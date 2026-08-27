@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEREN SNACK - Enterprise AI Workforce & ERP System Blueprint v2.0</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            900: '#7c2d12',
+                        },
+                        dark: {
+                            800: '#1e293b',
+                            850: '#131c2e',
+                            900: '#0b1120',
+                            950: '#030712',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #030712;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .glass-panel-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-panel-hover:hover {
+            background: rgba(31, 41, 55, 0.75);
+            border-color: rgba(249, 115, 22, 0.3);
+            transform: translateY(-2px);
+        }
+        .gradient-text-orange {
+            background: linear-gradient(135deg, #fb923c 0%, #f59e0b 50%, #fde047 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gradient-text-cyan {
+            background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .chat-bubble-driver {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px 18px 18px 4px;
+        }
+        .chat-bubble-bot {
+            background: rgba(249, 115, 22, 0.12);
+            border: 1px solid rgba(249, 115, 22, 0.3);
+            border-radius: 18px 18px 4px 18px;
+        }
+    </style>
+</head>
+<body class="bg-dark-950 text-slate-100 font-sans antialiased selection:bg-orange-500 selection:text-white min-h-screen flex flex-col custom-scrollbar">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-lg shadow-orange-500/25 ring-1 ring-white/20">
+                    <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-base font-extrabold tracking-tight text-white">KEREN SNACK</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-orange-500/20 text-orange-400 border border-orange-500/30 tracking-wide uppercase">ERP v2.0</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Next-Gen Autonomous AI Workforce</p>
+                </div>
+            </div>
+
+            <!-- Nav Links -->
+            <nav class="hidden lg:flex items-center space-x-1 text-xs font-semibold">
+                <a href="#transformasi" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition">Transformasi</a>
+                <a href="#solusi-kunci" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition">4 Solusi Kunci</a>
+                <a href="#telegram-bot" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition">Bot Telegram</a>
+                <a href="#sales-driver" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition">Sales-Driver</a>
+                <a href="#persona-web" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition">Persona Web</a>
+                <a href="#database-schema" class="px-3.5 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/60 transition">40 Tabel DB</a>
+                <span class="ml-2 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 font-mono text-[11px] flex items-center gap-1.5">
+                    <i data-lucide="palette" class="w-3.5 h-3.5"></i> UI: Material Design 3 (M3) + PHP MVC
+                </span>
+            </nav>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="relative pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden border-b border-slate-800/80">
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-950/30 via-dark-950 to-dark-950 -z-10"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto space-y-6">
+                
+                <!-- Status Badge -->
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-slate-700/80 text-xs text-slate-300 shadow-inner">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>1000% Selaras: SalaryApp &bull; Excel Stok 137 SKU &bull; IPOS 5</span>
+                </div>
+
+                <!-- Main Title -->
+                <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15]">
+                    Sistem Operasional & <br>
+                    <span class="gradient-text-orange">Karyawan AI Mandiri</span>
+                </h1>
+
+                <!-- Subtitle -->
+                <p class="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto font-normal">
+                    Mengotomasi 80% alur kerja repetitif toko & manufaktur repacking: <strong>matriks harga dinamis tanpa batas</strong>, <strong>modul konsinyasi rak toko</strong>, <strong>kemasan barcode multi-rasa</strong>, dan <strong>asisten lapangan Sales-Driver</strong>.
+                </p>
+
+                <!-- CTA Actions -->
+                <div class="flex flex-wrap justify-center items-center gap-3.5 pt-2">
+                    <a href="#solusi-kunci" class="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 font-semibold text-white text-xs sm:text-sm shadow-xl shadow-orange-500/20 transition flex items-center gap-2">
+                        <i data-lucide="compass" class="w-4 h-4"></i> Pelajari Solusi Arsitektur
+                    </a>
+                    <a href="#telegram-bot" class="px-6 py-3 rounded-xl glass-panel glass-panel-hover text-slate-200 font-semibold text-xs sm:text-sm transition flex items-center gap-2">
+                        <i data-lucide="bot" class="w-4 h-4 text-orange-400"></i> Demo Alur Telegram Bot
+                    </a>
+                </div>
+            </div>
+
+            <!-- KEY STATS -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-16 max-w-5xl mx-auto">
+                <div class="glass-panel p-5 rounded-2xl text-center">
+                    <div class="text-3xl font-black text-white mb-1 tracking-tight">40</div>
+                    <div class="text-[11px] text-orange-400 font-semibold uppercase tracking-wider">Tabel Relasional ACID</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Supabase PG15 + RLS 100%</p>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl text-center">
+                    <div class="text-3xl font-black text-white mb-1 tracking-tight">30 / 137</div>
+                    <div class="text-[11px] text-amber-400 font-semibold uppercase tracking-wider">Grup & SKU Fisik</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Diekstrak dari Excel Asli</p>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl text-center">
+                    <div class="text-3xl font-black text-white mb-1 tracking-tight">1 Role</div>
+                    <div class="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider">Sales = Driver</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Canvaser Rute Terpadu</p>
+                </div>
+                <div class="glass-panel p-5 rounded-2xl text-center">
+                    <div class="text-3xl font-black text-white mb-1 tracking-tight">Rp 0</div>
+                    <div class="text-[11px] text-cyan-400 font-semibold uppercase tracking-wider">Biaya Cloud / Bulan</div>
+                    <p class="text-[11px] text-slate-400 mt-1">Supabase Free Tier</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: TRANSFORMASI OPERASIONAL (SEBELUM VS SESUDAH) -->
+    <section id="transformasi" class="py-16 md:py-24 border-b border-slate-800/80 bg-dark-900/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-[11px] font-bold uppercase tracking-widest text-orange-400">Mengapa Kita Membangun Sistem Ini?</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1.5 mb-3">Perbandingan Transformasi Operasional</h2>
+                <p class="text-slate-400 text-xs sm:text-sm">Menghilangkan celah selisih, salah ketik harga, dan pekerjaan manual yang memperlambat bisnis.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+                <!-- SISI LAMA -->
+                <div class="glass-panel p-7 rounded-3xl border-rose-500/20 bg-rose-950/5 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold">
+                            <i data-lucide="x-circle" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-white text-base">Sistem Lama (Manual & IPOS 5)</h3>
+                            <span class="text-xs text-rose-400">Banyak Hambatan & Rawan Selisih</span>
+                        </div>
+                    </div>
+                    <ul class="text-xs text-slate-300 space-y-3 pt-2">
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="x" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+                            <span><strong>Harga Mentok 4 Level:</strong> IPOS 5 tidak mampu menampung puluhan variasi harga pelanggan dan diskon grup.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="x" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+                            <span><strong>Konsinyasi Rawan Hilang:</strong> Stok di rak toko konsinyasi dicatat manual, sering terjadi selisih saat penagihan.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="x" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+                            <span><strong>Data Terpecah:</strong> Penggajian di SalaryApp, stok di Excel, kasbon dicatat di kertas, transaksi di kasir.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="x" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+                            <span><strong>Sales & Driver Terpisah:</strong> Koordinasi pengiriman, nota baru di jalan, dan setoran uang sering miskomunikasi.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- SISI BARU -->
+                <div class="glass-panel p-7 rounded-3xl border-emerald-500/30 bg-emerald-950/10 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                            <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-white text-base">Sistem Baru (KEREN Snack AI ERP)</h3>
+                            <span class="text-xs text-emerald-400">Terpadu, Otomatis & Anti-Selisih</span>
+                        </div>
+                    </div>
+                    <ul class="text-xs text-slate-300 space-y-3 pt-2">
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                            <span><strong>Unlimited Pricing Matrix:</strong> Harga level &ge; 1 dihitung otomatis via RPC sesuai grup toko & diskon.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                            <span><strong>Modul Konsinyasi Rak:</strong> Sales-Driver cukup hitung sisa rak &rarr; invoice laku & retur rusak langsung terbit otomatis.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                            <span><strong>Single Source of Truth:</strong> Seluruh modul (POS, Payroll, HR, Stok, Kas) membaca 1 database Supabase yang sama.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <i data-lucide="check" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+                            <span><strong>Sales-Driver Terpadu:</strong> Bot Telegram mengelola rute manifest, POD foto, order canvas, dan rekap tutup rute harian.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: 4 SOLUSI KUNCI KEREN SNACK -->
+    <section id="solusi-kunci" class="py-16 md:py-24 border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-[11px] font-bold uppercase tracking-widest text-orange-400">Fondasi Bisnis Khusus</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1.5 mb-3">4 Solusi Arsitektur Kunci</h2>
+                <p class="text-slate-400 text-xs sm:text-sm">Dirancang khusus untuk memecahkan kerumitan manufaktur repacking dan distribusi snack.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Solusi 1 -->
+                <div class="glass-panel glass-panel-hover p-7 rounded-3xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="w-12 h-12 rounded-2xl bg-orange-500/10 text-orange-400 flex items-center justify-center font-bold">
+                            <i data-lucide="tags" class="w-6 h-6"></i>
+                        </div>
+                        <span class="text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">RPC Calculation</span>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-lg">1. Matriks Harga Dinamis Tanpa Batas</h3>
+                        <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                            Level harga (&ge; 1) diset di level <strong>Grup Produk</strong>. Toko dikelompokkan ke <strong>Grup Pelanggan</strong> (contoh: Toko Mitra A otomatis Level 8 diskon 5%).
+                        </p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800/80 text-xs space-y-1">
+                        <div class="text-orange-400 font-mono text-[11px]">Rumus Database Atomik:</div>
+                        <code class="text-slate-300 font-mono text-[11px] block">
+                            Harga Final = (Harga Level X) - Diskon % Grup - Diskon Toko
+                        </code>
+                    </div>
+                </div>
+
+                <!-- Solusi 2 -->
+                <div class="glass-panel glass-panel-hover p-7 rounded-3xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                            <i data-lucide="store" class="w-6 h-6"></i>
+                        </div>
+                        <span class="text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">Tabel `stok_konsinyasi_toko`</span>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-lg">2. Modul Konsinyasi & Opname Rak Toko</h3>
+                        <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                            Sales-Driver saat kunjungan rute mingguan cukup <strong>menghitung sisa fisik di rak toko</strong>. Sistem otomatis menghitung barang laku dan menerbitkan nota tagihan di tempat.
+                        </p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800/80 text-xs space-y-1">
+                        <div class="text-emerald-400 font-mono text-[11px]">Rumus Barang Laku:</div>
+                        <code class="text-slate-300 font-mono text-[11px] block">
+                            Laku = (Titip Awal + Tambah Baru) - (Sisa Rak + Retur Rusak)
+                        </code>
+                    </div>
+                </div>
+
+                <!-- Solusi 3 -->
+                <div class="glass-panel glass-panel-hover p-7 rounded-3xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold">
+                            <i data-lucide="scan-barcode" class="w-6 h-6"></i>
+                        </div>
+                        <span class="text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">Multi-Rasa 1 Label</span>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-lg">3. Barcode Kemasan Universal</h3>
+                        <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                            Karena plastik kemasan luar pre-printed menggunakan 1 barcode yang sama untuk varian Asin, Manis, atau Opak, fungsi <code>fn_cari_item_by_barcode()</code> otomatis menampilkan pilihan varian rasa cepat.
+                        </p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800/80 text-xs flex gap-2">
+                        <span class="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">[1] Asin (45)</span>
+                        <span class="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">[2] Manis (30)</span>
+                        <span class="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">[3] Opak (12)</span>
+                    </div>
+                </div>
+
+                <!-- Solusi 4 -->
+                <div class="glass-panel glass-panel-hover p-7 rounded-3xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold">
+                            <i data-lucide="boxes" class="w-6 h-6"></i>
+                        </div>
+                        <span class="text-[10px] font-mono font-semibold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">Kelompok 300 - 600</span>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-lg">4. Yield Repacking & Upah Borongan</h3>
+                        <p class="text-xs text-slate-300 mt-1.5 leading-relaxed">
+                            Karyawan membungkus bal curah menjadi bungkus pcs: tabel <code>komposisi_item</code> memotong bahan mentah (kg) & plastik (lembar), sekaligus mengkalkulasi upah borongan secara presisi.
+                        </p>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800/80 text-xs text-slate-300">
+                        <span class="text-purple-400 font-semibold block">⚡ Trigger Otomatis:</span>
+                        Input 500 pcs Berondong &rarr; Potong 27.5 kg mentah + Upah Siti Rp 300.000.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: BOT TELEGRAM (SUPERPOWER OPERASIONAL LAPANGAN) -->
+    <section id="telegram-bot" class="py-16 md:py-24 border-b border-slate-800/80 bg-dark-900/40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-[11px] font-bold uppercase tracking-widest text-amber-400">Asisten Digital Lapangan</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1.5 mb-3">6 Superpower Bot Telegram Karyawan AI</h2>
+                <p class="text-slate-400 text-xs sm:text-sm">Menghubungkan Sales-Driver, Mandor, dan Owner secara natural melalui chat & pesan suara.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Fitur 1 -->
+                <div class="glass-panel p-6 rounded-3xl space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold">
+                        <i data-lucide="map-pin" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">1. Manifest Rute & Loading Besok</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Kirim otomatis jam 18:00 sore: urutan toko kunjungan besok, total bal muatan mobil (Loading Sheet), dan link download PDF Surat Jalan.
+                    </p>
+                </div>
+
+                <!-- Fitur 2 -->
+                <div class="glass-panel p-6 rounded-3xl space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-400 flex items-center justify-center font-bold">
+                        <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">2. Direct Canvas Order di Toko</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Sales-Driver kirim pesan suara: <em>"Toko Berkah minta tambah 5 bal Berondong tempo 7 hari"</em> &rarr; AI cek plafon & terbitkan invoice baru.
+                    </p>
+                </div>
+
+                <!-- Fitur 3 -->
+                <div class="glass-panel p-6 rounded-3xl space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold">
+                        <i data-lucide="camera" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">3. Live Proof of Delivery (POD)</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Saat selesai menurunkan snack di toko, klik tombol <strong>[📦 BARANG DITERIMA]</strong> dan kirim foto nota bertanda tangan. Waktu & foto tersimpan rapi.
+                    </p>
+                </div>
+
+                <!-- Fitur 4 -->
+                <div class="glass-panel p-6 rounded-3xl space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center font-bold">
+                        <i data-lucide="badge-dollar-sign" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">4. Tagih Piutang & Setor Tunai</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Terima uang pelunasan toko di rute: <em>"Terima tagihan Toko Maju 1,5jt cash"</em> &rarr; Nota lunas, piutang berkurang, uang tercatat di kas mobil.
+                    </p>
+                </div>
+
+                <!-- Fitur 5 -->
+                <div class="glass-panel p-6 rounded-3xl space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">5. Cek Stok & Sisa Piutang Live</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Ketik <code>/stok berondong</code> atau <code>/cekpiutang Toko Majestik</code> untuk mengetahui sisa stok gudang dan limit utang toko detik itu juga.
+                    </p>
+                </div>
+
+                <!-- Fitur 6 -->
+                <div class="glass-panel p-6 rounded-3xl space-y-3">
+                    <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold">
+                        <i data-lucide="file-check" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-white text-base">6. Rekap Tutup Rute Harian</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        Sore jam 17:00 bot menyajikan total uang tunai yang harus disetor ke kasir toko dan sisa bal barang di mobil secara otomatis.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: MODEL SALES = DRIVER -->
+    <section id="sales-driver" class="py-16 md:py-24 border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid lg:grid-cols-2 gap-10 items-center">
+                <div class="space-y-5">
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-xs font-semibold text-orange-400">
+                        <i data-lucide="truck" class="w-3.5 h-3.5"></i> Peran Lapangan Terpadu
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-extrabold text-white leading-tight">
+                        Sales adalah Driver <br><span class="gradient-text-orange">(Canvaser Rute Terpadu)</span>
+                    </h2>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        Staf lapangan yang menyetir mobil/motor rute adalah orang yang sama yang <strong>memuat barang, mengantar pesanan, menawarkan snack tambahan, menagih uang piutang, dan lapor bensin</strong>.
+                    </p>
+                    <div class="space-y-3 pt-1">
+                        <div class="p-4 rounded-2xl glass-panel flex items-start gap-3.5">
+                            <div class="p-2 rounded-xl bg-orange-500/20 text-orange-400 shrink-0"><i data-lucide="shield-check" class="w-4 h-4"></i></div>
+                            <div class="text-xs text-slate-300">
+                                <strong class="text-white block mb-0.5">Role Otorisasi: <code>sales_driver</code></strong>
+                                Hak akses terintegrasi untuk melihat rute surat jalan, input order canvas, tagih piutang toko, dan input biaya jalan.
+                            </div>
+                        </div>
+                        <div class="p-4 rounded-2xl glass-panel flex items-start gap-3.5">
+                            <div class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 shrink-0"><i data-lucide="coins" class="w-4 h-4"></i></div>
+                            <div class="text-xs text-slate-300">
+                                <strong class="text-white block mb-0.5">Komisi Penjualan Otomatis 2.5%</strong>
+                                Gaji pokok bulanan + komisi penjualan langsung dihitung otomatis di modul Payroll dari nota rute yang sudah berstatus lunas.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Workflow Timeline -->
+                <div class="glass-panel p-7 rounded-3xl border-slate-800 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center font-bold text-white shadow-md">
+                                SD
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-white text-sm">Pak Slamet / Yayat / Asep</h4>
+                                <span class="text-[11px] text-orange-400 font-mono">Sales-Driver KEREN Snack</span>
+                            </div>
+                        </div>
+                        <span class="text-[11px] px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold">Aktif di Rute</span>
+                    </div>
+
+                    <div class="space-y-2.5 text-xs">
+                        <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800 flex items-center justify-between">
+                            <span class="text-slate-400 font-mono">07:30 Pagi</span>
+                            <span class="text-slate-200 font-medium">Terima Manifest Rute & Muat Bal Snack</span>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800 flex items-center justify-between">
+                            <span class="text-slate-400 font-mono">10:00 - 15:00</span>
+                            <span class="text-slate-200 font-medium">Kirim Snack, Foto POD, & Tagih Piutang</span>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800 flex items-center justify-between">
+                            <span class="text-slate-400 font-mono">12:30 Siang</span>
+                            <span class="text-slate-200 font-medium">Foto Struk Bensin / Tol via Bot Telegram</span>
+                        </div>
+                        <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800 flex items-center justify-between">
+                            <span class="text-slate-400 font-mono">17:00 Sore</span>
+                            <span class="text-slate-200 font-medium">Tutup Rute & Setor Uang Fisik ke Kasir</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: TAMPILAN 3 PERSONA WEB APP -->
+    <section id="persona-web" class="py-16 md:py-24 border-b border-slate-800/80 bg-dark-900/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-[11px] font-bold uppercase tracking-widest text-orange-400">Multi-Role Interface</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1.5 mb-3">3 Persona Tampilan Dashboard Web App</h2>
+                <p class="text-slate-400 text-xs sm:text-sm">Menyesuaikan kebutuhan spesifik Developer, Admin Kasir Toko, dan Owner Command Center.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Persona 1: Developer -->
+                <div class="glass-panel p-6 rounded-3xl space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-800 text-cyan-400 flex items-center justify-center font-bold">
+                        <i data-lucide="code-2" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-base">1. Developer View</h3>
+                        <span class="text-xs text-cyan-400">Pusat Teknis & Monitoring</span>
+                    </div>
+                    <ul class="text-xs text-slate-300 space-y-2.5 pt-1">
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i> Akses penuh 40 tabel & schema</li>
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i> Monitor log webhook n8n & API errors</li>
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i> Konfigurasi API keys & RPC triggers</li>
+                    </ul>
+                </div>
+
+                <!-- Persona 2: Admin Toko -->
+                <div class="glass-panel p-6 rounded-3xl space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold">
+                        <i data-lucide="shopping-bag" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-base">2. Admin Kasir & Gudang</h3>
+                        <span class="text-xs text-orange-400">Operasional POS & Stok</span>
+                    </div>
+                    <ul class="text-xs text-slate-300 space-y-2.5 pt-1">
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-orange-400 shrink-0"></i> Layar kasir POS cepat (Barcode ready)</li>
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-orange-400 shrink-0"></i> CRUD master item, varian rasa & harga</li>
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-orange-400 shrink-0"></i> Input PO barang masuk & stock opname</li>
+                    </ul>
+                </div>
+
+                <!-- Persona 3: Owner Command Center -->
+                <div class="glass-panel p-6 rounded-3xl border-amber-500/40 bg-amber-950/10 space-y-4">
+                    <div class="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                        <i data-lucide="crown" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-base">3. Owner Command Center</h3>
+                        <span class="text-xs text-amber-400">Audit Trail & AI Dispatcher</span>
+                    </div>
+                    <ul class="text-xs text-slate-300 space-y-2.5 pt-1">
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i> <strong>Live AI Stream</strong> (`log_aktivitas`)</li>
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i> One-click approval kasbon & bensin</li>
+                        <li class="flex items-center gap-2"><i data-lucide="check" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i> Chatbox AI ("Besok rute full Jakbar")</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: PETA SKEMA DATABASE (40 TABEL) -->
+    <section id="database-schema" class="py-16 md:py-24 border-b border-slate-800/80">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-[11px] font-bold uppercase tracking-widest text-orange-400">Database Relasional PostgreSQL 15+</span>
+                <h2 class="text-2xl sm:text-4xl font-extrabold text-white mt-1.5 mb-3">8 Modul Lengkap (40 Tabel Supabase)</h2>
+                <p class="text-slate-400 text-xs sm:text-sm">Setiap tabel dirancang dengan Primary Key UUIDv4, Row Level Security (RLS) 100%, dan Foreign Key ketat.</p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- Modul 1 -->
+                <div class="glass-panel p-5 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Modul 1: RBAC & Auth</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-orange-400">5 Tabel</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Otorisasi peran, izin granular & identitas bot.</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">peran</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">izin</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">pengguna</span>
+                    </div>
+                </div>
+
+                <!-- Modul 2 -->
+                <div class="glass-panel p-5 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Modul 2: Master Entitas</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-blue-400">5 Tabel</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Rute, karyawan, pemasok & grup pelanggan.</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">wilayah</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">pelanggan</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">grup_pelanggan</span>
+                    </div>
+                </div>
+
+                <!-- Modul 3 -->
+                <div class="glass-panel p-5 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Modul 3: Katalog & Harga</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-amber-400">5 Tabel</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Grup produk, 28+ harga & barcode kemasan.</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">grup_produk</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">item</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">komposisi_item</span>
+                    </div>
+                </div>
+
+                <!-- Modul 4 -->
+                <div class="glass-panel p-5 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Modul 4: Gudang & Stok</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-emerald-400">4 Tabel</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Buku besar mutasi stok immutable & PO.</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">riwayat_stok</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">pembelian</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">penyesuaian_stok</span>
+                    </div>
+                </div>
+
+                <!-- Modul 5 -->
+                <div class="glass-panel p-5 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Modul 5: Penjualan & SJ</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-purple-400">3 Tabel</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Invoice penjualan, tempo, & POD surat jalan.</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">pesanan</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">item_pesanan</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">surat_jalan</span>
+                    </div>
+                </div>
+
+                <!-- Modul 6 -->
+                <div class="glass-panel p-5 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Modul 6: Konsinyasi Rak</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-rose-400">3 Tabel</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Stok titip rak toko, opname & auto-invoice.</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">stok_konsinyasi_toko</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">kunjungan_konsinyasi</span>
+                    </div>
+                </div>
+
+                <!-- Modul 7 -->
+                <div class="glass-panel p-5 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Modul 7: HR & Payroll</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-indigo-400">10 Tabel</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Upah borongan, absensi, kasbon & tabungan.</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">penggajian</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">rincian_penggajian</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">tabungan</span>
+                    </div>
+                </div>
+
+                <!-- Modul 8 -->
+                <div class="glass-panel p-5 rounded-2xl space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Modul 8: Kas & Audit Trail</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-teal-400">5 Tabel</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400">Buku kas besar & master log aktivitas sistem.</p>
+                    <div class="flex flex-wrap gap-1 pt-1">
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">log_aktivitas</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">arus_kas</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-dark-950 text-slate-300 border border-slate-800">draf_pengeluaran</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: INFRASTRUKTUR & BIAYA CLOUD -->
+    <section id="infrastruktur" class="py-16 md:py-24 border-b border-slate-800/80 bg-dark-900/40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto glass-panel p-8 md:p-10 rounded-3xl border-emerald-500/30 space-y-6 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold mx-auto">
+                    <i data-lucide="badge-percent" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Biaya Backend Rp 0 / Bulan (Supabase Free Tier)</h2>
+                    <p class="text-xs sm:text-sm text-slate-300 mt-2 max-w-xl mx-auto leading-relaxed">
+                        Seluruh 40 tabel, ribuan transaksi nota, bot Telegram, dan dashboard web berjalan di atas infrastruktur cloud Supabase Free Tier tanpa biaya lisensi.
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left pt-2">
+                    <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800 text-center">
+                        <span class="text-[11px] text-slate-400 block">Database Storage</span>
+                        <strong class="text-emerald-400 text-sm">500 MB (Muat 3-5 Thn)</strong>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800 text-center">
+                        <span class="text-[11px] text-slate-400 block">Bandwidth Transfer</span>
+                        <strong class="text-emerald-400 text-sm">5 GB / Bulan</strong>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800 text-center">
+                        <span class="text-[11px] text-slate-400 block">Active Users</span>
+                        <strong class="text-emerald-400 text-sm">50.000 MAU</strong>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-dark-950 border border-slate-800 text-center">
+                        <span class="text-[11px] text-slate-400 block">File Storage</span>
+                        <strong class="text-emerald-400 text-sm">1 GB + Telegram CDN</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="py-8 text-center text-xs text-slate-500 border-t border-slate-900">
+        <p>KEREN SNACK Enterprise AI Workforce & ERP System &copy; 2026. Production Ready Architecture.</p>
+    </footer>
+
+    <!-- Initialize Lucide Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
