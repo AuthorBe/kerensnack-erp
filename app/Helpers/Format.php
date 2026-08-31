@@ -107,4 +107,52 @@ class Format
                 </span>';
         }
     }
+
+    /**
+     * Konversi angka nominal ke kalimat Terbilang Bahasa Indonesia
+     * Contoh: 67500 -> "Enam Puluh Tujuh Ribu Lima Ratus Rupiah"
+     */
+    public static function terbilang(float|int|string|null $angka, bool $withRupiah = true): string
+    {
+        $val = (int)floor(abs((float)($angka ?? 0)));
+        if ($val === 0) {
+            return $withRupiah ? 'Nol Rupiah' : '';
+        }
+
+        $baca = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam', 'Tujuh', 'Delapan', 'Sembilan', 'Sepuluh', 'Sebelas'];
+        $hasil = '';
+
+        if ($val < 12) {
+            $hasil = $baca[$val];
+        } elseif ($val < 20) {
+            $hasil = self::terbilang($val - 10, false) . ' Belas';
+        } elseif ($val < 100) {
+            $sisa = $val % 10;
+            $hasil = self::terbilang((int)($val / 10), false) . ' Puluh' . ($sisa > 0 ? ' ' . self::terbilang($sisa, false) : '');
+        } elseif ($val < 200) {
+            $sisa = $val - 100;
+            $hasil = 'Seratus' . ($sisa > 0 ? ' ' . self::terbilang($sisa, false) : '');
+        } elseif ($val < 1000) {
+            $sisa = $val % 100;
+            $hasil = self::terbilang((int)($val / 100), false) . ' Ratus' . ($sisa > 0 ? ' ' . self::terbilang($sisa, false) : '');
+        } elseif ($val < 2000) {
+            $sisa = $val - 1000;
+            $hasil = 'Seribu' . ($sisa > 0 ? ' ' . self::terbilang($sisa, false) : '');
+        } elseif ($val < 1000000) {
+            $sisa = $val % 1000;
+            $hasil = self::terbilang((int)($val / 1000), false) . ' Ribu' . ($sisa > 0 ? ' ' . self::terbilang($sisa, false) : '');
+        } elseif ($val < 1000000000) {
+            $sisa = (int)fmod((float)$val, 1000000);
+            $hasil = self::terbilang((int)($val / 1000000), false) . ' Juta' . ($sisa > 0 ? ' ' . self::terbilang($sisa, false) : '');
+        } elseif ($val < 1000000000000) {
+            $sisa = (int)fmod((float)$val, 1000000000);
+            $hasil = self::terbilang((int)($val / 1000000000), false) . ' Milyar' . ($sisa > 0 ? ' ' . self::terbilang($sisa, false) : '');
+        } else {
+            $sisa = (int)fmod((float)$val, 1000000000000);
+            $hasil = self::terbilang((int)($val / 1000000000000), false) . ' Triliun' . ($sisa > 0 ? ' ' . self::terbilang($sisa, false) : '');
+        }
+
+        $hasil = trim(preg_replace('/\s+/', ' ', $hasil));
+        return $withRupiah ? $hasil . ' Rupiah' : $hasil;
+    }
 }

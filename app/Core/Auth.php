@@ -14,7 +14,7 @@ class Auth
 {
     public static function init(): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
+        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             session_start();
         }
     }
@@ -68,12 +68,56 @@ class Auth
 
     public static function isSalesDriver(): bool
     {
-        return in_array(self::role(), ['developer', 'sales_driver'], true);
+        return in_array(self::role(), ['developer', 'sales_driver', 'sales', 'driver'], true);
+    }
+
+    public static function employeeId(): ?string
+    {
+        return self::user()['karyawan_id'] ?? null;
+    }
+
+    public static function employeePosition(): ?string
+    {
+        $cached = self::user()['posisi_karyawan'] ?? null;
+        if ($cached) return $cached;
+
+        $kId = self::employeeId();
+        if ($kId) {
+            $pos = Database::fetchOne("SELECT posisi FROM public.karyawan WHERE id = :id", ['id' => $kId])['posisi'] ?? null;
+            if ($pos && isset($_SESSION['user'])) {
+                $_SESSION['user']['posisi_karyawan'] = $pos;
+            }
+            return $pos;
+        }
+        return null;
+    }
+
+    public static function isSales(): bool
+    {
+        if (self::isOwner() || self::isAdmin()) return true;
+        if (self::role() === 'sales') return true;
+        if (self::role() === 'sales_driver') {
+            return self::employeePosition() !== 'driver';
+        }
+        return false;
+    }
+
+    public static function isDriver(): bool
+    {
+        if (self::isOwner() || self::isAdmin()) return true;
+        if (self::role() === 'driver') return true;
+        if (self::role() === 'sales_driver') {
+            return self::employeePosition() === 'driver';
+        }
+        return false;
     }
 
     public static function login(array $userData): void
     {
         self::init();
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
         $_SESSION['user'] = $userData;
     }
 
@@ -108,7 +152,7 @@ class Auth
         if (!in_array(self::role(), $allowedRoles, true)) {
             http_response_code(403);
             $posUrl = Router::url('/pos');
-            echo "<!DOCTYPE html><html class='dark'><head><title>Akses Ditolak</title><script src='https://cdn.tailwindcss.com'></script></head><body class='bg-slate-950 text-white min-h-screen flex items-center justify-center font-sans'><div class='text-center space-y-4 max-w-md p-8 bg-slate-900 border border-rose-500/30 rounded-3xl'><div class='text-4xl'>🛡️</div><h1 class='text-xl font-bold text-rose-400'>403 - Akses Ditolak</h1><p class='text-xs text-slate-400'>Peran <strong>" . ucfirst(self::role()) . "</strong> Anda tidak memiliki izin mengakses modul ini.</p><a href='{$posUrl}' class='inline-block px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs font-semibold text-white'>Kembali ke Layar Kasir</a></div></body></html>";
+            echo "<!DOCTYPE html><html lang='id' class='dark'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>403 - Akses Ditolak</title><style>body{margin:0;padding:0;background:#090d16;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;}.card{max-width:420px;padding:32px;background:#0f172a;border:1px solid rgba(244,63,94,0.3);border-radius:24px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.5);}.icon{font-size:48px;margin-bottom:12px;}.title{font-size:20px;font-weight:700;color:#fb7185;margin:0 0 8px;}.desc{font-size:13px;color:#94a3b8;margin:0 0 24px;line-height:1.5;}.btn{display:inline-block;padding:10px 20px;border-radius:12px;background:#059669;color:#fff;font-size:13px;font-weight:600;text-decoration:none;transition:background 0.15s;}.btn:hover{background:#047857;}</style></head><body><div class='card'><div class='icon'>🛡️</div><h1 class='title'>403 - Akses Ditolak</h1><p class='desc'>Peran <strong>" . htmlspecialchars(ucfirst(self::role())) . "</strong> Anda tidak memiliki izin mengakses modul ini.</p><a href='{$posUrl}' class='btn'>Kembali ke Layar Utama</a></div></body></html>";
             exit;
         }
     }

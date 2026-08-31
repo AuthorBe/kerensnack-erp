@@ -18,6 +18,12 @@ class Controller
         $cleanPath = str_replace('.', '/', $viewPath);
         $fullPath = dirname(__DIR__, 2) . '/views/' . $cleanPath . '.php';
 
+        if (!headers_sent()) {
+            header('Cache-Control: no-cache, no-store, must-revalidate, max-age=0');
+            header('Pragma: no-cache');
+            header('Expires: Sat, 26 Jul 1997 05:00:00 GMT');
+        }
+
         if (!file_exists($fullPath)) {
             http_response_code(500);
             echo "View file not found: views/{$viewPath}.php";
@@ -94,5 +100,17 @@ class Controller
     protected function input(string $key, mixed $default = null): mixed
     {
         return $_POST[$key] ?? $_GET[$key] ?? $default;
+    }
+
+    /**
+     * Validasi Token CSRF
+     */
+    protected function validateCsrf(): bool
+    {
+        if (!\App\Helpers\CSRF::validate()) {
+            $this->flashError('Sesi formulir kadaluarsa (CSRF Mismatch). Silakan ulangi aksi Anda.');
+            return false;
+        }
+        return true;
     }
 }

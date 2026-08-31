@@ -6,6 +6,25 @@ ob_start();
 
 <div class="space-y-6 max-w-4xl mx-auto">
 
+    <!-- ========================================================================= -->
+    <!-- PAGE HEADER                                                               -->
+    <!-- ========================================================================= -->
+    <div class="page-header">
+        <div class="page-header-body">
+            <div class="page-header-icon is-indigo">
+                <i data-lucide="user-cog"></i>
+            </div>
+            <div class="page-header-text">
+                <div class="page-header-tag">
+                    <span class="tag-dot" style="background-color:#6366f1;"></span>
+                    <span>Pengaturan Akun</span>
+                </div>
+                <h1 class="page-title"><?= $pageTitle ?? 'Profil Pengguna' ?></h1>
+                <p class="page-subtitle">Kelola identitas akun, ubah username &amp; keamanan kata sandi</p>
+            </div>
+        </div>
+    </div>
+
     <!-- USER OVERVIEW CARD -->
     <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
         <div style="display:flex;align-items:center;gap:16px;">

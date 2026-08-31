@@ -12,7 +12,7 @@ class Flash
      */
     public static function set(string $type, string $message, ?string $title = null): void
     {
-        if (session_status() === PHP_SESSION_NONE) {
+        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             session_start();
         }
 
@@ -49,7 +49,7 @@ class Flash
      */
     public static function get(): ?array
     {
-        if (session_status() === PHP_SESSION_NONE) {
+        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             session_start();
         }
 

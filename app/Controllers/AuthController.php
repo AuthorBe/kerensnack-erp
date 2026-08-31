@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Helpers\ActivityLog;
 use Database;
 
 /**
@@ -14,22 +15,137 @@ use Database;
 
 class AuthController extends Controller
 {
+    private const MAX_ATTEMPTS = 5;
+    private const LOCKOUT_SECONDS = 900; // 15 minutes
+
+    private function getClientIp(): string
+    {
+        if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+            return $_SERVER['HTTP_CF_CONNECTING_IP'];
+        }
+        if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+            $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            return trim($ips[0]);
+        }
+        return $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+    }
+
+    private function getRateLimitDir(): string
+    {
+        $dir = ROOT_PATH . '/cache/rate_limit/';
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+            file_put_contents($dir . '.htaccess', 'Deny from all');
+        }
+        return $dir;
+    }
+
+    private function getRateLimitFile(string $ip): string
+    {
+        return $this->getRateLimitDir() . md5($ip) . '.json';
+    }
+
+    private function checkRateLimit(string $ip): array
+    {
+        $file = $this->getRateLimitFile($ip);
+        if (!file_exists($file)) {
+            return ['blocked' => false, 'attempts' => 0, 'remaining' => 0];
+        }
+
+        $data = json_decode((string)file_get_contents($file), true);
+        if (!$data) {
+            return ['blocked' => false, 'attempts' => 0, 'remaining' => 0];
+        }
+
+        $elapsed = time() - ($data['first_attempt'] ?? time());
+        if ($elapsed > self::LOCKOUT_SECONDS) {
+            @unlink($file);
+            return ['blocked' => false, 'attempts' => 0, 'remaining' => 0];
+        }
+
+        $attempts = (int)($data['attempts'] ?? 0);
+        $blocked = $attempts >= self::MAX_ATTEMPTS;
+        $remaining = self::LOCKOUT_SECONDS - $elapsed;
+
+        return ['blocked' => $blocked, 'attempts' => $attempts, 'remaining' => max(0, $remaining)];
+    }
+
+    private function recordFailedAttempt(string $ip): void
+    {
+        $file = $this->getRateLimitFile($ip);
+        $data = ['ip' => $ip, 'attempts' => 1, 'first_attempt' => time()];
+        if (file_exists($file)) {
+            $existing = json_decode((string)file_get_contents($file), true);
+            if ($existing && (time() - ($existing['first_attempt'] ?? time())) <= self::LOCKOUT_SECONDS) {
+                $newAttempts = ($existing['attempts'] ?? 0) + 1;
+                // Jika mencapai ambang batas blokir, mulai hitungan lockout 15 menit penuh dari saat diblokir
+                $firstAttempt = ($newAttempts >= self::MAX_ATTEMPTS) ? time() : $existing['first_attempt'];
+                $data = [
+                    'ip' => $ip,
+                    'attempts' => $newAttempts,
+                    'first_attempt' => $firstAttempt
+                ];
+            }
+        }
+        file_put_contents($file, json_encode($data), LOCK_EX);
+    }
+
+    private function resetRateLimit(string $ip): void
+    {
+        $file = $this->getRateLimitFile($ip);
+        if (file_exists($file)) {
+            @unlink($file);
+        }
+    }
+
     public function showLogin(): void
     {
         if (Auth::check()) {
             $this->redirect('/pos');
+            return;
+        }
+
+        $ip = $this->getClientIp();
+
+        // Fitur darurat untuk developer / testing: Buka blokir instan via query ?unlock=1
+        if (isset($_GET['unlock']) || isset($_GET['reset_lock'])) {
+            $this->resetRateLimit($ip);
+            $this->redirect('/login');
+            return;
+        }
+
+        $rateCheck = $this->checkRateLimit($ip);
+        $remainingTime = 0;
+        $error = $_SESSION['auth_error'] ?? null;
+        unset($_SESSION['auth_error']);
+        $info = null;
+
+        if ($rateCheck['blocked']) {
+            $remainingTime = $rateCheck['remaining'];
+            $error = "<div>Terlalu banyak percobaan gagal.</div><div class='alert-sub'>Silakan coba lagi dalam <span id='countdown-timer' class='font-bold font-mono'></span>.</div>";
+        }
+
+        if (isset($_GET['timeout'])) {
+            $info = 'Sesi Anda telah berakhir secara otomatis demi keamanan.';
+        } elseif (isset($_GET['illegal'])) {
+            $info = 'Silakan login terlebih dahulu untuk mengakses sistem.';
         }
 
         $this->view('auth.login', [
-            'error' => $_SESSION['auth_error'] ?? null
+            'error' => $error,
+            'info' => $info,
+            'remainingTime' => $remainingTime,
+            'maxAttempts' => self::MAX_ATTEMPTS,
+            'lockoutMinutes' => (int)(self::LOCKOUT_SECONDS / 60)
         ]);
-        unset($_SESSION['auth_error']);
     }
 
     public function login(): void
     {
         $username = trim((string)$this->input('username'));
         $password = trim((string)$this->input('password'));
+        $ip = $this->getClientIp();
+        $rateCheck = $this->checkRateLimit($ip);
 
         if (empty($username) || empty($password)) {
             $_SESSION['auth_error'] = 'Nama pengguna dan kata sandi wajib diisi.';
@@ -38,70 +154,133 @@ class AuthController extends Controller
         }
 
         try {
-            // 1. Cari pengguna dari Database Supabase PostgreSQL
+            // 1. Cari pengguna dari Database PostgreSQL
             $userDb = Database::fetchOne("
-                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi, pr.nama_peran as peran
+                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi, p.karyawan_id,
+                       pr.nama_peran as peran, p.status_aktif,
+                       k.posisi as posisi_karyawan
                 FROM public.pengguna p
                 JOIN public.peran pr ON p.peran_id = pr.id
-                WHERE LOWER(p.nama_pengguna) = LOWER(:username) AND p.status_aktif = TRUE
+                LEFT JOIN public.karyawan k ON p.karyawan_id = k.id
+                WHERE LOWER(p.nama_pengguna) = LOWER(:username)
                 LIMIT 1
             ", ['username' => $username]);
 
-            if ($userDb) {
-                // Verifikasi password jika kata_sandi tersimpan di database
-                if (!empty($userDb['kata_sandi'])) {
-                    $isMatch = password_verify($password, $userDb['kata_sandi']) || ($password === $userDb['kata_sandi']);
-                    if (!$isMatch) {
-                        $_SESSION['auth_error'] = 'Kata sandi tidak sesuai.';
-                        $this->redirect('/login');
-                        return;
+            $passwordMatch = false;
+            $needsRehash = false;
+
+            if ($userDb && !empty($userDb['kata_sandi'])) {
+                if (password_verify($password, $userDb['kata_sandi'])) {
+                    $passwordMatch = true;
+                    if (password_needs_rehash($userDb['kata_sandi'], PASSWORD_BCRYPT)) {
+                        $needsRehash = true;
                     }
+                } elseif ($password === $userDb['kata_sandi']) {
+                    $passwordMatch = true;
+                    $needsRehash = true;
+                }
+            } elseif ($userDb && empty($userDb['kata_sandi'])) {
+                // Inisialisasi password akun baru
+                $passwordMatch = true;
+                $needsRehash = true;
+            }
+
+            // Anti-brute-force guard: Jika IP diblokir, HANYA izinkan jika role developer dengan password benar
+            if ($rateCheck['blocked']) {
+                $isBypass = $passwordMatch && $userDb && (strtolower(trim((string)($userDb['peran'] ?? ''))) === 'developer');
+                if (!$isBypass) {
+                    $_SESSION['auth_error'] = "<div>Terlalu banyak percobaan gagal.</div><div class='alert-sub'>Silakan coba lagi dalam <span id='countdown-timer' class='font-bold font-mono'></span>.</div>";
+                    $this->redirect('/login');
+                    return;
+                }
+                // Khusus Developer dengan password benar: buka kunci limit secara otomatis
+                $this->resetRateLimit($ip);
+            }
+
+            if ($userDb && $passwordMatch) {
+                if (!$userDb['status_aktif']) {
+                    $this->recordFailedAttempt($ip);
+                    $_SESSION['auth_error'] = 'Akun Anda telah dinonaktifkan oleh Administrator.';
+                    $this->redirect('/login');
+                    return;
                 }
 
-                // Hapus hash password dari memori sesi
+                // Berhasil login: reset hitungan percobaan gagal
+                $this->resetRateLimit($ip);
+
+                if ($needsRehash) {
+                    $newHash = password_hash($password, PASSWORD_BCRYPT);
+                    Database::execute("UPDATE public.pengguna SET kata_sandi = :hash, diubah_pada = NOW() WHERE id = :id", [
+                        'hash' => $newHash,
+                        'id' => $userDb['id']
+                    ]);
+                }
+
+                // Hapus hash dari memori sesi
                 unset($userDb['kata_sandi']);
 
+                // Regenerate session id untuk cegah session fixation
+                if (session_status() === PHP_SESSION_ACTIVE) {
+                    session_regenerate_id(true);
+                }
+
                 Auth::login($userDb);
+                ActivityLog::log(
+                    'keamanan',
+                    'LOGIN',
+                    "Pengguna {$userDb['nama_lengkap']} ({$userDb['nama_pengguna']}) berhasil login ke sistem",
+                    'pengguna',
+                    $userDb['id'],
+                    null,
+                    null,
+                    'web_app',
+                    $userDb['id'],
+                    $userDb['nama_lengkap'],
+                    $userDb['peran'] ?? 'staff'
+                );
+
+                // Smart Redirect sesuai Role & Jabatan Karyawan
+                if (in_array($userDb['peran'], ['sales_driver', 'driver', 'sales'], true)) {
+                    if (($userDb['posisi_karyawan'] ?? '') === 'driver') {
+                        $this->redirect('/deliveries');
+                    } else {
+                        $this->redirect('/consignment/sales');
+                    }
+                    return;
+                }
+
                 $this->redirect('/pos');
                 return;
             }
 
-            // 2. Fallback darurat jika database offline
-            if (in_array(strtolower($username), ['developer', 'admin', 'owner', 'mandor', 'driver'], true)) {
-                $role = match(strtolower($username)) {
-                    'developer' => 'developer',
-                    'driver'    => 'sales_driver',
-                    default     => strtolower($username)
-                };
+            // Gagal login: catat percobaan gagal
+            $this->recordFailedAttempt($ip);
+            ActivityLog::log(
+                'keamanan',
+                'LOGIN_FAILED',
+                "Percobaan login gagal untuk username '{$username}' dari IP {$ip}",
+                'pengguna',
+                null,
+                null,
+                null,
+                'web_app',
+                null,
+                'Tamu / Unauthenticated',
+                'guest'
+            );
 
-                Auth::login([
-                    'id' => '00000000-0000-0000-0000-000000000000',
-                    'nama_lengkap' => $role === 'developer' ? 'AJSK.' : ucfirst($username) . ' KEREN Snack',
-                    'nama_pengguna' => $username,
-                    'peran' => $role,
-                    'is_demo' => false
-                ]);
-                $this->redirect('/pos');
-                return;
+            $newRateCheck = $this->checkRateLimit($ip);
+            $attemptsLeft = max(0, self::MAX_ATTEMPTS - (int)($newRateCheck['attempts'] ?? 0));
+
+            if ($attemptsLeft > 0) {
+                $_SESSION['auth_error'] = "<div>Nama pengguna atau kata sandi tidak sesuai.</div><div class='alert-sub'>Sisa <strong>{$attemptsLeft} kali</strong> percobaan sebelum akses diblokir.</div>";
+            } else {
+                $_SESSION['auth_error'] = "<div>Terlalu banyak percobaan gagal.</div><div class='alert-sub'>Silakan coba lagi dalam <span id='countdown-timer' class='font-bold font-mono'></span>.</div>";
             }
 
-            $_SESSION['auth_error'] = 'Nama pengguna atau kata sandi tidak sesuai.';
             $this->redirect('/login');
 
         } catch (\Throwable $e) {
-            // Jika ada kendala koneksi database, tetap izinkan login developer fallback
-            if (strtolower($username) === 'developer') {
-                Auth::login([
-                    'id' => '00000000-0000-0000-0000-000000000000',
-                    'nama_lengkap' => 'AJSK.',
-                    'nama_pengguna' => 'developer',
-                    'peran' => 'developer',
-                    'is_demo' => false
-                ]);
-                $this->redirect('/pos');
-                return;
-            }
-
             $_SESSION['auth_error'] = 'Terjadi kesalahan koneksi: ' . $e->getMessage();
             $this->redirect('/login');
         }
@@ -109,7 +288,24 @@ class AuthController extends Controller
 
     public function logout(): void
     {
+        if (Auth::check()) {
+            ActivityLog::log(
+                'keamanan',
+                'LOGOUT',
+                "Pengguna " . (Auth::user()['nama_lengkap'] ?? Auth::name() ?? 'Pengguna') . " telah keluar dari sistem",
+                'pengguna',
+                Auth::id()
+            );
+        }
+
         Auth::logout();
-        $this->redirect('/login');
+        
+        // Anti-cache headers
+        header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+        header("Cache-Control: post-check=0, pre-check=0", false);
+        header("Pragma: no-cache");
+        header("Expires: Sat, 26 Jul 1997 05:00:00 GMT");
+
+        $this->view('auth.logout');
     }
 }

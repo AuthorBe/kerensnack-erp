@@ -4,24 +4,32 @@ use App\Core\Router;
 ob_start();
 ?>
 
-<div x-data="inventoryApp()" class="space-y-4">
+<div x-data="inventoryApp()" class="space-y-5">
 
-    <!-- HEADER & SEARCH -->
-    <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;">
-        <div style="display:flex;align-items:center;gap:12px;">
-            <div class="stat-card-icon" style="background:rgba(62,207,142,0.1);color:var(--color-primary);">
-                <i data-lucide="boxes"></i>
+    <!-- ========================================================================= -->
+    <!-- PAGE HEADER                                                               -->
+    <!-- ========================================================================= -->
+    <div class="page-header">
+        <div class="page-header-body">
+            <div class="page-header-icon is-emerald">
+                <i data-lucide="warehouse"></i>
             </div>
-            <div>
-                <div class="section-title">Katalog Master Produk (<span x-text="filteredItems.length"></span> SKU)</div>
-                <div class="section-subtitle">Monitoring stok fisik gudang secara realtime.</div>
+            <div class="page-header-text">
+                <div class="page-header-tag">
+                    <span class="tag-dot"></span>
+                    <span>Inventaris Gudang</span>
+                </div>
+                <h1 class="page-title"><?= $pageTitle ?? 'Katalog & Mutasi Stok Fisik' ?></h1>
+                <p class="page-subtitle"><?= $pageSubtitle ?? 'Monitoring stok realtime, status ketersediaan & kartu stok gudang' ?></p>
             </div>
         </div>
-        <div class="form-input-icon" style="width:100%;max-width:280px;">
-            <i data-lucide="search" class="icon-left"></i>
-            <input type="text" x-model="searchQuery"
-                   placeholder="Cari SKU, Nama atau Barcode..."
-                   class="form-input">
+        <div class="page-header-actions">
+            <div class="form-input-icon w-full sm:w-80">
+                <i data-lucide="search" class="icon-left"></i>
+                <input type="text" x-model="searchQuery"
+                       placeholder="Cari SKU, Nama atau Barcode..."
+                       class="form-input" style="height:40px;">
+            </div>
         </div>
     </div>
 
@@ -97,6 +105,7 @@ ob_start();
     </div>
 
     <!-- MODAL OPNAME -->
+    <template x-teleport="body">
     <div x-show="showAdjustModal" x-cloak class="modal-backdrop">
         <div @click.away="showAdjustModal = false" class="modal-box">
             <div class="modal-header">
@@ -143,6 +152,7 @@ ob_start();
             </form>
         </div>
     </div>
+    </template>
 
 </div>
 

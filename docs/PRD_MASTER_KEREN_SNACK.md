@@ -6,17 +6,39 @@
 
 ## 1. Ringkasan Eksekutif & Visi Sistem
 
-### 1.1 Latar Belakang & Masalah Riil Bisnis
-**KEREN Snack** adalah perusahaan manufaktur repacking dan distribusi makanan ringan (snack curah, kerupuk, berondong beras, opak, singkong, makaroni, dll.) skala besar yang melayani ratusan toko di wilayah Jabodetabek dan sekitarnya. Saat ini operasional menghadapi beberapa tantangan krusial:
-1. **Model Bisnis Repacking Fleksibel**: Membeli bahan baku dalam bentuk **Bal / Curah Besar (kg/bal)**, lalu dipecah (*repack*) menjadi **Pcs / Bungkus**. Tiap jenis produk memiliki rasio konversi (*yield*) berbeda-beda (misal: 1 bal curah 5kg bisa menghasilkan 37 bungkus 135gr + sisa gramasi).
-2. **Matriks Harga Super Kompleks (Unlimited Level Harga &ge; 1)**: 1 item produk memiliki puluhan variasi harga jual berdasarkan tier pelanggan (ritel, grosir kecil, grosir besar, agen pasar, mitra warung, konsinyasi), metode pembayaran (cash vs tempo 7/14/30 hari), dan volume pembelian. IPOS 5 yang hanya mendukung 4 level harga kaku (`tbl_itemhj`) sudah tidak mampu menampung kebutuhan ini.
-3. **Barcode Kemasan Universal (Multi-Rasa 1 Label)**: Kemasan plastik luar *pre-printed* memiliki 1 barcode universal dari pabrik yang digunakan bersama oleh beberapa varian rasa (contoh: Kemasan Singkong 250gr ber-barcode `899123456001` dipakai untuk rasa Asin Gurih, Manis Pedas, dan Opak Balado).
-4. **Model Konsinyasi (Titip Jual Rak Toko)**: Banyak toko langganan menggunakan skema titip jual di mana tagihan hanya terbit saat barang laku berdasarkan hitung fisik rak toko (*Opname Rak* saat kunjungan mingguan Sales-Driver).
-5. **Sales adalah Driver (Sales-Driver / Canvaser Terpadu)**: Staf lapangan yang menyetir mobil/motor rute logistik adalah orang yang sama yang memuat barang ke kendaraan (*loading*), mengantar pesanan, menawarkan snack tambahan di toko (*canvas order*), menagih piutang jatuh tempo, menerima pembayaran tunai, dan melaporkan biaya bensin/tol.
-6. **Pencatatan Fragmented & Rawan Selisih**: Data penggajian borongan terpisah di aplikasi PHP/MySQL (`salaryapp`), stok di IPOS 5 & Excel, kasbon dicatat di buku manual, dan pelaporan biaya bensin via chat WhatsApp tanpa validasi otomatis.
+### 1.1 Latar Belakang & Model Bisnis Riil (Keren Snack)
+**KEREN Snack** adalah usaha manufaktur repacking, assembling, dan distribusi makanan ringan skala besar yang melayani ratusan toko di wilayah Jabodetabek dan sekitarnya. Operasional bisnis terbagi menjadi alur-alur utama berikut:
+
+1. **Model Produksi Repacking & Assembling Mandiri**:
+   - **Tipe A (Repacking Snack Curah)**: Membeli bahan mentah dalam bentuk **Bal / Curah Kiloan Besar** dari supplier (misal: Makaroni Balan 5–10 kg, Kerupuk Balan) + **Kemasan Plastik** berbagai ukuran + **Stiker Label Khusus** $\rightarrow$ dikemas ulang menjadi snack eceran siap jual toko/supermarket.
+   - **Tipe B (Assembly Pretelan Cuanki Cup)**: Membeli bahan pretelan terpisah dari supplier (Mie kering, Cuanki lidah/tahu, Bumbu sachet instan, Cup seduh + Tutup) $\rightarrow$ dirakit menjadi satu kesatuan produk *Cuanki Cup Instan Keren Snack*.
+   - **Tidak Ada Supplier pada Barang Jadi**: Barang jadi adalah hasil repacking/assembly mandiri toko, sehingga tidak memiliki supplier langsung. Yang memiliki data Supplier dan dibeli lewat Faktur Pembelian adalah **Bahan Baku Curah & Bahan Kemasan**.
+   - **Tidak Ada Satuan Jual "Bal" pada Barang Jadi**: Barang jadi murni dijual dalam satuan unit eceran (**Pcs / Bungkus / Cup**). Istilah "Bal" atau "Kiloan" hanya digunakan sebagai satuan pembelian bahan baku mentah dari vendor supplier.
+
+2. **Logika Barcode Universal & Multi-Varian Rasa**:
+   - Kemasan plastik luar *pre-printed* memiliki **1 Barcode Universal** yang digunakan bersama oleh beberapa SKU varian rasa (contoh: Kemasan Makaroni 150gr ber-barcode universal `88030173` menaungi rasa Makaroni Rujak, Makaroni Pedas Jeruk, Makaroni Keju, dan Makaroni Balado).
+   - **Keseragaman Harga per Barcode**: Seluruh varian rasa yang berbagi 1 barcode yang sama **selalu memiliki harga jual yang sama** pada tingkat level harga yang sama (Level 1 s/d Level 28).
+
+3. **Matriks Harga Bertingkat (Level 1–28) & Diskon Pelanggan**:
+   - Setiap toko pelanggan dikaitkan ke **Grup Pelanggan** untuk menentukan tingkat **Level Harga (Level 1 s/d Level 28)** yang berlaku bagi toko tersebut.
+   - Toko pelanggan dapat memiliki diskon default bawaan grup atau diskon khusus per toko (% atau potongan nominal per bungkus).
+
+4. **Modul Persediaan Fleksibel (Standar iPos 5 Profesional)**:
+   - Pengeluaran bahan mentah di lapangan tidak selalu 100% presisi matematis (terdapat potensi plastik sobek/gagal *seal*, makaroni remuk/hancur, stiker rusak, bahan terbuang/*waste*, atau sampel).
+   - Sistem persediaan menyediakan modul terpadu: **Daftar Item Masuk**, **Daftar Item Keluar (Waste/Manual)**, **Stok Opname Fisik**, dan **Saldo Awal Item**.
+
+5. **Unifikasi Dua Aplikasi & Satu Database Terpadu (Supabase)**:
+   - **`salaryapp` (`D:\laragon\www\salary`)**: Aplikasi operasional lapangan untuk pencatatan absensi harian, input hasil produksi bungkus buruh borongan (`produksi`), pengelolaan kasbon, tabungan, dan perhitungan slip gaji mingguan/bulanan.
+   - **`kerensnack-erp` (Aplikasi Utama)**: Pusat kendali operasional, POS Kasir Toko, Master Data Terpadu, Manajemen Stok Bahan Baku & Barang Jadi, Modul Konsinyasi Rak, Surat Jalan Logistik, dan **Dashboard Rekapitulasi Eksekutif Owner** (rekap produksi, rekap pengeluaran payroll, dan arus kas terpadu).
+
+6. **Model Konsinyasi (Titip Jual Rak Toko)**:
+   - Toko konsinyasi menggunakan skema titip jual di mana tagihan hanya terbit saat barang laku berdasarkan hitung fisik rak toko (*Opname Rak* saat kunjungan mingguan Sales-Driver).
+
+7. **Sales adalah Driver (Sales-Driver / Canvaser Terpadu)**:
+   - Staf lapangan merangkap pengemudi rute logistik, memuat barang (*loading*), mengantar pesanan, menawarkan snack tambahan (*canvas order*), menagih piutang jatuh tempo, dan menerima pembayaran tunai.
 
 ### 1.2 Visi Solusi (Next-Gen Autonomous AI ERP)
-Membangun **Single Source of Truth (SSOT)** berbasis **PostgreSQL 15+ (Supabase Cloud)** yang terintegrasi penuh dengan **n8n Workflow Automation**, **Google Gemini 2.0 AI**, **Bot Telegram Lapangan**, **Aplikasi Salary PHP**, dan **Web App POS Kasir & Owner Command Center (PHP MVC + Tailwind CSS + Alpine.js)**.
+Membangun **Single Source of Truth (SSOT)** berbasis **PostgreSQL 15+ (Supabase Cloud)** yang menghubungkan seluruh ekosistem: **Web App POS & Owner Command Center (`kerensnack-erp`)**, **Aplikasi Payroll Borongan (`salaryapp`)**, **Workflow Automation (n8n)**, dan **Telegram Bot Lapangan**.
 
 Sistem ini mentransformasikan operasional menjadi **Karyawan AI Mandiri**:
 * 80% pekerjaan mekanis/berulang (susun rute manifest pengiriman besok, hitung upah borongan bungkus, parsing biaya bensin, validasi limit piutang, draf surat jalan) diambil alih oleh AI dan Database Triggers.
@@ -217,78 +239,78 @@ Pemegang aturan level harga default (Level 1 s/d unlimited) dan diskon grup otom
 
 ---
 
-### MODUL 3: GRUP PRODUK, ITEM (VARIAN RASA) & PRICING MATRIX DINAMIS (5 Tabel)
+### MODUL 3: GRUP PRODUK, ITEM (BAHAN BAKU & BARANG JADI) & PRICING MATRIX DINAMIS (5 Tabel)
 
-#### 11. `grup_produk` (Pemegang Barcode Kemasan Universal & Level Harga)
+#### 11. `grup_produk` (Pemegang Barcode Kemasan Universal & Matriks Level)
+Mewakili satu desain kemasan luar yang dicetak pabrik dengan 1 barcode universal.
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
-* **`kode_grup`** `VARCHAR(50)` NOT NULL UNIQUE (Contoh: `'GRP-001'`, `'GRP-SINGKONG-250'`, `'GRP-BRND-135'`)
-* **`nama_grup`** `VARCHAR(150)` NOT NULL
-* **`barcode_universal`** `VARCHAR(100)` NULL (Barcode fisik yang tercetak pada plastik kemasan luar)
+* **`kode_grup`** `VARCHAR(50)` NOT NULL UNIQUE (Contoh: `'GRP-001'`, `'GRP-SINGKONG-250'`, `'GRP-MAK-150'`)
+* **`nama_grup`** `VARCHAR(150)` NOT NULL (Contoh: `'KEREN SNACK MAKARONI 150GR'`)
+* **`barcode_universal`** `VARCHAR(100)` NULL (Barcode fisik tercetak pada kemasan luar)
 * **`merek`** `VARCHAR(100)` NOT NULL DEFAULT `'KEREN SNACK'`
-* **`satuan_dasar`** `VARCHAR(30)` NOT NULL DEFAULT `'pcs'`
-* **`satuan_distribusi`** `VARCHAR(30)` NOT NULL DEFAULT `'bal'`
-* **`konversi_bal_ke_pcs`** `INT` NOT NULL DEFAULT 20
+* **`satuan_jual`** `VARCHAR(30)` NOT NULL DEFAULT `'pcs'` (Satuan eceran: `'pcs'`, `'pack'`, `'cup'`, `'bungkus'`)
 * **`status_aktif`** `BOOLEAN` NOT NULL DEFAULT `TRUE`
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 * **`diubah_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 
-#### 12. `grup_produk_harga_level` (Matriks Harga Jual Dinamis Level 1 s/d Unlimited)
-Menyimpan harga jual per bungkus (pcs) dan per bal untuk masing-masing tingkatan level harga.
+#### 12. `grup_produk_harga_level` (Matriks Harga Jual Dinamis Level 1 s/d 28)
+Menyimpan harga jual per bungkus/pcs untuk masing-masing tingkatan level harga toko.
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
 * **`grup_produk_id`** `UUID` NOT NULL REFERENCES `grup_produk(id)` ON DELETE CASCADE
-* **`level_harga`** `INT` NOT NULL CHECK (level_harga >= 1)
-* **`nama_level`** `VARCHAR(50)` NOT NULL (Contoh: `'Level 1 - Ritel'`, `'Level 5 - Konsinyasi'`, `'Level 8 - Grosir Mitra'`)
-* **`harga_jual_pcs`** `NUMERIC(15, 2)` NOT NULL
-* **`harga_jual_bal`** `NUMERIC(15, 2)` NOT NULL
+* **`level_harga`** `INT` NOT NULL CHECK (level_harga >= 1 AND level_harga <= 28)
+* **`nama_level`** `VARCHAR(50)` NOT NULL (Contoh: `'Level 1 - Ritel'`, `'Level 5 - Konsinyasi'`, `'Level 8 - Grosir Mitra'`, `'Level 12 - Agen Pasar'`)
+* **`harga_jual_pcs`** `NUMERIC(15, 2)` NOT NULL (Harga jual eceran per bungkus/cup)
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 * **`diubah_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 * *Constraint*: `UNIQUE(grup_produk_id, level_harga)`
 
-#### 13. `kelompok_upah_borongan` (Kamus Tarif Ongkos Bungkus)
+#### 13. `kelompok_upah_borongan` (Kamus Tarif Ongkos Bungkus Karyawan)
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
-* **`id_legacy`** `INT` NULL UNIQUE
+* **`id_legacy`** `INT` NULL UNIQUE (Sinkron `kelompok_harga_produk` di SalaryApp)
 * **`nama_kelompok`** `VARCHAR(100)` NOT NULL UNIQUE (Contoh: `'Kelompok 600'`, `'Kelompok 500'`, `'Kelompok 300'`)
-* **`upah_per_bungkus`** `NUMERIC(15, 2)` NOT NULL
+* **`upah_per_bungkus`** `NUMERIC(15, 2)` NOT NULL (Nominal rupiah yang didapat buruh per 1 bungkus hasil repacking)
 * **`keterangan`** `TEXT` NULL
 * **`status_aktif`** `BOOLEAN` NOT NULL DEFAULT `TRUE`
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 * **`diubah_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 
-#### 14. `item` (Master SKU Tunggal / Varian Rasa / Bahan Baku)
+#### 14. `item` (Master Item: Barang Jadi, Bahan Mentah Curah & Bahan Kemas)
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
-* **`id_legacy_produk`** `INT` NULL UNIQUE
-* **`grup_id`** `UUID` NULL REFERENCES `grup_produk(id)`
-* **`kode_sku`** `VARCHAR(50)` NOT NULL UNIQUE (Contoh: `'SUB-0001'`, `'KS-SK-ASIN-250'`)
-* **`barcode`** `VARCHAR(100)` NULL
+* **`id_legacy_produk`** `INT` NULL UNIQUE (Sinkron `produk.id` di SalaryApp)
+* **`grup_id`** `UUID` NULL REFERENCES `grup_produk(id)` (Hanya terisi jika `tipe_item = 'barang_jadi'`)
+* **`kode_sku`** `VARCHAR(50)` NOT NULL UNIQUE (Contoh: `'KS-MAK-RUJAK-150'`, `'BAHAN-MAK-BAL'`, `'KEMAS-PLST-150'`)
+* **`barcode`** `VARCHAR(100)` NULL (Barcode fisik spesifik atau inherit barcode universal)
 * **`nama_item`** `VARCHAR(200)` NOT NULL
-* **`varian_rasa`** `VARCHAR(100)` NULL (Contoh: `'Asin Gurih'`, `'Manis Pedas'`, `'Opak'`)
+* **`varian_rasa`** `VARCHAR(100)` NULL (Contoh: `'Rujak'`, `'Pedas Daun Jeruk'`, `'Keju'`, `'Balado'`)
 * **`tipe_item`** `VARCHAR(30)` NOT NULL CHECK (tipe_item IN ('barang_jadi', 'bahan_mentah', 'bahan_kemas'))
-* **`satuan_dasar`** `VARCHAR(30)` NOT NULL
-* **`satuan_distribusi`** `VARCHAR(30)` NOT NULL DEFAULT `'bal'`
-* **`konversi_distribusi_ke_dasar`** `INT` NOT NULL DEFAULT 1
+  - `'barang_jadi'`: Produk hasil repacking/assembly yang dijual di POS Kasir (Tidak punya supplier).
+  - `'bahan_mentah'`: Snack balan kiloan curah, mie, cuanki lidah, bumbu (Dibeli dari supplier via Pembelian).
+  - `'bahan_kemas'`: Plastik berbagai ukuran, stiker label produk, cup seduh + tutup (Dibeli dari supplier).
+* **`satuan_dasar`** `VARCHAR(30)` NOT NULL (Nilai: `'pcs'`, `'kg'`, `'bal'`, `'lembar'`, `'pack'`, `'roll'`)
 * **`kelompok_borongan_id`** `UUID` NULL REFERENCES `kelompok_upah_borongan(id)`
-* **`pemasok_utama_id`** `UUID` NULL REFERENCES `pemasok(id)`
-* **`harga_pokok_pembelian`** `NUMERIC(15, 2)` NOT NULL DEFAULT 0.00
+* **`pemasok_utama_id`** `UUID` NULL REFERENCES `pemasok(id)` (Hanya untuk `bahan_mentah` dan `bahan_kemas`)
+* **`harga_pokok_pembelian`** `NUMERIC(15, 2)` NOT NULL DEFAULT 0.00 (HPP Beli dari Vendor Supplier)
 * **`stok_minimum_peringatan`** `INT` NOT NULL DEFAULT 10
-* **`stok_fisik_saat_ini`** `INT` NOT NULL DEFAULT 0
-* **`status_jual`** `BOOLEAN` NOT NULL DEFAULT `TRUE`
+* **`stok_fisik_saat_ini`** `NUMERIC(15, 2)` NOT NULL DEFAULT 0.00
+* **`status_jual`** `BOOLEAN` NOT NULL DEFAULT `TRUE` (True jika barang_jadi yang tampil di POS)
 * **`status_aktif`** `BOOLEAN` NOT NULL DEFAULT `TRUE`
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 * **`diubah_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 
-#### 15. `komposisi_item` (Bill of Materials / Resep Repacking Bal Curah)
+#### 15. `komposisi_item` (Bill of Materials / Master Resep Repacking & Assembly)
+Menghubungkan 1 unit Barang Jadi dengan Bahan Baku & Kemasan yang dibutuhkan.
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
 * **`item_jadi_id`** `UUID` NOT NULL REFERENCES `item(id)` ON DELETE CASCADE
 * **`item_bahan_id`** `UUID` NOT NULL REFERENCES `item(id)` ON DELETE RESTRICT
-* **`jumlah_kebutuhan`** `NUMERIC(12, 4)` NOT NULL (Contoh: 0.1350 kg curah singkong + 1 lbr plastik)
+* **`jumlah_kebutuhan`** `NUMERIC(12, 4)` NOT NULL (Contoh: 0.1500 kg Makaroni Curah Balan + 1 lbr Plastik + 1 lbr Label)
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 * *Constraint*: `UNIQUE(item_jadi_id, item_bahan_id)`
 
 ---
 
-### MODUL 4: GUDANG, PEMBELIAN & MUTASI STOK IMMUTABLE (4 Tabel)
+### MODUL 4: GUDANG, PEMBELIAN SUPPLIER & PERSEDIAAN ALA IPOS 5 (4 Tabel)
 
-#### 16. `pembelian` (PO / Faktur Pembelian Bahan Vendor)
+#### 16. `pembelian` (Faktur Pembelian Bahan Baku / Kemasan dari Vendor)
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
 * **`nomor_faktur_pembelian`** `VARCHAR(100)` NOT NULL UNIQUE
 * **`pemasok_id`** `UUID` NOT NULL REFERENCES `pemasok(id)`
@@ -301,38 +323,49 @@ Menyimpan harga jual per bungkus (pcs) dan per bal untuk masing-masing tingkatan
 * **`dibuat_oleh`** `UUID` NULL REFERENCES `pengguna(id)`
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 
-#### 17. `rincian_pembelian`
+#### 17. `rincian_pembelian` (Detail Item Bahan yang Dibeli)
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
 * **`pembelian_id`** `UUID` NOT NULL REFERENCES `pembelian(id)` ON DELETE CASCADE
-* **`item_id`** `UUID` NOT NULL REFERENCES `item(id)`
-* **`kuantitas`** `INT` NOT NULL CHECK (kuantitas > 0)
-* **`satuan`** `VARCHAR(30)` NOT NULL
+* **`item_id`** `UUID` NOT NULL REFERENCES `item(id)` (Khusus item bertipe `bahan_mentah` / `bahan_kemas`)
+* **`kuantitas`** `NUMERIC(15, 2)` NOT NULL CHECK (kuantitas > 0)
+* **`satuan`** `VARCHAR(30)` NOT NULL (Contoh: `'bal'`, `'kg'`, `'lembar'`, `'roll'`)
 * **`harga_satuan`** `NUMERIC(15, 2)` NOT NULL
 * **`subtotal`** `NUMERIC(15, 2)` NOT NULL
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 
-#### 18. `penyesuaian_stok` (Stock Opname Fisik & Barang Rusak)
+#### 18. `mutasi_persediaan_manual` (Item Masuk, Item Keluar / Waste & Saldo Awal ala iPos 5)
+Mencatat seluruh mutasi persediaan manual yang terjadi di luar pembelian dan POS.
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
-* **`nomor_dokumen`** `VARCHAR(100)` NOT NULL UNIQUE
+* **`nomor_dokumen`** `VARCHAR(100)` NOT NULL UNIQUE (Contoh: `'IM-202608-001'`, `'IK-202608-001'`, `'SA-202608-001'`)
 * **`item_id`** `UUID` NOT NULL REFERENCES `item(id)`
 * **`tanggal`** `DATE` NOT NULL DEFAULT `CURRENT_DATE`
-* **`tipe_penyesuaian`** `VARCHAR(50)` NOT NULL CHECK (tipe_penyesuaian IN ('opname_hilang', 'opname_lebih', 'barang_rusak', 'retur_masuk_manual'))
-* **`kuantitas`** `INT` NOT NULL CHECK (kuantitas > 0)
-* **`alasan_keterangan`** `TEXT` NOT NULL
+* **`jenis_mutasi`** `VARCHAR(50)` NOT NULL CHECK (jenis_mutasi IN (
+    'item_masuk',         -- Penambahan manual (bonus supplier, sisa bahan repacking dikembalikan)
+    'item_keluar_waste',  -- Pengurangan manual (plastik rusak/gagal seal, snack remuk/hancur, sampel)
+    'item_keluar_manual', -- Bahan dikeluarkan ke lantai produksi secara manual
+    'saldo_awal',         -- Inisialisasi stok awal item
+    'opname_selisih_lebih', -- Hasil hitung fisik > sistem (+)
+    'opname_selisih_kurang' -- Hasil hitung fisik < sistem (-)
+  ))
+* **`kuantitas`** `NUMERIC(15, 2)` NOT NULL CHECK (kuantitas > 0)
+* **`alasan_keterangan`** `TEXT` NOT NULL (Penjelasan: misal *"Plastik cacat seal 25 lembar"*, *"Remukan makaroni 1.5kg"*)
 * **`dicatat_oleh`** `UUID` NOT NULL REFERENCES `pengguna(id)`
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 
-#### 19. `riwayat_stok` (Buku Besar Mutasi Stok Immutable)
+#### 19. `riwayat_stok` (Buku Besar Mutasi Persediaan Immutable)
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
 * **`item_id`** `UUID` NOT NULL REFERENCES `item(id)`
 * **`tipe_mutasi`** `VARCHAR(50)` NOT NULL CHECK (tipe_mutasi IN (
-    'produksi_masuk', 'bahan_terpakai_produksi', 'penjualan_keluar',
-    'pembelian_masuk', 'penyesuaian_opname_tambah', 'penyesuaian_opname_kurang',
-    'retur_pelanggan_masuk', 'konsinyasi_keluar', 'konsinyasi_retur_masuk'
+    'pembelian_masuk', 'item_masuk_manual', 'saldo_awal_masuk',
+    'produksi_barang_jadi_masuk', 'produksi_bahan_baku_keluar',
+    'penjualan_pos_keluar', 'surat_jalan_kirim_keluar',
+    'item_keluar_waste', 'item_keluar_manual',
+    'opname_penyesuaian_plus', 'opname_penyesuaian_minus',
+    'konsinyasi_titip_keluar', 'konsinyasi_retur_masuk'
   ))
-* **`jumlah_perubahan`** `INT` NOT NULL
-* **`stok_sebelum`** `INT` NOT NULL
-* **`stok_sesudah`** `INT` NOT NULL
+* **`jumlah_perubahan`** `NUMERIC(15, 2)` NOT NULL
+* **`stok_sebelum`** `NUMERIC(15, 2)` NOT NULL
+* **`stok_sesudah`** `NUMERIC(15, 2)` NOT NULL
 * **`referensi_tabel`** `VARCHAR(50)` NOT NULL
 * **`referensi_id`** `UUID` NOT NULL
 * **`keterangan`** `TEXT` NULL
@@ -600,14 +633,27 @@ Menyimpan harga jual per bungkus (pcs) dan per bal untuk masing-masing tingkatan
 * **`dibuat_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 * **`diubah_pada`** `TIMESTAMPTZ` NOT NULL DEFAULT `NOW()`
 
-#### 38. `arus_kas` (Buku Kas Besar Toko - Ledger Keuangan Immutable)
+#### 38. `arus_kas` (Buku Kas & Bank Besar Toko - Ledger Keuangan Immutable)
+Mencatat seluruh transaksi uang masuk dan uang keluar toko secara transparan dan terperinci ala iPos 5.
 * **`id`** `UUID` PRIMARY KEY DEFAULT `gen_random_uuid()`
 * **`akun_kas_id`** `UUID` NOT NULL REFERENCES `akun_kas(id)`
 * **`tanggal_transaksi`** `DATE` NOT NULL DEFAULT `CURRENT_DATE`
 * **`jenis_kas`** `VARCHAR(20)` NOT NULL CHECK (jenis_kas IN ('masuk', 'keluar'))
-* **`kategori`** `VARCHAR(50)` NOT NULL CHECK (kategori IN ('penjualan', 'beban_operasional', 'pembayaran_payroll', 'kasbon', 'pembelian_bahan', 'transfer_antar_kas'))
+* **`kategori`** `VARCHAR(50)` NOT NULL CHECK (kategori IN (
+    'kas_masuk_penjualan_pos',    -- Kas masuk dari kasir toko tunai
+    'kas_masuk_pelunasan_piutang', -- Kas masuk dari tagihan toko langganan (Cash/Transfer)
+    'kas_masuk_modal_owner',       -- Suntikan dana / modal awal
+    'kas_masuk_pendapatan_lain',   -- Pemasukan non-operasional
+    'kas_keluar_pembelian_bahan',  -- Pembayaran faktur pembelian bahan baku ke vendor
+    'kas_keluar_pembayaran_payroll', -- Pembayaran slip gaji mingguan/bulanan dari SalaryApp
+    'kas_keluar_pencairan_kasbon',  -- Uang kasbon pinjaman karyawan
+    'kas_keluar_operasional_toko',  -- Beban bensin, lakban, plastik kresek, listrik, perbaikan mesin
+    'kas_keluar_prive_owner',       -- Penarikan profit oleh owner
+    'transfer_antar_kas_masuk',     -- Penerimaan transfer dari akun kas lain
+    'transfer_antar_kas_keluar'     -- Pengiriman transfer ke akun kas lain (misal: Setor Laci Kasir ke BCA)
+  ))
 * **`nominal`** `NUMERIC(15, 2)` NOT NULL CHECK (nominal > 0)
-* **`keterangan`** `TEXT` NOT NULL
+* **`keterangan`** `TEXT` NOT NULL (Catatan detail transaksi)
 * **`referensi_tabel`** `VARCHAR(50)` NULL
 * **`referensi_id`** `UUID` NULL
 * **`saldo_berjalan`** `NUMERIC(15, 2)` NOT NULL

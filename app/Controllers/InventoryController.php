@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Helpers\ActivityLog;
 use Database;
 use Throwable;
 
@@ -43,7 +44,7 @@ class InventoryController extends Controller
             ");
 
             $this->view('inventory.index', [
-                'pageTitle' => 'Katalog & Mutasi Stok (137 SKU)',
+                'pageTitle' => 'Katalog & Mutasi Stok',
                 'pageSubtitle' => 'Monitoring Stok Fisik Gudang & Riwayat Perubahan',
                 'items' => $items,
                 'recentLogs' => $recentLogs
@@ -73,6 +74,14 @@ class InventoryController extends Controller
 
             $item = Database::fetchOne("SELECT stok_fisik_saat_ini, nama_item FROM public.item WHERE id = :id", ['id' => $itemId]);
             $stokLama = (int)($item['stok_fisik_saat_ini'] ?? 0);
+
+            // Pengaman Anti-Minus: Pengurangan tidak boleh melebihi sisa stok
+            if (!in_array($tipe, ['opname_lebih', 'retur_masuk_manual'], true) && $stokLama < $qty) {
+                $this->flashError("Jumlah penyesuaian minus ({$qty} pcs) melebihi stok fisik saat ini ({$stokLama} pcs). Stok tidak boleh minus.");
+                $this->redirect('/inventory');
+                return;
+            }
+
             $stokBaru = in_array($tipe, ['opname_lebih', 'retur_masuk_manual']) ? ($stokLama + $qty) : max(0, $stokLama - $qty);
 
             // Update item
@@ -96,6 +105,14 @@ class InventoryController extends Controller
                 'sesudah' => $stokBaru,
                 'ket' => "Manual Opname: {$alasan}"
             ]);
+
+            ActivityLog::log(
+                'logistik',
+                'UPDATE',
+                "Penyesuaian Stok Opname '{$item['nama_item']}' dari {$stokLama} pcs menjadi {$stokBaru} pcs (Alasan: {$alasan})",
+                'item',
+                $itemId
+            );
 
             $pdo->commit();
             $this->flashSuccess("Opname fisik berhasil! Stok '{$item['nama_item']}' kini menjadi {$stokBaru} pcs.");

@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS public.pelanggan (
     tipe_pembayaran_default VARCHAR(30) NOT NULL DEFAULT 'cash' CHECK (tipe_pembayaran_default IN ('cash', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi')),
     plafon_piutang NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     total_piutang_berjalan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    sales_driver_id UUID REFERENCES public.karyawan(id), -- Sales pemegang toko tetap
     override_level_harga INT CHECK (override_level_harga >= 1), -- Bebas, tanpa batas maksimal
     override_diskon_persen NUMERIC(5, 2) DEFAULT 0.00,
     override_diskon_nominal NUMERIC(15, 2) DEFAULT 0.00,
@@ -275,7 +276,7 @@ CREATE TABLE IF NOT EXISTS public.riwayat_stok (
     tipe_mutasi VARCHAR(50) NOT NULL CHECK (tipe_mutasi IN (
         'produksi_masuk', 'bahan_terpakai_produksi', 'penjualan_keluar',
         'pembelian_masuk', 'penyesuaian_opname_tambah', 'penyesuaian_opname_kurang',
-        'retur_pelanggan_masuk', 'konsinyasi_keluar', 'konsinyasi_retur_masuk'
+        'retur_pelanggan_masuk', 'konsinyasi_keluar', 'konsinyasi_retur_masuk', 'konsinyasi_retur_rusak'
     )),
     jumlah_perubahan INT NOT NULL,
     stok_sebelum INT NOT NULL,
@@ -302,10 +303,14 @@ CREATE TABLE IF NOT EXISTS public.pesanan (
     total_netto NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     tipe_pembayaran VARCHAR(30) NOT NULL CHECK (tipe_pembayaran IN ('cash', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi')),
     tanggal_jatuh_tempo DATE,
-    status_pembayaran VARCHAR(30) NOT NULL DEFAULT 'belum_lunas' CHECK (status_pembayaran IN ('belum_lunas', 'tempo', 'lunas', 'dibatalkan')),
+    status_pembayaran VARCHAR(30) NOT NULL DEFAULT 'belum_lunas' CHECK (status_pembayaran IN ('belum_lunas', 'sebagian', 'tempo', 'lunas', 'dibatalkan')),
     status_pemrosesan VARCHAR(30) NOT NULL DEFAULT 'menunggu_approval' CHECK (status_pemrosesan IN ('menunggu_approval', 'disetujui', 'siap_kirim', 'dalam_pengiriman', 'selesai', 'dibatalkan')),
     catatan TEXT,
     dibuat_oleh UUID REFERENCES public.pengguna(id),
+    akun_kas_id UUID REFERENCES public.akun_kas(id),
+    total_dibayar NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    sisa_tagihan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    adalah_tagihan BOOLEAN NOT NULL DEFAULT TRUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -331,7 +336,7 @@ CREATE TABLE IF NOT EXISTS public.surat_jalan (
     sales_driver_id UUID REFERENCES public.karyawan(id),
     rute_wilayah_id UUID REFERENCES public.wilayah(id),
     url_pdf_dokumen TEXT,
-    status_surat_jalan VARCHAR(30) NOT NULL DEFAULT 'draf_n8n' CHECK (status_surat_jalan IN ('draf_n8n', 'disetujui_owner', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali')),
+    status_surat_jalan VARCHAR(30) NOT NULL DEFAULT 'draf_n8n' CHECK (status_surat_jalan IN ('draf_n8n', 'disetujui_owner', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'ditolak_owner')),
     bukti_terima_foto TEXT, -- Foto bukti terima toko yang diupload Sales-Driver via Telegram
     nama_penerima_toko VARCHAR(100),
     waktu_berangkat TIMESTAMPTZ,
@@ -376,12 +381,16 @@ CREATE TABLE IF NOT EXISTS public.rincian_kunjungan_konsinyasi (
     kunjungan_id UUID NOT NULL REFERENCES public.kunjungan_konsinyasi(id) ON DELETE CASCADE,
     item_id UUID NOT NULL REFERENCES public.item(id),
     stok_titip_awal INT NOT NULL, -- Sisa di sistem sebelumnya
-    tambah_titip_baru INT NOT NULL DEFAULT 0, -- Tambahan bal baru yang dibawa hari ini
+    tambah_titip_baru INT NOT NULL DEFAULT 0,
     sisa_fisik_di_rak INT NOT NULL, -- Hasil hitung fisik di rak toko
+    retur_bagus INT NOT NULL DEFAULT 0, -- Sisa bagus yang ditarik balik ke gudang
     retur_rusak INT NOT NULL DEFAULT 0, -- Bungkus rusak/bocor yang ditarik balik
-    jumlah_laku_terjual INT NOT NULL, -- (stok_titip_awal + tambah_titip_baru) - (sisa_fisik_di_rak + retur_rusak)
+    jumlah_laku_terjual INT NOT NULL, -- stok_titip_awal - (sisa_fisik_di_rak + retur_bagus + retur_rusak)
+    selisih_qty INT NOT NULL DEFAULT 0,
     harga_satuan_deal NUMERIC(15, 2) NOT NULL,
     subtotal_laku NUMERIC(15, 2) NOT NULL,
+    harga_pokok_satuan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    nilai_kerugian_rusak NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

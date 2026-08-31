@@ -26,17 +26,27 @@ class PosController extends Controller
     public function index(): void
     {
         try {
-            // 1. Ambil seluruh master toko pelanggan
+            // 1. Ambil pelanggan khusus UMUM / CASH (Konsumen Ritel Walk-in)
             $customers = Database::fetchAll("
                 SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.is_konsinyasi, 
                        gp.nama_grup as grup_nama, gp.default_level_harga
                 FROM public.pelanggan p
                 JOIN public.grup_pelanggan gp ON p.grup_pelanggan_id = gp.id
                 WHERE p.status_aktif = TRUE
-                ORDER BY p.nama_toko ASC
+                  AND (p.kode_pelanggan = 'CUST-001' OR LOWER(p.nama_toko) LIKE '%umum%' OR LOWER(p.nama_toko) LIKE '%cash%')
+                ORDER BY p.kode_pelanggan ASC
             ");
 
-            // 2. Ambil master grup produk & item SKU
+            if (empty($customers)) {
+                $customers = Database::fetchAll("
+                    SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, false as is_konsinyasi, 
+                           'Grup Ritel Standar (Level 1)' as grup_nama, 1 as default_level_harga 
+                    FROM public.pelanggan p 
+                    WHERE p.kode_pelanggan = 'CUST-001'
+                ");
+            }
+
+            // 2. Ambil master grup produk & item SKU lengkap dengan Harga Retail Level 1
             $groups = Database::fetchAll("
                 SELECT id, kode_grup, nama_grup, barcode_universal, satuan_dasar, satuan_distribusi, konversi_bal_ke_pcs
                 FROM public.grup_produk
@@ -47,14 +57,26 @@ class PosController extends Controller
             $items = Database::fetchAll("
                 SELECT i.id, i.grup_id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
                        i.satuan_dasar, i.satuan_distribusi, i.stok_fisik_saat_ini, i.harga_pokok_pembelian,
-                       gp.nama_grup, gp.kode_grup
+                       gp.nama_grup, gp.kode_grup,
+                       COALESCE(gphl.harga_jual_pcs, 15000) AS harga_jual_satuan
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 1
                 WHERE i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
 
-            // 3. Ambil akun kas aktif
+            // 3. Ambil pemetaan item khusus pelanggan
+            $rawCustomerItems = Database::fetchAll("
+                SELECT pelanggan_id, item_id 
+                FROM public.pelanggan_item
+            ");
+            $customerItemsMap = [];
+            foreach ($rawCustomerItems as $ci) {
+                $customerItemsMap[$ci['pelanggan_id']][] = $ci['item_id'];
+            }
+
+            // 4. Ambil akun kas aktif
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, saldo_saat_ini 
                 FROM public.akun_kas 
@@ -62,11 +84,12 @@ class PosController extends Controller
             ");
 
             $this->view('pos.index', [
-                'pageTitle' => 'Kasir POS (Point of Sale)',
-                'pageSubtitle' => 'Layar Transaksi Penjualan Cepat',
+                'pageTitle' => 'Kasir POS',
+                'pageSubtitle' => 'Layar Transaksi Penjualan Ritel / Umum',
                 'customers' => $customers,
                 'groups' => $groups,
                 'items' => $items,
+                'customerItemsMap' => $customerItemsMap,
                 'cashAccounts' => $cashAccounts,
             ]);
 
@@ -134,8 +157,32 @@ class PosController extends Controller
     {
         $payload = json_decode(file_get_contents('php://input'), true);
 
-        if (empty($payload) || empty($payload['customer_id']) || empty($payload['cart'])) {
+        if (empty($payload) || empty($payload['customer_id']) || empty($payload['cart']) || !is_array($payload['cart'])) {
             $this->json(['success' => false, 'message' => 'Keranjang belanja kosong'], 400);
+            return;
+        }
+
+        $rawCart = $payload['cart'];
+        $validCart = [];
+        $totalNetto = 0.0;
+        $totalQty = 0;
+
+        foreach ($rawCart as $c) {
+            $itemId = $c['item_id'] ?? null;
+            $qtyPcs = (int)($c['qty_pcs'] ?? 0);
+            $qtyBal = (int)($c['qty_bal'] ?? 0);
+            $subtotal = (float)($c['subtotal'] ?? 0);
+
+            if (!empty($itemId) && ($qtyPcs > 0 || $qtyBal > 0)) {
+                $validCart[] = $c;
+                $totalNetto += $subtotal;
+                $totalQty += ($qtyPcs + $qtyBal);
+            }
+        }
+
+        if (empty($validCart) || $totalQty <= 0 || $totalNetto <= 0) {
+            $this->json(['success' => false, 'message' => 'Keranjang belanja kosong atau seluruh kuantitas bernilai 0.'], 400);
+            return;
         }
 
         try {
@@ -146,33 +193,41 @@ class PosController extends Controller
             $customerId = $payload['customer_id'];
             $paymentType = $payload['payment_type'] ?? 'cash';
             $catatan = $payload['notes'] ?? 'Transaksi Kasir POS';
-            $cart = $payload['cart'];
+            $cart = $validCart;
 
-            $totalBruto = 0.0;
-            $totalDiskon = 0.0;
-            $totalNetto = 0.0;
-
-            foreach ($cart as $c) {
-                $subtotal = (float)($c['subtotal'] ?? 0);
-                $totalNetto += $subtotal;
-            }
             $totalBruto = $totalNetto; // Dihitung dari akumulasi netto item
+            $totalDiskon = 0.0;
 
             $statusPembayaran = ($paymentType === 'cash') ? 'lunas' : 'tempo';
             $jatuhTempo = ($paymentType === 'tempo_7_hari') ? date('Y-m-d', strtotime('+7 days')) :
                           (($paymentType === 'tempo_14_hari') ? date('Y-m-d', strtotime('+14 days')) : null);
 
-            // 1. Insert ke tabel pesanan
+            // 1. Ambil data pelanggan & toko
+            $customer = Database::fetchOne("
+                SELECT p.nama_toko, p.nama_pemilik, gp.nama_grup 
+                FROM public.pelanggan p
+                LEFT JOIN public.grup_pelanggan gp ON p.grup_pelanggan_id = gp.id
+                WHERE p.id = :id
+            ", ['id' => $customerId]);
+
+            $storeSettings = [];
+            $settingsRows = Database::fetchAll("SELECT kunci, nilai FROM public.pengaturan_sistem");
+            foreach ($settingsRows as $sr) {
+                $storeSettings[$sr['kunci']] = $sr['nilai'];
+            }
+
+            // 2. Insert ke tabel pesanan
             $stmtPesanan = $pdo->prepare("
                 INSERT INTO public.pesanan (
                     nomor_nota, pelanggan_id, tanggal_pesanan, total_bruto, total_diskon, total_netto,
-                    tipe_pembayaran, tanggal_jatuh_tempo, status_pembayaran, status_pemrosesan, catatan
+                    tipe_pembayaran, tanggal_jatuh_tempo, status_pembayaran, status_pemrosesan, catatan, dibuat_oleh
                 ) VALUES (
                     :nomor_nota, :pelanggan_id, CURRENT_DATE, :total_bruto, :total_diskon, :total_netto,
-                    :tipe_pembayaran, :jatuh_tempo, :status_pembayaran, 'selesai', :catatan
+                    :tipe_pembayaran, :jatuh_tempo, :status_pembayaran, 'selesai', :catatan, :dibuat_oleh
                 ) RETURNING id
             ");
 
+            $userId = Auth::id() ?: null;
             $stmtPesanan->execute([
                 'nomor_nota' => $nomorNota,
                 'pelanggan_id' => $customerId,
@@ -182,12 +237,13 @@ class PosController extends Controller
                 'tipe_pembayaran' => $paymentType,
                 'jatuh_tempo' => $jatuhTempo,
                 'status_pembayaran' => $statusPembayaran,
-                'catatan' => $catatan
+                'catatan' => $catatan,
+                'dibuat_oleh' => $userId
             ]);
 
             $pesananId = $stmtPesanan->fetchColumn();
 
-            // 2. Insert ke item_pesanan
+            // 3. Insert ke item_pesanan + POTONG STOK FISIK & CATAT RIWAYAT MUTASI STOK
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
                     pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
@@ -197,42 +253,140 @@ class PosController extends Controller
                 )
             ");
 
+            $stmtUpdateStock = $pdo->prepare("
+                UPDATE public.item 
+                SET stok_fisik_saat_ini = :stok_baru, diubah_pada = NOW() 
+                WHERE id = :item_id
+            ");
+
+            $stmtRiwayatStok = $pdo->prepare("
+                INSERT INTO public.riwayat_stok (
+                    item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
+                    referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
+                ) VALUES (
+                    :item_id, 'penjualan_keluar', :perubahan, :sebelum, :sesudah,
+                    'pesanan', :pesanan_id, :keterangan, :dibuat_oleh, NOW()
+                )
+            ");
+
+            $receiptItems = [];
+
             foreach ($cart as $c) {
+                $itemId = $c['item_id'];
+                $qtyPcs = (int)($c['qty_pcs'] ?? 0);
+                $qtyBal = (int)($c['qty_bal'] ?? 0);
+                $hargaDeal = (float)($c['price'] ?? 0);
+                $discPersen = (float)($c['discount_percent'] ?? 0);
+                $discNom = (float)($c['discount_nominal'] ?? 0);
+                $itemSubtotal = (float)($c['subtotal'] ?? 0);
+
+                // Ambil data item & rasio konversi bal ke pcs
+                $itemData = Database::fetchOne("
+                    SELECT i.id, i.nama_item, i.kode_sku, i.stok_fisik_saat_ini, i.satuan_dasar, 
+                           COALESCE(gp.konversi_bal_ke_pcs, 20) as konversi_bal
+                    FROM public.item i
+                    LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                    WHERE i.id = :id
+                ", ['id' => $itemId]);
+
+                $konversi = (int)($itemData['konversi_bal'] ?? 20);
+                $totalPcsKeluar = $qtyPcs + ($qtyBal * $konversi);
+                $stokSebelum = (int)($itemData['stok_fisik_saat_ini'] ?? 0);
+
+                // Pengaman Anti-Minus: Validasi ketersediaan stok fisik
+                if ($stokSebelum < $totalPcsKeluar) {
+                    $namaItem = $c['nama_item'] ?? ($itemData['nama_item'] ?? 'Produk');
+                    throw new \Exception("Stok produk '{$namaItem}' tidak mencukupi! (Sisa stok fisik: {$stokSebelum} pcs, diminta: {$totalPcsKeluar} pcs). Transaksi dibatalkan untuk mencegah stok minus.");
+                }
+
+                $stokSesudah = $stokSebelum - $totalPcsKeluar;
+
+                // Simpan item pesanan
                 $stmtItem->execute([
                     'pesanan_id' => $pesananId,
-                    'item_id' => $c['item_id'],
-                    'qty_pcs' => (int)($c['qty_pcs'] ?? 0),
-                    'qty_bal' => (int)($c['qty_bal'] ?? 0),
-                    'harga' => (float)($c['price'] ?? 0),
-                    'disc_persen' => (float)($c['discount_percent'] ?? 0),
-                    'disc_nom' => (float)($c['discount_nominal'] ?? 0),
-                    'subtotal' => (float)($c['subtotal'] ?? 0)
+                    'item_id' => $itemId,
+                    'qty_pcs' => $qtyPcs,
+                    'qty_bal' => $qtyBal,
+                    'harga' => $hargaDeal,
+                    'disc_persen' => $discPersen,
+                    'disc_nom' => $discNom,
+                    'subtotal' => $itemSubtotal
                 ]);
+
+                // Potong stok fisik produk
+                $stmtUpdateStock->execute([
+                    'stok_baru' => $stokSesudah,
+                    'item_id' => $itemId
+                ]);
+
+                // Catat ke buku besar riwayat mutasi stok
+                $stmtRiwayatStok->execute([
+                    'item_id' => $itemId,
+                    'perubahan' => -$totalPcsKeluar,
+                    'sebelum' => $stokSebelum,
+                    'sesudah' => $stokSesudah,
+                    'pesanan_id' => $pesananId,
+                    'keterangan' => "Penjualan kasir POS: {$nomorNota}",
+                    'dibuat_oleh' => $userId
+                ]);
+
+                $receiptItems[] = [
+                    'item_id' => $itemId,
+                    'nama_item' => $c['nama_item'] ?? ($itemData['nama_item'] ?? 'Item'),
+                    'kode_sku' => $c['kode_sku'] ?? ($itemData['kode_sku'] ?? ''),
+                    'qty_pcs' => $qtyPcs,
+                    'qty_bal' => $qtyBal,
+                    'harga' => $hargaDeal,
+                    'subtotal' => $itemSubtotal
+                ];
             }
 
-            // 3. Catat Kas Masuk jika Cash
-            if ($paymentType === 'cash') {
-                $akunKasId = Database::fetchOne("SELECT id FROM public.akun_kas LIMIT 1")['id'] ?? null;
-                if ($akunKasId) {
+            // 4. Catat Kas Masuk & Update Saldo Kas Toko jika Cash / Transfer Lunas
+            $saldoKasAkhir = 0;
+            if ($paymentType === 'cash' || $paymentType === 'transfer') {
+                $requestedKasId = $payload['cash_account_id'] ?? $payload['akun_kas_id'] ?? null;
+                if (!empty($requestedKasId)) {
+                    $akunKas = Database::fetchOne("SELECT id, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE", ['id' => $requestedKasId]);
+                } else {
+                    $akunKas = Database::fetchOne("SELECT id, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1");
+                }
+
+                if ($akunKas) {
+                    $akunKasId = $akunKas['id'];
+                    $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
+                    $saldoKasAkhir = $saldoLama + $totalNetto;
+
+                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                        ->execute(['saldo' => $saldoKasAkhir, 'id' => $akunKasId]);
+
                     $stmtKas = $pdo->prepare("
                         INSERT INTO public.arus_kas (
-                            akun_kas_id, jenis_kas, kategori, nominal, keterangan,
-                            referensi_tabel, referensi_id, saldo_berjalan
+                            akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                            referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
                         ) VALUES (
-                            :akun_id, 'masuk', 'penjualan', :nominal, :ket,
-                            'pesanan', :pesanan_id, 0
+                            :akun_id, CURRENT_DATE, 'masuk', 'penjualan', :nominal, :ket,
+                            'pesanan', :pesanan_id, :saldo_berjalan, :dibuat_oleh, NOW()
                         )
                     ");
                     $stmtKas->execute([
                         'akun_id' => $akunKasId,
                         'nominal' => $totalNetto,
                         'ket' => "Pelunasan Nota POS Kasir: {$nomorNota}",
-                        'pesanan_id' => $pesananId
+                        'pesanan_id' => $pesananId,
+                        'saldo_berjalan' => $saldoKasAkhir,
+                        'dibuat_oleh' => $userId
                     ]);
                 }
+            } else {
+                // Jika pembayaran tempo/konsinyasi, update piutang berjalan pelanggan
+                $pdo->prepare("
+                    UPDATE public.pelanggan 
+                    SET total_piutang_berjalan = total_piutang_berjalan + :nominal, diubah_pada = NOW() 
+                    WHERE id = :id
+                ")->execute(['nominal' => $totalNetto, 'id' => $customerId]);
             }
 
-            // 4. Catat Audit Trail
+            // 5. Catat Audit Trail
             $stmtLog = $pdo->prepare("
                 INSERT INTO public.log_aktivitas (
                     nama_aktor, peran_aktor, sumber_aksi, kategori_aktivitas, jenis_aksi,
@@ -259,7 +413,21 @@ class PosController extends Controller
                 'data' => [
                     'order_id' => $pesananId,
                     'nomor_nota' => $nomorNota,
-                    'total_netto' => $totalNetto
+                    'tanggal' => date('d/m/Y H:i'),
+                    'customer_name' => $customer['nama_toko'] ?? 'Umum',
+                    'customer_group' => $customer['nama_grup'] ?? 'Ritel',
+                    'cashier_name' => Auth::name(),
+                    'payment_type' => $paymentType,
+                    'total_bruto' => $totalBruto,
+                    'total_diskon' => $totalDiskon,
+                    'total_netto' => $totalNetto,
+                    'notes' => $catatan,
+                    'items' => $receiptItems,
+                    'store' => [
+                        'nama' => $storeSettings['nama_toko'] ?? 'KEREN SNACK',
+                        'alamat' => 'Sentra Distribusi & Manufaktur Snack',
+                        'kontak' => 'WhatsApp: 0812-xxxx-xxxx'
+                    ]
                 ]
             ]);
 

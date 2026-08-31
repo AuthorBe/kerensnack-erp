@@ -178,7 +178,18 @@ class ProfileController extends Controller
                 }
             }
 
-            // 3. Update nama_pengguna di Database
+            // 3. Ambil ID pengguna yang valid dari DB
+            $userDb = Database::fetchOne("
+                SELECT id, nama_pengguna FROM public.pengguna 
+                WHERE id = :id OR LOWER(nama_pengguna) = LOWER(:old_uname)
+                LIMIT 1
+            ", [
+                'id' => $userId ?: '00000000-0000-0000-0000-000000000000',
+                'old_uname' => $currentUsername
+            ]);
+            $actualUid = $userDb['id'] ?? ($userId ?: null);
+
+            // 4. Update nama_pengguna di Database
             Database::execute("
                 UPDATE public.pengguna 
                 SET nama_pengguna = :new_uname, diubah_pada = NOW() 
@@ -189,19 +200,19 @@ class ProfileController extends Controller
                 'old_uname' => $currentUsername
             ]);
 
-            // 4. Catat riwayat perubahan ke tabel log_aktivitas
+            // 5. Catat riwayat perubahan ke tabel log_aktivitas
             Database::execute("
                 INSERT INTO public.log_aktivitas (
                     pengguna_id, nama_aktor, peran_aktor, sumber_aksi, 
                     kategori_aktivitas, jenis_aksi, tabel_terdampak, id_referensi,
                     deskripsi_aktivitas, data_sebelum, data_sesudah, ip_address
                 ) VALUES (
-                    :uid, :aktor, :peran, 'web_profile',
-                    'keamanan_pengguna', 'ubah_nama_pengguna', 'pengguna', :uid,
+                    :uid, :aktor, :peran, 'web_app',
+                    'keamanan_auth', 'ubah_nama_pengguna', 'pengguna', :uid,
                     :deskripsi, :sebelum, :sesudah, :ip
                 )
             ", [
-                'uid' => $userId ?: '00000000-0000-0000-0000-000000000000',
+                'uid' => $actualUid,
                 'aktor' => Auth::name(),
                 'peran' => Auth::role(),
                 'deskripsi' => "Mengubah nama pengguna dari '{$currentUsername}' menjadi '{$newUsername}'",
@@ -210,7 +221,7 @@ class ProfileController extends Controller
                 'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
             ]);
 
-            // 5. Update session aktif
+            // 6. Update session aktif
             $_SESSION['user']['nama_pengguna'] = $newUsername;
 
             Flash::success("Nama pengguna berhasil diubah menjadi '{$newUsername}'!");
@@ -266,6 +277,8 @@ class ProfileController extends Controller
                 'username' => $username
             ]);
 
+            $actualUid = $userDb['id'] ?? ($userId ?: null);
+
             if ($userDb && !empty($userDb['kata_sandi']) && !$isDeveloper) {
                 $isOldMatch = password_verify($currentPassword, $userDb['kata_sandi']) || ($currentPassword === $userDb['kata_sandi']);
                 if (!$isOldMatch) {
@@ -296,12 +309,12 @@ class ProfileController extends Controller
                     kategori_aktivitas, jenis_aksi, tabel_terdampak, id_referensi,
                     deskripsi_aktivitas, ip_address
                 ) VALUES (
-                    :uid, :aktor, :peran, 'web_profile',
-                    'keamanan_pengguna', 'ubah_kata_sandi', 'pengguna', :uid,
+                    :uid, :aktor, :peran, 'web_app',
+                    'keamanan_auth', 'ubah_kata_sandi', 'pengguna', :uid,
                     'Memperbarui kata sandi akun', :ip
                 )
             ", [
-                'uid' => $userId ?: '00000000-0000-0000-0000-000000000000',
+                'uid' => $actualUid,
                 'aktor' => Auth::name(),
                 'peran' => Auth::role(),
                 'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'

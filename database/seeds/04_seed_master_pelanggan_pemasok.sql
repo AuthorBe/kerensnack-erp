@@ -11,10 +11,10 @@ ON CONFLICT (kode_rute) DO NOTHING;
 
 -- 2. Master Grup Pelanggan (Pemegang Default Level Harga 1-28 & Diskon)
 INSERT INTO public.grup_pelanggan (id, kode_grup, nama_grup, default_level_harga, diskon_persen_default, diskon_nominal_default) VALUES
-('44444444-4444-4444-4444-444444444401', 'GRP-UMUM-RITEL', 'Grup Ritel Standar (Level 1)', 1, 0.00, 0.00),
-('44444444-4444-4444-4444-444444444402', 'GRP-MITRA-A', 'Grup Mitra Warung A (Level 8)', 8, 5.00, 0.00),
-('44444444-4444-4444-4444-444444444403', 'GRP-GROSIR-B', 'Grup Grosir Pasar B (Level 12)', 12, 0.00, 500.00),
-('44444444-4444-4444-4444-444444444404', 'GRP-KONSINYASI', 'Grup Toko Titip Jual (Konsinyasi - Level 5)', 5, 0.00, 0.00)
+('44444444-4444-4444-4444-444444444401', 'GRP-UMUM-RITEL', 'Grup Ritel Standar', 1, 0.00, 0.00),
+('44444444-4444-4444-4444-444444444402', 'GRP-MITRA-A', 'Grup Mitra Warung A', 8, 5.00, 0.00),
+('44444444-4444-4444-4444-444444444403', 'GRP-GROSIR-B', 'Grup Grosir Pasar B', 12, 0.00, 500.00),
+('44444444-4444-4444-4444-444444444404', 'GRP-KONSINYASI', 'Grup Toko Titip Jual', 5, 0.00, 0.00)
 ON CONFLICT (kode_grup) DO NOTHING;
 
 -- 3. Master Pemasok (Vendor Bahan Mentah & Kemasan)
