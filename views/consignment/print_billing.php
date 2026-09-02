@@ -207,6 +207,31 @@ use App\Core\Router;
             font-size: 13px;
         }
 
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+            }
+            .invoice-card {
+                padding: 16px;
+            }
+            .invoice-header {
+                flex-direction: column;
+                gap: 12px;
+            }
+            .meta-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .no-print-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .btn-back, .btn-print {
+                text-align: center;
+                justify-content: center;
+            }
+        }
+
         @media print {
             body {
                 background: #ffffff;

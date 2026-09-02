@@ -20,20 +20,20 @@ ob_start();
             <div class="page-header-text">
                 <div class="page-header-tag">
                     <span class="tag-dot"></span>
-                    <span>Transaksi Baru B2B</span>
+                    <span>Penerbitan PO Baru B2B</span>
                 </div>
-                <h1 class="page-title"><?= $pageTitle ?? 'Input Pesanan Pelanggan Baru' ?></h1>
-                <p class="page-subtitle"><?= $pageSubtitle ?? 'Penerbitan faktur pemesanan mitra toko, grosir & supermarket' ?></p>
+                <h1 class="page-title"><?= $pageTitle ?? 'Input Purchase Order (PO) Baru' ?></h1>
+                <p class="page-subtitle"><?= $pageSubtitle ?? 'Penerbitan pesanan mitra toko, grosir & supermarket (Tahap 1: PO)' ?></p>
             </div>
         </div>
         <div class="page-header-actions">
             <button type="button" @click="submitOrder(false)" :disabled="isSubmitting || items.length === 0" class="btn btn-primary flex-1 sm:flex-initial" style="font-weight:700;">
-                <i data-lucide="save"></i>
-                <span x-text="isSubmitting ? 'Menyimpan...' : 'Simpan Faktur'"></span>
+                <i data-lucide="inbox"></i>
+                <span x-text="isSubmitting ? 'Menerbitkan...' : 'Terbitkan PO'"></span>
             </button>
             <button type="button" @click="submitOrder(true)" :disabled="isSubmitting || items.length === 0" class="btn btn-secondary flex-1 sm:flex-initial" style="font-weight:700;">
                 <i data-lucide="printer"></i>
-                <span>Simpan & Cetak</span>
+                <span>Terbitkan & Cetak List</span>
             </button>
         </div>
     </div>
@@ -52,25 +52,28 @@ ob_start();
             <!-- ===================================================================== -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-                <!-- PANEL KIRI: DATA TOKO & LOGISTIK (Aksen Indigo / Slate) -->
-                <div class="card p-4 space-y-3">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--color-hairline);padding-bottom:8px;">
-                        <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-                            <div style="width:28px;height:28px;border-radius:6px;background:rgba(99,102,241,0.12);color:#818cf8;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                <i data-lucide="store" style="width:15px;height:15px;"></i>
+                <!-- PANEL KIRI: DATA TOKO & LOGISTIK (Modern Material Design 3 Styling) -->
+                <div class="card p-4 space-y-3.5">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--color-hairline);padding-bottom:10px;">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                            <div style="width:34px;height:34px;border-radius:10px;background:rgba(99,102,241,0.12);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="store" style="width:18px;height:18px;"></i>
                             </div>
-                            <span style="font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink);white-space:nowrap;">Mitra Toko &amp; Logistik</span>
+                            <div>
+                                <div style="font-size:13.5px;font-weight:800;color:var(--color-ink);line-height:1.2;">Mitra Toko &amp; Logistik</div>
+                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:1px;">Pilih toko pelanggan tujuan distribusi</div>
+                            </div>
                         </div>
                         <template x-if="selectedCustomer">
-                            <span class="badge" style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-weight:700;font-size:11px;padding:3px 8px;white-space:nowrap;">
-                                🏷️ Level <span x-text="selectedCustomer.level_harga"></span>
+                            <span class="badge flex items-center gap-1.5" style="background:rgba(99,102,241,0.1);color:#4f46e5;border:1px solid rgba(99,102,241,0.25);font-weight:800;font-size:11.5px;padding:4px 10px;border-radius:999px;white-space:nowrap;">
+                                <i data-lucide="tag" style="width:13px;height:13px;"></i> Level <span x-text="selectedCustomer.level_harga"></span>
                             </span>
                         </template>
                     </div>
 
                     <div>
-                        <label class="form-label">Toko Pelanggan *</label>
-                        <select name="pelanggan_id" x-model="header.pelanggan_id" @change="onCustomerChange()" required class="form-input font-bold" style="height:38px;">
+                        <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;">Toko Pelanggan *</label>
+                        <select name="pelanggan_id" x-model="header.pelanggan_id" @change="onCustomerChange()" required class="form-input font-bold" style="height:42px;border-radius:10px;font-size:13.5px;">
                             <option value="">-- Pilih Toko Pelanggan --</option>
                             <?php foreach ($customers as $c): ?>
                             <option value="<?= $c['id'] ?>">
@@ -82,77 +85,87 @@ ob_start();
 
                     <!-- Customer Detail Strip (Jika Toko Terpilih) -->
                     <template x-if="selectedCustomer">
-                        <div style="padding:6px 10px;border-radius:var(--rounded-xs);font-size:11.5px;display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.15);color:var(--color-ink-secondary);">
-                            <i data-lucide="tag" style="width:13px;height:13px;color:#818cf8;flex-shrink:0;"></i>
-                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                                Skema Harga: <strong>Level <span x-text="selectedCustomer.level_harga"></span> (<span x-text="selectedCustomer.nama_grup_harga || 'Standar'"></span>)</strong>
-                            </span>
+                        <div style="padding:10px 12px;border-radius:12px;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);color:var(--color-ink);">
+                            <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                                <div style="width:26px;height:26px;border-radius:6px;background:rgba(99,102,241,0.1);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i data-lucide="tag" style="width:13px;height:13px;"></i>
+                                </div>
+                                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                    Skema: <strong>Level <span x-text="selectedCustomer.level_harga"></span> (<span x-text="selectedCustomer.nama_grup_harga || 'Standar'"></span>)</strong>
+                                </span>
+                            </div>
                             <template x-if="selectedCustomer.is_konsinyasi">
-                                <span style="margin-left:auto;background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:4px;font-weight:700;font-size:10px;text-transform:uppercase;">
-                                    Toko Konsinyasi (Tanpa Tagihan)
+                                <span style="background:rgba(225,29,72,0.1);color:#e11d48;border:1px solid rgba(225,29,72,0.22);padding:3px 8px;border-radius:6px;font-weight:800;font-size:10.5px;text-transform:uppercase;white-space:nowrap;">
+                                    Titip Jual (Konsinyasi)
+                                </span>
+                            </template>
+                            <template x-if="!selectedCustomer.is_konsinyasi">
+                                <span style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.22);padding:3px 8px;border-radius:6px;font-weight:800;font-size:10.5px;text-transform:uppercase;white-space:nowrap;">
+                                    Penjualan B2B
                                 </span>
                             </template>
                         </div>
                     </template>
 
-                    <div class="grid grid-cols-1 gap-3">
-                        <div>
-                            <label class="form-label">Catatan / Keterangan Nota</label>
-                            <input type="text" name="catatan" x-model="header.catatan" class="form-input" style="height:38px;" placeholder="Contoh: Titip faktur ke kasir">
-                        </div>
+                    <div>
+                        <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;">Catatan / Keterangan Nota</label>
+                        <input type="text" name="catatan" x-model="header.catatan" class="form-input" style="height:42px;border-radius:10px;font-size:13px;" placeholder="Contoh: Titip faktur ke kasir...">
                     </div>
 
                     <!-- Whitelist Status Banner (Aksen Cyan / Sky) -->
                     <template x-if="selectedCustomer">
-                        <div style="padding:7px 10px;border-radius:var(--rounded-md);font-size:11.5px;display:flex;align-items:center;justify-content:space-between;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.18);color:var(--color-ink-secondary);">
-                            <div style="display:flex;align-items:center;gap:6px;min-width:0;">
-                                <i data-lucide="shield-check" style="width:14px;height:14px;color:#38bdf8;flex-shrink:0;" x-show="hasWhitelist"></i>
-                                <i data-lucide="globe" style="width:14px;height:14px;color:#38bdf8;flex-shrink:0;" x-show="!hasWhitelist"></i>
-                                <span x-text="hasWhitelist ? '🔒 Khusus ' + whitelistCount + ' Produk Terdaftar Toko' : '🌐 Semua 137 Produk Tersedia'" style="font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+                        <div style="padding:9px 12px;border-radius:12px;font-size:12px;display:flex;align-items:center;justify-content:space-between;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);color:var(--color-ink-secondary);">
+                            <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+                                <i data-lucide="shield-check" style="width:16px;height:16px;color:#0284c7;flex-shrink:0;" x-show="hasWhitelist"></i>
+                                <i data-lucide="globe" style="width:16px;height:16px;color:#0284c7;flex-shrink:0;" x-show="!hasWhitelist"></i>
+                                <span x-text="hasWhitelist ? ('Khusus ' + whitelistCount + ' Produk Terdaftar Toko') : ('Semua <?= count($products) ?> Produk Tersedia')" style="font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
                             </div>
                             <template x-if="hasWhitelist">
-                                <button type="button" @click="showAllProducts = !showAllProducts" class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;font-weight:700;color:#38bdf8;" x-text="showAllProducts ? '← Saring Whitelist' : '👁️ Buka 137 SKU'"></button>
+                                <button type="button" @click="showAllProducts = !showAllProducts" class="btn btn-ghost btn-xs" style="font-size:11.5px;padding:3px 8px;font-weight:800;color:#0284c7;border-radius:6px;" x-text="showAllProducts ? '← Saring Whitelist' : 'Buka <?= count($products) ?> SKU'"></button>
                             </template>
                         </div>
                     </template>
                 </div>
 
                 <!-- PANEL KANAN: DATA FAKTUR & PEMBAYARAN (Aksen Amber / Gold) -->
-                <div class="card p-4 space-y-3">
-                    <div style="display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--color-hairline);padding-bottom:8px;">
-                        <div style="width:28px;height:28px;border-radius:6px;background:rgba(245,158,11,0.12);color:#fbbf24;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="receipt" style="width:15px;height:15px;"></i>
+                <div class="card p-4 space-y-3.5">
+                    <div style="display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--color-hairline);padding-bottom:10px;">
+                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(245,158,11,0.12);color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="receipt" style="width:18px;height:18px;"></i>
                         </div>
-                        <span style="font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink);">Faktur &amp; Skema Pembayaran</span>
+                        <div>
+                            <div style="font-size:13.5px;font-weight:800;color:var(--color-ink);line-height:1.2;">Faktur &amp; Skema Pembayaran</div>
+                            <div style="font-size:11px;color:var(--color-ink-mute);margin-top:1px;">Nomor transaksi &amp; ketentuan tempo</div>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="form-label flex items-center justify-between">
+                            <label class="form-label flex items-center justify-between" style="font-size:12px;font-weight:700;margin-bottom:6px;">
                                 <span>No. Faktur (Auto)</span>
-                                <span style="font-size:10px;color:var(--color-ink-mute);">🔒 Terkunci</span>
+                                <span style="font-size:10.5px;color:var(--color-ink-mute);display:flex;align-items:center;gap:3px;"><i data-lucide="lock" style="width:11px;height:11px;"></i> Terkunci</span>
                             </label>
-                            <input type="text" name="nomor_nota" :value="header.nomor_nota" readonly class="form-input font-mono font-bold" style="height:38px;background:var(--color-canvas-soft);cursor:not-allowed;color:var(--color-ink);letter-spacing:0.02em;">
+                            <input type="text" name="nomor_nota" :value="header.nomor_nota" readonly class="form-input font-mono font-bold" style="height:42px;border-radius:10px;background:var(--color-canvas-soft);cursor:not-allowed;color:var(--color-ink);letter-spacing:0.02em;">
                         </div>
                         <div>
-                            <label class="form-label">Tanggal Transaksi *</label>
-                            <input type="date" name="tanggal_pesanan" x-model="header.tanggal_pesanan" required class="form-input font-mono" style="height:38px;">
+                            <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;">Tanggal Transaksi *</label>
+                            <input type="date" name="tanggal_pesanan" x-model="header.tanggal_pesanan" required class="form-input font-mono" style="height:42px;border-radius:10px;">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="form-label">Skema Pembayaran *</label>
+                            <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;">Skema Pembayaran *</label>
                             <input type="hidden" name="tipe_pembayaran" :value="header.tipe_pembayaran">
-                            <div class="form-input font-semibold flex items-center" style="height:38px;background:var(--color-canvas-soft);cursor:not-allowed;color:var(--color-ink);" x-text="getPaymentSchemeLabel(header.tipe_pembayaran)">
+                            <div class="form-input font-semibold flex items-center" style="height:42px;border-radius:10px;background:var(--color-canvas-soft);cursor:not-allowed;color:var(--color-ink);" x-text="getPaymentSchemeLabel(header.tipe_pembayaran)">
                             </div>
                         </div>
 
                         <!-- Conditional: Akun Kas Penerima jika Tunai atau Bayar Sebagian (DP) -->
                         <template x-if="header.tipe_pembayaran === 'cash' || header.tipe_pembayaran === 'sebagian'">
                             <div>
-                                <label class="form-label" style="color:#10b981;">Masuk ke Akun Kas *</label>
-                                <select name="akun_kas_id" x-model="header.akun_kas_id" required class="form-input" style="height:38px;">
+                                <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;color:#10b981;">Masuk ke Akun Kas *</label>
+                                <select name="akun_kas_id" x-model="header.akun_kas_id" required class="form-input" style="height:42px;border-radius:10px;">
                                     <?php foreach ($cashAccounts as $a): ?>
                                     <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
                                     <?php endforeach; ?>
@@ -163,22 +176,22 @@ ob_start();
                         <!-- Conditional: Tanggal Jatuh Tempo jika Tempo murni -->
                         <template x-if="header.tipe_pembayaran !== 'cash' && header.tipe_pembayaran !== 'sebagian'">
                             <div>
-                                <label class="form-label" style="color:#ef4444;">Tanggal Jatuh Tempo *</label>
-                                <input type="date" name="tanggal_jatuh_tempo" x-model="header.tanggal_jatuh_tempo" required class="form-input font-mono" style="height:38px;border-color:#ef4444;color:#ef4444;font-weight:700;">
+                                <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;color:#ef4444;">Tanggal Jatuh Tempo *</label>
+                                <input type="date" name="tanggal_jatuh_tempo" x-model="header.tanggal_jatuh_tempo" required class="form-input font-mono" style="height:42px;border-radius:10px;border-color:#ef4444;color:#ef4444;font-weight:700;">
                             </div>
                         </template>
                     </div>
 
                     <!-- Row Tambahan Jika Skema Pembayaran Sebagian / DP -->
                     <template x-if="header.tipe_pembayaran === 'sebagian'">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2" style="border-top:1px dashed var(--color-hairline);">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3" style="border-top:1px dashed var(--color-hairline);">
                             <div>
-                                <label class="form-label" style="color:#10b981;font-weight:700;">Nominal Dibayar Saat Ini (DP) *</label>
-                                <input type="number" min="0" step="any" name="nominal_dibayar" x-model.number="header.nominal_dibayar" class="form-input font-mono font-bold" style="height:38px;border-color:#10b981;" placeholder="0">
+                                <label class="form-label" style="color:#10b981;font-weight:700;font-size:12px;margin-bottom:6px;">Nominal Dibayar Saat Ini (DP) *</label>
+                                <input type="number" min="0" step="any" name="nominal_dibayar" x-model.number="header.nominal_dibayar" class="form-input font-mono font-bold" style="height:42px;border-radius:10px;border-color:#10b981;" placeholder="0">
                             </div>
                             <div>
-                                <label class="form-label" style="color:#ef4444;font-weight:700;">Jatuh Tempo Sisa Tagihan *</label>
-                                <input type="date" name="tanggal_jatuh_tempo" x-model="header.tanggal_jatuh_tempo" required class="form-input font-mono" style="height:38px;border-color:#ef4444;color:#ef4444;font-weight:700;">
+                                <label class="form-label" style="color:#ef4444;font-weight:700;font-size:12px;margin-bottom:6px;">Jatuh Tempo Sisa Tagihan *</label>
+                                <input type="date" name="tanggal_jatuh_tempo" x-model="header.tanggal_jatuh_tempo" required class="form-input font-mono" style="height:42px;border-radius:10px;border-color:#ef4444;color:#ef4444;font-weight:700;">
                             </div>
                         </div>
                     </template>
@@ -204,12 +217,40 @@ ob_start();
                     </button>
                 </div>
 
+<style>
+/* CSS Grid Fallback for Mobile Table */
+@media (max-width: 768px) {
+    .responsive-table { display: block; width: 100%; min-width: 0 !important; }
+    .responsive-table thead { display: none; }
+    .responsive-table tbody { display: block; }
+    .responsive-table tr { 
+        display: flex; flex-direction: column; 
+        border: 1px solid var(--color-hairline); 
+        border-radius: 8px; margin-bottom: 12px; 
+        padding: 12px; background: #fff;
+    }
+    .responsive-table td { 
+        display: flex; justify-content: space-between; align-items: center; 
+        padding: 4px 0 !important; border: none !important; text-align: right; 
+    }
+    .responsive-table td::before { 
+        content: attr(data-label); 
+        font-weight: 600; font-size: 12px; color: var(--color-ink-mute); 
+        text-align: left; margin-right: 12px;
+    }
+    /* Sembunyikan No. baris atau format ulang */
+    .responsive-table td.col-no { display: none; }
+    /* Pastikan input selebar mungkin */
+    .responsive-table select, .responsive-table input { width: 100%; max-width: 200px; }
+}
+</style>
+
                 <div class="table-scroll no-scrollbar" style="overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;">
-                    <table class="table" style="min-width:860px;width:100%;">
+                    <table class="table responsive-table" style="min-width:860px;width:100%;">
                         <thead>
                             <tr>
                                 <th class="cell-center" style="width:36px;">No</th>
-                                <th style="min-width:320px;">Produk Snack Siap Jual (137 SKU)</th>
+                                <th style="min-width:320px;">Produk Snack Siap Jual (<?= count($products) ?> SKU)</th>
                                 <th class="cell-center cell-nowrap" style="width:95px;">Stok Gudang</th>
                                 <th class="cell-center cell-nowrap" style="width:85px;">Qty (Bks)</th>
                                 <th class="cell-right cell-nowrap" style="width:135px;" x-show="!selectedCustomer?.is_konsinyasi">Harga Satuan</th>
@@ -222,10 +263,10 @@ ob_start();
                             <template x-for="(row, idx) in items" :key="row.uid">
                                 <tr>
                                     <!-- No -->
-                                    <td class="cell-center cell-nowrap" style="color:var(--color-ink-mute);font-size:12px;font-weight:700;" x-text="idx + 1"></td>
+                                    <td class="cell-center cell-nowrap col-no" data-label="No" style="color:var(--color-ink-mute);font-size:12px;font-weight:700;" x-text="idx + 1"></td>
 
                                     <!-- Produk Dropdown -->
-                                    <td>
+                                    <td data-label="Produk Snack">
                                         <select x-model="row.item_id" @change="onProductSelect(row)" class="form-input enter-nav" style="height:36px;font-size:12.5px;font-weight:600;width:100%;">
                                             <option value="">-- Pilih Snack &amp; Varian Rasa --</option>
                                             <template x-for="p in availableProducts" :key="p.id">
@@ -235,34 +276,35 @@ ob_start();
                                     </td>
 
                                     <!-- Stok Gudang -->
-                                    <td class="cell-center cell-nowrap">
+                                    <td class="cell-center cell-nowrap" data-label="Stok Gudang">
                                         <span class="badge" :class="Number(row.stok_tersedia) > 0 ? 'badge-mono' : 'badge-warning'" style="font-family:var(--font-mono);font-size:11px;font-weight:700;" x-text="formatNumber(row.stok_tersedia) + ' bks'"></span>
                                     </td>
 
                                     <!-- Qty (Bungkus) -->
-                                    <td class="cell-center cell-nowrap">
+                                    <td class="cell-center cell-nowrap" data-label="Qty (Bks)">
                                         <input type="number" min="1" :disabled="!row.item_id" x-model.number="row.qty" @input="calcRow(row)" @focus="$event.target.select()" @click="$event.target.select()" class="form-input font-mono text-center enter-nav no-spinner" style="height:36px;width:75px;font-size:14px;font-weight:800;padding:4px;">
                                     </td>
 
                                     <!-- Harga Satuan Level (Locked / Sesuai Level Harga Toko) -->
-                                    <td class="cell-right cell-nowrap" x-show="!selectedCustomer?.is_konsinyasi">
+                                    <td class="cell-right cell-nowrap" x-show="!selectedCustomer?.is_konsinyasi" data-label="Harga Satuan">
                                         <div class="font-mono font-bold text-sm" style="color:var(--color-ink);padding-right:8px;" x-text="row.item_id ? formatRupiah(row.harga) : '-'"></div>
                                     </td>
 
                                     <!-- Diskon Item -->
-                                    <td class="cell-right cell-nowrap" x-show="!selectedCustomer?.is_konsinyasi">
+                                    <td class="cell-right cell-nowrap" x-show="!selectedCustomer?.is_konsinyasi" data-label="Diskon (Rp)">
                                         <input type="number" step="any" min="0" :disabled="!row.item_id" x-model.number="row.diskon" @input="calcRow(row)" @focus="$event.target.select()" @click="$event.target.select()" class="form-input font-mono text-right enter-nav no-spinner" style="height:36px;width:95px;font-size:12.5px;" placeholder="0">
                                     </td>
 
                                     <!-- Subtotal -->
-                                    <td class="cell-right cell-nowrap" x-show="!selectedCustomer?.is_konsinyasi">
+                                    <td class="cell-right cell-nowrap" x-show="!selectedCustomer?.is_konsinyasi" data-label="Subtotal (Rp)">
                                         <div class="font-mono font-bold" style="font-size:13.5px;color:var(--color-ink);" x-text="row.item_id ? formatRupiah(row.subtotal) : 'Rp 0'"></div>
                                     </td>
 
                                     <!-- Hapus Baris -->
-                                    <td class="cell-center cell-nowrap">
+                                    <td class="cell-center cell-nowrap" data-label="Hapus">
                                         <button type="button" @click="removeItemRow(idx)" class="btn btn-ghost btn-sm text-danger btn-remove-row" style="padding:4px;" title="Hapus baris ini (Ctrl+Del)">
                                             <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+                                            <span>Hapus Baris</span>
                                         </button>
                                     </td>
                                 </tr>
@@ -292,12 +334,12 @@ ob_start();
                 <div class="card p-5 lg:col-span-2 space-y-3">
                     <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);display:flex;align-items:center;gap:6px;">
                         <i data-lucide="info" style="width:16px;height:16px;color:#60a5fa;"></i>
-                        <span>Petunjuk Sistem Penjualan Toko (B2B):</span>
+                        <span>Petunjuk Alur Purchase Order (PO):</span>
                     </div>
                     <ul style="font-size:12.5px;color:var(--color-ink-mute);line-height:1.6;list-style:disc;padding-left:18px;" class="space-y-1.5">
-                        <li>Semua produk barang jadi otomatis dihitung dalam satuan <strong>Bungkus (Pcs)</strong> dengan level harga toko.</li>
-                        <li>Stok fisik di gudang akan <strong>langsung terpotong real-time</strong> saat faktur disimpan.</li>
-                        <li>Untuk pembayaran <strong>Kredit / Sebagian</strong>, nominal yang dibayar langsung masuk ke kas, dan sisa tagihan tercatat otomatis di piutang toko.</li>
+                        <li>Pesanan yang baru diterbitkan berstatus <strong>PO (Tahap 1)</strong>. Stok fisik di gudang <strong>belum berkurang</strong>.</li>
+                        <li>Staf Gudang akan memverifikasi ketersediaan dan memotong stok di menu <strong>Daftar PO</strong> untuk menerbitkan Surat Jalan (*Siap Dikirim*).</li>
+                        <li>Penerimaan Kas (Tunai/DP) dan Piutang Toko akan resmi dicatat saat barang telah <strong>Selesai Diterima</strong> oleh toko.</li>
                     </ul>
                 </div>
 
@@ -327,7 +369,7 @@ ob_start();
 
                         <div class="flex justify-between items-center gap-2" style="margin-top:12px;">
                             <span style="font-size:13px;color:var(--color-ink-secondary);">Diskon Faktur (Rp):</span>
-                            <input type="text" name="diskon_faktur" x-model="header.diskon_faktur" class="form-input font-mono input-rupiah text-right" style="height:32px;width:120px;font-size:12px;" placeholder="0">
+                            <input type="text" name="diskon_faktur" x-model="diskon_faktur_display" @input="onDiskonFakturInput($event)" class="form-input font-mono text-right" style="height:32px;width:120px;font-size:12px;" placeholder="0">
                         </div>
 
                         <div style="border-top:2px solid var(--color-hairline);padding-top:10px;margin-top:12px;" class="flex justify-between items-center">
@@ -380,9 +422,10 @@ function createSalesOrderApp() {
             tanggal_jatuh_tempo: '<?= date('Y-m-d', strtotime('+14 days')) ?>',
             akun_kas_id: '<?= !empty($cashAccounts) ? $cashAccounts[0]['id'] : '' ?>',
             nominal_dibayar: 0,
-            diskon_faktur: '0',
+            diskon_faktur: 0,
             catatan: ''
         },
+        diskon_faktur_display: '',
 
         items: [],
         selectedCustomer: null,
@@ -395,6 +438,13 @@ function createSalesOrderApp() {
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             });
+        },
+
+        onDiskonFakturInput(e) {
+            let val = e.target.value.replace(/[^0-9]/g, '');
+            if (!val) val = '0';
+            this.header.diskon_faktur = parseInt(val, 10);
+            this.diskon_faktur_display = this.formatRupiah(this.header.diskon_faktur).replace('Rp ', '');
         },
 
         get hasWhitelist() {
@@ -468,14 +518,14 @@ function createSalesOrderApp() {
 
         getPaymentSchemeLabel(type) {
             const labels = {
-                'cash': '💵 Tunai (Lunas 100%)',
-                'sebagian': '💳 Kredit / Bayar Sebagian (DP)',
-                'tempo_7_hari': '⏱️ Tempo 7 Hari',
-                'tempo_14_hari': '⏱️ Tempo 14 Hari',
-                'tempo_30_hari': '⏱️ Tempo 30 Hari',
-                'konsinyasi': '🏪 Titip Jual (Konsinyasi)'
+                'cash': 'Tunai (Lunas 100%)',
+                'sebagian': 'Kredit / Bayar Sebagian (DP)',
+                'tempo_7_hari': 'Tempo 7 Hari',
+                'tempo_14_hari': 'Tempo 14 Hari',
+                'tempo_30_hari': 'Tempo 30 Hari',
+                'konsinyasi': 'Titip Jual (Konsinyasi)'
             };
-            return labels[type] || '💵 Tunai (Lunas 100%)';
+            return labels[type] || 'Tunai (Lunas 100%)';
         },
 
         getPriceForProduct(itemId) {

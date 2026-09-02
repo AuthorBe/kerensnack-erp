@@ -23,6 +23,8 @@ $headerTitle = $pageTitle ?? match(true) {
     str_contains($uri, '/employees')        => 'Master Data Karyawan',
     str_contains($uri, '/owner')            => 'Owner Command Center',
     str_contains($uri, '/developer/architecture') => 'System Blueprint',
+    str_contains($uri, '/users')            => 'Manajemen Pengguna',
+    str_contains($uri, '/permissions')      => 'Hak Akses & Izin RBAC',
     str_contains($uri, '/profile')          => 'Profil Pengguna',
     default                                 => 'Keren Snack ERP',
 };
@@ -46,6 +48,8 @@ $headerSub = $pageSubtitle ?? match(true) {
     str_contains($uri, '/employees')        => 'Data Pegawai & Tim Borongan',
     str_contains($uri, '/owner')            => 'Overview Operasional Bisnis',
     str_contains($uri, '/developer/architecture') => 'Peta Arsitektur & AI Prompt Generator',
+    str_contains($uri, '/users')            => 'Kelola Akun, Karyawan & Suspend Akses',
+    str_contains($uri, '/permissions')      => 'Pusat Konfigurasi Izin & Matriks Role',
     str_contains($uri, '/profile')          => 'Pengaturan Akun & Keamanan',
     default                                 => '',
 };

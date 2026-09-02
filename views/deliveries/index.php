@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 use App\Helpers\Format;
 use App\Core\Router;
 use App\Core\Auth;
@@ -136,7 +136,10 @@ ob_start();
                                 <div style="display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap;">
                                     <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-ink-mute);" x-text="d.telp_driver || ''"></span>
                                     <template x-if="d.nopol_driver">
-                                        <span class="badge badge-mono" style="font-size:10px;padding:1px 5px;color:#0284c7;background:rgba(2,132,199,0.08);border-color:rgba(2,132,199,0.3);" x-text="'ðŸšš ' + d.nopol_driver"></span>
+                                        <span class="badge badge-mono flex items-center gap-1" style="font-size:10px;padding:1px 5px;color:#0284c7;background:rgba(2,132,199,0.08);border-color:rgba(2,132,199,0.3);">
+                                            <i data-lucide="truck" style="width:10px;height:10px;"></i>
+                                            <span x-text="d.nopol_driver"></span>
+                                        </span>
                                     </template>
                                 </div>
                             </td>
@@ -148,18 +151,51 @@ ob_start();
                             <td class="cell-currency cell-right cell-nowrap" style="color:var(--color-primary-deep);font-weight:700;" x-text="formatRupiah(d.total_netto)"></td>
                             <?php endif; ?>
                             <td class="cell-center cell-nowrap">
-                                <span class="badge"
-                                      :class="{
-                                          'badge-primary': d.status_surat_jalan === 'selesai_diterima',
-                                          'badge-info': d.status_surat_jalan === 'sedang_dikirim',
-                                          'badge-secondary': d.status_surat_jalan === 'disetujui_owner',
-                                          'badge-danger': d.status_surat_jalan === 'ditolak_owner' || d.status_surat_jalan === 'dibatalkan'
-                                      }"
-                                      style="text-transform:capitalize;"
-                                      x-text="d.status_surat_jalan ? d.status_surat_jalan.replace(/_/g, ' ') : ''"></span>
+                                <template x-if="d.status_surat_jalan === 'menunggu_persetujuan' || d.status_surat_jalan === 'draf_n8n'">
+                                    <span class="badge" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:700;font-size:11px;">
+                                        ⏳ Menunggu Approval
+                                    </span>
+                                </template>
+                                <template x-if="d.status_surat_jalan === 'disetujui_owner' || d.status_surat_jalan === 'siap_kirim'">
+                                    <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700;font-size:11px;">
+                                        📦 Siap Berangkat
+                                    </span>
+                                </template>
+                                <template x-if="d.status_surat_jalan === 'sedang_dikirim'">
+                                    <span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-weight:700;font-size:11px;">
+                                        🚚 Sedang Dikirim
+                                    </span>
+                                </template>
+                                <template x-if="d.status_surat_jalan === 'selesai_diterima'">
+                                    <span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-weight:700;font-size:11px;">
+                                        ✅ Selesai Diterima
+                                    </span>
+                                </template>
+                                <template x-if="d.status_surat_jalan === 'gagal_kembali' || d.status_surat_jalan === 'gagal_kirim' || d.status_surat_jalan === 'dibatalkan'">
+                                    <span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;font-weight:700;font-size:11px;">
+                                        ❌ Gagal Kirim / Retur
+                                    </span>
+                                </template>
                             </td>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                                    <?php if (Auth::can('owner.approval_delivery')): ?>
+                                    <template x-if="d.status_surat_jalan === 'menunggu_persetujuan'">
+                                        <form action="<?= Router::url('/deliveries/approve') ?>" method="POST" style="display:inline;"
+                                              data-confirm="Setujui pengiriman Surat Jalan ini untuk diberangkatkan oleh armada logistik?"
+                                              data-confirm-title="Persetujuan Surat Jalan"
+                                              data-confirm-type="primary"
+                                              data-confirm-icon="check-circle"
+                                              data-confirm-btn="Ya, Setujui">
+                                            <input type="hidden" name="id" :value="d.id">
+                                            <button type="submit" class="btn btn-sm" style="background:#10b981;color:#ffffff;padding:5px 9px;font-size:11px;font-weight:700;border-radius:6px;display:inline-flex;align-items:center;gap:4px;" title="Setujui Surat Jalan Ini">
+                                                <i data-lucide="check-circle" style="width:13px;height:13px;"></i>
+                                                <span>Approve</span>
+                                            </button>
+                                        </form>
+                                    </template>
+                                    <?php endif; ?>
+
                                     <a :href="'<?= Router::url('/deliveries/print') ?>?id=' + d.id" target="_blank" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:var(--color-info);" title="Cetak Surat Jalan">
                                         <i data-lucide="printer" style="width:14px;height:14px;"></i>
                                     </a>
@@ -218,11 +254,8 @@ ob_start();
                     </div>
                     <div>
                         <label class="form-label">Tujuan Wilayah / Rute</label>
-                        <select name="rute_wilayah_id" class="form-input">
+                        <select name="rute_wilayah_id" class="form-input" disabled style="background-color: var(--color-canvas-soft); cursor: not-allowed; appearance: none; padding-right: 12px; opacity: 0.9;">
                             <option value="">-- Sesuai Rute Toko --</option>
-                            <?php foreach ($territories as $t): ?>
-                            <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nama_wilayah']) ?></option>
-                            <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
@@ -269,10 +302,10 @@ ob_start();
                 <div>
                     <label class="form-label">Ubah Status Pengiriman *</label>
                     <select name="status_surat_jalan" x-model="statusForm.status_surat_jalan" required class="form-input">
-                        <option value="disetujui_owner">Siap Dikirim</option>
+                        <option value="siap_kirim">Siap Berangkat (Disiapkan)</option>
                         <option value="sedang_dikirim">Sedang Dikirim (Driver di Jalan)</option>
-                        <option value="selesai_diterima">Selesai Diterima Toko (POD Selesai)</option>
-                        <option value="gagal_kembali">Gagal / Barang Kembali</option>
+                        <option value="selesai_diterima">Selesai Diterima Toko (Konfirmasi Sampai)</option>
+                        <option value="gagal_kirim">Gagal Dikirim / Retur Jalan</option>
                     </select>
                 </div>
 

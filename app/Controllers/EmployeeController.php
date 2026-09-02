@@ -16,7 +16,7 @@ class EmployeeController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['owner', 'admin']);
+        Auth::requirePermission(['master.employees_view', 'master.employees_manage']);
     }
 
     public function index(): void

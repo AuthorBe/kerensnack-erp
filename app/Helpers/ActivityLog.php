@@ -72,4 +72,40 @@ class ActivityLog
             return false;
         }
     }
+
+    /**
+     * Helper record() untuk kompatibilitas mutasi RBAC & User Management
+     */
+    public static function record(
+        ?string $userId,
+        string $jenisAksi,
+        string $deskripsi,
+        ?string $tabelTerdampak = null,
+        ?string $idReferensi = null,
+        array|object|null $dataSebelum = null,
+        array|object|null $dataSesudah = null
+    ): bool {
+        $kategori = 'Hak Akses & Sistem';
+        $upperAction = strtoupper($jenisAksi);
+
+        if (str_contains($upperAction, 'ROLE')) {
+            $kategori = 'Manajemen Peran';
+        } elseif (str_contains($upperAction, 'USER')) {
+            $kategori = 'Manajemen Pengguna';
+        } elseif (str_contains($upperAction, 'PERM')) {
+            $kategori = 'Hak Akses';
+        }
+
+        return self::log(
+            $kategori,
+            $jenisAksi,
+            $deskripsi,
+            $tabelTerdampak,
+            $idReferensi,
+            $dataSebelum,
+            $dataSesudah,
+            'web_app',
+            $userId
+        );
+    }
 }

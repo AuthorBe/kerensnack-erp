@@ -293,12 +293,14 @@ ob_start();
                          style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
                         
                         <div class="space-y-2">
-                            <div class="flex items-start justify-between gap-2">
+                            <div class="flex flex-col gap-2">
                                 <div class="flex items-center gap-2">
-                                    <span style="font-size:20px;" x-text="f.icon"></span>
-                                    <h3 class="font-mono font-bold text-xs" style="color:var(--color-ink);" x-text="f.name"></h3>
+                                    <span style="font-size:20px;flex-shrink:0;" x-text="f.icon"></span>
+                                    <h3 class="font-mono font-bold text-sm truncate" style="color:var(--color-ink);" x-text="f.name"></h3>
                                 </div>
-                                <span class="badge badge-primary font-mono text-[9px]" x-text="f.badge"></span>
+                                <div class="flex">
+                                    <span class="badge badge-primary font-mono text-[9.5px]" x-text="f.badge"></span>
+                                </div>
                             </div>
                             <p style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.4;" x-text="f.desc"></p>
                         </div>

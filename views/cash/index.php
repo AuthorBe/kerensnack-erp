@@ -115,16 +115,29 @@ ob_start();
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <?php foreach ($accounts as $acc): 
             $isBank = $acc['tipe_akun'] === 'bank';
-            $isPetty = $acc['tipe_akun'] === 'kas_kecil';
-            $isOp = $acc['tipe_akun'] === 'kas_operasional';
+            $isQris = $acc['tipe_akun'] === 'qris';
+            $isOp = in_array($acc['tipe_akun'], ['kas_operasional', 'kas_kecil']);
+            $isTunai = $acc['tipe_akun'] === 'kas_tunai';
+
+            $badgeBg = $isBank ? 'rgba(59,130,246,0.12)' : ($isQris ? 'rgba(225,29,72,0.12)' : ($isOp ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)'));
+            $badgeColor = $isBank ? '#3b82f6' : ($isQris ? '#e11d48' : ($isOp ? '#f59e0b' : '#10b981'));
+            $iconName = $isBank ? 'building-2' : ($isQris ? 'qr-code' : ($isOp ? 'briefcase' : 'banknote'));
+
+            $tipeLabel = match($acc['tipe_akun']) {
+                'kas_tunai' => 'Kas Tunai (Laci / Toko)',
+                'qris' => 'QRIS / E-Wallet (Digital)',
+                'bank' => 'Rekening Bank',
+                'kas_operasional', 'kas_kecil' => 'Kas Operasional (Petty Cash)',
+                default => ucfirst(str_replace('_', ' ', $acc['tipe_akun']))
+            };
         ?>
         <div class="card p-5" style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;background:var(--color-canvas);border:1px solid <?= $acc['is_default_pos'] ? 'rgba(16,185,129,0.4)' : 'var(--color-hairline)' ?>;border-radius:var(--rounded-lg);box-shadow:var(--shadow-1);">
             
             <!-- Header Kartu -->
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
                 <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-                    <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:<?= $isBank ? 'rgba(59,130,246,0.1)' : ($isPetty ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)') ?>;color:<?= $isBank ? '#3b82f6' : ($isPetty ? '#f59e0b' : '#10b981') ?>;">
-                        <i data-lucide="<?= $isBank ? 'building-2' : ($isPetty ? 'coins' : ($isOp ? 'briefcase' : 'banknote')) ?>" style="width:20px;height:20px;"></i>
+                    <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:<?= $badgeBg ?>;color:<?= $badgeColor ?>;">
+                        <i data-lucide="<?= $iconName ?>" style="width:20px;height:20px;"></i>
                     </div>
                     <div style="min-width:0;">
                         <div style="font-weight:800;font-size:14px;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($acc['nama_akun']) ?>">
@@ -134,7 +147,7 @@ ob_start();
                             <?php if ($isBank): ?>
                                 <span class="font-mono"><?= htmlspecialchars($acc['nomor_rekening'] ?: '-') ?></span> (a.n. <?= htmlspecialchars($acc['atas_nama'] ?: '-') ?>)
                             <?php else: ?>
-                                <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $acc['tipe_akun']))) ?>
+                                <?= htmlspecialchars($tipeLabel) ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -372,12 +385,12 @@ ob_start();
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="form-label">Tipe Akun *</label>
-                        <select name="tipe_akun" x-model="accountForm.tipe_akun" required class="form-input">
-                            <option value="kas_tunai">Kas Tunai (Kasir Toko)</option>
-                            <option value="kas_kecil">Kas Kecil (Petty Cash)</option>
-                            <option value="bank">Rekening Bank</option>
-                            <option value="kas_operasional">Kas Operasional Owner</option>
+                        <label class="form-label">Tipe Akun Kas *</label>
+                        <select name="tipe_akun" x-model="accountForm.tipe_akun" required class="form-input font-semibold">
+                            <option value="kas_tunai">💵 Kas Tunai (Laci / Toko)</option>
+                            <option value="qris">📱 QRIS / E-Wallet (Digital)</option>
+                            <option value="bank">🏦 Rekening Bank (Transfer)</option>
+                            <option value="kas_operasional">💼 Kas Operasional (Petty Cash)</option>
                         </select>
                     </div>
 

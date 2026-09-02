@@ -1,7 +1,7 @@
 # PRD FINAL (DISEMPURNAKAN) — Fitur Konsinyasi Rak Toko (KEREN SNACK)
 
 **Status:** Final & Disempurnakan — siap eksekusi  
-**Tanggal:** 31 Agustus 2026  
+**Tanggal:** 1 September 2026 (Revisi UI/UX — Portal Konsinyasi)  
 **Menggantikan:** Semua draf sebelumnya (`PRD-Penyempurnaan-Konsinyasi.md`, `v2`, `UIUX.md`) — dokumen ini adalah **satu-satunya rujukan final**.  
 
 ---
@@ -537,95 +537,264 @@ Komisi dihitung dari toko yang **di-assign tetap** ke sales (`pelanggan.sales_dr
 
 ---
 
-## 4. UI/UX — Spek Layar per Role
+## 4. UI/UX — Portal Konsinyasi Terpadu
 
-Prinsip lintas layar (berlaku ke SEMUA layar di bawah):
-- Setiap aksi yang mengubah stok/uang **wajib ada konfirmasi eksplisit** sebelum submit.
-- Angka hasil kalkulasi sistem (laku, komisi, sisa tagihan, kerugian) selalu **read-only**, jangan dibikin seolah bisa diedit manual.
-- State kosong **selalu ada pesan + CTA**, jangan biarkan layar putih polos.
-- State error **actionable** — jelas apa yang salah dan apa yang bisa dilakukan user, bukan cuma "Terjadi kesalahan".
-- Istilah dipakai konsisten di semua layar: "titip", "laku", "retur bagus", "retur rusak".
+### 4.0 Prinsip Arsitektur UI (WAJIB DIBACA DULU)
 
----
+#### 4.0.1 Satu Entry-Point, Satu Sidebar Menu
 
-### A. SALES (Mobile, HTMX)
+Fitur konsinyasi **hanya punya 1 menu di sidebar**: **"Konsinyasi"** → `/consignment`.
 
-**A1. Daftar Toko & Pengiriman Masuk**
-- Query Toko: `pelanggan WHERE sales_driver_id = :karyawan_id_login AND is_konsinyasi = true AND status_aktif = true`
-- Card per toko: nama, alamat singkat, badge merah kalau `terakhir_opname_pada` > 14 hari.
-- **Sub-komponen Pengiriman Masuk:** Jika ada `surat_jalan` berstatus `sedang_dikirim` untuk toko tersebut, tampilkan banner: *"Kiriman No. [SJ] sedang menuju toko"* + Tombol **"Konfirmasi Barang Diterima Toko"** (mengubah status ke `selesai_diterima` untuk mentrigger masuknya stok ke rak toko).
-- Search box filter nama toko (client-side).
-- Kosong → pesan "Belum ada toko yang di-assign ke kamu, hubungi admin" + CTA jelas.
-- Tap toko → A2.
+Tidak ada lagi sub-menu konsinyasi di sidebar (misal: "Laporan Konsinyasi", "Piutang Konsinyasi", "Approval", dst. sebagai item sidebar terpisah). Semua akses masuk lewat 1 entry-point, lalu user memilih fitur dari halaman portal.
 
-**A2. Form Opname (layar paling kritis)**
-- Header: nama toko, alamat, tombol telepon/WA cepat.
-- Jika toko ini **belum pernah ada riwayat titipan sama sekali** (`COUNT(stok_konsinyasi_toko) = 0`) $\rightarrow$ tampilkan CTA "Toko ini belum ada barang titipan — buat pengiriman pertama" $\rightarrow$ A4.
-- **Daftar Item:** Tampilkan seluruh SKU yang terdaftar di rak toko tersebut (termasuk item dengan saldo 0 pcs yang diberi badge *"Habis: 0 pcs"* agar sales bisa mengonfirmasi saldo 0 dan mengajukan restock).
-- Per item yang dititip, tampilkan:
-  - Nama item, "Stok titip sistem: X pcs" (read-only, acuan)
-  - Input: `sisa_fisik_di_rak` (wajib), `retur_bagus` (default 0), `retur_rusak` (default 0)
-  - **Helper text WAJIB di bawah field retur_bagus:** *"Isi ini CUMA kalau barangnya dibawa pulang ke gudang. Kalau barang masih ditinggal di toko (walau cuma sisa dikit), JANGAN diisi di sini — masukin ke 'sisa fisik di rak'."*
-  - Preview real-time: "Estimasi laku = X pcs" (rumus: `titip - (sisa + retur_bagus + retur_rusak)`, pakai `GREATEST(0, ...)`)
-  - Warning merah jika `sisa + retur_bagus + retur_rusak > stok_titip` sebelum submit.
-- Tombol submit disabled sampai semua item minimal disentuh field `sisa_fisik_di_rak`.
-- Konfirmasi modal sebelum submit: "Kamu akan mencatat kunjungan ke [Toko]: total estimasi laku Rp X dari Y item. Lanjut?"
-- Submit gagal (koneksi putus) → input tidak hilang, sediakan tombol "Coba kirim lagi".
-- Submit sukses → panggil `fn_proses_kunjungan_konsinyasi` → A3.
+#### 4.0.2 Halaman Portal sebagai Homepage Konsinyasi
 
-**A3. Hasil Kunjungan**
-- Tampilkan: nomor kunjungan, tanggal, total laku, nomor nota (kalau `total_laku_netto > 0`; kalau 0 tampilkan jelas "Tidak ada barang laku pada kunjungan ini", bukan halaman kosong).
-- Rincian per item: titip awal → laku → sisa baru.
-- Tombol besar: "Toko ini minta kiriman baru?" → A4 (toko ke-prefill).
-- Tombol sekunder: "Selesai, kembali ke daftar toko" → A1.
+`/consignment` adalah halaman portal — bukan form, bukan tabel data. Halaman ini menampilkan **grid card navigasi** yang masing-masing merepresentasikan satu fitur/sub-halaman. Klik card → buka halaman baru (full page navigation) di URL `/consignment/<sub>`.
 
-**A4. Buat Pengiriman/Titip Baru**
-- Toko tujuan (prefill dari A3, atau searchable untuk toko baru).
-- Pilih item + qty (multi-row).
-- **Tidak menampilkan harga** ke sales sama sekali di layar ini (dokumen kirim gak nampilin nilai barang, lihat §2.10) — cukup nama barang + jumlah.
-- Info: *"Kiriman ini masih perlu approval owner sebelum diberangkatkan."*
-- Jika qty diminta > stok gudang saat ini → warning di layar ini (validasi dini).
-- Submit → bikin `pesanan` (`adalah_tagihan=false`, item pakai HPP di database) + `surat_jalan` status `draf_n8n` → kembali ke A1 dengan toast "Pengiriman diajukan, menunggu approval owner".
+Layout portal:
+- Header halaman: judul "Konsinyasi" + breadcrumb sederhana.
+- Grid card responsif: **2 kolom di mobile, 3–4 kolom di tablet/desktop**.
+- Setiap card: icon + label fitur saja — **tanpa summary angka**, bersih dan tidak overfitting.
+- Card yang tidak boleh diakses oleh role aktif: **disembunyikan (hidden)**, bukan di-disable/greyed-out.
+
+#### 4.0.3 Responsive — Bukan Mobile-First Terpisah
+
+Semua layar (portal + sub-halaman) harus **responsive** dengan pendekatan mobile-first CSS:
+- Tidak ada halaman khusus "versi mobile" atau route `/consignment/sales` — semua role pakai URL yang sama.
+- Tabel di mobile → collapse jadi card list atau horizontal scroll dengan sticky column pertama.
+- Form input di mobile → full-width, touch-friendly (min height 44px per input).
+
+#### 4.0.4 Prinsip Lintas Layar
+
+- Setiap aksi yang mengubah stok/uang **wajib ada konfirmasi modal** sebelum submit.
+- Angka hasil kalkulasi sistem (laku, komisi, sisa tagihan, kerugian) selalu **read-only**, tidak bisa diedit manual.
+- State kosong **selalu ada pesan + CTA** yang jelas — tidak boleh ada halaman putih polos.
+- State error **actionable** — sebutkan apa yang salah dan langkah yang bisa dilakukan, bukan cuma "Terjadi kesalahan".
+- Istilah dipakai konsisten di semua layar: **"titip"**, **"laku"**, **"retur bagus"**, **"retur rusak"**.
+- Semua teks UI dalam **Bahasa Indonesia**.
 
 ---
 
-### B. ADMIN (Web)
+### 4.1 Controller & Routing
 
-**B1. Dashboard Saldo Rak per Toko** — tabel: toko, total item dititip, terakhir opname, badge status. Drill down → B5.
+**Rekomendasi (terbaik untuk jangka panjang):** Gunakan satu `ConsignmentController.php` yang sudah ada, tambah method baru untuk setiap sub-halaman. Jangan buat controller baru yang pecah-pecah karena ini satu domain fitur.
 
-**B2. Kelola Assignment Sales ↔ Toko** — form assign `pelanggan.sales_driver_id`. Toko belum punya sales → badge kuning "Belum ada sales".
+Struktur method controller:
 
-**B3. Buat & Kelola Pengiriman Konsinyasi**
-- Admin bikin draft pengiriman (sama seperti A4, tapi dari sisi admin) — HPP boleh ditampilkan ke admin.
-- List draft yang menunggu approval owner (status `draf_n8n`) — read-only untuk admin, approve final tetap di tangan owner (§2.9).
-- Validasi stok gudang ditampilkan di sini SEBELUM dikirim ke owner untuk approve.
+```
+ConsignmentController::portal()            → GET /consignment
+ConsignmentController::stokRak()           → GET /consignment/stok-rak
+ConsignmentController::opname()            → GET /consignment/opname (atau ?pelanggan_id=...)
+ConsignmentController::opnameProses()      → POST /consignment/opname/proses
+ConsignmentController::hasilKunjungan()    → GET /consignment/opname/hasil (?kunjungan_id=...)
+ConsignmentController::konfirmasiTerima()  → POST /consignment/konfirmasi-terima
+ConsignmentController::laporanPenjualan()  → GET /consignment/laporan-penjualan
+ConsignmentController::piutang()           → GET /consignment/piutang
+ConsignmentController::catatPembayaran()   → POST /consignment/piutang/bayar
+ConsignmentController::assignmentSales()   → GET /consignment/assignment-sales
+ConsignmentController::saveAssignment()    → POST /consignment/assignment-sales/save
+ConsignmentController::riwayatKunjungan()  → GET /consignment/riwayat-kunjungan
+ConsignmentController::komisiSales()       → GET /consignment/komisi-sales
+ConsignmentController::kerugianRusak()     → GET /consignment/kerugian-rusak
+ConsignmentController::earlyWarning()      → GET /consignment/early-warning
+```
 
-**B4. List Piutang Konsinyasi**
+Setiap method yang memerlukan role tertentu **wajib cek permission di awal method** — jika tidak punya akses, redirect ke `/consignment` dengan flash error "Kamu tidak punya akses ke halaman ini."
+
+---
+
+### 4.2 Hak Akses Per Card (Role-Based Visibility)
+
+Card di portal ditampilkan atau disembunyikan berdasarkan role user yang sedang login.
+
+| # | Fitur (Card) | URL Sub-halaman | Sales | Admin | Owner |
+|---|---|---|:---:|:---:|:---:|
+| 1 | Opname / Kunjungan | `/consignment/opname` | ✅ | ✅ | ✅ |
+| 2 | Stok Rak per Toko | `/consignment/stok-rak` | ✅ (filter toko assigned) | ✅ (semua toko) | ✅ (semua toko) |
+| 3 | Laporan Penjualan | `/consignment/laporan-penjualan` | ✅ (filter toko assigned) | ✅ (semua) | ✅ (semua) |
+| 4 | Piutang Konsinyasi | `/consignment/piutang` | ❌ | ✅ | ✅ (read-only, tanpa tombol bayar) |
+| 5 | Assignment Sales ↔ Toko | `/consignment/assignment-sales` | ❌ | ✅ | ✅ |
+| 6 | Rekap Komisi Sales | `/consignment/komisi-sales` | ❌ | ✅ | ✅ |
+| 7 | Laporan Kerugian Barang Rusak | `/consignment/kerugian-rusak` | ❌ | ✅ | ✅ |
+| 8 | Early Warning Toko | `/consignment/early-warning` | ❌ | ✅ | ✅ |
+| 9 | Riwayat Kunjungan | `/consignment/riwayat-kunjungan` | ❌ | ✅ | ✅ |
+
+**Catatan penting:**
+- Sales hanya lihat 3 card → portal ringkas, fokus kerja lapangan.
+- **Approval Pengiriman Konsinyasi berada di `/owner` (Owner Command Center)**, bukan di portal konsinyasi — sesuai dengan `OwnerController::approveConsignmentDelivery` dan `rejectConsignmentDelivery` yang sudah ada.
+- Pembuatan pesanan/pengiriman konsinyasi baru dilakukan lewat `/customer-orders/create` (modul terpusat), **bukan** dari portal konsinyasi — tidak ada card "Buat Pengiriman" di sini.
+- Card Piutang untuk Owner bersifat **read-only** (tidak ada tombol "Catat Pembayaran") — aksi bayar hanya bisa dilakukan Admin.
+
+---
+
+### 4.3 Halaman Portal (`/consignment`)
+
+**Tampilan:**
+- Judul halaman: **"Konsinyasi"** — besar, jelas.
+- Subjudul opsional berdasarkan role: misal untuk Sales tampilkan *"Selamat datang, [nama]. Pilih aktivitas kamu:"*
+- Grid card 2 kolom (mobile) / 3–4 kolom (tablet/desktop).
+
+**Setiap card berisi:**
+- Icon yang relevan (gunakan icon set yang sudah dipakai di sistem).
+- Label fitur (contoh: "Opname / Kunjungan", "Stok Rak per Toko").
+- Tidak ada angka/statistik — card adalah navigasi murni.
+
+**Contoh urutan card berdasarkan role:**
+
+*Sales:*
+1. Opname / Kunjungan
+2. Stok Rak per Toko
+3. Laporan Penjualan
+
+*Admin:*
+1. Opname / Kunjungan
+2. Stok Rak per Toko
+3. Laporan Penjualan
+4. Piutang Konsinyasi
+5. Assignment Sales ↔ Toko
+6. Rekap Komisi Sales
+7. Laporan Kerugian Barang Rusak
+8. Riwayat Kunjungan
+9. Early Warning Toko
+
+*Owner:*
+1. Laporan Penjualan
+2. Piutang Konsinyasi (read-only)
+3. Rekap Komisi Sales
+4. Laporan Kerugian Barang Rusak
+5. Stok Rak per Toko
+6. Assignment Sales ↔ Toko
+7. Riwayat Kunjungan
+8. Early Warning Toko
+
+> **Catatan untuk Owner:** Approval Pengiriman Konsinyasi tersedia di halaman **Owner Command Center** (`/owner`) — bukan di portal ini.
+
+---
+
+### 4.4 Sub-halaman: Opname / Kunjungan (`/consignment/opname`)
+
+**Deskripsi:** Halaman utama kerja Sales di lapangan — sales pilih toko, lakukan opname rak, submit → sistem catat kunjungan & terbitkan nota otomatis jika ada barang laku. Menggunakan pola **Master-Detail via URL State** (`/consignment/opname` untuk daftar toko dan `?pelanggan_id={id}` untuk form opname).
+
+**Step 1 — Pilih Toko (`GET /consignment/opname`):**
+- Tampilkan daftar toko konsinyasi yang di-assign ke sales yang sedang login.
+  - Query: `pelanggan WHERE sales_driver_id = :karyawan_id_login AND is_konsinyasi = true AND status_aktif = true`
+  - Admin/Owner yang membuka halaman ini bisa pilih semua toko (tanpa filter sales).
+- Tampilan per toko: nama toko, alamat singkat, badge merah jika `terakhir_opname_pada > 14 hari`.
+- Indikator visual jika ada kiriman sedang menuju toko tersebut.
+- Search box filter nama toko (client-side, instan tanpa reload).
+- State kosong → pesan: *"Belum ada toko yang di-assign ke kamu, hubungi admin."*
+- Klik toko → navigasi ke `GET /consignment/opname?pelanggan_id={id}` (membuka Form Opname Toko).
+
+**Step 2 — Form Opname Rak (`GET /consignment/opname?pelanggan_id={id}`):**
+- **Header:** Tombol navigasi *"← Kembali ke Daftar Toko"*, nama toko, alamat, tombol telepon/WA langsung.
+- **Banner Kiriman Masuk Interaktif (SOP Restock saat Kunjungan):**
+  - Jika ada `surat_jalan` berstatus `sedang_dikirim` untuk toko tersebut, tampilkan banner interaktif di atas form:
+    *"🚚 Ada Kiriman Masuk: [No. Surat Jalan] ([Total SKU] SKU / [Total Qty] pcs) sedang menuju toko ini."*
+  - Tombol aksi **[Konfirmasi Barang Diterima Toko]** $\rightarrow$ kirim request ke `POST /consignment/konfirmasi-terima` $\rightarrow$ trigger database `trg_proses_pengiriman_konsinyasi` otomatis memindahkan stok gudang ke saldo rak toko seketika $\rightarrow$ form opname otomatis memuat ulang saldo stok titip terbaru sebelum sales mulai menghitung fisik.
+  - **Catatan:** Form opname **TIDAK memiliki input manual `tambah_titip_baru`**. Semua penambahan titipan wajib melalui alur pengiriman resmi satu pintu yang telah disetujui Owner.
+- Jika toko belum pernah ada riwayat titipan (`COUNT(stok_konsinyasi_toko) = 0`) → tampilkan CTA: *"Toko ini belum ada barang titipan. Buat pesanan pengiriman pertama di menu Customer Orders."* (link ke `/customer-orders/create`).
+- **Daftar Item:** Semua SKU yang terdaftar di rak toko (termasuk saldo 0 pcs — beri badge *"Habis: 0 pcs"*).
+- Per item:
+  - Nama item, **"Stok titip sistem: X pcs"** (read-only, acuan)
+  - Input: `sisa_fisik_di_rak` (wajib diisi), `retur_bagus` (default 0), `retur_rusak` (default 0)
+  - **Helper text WAJIB di bawah field `retur_bagus`:** *"Isi ini HANYA kalau barang dibawa pulang ke gudang. Kalau barang masih di toko (walau sisa sedikit), masukkan ke 'sisa fisik di rak'."*
+  - Preview real-time: **"Estimasi laku = X pcs"** — rumus: `GREATEST(0, stok_titip - (sisa + retur_bagus + retur_rusak))`
+  - Warning merah jika `sisa + retur_bagus + retur_rusak > stok_titip`.
+- Tombol **"Submit Opname"** disabled sampai semua item minimal disentuh field `sisa_fisik_di_rak`.
+- Konfirmasi modal sebelum submit: *"Kamu akan mencatat kunjungan ke [Toko]: estimasi laku Rp X dari Y item. Lanjutkan?"*
+- Jika submit gagal (koneksi putus) → input tidak hilang (tersimpan di session form recovery), tampilkan tombol *"Coba kirim lagi"*.
+- Submit sukses → panggil `fn_proses_kunjungan_konsinyasi` → redirect ke `GET /consignment/opname/hasil?kunjungan_id={id}`.
+
+**Step 3 — Hasil Kunjungan (`GET /consignment/opname/hasil?kunjungan_id={kunjungan_id}`):**
+- Tampilkan: nomor kunjungan, tanggal, nama toko, nama sales, total laku (Rp), nomor nota (jika `total_laku_netto > 0`), status pembayaran nota.
+- Jika total laku = 0 → tampilkan jelas: *"Tidak ada barang laku pada kunjungan ini."* — bukan halaman kosong.
+- Rincian per item: titip awal → laku → retur rusak → sisa baru.
+- **Fitur Bukti Kunjungan & Dokumen Lapangan:**
+  - **Tombol "Kirim Rekap WhatsApp"** → membuka tautan `https://wa.me/{nomor_wa_toko}?text=...` berisi rekap rapi siap kirim (Nama Toko, Tanggal, No. Nota, Qty Laku per item, Retur Rusak, Total Tagihan, Sisa Tagihan).
+  - **Tombol "Cetak Struk / Thermal"** → trigger fungsi browser `window.print()` dengan layout struk kasir/thermal 58mm/80mm & A4 bersih.
+- **Navigasi:** Tombol **"Kembali ke Daftar Toko"** → `/consignment/opname` | **"Kembali ke Portal"** → `/consignment`.
+
+---
+
+### 4.5 Sub-halaman: Stok Rak per Toko (`/consignment/stok-rak`)
+
+- Tabel: nama toko, total SKU dititip, total qty dititip, tanggal terakhir opname, badge status.
+  - Sales: filter otomatis hanya toko yang di-assign ke dia.
+  - Admin/Owner: lihat semua toko.
+- Badge status opname: **Hijau** (≤ 7 hari), **Kuning** (8–14 hari), **Merah** (> 14 hari atau belum pernah opname).
+- Klik baris toko → drill-down: detail item per rak toko (nama item, stok titip saat ini, HPP saat ini — HPP hanya tampil untuk Admin/Owner, bukan Sales).
+- State kosong → pesan: *"Belum ada data stok rak. Buat pengiriman pertama lewat menu Customer Orders."*
+
+---
+
+### 4.6 Sub-halaman: Laporan Penjualan Konsinyasi (`/consignment/laporan-penjualan`)
+
+- Filter: periode (tanggal awal–akhir), toko (dropdown — Sales hanya lihat toko miliknya).
+- Tabel hasil: tanggal kunjungan, nama toko, nomor kunjungan, nomor nota, total laku (Rp), status pembayaran nota.
+- Aggregasi di bawah tabel: total laku periode, total nota terbit, total sudah dibayar, total piutang.
+- State kosong → pesan: *"Belum ada data penjualan konsinyasi untuk periode ini."*
+- Klik baris → drawer/halaman detail rincian item per kunjungan.
+
+---
+
+### 4.7 Sub-halaman: Piutang Konsinyasi (`/consignment/piutang`)
+
 - Query: `pesanan WHERE tipe_pembayaran='konsinyasi' AND adalah_tagihan=true AND status_pembayaran IN ('belum_lunas','sebagian')`
-- Tabel: toko, nomor nota, total tagihan, sudah dibayar, sisa, status (badge beda warna untuk "belum lunas" vs "sebagian").
-- Tombol "Catat Pembayaran" → modal: pilih akun kas, input nominal (max = sisa tagihan, validasi client-side sebelum submit), keterangan opsional → panggil `fn_catat_pembayaran_konsinyasi`.
-
-**B5. History Kunjungan per Toko** — read-only, `kunjungan_konsinyasi` + `rincian_kunjungan_konsinyasi` per toko, buat audit.
+- Tabel: nama toko, nomor nota, tanggal tagihan, total tagihan (Rp), sudah dibayar (Rp), sisa tagihan (Rp), status.
+  - Badge status: **Merah** = `belum_lunas`, **Kuning** = `sebagian`.
+- **Tombol "Catat Pembayaran"** — hanya tampil untuk Admin (Owner lihat read-only tanpa tombol ini):
+  - Modal: pilih akun kas (dropdown), input nominal bayar (max = sisa tagihan, validasi client-side), keterangan opsional.
+  - Submit → panggil `fn_catat_pembayaran_konsinyasi`.
+  - Konfirmasi modal sebelum submit: *"Catat pembayaran Rp X untuk nota [No.Nota] dari [Toko]?"*
+- State kosong → pesan: *"Tidak ada piutang konsinyasi aktif saat ini."*
 
 ---
 
-### C. OWNER (Web) — ringkas & fokus keputusan
+### 4.8 Sub-halaman: Assignment Sales ↔ Toko (`/consignment/assignment-sales`)
 
-**C1. Rekap Omzet per Toko/Periode** — filter tanggal, tabel/chart dari `kunjungan_konsinyasi`.
+- Tabel toko konsinyasi: nama toko, sales yang di-assign saat ini, tombol "Ubah Assignment".
+- Toko belum punya sales → badge **"Belum ada sales"** (warna kuning/warning).
+- Tombol "Ubah Assignment" → modal: dropdown pilih karyawan dengan role sales, simpan → update `pelanggan.sales_driver_id`.
+- State kosong → pesan: *"Belum ada toko konsinyasi yang terdaftar."*
 
-**C2. Approval Pengiriman Konsinyasi**
-- List draft dari B3 yang perlu di-approve owner (satu pintu, §2.9).
-- Per item: toko tujuan, list barang+qty, nilai HPP (khusus owner boleh lihat).
-- Tombol **Approve** $\rightarrow$ status `surat_jalan = 'disetujui_owner'`.
-- Tombol **Tolak** $\rightarrow$ status `surat_jalan = 'ditolak_owner'`, `pesanan.status_pemrosesan = 'dibatalkan'` + input catatan alasan penolakan.
+---
 
-**C3. Rekap Komisi per Sales** — query §2.11 (Opsi A), tabel: sales, total omzet, %komisi, nominal komisi.
+### 4.9 Sub-halaman: Rekap Komisi Sales (`/consignment/komisi-sales`)
 
-**C4. Piutang Konsinyasi Outstanding** — total + breakdown per toko, versi ringkas B4 tanpa tombol aksi bayar.
+- Filter: periode (bulan/tanggal).
+- Tabel: nama sales, total toko yang di-assign, total omzet (Rp), persentase komisi (%), nominal komisi (Rp).
+- Query basis: §2.11 — komisi berdasarkan toko yang di-assign tetap (`pelanggan.sales_driver_id`).
+- State kosong → pesan: *"Belum ada data komisi untuk periode ini."*
 
-**C5. Laporan Kerugian Barang Rusak** — `SUM(nilai_kerugian_rusak)` dari `rincian_kunjungan_konsinyasi`, filter periode/toko. Tabel: toko, tanggal kunjungan, item, qty rusak, nilai kerugian.
+---
 
-**C6. Early Warning Toko Lama Gak Diopname** — toko dengan `terakhir_opname_pada` > threshold (14 hari).
+### 4.10 Sub-halaman: Laporan Kerugian Barang Rusak (`/consignment/kerugian-rusak`)
+
+- Filter: periode, toko.
+- Tabel: tanggal kunjungan, nama toko, nama item, qty rusak, HPP satuan (Rp), nilai kerugian (Rp).
+- Aggregasi: total nilai kerugian periode.
+- Source data: `SUM(nilai_kerugian_rusak)` dari `rincian_kunjungan_konsinyasi`.
+- State kosong → pesan: *"Tidak ada barang rusak yang tercatat pada periode ini."*
+
+---
+
+### 4.11 Sub-halaman: Riwayat Kunjungan per Toko (`/consignment/riwayat-kunjungan`)
+
+- Filter: toko (dropdown), periode.
+- Tabel: tanggal kunjungan, nomor kunjungan, nama sales, total laku (Rp), nomor nota.
+- Klik baris → drawer/halaman detail rincian item kunjungan (read-only, untuk audit).
+- State kosong → pesan: *"Belum ada riwayat kunjungan untuk filter ini."*
+
+---
+
+### 4.12 Sub-halaman: Early Warning Toko (`/consignment/early-warning`)
+
+- Threshold default: 14 hari (hardcode, bisa diubah nanti jika diperlukan).
+- Tabel: nama toko, nama sales assigned, terakhir opname, jumlah hari sejak opname terakhir (badge merah), total stok titip saat ini.
+- Urutkan: terlama (paling berbahaya) di atas.
+- State kosong → pesan: *"Semua toko sudah diopname dalam 14 hari terakhir. 👍"*
+
+
 
 ---
 
@@ -635,17 +804,29 @@ Prinsip lintas layar (berlaku ke SEMUA layar di bawah):
 |---|---|---|
 | 1 | Basis komisi sales | Toko yang di-assign tetap (`pelanggan.sales_driver_id`), direkap per periode/bulanan |
 | 2 | Barang rusak | Masuk laporan kerugian resmi, dihitung pakai HPP snapshot |
-| 3 | Validasi stok gudang | Sistem nolak otomatis (di trigger, plus dicek dini di UI admin B3 & sales A4) |
+| 3 | Validasi stok gudang | Sistem nolak otomatis (di trigger), dicek dini di UI form opname |
 | 4 | Status pembayaran sebagian | Ditambah status baru `'sebagian'` pada constraint status pembayaran |
 | 5 | Nilai di dokumen kirim (non-tagihan) | HPP, internal only (admin/owner) — TIDAK ditampilkan ke sales/toko |
-| 6 | Approval pengiriman | Admin/Sales bikin draft → **Owner approve** (satu pintu, gak dobel approval) |
+| 6 | Approval pengiriman | Draft dibuat via `/customer-orders/create` → **Owner approve di `/owner` (Owner Command Center)** — bukan di portal konsinyasi |
 | 7 | Penolakan kiriman | Status surat jalan menjadi `'ditolak_owner'` dan pesanan menjadi `'dibatalkan'` |
+| 8 | Arsitektur sidebar | **1 menu "Konsinyasi"** di sidebar → `/consignment` sebagai portal card navigasi |
+| 9 | URL sub-halaman | Semua pakai pola `/consignment/<sub>` — tidak ada route `/consignment/sales` lagi |
+| 10 | Hak akses card | Card **hidden** (bukan disabled) jika role tidak punya akses |
+| 11 | Tampilan | **Responsive** (mobile-first CSS) — tidak ada halaman mobile terpisah |
+| 12 | Buat pengiriman konsinyasi | Terpusat di `/customer-orders/create` — bukan dari portal konsinyasi |
+| 13 | Controller | Satu `ConsignmentController.php` — method baru per sub-halaman (maintainable jangka panjang) |
+| 14 | Format URL Hasil Opname | `GET /consignment/opname/hasil?kunjungan_id={UUID}` — sinkron dengan arsitektur Router query parameter ERP |
+| 15 | Alur Opname Master-Detail | `GET /consignment/opname` (daftar toko) & `GET /consignment/opname?pelanggan_id={UUID}` (form opname toko) |
+| 16 | Alur Restock saat Kunjungan | Melalui Banner Konfirmasi Kiriman Masuk interaktif di atas form opname yang mentrigger `trg_proses_pengiriman_konsinyasi` sebelum opname dihitung (tidak ada input manual `tambah_titip_baru`) |
+| 17 | Bukti Kunjungan Lapangan | Tombol ringkasan WhatsApp ke toko + tombol browser thermal print (58mm/80mm & A4) di layar hasil kunjungan |
 
 ---
 
 ## 6. Checklist Implementasi (Urutan Pengerjaan)
 
-- [ ] **1. Fix CHECK constraint `riwayat_stok`** (§2.1) — bug aktif, kerjain PERTAMA sebelum yang lain.
+### Phase 1 — Database (PRIORITAS MUTLAK, KERJAIN PERTAMA)
+
+- [ ] **1. Fix CHECK constraint `riwayat_stok`** (§2.1) — bug aktif yang bikin transaksi rollback total saat ada retur rusak.
 - [ ] 2. Tambah kolom `pelanggan.sales_driver_id` (§2.2).
 - [ ] 3. Tambah kolom `pesanan.adalah_tagihan` (§2.3).
 - [ ] 4. Update constraint `pesanan_status_pembayaran_check` tambah `'sebagian'` (§2.4).
@@ -654,7 +835,31 @@ Prinsip lintas layar (berlaku ke SEMUA layar di bawah):
 - [ ] 7. Update fungsi `fn_proses_kunjungan_konsinyasi` lengkap dengan valuasi kerugian rusak (§2.7).
 - [ ] 8. Buat fungsi `fn_catat_pembayaran_konsinyasi` (§2.8).
 - [ ] 9. Buat & pasang trigger `trg_proses_pengiriman_konsinyasi` pada `surat_jalan` (§2.9).
-- [ ] 10. Bangun UI Sales: A1 → A2 → A3 → A4 (§4-A).
-- [ ] 11. Bangun UI Admin: B1–B5 (§4-B).
-- [ ] 12. Bangun UI Owner: C1–C6 (§4-C).
-- [ ] 13. Testing skenario end-to-end: toko baru → kirim tanpa tagihan HPP → approve owner → konfirmasi terima → opname (ada retur rusak) → nota otomatis terbit → bayar sebagian → bayar lunas → restock aman.
+
+### Phase 2 — Routing & Controller
+
+- [ ] 10. Tambah semua method baru di `ConsignmentController.php` sesuai mapping §4.1.
+- [ ] 11. Daftarkan semua route `/consignment/*` di file routing aplikasi.
+- [ ] 12. Implementasi middleware/cek permission di setiap method controller (role-based access).
+- [ ] 13. Hapus/nonaktifkan route `/consignment/sales` yang lama (redirect ke `/consignment` jika masih ada link yang tersisa).
+
+### Phase 3 — UI Portal & Sub-halaman
+
+- [ ] 14. Bangun halaman portal `/consignment` — grid card responsif, card hidden berdasarkan role (§4.3).
+- [ ] 15. Bangun sub-halaman Opname/Kunjungan `/consignment/opname` — Step 1 (pilih toko) + Step 2 (form opname) + Step 3 (hasil kunjungan) (§4.4).
+- [ ] 16. Bangun sub-halaman Stok Rak per Toko `/consignment/stok-rak` (§4.5).
+- [ ] 17. Bangun sub-halaman Laporan Penjualan `/consignment/laporan-penjualan` (§4.6).
+- [ ] 18. Bangun sub-halaman Piutang Konsinyasi `/consignment/piutang` — termasuk modal catat pembayaran untuk Admin (§4.7).
+- [ ] 19. Bangun sub-halaman Assignment Sales ↔ Toko `/consignment/assignment-sales` (§4.8).
+- [ ] 20. Bangun sub-halaman Rekap Komisi Sales `/consignment/komisi-sales` (§4.9).
+- [ ] 21. Bangun sub-halaman Laporan Kerugian Barang Rusak `/consignment/kerugian-rusak` (§4.10).
+- [ ] 22. Bangun sub-halaman Riwayat Kunjungan `/consignment/riwayat-kunjungan` (§4.11).
+- [ ] 23. Bangun sub-halaman Early Warning Toko `/consignment/early-warning` (§4.12).
+- [ ] 24. Pastikan sidebar hanya menampilkan **1 menu "Konsinyasi"** — hapus semua sub-item konsinyasi lain dari sidebar.
+
+### Phase 4 — Testing End-to-End
+
+- [ ] 25. Test skenario lengkap: toko baru → buat pesanan kirim via `/customer-orders/create` → owner approve di `/owner` (Owner Command Center) → konfirmasi terima (stok masuk rak) → opname di `/consignment/opname` (ada retur rusak) → nota otomatis terbit → bayar sebagian di `/consignment/piutang` → bayar lunas → stok rak terupdate benar.
+- [ ] 26. Test role visibility: login sebagai Sales → cek hanya 3 card muncul di portal; login sebagai Admin → 9 card muncul; login sebagai Owner → 8 card muncul (approval ada di `/owner`, bukan di sini).
+- [ ] 27. Test responsive: buka semua sub-halaman di mobile (320px) dan desktop (1440px) — tidak ada elemen yang overflow atau terpotong.
+

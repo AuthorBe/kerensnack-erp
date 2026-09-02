@@ -72,6 +72,34 @@ class Controller
     }
 
     /**
+     * Redirect back to HTTP_REFERER or fallback URL
+     * 
+     * @param string $fallback
+     */
+    protected function redirectBack(string $fallback = '/'): void
+    {
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $redirectUrl = (string)$this->input('redirect_url', '');
+
+        if (!empty($redirectUrl)) {
+            $this->redirect($redirectUrl);
+            return;
+        }
+
+        if (!empty($referer)) {
+            $parsed = parse_url($referer);
+            $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+            if (empty($parsed['host']) || $parsed['host'] === $currentHost) {
+                $target = ($parsed['path'] ?? '/') . (!empty($parsed['query']) ? '?' . $parsed['query'] : '');
+                $this->redirect($target);
+                return;
+            }
+        }
+
+        $this->redirect($fallback);
+    }
+
+    /**
      * Set Flash Messages
      */
     protected function flashSuccess(string $message, ?string $title = null): void

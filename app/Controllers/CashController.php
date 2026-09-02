@@ -19,7 +19,7 @@ class CashController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['owner', 'admin']);
+        Auth::requireLogin();
     }
 
     /**
@@ -27,6 +27,7 @@ class CashController extends Controller
      */
     public function index(): void
     {
+        Auth::requirePermission('cash.view_all');
         try {
             // 1. Ambil daftar Akun Kas & Bank
             $accounts = Database::fetchAll("
@@ -134,6 +135,8 @@ class CashController extends Controller
      */
     public function transactions(): void
     {
+        Auth::requirePermission(['cash.view_all', 'cash.inflow', 'cash.outflow']);
+
         try {
             $startDate = $this->input('start_date', date('Y-m-01'));
             $endDate = $this->input('end_date', date('Y-m-d'));
@@ -220,6 +223,8 @@ class CashController extends Controller
      */
     public function reports(): void
     {
+        Auth::requirePermission('cash.reports');
+
         try {
             $startDate = $this->input('start_date', date('Y-m-01'));
             $endDate = $this->input('end_date', date('Y-m-d'));
@@ -296,6 +301,8 @@ class CashController extends Controller
 
     public function setDefaultPos(): void
     {
+        Auth::requirePermission('cash.manage_accounts');
+
         $id = $this->input('id');
         if (!empty($id)) {
             try {
@@ -317,6 +324,8 @@ class CashController extends Controller
 
     public function storeAccount(): void
     {
+        Auth::requirePermission('cash.manage_accounts');
+
         $namaAkun = trim((string)$this->input('nama_akun'));
         $tipeAkun = $this->input('tipe_akun', 'kas_tunai');
         $nomorRekening = trim((string)$this->input('nomor_rekening', '-'));
@@ -347,9 +356,9 @@ class CashController extends Controller
 
             $stmt = $pdo->prepare("
                 INSERT INTO public.akun_kas (
-                    nama_akun, tipe_akun, nomor_rekening, atas_nama, saldo_saat_ini, is_default_pos, status_aktif
+                    nama_akun, tipe_akun, nomor_rekening, atas_nama, saldo_saat_ini, is_default_pos, status_aktif, dibuat_pada, diubah_pada
                 ) VALUES (
-                    :nama, :tipe, :rek, :an, :saldo, :def_pos, TRUE
+                    :nama, :tipe, :rek, :an, :saldo, :def_pos, TRUE, NOW(), NOW()
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -360,7 +369,7 @@ class CashController extends Controller
                 'saldo' => $saldoAwal,
                 'def_pos' => $isDefaultPos ? 'true' : 'false'
             ]);
-            $newAccId = $stmt->fetchColumn();
+            $newAccountId = $stmt->fetchColumn();
 
             // Jika ada saldo awal, catat di arus kas
             if ($saldoAwal > 0) {
@@ -369,12 +378,13 @@ class CashController extends Controller
                         akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                         keterangan, saldo_berjalan, dicatat_oleh, dibuat_pada
                     ) VALUES (
-                        :acc_id, CURRENT_DATE, 'masuk', 'Saldo Awal', :nom,
-                        'Pencatatan Saldo Awal Akun', :nom, :user_id, NOW()
+                        :acc_id, CURRENT_DATE, 'masuk', 'modal_awal', :nom,
+                        'Saldo Awal Pembukaan Akun', :saldo, :user_id, NOW()
                     )
                 ")->execute([
-                    'acc_id' => $newAccId,
+                    'acc_id' => $newAccountId,
                     'nom' => $saldoAwal,
+                    'saldo' => $saldoAwal,
                     'user_id' => Auth::id()
                 ]);
             }
@@ -392,6 +402,8 @@ class CashController extends Controller
 
     public function updateAccount(): void
     {
+        Auth::requirePermission('cash.manage_accounts');
+
         $id = $this->input('id');
         $namaAkun = trim((string)$this->input('nama_akun'));
         $tipeAkun = $this->input('tipe_akun', 'kas_tunai');
@@ -448,6 +460,8 @@ class CashController extends Controller
 
     public function storeInflow(): void
     {
+        Auth::requirePermission('cash.inflow');
+
         $accountId = $this->input('akun_kas_id');
         $tanggal = $this->input('tanggal_transaksi', date('Y-m-d'));
         $kategori = trim((string)$this->input('kategori', 'Pendapatan Lain'));
@@ -512,6 +526,8 @@ class CashController extends Controller
 
     public function storeOutflow(): void
     {
+        Auth::requirePermission('cash.outflow');
+
         $accountId = $this->input('akun_kas_id');
         $tanggal = $this->input('tanggal_transaksi', date('Y-m-d'));
         $kategori = trim((string)$this->input('kategori', 'Operasional'));
@@ -578,6 +594,8 @@ class CashController extends Controller
 
     public function storeTransfer(): void
     {
+        Auth::requirePermission('cash.transfer');
+
         $sourceId = $this->input('source_account_id');
         $destId = $this->input('dest_account_id');
         $tanggal = $this->input('tanggal_transaksi', date('Y-m-d'));

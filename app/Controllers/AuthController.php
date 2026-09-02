@@ -157,7 +157,7 @@ class AuthController extends Controller
             // 1. Cari pengguna dari Database PostgreSQL
             $userDb = Database::fetchOne("
                 SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi, p.karyawan_id,
-                       pr.nama_peran as peran, p.status_aktif,
+                       p.peran_id, pr.nama_peran as peran, p.status_aktif,
                        k.posisi as posisi_karyawan
                 FROM public.pengguna p
                 JOIN public.peran pr ON p.peran_id = pr.id
@@ -239,13 +239,17 @@ class AuthController extends Controller
                     $userDb['peran'] ?? 'staff'
                 );
 
-                // Smart Redirect sesuai Role & Jabatan Karyawan
-                if (in_array($userDb['peran'], ['sales_driver', 'driver', 'sales'], true)) {
-                    if (($userDb['posisi_karyawan'] ?? '') === 'driver') {
-                        $this->redirect('/deliveries');
-                    } else {
-                        $this->redirect('/consignment/sales');
-                    }
+                // Smart Redirect sesuai Role & Hak Akses
+                if ($userDb['peran'] === 'driver' || ($userDb['peran'] === 'sales' && ($userDb['posisi_karyawan'] ?? '') === 'driver')) {
+                    $this->redirect('/deliveries');
+                    return;
+                }
+                if ($userDb['peran'] === 'sales') {
+                    $this->redirect('/consignment');
+                    return;
+                }
+                if ($userDb['peran'] === 'owner') {
+                    $this->redirect('/owner');
                     return;
                 }
 

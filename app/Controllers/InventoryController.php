@@ -18,7 +18,7 @@ class InventoryController extends Controller
 {
     public function __construct()
     {
-        Auth::requireLogin();
+        Auth::requirePermission('inventory.view_all');
     }
 
     public function index(): void
@@ -57,6 +57,8 @@ class InventoryController extends Controller
 
     public function adjustStock(): void
     {
+        Auth::requirePermission('inventory.opname');
+
         $itemId = $this->input('item_id');
         $qty = (int)$this->input('kuantitas', 0);
         $tipe = $this->input('tipe_penyesuaian', 'opname_lebih');
@@ -121,6 +123,97 @@ class InventoryController extends Controller
         } catch (Throwable $e) {
             if (isset($pdo)) $pdo->rollBack();
             $this->flashError("Gagal menyimpan opname: " . $e->getMessage());
+            $this->redirect('/inventory');
+        }
+    }
+
+    /**
+     * Catat Pengurangan Stok Akibat Barang Rusak, Bocor, Expired, atau Sampel (Waste)
+     */
+    public function recordWaste(): void
+    {
+        Auth::requirePermission('inventory.waste');
+
+        $itemId = (string)$this->input('item_id');
+        $qty = (int)$this->input('kuantitas', 0);
+        $kategoriWaste = trim((string)$this->input('kategori_waste', 'kemasan_rusak'));
+        $keterangan = trim((string)$this->input('keterangan', 'Barang Rusak / Susut Operasional'));
+
+        if (empty($itemId) || $qty <= 0) {
+            $this->flashError('Jumlah kuantitas barang rusak/waste harus lebih dari 0.');
+            $this->redirect('/inventory');
+            return;
+        }
+
+        try {
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
+
+            $item = Database::fetchOne("SELECT stok_fisik_saat_ini, nama_item FROM public.item WHERE id = :id FOR UPDATE", ['id' => $itemId]);
+            if (!$item) {
+                $this->flashError('Item tidak ditemukan.');
+                $this->redirect('/inventory');
+                return;
+            }
+
+            $stokLama = (int)($item['stok_fisik_saat_ini'] ?? 0);
+            if ($stokLama < $qty) {
+                $this->flashError("Kuantitas waste ({$qty} pcs) melebihi sisa stok fisik saat ini ({$stokLama} pcs).");
+                $this->redirect('/inventory');
+                return;
+            }
+
+            $stokBaru = $stokLama - $qty;
+
+            // Update item stock
+            $pdo->prepare("UPDATE public.item SET stok_fisik_saat_ini = :baru, diubah_pada = NOW() WHERE id = :id")
+                ->execute(['baru' => $stokBaru, 'id' => $itemId]);
+
+            $kategoriLabels = [
+                'kemasan_rusak' => 'Kemasan Rusak / Gagal Segel',
+                'expired_kadaluarsa' => 'Kadaluarsa / Expired',
+                'remuk_hancur' => 'Produk Remuk / Hancur',
+                'sampel_promosi' => 'Sampel Uji Rasa / Promosi',
+                'lainnya' => 'Lain-lain'
+            ];
+            $labelKategori = $kategoriLabels[$kategoriWaste] ?? $kategoriWaste;
+            $catatanLengkap = "[WASTE: {$labelKategori}] {$keterangan}";
+
+            // Insert riwayat stok
+            $pdo->prepare("
+                INSERT INTO public.riwayat_stok (
+                    item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
+                    referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
+                ) VALUES (
+                    :item_id, 'item_keluar_waste', :qty, :sebelum, :sesudah,
+                    'waste_manual', '00000000-0000-0000-0000-000000000000', :ket, :user_id, NOW()
+                )
+            ")->execute([
+                'item_id' => $itemId,
+                'qty' => $qty,
+                'sebelum' => $stokLama,
+                'sesudah' => $stokBaru,
+                'ket' => $catatanLengkap,
+                'user_id' => Auth::id() ?: null,
+            ]);
+
+            ActivityLog::log(
+                'Gudang',
+                'WASTE',
+                "Catat waste/barang rusak: {$qty} pcs '{$item['nama_item']}' ({$labelKategori})",
+                'item',
+                $itemId
+            );
+
+            $pdo->commit();
+            $this->flashSuccess("Pencatatan barang rusak/waste berhasil! Stok '{$item['nama_item']}' terpotong {$qty} pcs (sisa: {$stokBaru} pcs).");
+            $this->redirect('/inventory');
+
+        } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $this->flashError("Gagal mencatat waste: " . $e->getMessage());
             $this->redirect('/inventory');
         }
     }

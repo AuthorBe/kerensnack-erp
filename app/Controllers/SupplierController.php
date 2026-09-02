@@ -16,7 +16,7 @@ class SupplierController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['owner', 'admin']);
+        Auth::requirePermission(['master.suppliers_view', 'master.suppliers_manage']);
     }
 
     public function index(): void

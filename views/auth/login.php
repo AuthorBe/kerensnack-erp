@@ -36,6 +36,9 @@ $flash = Flash::get();
     <!-- Lucide Icons (Local) -->
     <script src="<?= Router::asset('/js/lucide.min.js') ?>"></script>
 
+    <!-- Global App CSS (Loader & Design System) -->
+    <link rel="stylesheet" href="<?= Router::asset('/css/app.css') ?>?v=<?= $cssV ?>">
+
     <!-- Alpine.js (Local) -->
     <script defer src="<?= Router::asset('/js/alpine.min.js') ?>"></script>
 
@@ -484,10 +487,37 @@ $flash = Flash::get();
                         passInput.focus();
                         return false;
                     }
+                    if (window.AppAction) {
+                        window.AppAction.show('Memverifikasi akun...');
+                    }
                 });
             }
         });
     </script>
+
+    <!-- ACTION PROCESSING LOADER -->
+    <div id="app-action-loader" aria-hidden="true">
+        <div class="action-loader-card">
+            <div class="action-visual-stage">
+                <div class="action-pulse-ring"></div>
+                <div class="action-spinner-outer"></div>
+                <div class="action-spinner-inner"></div>
+                <div class="action-center-logo">K</div>
+                <div class="action-success-orb">
+                    <svg class="action-success-svg" viewBox="0 0 24 24">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+            </div>
+            <p id="app-action-loader-text" class="action-loader-text">Memverifikasi akun...</p>
+            <div class="action-loader-track">
+                <div class="action-loader-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global App JS -->
+    <script src="<?= Router::asset('/js/app.js') ?>?v=<?= $jsV ?>"></script>
 </body>
 </html>
 

@@ -16,7 +16,7 @@ class PurchaseController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['owner', 'admin']);
+        Auth::requirePermission('purchases.view');
     }
 
     public function index(): void
@@ -58,6 +58,8 @@ class PurchaseController extends Controller
 
     public function store(): void
     {
+        Auth::requirePermission('purchases.create');
+
         $payload = json_decode(file_get_contents('php://input'), true);
 
         if (empty($payload) || empty($payload['pemasok_id']) || empty($payload['items']) || !is_array($payload['items'])) {

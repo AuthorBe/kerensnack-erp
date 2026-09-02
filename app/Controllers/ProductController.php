@@ -19,7 +19,7 @@ class ProductController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['owner', 'admin']);
+        Auth::requirePermission('master.products_view');
     }
 
     public function index(): void

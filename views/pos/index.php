@@ -66,11 +66,13 @@ function posApp() {
         },
 
         get totalPcsCount() {
-            return this.cart.reduce((sum, item) => sum + item.qty_pcs, 0);
+            if (!this.cart || !Array.isArray(this.cart)) return 0;
+            return this.cart.reduce((sum, item) => sum + (parseInt(item.qty_pcs, 10) || 0), 0);
         },
 
         get grandTotal() {
-            return this.cart.reduce((sum, item) => sum + item.subtotal, 0);
+            if (!this.cart || !Array.isArray(this.cart)) return 0;
+            return this.cart.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0);
         },
 
         formatRupiah(num) {
@@ -104,16 +106,19 @@ function posApp() {
             }
         },
 
+        isScanning: false,
+
         async scanBarcode() {
             const barcode = this.barcodeQuery.trim();
-            if (!barcode) return;
+            if (!barcode || this.isScanning) return;
+            this.isScanning = true;
             try {
                 const url = '<?= Router::url('/api/pos/search-barcode') ?>?barcode=' + encodeURIComponent(barcode);
                 const res = await fetch(url);
                 const json = await res.json();
                 if (json.success && json.data.ditemukan) {
                     if (json.data.total_varian === 1) {
-                        const rawItem = this.items.find(i => i.id === json.data.items[0].item_id);
+                        const rawItem = this.items.find(i => String(i.id) === String(json.data.items[0].item_id));
                         if (rawItem) this.addItemToCart(rawItem);
                     } else {
                         this.currentScannedBarcode = barcode;
@@ -121,11 +126,21 @@ function posApp() {
                         this.showBarcodeModal = true;
                     }
                 } else {
-                    toast.warning(`Barcode '${barcode}' tidak ditemukan dalam katalog.`);
+                    if (window.AppAlert) {
+                        window.AppAlert({
+                            title: 'Barcode Tidak Ditemukan',
+                            message: `Barcode '${barcode}' tidak terdaftar dalam katalog produk aktif.`,
+                            type: 'warning',
+                            icon: 'scan-line'
+                        });
+                    } else if (typeof toast !== 'undefined') {
+                        toast.warning(`Barcode '${barcode}' tidak ditemukan dalam katalog.`);
+                    }
                 }
             } catch (err) {
                 console.error(err);
             } finally {
+                this.isScanning = false;
                 this.barcodeQuery = '';
                 this.$nextTick(() => {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -134,43 +149,45 @@ function posApp() {
         },
 
         selectVariant(variant) {
-            const rawItem = this.items.find(i => i.id === variant.item_id);
+            const rawItem = this.items.find(i => String(i.id) === String(variant.item_id));
             if (rawItem) this.addItemToCart(rawItem);
             this.showBarcodeModal = false;
         },
 
-        get cartQtyMap() {
-            const map = {};
-            for (let i = 0; i < this.cart.length; i++) {
-                const c = this.cart[i];
-                map[c.item_id] = (c.qty_pcs || 0) + ((c.qty_bal || 0) * 20);
-            }
-            return map;
-        },
-
         getItemQty(itemId) {
-            return this.cartQtyMap[itemId] || 0;
+            if (!this.cart || !Array.isArray(this.cart) || !itemId) return 0;
+            const item = this.cart.find(c => String(c.item_id) === String(itemId));
+            return item ? (parseInt(item.qty_pcs, 10) || 0) : 0;
         },
 
         decreaseItemInCart(rawItem) {
-            const existingIndex = this.cart.findIndex(c => c.item_id === rawItem.id);
+            if (!rawItem || !rawItem.id) return;
+            const existingIndex = this.cart.findIndex(c => String(c.item_id) === String(rawItem.id));
             if (existingIndex > -1) {
                 this.updateQty(existingIndex, -1);
             }
         },
 
         async addItemToCart(rawItem) {
+            if (!rawItem || !rawItem.id) return;
+
             if (Number(rawItem.stok_fisik_saat_ini || 0) <= 0) {
-                if (typeof toast !== 'undefined') {
+                if (window.AppAlert) {
+                    window.AppAlert({
+                        title: 'Stok Habis',
+                        message: `Stok produk '${rawItem.nama_item}' sedang habis (0 pcs).`,
+                        type: 'warning',
+                        icon: 'package-x'
+                    });
+                } else if (typeof toast !== 'undefined') {
                     toast.warning(`Stok produk '${rawItem.nama_item}' sedang habis (0 pcs).`);
                 }
                 return;
             }
 
-            const existingIndex = this.cart.findIndex(c => c.item_id === rawItem.id);
+            const existingIndex = this.cart.findIndex(c => String(c.item_id) === String(rawItem.id));
             if (existingIndex > -1) {
-                this.cart[existingIndex].qty_pcs += 1;
-                this.recalculateItemSubtotal(existingIndex);
+                this.updateQty(existingIndex, 1);
                 return;
             }
 
@@ -178,23 +195,25 @@ function posApp() {
             let discountPercent = 0;
             let discountNominal = 0;
 
-            try {
-                const url = '<?= Router::url('/api/pos/calculate-price') ?>?item_id=' + rawItem.id + '&customer_id=' + this.selectedCustomerId;
-                const res = await fetch(url);
-                const json = await res.json();
-                if (json.success && json.data) {
-                    calculatedPrice = Number(json.data.harga_pcs_netto);
-                    discountPercent = Number(json.data.diskon_persen);
-                    discountNominal = Number(json.data.diskon_nominal);
-                }
-            } catch (e) { console.error(e); }
+            if (this.selectedCustomerId) {
+                try {
+                    const url = '<?= Router::url('/api/pos/calculate-price') ?>?item_id=' + rawItem.id + '&customer_id=' + this.selectedCustomerId;
+                    const res = await fetch(url);
+                    const json = await res.json();
+                    if (json.success && json.data) {
+                        calculatedPrice = Number(json.data.harga_pcs_netto);
+                        discountPercent = Number(json.data.diskon_persen);
+                        discountNominal = Number(json.data.diskon_nominal);
+                    }
+                } catch (e) { console.error(e); }
+            }
 
             this.cart.push({
                 item_id: rawItem.id,
-                kode_sku: rawItem.kode_sku,
-                nama_item: rawItem.nama_item,
-                grup_nama: rawItem.nama_grup,
-                satuan: rawItem.satuan_dasar,
+                kode_sku: rawItem.kode_sku || '',
+                nama_item: rawItem.nama_item || 'Produk',
+                grup_nama: rawItem.nama_grup || '',
+                satuan: rawItem.satuan_dasar || 'pcs',
                 price: calculatedPrice,
                 qty_pcs: 1,
                 qty_bal: 0,
@@ -203,31 +222,58 @@ function posApp() {
                 subtotal: calculatedPrice
             });
 
+            this.cart = [...this.cart];
+
             this.$nextTick(() => {
-                if (typeof lucide !== 'undefined') lucide.createIcons();
+                if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
             });
         },
 
         updateQty(index, change) {
-            const newQty = this.cart[index].qty_pcs + change;
+            if (!this.cart[index]) return;
+            const current = parseInt(this.cart[index].qty_pcs, 10) || 1;
+            const newQty = current + change;
             if (newQty <= 0) {
                 this.removeItem(index);
             } else {
                 this.cart[index].qty_pcs = newQty;
-                this.recalculateItemSubtotal(index);
+                this.cart[index].subtotal = newQty * Number(this.cart[index].price || 0);
+                this.cart = [...this.cart];
             }
+        },
+
+        recalculateItemSubtotal(index) {
+            if (!this.cart[index]) return;
+            const qty = Math.max(1, parseInt(this.cart[index].qty_pcs, 10) || 1);
+            this.cart[index].qty_pcs = qty;
+            this.cart[index].subtotal = qty * Number(this.cart[index].price || 0);
+            this.cart = [...this.cart];
         },
 
         removeItem(index) {
             this.cart.splice(index, 1);
+            this.cart = [...this.cart];
             this.$nextTick(() => {
-                if (typeof lucide !== 'undefined') lucide.createIcons();
+                if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                    lucide.createIcons();
+                }
             });
         },
 
         async clearCart() {
             if (this.cart.length === 0) return;
-            if (confirm('Kosongkan semua item dari keranjang belanja?')) {
+            const confirmed = window.AppConfirm ? await window.AppConfirm({
+                title: 'Kosongkan Keranjang POS',
+                message: 'Apakah Anda yakin ingin mengosongkan semua item dari keranjang belanja kasir?',
+                confirmText: 'Ya, Kosongkan',
+                cancelText: 'Batal',
+                type: 'danger',
+                icon: 'trash-2'
+            }) : confirm('Kosongkan semua item dari keranjang belanja?');
+
+            if (confirmed) {
                 this.cart = [];
                 this.showMobileCartDrawer = false;
             }
@@ -253,18 +299,53 @@ function posApp() {
         },
 
         openPaymentModal() {
+            this.paymentType = 'cash';
             this.paidAmount = this.grandTotal;
             this.paidAmountDisplay = window.formatRupiahNumber ? window.formatRupiahNumber(this.grandTotal) : String(this.grandTotal);
             this.showPaymentModal = true;
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+                this.$refs.paidInput?.focus();
+                this.$refs.paidInput?.select();
+            });
+        },
+
+        setQuickCash(amount) {
+            this.paidAmount = amount;
+            this.paidAmountDisplay = window.formatRupiahNumber ? window.formatRupiahNumber(amount) : String(amount);
+        },
+
+        setExactCash() {
+            this.paidAmount = this.grandTotal;
+            this.paidAmountDisplay = window.formatRupiahNumber ? window.formatRupiahNumber(this.grandTotal) : String(this.grandTotal);
         },
 
         onPaidInput(e) {
-            this.paidAmount = window.unformatRupiah ? window.unformatRupiah(e.target.value) : Number(e.target.value.replace(/[^0-9]/g, ''));
-            this.paidAmountDisplay = e.target.value;
+            const rawVal = e.target.value.replace(/[^0-9]/g, '');
+            this.paidAmount = rawVal ? parseInt(rawVal, 10) : 0;
+            this.paidAmountDisplay = window.formatRupiahNumber ? window.formatRupiahNumber(this.paidAmount) : String(this.paidAmount);
         },
 
         async submitCheckout() {
+            if (this.paymentType === 'cash' && this.paidAmount < this.grandTotal) {
+                if (window.AppAlert) {
+                    window.AppAlert({
+                        title: 'Nominal Kurang',
+                        message: `Uang tunai yang dibayarkan (Rp ${Number(this.paidAmount).toLocaleString('id-ID')}) kurang dari total tagihan (Rp ${Number(this.grandTotal).toLocaleString('id-ID')}).`,
+                        type: 'warning',
+                        icon: 'alert-triangle'
+                    });
+                } else if (typeof toast !== 'undefined') {
+                    toast.warning('Nominal uang tunai kurang dari total tagihan!');
+                }
+                return;
+            }
+
             this.isSubmitting = true;
+            if (window.AppAction) {
+                window.AppAction.show('Memproses transaksi kasir...');
+            }
+
             try {
                 const res = await fetch('<?= Router::url('/api/pos/checkout') ?>', {
                     method: 'POST',
@@ -273,14 +354,18 @@ function posApp() {
                         customer_id: this.selectedCustomerId,
                         payment_type: this.paymentType,
                         cart: this.cart,
-                        paid_amount: this.paidAmount
+                        paid_amount: this.paymentType === 'qris' ? this.grandTotal : this.paidAmount
                     })
                 });
                 const json = await res.json();
                 if (json.success) {
+                    if (window.AppAction) {
+                        await window.AppAction.success('Transaksi Berhasil! ✨', 650);
+                    }
+
                     if (json.data && json.data.items) {
                         json.data.items.forEach(it => {
-                            const found = this.items.find(i => i.id === it.item_id);
+                            const found = this.items.find(i => String(i.id) === String(it.item_id));
                             if (found) {
                                 found.stok_fisik_saat_ini = Math.max(0, found.stok_fisik_saat_ini - it.qty_pcs);
                             }
@@ -289,7 +374,7 @@ function posApp() {
 
                     this.receiptData = {
                         ...json.data,
-                        paid_amount: this.paidAmount
+                        paid_amount: this.paymentType === 'qris' ? this.grandTotal : this.paidAmount
                     };
                     this.cart = [];
                     this.showPaymentModal = false;
@@ -299,9 +384,11 @@ function posApp() {
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     });
                 } else {
+                    if (window.AppAction) window.AppAction.hide();
                     toast.error(`Gagal memproses transaksi: ${json.message}`);
                 }
             } catch (err) {
+                if (window.AppAction) window.AppAction.hide();
                 toast.error('Terjadi kesalahan jaringan/koneksi saat memproses checkout.');
             } finally {
                 this.isSubmitting = false;
@@ -346,6 +433,7 @@ document.addEventListener('alpine:init', () => {
                 <i data-lucide="scan-barcode" class="icon-left" style="color:#6366f1;"></i>
                 <input type="text" x-model="barcodeQuery" @keydown.enter="scanBarcode()"
                     x-ref="barcodeInput"
+                    :disabled="isScanning"
                     placeholder="Scan / ketik barcode..."
                     class="form-input font-mono"
                     style="height:38px;font-size:12.5px;">
@@ -470,10 +558,10 @@ document.addEventListener('alpine:init', () => {
             <!-- Pelanggan Kasir -->
             <div>
                 <label class="form-label">Pelanggan Kasir (Ritel)</label>
-                <select x-model="selectedCustomerId" @change="recalculateCartPrices()" class="form-select font-bold">
+                <select x-model="selectedCustomerId" disabled class="form-select font-bold" style="background-color: var(--color-canvas-soft); cursor: not-allowed; appearance: none; padding-right: 12px; opacity: 0.9;">
                     <?php foreach ($customers as $c): ?>
                     <option value="<?= $c['id'] ?>">
-                        👤 <?= htmlspecialchars($c['nama_toko']) ?> (<?= htmlspecialchars($c['grup_nama']) ?>)
+                        <?= htmlspecialchars($c['nama_toko']) ?> (<?= htmlspecialchars($c['grup_nama']) ?>)
                     </option>
                     <?php endforeach; ?>
                 </select>
@@ -508,15 +596,15 @@ document.addEventListener('alpine:init', () => {
                                 <div style="font-size:12.5px;font-weight:700;color:var(--color-ink);" x-text="item.nama_item"></div>
                                 <div style="font-size:11.5px;font-family:var(--font-mono);color:var(--color-ink-mute);font-weight:600;margin-top:1px;" x-text="formatRupiah(item.price) + ' / ' + item.satuan"></div>
                             </div>
-                            <button @click="removeItem(index)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:var(--color-danger);border-radius:var(--rounded-xs);" title="Hapus item">
+                            <button @click.stop="removeItem(index)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:var(--color-danger);border-radius:var(--rounded-xs);" title="Hapus item">
                                 <i data-lucide="trash-2" style="width:15px;height:15px;color:var(--color-danger);"></i>
                             </button>
                         </div>
                         <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--color-hairline);">
                             <div class="qty-counter">
-                                <button @click="updateQty(index, -1)" class="qty-btn">−</button>
-                                <input type="number" x-model.number="item.qty_pcs" @change="recalculateItemSubtotal(index)" class="qty-input">
-                                <button @click="updateQty(index, 1)" class="qty-btn">+</button>
+                                <button type="button" @click.stop="updateQty(index, -1)" class="qty-btn" aria-label="Kurang">−</button>
+                                <input type="number" min="1" x-model.number="item.qty_pcs" @input="recalculateItemSubtotal(index)" @change="recalculateItemSubtotal(index)" class="qty-input">
+                                <button type="button" @click.stop="updateQty(index, 1)" class="qty-btn" aria-label="Tambah">+</button>
                             </div>
                             <span style="font-size:13.5px;font-weight:800;font-family:var(--font-mono);color:var(--color-ink);" x-text="formatRupiah(item.subtotal)"></span>
                         </div>
@@ -588,7 +676,7 @@ document.addEventListener('alpine:init', () => {
             <!-- Pelanggan Mobile -->
             <div>
                 <label class="form-label">Toko Pelanggan</label>
-                <select x-model="selectedCustomerId" @change="recalculateCartPrices()" class="form-select font-semibold">
+                <select x-model="selectedCustomerId" disabled class="form-select font-semibold" style="background-color: var(--color-canvas-soft); cursor: not-allowed; appearance: none; padding-right: 12px; opacity: 0.9;">
                     <?php foreach ($customers as $c): ?>
                     <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nama_toko']) ?> (<?= htmlspecialchars($c['grup_nama']) ?>)</option>
                     <?php endforeach; ?>
@@ -604,15 +692,15 @@ document.addEventListener('alpine:init', () => {
                     <div style="padding:12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                             <div style="font-size:12.5px;font-weight:700;color:var(--color-ink);" x-text="item.nama_item"></div>
-                            <button @click="removeItem(index)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:var(--color-danger);border-radius:var(--rounded-xs);" title="Hapus item">
+                            <button @click.stop="removeItem(index)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:var(--color-danger);border-radius:var(--rounded-xs);" title="Hapus item">
                                 <i data-lucide="trash-2" style="width:15px;height:15px;color:var(--color-danger);"></i>
                             </button>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid var(--color-hairline);">
                             <div class="qty-counter">
-                                <button @click="updateQty(index, -1)" class="qty-btn">−</button>
-                                <input type="number" x-model.number="item.qty_pcs" @change="recalculateItemSubtotal(index)" class="qty-input">
-                                <button @click="updateQty(index, 1)" class="qty-btn">+</button>
+                                <button type="button" @click.stop="updateQty(index, -1)" class="qty-btn" aria-label="Kurang">−</button>
+                                <input type="number" min="1" x-model.number="item.qty_pcs" @input="recalculateItemSubtotal(index)" @change="recalculateItemSubtotal(index)" class="qty-input">
+                                <button type="button" @click.stop="updateQty(index, 1)" class="qty-btn" aria-label="Tambah">+</button>
                             </div>
                             <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);" x-text="formatRupiah(item.subtotal)"></span>
                         </div>
@@ -627,8 +715,7 @@ document.addEventListener('alpine:init', () => {
                     <strong style="font-size:22px;font-weight:900;font-family:var(--font-mono);color:var(--color-ink);" x-text="formatRupiah(grandTotal)"></strong>
                 </div>
                 <button type="button"
-                        @click="showMobileCartDrawer = false; var d = document.getElementById('mobile-cart-drawer'); if(d) d.style.setProperty('display', 'none', 'important'); openPaymentModal();"
-                        onclick="var d = document.getElementById('mobile-cart-drawer'); if(d) d.style.setProperty('display', 'none', 'important'); if(window.posInstance) { window.posInstance.showMobileCartDrawer=false; window.posInstance.openPaymentModal(); }"
+                        @click="showMobileCartDrawer = false; openPaymentModal();"
                         :disabled="cart.length === 0"
                         class="btn btn-primary btn-full btn-lg" style="justify-content:center;">
                     Lanjut ke Pembayaran
@@ -664,7 +751,7 @@ document.addEventListener('alpine:init', () => {
                             <div style="font-size:13px;font-weight:700;color:var(--color-ink);" x-text="v.nama_item"></div>
                             <div style="font-size:11.5px;font-family:var(--font-mono);font-weight:500;color:var(--color-ink-mute);margin-top:1px;" x-text="v.grup_nama + ' • Stok: ' + v.stok_fisik + ' ' + v.satuan_dasar"></div>
                         </div>
-                        <span style="font-size:12px;font-family:var(--font-mono);font-weight:800;color:var(--color-primary-deep);" x-text="'[' + (i+1) + ']'"></span>
+<div style="font-size:12px;font-family:var(--font-mono);font-weight:800;color:var(--color-primary-deep);" x-text="'[' + (i+1) + ']'"></span>
                     </button>
                 </template>
             </div>
@@ -672,59 +759,127 @@ document.addEventListener('alpine:init', () => {
     </div>
 
     <!-- ====================================================================== -->
-    <!-- MODAL 2: PEMBAYARAN                                                    -->
+    <!-- MODAL 2: PEMBAYARAN KASIR POS (OFFICIAL MATERIAL DESIGN 3 DIALOG)       -->
     <!-- ====================================================================== -->
-    <div x-show="showPaymentModal" x-cloak class="modal-backdrop" style="display:none;">
-        <div @click.away="showPaymentModal = false" class="modal-box">
-            <div class="modal-header">
-                <div class="modal-title">Pembayaran Kasir</div>
-                <button @click="showPaymentModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
+    <div x-show="showPaymentModal" x-cloak class="modal-backdrop" @click.self="showPaymentModal = false" style="display:none;">
+        <div class="m3-dialog" @click.stop>
+            
+            <!-- M3 Dialog Header -->
+            <div class="m3-dialog-header">
+                <div class="m3-dialog-icon">
+                    <i data-lucide="wallet" style="width: 22px; height: 22px;"></i>
+                </div>
+                <div class="m3-dialog-title-group">
+                    <h2 class="m3-dialog-title">Pembayaran Transaksi</h2>
+                    <p class="m3-dialog-subtitle">Kasir Ritel Keren Snack</p>
+                </div>
+                <button type="button" @click="showPaymentModal = false" class="m3-icon-btn" aria-label="Tutup">
+                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                 </button>
             </div>
 
-            <!-- Tipe Pembayaran -->
-            <div style="margin-bottom:16px;">
-                <label class="form-label">Tipe Pembayaran</label>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-                    <button @click="paymentType = 'cash'"
-                            :class="paymentType === 'cash' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'"
-                            style="justify-content:center;">Tunai</button>
-                    <button @click="paymentType = 'tempo_7_hari'"
-                            :class="paymentType === 'tempo_7_hari' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'"
-                            style="justify-content:center;">Tempo 7H</button>
-                    <button @click="paymentType = 'tempo_14_hari'"
-                            :class="paymentType === 'tempo_14_hari' ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'"
-                            style="justify-content:center;">Tempo 14H</button>
+            <!-- M3 Total Headline Display (Tonal Hero Card) -->
+            <div class="m3-hero-total">
+                <div>
+                    <div class="m3-hero-total-label">Total Tagihan Netto</div>
+                    <div class="m3-hero-total-amount" x-text="formatRupiah(grandTotal)"></div>
+                </div>
+                <div class="m3-hero-total-badge" x-text="cartTotalQty + ' Pcs Item'"></div>
+            </div>
+
+            <!-- M3 Segmented Button Group (Payment Method Selection) -->
+            <div class="m3-section">
+                <div class="m3-section-label">Metode Pembayaran</div>
+                <div class="m3-segmented-group">
+                    <!-- Cash Button -->
+                    <button type="button" 
+                            @click="paymentType = 'cash'; $nextTick(() => { $refs.paidInput?.focus(); $refs.paidInput?.select(); if (typeof lucide !== 'undefined') lucide.createIcons(); })"
+                            class="m3-segment-btn"
+                            :class="{ 'is-selected': paymentType === 'cash' }">
+                        <i data-lucide="banknote" style="width: 17px; height: 17px;"></i>
+                        <span>Tunai (Cash)</span>
+                    </button>
+                    <!-- QRIS Button -->
+                    <button type="button" 
+                            @click="paymentType = 'qris'; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })"
+                            class="m3-segment-btn"
+                            :class="{ 'is-selected': paymentType === 'qris' }">
+                        <i data-lucide="qr-code" style="width: 17px; height: 17px;"></i>
+                        <span>QRIS Toko</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Tagihan -->
-            <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);margin-bottom:16px;">
-                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-                    <span style="font-size:12.5px;font-weight:600;color:var(--color-ink-secondary);">Total Netto</span>
-                    <strong style="font-size:16px;font-family:var(--font-mono);font-weight:800;color:var(--color-ink);" x-text="formatRupiah(grandTotal)"></strong>
+            <!-- M3 Content Area (Conditional by Payment Type) -->
+            <!-- 1. Cash Payment Area -->
+            <div x-show="paymentType === 'cash'" class="m3-cash-area">
+                
+                <!-- M3 Outlined Text Field -->
+                <div class="m3-text-field">
+                    <div class="m3-text-field-header">
+                        <label class="m3-field-label">Nominal Uang Diterima</label>
+                        <button type="button" @click="setExactCash()" class="m3-text-action-btn">
+                            <i data-lucide="sparkles" style="width: 13px; height: 13px;"></i>
+                            <span>Uang Pas</span>
+                        </button>
+                    </div>
+                    <div class="m3-input-container">
+                        <span class="m3-input-prefix">Rp</span>
+                        <input type="text" x-ref="paidInput" x-model="paidAmountDisplay" @input="onPaidInput($event)"
+                               class="m3-input-text font-mono" placeholder="0">
+                    </div>
                 </div>
 
-                <div x-show="paymentType === 'cash'" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--color-hairline);">
-                    <label class="form-label">Nominal Uang Tunai (Rp)</label>
-                    <input type="text" x-model="paidAmountDisplay" @input="onPaidInput($event)" class="form-input font-mono input-rupiah" style="font-size:16px;font-weight:800;" placeholder="0">
+                <!-- M3 Suggestion Chips Row -->
+                <div class="m3-chips-row">
+                    <button type="button" @click="setQuickCash(10000)" class="m3-chip">10.000</button>
+                    <button type="button" @click="setQuickCash(20000)" class="m3-chip">20.000</button>
+                    <button type="button" @click="setQuickCash(50000)" class="m3-chip">50.000</button>
+                    <button type="button" @click="setQuickCash(100000)" class="m3-chip">100.000</button>
+                    <button type="button" @click="setQuickCash(200000)" class="m3-chip">200.000</button>
+                </div>
 
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-                        <span style="font-size:12.5px;font-weight:600;color:var(--color-ink-secondary);">Kembalian:</span>
-                        <strong :style="paidAmount >= grandTotal ? 'color:var(--color-primary-deep)' : 'color:var(--color-danger)'"
-                                style="font-family:var(--font-mono);font-size:15px;font-weight:800;"
-                                x-text="formatRupiah(Math.max(0, paidAmount - grandTotal))"></strong>
+                <!-- M3 Kembalian Status Card -->
+                <div class="m3-status-banner"
+                     :class="paidAmount >= grandTotal ? 'is-success' : 'is-error'">
+                    <div class="m3-status-banner-left">
+                        <i :data-lucide="paidAmount >= grandTotal ? 'check-circle' : 'alert-circle'" style="width: 18px; height: 18px;"></i>
+                        <span x-text="paidAmount >= grandTotal ? 'Kembalian:' : 'Uang Kurang:'"></span>
+                    </div>
+                    <div class="m3-status-banner-amount font-mono"
+                         x-text="paidAmount >= grandTotal ? formatRupiah(paidAmount - grandTotal) : 'Kurang ' + formatRupiah(grandTotal - paidAmount)"></div>
+                </div>
+            </div>
+
+            <!-- 2. QRIS Payment Area -->
+            <div x-show="paymentType === 'qris'" class="m3-qris-area">
+                <div class="m3-qris-banner">
+                    <div class="m3-qris-icon-box">
+                        <i data-lucide="qr-code" style="width: 22px; height: 22px;"></i>
+                    </div>
+                    <div class="m3-qris-text">
+                        <div class="m3-qris-title">Pembayaran QRIS Otomatis</div>
+                        <div class="m3-qris-desc">
+                            Dana sebesar <strong style="color: var(--color-ink);" x-text="formatRupiah(grandTotal)"></strong> langsung dialokasikan ke rekening <strong>Kantong Kas QRIS</strong> tanpa uang kembalian.
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <button @click="submitCheckout()" :disabled="isSubmitting"
-                    class="btn btn-primary btn-full btn-lg" style="justify-content:center;height:44px;">
-                <i data-lucide="check-circle"></i>
-                <span x-show="!isSubmitting">Konfirmasi & Simpan Transaksi</span>
-                <span x-show="isSubmitting">Memproses Transaksi...</span>
-            </button>
+            <!-- M3 Dialog Actions Footer -->
+            <div class="m3-dialog-actions">
+                <button type="button" @click="showPaymentModal = false" class="m3-btn-outlined">
+                    Batal
+                </button>
+                <button type="button" @click="submitCheckout()"
+                        :disabled="isSubmitting || (paymentType === 'cash' && paidAmount < grandTotal)"
+                        class="m3-btn-filled">
+                    <i data-lucide="check" style="width: 18px; height: 18px;"></i>
+                    <span x-show="!isSubmitting">Selesaikan Transaksi</span>
+                    <span x-show="isSubmitting">Memproses...</span>
+                </button>
+            </div>
+
         </div>
     </div>
 
@@ -764,7 +919,10 @@ document.addEventListener('alpine:init', () => {
                 </div>
                 <div style="display:flex;justify-content:space-between;font-size:10px;">
                     <span>Kasir: <span x-text="receiptData?.cashier_name"></span></span>
-                    <span>Tipe: <strong style="text-transform:uppercase;" x-text="receiptData?.payment_type"></strong></span>
+                    <span>Tipe: <strong style="text-transform:uppercase;" x-text="receiptData?.payment_type === 'qris' ? 'QRIS' : 'TUNAI'"></strong></span>
+                </div>
+                <div style="font-size:9.5px;color:#4b5563;margin-top:2px;">
+                    <span>Kas Masuk: <span x-text="receiptData?.akun_kas_nama || (receiptData?.payment_type === 'qris' ? 'Kantong Kas QRIS' : 'Kasir Utama Toko')"></span></span>
                 </div>
                 <div style="font-size:10px;margin-top:2px;">
                     <span>Toko: <strong x-text="receiptData?.customer_name"></strong> (<span x-text="receiptData?.customer_group"></span>)</span>

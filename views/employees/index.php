@@ -158,7 +158,9 @@ ob_start();
                                 <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                                     <span x-text="e.nomor_telepon ? ('HP: ' + e.nomor_telepon) : (e.nik ? ('NIK: ' + e.nik) : 'Belum ada kontak')"></span>
                                     <template x-if="e.nomor_polisi_kendaraan">
-                                        <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:#0284c7;border-color:rgba(2,132,199,0.3);background:rgba(2,132,199,0.08);" x-text="'🚚 ' + e.nomor_polisi_kendaraan"></span>
+                                        <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:#0284c7;border-color:rgba(2,132,199,0.3);background:rgba(2,132,199,0.08);">
+                                            &#x1F69A; <span x-text="e.nomor_polisi_kendaraan"></span>
+                                        </span>
                                     </template>
                                 </div>
                             </td>

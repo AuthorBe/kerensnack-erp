@@ -21,7 +21,7 @@ class CustomerController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['owner', 'admin']);
+        Auth::requirePermission(['master.customers_view_all', 'master.customers_view_assigned', 'master.customers_manage']);
     }
 
     public function index(): void

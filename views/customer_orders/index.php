@@ -1,5 +1,6 @@
 <?php
 use App\Core\Router;
+use App\Core\Auth;
 use App\Helpers\Format;
 ob_start();
 ?>
@@ -147,7 +148,7 @@ ob_start();
                     <i data-lucide="filter" style="width:14px;height:14px;"></i>
                     <span>Filter</span>
                 </button>
-                <a href="<?= Router::url('/customer-orders') ?>" class="btn btn-secondary" style="height:36px;padding:0 12px;" title="Reset Filter">
+                <a href="<?= Router::url('/customer-orders?reset=1') ?>" class="btn btn-secondary" style="height:36px;padding:0 12px;" title="Reset Filter ke Default">
                     <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i>
                 </a>
             </div>
@@ -177,16 +178,18 @@ ob_start();
                 <tbody>
                     <?php if (empty($orders)): ?>
                     <tr>
-                        <td colspan="10" class="empty-state">
-                            <div class="empty-state-icon">
-                                <i data-lucide="file-x"></i>
+                        <td colspan="10" style="padding: 48px 20px; text-align: center;">
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(148, 163, 184, 0.1); color: var(--color-ink-mute); display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                                    <i data-lucide="file-x" style="width: 28px; height: 28px;"></i>
+                                </div>
+                                <div style="font-size: 15px; font-weight: 700; color: var(--color-ink);">Belum Ada Transaksi Penjualan Toko</div>
+                                <div style="font-size: 13px; color: var(--color-ink-mute); margin-top: 4px; margin-bottom: 16px;">Belum ada faktur penjualan yang sesuai dengan filter pencarian.</div>
+                                <a href="<?= Router::url('/customer-orders/create') ?>" class="btn btn-primary btn-sm">
+                                    <i data-lucide="plus"></i>
+                                    <span>Input Penjualan Toko Baru</span>
+                                </a>
                             </div>
-                            <div class="empty-state-title">Belum Ada Transaksi Penjualan Toko</div>
-                            <div class="empty-state-desc">Belum ada faktur penjualan yang sesuai dengan filter pencarian.</div>
-                            <a href="<?= Router::url('/customer-orders/create') ?>" class="btn btn-primary btn-sm mt-3">
-                                <i data-lucide="plus"></i>
-                                <span>Input Penjualan Toko Baru</span>
-                            </a>
                         </td>
                     </tr>
                     <?php else: ?>
@@ -247,25 +250,33 @@ ob_start();
                             <div style="font-size:11.5px;color:var(--color-ink-mute);">Belum ada driver</div>
                             <?php endif; ?>
 
-                            <!-- Status Pengiriman Badge -->
+                            <!-- Status Tahap Pemrosesan Badge -->
                             <div style="margin-top:4px;">
                                 <?php 
-                                $statusSj = $o['status_surat_jalan'] ?? 'disetujui_owner';
-                                if ($statusSj === 'selesai_diterima'): ?>
-                                <span class="badge badge-success" style="font-size:10px;">
-                                    ✅ Selesai Diterima
+                                $statusProc = $o['status_pemrosesan'] ?? 'po';
+                                if ($statusProc === 'po'): ?>
+                                <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 7px;">
+                                    📝 PO
                                 </span>
-                                <?php elseif ($statusSj === 'sedang_dikirim'): ?>
-                                <span class="badge badge-info" style="font-size:10px;">
+                                <?php elseif (in_array($statusProc, ['siap_dikirim', 'siap_kirim'], true)): ?>
+                                <span class="badge" style="background:#d1fae5;color:#065f46;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 7px;">
+                                    📦 Siap Dikirim
+                                </span>
+                                <?php elseif ($statusProc === 'sedang_dikirim'): ?>
+                                <span class="badge" style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 7px;">
                                     🚚 Sedang Dikirim
                                 </span>
-                                <?php elseif ($statusSj === 'gagal_kembali'): ?>
-                                <span class="badge badge-danger" style="font-size:10px;">
-                                    ⚠️ Retur / Batal
+                                <?php elseif (in_array($statusProc, ['selesai_dikirim', 'selesai', 'selesai_diterima'], true)): ?>
+                                <span class="badge" style="background:#ecfdf5;color:#047857;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 7px;">
+                                    ✅ Selesai Diterima
                                 </span>
-                                <?php else: ?>
-                                <span class="badge badge-warning" style="font-size:10px;">
-                                    📦 Siap Kirim
+                                <?php elseif (in_array($statusProc, ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'], true)): ?>
+                                <span class="badge" style="background:#ffe4e6;color:#9f1239;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 7px;">
+                                    ❌ Gagal Kirim
+                                </span>
+                                <?php elseif ($statusProc === 'dibatalkan'): ?>
+                                <span class="badge" style="background:#f1f5f9;color:#64748b;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 7px;">
+                                    🚫 Dibatalkan
                                 </span>
                                 <?php endif; ?>
                             </div>
@@ -333,16 +344,53 @@ ob_start();
                             <?php endif; ?>
                         </td>
 
-                        <!-- Aksi (Satu Tombol Detail Utama Elegan) -->
+                        <!-- Aksi (Detail & Edit) -->
                         <td class="cell-center cell-nowrap">
-                            <button type="button" 
-                                    @click="openOrderDetail(<?= htmlspecialchars(json_encode($o)) ?>)" 
-                                    class="btn btn-secondary btn-sm" 
-                                    style="padding:6px 14px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;border-radius:var(--rounded-md);box-shadow:0 1px 2px rgba(0,0,0,0.05);"
-                                    title="Buka Rincian & Aksi Transaksi">
-                                <i data-lucide="eye" style="width:14px;height:14px;color:var(--color-primary-deep);"></i>
-                                <span>Detail</span>
-                            </button>
+                            <div class="d-inline-flex align-items-center gap-1.5" style="display:inline-flex;align-items:center;gap:6px;">
+                                <button type="button" 
+                                        @click="openOrderDetail(<?= htmlspecialchars(json_encode($o)) ?>)" 
+                                        class="btn btn-secondary btn-sm" 
+                                        style="padding:6px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;border-radius:var(--rounded-md);box-shadow:0 1px 2px rgba(0,0,0,0.05);"
+                                        title="Buka Rincian & Aksi Transaksi">
+                                    <i data-lucide="eye" style="width:14px;height:14px;color:var(--color-primary-deep);"></i>
+                                    <span>Detail</span>
+                                </button>
+                                <?php if (Auth::can(['orders.edit_all', 'orders.edit_assigned']) && !in_array($o['status_pemrosesan'] ?? '', ['selesai', 'selesai_diterima', 'dibatalkan', 'dikirim'], true)): ?>
+                                    <?php if (!empty($o['surat_jalan_id'])): ?>
+                                    <button type="button" 
+                                            class="btn btn-secondary btn-sm"
+                                            style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;cursor:pointer;"
+                                            title="Terkunci: Surat Jalan #<?= htmlspecialchars($o['nomor_surat_jalan'] ?? '') ?> aktif"
+                                            onclick="window.AppAlert ? window.AppAlert({ title: 'Edit Pesanan Terkunci', message: 'Pesanan ini sudah memiliki Surat Jalan aktif (#<?= htmlspecialchars($o['nomor_surat_jalan'] ?? '') ?>).\n\nUntuk mengedit rincian pesanan, silakan batalkan atau hapus Surat Jalan terlebih dahulu.', type: 'warning', icon: 'lock' }) : alert('Pesanan ini sudah memiliki Surat Jalan aktif (#<?= htmlspecialchars($o['nomor_surat_jalan'] ?? '') ?>). Batalkan Surat Jalan terlebih dahulu jika ingin mengedit.')">
+                                        <i data-lucide="lock" style="width:13px;height:13px;color:#94a3b8;"></i>
+                                        <span>Edit</span>
+                                    </button>
+                                    <?php else: ?>
+                                    <a href="<?= Router::url('/customer-orders/edit?id=' . urlencode($o['id'])) ?>" 
+                                       class="btn btn-secondary btn-sm"
+                                       style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;"
+                                       title="Edit Pesanan">
+                                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
+                                        <span>Edit</span>
+                                    </a>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+
+                                <?php if (in_array($o['status_pemrosesan'] ?? '', ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'], true) && Auth::can('orders.retry_delivery')): ?>
+                                <form action="<?= Router::url('/customer-orders/retry-delivery') ?>" method="POST"
+                                      data-confirm="Jadwalkan ulang pesanan #<?= htmlspecialchars($o['nomor_nota']) ?> untuk pengiriman? Status pesanan akan kembali menjadi 'Siap Dikirim'."
+                                      data-confirm-title="Kirim Ulang Pesanan"
+                                      data-confirm-type="info"
+                                      data-confirm-btn="Ya, Jadwalkan Ulang"
+                                      style="display:inline;">
+                                    <input type="hidden" name="order_id" value="<?= htmlspecialchars($o['id']) ?>">
+                                    <button type="submit" class="btn btn-sm" style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#ffffff;background:#e11d48;" title="Jadwalkan Kirim Ulang (Batas 7 Hari)">
+                                        <i data-lucide="rotate-cw" style="width:13px;height:13px;"></i>
+                                        <span>Kirim Ulang</span>
+                                    </button>
+                                </form>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -766,7 +814,66 @@ ob_start();
                             </div>
                         </a>
 
+                        <?php if (Auth::can(['orders.edit_all', 'orders.edit_assigned'])): ?>
+                        <template x-if="orderDetail && !['dikirim', 'selesai', 'selesai_diterima', 'dibatalkan'].includes(orderDetail.status_pemrosesan)">
+                            <div>
+                                <template x-if="orderDetail.surat_jalan_id">
+                                    <div class="card p-4" style="border:1.5px solid #e2e8f0;background:#f8fafc;border-radius:14px;display:flex;align-items:center;gap:12px;">
+                                        <div style="width:42px;height:42px;border-radius:12px;background:#94a3b8;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                            <i data-lucide="lock" style="width:20px;height:20px;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight:800;font-size:13px;color:#475569;">Edit Pesanan Terkunci</div>
+                                            <div style="font-size:11px;color:#64748b;margin-top:2px;">
+                                                Surat Jalan <span class="font-mono font-bold" x-text="'#' + orderDetail.nomor_surat_jalan"></span> aktif. Batalkan Surat Jalan terlebih dahulu jika ingin mengedit.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template x-if="!orderDetail.surat_jalan_id">
+                                    <a :href="'<?= Router::url('/customer-orders/edit?id=') ?>' + orderDetail.id"
+                                       class="card p-4 hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;border:1.5px solid #bfdbfe;background:#eff6ff;border-radius:14px;">
+                                        <div style="width:42px;height:42px;border-radius:12px;background:#2563eb;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                            <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight:800;font-size:13.5px;color:#1e3a8a;">Edit Rincian Pesanan</div>
+                                            <div style="font-size:11px;color:#3b82f6;margin-top:2px;">Ubah item produk, jumlah kuantiti, dan parameter faktur</div>
+                                        </div>
+                                    </a>
+                                </template>
+                            </div>
+                        </template>
+                        <?php endif; ?>
 
+                        <?php if (Auth::can('orders.retry_delivery')): ?>
+                        <template x-if="orderDetail && ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'].includes(orderDetail.status_pemrosesan)">
+                            <div class="card p-4" style="border:1.5px solid #fecaca;background:#fff1f2;border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <div style="width:42px;height:42px;border-radius:12px;background:#e11d48;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="rotate-cw" style="width:20px;height:20px;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:800;font-size:13.5px;color:#9f1239;">Jadwalkan Kirim Ulang Pesanan Gagal</div>
+                                        <div style="font-size:11.5px;color:#be123c;margin-top:2px;">
+                                            Kembalikan status pesanan ke "Siap Dikirim" agar dapat diterbitkan Surat Jalan baru di menu Logistik.
+                                        </div>
+                                    </div>
+                                </div>
+                                <form action="<?= Router::url('/customer-orders/retry-delivery') ?>" method="POST"
+                                      data-confirm="Jadwalkan ulang pesanan ini untuk pengiriman? Status pesanan akan menjadi 'Siap Dikirim'."
+                                      data-confirm-title="Kirim Ulang Pesanan"
+                                      data-confirm-type="info"
+                                      data-confirm-btn="Ya, Jadwalkan Kirim Ulang">
+                                    <input type="hidden" name="order_id" :value="orderDetail?.id">
+                                    <button type="submit" class="btn btn-sm" style="background:#e11d48;color:#ffffff;font-weight:800;border-radius:10px;padding:9px 18px;display:inline-flex;align-items:center;gap:6px;">
+                                        <i data-lucide="truck" style="width:15px;height:15px;"></i>
+                                        <span>Jadwalkan Kirim Ulang</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </template>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Batalkan & Hapus Transaksi (Danger Area) -->
@@ -778,7 +885,11 @@ ob_start();
                         <p style="font-size:12px;color:var(--color-ink-secondary);line-height:1.45;margin-bottom:12px;">
                             Membatalkan faktur ini akan secara otomatis <strong>mengembalikan seluruh stok produk ke gudang</strong>.
                         </p>
-                        <form action="<?= Router::url('/customer-orders/cancel') ?>" method="POST" onsubmit="return confirm('Apakah Anda YAKIN ingin membatalkan transaksi faktur ini? Seluruh stok produk akan otomatis dikembalikan ke gudang!')">
+                        <form action="<?= Router::url('/customer-orders/cancel') ?>" method="POST"
+                              data-confirm="Apakah Anda YAKIN ingin membatalkan transaksi faktur ini? Seluruh stok produk akan otomatis dikembalikan ke gudang!"
+                              data-confirm-title="Batalkan & Hapus Transaksi Faktur"
+                              data-confirm-type="danger"
+                              data-confirm-btn="Ya, Batalkan Transaksi">
                             <input type="hidden" name="id" :value="orderDetail?.id">
                             <button type="submit" class="btn btn-danger w-full sm:w-auto" style="padding:9px 18px;font-size:12.5px;font-weight:700;border-radius:10px;">
                                 <i data-lucide="trash-2"></i>

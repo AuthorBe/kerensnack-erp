@@ -16,7 +16,7 @@ class DeveloperController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['developer', 'owner']);
+        Auth::requirePermission('system.blueprint');
     }
 
     /**

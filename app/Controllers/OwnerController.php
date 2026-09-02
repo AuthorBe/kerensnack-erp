@@ -18,7 +18,7 @@ class OwnerController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['owner', 'developer']);
+        Auth::requirePermission('owner.dashboard');
     }
 
     public function index(): void

@@ -34,6 +34,11 @@ class Flash
         self::set('error', $message, $title);
     }
 
+    public static function danger(string $message, ?string $title = null): void
+    {
+        self::set('error', $message, $title);
+    }
+
     public static function warning(string $message, ?string $title = null): void
     {
         self::set('warning', $message, $title);

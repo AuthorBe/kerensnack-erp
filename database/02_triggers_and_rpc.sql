@@ -523,19 +523,19 @@ CREATE TRIGGER trg_proses_pengiriman_konsinyasi
 CREATE OR REPLACE FUNCTION public.fn_trg_produksi_harian_after_insert()
 RETURNS TRIGGER AS $$
 DECLARE
-    v_stok_lama INT;
-    v_stok_baru INT;
-    v_total_pcs INT;
+    v_stok_lama NUMERIC(15,4);
+    v_stok_baru NUMERIC(15,4);
+    v_total_pcs NUMERIC(15,4);
     r_bom RECORD;
-    v_bahan_stok_lama INT;
-    v_bahan_stok_baru INT;
-    v_pemakaian_bahan NUMERIC;
+    v_bahan_stok_lama NUMERIC(15,4);
+    v_bahan_stok_baru NUMERIC(15,4);
+    v_pemakaian_bahan NUMERIC(15,4);
 BEGIN
     v_total_pcs := NEW.kuantitas_pcs + NEW.lembur_pcs;
 
     SELECT stok_fisik_saat_ini INTO v_stok_lama 
     FROM public.item 
-    WHERE id = NEW.item_id;
+    WHERE id = NEW.item_id FOR UPDATE;
 
     v_stok_baru := COALESCE(v_stok_lama, 0) + v_total_pcs;
 
@@ -556,13 +556,13 @@ BEGIN
         FROM public.komposisi_item 
         WHERE item_jadi_id = NEW.item_id
     LOOP
-        v_pemakaian_bahan := ROUND(v_total_pcs * r_bom.jumlah_kebutuhan);
+        v_pemakaian_bahan := ROUND(v_total_pcs * r_bom.jumlah_kebutuhan, 4);
 
         SELECT stok_fisik_saat_ini INTO v_bahan_stok_lama 
         FROM public.item 
-        WHERE id = r_bom.item_bahan_id;
+        WHERE id = r_bom.item_bahan_id FOR UPDATE;
 
-        v_bahan_stok_baru := COALESCE(v_bahan_stok_lama, 0) - v_pemakaian_bahan::INT;
+        v_bahan_stok_baru := COALESCE(v_bahan_stok_lama, 0) - v_pemakaian_bahan;
 
         UPDATE public.item 
         SET stok_fisik_saat_ini = v_bahan_stok_baru, diubah_pada = NOW()
@@ -572,7 +572,7 @@ BEGIN
             item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
             referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
         ) VALUES (
-            r_bom.item_bahan_id, 'bahan_terpakai_produksi', -v_pemakaian_bahan::INT, 
+            r_bom.item_bahan_id, 'bahan_terpakai_produksi', -v_pemakaian_bahan, 
             COALESCE(v_bahan_stok_lama, 0), v_bahan_stok_baru,
             'produksi_harian', NEW.id, 'Pemakaian bahan baku repacking', NEW.dicatat_oleh, NOW()
         );

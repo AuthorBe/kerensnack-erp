@@ -164,7 +164,10 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                 <div style="font-weight:700;color:var(--color-ink);" x-text="c.nama_toko"></div>
                                 <div style="font-size:11px;color:var(--color-ink-mute);" x-text="c.nama_pemilik ? ('Pemilik: ' + c.nama_pemilik) : c.alamat_lengkap"></div>
                                 <template x-if="c.nomor_rekening">
-                                    <div style="font-size:10.5px;color:var(--color-ink-mute);font-family:var(--font-mono);margin-top:2px;">🏦 <span x-text="(c.nama_bank || 'Bank') + ' • ' + c.nomor_rekening + ' a.n. ' + (c.atas_nama_rekening || '-')"></span></div>
+                                    <div style="font-size:10.5px;color:var(--color-ink-mute);font-family:var(--font-mono);margin-top:2px;">
+                                        <i data-lucide="building" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;margin-top:-2px;"></i>
+                                        <span x-text="(c.nama_bank || 'Bank') + ' &bull; ' + c.nomor_rekening + ' a.n. ' + (c.atas_nama_rekening || '-')"></span>
+                                    </div>
                                 </template>
                             </td>
                             <td class="cell-nowrap">
@@ -525,7 +528,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 <input type="hidden" name="pelanggan_id" :value="selectedCustomer?.id">
 
                 <div style="padding:10px 12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);font-size:12px;color:var(--color-ink-mute);">
-                    💡 <em>Centang barang jadi yang biasa dibeli atau dipajang di toko ini. Jika <strong>tidak ada yang dicentang</strong>, maka toko ini diizinkan membeli <strong>semua produk (137 SKU)</strong> secara default di POS.</em>
+                    💡 <em>Centang barang jadi yang biasa dibeli atau dipajang di toko ini. Jika <strong>tidak ada yang dicentang</strong>, maka toko ini diizinkan membeli <strong>semua produk (<?= count($finishedGoods) ?> SKU)</strong> secara default di POS.</em>
                 </div>
 
                 <!-- SEARCH & BULK ACTIONS -->

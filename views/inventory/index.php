@@ -1,6 +1,7 @@
 <?php
 use App\Helpers\Format;
 use App\Core\Router;
+use App\Core\Auth;
 ob_start();
 ?>
 
@@ -93,9 +94,21 @@ ob_start();
 
                             <!-- Aksi -->
                             <td style="text-align:center;">
-                                <button @click="openAdjust(item)" class="btn btn-secondary btn-sm">
-                                    Opname
-                                </button>
+                                <div style="display:flex;align-items:center;justify-content:center;gap:6px;">
+                                    <?php if (Auth::can('inventory.opname')): ?>
+                                    <button @click="openAdjust(item)" class="btn btn-secondary btn-sm" title="Opname Koreksi Stok Fisik">
+                                        <i data-lucide="sliders-horizontal" style="width:13px;height:13px;"></i>
+                                        <span>Opname</span>
+                                    </button>
+                                    <?php endif; ?>
+
+                                    <?php if (Auth::can('inventory.waste')): ?>
+                                    <button @click="openWaste(item)" class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;padding:5px 9px;font-size:11.5px;font-weight:700;" title="Catat Barang Rusak / Waste">
+                                        <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                        <span>Waste</span>
+                                    </button>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     </template>
@@ -126,7 +139,7 @@ ob_start();
                     <label class="form-label">Jenis Penyesuaian</label>
                     <select name="tipe_penyesuaian" class="form-select">
                         <option value="opname_lebih">Opname Lebih (Tambah Stok)</option>
-                        <option value="opname_hilang">Opname Hilang / Rusak (Kurang Stok)</option>
+                        <option value="opname_hilang">Opname Hilang / Selisih Fisik (Kurang Stok)</option>
                     </select>
                 </div>
 
@@ -154,6 +167,64 @@ ob_start();
     </div>
     </template>
 
+    <!-- MODAL WASTE / BARANG RUSAK -->
+    <template x-teleport="body">
+    <div x-show="showWasteModal" x-cloak class="modal-backdrop">
+        <div @click.away="showWasteModal = false" class="modal-box">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" style="color:#b91c1c;">Catat Barang Rusak / Waste</div>
+                    <div style="font-size:11px;font-family:var(--font-mono);color:#dc2626;margin-top:2px;"
+                         x-text="selectedItem.kode_sku + ' — ' + selectedItem.nama_item"></div>
+                </div>
+                <button @click="showWasteModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
+                    <i data-lucide="x" style="width:15px;height:15px;"></i>
+                </button>
+            </div>
+
+            <form action="<?= Router::url('/inventory/waste') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+                <input type="hidden" name="item_id" :value="selectedItem.id">
+
+                <div style="padding:10px 12px;background:#fef2f2;border:1px solid #fee2e2;border-radius:10px;font-size:12px;color:#991b1b;display:flex;align-items:center;justify-content:space-between;">
+                    <span>Sisa Stok Fisik Saat Ini:</span>
+                    <strong class="font-mono" style="font-size:13px;" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' Pcs'"></strong>
+                </div>
+
+                <div>
+                    <label class="form-label">Kategori Kerusakan / Waste *</label>
+                    <select name="kategori_waste" class="form-select font-semibold" required>
+                        <option value="kemasan_rusak">Kemasan Rusak / Gagal Segel</option>
+                        <option value="remuk_hancur">Produk Remuk / Hancur</option>
+                        <option value="expired_kadaluarsa">Kadaluarsa / Expired</option>
+                        <option value="sampel_promosi">Sampel Uji Rasa / Promosi</option>
+                        <option value="lainnya">Lain-lain</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="form-label">Jumlah Pcs Rusak / Dibuang *</label>
+                    <input type="number" name="kuantitas" required min="1" :max="selectedItem.stok_fisik_saat_ini" placeholder="1"
+                           class="form-input font-mono" style="font-weight:700;">
+                </div>
+
+                <div>
+                    <label class="form-label">Keterangan / Kronologi *</label>
+                    <input type="text" name="keterangan" required placeholder="Contoh: Plastik bocor saat proses packing di line 2"
+                           class="form-input">
+                </div>
+
+                <div style="display:flex;gap:8px;padding-top:4px;">
+                    <button type="button" @click="showWasteModal = false" class="btn btn-secondary" style="flex:1;justify-content:center;">Batal</button>
+                    <button type="submit" class="btn btn-danger" style="flex:1;justify-content:center;background:#dc2626;">
+                        <i data-lucide="trash-2"></i>
+                        Potong Stok Waste
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </template>
+
 </div>
 
 <script>
@@ -162,6 +233,7 @@ function inventoryApp() {
         items: <?= json_encode($items) ?>,
         searchQuery: '',
         showAdjustModal: false,
+        showWasteModal: false,
         selectedItem: {},
 
         get filteredItems() {
@@ -179,6 +251,12 @@ function inventoryApp() {
         openAdjust(item) {
             this.selectedItem = item;
             this.showAdjustModal = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        openWaste(item) {
+            this.selectedItem = item;
+            this.showWasteModal = true;
             this.$nextTick(() => lucide.createIcons());
         }
     }

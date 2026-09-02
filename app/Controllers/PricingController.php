@@ -17,7 +17,7 @@ class PricingController extends Controller
 {
     public function __construct()
     {
-        Auth::requireRole(['owner', 'admin']);
+        Auth::requirePermission(['master.pricing_view', 'master.pricing_manage']);
     }
 
     public function index(): void

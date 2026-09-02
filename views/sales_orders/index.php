@@ -177,16 +177,18 @@ ob_start();
                 <tbody>
                     <?php if (empty($orders)): ?>
                     <tr>
-                        <td colspan="10" class="empty-state">
-                            <div class="empty-state-icon">
-                                <i data-lucide="file-x"></i>
+                        <td colspan="10" style="padding: 48px 20px; text-align: center;">
+                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                                <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(148, 163, 184, 0.1); color: var(--color-ink-mute); display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+                                    <i data-lucide="file-x" style="width: 28px; height: 28px;"></i>
+                                </div>
+                                <div style="font-size: 15px; font-weight: 700; color: var(--color-ink);">Belum Ada Transaksi Penjualan Toko</div>
+                                <div style="font-size: 13px; color: var(--color-ink-mute); margin-top: 4px; margin-bottom: 16px;">Belum ada faktur penjualan yang sesuai dengan filter pencarian.</div>
+                                <a href="<?= Router::url('/sales-orders/create') ?>" class="btn btn-primary btn-sm">
+                                    <i data-lucide="plus"></i>
+                                    <span>Input Penjualan Toko Baru</span>
+                                </a>
                             </div>
-                            <div class="empty-state-title">Belum Ada Transaksi Penjualan Toko</div>
-                            <div class="empty-state-desc">Belum ada faktur penjualan yang sesuai dengan filter pencarian.</div>
-                            <a href="<?= Router::url('/sales-orders/create') ?>" class="btn btn-primary btn-sm mt-3">
-                                <i data-lucide="plus"></i>
-                                <span>Input Penjualan Toko Baru</span>
-                            </a>
                         </td>
                     </tr>
                     <?php else: ?>
