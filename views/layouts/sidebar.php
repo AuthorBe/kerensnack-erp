@@ -95,10 +95,10 @@ if (!function_exists('isActiveSection')) {
         <?php endif; ?>
 
         <!-- GUDANG & PEMBELIAN -->
-        <?php if (Auth::can(['inventory.view_all', 'purchases.view'])): ?>
+        <?php if (Auth::can(['inventory.view_all', 'inventory.opname', 'inventory.waste', 'purchases.view', 'purchases.create', 'purchases.edit'])): ?>
         <div class="sidebar-section-label">Gudang &amp; Pembelian</div>
 
-        <?php if (Auth::can('inventory.view_all')): ?>
+        <?php if (Auth::can(['inventory.view_all', 'inventory.opname', 'inventory.waste'])): ?>
         <a href="<?= Router::url('/inventory') ?>"
            class="sidebar-link <?= isActiveSection('/inventory', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="boxes"></i>
@@ -106,7 +106,7 @@ if (!function_exists('isActiveSection')) {
         </a>
         <?php endif; ?>
 
-        <?php if (Auth::can('purchases.view')): ?>
+        <?php if (Auth::can(['purchases.view', 'purchases.create', 'purchases.edit'])): ?>
         <a href="<?= Router::url('/purchases') ?>"
            class="sidebar-link <?= isActiveSection('/purchases', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="file-check"></i>
@@ -116,16 +116,18 @@ if (!function_exists('isActiveSection')) {
         <?php endif; ?>
 
         <!-- KEUANGAN & KAS -->
-        <?php if (Auth::can(['cash.view_all', 'cash.reports'])): ?>
+        <?php if (Auth::can(['cash.view_all', 'cash.inflow', 'cash.outflow', 'cash.transfer', 'cash.reports', 'cash.manage_accounts'])): ?>
         <div class="sidebar-section-label">Keuangan &amp; Kas</div>
 
-        <?php if (Auth::can('cash.view_all')): ?>
+        <?php if (Auth::can(['cash.view_all', 'cash.manage_accounts'])): ?>
         <a href="<?= Router::url('/cash') ?>"
            class="sidebar-link <?= isActive('/cash', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="wallet"></i>
             <span>Buku Kas &amp; Valuasi</span>
         </a>
+        <?php endif; ?>
 
+        <?php if (Auth::can(['cash.view_all', 'cash.inflow', 'cash.outflow', 'cash.transfer'])): ?>
         <a href="<?= Router::url('/cash/transactions') ?>"
            class="sidebar-link <?= isActive('/cash/transactions', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="arrow-left-right"></i>
@@ -143,10 +145,10 @@ if (!function_exists('isActiveSection')) {
         <?php endif; ?>
 
         <!-- MASTER DATA -->
-        <?php if (Auth::can(['master.products_view', 'master.pricing_view', 'master.customers_view_all', 'master.suppliers_view', 'master.employees_view'])): ?>
+        <?php if (Auth::can(['master.products_view', 'master.products_manage', 'master.materials_manage', 'master.pricing_view', 'master.pricing_manage', 'master.customers_view_all', 'master.customers_view_assigned', 'master.customers_manage', 'master.suppliers_view', 'master.suppliers_manage', 'master.employees_view', 'master.employees_manage'])): ?>
         <div class="sidebar-section-label">Master Data</div>
 
-        <?php if (Auth::can('master.products_view')): ?>
+        <?php if (Auth::can(['master.products_view', 'master.products_manage', 'master.materials_manage'])): ?>
         <a href="<?= Router::url('/products') ?>"
            class="sidebar-link <?= isActiveSection('/products', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="package"></i>
@@ -154,7 +156,7 @@ if (!function_exists('isActiveSection')) {
         </a>
         <?php endif; ?>
 
-        <?php if (Auth::can('master.pricing_view')): ?>
+        <?php if (Auth::can(['master.pricing_view', 'master.pricing_manage'])): ?>
         <a href="<?= Router::url('/pricing') ?>"
            class="sidebar-link <?= isActiveSection('/pricing', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="tags"></i>
@@ -162,7 +164,7 @@ if (!function_exists('isActiveSection')) {
         </a>
         <?php endif; ?>
 
-        <?php if (Auth::can('master.customers_view_all')): ?>
+        <?php if (Auth::can(['master.customers_view_all', 'master.customers_view_assigned', 'master.customers_manage'])): ?>
         <a href="<?= Router::url('/customers') ?>"
            class="sidebar-link <?= isActiveSection('/customers', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="users"></i>
@@ -170,7 +172,7 @@ if (!function_exists('isActiveSection')) {
         </a>
         <?php endif; ?>
 
-        <?php if (Auth::can('master.suppliers_view')): ?>
+        <?php if (Auth::can(['master.suppliers_view', 'master.suppliers_manage'])): ?>
         <a href="<?= Router::url('/suppliers') ?>"
            class="sidebar-link <?= isActiveSection('/suppliers', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="building-2"></i>
@@ -178,7 +180,7 @@ if (!function_exists('isActiveSection')) {
         </a>
         <?php endif; ?>
 
-        <?php if (Auth::can('master.employees_view')): ?>
+        <?php if (Auth::can(['master.employees_view', 'master.employees_manage'])): ?>
         <a href="<?= Router::url('/employees') ?>"
            class="sidebar-link <?= isActiveSection('/employees', $currentPath, $base) ? 'is-active' : '' ?>">
             <i data-lucide="contact-2"></i>

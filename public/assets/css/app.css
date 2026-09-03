@@ -3465,6 +3465,13 @@ html:not(.dark) .toast-info {
   box-shadow: var(--shadow-1);
 }
 
+/* Sembunyikan panduan keyboard navigation di layar mobile / sentuh kecil */
+@media (max-width: 768px) {
+  .keyboard-nav-info {
+    display: none !important;
+  }
+}
+
 .kbd-badge {
   background: var(--color-canvas, #ffffff);
   color: var(--color-ink, #1e293b);

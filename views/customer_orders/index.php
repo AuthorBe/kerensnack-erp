@@ -18,10 +18,10 @@ ob_start();
             <div class="page-header-text">
                 <div class="page-header-tag">
                     <span class="tag-dot"></span>
-                    <span>Modul Penjualan B2B</span>
+                    <span>Modul Penjualan</span>
                 </div>
                 <h1 class="page-title"><?= $pageTitle ?? 'Pesanan Pelanggan' ?></h1>
-                <p class="page-subtitle"><?= $pageSubtitle ?? 'Daftar Transaksi & Faktur B2B Toko Mitra' ?></p>
+                <p class="page-subtitle"><?= $pageSubtitle ?? 'Daftar Transaksi & Faktur Penjualan Toko Mitra' ?></p>
             </div>
         </div>
         <div class="page-header-actions">
@@ -75,7 +75,7 @@ ob_start();
                     <i data-lucide="file-text" style="width:20px;height:20px;"></i>
                 </div>
             </div>
-            <div class="stat-helper">Total transaksi B2B</div>
+            <div class="stat-helper">Total transaksi toko</div>
         </div>
 
         <!-- 4. Lunas -->
@@ -867,7 +867,7 @@ ob_start();
                             </div>
                             <div>
                                 <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);" x-text="orderDetail?.is_konsinyasi || orderDetail?.tipe_pembayaran === 'konsinyasi' ? 'Cetak Bukti Titip Barang' : 'Cetak Faktur Penjualan'"></div>
-                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;" x-text="orderDetail?.is_konsinyasi || orderDetail?.tipe_pembayaran === 'konsinyasi' ? 'Lembar tanda terima titip barang rak toko' : 'Invoice tagihan resmi B2B Toko'"></div>
+                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;" x-text="orderDetail?.is_konsinyasi || orderDetail?.tipe_pembayaran === 'konsinyasi' ? 'Lembar tanda terima titip barang rak toko' : 'Invoice tagihan resmi Toko Reguler'"></div>
                             </div>
                         </a>
 

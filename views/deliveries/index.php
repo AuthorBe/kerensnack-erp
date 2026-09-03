@@ -98,7 +98,7 @@ ob_start();
                         <th style="min-width:180px;">Toko Tujuan</th>
                         <th style="min-width:160px;">Supir Pengantar</th>
                         <th style="min-width:130px;">Wilayah / Rute</th>
-                        <?php if (Auth::isAdmin() || Auth::isOwner()): ?>
+                        <?php if (Auth::can(['deliveries.view_all', 'deliveries.create', 'deliveries.update_all'])): ?>
                         <th class="cell-right cell-nowrap" style="width:140px; min-width:120px;">Total Nilai Nota</th>
                         <?php endif; ?>
                         <th class="cell-center cell-nowrap" style="width:140px; min-width:120px;">Status Pengiriman</th>
@@ -141,7 +141,7 @@ ob_start();
                                 <div style="font-weight:600;" x-text="d.nama_wilayah || '-'"></div>
                                 <div style="font-size:10.5px;color:var(--color-primary-deep);" x-text="d.kode_rute || ''"></div>
                             </td>
-                            <?php if (Auth::isAdmin() || Auth::isOwner()): ?>
+                            <?php if (Auth::can(['deliveries.view_all', 'deliveries.create', 'deliveries.update_all'])): ?>
                             <td class="cell-currency cell-right cell-nowrap" style="color:var(--color-primary-deep);font-weight:700;" x-text="formatRupiah(d.total_netto)"></td>
                             <?php endif; ?>
                             <td class="cell-center cell-nowrap">

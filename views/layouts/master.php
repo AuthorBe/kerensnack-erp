@@ -103,7 +103,7 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
     <!-- ========================================================================= -->
     <!-- SKELETON SCREEN & SHIMMER GHOST OVERLAY                                   -->
     <!-- ========================================================================= -->
-    <div id="app-page-loader" class="app-page-loader is-active" aria-hidden="true">
+    <div id="app-page-loader" class="app-page-loader <?= \App\Helpers\Flash::has() ? '' : 'is-active' ?>" aria-hidden="true">
         <!-- Floating Live Status Indicator -->
         <div class="skeleton-floating-status">
             <div class="skeleton-spinner-mini"></div>

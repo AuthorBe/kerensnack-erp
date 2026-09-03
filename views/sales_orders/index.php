@@ -17,7 +17,7 @@ ob_start();
             <div class="page-header-text">
                 <div class="page-header-tag">
                     <span class="tag-dot"></span>
-                    <span>Modul Penjualan B2B</span>
+                    <span>Modul Penjualan</span>
                 </div>
                 <h1 class="page-title"><?= $pageTitle ?? 'Penjualan Toko' ?></h1>
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Daftar Transaksi & Faktur Mitra Toko' ?></p>
@@ -74,7 +74,7 @@ ob_start();
                     <i data-lucide="file-text" style="width:20px;height:20px;"></i>
                 </div>
             </div>
-            <div class="stat-helper">Total transaksi B2B</div>
+            <div class="stat-helper">Total transaksi toko</div>
         </div>
 
         <!-- 4. Lunas -->

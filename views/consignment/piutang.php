@@ -146,7 +146,7 @@ ob_start();
                 </button>
             </div>
 
-            <form id="payForm" action="<?= Router::url('/consignment/piutang/bayar') ?>" method="POST" class="space-y-3.5 mt-3.5">
+            <form id="payForm" action="<?= Router::url('/consignment/piutang/bayar') ?>" method="POST" data-action-text="Mencatat pembayaran piutang..." class="space-y-3.5 mt-3.5">
                 <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="pesanan_id" :value="selectedInvoice.pesanan_id">
 

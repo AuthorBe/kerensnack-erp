@@ -764,13 +764,13 @@ $activeTab = $_GET['tab'] ?? 'customers';
     </template>
 
     <!-- HIDDEN FORMS FOR DELETING -->
-    <form id="delete-customer-form" action="<?= Router::url('/customers/delete') ?>" method="POST" style="display:none;">
+    <form id="delete-customer-form" action="<?= Router::url('/customers/delete') ?>" method="POST" data-action-text="Menghapus toko pelanggan..." style="display:none;">
         <input type="hidden" name="id" id="delete-customer-id">
     </form>
-    <form id="delete-group-form" action="<?= Router::url('/customers/delete-group') ?>" method="POST" style="display:none;">
+    <form id="delete-group-form" action="<?= Router::url('/customers/delete-group') ?>" method="POST" data-action-text="Menghapus grup pelanggan..." style="display:none;">
         <input type="hidden" name="id" id="delete-group-id">
     </form>
-    <form id="delete-territory-form" action="<?= Router::url('/customers/delete-territory') ?>" method="POST" style="display:none;">
+    <form id="delete-territory-form" action="<?= Router::url('/customers/delete-territory') ?>" method="POST" data-action-text="Menghapus wilayah rute..." style="display:none;">
         <input type="hidden" name="id" id="delete-territory-id">
     </form>
 

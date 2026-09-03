@@ -98,7 +98,7 @@ ob_start();
     </div>
 
     <!-- FORM OPNAME TABLE / CARDS -->
-    <form id="opnameForm" action="<?= Router::url('/consignment/opname/proses') ?>" method="POST" class="space-y-4">
+    <form id="opnameForm" action="<?= Router::url('/consignment/opname/proses') ?>" method="POST" data-action-text="Memproses hasil opname & faktur konsinyasi..." class="space-y-4">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="pelanggan_id" value="<?= htmlspecialchars((string)$customer['id']) ?>">
         <input type="hidden" name="items_json" :value="JSON.stringify(items)">

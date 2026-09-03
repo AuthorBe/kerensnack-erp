@@ -27,9 +27,9 @@ ob_start();
     </div>
 
     <!-- ========================================================================= -->
-    <!-- QUICK BANNER INFORMASI LOGISTIK OWNER (JIKA ADA SJ DRAFT/PENDING)          -->
+    <!-- QUICK BANNER INFORMASI LOGISTIK OWNER (JIKA MEMILIKI IZIN APPROVAL)        -->
     <!-- ========================================================================= -->
-    <?php if ($isOwner): ?>
+    <?php if (Auth::can(['owner.dashboard', 'owner.approval_delivery'])): ?>
     <div class="p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm" style="background:rgba(2,132,199,0.04);border:1px solid var(--color-hairline);">
         <div class="flex items-center gap-3">
             <i data-lucide="shield-check" class="w-6 h-6 flex-shrink-0" style="color:#0284c7;"></i>
@@ -51,6 +51,7 @@ ob_start();
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
 
         <!-- CARD 1: Stok Rak & Opname Toko -->
+        <?php if (Auth::can(['consignment.view_all', 'consignment.view_assigned', 'consignment.opname_all', 'consignment.opname_assigned'])): ?>
         <a href="<?= Router::url('/consignment/stok-rak') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">
@@ -63,8 +64,10 @@ ob_start();
                 <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Monitoring rak &amp; input fisik toko</p>
             </div>
         </a>
+        <?php endif; ?>
 
         <!-- CARD 2: Laporan Penjualan -->
+        <?php if (Auth::can(['consignment.reports_all', 'consignment.reports_assigned'])): ?>
         <a href="<?= Router::url('/consignment/laporan-penjualan') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">
@@ -77,9 +80,10 @@ ob_start();
                 <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Rekap omzet settlement &amp; faktur</p>
             </div>
         </a>
+        <?php endif; ?>
 
-        <?php if ($isAdmin || $isOwner): ?>
         <!-- CARD 3: Piutang Konsinyasi -->
+        <?php if (Auth::can('consignment.piutang')): ?>
         <a href="<?= Router::url('/consignment/piutang') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">
@@ -92,8 +96,10 @@ ob_start();
                 <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Tagihan aktif &amp; catat kas</p>
             </div>
         </a>
+        <?php endif; ?>
 
         <!-- CARD 4: Assignment Sales ↔ Toko -->
+        <?php if (Auth::can('consignment.assignment')): ?>
         <a href="<?= Router::url('/consignment/assignment-sales') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">
@@ -106,8 +112,10 @@ ob_start();
                 <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Penugasan sales tetap</p>
             </div>
         </a>
+        <?php endif; ?>
 
         <!-- CARD 5: Rekap Komisi Sales -->
+        <?php if (Auth::can(['consignment.komisi_all', 'consignment.komisi_self'])): ?>
         <a href="<?= Router::url('/consignment/komisi-sales') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">
@@ -120,8 +128,10 @@ ob_start();
                 <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Insentif omzet bulanan</p>
             </div>
         </a>
+        <?php endif; ?>
 
         <!-- CARD 6: Kerugian Barang Rusak -->
+        <?php if (Auth::can('consignment.kerugian')): ?>
         <a href="<?= Router::url('/consignment/kerugian-rusak') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">
@@ -134,8 +144,10 @@ ob_start();
                 <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Valuasi retur rusak HPP</p>
             </div>
         </a>
+        <?php endif; ?>
 
         <!-- CARD 7: Early Warning Toko -->
+        <?php if (Auth::can('consignment.early_warning')): ?>
         <a href="<?= Router::url('/consignment/early-warning') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">
@@ -148,8 +160,10 @@ ob_start();
                 <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">&gt;14 hari belum opname</p>
             </div>
         </a>
+        <?php endif; ?>
 
         <!-- CARD 8: Riwayat Kunjungan -->
+        <?php if (Auth::can(['consignment.view_all', 'consignment.view_assigned'])): ?>
         <a href="<?= Router::url('/consignment/riwayat-kunjungan') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">

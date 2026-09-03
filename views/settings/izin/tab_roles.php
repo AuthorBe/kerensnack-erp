@@ -32,13 +32,13 @@ $scopeDefs = [
         'assigned_code' => 'orders.po_view_assigned',
     ],
     'orders.view' => [
-        'title' => 'Lihat Pesanan Penjualan B2B',
+        'title' => 'Lihat Pesanan Penjualan Reguler',
         'desc' => 'Akses melihat daftar transaksi pesanan / faktur toko',
         'all_code' => 'orders.view_all',
         'assigned_code' => 'orders.view_assigned',
     ],
     'orders.edit' => [
-        'title' => 'Edit Faktur Pesanan B2B',
+        'title' => 'Edit Faktur Pesanan Reguler',
         'desc' => 'Mengubah item, kuantiti & diskon pesanan sebelum dikirim',
         'all_code' => 'orders.edit_all',
         'assigned_code' => 'orders.edit_assigned',

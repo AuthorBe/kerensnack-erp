@@ -823,13 +823,13 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     </template>
 
     <!-- HIDDEN FORM FOR DELETING MATERIAL, RECIPE & BORONGAN -->
-    <form id="delete-material-form" action="<?= Router::url('/products/delete-material') ?>" method="POST" style="display:none;">
+    <form id="delete-material-form" action="<?= Router::url('/products/delete-material') ?>" method="POST" data-action-text="Menghapus bahan mentah/kemasan..." style="display:none;">
         <input type="hidden" name="id" id="delete-material-id">
     </form>
-    <form id="delete-recipe-form" action="<?= Router::url('/products/delete-recipe-item') ?>" method="POST" style="display:none;">
+    <form id="delete-recipe-form" action="<?= Router::url('/products/delete-recipe-item') ?>" method="POST" data-action-text="Menghapus komponen resep..." style="display:none;">
         <input type="hidden" name="id" id="delete-recipe-id">
     </form>
-    <form id="delete-borongan-form" action="<?= Router::url('/products/delete-borongan-group') ?>" method="POST" style="display:none;">
+    <form id="delete-borongan-form" action="<?= Router::url('/products/delete-borongan-group') ?>" method="POST" data-action-text="Menghapus kelompok borongan..." style="display:none;">
         <input type="hidden" name="id" id="delete-borongan-id">
     </form>
 

@@ -175,7 +175,7 @@ ob_start();
     </template>
 
     <!-- FORM SUBMIT HIDDEN FOR DELETE -->
-    <form id="delete-level-form" action="<?= Router::url('/pricing/delete-level') ?>" method="POST" style="display:none;">
+    <form id="delete-level-form" action="<?= Router::url('/pricing/delete-level') ?>" method="POST" data-action-text="Menghapus level harga..." style="display:none;">
         <input type="hidden" name="id" id="delete-level-id">
     </form>
 

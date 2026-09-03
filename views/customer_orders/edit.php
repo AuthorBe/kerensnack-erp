@@ -89,7 +89,7 @@ ob_start();
                         </template>
                         <template x-if="!isKonsinyasi">
                             <span style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.22);padding:3px 8px;border-radius:6px;font-weight:800;font-size:10.5px;text-transform:uppercase;white-space:nowrap;">
-                                Penjualan B2B
+                                Penjualan Reguler
                             </span>
                         </template>
                     </div>

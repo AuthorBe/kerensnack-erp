@@ -165,7 +165,7 @@ class CustomerOrderController extends Controller
 
             $this->view('customer_orders.index', [
                 'pageTitle' => 'Pesanan Pelanggan',
-                'pageSubtitle' => 'Daftar Transaksi & Faktur B2B Toko Mitra',
+                'pageSubtitle' => 'Daftar Transaksi & Faktur Penjualan Toko Mitra',
                 'orders' => $orders,
                 'customers' => $customers,
                 'drivers' => $drivers,
@@ -378,7 +378,7 @@ class CustomerOrderController extends Controller
 
             $this->view('customer_orders.create', [
                 'pageTitle' => 'Input Pesanan Pelanggan Baru',
-                'pageSubtitle' => 'Penerbitan Faktur Penjualan B2B Toko Mitra',
+                'pageSubtitle' => 'Penerbitan Faktur Penjualan Reguler Toko Mitra',
                 'customers' => $customers,
                 'drivers' => $drivers,
                 'cashAccounts' => $cashAccounts,
@@ -523,7 +523,24 @@ class CustomerOrderController extends Controller
                 $sisaTagihan = 0;
                 $statusBayar = 'lunas';
             } else if ($tipePembayaran === 'sebagian') {
-                $totalDibayar = min($totalNetto, max(0, $nominalDibayarInput));
+                // Pengaman Finansial Kuat: Validasi Ketat Nominal Uang Muka (DP)
+                if ($nominalDibayarInput <= 0) {
+                    $pdo->rollBack();
+                    $this->flashError('Transaksi ditolak: Skema Pembayaran Sebagian (DP) mewajibkan nominal uang muka lebih dari Rp 0.');
+                    $this->redirect('/customer-orders/create');
+                    return;
+                }
+                if ($nominalDibayarInput > $totalNetto) {
+                    $pdo->rollBack();
+                    $this->flashError(sprintf(
+                        'Transaksi ditolak: Nominal DP (Rp %s) melebihi Total Nilai PO (Rp %s). Penginputan uang muka tidak valid.',
+                        number_format($nominalDibayarInput, 0, ',', '.'),
+                        number_format($totalNetto, 0, ',', '.')
+                    ));
+                    $this->redirect('/customer-orders/create');
+                    return;
+                }
+                $totalDibayar = $nominalDibayarInput;
                 $sisaTagihan = max(0, $totalNetto - $totalDibayar);
                 $statusBayar = ($sisaTagihan <= 0) ? 'lunas' : 'belum_lunas';
             } else {
@@ -889,7 +906,23 @@ class CustomerOrderController extends Controller
                 $statusBayar = 'lunas';
             } elseif ($tipePembayaran === 'sebagian') {
                 $nominalDibayar = (float)preg_replace('/[^0-9]/', '', (string)$this->input('nominal_dibayar', '0'));
-                $totalDibayar = min($nominalDibayar, $totalNetto);
+                if ($nominalDibayar <= 0) {
+                    $pdo->rollBack();
+                    $this->flashError('Pembaruan pesanan ditolak: Skema Pembayaran Sebagian (DP) mewajibkan nominal uang muka lebih dari Rp 0.');
+                    $this->redirect('/customer-orders/' . $id . '/edit');
+                    return;
+                }
+                if ($nominalDibayar > $totalNetto) {
+                    $pdo->rollBack();
+                    $this->flashError(sprintf(
+                        'Pembaruan pesanan ditolak: Nominal DP (Rp %s) melebihi Total Nilai PO (Rp %s). Penginputan uang muka tidak valid.',
+                        number_format($nominalDibayar, 0, ',', '.'),
+                        number_format($totalNetto, 0, ',', '.')
+                    ));
+                    $this->redirect('/customer-orders/' . $id . '/edit');
+                    return;
+                }
+                $totalDibayar = $nominalDibayar;
                 $sisaTagihan = max(0, $totalNetto - $totalDibayar);
                 $statusBayar = ($sisaTagihan == 0) ? 'lunas' : (($totalDibayar > 0) ? 'sebagian' : 'belum_lunas');
             } else {

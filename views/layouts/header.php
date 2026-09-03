@@ -31,8 +31,8 @@ $headerTitle = $pageTitle ?? match(true) {
 
 $headerSub = $pageSubtitle ?? match(true) {
     str_contains($uri, '/pos')              => 'Layar Transaksi Kasir POS',
-    str_contains($uri, '/customer-orders')  => 'Faktur Penjualan B2B',
-    str_contains($uri, '/sales-orders')     => 'Faktur Penjualan B2B',
+    str_contains($uri, '/customer-orders')  => 'Faktur Penjualan Reguler',
+    str_contains($uri, '/sales-orders')     => 'Faktur Penjualan Reguler',
     str_contains($uri, '/pricing')          => '28 Level Harga & Grup Mitra',
     str_contains($uri, '/inventory')        => 'Monitoring Stok Gudang Realtime',
     str_contains($uri, '/products')         => 'Barang Jadi, Bahan & BOM',

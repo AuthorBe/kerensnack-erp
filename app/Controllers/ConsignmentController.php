@@ -651,13 +651,6 @@ class ConsignmentController extends Controller
             return;
         }
 
-        // Owner bersifat read-only untuk pembayaran
-        if (Auth::isOwner() && !Auth::isAdmin() && !Auth::isDeveloper()) {
-            $this->flashError('Owner memiliki akses read-only pada pencatatan kas piutang.');
-            $this->redirect('/consignment/piutang');
-            return;
-        }
-
         $pesananId = (string)$this->input('pesanan_id');
         $accountId = (string)$this->input('akun_kas_id');
         $nominal = (float)$this->input('nominal', 0);

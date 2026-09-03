@@ -497,6 +497,58 @@
   };
 
   // Global Declarative data-confirm form submit interceptor
+  /* =====================================================================
+     6. APP CONFIRMATION DIALOG & SMART ACTION TEXT RESOLVER
+     ===================================================================== */
+  function getSmartActionText(form) {
+    if (!form) return 'Menyimpan data...';
+    let customText = form.getAttribute('data-action-text');
+    if (customText) return customText;
+
+    const formAction = (form.getAttribute('action') || '').toLowerCase();
+    const formId = (form.id || '').toLowerCase();
+    
+    if (formAction.includes('/login') || formId.includes('login')) {
+      return 'Memverifikasi akun...';
+    } else if (formAction.includes('/logout') || formId.includes('logout')) {
+      return 'Keluar sistem...';
+    } else if (formAction.includes('delete') || formAction.includes('hapus') || formId.includes('delete') || formId.includes('hapus')) {
+      return 'Menghapus data...';
+    } else if (formAction.includes('update') || formAction.includes('edit')) {
+      return 'Memperbarui data...';
+    } else if (formAction.includes('approve') || formAction.includes('setujui')) {
+      return 'Menyetujui data...';
+    } else if (formAction.includes('reject') || formAction.includes('tolak')) {
+      return 'Menolak data...';
+    } else if (formAction.includes('pay') || formAction.includes('bayar')) {
+      return 'Memproses pembayaran...';
+    } else if (formAction.includes('adjust') || formAction.includes('penyesuaian')) {
+      return 'Menyesuaikan stok...';
+    } else if (formAction.includes('waste') || formAction.includes('rusak')) {
+      return 'Mencatat barang rusak...';
+    } else if (formAction.includes('transfer')) {
+      return 'Mentransfer dana kas...';
+    } else {
+      return 'Menyimpan data...';
+    }
+  }
+
+  // Global Native form.submit() Monkey-Patch (Intersepsi seluruh submit form programmatik via JS / modal / Alpine)
+  const _nativeFormSubmit = HTMLFormElement.prototype.submit;
+  HTMLFormElement.prototype.submit = function() {
+    if (!this.classList.contains('no-loader') && this.getAttribute('target') !== '_blank') {
+      const method = (this.getAttribute('method') || 'GET').toUpperCase();
+      if (method === 'GET') {
+        AppSkeleton.show('Memuat data...');
+      } else {
+        const text = getSmartActionText(this);
+        AppAction.show(text);
+      }
+    }
+    return _nativeFormSubmit.apply(this, arguments);
+  };
+
+  // Global Declarative data-confirm form submit interceptor
   document.addEventListener('submit', async (e) => {
     const form = e.target;
     if (form && form.hasAttribute && form.hasAttribute('data-confirm')) {
@@ -519,7 +571,8 @@
 
       if (confirmed) {
         form.removeAttribute('data-confirm'); // prevent infinite loop
-        AppAction.show(form.getAttribute('data-action-text') || 'Memproses data...');
+        const customText = getSmartActionText(form);
+        AppAction.show(customText);
         form.submit();
       }
     }
@@ -534,11 +587,14 @@
      6.1 SKELETON SCREEN & ACTION PROCESSING DUAL-ENGINE
      ===================================================================== */
   
-  // 1. AppSkeleton: Khusus untuk Navigasi Antar Halaman & Refresh
+  // 1. AppSkeleton: Khusus untuk Navigasi Antar Halaman, Filter, & Refresh
   const AppSkeleton = {
     safetyTimer: null,
 
     show(text = 'Memuat halaman...') {
+      // Jika proses aksi CRUD sedang aktif, JANGAN timpa dengan skeleton halaman
+      if (typeof AppAction !== 'undefined' && AppAction.isActive()) return;
+
       const loader = document.getElementById('app-page-skeleton') || document.getElementById('app-page-loader');
       const textEl = document.getElementById('app-page-skeleton-text') || document.getElementById('app-page-loader-text');
       if (!loader) return;
@@ -564,14 +620,30 @@
     }
   };
 
-  // 2. AppAction: Khusus untuk Simpan Data, Update, Checkout POS & Mutasi Data (Dual-Ring Glow -> Morph Checkmark / Error X)
+  // 2. AppAction: Khusus untuk Simpan Data, Update, Hapus, Checkout POS & Mutasi Data (Dual-Ring Glow -> Morph Checkmark / Error X)
   const AppAction = {
     safetyTimer: null,
+    _active: false,
+
+    isActive() {
+      if (this._active) return true;
+      try {
+        return sessionStorage.getItem('app_action_triggered') === 'true';
+      } catch (e) {
+        return false;
+      }
+    },
 
     show(text = 'Menyimpan data...') {
+      this._active = true;
       try {
         sessionStorage.setItem('app_action_triggered', 'true');
       } catch (e) {}
+
+      // Sembunyikan page skeleton seketika agar Action Loader mendapat prioritas 100%
+      if (typeof AppSkeleton !== 'undefined') {
+        AppSkeleton.hide();
+      }
 
       const loader = document.getElementById('app-action-loader');
       const textEl = document.getElementById('app-action-loader-text');
@@ -592,6 +664,7 @@
     },
 
     success(text = 'Berhasil Disimpan! ✨', duration = 850) {
+      this._active = false;
       try {
         sessionStorage.removeItem('app_action_triggered');
       } catch (e) {}
@@ -621,6 +694,7 @@
     },
 
     error(text = 'Gagal memproses data!', duration = 1400) {
+      this._active = false;
       try {
         sessionStorage.removeItem('app_action_triggered');
       } catch (e) {}
@@ -654,6 +728,10 @@
     },
 
     hide() {
+      this._active = false;
+      try {
+        sessionStorage.removeItem('app_action_triggered');
+      } catch (e) {}
       clearTimeout(this.safetyTimer);
       const loader = document.getElementById('app-action-loader');
       if (loader) {
@@ -685,7 +763,6 @@
     } catch (e) {}
 
     const flash = window.__FLASH__;
-    console.log('dismissInitialSkeleton: flash =', flash);
 
     // Always animate AppAction if there's a server flash — regardless of hadAction.
     // This covers: data-confirm forms, modal-submit forms, Alpine-rendered forms,
@@ -708,7 +785,7 @@
       setTimeout(() => {
         AppSkeleton.hide();
         AppAction.hide();
-      }, 150);
+      }, 120);
     }
   };
 
@@ -750,7 +827,7 @@
   } else {
     window.addEventListener('load', dismissInitialSkeleton);
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(dismissInitialSkeleton, 80);
+      setTimeout(dismissInitialSkeleton, 60);
     });
   }
 
@@ -762,13 +839,17 @@
 
   // Intercept Refresh / Page Reload (F5, Ctrl+R, Reload button)
   window.addEventListener('beforeunload', () => {
+    // Jika proses aksi CRUD (AppAction) sedang aktif, pertahankan AppAction dan JANGAN timpa dengan AppSkeleton!
+    if (AppAction.isActive()) {
+      return;
+    }
     const loader = document.getElementById('app-page-skeleton') || document.getElementById('app-page-loader');
     if (loader) {
       loader.classList.add('is-active');
     }
   });
 
-  // Intercept standard internal links -> Trigger Skeleton Screen
+  // Intercept standard internal links -> Trigger Skeleton Screen (Navigasi Antar Halaman)
   document.addEventListener('click', (e) => {
     const link = e.target.closest('a');
     if (!link) return;
@@ -798,28 +879,28 @@
     } catch (err) {}
   });
 
-  // Intercept standard form submissions -> Trigger Action Blur Processing Loader
+  // Intercept standard form submissions -> Trigger Action Blur Processing Loader (POST) or Skeleton (GET)
   document.addEventListener('submit', (e) => {
     const form = e.target;
-    if (e.defaultPrevented || !form || form.hasAttribute('data-confirm') || form.classList.contains('no-loader') || form.getAttribute('target') === '_blank') {
+    if (e.defaultPrevented || !form || form.classList.contains('no-loader') || form.getAttribute('target') === '_blank') {
       return;
     }
-    let customText = form.getAttribute('data-action-text');
-    if (!customText) {
-      const formAction = (form.getAttribute('action') || '').toLowerCase();
-      const formId = (form.id || '').toLowerCase();
-      if (formAction.includes('/login') || formId.includes('login')) {
-        customText = 'Memverifikasi akun...';
-      } else if (formAction.includes('/logout') || formId.includes('logout')) {
-        customText = 'Keluar sistem...';
-      } else if (formAction.includes('delete') || formAction.includes('hapus')) {
-        customText = 'Menghapus data...';
-      } else if (formAction.includes('update') || formAction.includes('edit')) {
-        customText = 'Memperbarui data...';
-      } else {
-        customText = 'Menyimpan data...';
-      }
+
+    const method = (form.getAttribute('method') || 'GET').toUpperCase();
+    
+    // 1. Form GET (Filter, Pencarian, Parameter Laporan) -> Trigger Page Transition Skeleton
+    if (method === 'GET') {
+      AppSkeleton.show('Memuat data...');
+      return;
     }
+
+    // 2. Form dengan data-confirm akan diproses oleh listener data-confirm setelah dialog dikonfirmasi
+    if (form.hasAttribute('data-confirm')) {
+      return;
+    }
+
+    // 3. Form POST / PUT / DELETE (Operasi CRUD) -> Trigger AppAction Processing Loader
+    const customText = getSmartActionText(form);
     AppAction.show(customText);
   });
 

@@ -132,7 +132,7 @@ ob_start();
                 </button>
             </div>
 
-            <form action="<?= Router::url('/inventory/adjust') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <form action="<?= Router::url('/inventory/adjust') ?>" method="POST" data-action-text="Menyimpan penyesuaian stok..." style="display:flex;flex-direction:column;gap:14px;">
                 <input type="hidden" name="item_id" :value="selectedItem.id">
 
                 <div>
@@ -182,7 +182,7 @@ ob_start();
                 </button>
             </div>
 
-            <form action="<?= Router::url('/inventory/waste') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <form action="<?= Router::url('/inventory/waste') ?>" method="POST" data-action-text="Mencatat barang rusak / waste..." style="display:flex;flex-direction:column;gap:14px;">
                 <input type="hidden" name="item_id" :value="selectedItem.id">
 
                 <div style="padding:10px 12px;background:#fef2f2;border:1px solid #fee2e2;border-radius:10px;font-size:12px;color:#991b1b;display:flex;align-items:center;justify-content:space-between;">
