@@ -228,7 +228,9 @@
             selectEl.value = id;
 
             // Trigger event change & input native agar listener di luar (Alpine.js / JS) jalan
-            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+            const changeEv = new Event('change', { bubbles: true });
+            changeEv._fromSd = true;
+            selectEl.dispatchEvent(changeEv);
             selectEl.dispatchEvent(new Event('input', { bubbles: true }));
             if (typeof selectEl.onchange === 'function') {
                 selectEl.onchange();
@@ -240,21 +242,42 @@
             }
         }
 
+        // Sinkronisasi otomatis jika nilai <select> diubah dari luar (Alpine.js / JS / reset form)
+        selectEl.addEventListener('change', function(e) {
+            if (e._fromSd) return;
+            const chosen = optionsData.find(o => String(o.id) === String(selectEl.value));
+            if (chosen) {
+                valueSpan.textContent = chosen.name;
+                valueSpan.classList.remove('sd-placeholder');
+            } else {
+                valueSpan.textContent = placeholderText;
+                valueSpan.classList.add('sd-placeholder');
+            }
+        });
+
         function positionDropdown() {
             const rect = trigger.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
             const dropH = Math.min(300, dropdown.scrollHeight || 300);
             const goUp = spaceBelow < dropH + 8 && rect.top > dropH + 8;
 
-            dropdown.style.width = rect.width + 'px';
-            dropdown.style.left  = (rect.left + window.scrollX) + 'px';
+            const targetWidth = Math.max(rect.width, 220);
+            dropdown.style.position = 'fixed';
+            dropdown.style.zIndex   = '99999';
+            dropdown.style.width    = targetWidth + 'px';
+
+            let left = rect.left;
+            if (left + targetWidth > window.innerWidth - 10) {
+                left = Math.max(10, window.innerWidth - targetWidth - 10);
+            }
+            dropdown.style.left = left + 'px';
 
             if (goUp) {
-                dropdown.style.top    = '';
+                dropdown.style.top    = 'auto';
                 dropdown.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
             } else {
-                dropdown.style.top    = (rect.bottom + window.scrollY + 4) + 'px';
-                dropdown.style.bottom = '';
+                dropdown.style.top    = (rect.bottom + 4) + 'px';
+                dropdown.style.bottom = 'auto';
             }
         }
 
@@ -342,6 +365,169 @@
         selects.forEach(transformSelect);
     };
 
-    document.addEventListener('DOMContentLoaded', function() { window.initSearchableSelects(); });
+    /**
+     * =========================================================================
+     * REUSABLE SEARCHABLE SELECT COMPONENT (Alpine.js Native)
+     * Dapat digunakan untuk Dropdown Toko, Produk, dsb dengan kolom pencarian
+     * =========================================================================
+     */
+    window.searchableSelect = function(config) {
+        config = config || {};
+        return {
+            open: false,
+            search: '',
+            activeIndex: -1,
+            _onScroll: null,
+            _onResize: null,
+
+            get options() {
+                if (typeof config.options === 'function') {
+                    return config.options() || [];
+                }
+                return config.options || [];
+            },
+
+            get selectedItem() {
+                const currentVal = typeof config.getValue === 'function' ? config.getValue() : this.value;
+                if (currentVal === '' || currentVal === null || currentVal === undefined) return null;
+                const key = config.valueKey || 'id';
+                return this.options.find(opt => String(opt[key]) === String(currentVal)) || null;
+            },
+
+            get selectedLabel() {
+                if (this.selectedItem) {
+                    if (typeof config.formatLabel === 'function') {
+                        return config.formatLabel(this.selectedItem);
+                    }
+                    const labelKey = config.labelKey || 'nama_item';
+                    return this.selectedItem[labelKey] || '';
+                }
+                return config.placeholder || '-- Pilih --';
+            },
+
+            get filteredOptions() {
+                const q = (this.search || '').toLowerCase().trim();
+                const opts = this.options;
+                if (!q) return opts;
+                const lKey = config.labelKey || 'nama_item';
+                const sKey = config.subKey || '';
+                const eKey = config.searchKey || '';
+                return opts.filter(opt => {
+                    const label = String(opt[lKey] || '').toLowerCase();
+                    const sub = sKey ? String(opt[sKey] || '').toLowerCase() : '';
+                    const extra = eKey ? String(opt[eKey] || '').toLowerCase() : '';
+                    return label.includes(q) || sub.includes(q) || extra.includes(q);
+                });
+            },
+
+            toggle() {
+                this.open ? this.close() : this.show();
+            },
+
+            show() {
+                this.open = true;
+                this.search = '';
+                this.activeIndex = -1;
+
+                this.$nextTick(() => {
+                    this.updatePosition();
+                    if (this.$refs.searchInput) {
+                        this.$refs.searchInput.focus();
+                    }
+                    if (typeof lucide !== 'undefined') {
+                        lucide.createIcons();
+                    }
+                });
+
+                this._onScroll = () => { if (this.open) this.updatePosition(); };
+                this._onResize = () => { if (this.open) this.updatePosition(); };
+                window.addEventListener('scroll', this._onScroll, { passive: true, capture: true });
+                window.addEventListener('resize', this._onResize, { passive: true });
+            },
+
+            close() {
+                this.open = false;
+                this.search = '';
+                this.activeIndex = -1;
+                if (this._onScroll) {
+                    window.removeEventListener('scroll', this._onScroll, true);
+                    this._onScroll = null;
+                }
+                if (this._onResize) {
+                    window.removeEventListener('resize', this._onResize);
+                    this._onResize = null;
+                }
+            },
+
+            updatePosition() {
+                if (!this.$refs.trigger || !this.$refs.dropdown) return;
+                const rect = this.$refs.trigger.getBoundingClientRect();
+                const dd = this.$refs.dropdown;
+                const spaceBelow = window.innerHeight - rect.bottom;
+                const dropHeight = Math.min(280, dd.scrollHeight || 260);
+                const goUp = spaceBelow < dropHeight + 8 && rect.top > dropHeight + 8;
+
+                const targetWidth = Math.max(rect.width, config.minWidth || 300);
+                dd.style.position = 'fixed';
+                dd.style.zIndex = '99999';
+                dd.style.width = targetWidth + 'px';
+
+                let left = rect.left;
+                if (left + targetWidth > window.innerWidth - 12) {
+                    left = Math.max(8, window.innerWidth - targetWidth - 12);
+                }
+                dd.style.left = left + 'px';
+
+                if (goUp) {
+                    dd.style.top = 'auto';
+                    dd.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
+                } else {
+                    dd.style.top = (rect.bottom + 4) + 'px';
+                    dd.style.bottom = 'auto';
+                }
+            },
+
+            select(opt) {
+                const val = opt ? opt[config.valueKey || 'id'] : '';
+                this.close();
+                if (typeof config.onSelect === 'function') {
+                    config.onSelect(opt, val);
+                }
+            },
+
+            navigate(dir) {
+                const total = this.filteredOptions.length;
+                if (total === 0) return;
+                this.activeIndex = Math.max(0, Math.min(total - 1, this.activeIndex + dir));
+                this.$nextTick(() => {
+                    const activeEl = this.$refs.list?.querySelector(`.searchable-opt-idx-${this.activeIndex}`);
+                    if (activeEl) {
+                        activeEl.scrollIntoView({ block: 'nearest' });
+                    }
+                });
+            },
+
+            selectActive() {
+                if (this.activeIndex >= 0 && this.activeIndex < this.filteredOptions.length) {
+                    this.select(this.filteredOptions[this.activeIndex]);
+                } else if (this.filteredOptions.length === 1) {
+                    this.select(this.filteredOptions[0]);
+                }
+            }
+        };
+    };
+
+    function initAlpineIntegration() {
+        if (window.Alpine && typeof window.Alpine.data === 'function') {
+            window.Alpine.data('searchableSelect', window.searchableSelect);
+        }
+    }
+    initAlpineIntegration();
+    document.addEventListener('alpine:init', initAlpineIntegration);
+
+    document.addEventListener('DOMContentLoaded', function() {
+        window.initSearchableSelects();
+        initAlpineIntegration();
+    });
 
 })();

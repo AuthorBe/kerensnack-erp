@@ -24,12 +24,6 @@ ob_start();
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Manifest Rute Sales-Driver &amp; Status Pengiriman Toko' ?></p>
             </div>
         </div>
-        <div class="page-header-actions">
-            <button @click="openAddModal()" :disabled="pendingOrders.length === 0" class="btn btn-primary" style="font-weight:700;">
-                <i data-lucide="plus"></i>
-                <span>Terbitkan Surat Jalan</span>
-            </button>
-        </div>
     </div>
 
     <!-- STATS -->
@@ -234,7 +228,7 @@ ob_start();
             <form action="<?= Router::url('/deliveries/store') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
                 <div>
                     <label class="form-label">Pilih Nota Pesanan Toko *</label>
-                    <select name="pesanan_id" required class="form-input">
+                    <select name="pesanan_id" required class="form-input searchable-select">
                         <option value="">-- Pilih Pesanan Menunggu Kirim --</option>
                         <?php foreach ($pendingOrders as $po): ?>
                         <option value="<?= $po['id'] ?>"><?= htmlspecialchars($po['nomor_nota']) ?> - <?= htmlspecialchars($po['nama_toko']) ?> (Rp <?= number_format((float)$po['total_netto'], 0, ',', '.') ?>)</option>
@@ -260,13 +254,11 @@ ob_start();
                     </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Status Awal Surat Jalan</label>
-                    <select name="status_surat_jalan" class="form-input">
-                        <option value="disetujui_owner">Siap Dikirim (Disetujui Owner)</option>
-                        <option value="sedang_dikirim">Sedang Dalam Perjalanan (Otomatis Potong Stok)</option>
-                    </select>
+                <div style="padding:10px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;font-size:12px;color:#1e40af;display:flex;align-items:center;gap:8px;">
+                    <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
+                    <span>Surat Jalan otomatis berstatus <strong>Siap Dikirim</strong> dan langsung dialokasikan ke jadwal rute driver.</span>
                 </div>
+                <input type="hidden" name="status_surat_jalan" value="disetujui_owner">
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
                     <button type="button" @click="showAddModal = false" class="btn btn-secondary">Batal</button>

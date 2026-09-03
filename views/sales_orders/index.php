@@ -111,11 +111,11 @@ ob_start();
 
             <div>
                 <label class="form-label" style="font-size:11px;">Toko Pelanggan</label>
-                <select name="pelanggan_id" class="form-input" style="height:36px;font-size:12px;">
-                    <option value="">-- Semua Toko --</option>
+                <select name="pelanggan_id" class="form-input searchable-select" style="height:36px;font-size:12px;">
+                    <option value="">-- Semua Toko Pelanggan --</option>
                     <?php foreach ($customers as $c): ?>
                     <option value="<?= $c['id'] ?>" <?= $filter['pelanggan_id'] === $c['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($c['nama_toko']) ?>
+                        <?= htmlspecialchars($c['nama_toko']) ?><?= !empty($c['kode_pelanggan']) ? ' (' . htmlspecialchars($c['kode_pelanggan']) . ')' : '' ?>
                     </option>
                     <?php endforeach; ?>
                 </select>

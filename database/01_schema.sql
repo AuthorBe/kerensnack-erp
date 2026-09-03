@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS public.pelanggan (
     alamat_lengkap TEXT NOT NULL,
     nomor_telepon VARCHAR(25),
     nomor_whatsapp VARCHAR(25),
-    tipe_pembayaran_default VARCHAR(30) NOT NULL DEFAULT 'cash' CHECK (tipe_pembayaran_default IN ('cash', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi')),
+    tipe_pembayaran_default VARCHAR(30) NOT NULL DEFAULT 'cash' CHECK (tipe_pembayaran_default IN ('cash', 'qris', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi')),
     plafon_piutang NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     total_piutang_berjalan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     sales_driver_id UUID REFERENCES public.karyawan(id), -- Sales pemegang toko tetap
@@ -301,7 +301,7 @@ CREATE TABLE IF NOT EXISTS public.pesanan (
     total_bruto NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     total_diskon NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     total_netto NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
-    tipe_pembayaran VARCHAR(30) NOT NULL CHECK (tipe_pembayaran IN ('cash', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi')),
+    tipe_pembayaran VARCHAR(30) NOT NULL CHECK (tipe_pembayaran IN ('cash', 'qris', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi', 'sebagian', 'kredit')),
     tanggal_jatuh_tempo DATE,
     status_pembayaran VARCHAR(30) NOT NULL DEFAULT 'belum_lunas' CHECK (status_pembayaran IN ('belum_lunas', 'sebagian', 'tempo', 'lunas', 'dibatalkan')),
     status_pemrosesan VARCHAR(30) NOT NULL DEFAULT 'menunggu_approval' CHECK (status_pemrosesan IN ('menunggu_approval', 'disetujui', 'siap_kirim', 'dalam_pengiriman', 'selesai', 'dibatalkan')),

@@ -340,7 +340,7 @@ ob_start();
             $isInTransit = ($statusSj === 'sedang_dikirim');
             $isCompleted = ($statusSj === 'selesai_diterima');
             $isFailed = ($statusSj === 'gagal_kirim');
-            $isPending = in_array($statusSj, ['menunggu_persetujuan', 'draf_n8n', 'siap_kirim'], true);
+            $isPending = in_array($statusSj, ['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'], true);
 
             $cardClass = $isInTransit ? 'is-in-transit' : ($isCompleted ? 'is-completed' : ($isFailed ? 'is-failed' : ''));
         ?>
@@ -460,7 +460,7 @@ ob_start();
                             <template x-if="activeDelivery?.status_surat_jalan === 'gagal_kirim'">
                                 <span class="badge" style="background: #ffe4e6; color: #9f1239; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Gagal Kirim</span>
                             </template>
-                            <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim'].includes(activeDelivery?.status_surat_jalan)">
+                            <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'].includes(activeDelivery?.status_surat_jalan)">
                                 <span class="badge" style="background: #f1f5f9; color: #475569; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Siap Berangkat</span>
                             </template>
                         </div>
@@ -546,10 +546,14 @@ ob_start();
                                 </div>
                                 <div class="text-sm font-medium text-ink leading-relaxed" style="padding-left: 24px;" x-text="activeDelivery?.alamat_lengkap || 'Alamat toko belum diatur'"></div>
                                 
-                                <div style="padding-left: 24px;" class="pt-1.5">
-                                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((activeDelivery?.nama_toko || '') + ' ' + (activeDelivery?.alamat_lengkap || ''))" target="_blank" rel="noopener noreferrer" class="quick-action-pill is-maps">
-                                        <i data-lucide="map" style="width: 15px; height: 15px;"></i>
-                                        <span>Buka Google Maps Navigasi</span>
+                                <div style="padding-left: 24px;" class="pt-1.5 flex items-center gap-2">
+                                    <a :href="activeDelivery?.link_google_maps || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((activeDelivery?.nama_toko || '') + ' ' + (activeDelivery?.alamat_lengkap || '')))" target="_blank" rel="noopener noreferrer" class="quick-action-pill is-maps">
+                                        <i data-lucide="map-pin" style="width: 15px; height: 15px; color: #ef4444;" x-show="activeDelivery?.link_google_maps"></i>
+                                        <i data-lucide="map" style="width: 15px; height: 15px;" x-show="!activeDelivery?.link_google_maps"></i>
+                                        <span x-text="activeDelivery?.link_google_maps ? 'Buka Titik Presisi Google Maps' : 'Buka Google Maps Navigasi'"></span>
+                                        <template x-if="activeDelivery?.link_google_maps">
+                                            <span class="badge" style="background:#d1fae5; color:#065f46; font-size:10px; font-weight:800; padding:1px 6px; border-radius:5px; margin-left:4px;">Presisi</span>
+                                        </template>
                                     </a>
                                 </div>
                             </div>
@@ -710,7 +714,8 @@ ob_start();
                         </div>
                     </div>
 
-                    <form action="<?= Router::url('/driver-deliveries/complete') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left">
+                    <form action="<?= Router::url('/driver-deliveries/complete') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left"
+                          data-action-text="Menyimpan serah terima...">
                         <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
 
                         <!-- 1. Nama Penerima Toko (Wajib) -->
@@ -785,7 +790,8 @@ ob_start();
                         </div>
                     </div>
 
-                    <form action="<?= Router::url('/driver-deliveries/fail') ?>" method="POST" class="space-y-5 text-left">
+                    <form action="<?= Router::url('/driver-deliveries/fail') ?>" method="POST" class="space-y-5 text-left"
+                          data-action-text="Melaporkan gagal kirim...">
                         <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
 
                         <!-- Dropdown Alasan Gagal -->
@@ -825,52 +831,51 @@ ob_start();
 
             </div>
 
-            <!-- 4. MODAL FOOTER AKSI OPERASIONAL TETAP -->
+            <!-- 4. MODAL FOOTER AKSI OPERASIONAL TETAP (CLEAN, PROPORTIONAL & RESPONSIVE) -->
             <div x-show="viewMode === 'detail'"
-                 style="padding: 18px 28px; border-top: 1px solid var(--color-hairline); background: var(--color-canvas); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                 class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3"
+                 style="padding: 16px 24px; border-top: 1px solid var(--color-hairline); background: var(--color-canvas); flex-shrink: 0;">
                 
                 <!-- KIRI: Cetak Surat Jalan -->
-                <a :href="'<?= Router::url('/deliveries/print?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
-                   target="_blank"
-                   class="btn btn-secondary btn-sm"
-                   style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px;">
-                    <i data-lucide="printer" style="width: 15px; height: 15px;"></i>
-                    <span>Cetak Surat Jalan</span>
-                </a>
+                <div class="flex items-center">
+                    <a :href="'<?= Router::url('/deliveries/print?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
+                       target="_blank"
+                       class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
+                       style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px;">
+                        <i data-lucide="printer" style="width: 15px; height: 15px;"></i>
+                        <span>Cetak Surat Jalan</span>
+                    </a>
+                </div>
 
-                <!-- KANAN: Tombol Aksi (container ini SELALU ada agar space-between konsisten) -->
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <!-- KANAN: Tombol Aksi Operasional -->
+                <div class="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+                    <!-- Tutup -->
+                    <button type="button" @click="closeDetailModal()" class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                            style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 18px;">
+                        Tutup
+                    </button>
 
-                    <!-- Form Mulai Kirim (display:contents = tidak buat flex item sendiri) -->
+                    <!-- Form Mulai Kirim (Jika Masih Status Siap Berangkat) -->
                     <form action="<?= Router::url('/driver-deliveries/start') ?>" method="POST"
                           style="display: contents;"
                           :data-confirm="'Mulai perjalanan pengiriman ke ' + (activeDelivery?.nama_toko || '') + '?'"
                           data-confirm-title="Mulai Pengiriman"
                           data-confirm-type="info"
-                          data-confirm-btn="Ya, Mulai Berangkat">
+                          data-confirm-btn="Ya, Mulai Berangkat"
+                          data-action-text="Memulai pengiriman...">
                         <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
-                        <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim'].includes(activeDelivery?.status_surat_jalan)">
-                            <button type="submit" class="btn btn-primary btn-sm"
-                                    style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 20px; display: inline-flex; align-items: center; gap: 7px;">
+                        <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'].includes(activeDelivery?.status_surat_jalan)">
+                            <button type="submit" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
+                                    style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; display: inline-flex; align-items: center; gap: 7px; background: #2563eb; border-color: #2563eb; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
                                 <i data-lucide="send" style="width: 15px; height: 15px;"></i>
                                 <span>Mulai Kirim</span>
                             </button>
                         </template>
                     </form>
 
-                    <!-- Selesai Kirim -->
+                    <!-- Lapor Gagal (Jika Sedang Dikirim) -->
                     <template x-if="activeDelivery?.status_surat_jalan === 'sedang_dikirim'">
-                        <button type="button" class="btn btn-primary btn-sm"
-                                style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 20px; background: #059669; border-color: #059669; display: inline-flex; align-items: center; gap: 7px;"
-                                @click="viewMode = 'complete_form'; $nextTick(() => lucide.createIcons())">
-                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
-                            <span>Selesai Kirim</span>
-                        </button>
-                    </template>
-
-                    <!-- Lapor Gagal -->
-                    <template x-if="activeDelivery?.status_surat_jalan === 'sedang_dikirim'">
-                        <button type="button" class="btn btn-secondary btn-sm"
+                        <button type="button" class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
                                 style="font-weight: 700; font-size: 13px; border-radius: 12px; padding: 9px 16px; color: #e11d48; border-color: #fecaca; display: inline-flex; align-items: center; gap: 6px;"
                                 @click="viewMode = 'fail_form'; $nextTick(() => lucide.createIcons())">
                             <i data-lucide="x-circle" style="width: 15px; height: 15px;"></i>
@@ -878,12 +883,15 @@ ob_start();
                         </button>
                     </template>
 
-                    <!-- Tutup (selalu ada) -->
-                    <button type="button" @click="closeDetailModal()" class="btn btn-secondary btn-sm"
-                            style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 18px;">
-                        Tutup
-                    </button>
-
+                    <!-- Selesai Kirim (Jika Sedang Dikirim) -->
+                    <template x-if="activeDelivery?.status_surat_jalan === 'sedang_dikirim'">
+                        <button type="button" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
+                                style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; background: #059669; border-color: #059669; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);"
+                                @click="viewMode = 'complete_form'; $nextTick(() => lucide.createIcons())">
+                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                            <span>Selesai Kirim</span>
+                        </button>
+                    </template>
                 </div>
 
             </div>

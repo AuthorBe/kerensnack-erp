@@ -2337,6 +2337,7 @@ pre.code-block {
 .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 4px !important; }
 .space-y-2 > :not([hidden]) ~ :not([hidden]) { margin-top: 8px !important; }
 .space-y-3 > :not([hidden]) ~ :not([hidden]) { margin-top: 12px !important; }
+.space-y-3\.5 > :not([hidden]) ~ :not([hidden]) { margin-top: 14px !important; }
 .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 16px !important; }
 .space-y-5 > :not([hidden]) ~ :not([hidden]) { margin-top: 20px !important; }
 .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 24px !important; }
@@ -3401,6 +3402,56 @@ html:not(.dark) .toast-info {
   font-size: 12px;
 }
 
+/* --- Reusable Alpine Searchable Dropdown Styles --- */
+.dropdown-menu-searchable {
+  background: var(--color-canvas, #ffffff);
+  border: 1px solid var(--color-hairline, #e2e8f0);
+  box-shadow: 0 14px 34px -4px rgba(0, 0, 0, 0.16), 0 6px 14px -4px rgba(0, 0, 0, 0.08);
+  border-radius: var(--rounded-md, 12px);
+  animation: sdFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .dropdown-menu-searchable {
+  background: var(--color-canvas-soft, #1e293b);
+  border-color: var(--color-hairline-strong, #334155);
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6);
+}
+
+.searchable-option {
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+  border-left: 3px solid transparent;
+}
+
+.searchable-option:hover {
+  background-color: var(--color-canvas-soft, #f8fafc) !important;
+}
+
+.dark .searchable-option:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+.searchable-option.is-selected {
+  background-color: rgba(99, 102, 241, 0.08) !important;
+  border-left: 3px solid #6366f1 !important;
+}
+
+.dark .searchable-option.is-selected {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+  border-left: 3px solid #818cf8 !important;
+}
+
+.searchable-option.is-active {
+  background-color: rgba(99, 102, 241, 0.09) !important;
+  border-left: 3px solid #6366f1 !important;
+  outline: none !important;
+}
+
+.dark .searchable-option.is-active {
+  background-color: rgba(99, 102, 241, 0.22) !important;
+  border-left: 3px solid #818cf8 !important;
+  outline: none !important;
+}
+
 /* =============================================================================
    31. KEYBOARD NAVIGATION SHORTCUTS BANNER (.keyboard-nav-info)
    ============================================================================= */
@@ -3824,6 +3875,40 @@ html:not(.dark) .toast-info {
   transition: stroke-dashoffset 0.35s 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* --- Morph Error X Circle --- */
+.action-error-orb {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.45);
+  opacity: 0;
+  transform: scale(0.4) rotate(45deg);
+  transition: opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.action-error-svg {
+  width: 28px;
+  height: 28px;
+  stroke: #ffffff;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.action-error-svg line {
+  stroke-dasharray: 25;
+  stroke-dashoffset: 25;
+  transition: stroke-dashoffset 0.35s 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* --- Success State Active Classes --- */
 #app-action-loader.is-success .action-pulse-ring {
   border-color: rgba(16, 185, 129, 0.35);
@@ -3846,6 +3931,54 @@ html:not(.dark) .toast-info {
   stroke-dashoffset: 0;
 }
 
+#app-action-loader.is-success .action-loader-text {
+  color: #10b981;
+}
+
+#app-action-loader.is-success .action-loader-bar {
+  animation: none;
+  left: 0;
+  width: 100%;
+  background: #10b981;
+}
+
+/* --- Error State Active Classes --- */
+#app-action-loader.is-error .action-pulse-ring {
+  border-color: rgba(239, 68, 68, 0.35);
+  animation: actionPulseGlowError 1.4s ease-out infinite;
+}
+
+#app-action-loader.is-error .action-spinner-outer,
+#app-action-loader.is-error .action-spinner-inner,
+#app-action-loader.is-error .action-center-logo {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+#app-action-loader.is-error .action-error-orb {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+#app-action-loader.is-error .action-error-svg line {
+  stroke-dashoffset: 0;
+}
+
+#app-action-loader.is-error .action-loader-text {
+  color: #ef4444;
+}
+
+#app-action-loader.is-error .action-loader-bar {
+  animation: none;
+  left: 0;
+  width: 100%;
+  background: #ef4444;
+}
+
+#app-action-loader.is-error .action-loader-card {
+  animation: actionCardShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
 /* Action Text */
 .action-loader-text {
   font-size: 13.5px;
@@ -3854,10 +3987,6 @@ html:not(.dark) .toast-info {
   letter-spacing: -0.01em;
   margin: 0;
   transition: color 0.2s ease;
-}
-
-#app-action-loader.is-success .action-loader-text {
-  color: #10b981;
 }
 
 /* Action Progress Bar */
@@ -3882,13 +4011,6 @@ html:not(.dark) .toast-info {
   transition: background 0.3s ease, width 0.3s ease, left 0.3s ease;
 }
 
-#app-action-loader.is-success .action-loader-bar {
-  animation: none;
-  left: 0;
-  width: 100%;
-  background: #10b981;
-}
-
 /* Animations */
 @keyframes appLoaderSpinReverse {
   0% { transform: rotate(360deg); }
@@ -3903,6 +4025,18 @@ html:not(.dark) .toast-info {
 @keyframes actionPulseGlowSuccess {
   0% { transform: scale(0.88); opacity: 0.9; }
   100% { transform: scale(1.4); opacity: 0; }
+}
+
+@keyframes actionPulseGlowError {
+  0% { transform: scale(0.88); opacity: 0.9; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+@keyframes actionCardShake {
+  10%, 90% { transform: scale(1) translate3d(-1px, 0, 0); }
+  20%, 80% { transform: scale(1) translate3d(2px, 0, 0); }
+  30%, 50%, 70% { transform: scale(1) translate3d(-4px, 0, 0); }
+  40%, 60% { transform: scale(1) translate3d(4px, 0, 0); }
 }
 
 /* =============================================================================

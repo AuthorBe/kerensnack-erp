@@ -351,7 +351,7 @@ $flash = Flash::get();
         <?php endif; ?>
 
         <!-- Login Form -->
-        <form method="POST" action="<?= Router::url('/login') ?>" id="login-form" novalidate>
+        <form method="POST" action="<?= Router::url('/login') ?>" id="login-form" data-action-text="Memverifikasi akun..." novalidate>
             <?= \App\Helpers\CSRF::field() ?>
             <div class="form-group-modern">
                 <label for="username" class="form-label-modern">Username</label>
@@ -503,9 +503,17 @@ $flash = Flash::get();
                 <div class="action-spinner-outer"></div>
                 <div class="action-spinner-inner"></div>
                 <div class="action-center-logo">K</div>
+                <!-- Kinetic Morph Success Checkmark Circle -->
                 <div class="action-success-orb">
                     <svg class="action-success-svg" viewBox="0 0 24 24">
                         <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+                <!-- Kinetic Morph Error X Circle -->
+                <div class="action-error-orb">
+                    <svg class="action-error-svg" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                 </div>
             </div>

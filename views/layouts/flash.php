@@ -12,7 +12,7 @@ $iconMap = [
 <!-- GLOBAL TOAST NOTIFICATION CONTAINER -->
 <div id="toast-container" class="toast-container">
     <?php if ($flash): ?>
-    <div class="toast toast-<?= htmlspecialchars($flash['type']) ?>" id="php-flash-toast" style="animation: toastSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+    <div class="toast toast-<?= htmlspecialchars($flash['type']) ?>" id="php-flash-toast" style="opacity:0; pointer-events:none; animation:none;">
         <i data-lucide="<?= htmlspecialchars($iconMap[$flash['type']] ?? 'info') ?>" class="toast-icon"></i>
         <span class="toast-msg"><?= $flash['message'] ?></span>
         <button class="toast-close" onclick="this.closest('.toast').remove()" aria-label="Tutup">
@@ -20,15 +20,15 @@ $iconMap = [
         </button>
     </div>
     <script>
-        setTimeout(function() {
-            var el = document.getElementById('php-flash-toast');
-            if (el) {
-                el.style.opacity = '0';
-                el.style.transform = 'translateY(-8px) scale(0.96)';
-                el.style.transition = 'all 0.2s ease';
-                setTimeout(function() { el.remove(); }, 200);
-            }
-        }, 5000);
+        window.__FLASH__ = <?= json_encode([
+            'type' => $flash['type'],
+            'message' => strip_tags($flash['message']),
+            'raw_message' => $flash['message']
+        ]) ?>;
+    </script>
+    <?php else: ?>
+    <script>
+        window.__FLASH__ = null;
     </script>
     <?php endif; ?>
 </div>

@@ -30,7 +30,7 @@ class CustomerController extends Controller
             // 1. Ambil data seluruh toko pelanggan beserta relasi & jumlah item khusus
             $customers = Database::fetchAll("
                 SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.is_konsinyasi,
-                       p.alamat_lengkap, p.nomor_telepon, p.nomor_whatsapp, p.tipe_pembayaran_default,
+                       p.alamat_lengkap, p.link_google_maps, p.nomor_telepon, p.nomor_whatsapp, p.tipe_pembayaran_default,
                        p.nama_bank, p.nomor_rekening, p.atas_nama_rekening,
                        p.plafon_piutang, p.total_piutang_berjalan, p.override_level_harga,
                        p.override_diskon_persen, p.override_diskon_nominal, p.status_aktif,
@@ -116,6 +116,7 @@ class CustomerController extends Controller
         $overrideLevel = $this->input('override_level_harga') ? (int)$this->input('override_level_harga') : null;
         $overrideDiskonPersen = (float)$this->input('override_diskon_persen', 0);
         $overrideDiskonNominal = (float)preg_replace('/[^0-9]/', '', (string)$this->input('override_diskon_nominal', '0'));
+        $linkMaps = trim((string)$this->input('link_google_maps')) ?: null;
         $namaBank = trim((string)$this->input('nama_bank'));
         $nomorRekening = trim((string)$this->input('nomor_rekening'));
         $atasNamaRekening = trim((string)$this->input('atas_nama_rekening'));
@@ -139,13 +140,13 @@ class CustomerController extends Controller
             Database::execute("
                 INSERT INTO public.pelanggan (
                     kode_pelanggan, nama_toko, nama_pemilik, grup_pelanggan_id, is_konsinyasi,
-                    wilayah_id, alamat_lengkap, nomor_telepon, nomor_whatsapp,
+                    wilayah_id, alamat_lengkap, link_google_maps, nomor_telepon, nomor_whatsapp,
                     tipe_pembayaran_default, plafon_piutang, override_level_harga,
                     override_diskon_persen, override_diskon_nominal,
                     nama_bank, nomor_rekening, atas_nama_rekening, status_aktif
                 ) VALUES (
                     :kode, :nama, :pemilik, :grup, :konsinyasi,
-                    :wilayah, :alamat, :telp, :wa,
+                    :wilayah, :alamat, :link_maps, :telp, :wa,
                     :bayar, :plafon, :level,
                     :disc_persen, :disc_nom,
                     :nama_bank, :nomor_rek, :atas_nama, TRUE
@@ -158,6 +159,7 @@ class CustomerController extends Controller
                 'konsinyasi' => $isKonsinyasi ? 'true' : 'false',
                 'wilayah' => $wilayahId,
                 'alamat' => $alamat,
+                'link_maps' => $linkMaps,
                 'telp' => $telepon,
                 'wa' => $whatsapp,
                 'bayar' => $tipeBayar,
@@ -195,6 +197,7 @@ class CustomerController extends Controller
         $overrideLevel = $this->input('override_level_harga') ? (int)$this->input('override_level_harga') : null;
         $overrideDiskonPersen = (float)$this->input('override_diskon_persen', 0);
         $overrideDiskonNominal = (float)preg_replace('/[^0-9]/', '', (string)$this->input('override_diskon_nominal', '0'));
+        $linkMaps = trim((string)$this->input('link_google_maps')) ?: null;
         $statusAktif = (bool)$this->input('status_aktif', true);
         $namaBank = trim((string)$this->input('nama_bank'));
         $nomorRekening = trim((string)$this->input('nomor_rekening'));
@@ -221,6 +224,7 @@ class CustomerController extends Controller
                     is_konsinyasi = :konsinyasi,
                     wilayah_id = :wilayah,
                     alamat_lengkap = :alamat,
+                    link_google_maps = :link_maps,
                     nomor_telepon = :telp,
                     nomor_whatsapp = :wa,
                     tipe_pembayaran_default = :bayar,
@@ -242,6 +246,7 @@ class CustomerController extends Controller
                 'konsinyasi' => $isKonsinyasi ? 'true' : 'false',
                 'wilayah' => $wilayahId,
                 'alamat' => $alamat,
+                'link_maps' => $linkMaps,
                 'telp' => $telepon,
                 'wa' => $whatsapp,
                 'bayar' => $tipeBayar,

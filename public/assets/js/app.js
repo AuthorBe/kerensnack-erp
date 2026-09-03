@@ -564,17 +564,21 @@
     }
   };
 
-  // 2. AppAction: Khusus untuk Simpan Data, Update, Checkout POS & Mutasi Data (Dual-Ring Glow -> Morph Checkmark)
+  // 2. AppAction: Khusus untuk Simpan Data, Update, Checkout POS & Mutasi Data (Dual-Ring Glow -> Morph Checkmark / Error X)
   const AppAction = {
     safetyTimer: null,
 
     show(text = 'Menyimpan data...') {
+      try {
+        sessionStorage.setItem('app_action_triggered', 'true');
+      } catch (e) {}
+
       const loader = document.getElementById('app-action-loader');
       const textEl = document.getElementById('app-action-loader-text');
       if (!loader) return;
 
       clearTimeout(this.safetyTimer);
-      loader.classList.remove('is-success');
+      loader.classList.remove('is-success', 'is-error');
 
       if (textEl && text) {
         textEl.textContent = text;
@@ -587,7 +591,11 @@
       }, 15000);
     },
 
-    success(text = 'Berhasil Disimpan! ✨', duration = 700) {
+    success(text = 'Berhasil Disimpan! ✨', duration = 850) {
+      try {
+        sessionStorage.removeItem('app_action_triggered');
+      } catch (e) {}
+
       return new Promise((resolve) => {
         const loader = document.getElementById('app-action-loader');
         const textEl = document.getElementById('app-action-loader-text');
@@ -595,6 +603,9 @@
           resolve();
           return;
         }
+
+        clearTimeout(this.safetyTimer);
+        loader.classList.remove('is-error');
 
         if (textEl && text) {
           textEl.textContent = text;
@@ -609,13 +620,46 @@
       });
     },
 
+    error(text = 'Gagal memproses data!', duration = 1400) {
+      try {
+        sessionStorage.removeItem('app_action_triggered');
+      } catch (e) {}
+
+      return new Promise((resolve) => {
+        const loader = document.getElementById('app-action-loader');
+        const textEl = document.getElementById('app-action-loader-text');
+        if (!loader) {
+          resolve();
+          return;
+        }
+
+        clearTimeout(this.safetyTimer);
+        loader.classList.remove('is-success');
+
+        if (textEl && text) {
+          textEl.textContent = text;
+        }
+
+        loader.classList.add('is-active', 'is-error');
+
+        setTimeout(() => {
+          this.hide();
+          resolve();
+        }, duration);
+      });
+    },
+
+    fail(text, duration) {
+      return this.error(text, duration);
+    },
+
     hide() {
       clearTimeout(this.safetyTimer);
       const loader = document.getElementById('app-action-loader');
       if (loader) {
         loader.classList.remove('is-active');
         setTimeout(() => {
-          loader.classList.remove('is-success');
+          loader.classList.remove('is-success', 'is-error');
         }, 250);
       }
     }
@@ -627,23 +671,86 @@
   window.ActionLoader = AppAction;
   window.AppLoading = AppSkeleton; // backwards-compatible
 
-  // Lifecycle Handlers: Smooth Reveal & Dismiss on Page Ready / Refresh
+  // Lifecycle Handlers: Smooth Reveal & Dismiss on Page Ready / Refresh with Kinetic Morphing
   let isInitialSkeletonDismissed = false;
   const dismissInitialSkeleton = () => {
     if (isInitialSkeletonDismissed) return;
     isInitialSkeletonDismissed = true;
-    setTimeout(() => {
+
+    // Check whether a form/action was explicitly submitted (for page-navigation uses)
+    let hadAction = false;
+    try {
+      hadAction = sessionStorage.getItem('app_action_triggered') === 'true';
+      sessionStorage.removeItem('app_action_triggered');
+    } catch (e) {}
+
+    const flash = window.__FLASH__;
+    console.log('dismissInitialSkeleton: flash =', flash);
+
+    // Always animate AppAction if there's a server flash — regardless of hadAction.
+    // This covers: data-confirm forms, modal-submit forms, Alpine-rendered forms,
+    // and any redirect from a backend action that produces a flash message.
+    if (flash && (flash.type === 'error' || flash.type === 'danger')) {
       AppSkeleton.hide();
-      AppAction.hide();
-    }, 180);
+      // Suppress corner toast so the animated orb is the sole feedback channel
+      _suppressToast();
+      AppAction.error(flash.message || 'Terjadi Kesalahan!', 1600);
+    } else if (flash && flash.type === 'success') {
+      AppSkeleton.hide();
+      _suppressToast();
+      AppAction.success(flash.message || 'Berhasil! ✨', 1200);
+    } else if (flash && (flash.type === 'warning' || flash.type === 'info')) {
+      AppSkeleton.hide();
+      // For warnings and info, keep the corner toast (they are informational, not action results)
+      _showToast();
+      setTimeout(() => { AppAction.hide(); }, 100);
+    } else {
+      setTimeout(() => {
+        AppSkeleton.hide();
+        AppAction.hide();
+      }, 150);
+    }
   };
+
+  // Suppress the PHP-flash corner toast element so the kinetic orb is the sole feedback channel
+  function _suppressToast() {
+    try {
+      const el = document.getElementById('php-flash-toast');
+      if (el) {
+        el.style.transition = 'none';
+        el.style.opacity = '0';
+        setTimeout(() => { if (el.parentNode) el.remove(); }, 10);
+      }
+    } catch (e) {}
+  }
+
+  // Re-show the PHP-flash corner toast for non-action feedback (info/warning)
+  function _showToast() {
+    try {
+      const el = document.getElementById('php-flash-toast');
+      if (el) {
+        el.style.animation = 'toastSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+        el.style.pointerEvents = '';
+        el.style.opacity = '';
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+          if (el.parentNode) {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(-8px) scale(0.96)';
+            el.style.transition = 'all 0.2s ease';
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 200);
+          }
+        }, 5000);
+      }
+    } catch (e) {}
+  }
 
   if (document.readyState === 'complete') {
     dismissInitialSkeleton();
   } else {
     window.addEventListener('load', dismissInitialSkeleton);
     document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(dismissInitialSkeleton, 100);
+      setTimeout(dismissInitialSkeleton, 80);
     });
   }
 
@@ -694,10 +801,25 @@
   // Intercept standard form submissions -> Trigger Action Blur Processing Loader
   document.addEventListener('submit', (e) => {
     const form = e.target;
-    if (!form || form.hasAttribute('data-confirm') || form.classList.contains('no-loader') || form.getAttribute('target') === '_blank') {
+    if (e.defaultPrevented || !form || form.hasAttribute('data-confirm') || form.classList.contains('no-loader') || form.getAttribute('target') === '_blank') {
       return;
     }
-    const customText = form.getAttribute('data-action-text') || 'Menyimpan data...';
+    let customText = form.getAttribute('data-action-text');
+    if (!customText) {
+      const formAction = (form.getAttribute('action') || '').toLowerCase();
+      const formId = (form.id || '').toLowerCase();
+      if (formAction.includes('/login') || formId.includes('login')) {
+        customText = 'Memverifikasi akun...';
+      } else if (formAction.includes('/logout') || formId.includes('logout')) {
+        customText = 'Keluar sistem...';
+      } else if (formAction.includes('delete') || formAction.includes('hapus')) {
+        customText = 'Menghapus data...';
+      } else if (formAction.includes('update') || formAction.includes('edit')) {
+        customText = 'Memperbarui data...';
+      } else {
+        customText = 'Menyimpan data...';
+      }
+    }
     AppAction.show(customText);
   });
 

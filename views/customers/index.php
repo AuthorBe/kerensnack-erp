@@ -162,7 +162,15 @@ $activeTab = $_GET['tab'] ?? 'customers';
                             </td>
                             <td>
                                 <div style="font-weight:700;color:var(--color-ink);" x-text="c.nama_toko"></div>
-                                <div style="font-size:11px;color:var(--color-ink-mute);" x-text="c.nama_pemilik ? ('Pemilik: ' + c.nama_pemilik) : c.alamat_lengkap"></div>
+                                <div style="font-size:11px;color:var(--color-ink-mute);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:1px;">
+                                    <span x-text="c.nama_pemilik ? ('Pemilik: ' + c.nama_pemilik) : c.alamat_lengkap"></span>
+                                    <template x-if="c.link_google_maps">
+                                        <a :href="c.link_google_maps" target="_blank" rel="noopener noreferrer" class="badge" style="background:rgba(37,99,235,0.08);color:#2563eb;border:1px solid rgba(37,99,235,0.2);padding:1px 6px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Buka Titik Presisi Google Maps">
+                                            <i data-lucide="map-pin" style="width:10px;height:10px;color:#ef4444;"></i>
+                                            <span>Maps</span>
+                                        </a>
+                                    </template>
+                                </div>
                                 <template x-if="c.nomor_rekening">
                                     <div style="font-size:10.5px;color:var(--color-ink-mute);font-family:var(--font-mono);margin-top:2px;">
                                         <i data-lucide="building" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-right:2px;margin-top:-2px;"></i>
@@ -463,6 +471,25 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 <div>
                     <label class="form-label">Alamat Lengkap Toko</label>
                     <textarea name="alamat_lengkap" x-model="form.alamat_lengkap" class="form-input" rows="2" placeholder="Jl. Raya Pasar..."></textarea>
+                </div>
+
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <label class="form-label" style="margin-bottom:0;display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="map-pin" style="width:14px;height:14px;color:#ef4444;"></i>
+                            <span>Link Google Maps / Titik Presisi (Opsional)</span>
+                        </label>
+                        <template x-if="form.link_google_maps">
+                            <a :href="form.link_google_maps" target="_blank" rel="noopener noreferrer" style="font-size:11px;font-weight:700;color:#2563eb;display:inline-flex;align-items:center;gap:3px;text-decoration:none;">
+                                <i data-lucide="external-link" style="width:11px;height:11px;"></i>
+                                <span>Tes Link</span>
+                            </a>
+                        </template>
+                    </div>
+                    <input type="url" name="link_google_maps" x-model="form.link_google_maps" class="form-input" placeholder="https://maps.app.goo.gl/... atau https://maps.google.com/?q=-6.2,106.8">
+                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;">
+                        Salin link dari Google Maps agar armada driver dapat membuka rute navigasi toko secara presisi.
+                    </div>
                 </div>
 
                 <!-- REKENING BANK (OPSIONAL) -->
@@ -786,6 +813,7 @@ function customerApp(initialTab) {
             grup_pelanggan_id: '',
             wilayah_id: '',
             alamat_lengkap: '',
+            link_google_maps: '',
             nomor_telepon: '',
             nomor_whatsapp: '',
             tipe_pembayaran_default: 'cash',
@@ -889,6 +917,7 @@ function customerApp(initialTab) {
                 grup_pelanggan_id: this.groups[0]?.id || '',
                 wilayah_id: this.territories[0]?.id || '',
                 alamat_lengkap: '',
+                link_google_maps: '',
                 nomor_telepon: '',
                 nomor_whatsapp: '',
                 tipe_pembayaran_default: 'cash',
@@ -915,6 +944,7 @@ function customerApp(initialTab) {
                 grup_pelanggan_id: c.grup_pelanggan_id || '',
                 wilayah_id: c.wilayah_id || '',
                 alamat_lengkap: c.alamat_lengkap || '',
+                link_google_maps: c.link_google_maps || '',
                 nomor_telepon: c.nomor_telepon || '',
                 nomor_whatsapp: c.nomor_whatsapp || '',
                 tipe_pembayaran_default: Boolean(c.is_konsinyasi) ? 'konsinyasi' : (c.tipe_pembayaran_default || 'cash'),

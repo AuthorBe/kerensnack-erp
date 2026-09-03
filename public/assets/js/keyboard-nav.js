@@ -238,6 +238,7 @@ let globalTargetForm = null;
 
     // Global Keydown Handler
     document.addEventListener('keydown', function(e) {
+        if (e.defaultPrevented) return;
         
         // 1. F2 Quick Add Row
         if (e.key === 'F2') {
@@ -315,7 +316,7 @@ let globalTargetForm = null;
         if (e.key === ' ' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
             const activeElement = document.activeElement;
             if (activeElement && activeElement.tagName.toLowerCase() !== 'input' && activeElement.tagName.toLowerCase() !== 'textarea') {
-                if (activeElement.classList.contains('sd-trigger')) {
+                if (activeElement.classList.contains('sd-trigger') || activeElement.classList.contains('enter-nav')) {
                     e.preventDefault();
                     e.stopPropagation();
                     activeElement.click();
@@ -342,18 +343,23 @@ let globalTargetForm = null;
             const activeElement = document.activeElement;
             if (!activeElement) return;
 
-            // Jika dalam modal popup yang punya aksi default khusus (misal barcode scan)
-            if (activeElement.id === 'posBarcodeInput' || activeElement.classList.contains('sd-search')) {
+            // Jika dalam modal popup yang punya aksi default khusus (misal barcode scan atau dropdown search box)
+            if (activeElement.id === 'posBarcodeInput' || activeElement.classList.contains('sd-search') || activeElement.closest('.dropdown-menu-searchable')) {
                 return;
             }
 
             const isTextarea = activeElement.tagName.toLowerCase() === 'textarea';
-            const isButton = activeElement.tagName.toLowerCase() === 'button' || activeElement.type === 'button' || activeElement.type === 'submit';
+            const isPlainButton = (activeElement.tagName.toLowerCase() === 'button' || activeElement.type === 'button' || activeElement.type === 'submit') && !activeElement.classList.contains('enter-nav');
 
-            if (isTextarea || isButton) return;
+            if (isTextarea || isPlainButton) return;
 
             const navElement = getCurrentNavElement(activeElement);
             if (navElement) {
+                if (navElement.tagName.toLowerCase() === 'button' && (navElement.getAttribute('data-nav') === 'customer' || navElement.getAttribute('data-nav') === 'product')) {
+                    e.preventDefault();
+                    navElement.click();
+                    return;
+                }
                 e.preventDefault();
                 moveNextNavElement(navElement);
             }

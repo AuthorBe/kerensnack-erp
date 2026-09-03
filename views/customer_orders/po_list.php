@@ -344,7 +344,7 @@ ob_start();
 
             <!-- Dropdown Filter Toko -->
             <div class="md:col-span-4">
-                <select name="pelanggan_id" class="form-input font-medium" onchange="this.form.submit()" style="height: 40px; font-size: 13px; border-radius: 12px;">
+                <select name="pelanggan_id" class="form-input font-medium searchable-select" onchange="this.form.submit()" style="height: 40px; font-size: 13px; border-radius: 12px;">
                     <option value="">-- Semua Toko Pelanggan --</option>
                     <?php foreach (($customers ?? []) as $c): ?>
                         <option value="<?= $c['id'] ?>" <?= ($pelangganId === $c['id']) ? 'selected' : '' ?>>

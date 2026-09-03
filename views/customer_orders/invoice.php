@@ -7,7 +7,7 @@ use App\Helpers\Format;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faktur Penjualan - <?= htmlspecialchars($order['nomor_nota']) ?></title>
+    <title><?= (!empty($order['is_konsinyasi']) || (($order['tipe_pembayaran'] ?? '') === 'konsinyasi')) ? 'Bukti Titip Barang' : 'Faktur Penjualan' ?> - <?= htmlspecialchars($order['nomor_nota']) ?></title>
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="<?= Router::asset('/favicon/favicon.ico') ?>">
     <link rel="icon" type="image/svg+xml" href="<?= Router::asset('/favicon/favicon.svg') ?>">
@@ -241,6 +241,9 @@ use App\Helpers\Format;
         </button>
     </div>
 
+<?php
+$isKonsinyasi = !empty($order['is_konsinyasi']) || (($order['tipe_pembayaran'] ?? '') === 'konsinyasi') || (isset($order['adalah_tagihan']) && ($order['adalah_tagihan'] === false || $order['adalah_tagihan'] === 'f' || $order['adalah_tagihan'] === 0 || $order['adalah_tagihan'] === 'false'));
+?>
     <div class="invoice-container">
         <!-- HEADER -->
         <table class="header-table">
@@ -254,7 +257,7 @@ use App\Helpers\Format;
                     </div>
                 </td>
                 <td style="vertical-align:top; width:40%;">
-                    <div class="invoice-title">FAKTUR PENJUALAN</div>
+                    <div class="invoice-title"><?= $isKonsinyasi ? 'BUKTI TITIP BARANG' : 'FAKTUR PENJUALAN' ?></div>
                     <div class="invoice-no"><?= htmlspecialchars($order['nomor_nota']) ?></div>
                     <div style="text-align:right; font-size:11.5px; color:#64748b; margin-top:4px;">
                         Tanggal: <strong><?= date('d/m/Y', strtotime($order['tanggal_pesanan'])) ?></strong>
@@ -280,8 +283,16 @@ use App\Helpers\Format;
             </div>
 
             <div class="meta-box">
-                <div class="meta-label">Rincian Pengiriman &amp; Pembayaran:</div>
+                <div class="meta-label"><?= $isKonsinyasi ? 'Rincian Pengiriman:' : 'Rincian Pengiriman &amp; Pembayaran:' ?></div>
                 <div>Sales / Driver: <strong><?= htmlspecialchars($order['nama_sales'] ?: 'Driver Toko') ?></strong></div>
+                <?php if ($isKonsinyasi): ?>
+                <div style="margin-top:3px;">
+                    Skema Distribusi: <strong style="color:#d97706;">TITIP JUAL (KONSINYASI)</strong>
+                </div>
+                <div style="margin-top:3px; font-size:11px; color:#64748b;">
+                    * Non-Tagihan Langsung (Penagihan via Opname Sales)
+                </div>
+                <?php else: ?>
                 <div style="margin-top:3px;">
                     Tipe Pembayaran: <strong><?= strtoupper(str_replace('_', ' ', $order['tipe_pembayaran'])) ?></strong>
                     <?php if ($order['status_pembayaran'] === 'lunas'): ?>
@@ -294,6 +305,7 @@ use App\Helpers\Format;
                 <div style="margin-top:3px; color:#dc2626;">
                     Jatuh Tempo: <strong><?= date('d/m/Y', strtotime($order['tanggal_jatuh_tempo'])) ?></strong>
                 </div>
+                <?php endif; ?>
                 <?php endif; ?>
             </div>
         </div>
@@ -348,7 +360,7 @@ use App\Helpers\Format;
             <div>
                 <table class="summary-table">
                     <tr>
-                        <td style="color:#64748b;">Subtotal Bruto:</td>
+                        <td style="color:#64748b;"><?= $isKonsinyasi ? 'Subtotal Valuasi:' : 'Subtotal Bruto:' ?></td>
                         <td class="text-right font-mono font-bold"><?= Format::rupiah($order['total_bruto']) ?></td>
                     </tr>
                     <?php if ((float)$order['total_diskon'] > 0): ?>
@@ -358,14 +370,20 @@ use App\Helpers\Format;
                     </tr>
                     <?php endif; ?>
                     <tr class="total-row">
-                        <td style="padding-top:8px;">TOTAL NETTO:</td>
+                        <td style="padding-top:8px;"><?= $isKonsinyasi ? 'TOTAL TITIP RAK:' : 'TOTAL NETTO:' ?></td>
                         <td class="text-right font-mono" style="padding-top:8px;"><?= Format::rupiah($order['total_netto']) ?></td>
                     </tr>
-                    <?php if ($order['status_pembayaran'] !== 'lunas'): ?>
+                    <?php if (!$isKonsinyasi && $order['status_pembayaran'] !== 'lunas'): ?>
                     <tr>
                         <td style="color:#dc2626; font-size:11.5px; padding-top:4px;">Sisa Tagihan Tempo:</td>
                         <td class="text-right font-mono font-bold" style="color:#dc2626; font-size:12px; padding-top:4px;">
                             <?= Format::rupiah(max(0, (float)$order['total_netto'] - (float)$order['total_dibayar'])) ?>
+                        </td>
+                    </tr>
+                    <?php elseif ($isKonsinyasi): ?>
+                    <tr>
+                        <td style="color:#d97706; font-size:11px; padding-top:4px;" colspan="2" class="text-right">
+                            <em>* Non-Tagihan Langsung (Omzet ditagih saat Opname Sales)</em>
                         </td>
                     </tr>
                     <?php endif; ?>

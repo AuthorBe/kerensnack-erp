@@ -208,15 +208,51 @@ ob_start();
                         <div></div>
                     </div>
 
-                    <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;" class="custom-scrollbar">
+                    <div style="display:flex;flex-direction:column;gap:8px;min-height:200px;overflow:visible;">
                         <template x-for="(row, idx) in form.items" :key="idx">
                             <div style="display:grid;grid-template-columns:2.5fr 1fr 1.5fr 36px;gap:8px;align-items:center;">
-                                <select x-model="row.item_id" @change="onItemChange(idx)" class="form-input" style="font-size:12px;height:36px;">
-                                    <option value="">-- Pilih Bahan Baku / Kemasan --</option>
-                                    <template x-for="it in availableItems" :key="it.id">
-                                        <option :value="it.id" x-text="it.nama_item + ' (' + (it.tipe_item === 'bahan_mentah' ? 'Mentah Bal/Kg' : 'Kemasan') + ' - ' + it.satuan_dasar + ')'"></option>
-                                    </template>
-                                </select>
+                                <div class="relative" @click.outside="row.dropdownOpen = false">
+                                    <button type="button" @click="toggleItemDropdown(row)"
+                                            class="form-input flex items-center justify-between w-full text-left"
+                                            style="height:36px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer;background:var(--color-canvas);padding:0 8px;">
+                                        <span class="truncate" :style="!row.item_id ? 'color:var(--color-ink-mute);font-weight:500;' : 'color:var(--color-ink);'"
+                                              x-text="getSelectedItemName(row.item_id)"></span>
+                                        <i data-lucide="chevron-down" style="width:13px;height:13px;flex-shrink:0;transition:transform 0.2s;" :style="row.dropdownOpen ? 'transform:rotate(180deg)' : ''"></i>
+                                    </button>
+
+                                    <div x-show="row.dropdownOpen" x-cloak
+                                         class="dropdown-menu-searchable"
+                                         style="position:absolute;top:calc(100% + 4px);left:0;min-width:280px;max-width:360px;z-index:1050;border-radius:10px;overflow:hidden;background:var(--color-canvas);border:1px solid var(--color-hairline);box-shadow:0 12px 28px -4px rgba(0,0,0,0.15);">
+                                        <div style="padding:6px 8px;border-bottom:1px solid var(--color-hairline);background:var(--color-canvas-soft);">
+                                            <div style="position:relative;display:flex;align-items:center;">
+                                                <i data-lucide="search" style="position:absolute;left:8px;width:13px;height:13px;color:var(--color-ink-mute);pointer-events:none;"></i>
+                                                <input type="text" x-model="row.search"
+                                                       @keydown.escape="row.dropdownOpen = false"
+                                                       placeholder="Cari nama barang / SKU / jenis..."
+                                                       class="form-input"
+                                                       style="height:30px;padding-left:26px;font-size:11.5px;border-radius:6px;width:100%;background:var(--color-canvas);">
+                                            </div>
+                                        </div>
+                                        <div style="max-height:180px;overflow-y:auto;" class="custom-scrollbar">
+                                            <template x-for="it in getFilteredItems(row)" :key="it.id">
+                                                <div @click="selectItemRow(row, idx, it)"
+                                                     class="searchable-option"
+                                                     :class="{ 'is-selected': String(it.id) === String(row.item_id) }"
+                                                     style="padding:8px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--color-hairline-soft);">
+                                                    <div style="min-width:0;flex:1;">
+                                                        <div style="font-weight:700;color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" x-text="it.nama_item"></div>
+                                                        <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="(it.tipe_item === 'bahan_mentah' ? 'Mentah Bal/Kg' : 'Kemasan') + ' • ' + it.satuan_dasar"></div>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                            <template x-if="getFilteredItems(row).length === 0">
+                                                <div style="padding:12px;text-align:center;font-size:11.5px;color:var(--color-ink-mute);">
+                                                    Barang tidak ditemukan
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
                                 <input type="number" step="any" x-model.number="row.qty" placeholder="Qty" class="form-input font-mono" style="font-size:12px;height:36px;" @input="recalcRow(idx)">
                                 <input type="text" x-model="row.harga_satuan" placeholder="Harga" class="form-input font-mono input-rupiah" style="font-size:12px;height:36px;" @input="recalcRow(idx)">
                                 <button @click="removeItemRow(idx)" type="button" class="btn btn-ghost btn-sm" style="color:var(--color-danger);padding:4px;height:36px;width:36px;" title="Hapus Baris">
@@ -294,6 +330,43 @@ function purchaseApp() {
             return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
         },
 
+        getFilteredItems(row) {
+            const q = (row.search || '').toLowerCase().trim();
+            if (!q) return this.availableItems;
+            return this.availableItems.filter(it => {
+                const name = (it.nama_item || '').toLowerCase();
+                const sku = (it.kode_sku || '').toLowerCase();
+                const tipe = (it.tipe_item || '').toLowerCase();
+                return name.includes(q) || sku.includes(q) || tipe.includes(q);
+            });
+        },
+
+        getSelectedItemName(itemId) {
+            if (!itemId) return '-- Pilih Bahan Baku / Kemasan --';
+            const it = this.availableItems.find(x => x.id === itemId);
+            if (!it) return '-- Pilih Bahan Baku / Kemasan --';
+            return it.nama_item + ' (' + (it.tipe_item === 'bahan_mentah' ? 'Mentah Bal/Kg' : 'Kemasan') + ' - ' + it.satuan_dasar + ')';
+        },
+
+        selectItemRow(row, idx, item) {
+            row.item_id = item.id;
+            row.dropdownOpen = false;
+            row.search = '';
+            this.onItemChange(idx);
+        },
+
+        toggleItemDropdown(row) {
+            const wasOpen = row.dropdownOpen;
+            this.form.items.forEach(r => r.dropdownOpen = false);
+            row.dropdownOpen = !wasOpen;
+            if (row.dropdownOpen) {
+                row.search = '';
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            }
+        },
+
         openAddModal() {
             this.form = {
                 pemasok_id: '<?= $suppliers[0]['id'] ?? '' ?>',
@@ -303,7 +376,7 @@ function purchaseApp() {
                 akun_kas_id: '<?= $cashAccounts[0]['id'] ?? '' ?>',
                 catatan: '',
                 items: [
-                    { item_id: '', qty: 10, harga_satuan: '10.000', subtotal: 100000 }
+                    { item_id: '', qty: 10, harga_satuan: '10.000', subtotal: 100000, dropdownOpen: false, search: '' }
                 ]
             };
             this.showModal = true;
@@ -311,7 +384,7 @@ function purchaseApp() {
         },
 
         addItemRow() {
-            this.form.items.push({ item_id: '', qty: 1, harga_satuan: '0', subtotal: 0 });
+            this.form.items.push({ item_id: '', qty: 1, harga_satuan: '0', subtotal: 0, dropdownOpen: false, search: '' });
             this.$nextTick(() => lucide.createIcons());
         },
 
@@ -347,6 +420,9 @@ function purchaseApp() {
             }
 
             this.isSubmitting = true;
+            if (window.AppAction) {
+                window.AppAction.show('Menyimpan faktur pembelian...');
+            }
             try {
                 // Unmask currency fields for API
                 const payload = JSON.parse(JSON.stringify(this.form));
@@ -365,12 +441,21 @@ function purchaseApp() {
                 });
                 const json = await res.json();
                 if (json.success) {
+                    if (window.AppAction) {
+                        await window.AppAction.success('Faktur Berhasil Disimpan! ✨', 650);
+                    }
                     toast.success('Faktur pembelian berhasil disimpan dan stok otomatis bertambah!');
-                    setTimeout(() => window.location.reload(), 1200);
+                    setTimeout(() => window.location.reload(), 600);
                 } else {
+                    if (window.AppAction) {
+                        await window.AppAction.error(`Gagal: ${json.message || 'Gagal menyimpan faktur'}`, 1200);
+                    }
                     toast.error('Gagal: ' + json.message);
                 }
             } catch (err) {
+                if (window.AppAction) {
+                    await window.AppAction.error('Kesalahan Jaringan / Koneksi!', 1200);
+                }
                 toast.error('Terjadi kesalahan koneksi saat menyimpan faktur pembelian.');
             } finally {
                 this.isSubmitting = false;

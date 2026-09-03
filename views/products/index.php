@@ -330,7 +330,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             <div class="flex flex-col sm:flex-row items-end justify-between gap-3">
                 <div class="flex-1 w-full">
                     <label class="form-label" style="font-size:13px;font-weight:700;margin-bottom:6px;">Pilih Produk Barang Jadi untuk Atur Resep BOM:</label>
-                    <select x-model="selectedRecipeProductId" class="form-input" style="height:42px;font-size:13.5px;font-weight:600;">
+                    <select x-model="selectedRecipeProductId" class="form-input searchable-select" style="height:42px;font-size:13.5px;font-weight:600;">
                         <option value="">-- Pilih Barang Jadi --</option>
                         <?php foreach ($finishedGoods as $fg): ?>
                         <option value="<?= $fg['id'] ?>"><?= htmlspecialchars($fg['kode_sku']) ?> - <?= htmlspecialchars($fg['nama_item']) ?> (Varian: <?= htmlspecialchars($fg['varian_rasa'] ?? '-') ?>)</option>
@@ -743,7 +743,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
                 <div>
                     <label class="form-label">Pilih Bahan Baku / Kemasan *</label>
-                    <select name="item_bahan_id" x-model="recipeForm.item_bahan_id" required class="form-input">
+                    <select name="item_bahan_id" x-model="recipeForm.item_bahan_id" required class="form-input searchable-select">
                         <option value="">-- Pilih Bahan Mentah / Kemasan --</option>
                         <?php foreach ($materials as $m): ?>
                         <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nama_item']) ?> (<?= $m['tipe_item'] === 'bahan_mentah' ? 'Mentah Curah' : 'Kemas' ?> - <?= $m['satuan_dasar'] ?>)</option>
@@ -1082,7 +1082,10 @@ function productApp(initialTab) {
                 jumlah_kebutuhan: '1'
             };
             this.showRecipeModal = true;
-            this.$nextTick(() => lucide.createIcons());
+            this.$nextTick(() => {
+                lucide.createIcons();
+                if (window.initSearchableSelects) window.initSearchableSelects();
+            });
         },
 
         async deleteRecipeItem(id) {

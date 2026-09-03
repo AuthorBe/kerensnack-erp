@@ -79,8 +79,8 @@ class CustomerOrderController extends Controller
             $sql = "
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
-                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.dibuat_pada,
-                       pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp,
+                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
+                       pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.is_konsinyasi,
                        COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan) as nama_sales,
                        COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan) as nopol_driver,
                        ak.nama_akun as nama_akun_kas,
@@ -208,8 +208,8 @@ class CustomerOrderController extends Controller
             $sqlOrder = "
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
-                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.dibuat_pada,
-                       pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap,
+                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
+                       pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
                        p.sales_driver_id,
                        COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan) as nama_sales,
                        COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan) as nopol_driver,
@@ -289,7 +289,7 @@ class CustomerOrderController extends Controller
             // 1. Ambil Master Pelanggan Toko (Exclude Pelanggan Kasir Ritel UMUM/CASH)
             $custSql = "
                 SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, 
-                       p.alamat_lengkap, p.tipe_pembayaran_default, p.is_konsinyasi,
+                       p.alamat_lengkap, p.tipe_pembayaran_default, p.is_konsinyasi, p.sales_driver_id,
                        COALESCE(p.override_level_harga, gp.default_level_harga, 1) as level_harga,
                        gp.nama_grup as nama_grup_harga
                 FROM public.pelanggan p
@@ -450,7 +450,8 @@ class CustomerOrderController extends Controller
             
             if ($pelangganInfo) {
                 $isKonsinyasi = (bool)$pelangganInfo['is_konsinyasi'];
-                $salesDriverId = $pelangganInfo['sales_driver_id']; // PRD: otomatis assign ke sales tetap
+                $driverInput = $this->input('sales_driver_id') ?: null;
+                $salesDriverId = $driverInput ?: $pelangganInfo['sales_driver_id']; // PRD: Default ke sales tetap, bisa di-override
                 $ruteWilayahId = $pelangganInfo['wilayah_id'];
             }
             
@@ -517,7 +518,7 @@ class CustomerOrderController extends Controller
                 $totalDibayar = 0;
                 $sisaTagihan = $totalNetto; // Nilai HPP internal
                 $statusBayar = 'belum_lunas';
-            } else if ($tipePembayaran === 'cash') {
+            } else if ($tipePembayaran === 'cash' || $tipePembayaran === 'qris' || $tipePembayaran === 'transfer') {
                 $totalDibayar = $totalNetto;
                 $sisaTagihan = 0;
                 $statusBayar = 'lunas';
@@ -671,9 +672,10 @@ class CustomerOrderController extends Controller
                 return;
             }
 
-            // Validasi Status: Jangan izinkan edit jika pesanan sudah dikirim/selesai/dibatalkan
-            if (in_array($order['status_pemrosesan'] ?? '', ['dikirim', 'selesai', 'selesai_diterima', 'dibatalkan'], true)) {
-                $this->flashError("Pesanan dengan status '" . ($order['status_pemrosesan'] ?? '') . "' tidak dapat diedit lagi.");
+            // Validasi Status: Hanya izinkan edit jika pesanan masih berstatus draf PO
+            if (($order['status_pemrosesan'] ?? '') !== 'po') {
+                $statusLabel = strtoupper(str_replace('_', ' ', $order['status_pemrosesan'] ?? ''));
+                $this->flashError("Hanya pesanan berstatus 'PO' yang dapat diedit. Pesanan ini sudah berstatus '{$statusLabel}'.");
                 $this->redirectBack('/customer-orders');
                 return;
             }
@@ -834,8 +836,10 @@ class CustomerOrderController extends Controller
                 return;
             }
 
-            if (in_array($order['status_pemrosesan'] ?? '', ['dikirim', 'selesai', 'selesai_diterima', 'dibatalkan'], true)) {
-                $this->flashError("Pesanan dengan status '" . ($order['status_pemrosesan'] ?? '') . "' tidak dapat diedit lagi.");
+            // Validasi Status: Hanya izinkan edit jika pesanan masih berstatus draf PO
+            if (($order['status_pemrosesan'] ?? '') !== 'po') {
+                $statusLabel = strtoupper(str_replace('_', ' ', $order['status_pemrosesan'] ?? ''));
+                $this->flashError("Hanya pesanan berstatus 'PO' yang dapat diedit. Pesanan ini sudah berstatus '{$statusLabel}'.");
                 $this->redirect('/customer-orders');
                 return;
             }
@@ -844,17 +848,10 @@ class CustomerOrderController extends Controller
 
             $isKonsinyasi = (bool)$order['is_konsinyasi'];
 
-            // 1. Kembalikan stok item lama ke gudang
-            $oldItems = Database::fetchAll("SELECT item_id, kuantitas_satuan_dasar FROM public.item_pesanan WHERE pesanan_id = :id", ['id' => $id]);
-            foreach ($oldItems as $oit) {
-                $pdo->prepare("UPDATE public.item SET stok_fisik_saat_ini = stok_fisik_saat_ini + :qty, diubah_pada = NOW() WHERE id = :item_id")
-                    ->execute(['qty' => (int)$oit['kuantitas_satuan_dasar'], 'item_id' => $oit['item_id']]);
-            }
-
-            // 2. Hapus detail item lama
+            // 1. Hapus detail item lama (Stok belum terpotong di tahap PO)
             $pdo->prepare("DELETE FROM public.item_pesanan WHERE pesanan_id = :id")->execute(['id' => $id]);
 
-            // 3. Hitung total bruto & netto baru
+            // 2. Hitung total bruto & netto baru
             $totalBruto = 0;
             $totalDiskonItem = 0;
 
@@ -870,7 +867,7 @@ class CustomerOrderController extends Controller
                     $harga = (float)($it['harga'] ?? 0);
                 }
 
-                $subtotal = ($qty * $harga) - $diskon;
+                $subtotal = max(0, ($qty * $harga) - $diskon);
                 $it['subtotal'] = $subtotal;
                 $totalBruto += ($qty * $harga);
                 $totalDiskonItem += $diskon;
@@ -880,23 +877,46 @@ class CustomerOrderController extends Controller
             $diskonFaktur = (float)preg_replace('/[^0-9]/', '', (string)$this->input('diskon_faktur', '0'));
             $totalDiskon = $totalDiskonItem + $diskonFaktur;
             $totalNetto = max(0, $totalBruto - $totalDiskon);
-            $totalDibayar = (float)($order['total_dibayar'] ?? 0);
-            $sisaTagihan = max(0, $totalNetto - $totalDibayar);
-            $statusBayar = ($totalDibayar >= $totalNetto) ? 'lunas' : (($totalDibayar > 0) ? 'sebagian' : 'belum_lunas');
 
-            // 4. Update Header Pesanan
+            // Hitung status dan nominal pembayaran
+            if ($isKonsinyasi) {
+                $totalDibayar = 0;
+                $sisaTagihan = 0;
+                $statusBayar = 'lunas';
+            } elseif ($tipePembayaran === 'cash' || $tipePembayaran === 'qris' || $tipePembayaran === 'transfer') {
+                $totalDibayar = $totalNetto;
+                $sisaTagihan = 0;
+                $statusBayar = 'lunas';
+            } elseif ($tipePembayaran === 'sebagian') {
+                $nominalDibayar = (float)preg_replace('/[^0-9]/', '', (string)$this->input('nominal_dibayar', '0'));
+                $totalDibayar = min($nominalDibayar, $totalNetto);
+                $sisaTagihan = max(0, $totalNetto - $totalDibayar);
+                $statusBayar = ($sisaTagihan == 0) ? 'lunas' : (($totalDibayar > 0) ? 'sebagian' : 'belum_lunas');
+            } else {
+                $totalDibayar = 0;
+                $sisaTagihan = $totalNetto;
+                $statusBayar = 'belum_lunas';
+            }
+
+            // Driver tetap dari pesanan / profil toko (tidak diubah di form PO edit)
+            $driverId = $order['sales_driver_id'];
+            $adalahTagihan = $isKonsinyasi ? false : true;
+
+            // 3. Update Header Pesanan
             $stmtUpdateOrder = $pdo->prepare("
                 UPDATE public.pesanan SET
                     tanggal_pesanan = :tgl,
                     total_bruto = :bruto,
                     total_diskon = :diskon,
                     total_netto = :netto,
+                    total_dibayar = :dibayar,
                     sisa_tagihan = :sisa,
                     status_pembayaran = :status_bayar,
                     tipe_pembayaran = :tipe,
                     tanggal_jatuh_tempo = :tempo,
                     sales_driver_id = :driver_id,
                     catatan = :catatan,
+                    adalah_tagihan = :adalah_tagihan,
                     diubah_pada = NOW()
                 WHERE id = :id
             ");
@@ -905,16 +925,18 @@ class CustomerOrderController extends Controller
                 'bruto' => $totalBruto,
                 'diskon' => $totalDiskon,
                 'netto' => $totalNetto,
+                'dibayar' => $totalDibayar,
                 'sisa' => $sisaTagihan,
                 'status_bayar' => $statusBayar,
                 'tipe' => $tipePembayaran,
                 'tempo' => $tanggalJatuhTempo,
                 'driver_id' => $driverId,
                 'catatan' => $catatan ?: 'Pesanan Toko Mitra (Diperbarui)',
+                'adalah_tagihan' => $adalahTagihan ? 'true' : 'false',
                 'id' => $id,
             ]);
 
-            // 5. Insert Detail Items Baru & Potong Stok Baru
+            // 4. Insert Detail Items Baru (Stok gudang belum dipotong di tahap PO)
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
                     pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
@@ -924,27 +946,6 @@ class CustomerOrderController extends Controller
                     :harga, :diskon, :bonus, :subtotal, NOW()
                 )
             ");
-
-            $stmtStok = $pdo->prepare("
-                UPDATE public.item 
-                SET stok_fisik_saat_ini = stok_fisik_saat_ini - :qty,
-                    diubah_pada = NOW()
-                WHERE id = :item_id
-            ");
-
-            $stmtRiwayatStok = $pdo->prepare("
-                INSERT INTO public.riwayat_stok (
-                    item_id, tipe_mutasi, jumlah_perubahan,
-                    stok_sebelum, stok_sesudah, referensi_tabel, referensi_id,
-                    keterangan, dibuat_oleh, dibuat_pada
-                ) VALUES (
-                    :item_id, 'penyesuaian_stok', :qty,
-                    :stok_sebelum, :stok_sesudah, 'pesanan', :ref_id,
-                    :ket, :user_id, NOW()
-                )
-            ");
-
-            $userId = Auth::id() ?: null;
 
             foreach ($items as $it) {
                 $itemId = $it['item_id'];
@@ -964,30 +965,6 @@ class CustomerOrderController extends Controller
                     'bonus' => $isBonus ? 'true' : 'false',
                     'subtotal' => $subtotal,
                 ]);
-
-                if (!$isKonsinyasi) {
-                    $itemData = Database::fetchOne("SELECT stok_fisik_saat_ini, nama_item FROM public.item WHERE id = :id FOR UPDATE", ['id' => $itemId]);
-                    $stokSebelum = $itemData ? (float)$itemData['stok_fisik_saat_ini'] : 0;
-
-                    if ($stokSebelum < $qtyPcs) {
-                        $namaItem = $itemData['nama_item'] ?? 'Produk';
-                        throw new \Exception("Stok {$namaItem} tidak mencukupi setelah pembaruan. Tersedia: {$stokSebelum}, Diminta: {$qtyPcs}");
-                    }
-
-                    $stokSesudah = $stokSebelum - $qtyPcs;
-
-                    $stmtStok->execute(['qty' => $qtyPcs, 'item_id' => $itemId]);
-
-                    $stmtRiwayatStok->execute([
-                        'item_id' => $itemId,
-                        'qty' => $qtyPcs,
-                        'stok_sebelum' => $stokSebelum,
-                        'stok_sesudah' => $stokSesudah,
-                        'ref_id' => $id,
-                        'ket' => "Pembaruan Pesanan #{$order['nomor_nota']}",
-                        'user_id' => $userId,
-                    ]);
-                }
             }
 
             $pdo->commit();
@@ -1024,7 +1001,7 @@ class CustomerOrderController extends Controller
 
         try {
             $order = Database::fetchOne("
-                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap,
+                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
                        k.nama_karyawan as nama_sales,
                        ak.nama_akun as nama_akun_kas
                 FROM public.pesanan p
@@ -1193,59 +1170,70 @@ class CustomerOrderController extends Controller
                 throw new \Exception('Data faktur tidak ditemukan.');
             }
 
-            // 1. Ambil list item untuk dikembalikan ke stok
-            $items = Database::fetchAll("SELECT * FROM public.item_pesanan WHERE pesanan_id = :id", ['id' => $id]);
+            // Validasi Status: Tolak pembatalan jika pesanan sudah selesai diterima
+            if (in_array($order['status_pemrosesan'] ?? '', ['selesai_dikirim', 'selesai_diterima', 'selesai'], true)) {
+                $this->flashError("Pesanan #{$order['nomor_nota']} sudah selesai diterima oleh toko mitra. Pembatalan langsung dikunci untuk menjaga integritas kas & piutang. Silakan proses melalui menu Retur Penjualan atau Opname Konsinyasi.");
+                $this->redirect('/customer-orders');
+                return;
+            }
 
-            $stmtStok = $pdo->prepare("
-                UPDATE public.item 
-                SET stok_fisik_saat_ini = stok_fisik_saat_ini + :qty,
-                    diubah_pada = NOW()
-                WHERE id = :item_id
-            ");
+            // 1. Kembalikan stok fisik ke gudang HANYA JIKA pesanan sudah pernah diproses potong stok (status selain 'po')
+            $isPhysicalStockCut = in_array($order['status_pemrosesan'] ?? '', ['siap_dikirim', 'siap_kirim', 'sedang_dikirim', 'gagal_dikirim'], true);
 
-            $stmtRiwayat = $pdo->prepare("
-                INSERT INTO public.riwayat_stok (
-                    item_id, tipe_mutasi, jumlah_perubahan,
-                    stok_sebelum, stok_sesudah, referensi_tabel, referensi_id,
-                    keterangan, dibuat_oleh, dibuat_pada
-                ) VALUES (
-                    :item_id, 'penyesuaian_opname_tambah', :qty,
-                    :stok_sebelum, :stok_sesudah, 'pesanan', :ref_id,
-                    :ket, :user_id, NOW()
-                )
-            ");
+            if ($isPhysicalStockCut) {
+                $items = Database::fetchAll("SELECT * FROM public.item_pesanan WHERE pesanan_id = :id", ['id' => $id]);
 
-            $userId = Auth::id() ?: null;
+                $stmtStok = $pdo->prepare("
+                    UPDATE public.item 
+                    SET stok_fisik_saat_ini = stok_fisik_saat_ini + :qty,
+                        diubah_pada = NOW()
+                    WHERE id = :item_id
+                ");
 
-            foreach ($items as $it) {
-                $qtyPcs = (int)$it['kuantitas_satuan_dasar'];
-                $itemId = $it['item_id'];
+                $stmtRiwayat = $pdo->prepare("
+                    INSERT INTO public.riwayat_stok (
+                        item_id, tipe_mutasi, jumlah_perubahan,
+                        stok_sebelum, stok_sesudah, referensi_tabel, referensi_id,
+                        keterangan, dibuat_oleh, dibuat_pada
+                    ) VALUES (
+                        :item_id, 'penyesuaian_opname_tambah', :qty,
+                        :stok_sebelum, :stok_sesudah, 'pesanan', :ref_id,
+                        :ket, :user_id, NOW()
+                    )
+                ");
 
-                $itemData = Database::fetchOne("SELECT stok_fisik_saat_ini FROM public.item WHERE id = :id", ['id' => $itemId]);
-                $stokSebelum = $itemData ? (int)$itemData['stok_fisik_saat_ini'] : 0;
-                $stokSesudah = $stokSebelum + $qtyPcs;
+                $userId = Auth::id() ?: null;
 
-                $stmtStok->execute([
-                    'qty' => $qtyPcs,
-                    'item_id' => $itemId,
-                ]);
+                foreach ($items as $it) {
+                    $qtyPcs = (int)$it['kuantitas_satuan_dasar'];
+                    $itemId = $it['item_id'];
 
-                $stmtRiwayat->execute([
-                    'item_id' => $itemId,
-                    'qty' => $qtyPcs,
-                    'stok_sebelum' => $stokSebelum,
-                    'stok_sesudah' => $stokSesudah,
-                    'ref_id' => $id,
-                    'ket' => "Pembatalan Faktur Pesanan Pelanggan #{$order['nomor_nota']}",
-                    'user_id' => $userId,
-                ]);
+                    $itemData = Database::fetchOne("SELECT stok_fisik_saat_ini FROM public.item WHERE id = :id FOR UPDATE", ['id' => $itemId]);
+                    $stokSebelum = $itemData ? (int)$itemData['stok_fisik_saat_ini'] : 0;
+                    $stokSesudah = $stokSebelum + $qtyPcs;
+
+                    $stmtStok->execute([
+                        'qty' => $qtyPcs,
+                        'item_id' => $itemId,
+                    ]);
+
+                    $stmtRiwayat->execute([
+                        'item_id' => $itemId,
+                        'qty' => $qtyPcs,
+                        'stok_sebelum' => $stokSebelum,
+                        'stok_sesudah' => $stokSesudah,
+                        'ref_id' => $id,
+                        'ket' => "Pembatalan Pesanan #{$order['nomor_nota']} ({$order['status_pemrosesan']})",
+                        'user_id' => $userId,
+                    ]);
+                }
             }
 
             // 2. Jika kas pernah masuk, kurangi kembali saldo kas
             if ((float)$order['total_dibayar'] > 0 && !empty($order['akun_kas_id'])) {
-                $akunKas = Database::fetchOne("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $order['akun_kas_id']]);
+                $akunKas = Database::fetchOne("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE", ['id' => $order['akun_kas_id']]);
                 $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
-                $saldoBaru = $saldoLama - (float)$order['total_dibayar'];
+                $saldoBaru = max(0, $saldoLama - (float)$order['total_dibayar']);
 
                 $stmtKurangiKas = $pdo->prepare("
                     UPDATE public.akun_kas
@@ -1292,14 +1280,18 @@ class CustomerOrderController extends Controller
             ActivityLog::log(
                 'penjualan',
                 'DELETE',
-                "Pembatalan Faktur Pesanan Pelanggan #{$order['nomor_nota']} dan pengembalian stok ke gudang",
+                "Pembatalan Pesanan #{$order['nomor_nota']} ({$order['status_pemrosesan']})" . ($isPhysicalStockCut ? " dan pengembalian stok ke rak gudang" : ""),
                 'pesanan',
-                $id
+                (string)$id
             );
 
             $pdo->commit();
 
-            $this->flashSuccess("Faktur <strong>{$order['nomor_nota']}</strong> berhasil dibatalkan dan stok produk telah dikembalikan ke gudang!");
+            $msg = $isPhysicalStockCut
+                ? "Pesanan <strong>#{$order['nomor_nota']}</strong> berhasil dibatalkan dan seluruh stok produk telah dikembalikan ke rak gudang!"
+                : "Draf PO <strong>#{$order['nomor_nota']}</strong> berhasil dibatalkan dan dihapus dari antrean!";
+
+            $this->flashSuccess($msg);
             $this->redirect('/customer-orders');
 
         } catch (Throwable $e) {

@@ -199,6 +199,13 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
                         <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
                 </div>
+                <!-- Kinetic Morph Error X Circle -->
+                <div class="action-error-orb">
+                    <svg class="action-error-svg" viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </div>
             </div>
             <p id="app-action-loader-text" class="action-loader-text">Menyimpan data...</p>
             <div class="action-loader-track">

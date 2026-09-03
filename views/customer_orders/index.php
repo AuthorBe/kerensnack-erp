@@ -112,11 +112,11 @@ ob_start();
 
             <div>
                 <label class="form-label" style="font-size:11px;">Toko Pelanggan</label>
-                <select name="pelanggan_id" class="form-input" style="height:36px;font-size:12px;">
-                    <option value="">-- Semua Toko --</option>
+                <select name="pelanggan_id" class="form-input searchable-select" style="height:36px;font-size:12px;">
+                    <option value="">-- Semua Toko Pelanggan --</option>
                     <?php foreach ($customers as $c): ?>
                     <option value="<?= $c['id'] ?>" <?= $filter['pelanggan_id'] === $c['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($c['nama_toko']) ?>
+                        <?= htmlspecialchars($c['nama_toko']) ?><?= !empty($c['kode_pelanggan']) ? ' (' . htmlspecialchars($c['kode_pelanggan']) . ')' : '' ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
@@ -194,8 +194,9 @@ ob_start();
                     </tr>
                     <?php else: ?>
                     <?php foreach ($orders as $idx => $o): 
+                        $isKonsinyasiOrder = ($o['tipe_pembayaran'] === 'konsinyasi') || !empty($o['is_konsinyasi']) || (isset($o['adalah_tagihan']) && ($o['adalah_tagihan'] === false || $o['adalah_tagihan'] === 'f' || $o['adalah_tagihan'] === 0 || $o['adalah_tagihan'] === 'false'));
                         $isLunas = ($o['status_pembayaran'] === 'lunas');
-                        $sisa = max(0, (float)$o['total_netto'] - (float)$o['total_dibayar']);
+                        $sisa = $isKonsinyasiOrder ? 0 : max(0, (float)$o['total_netto'] - (float)$o['total_dibayar']);
                     ?>
                     <tr>
                         <!-- No -->
@@ -238,13 +239,13 @@ ob_start();
                         </td>
 
                         <!-- Sales / Driver & Pengiriman -->
-                        <td>
+                        <td class="cell-nowrap">
                             <?php if (!empty($o['nama_sales'])): ?>
-                            <div style="font-weight:700;font-size:12.5px;color:var(--color-ink);display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                                <span>🚚 <?= htmlspecialchars($o['nama_sales']) ?></span>
-                                <?php if (!empty($o['nopol_driver'])): ?>
-                                <span class="badge badge-mono" style="font-size:10px;padding:1px 5px;"><?= htmlspecialchars($o['nopol_driver']) ?></span>
-                                <?php endif; ?>
+                            <div style="font-weight:700;font-size:12.5px;color:var(--color-ink);">
+                                <?= htmlspecialchars($o['nama_sales']) ?>
+                            </div>
+                            <div class="font-mono" style="font-size:11px;color:var(--color-ink-mute);">
+                                <?= htmlspecialchars($o['nopol_driver'] ?: 'Armada Toko') ?>
                             </div>
                             <?php else: ?>
                             <div style="font-size:11.5px;color:var(--color-ink-mute);">Belum ada driver</div>
@@ -285,15 +286,25 @@ ob_start();
                         <!-- Pembayaran & Tempo -->
                         <td class="cell-nowrap">
                             <div style="font-size:12px;font-weight:700;text-transform:capitalize;">
-                                <?php if ($o['tipe_pembayaran'] === 'cash'): ?>
-                                <span style="color:#10b981;">💵 Tunai</span>
-                                <?php elseif ($o['tipe_pembayaran'] === 'konsinyasi'): ?>
+                                <?php if ($isKonsinyasiOrder): ?>
                                 <span style="color:#f59e0b;">🏪 Titip Jual (Konsinyasi)</span>
+                                <?php elseif ($o['tipe_pembayaran'] === 'cash'): ?>
+                                <span style="color:#10b981;">💵 Tunai</span>
+                                <?php elseif ($o['tipe_pembayaran'] === 'qris'): ?>
+                                <span style="color:#3b82f6;">📱 QRIS</span>
+                                <?php elseif ($o['tipe_pembayaran'] === 'transfer'): ?>
+                                <span style="color:#6366f1;">🏦 Transfer Bank</span>
+                                <?php elseif ($o['tipe_pembayaran'] === 'sebagian'): ?>
+                                <span style="color:#8b5cf6;">💳 DP / Sebagian</span>
                                 <?php else: ?>
                                 <span style="color:#d97706;">⏱️ <?= str_replace('_', ' ', $o['tipe_pembayaran']) ?></span>
                                 <?php endif; ?>
                             </div>
-                            <?php if (!empty($o['tanggal_jatuh_tempo']) && !$isLunas): 
+                            <?php if ($isKonsinyasiOrder): ?>
+                            <div style="font-size:11px;margin-top:2px;color:var(--color-ink-mute);">
+                                Non-Tagihan Langsung
+                            </div>
+                            <?php elseif (!empty($o['tanggal_jatuh_tempo']) && !$isLunas): 
                                 $isOverdue = strtotime($o['tanggal_jatuh_tempo']) < strtotime(date('Y-m-d'));
                             ?>
                             <div style="font-size:11px;margin-top:2px;color:<?= $isOverdue ? '#ef4444' : 'var(--color-ink-mute)' ?>;">
@@ -316,7 +327,14 @@ ob_start();
 
                         <!-- Dibayar / Sisa -->
                         <td class="cell-right cell-nowrap">
-                            <?php if ($isLunas): ?>
+                            <?php if ($isKonsinyasiOrder): ?>
+                            <div class="font-mono text-ink-secondary" style="font-size:12.5px;font-weight:700;">
+                                Titip Jual (Rp 0)
+                            </div>
+                            <div style="font-size:10.5px;color:var(--color-ink-mute);">
+                                Tagih saat Opname
+                            </div>
+                            <?php elseif ($isLunas): ?>
                             <div class="font-mono text-success" style="font-size:12.5px;font-weight:700;">
                                 Lunas (<?= Format::rupiah($o['total_netto']) ?>)
                             </div>
@@ -335,7 +353,11 @@ ob_start();
 
                         <!-- Status -->
                         <td class="cell-center cell-nowrap">
-                            <?php if ($isLunas): ?>
+                            <?php if ($isKonsinyasiOrder): ?>
+                            <span class="badge" style="background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:800;border:1px solid #fde68a;">
+                                TITIP RAK (NON-TAGIHAN)
+                            </span>
+                            <?php elseif ($isLunas): ?>
                             <span class="badge badge-success" style="font-weight:800;">LUNAS</span>
                             <?php else: ?>
                             <span class="badge badge-warning" style="font-weight:800;color:#ef4444;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.2);">
@@ -355,24 +377,24 @@ ob_start();
                                     <i data-lucide="eye" style="width:14px;height:14px;color:var(--color-primary-deep);"></i>
                                     <span>Detail</span>
                                 </button>
-                                <?php if (Auth::can(['orders.edit_all', 'orders.edit_assigned']) && !in_array($o['status_pemrosesan'] ?? '', ['selesai', 'selesai_diterima', 'dibatalkan', 'dikirim'], true)): ?>
-                                    <?php if (!empty($o['surat_jalan_id'])): ?>
-                                    <button type="button" 
-                                            class="btn btn-secondary btn-sm"
-                                            style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;cursor:pointer;"
-                                            title="Terkunci: Surat Jalan #<?= htmlspecialchars($o['nomor_surat_jalan'] ?? '') ?> aktif"
-                                            onclick="window.AppAlert ? window.AppAlert({ title: 'Edit Pesanan Terkunci', message: 'Pesanan ini sudah memiliki Surat Jalan aktif (#<?= htmlspecialchars($o['nomor_surat_jalan'] ?? '') ?>).\n\nUntuk mengedit rincian pesanan, silakan batalkan atau hapus Surat Jalan terlebih dahulu.', type: 'warning', icon: 'lock' }) : alert('Pesanan ini sudah memiliki Surat Jalan aktif (#<?= htmlspecialchars($o['nomor_surat_jalan'] ?? '') ?>). Batalkan Surat Jalan terlebih dahulu jika ingin mengedit.')">
-                                        <i data-lucide="lock" style="width:13px;height:13px;color:#94a3b8;"></i>
-                                        <span>Edit</span>
-                                    </button>
-                                    <?php else: ?>
+                                <?php if (Auth::can(['orders.edit_all', 'orders.edit_assigned'])): ?>
+                                    <?php if (($o['status_pemrosesan'] ?? '') === 'po'): ?>
                                     <a href="<?= Router::url('/customer-orders/edit?id=' . urlencode($o['id'])) ?>" 
                                        class="btn btn-secondary btn-sm"
                                        style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;"
-                                       title="Edit Pesanan">
+                                       title="Edit Pesanan (Tahap PO)">
                                         <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
                                         <span>Edit</span>
                                     </a>
+                                    <?php else: ?>
+                                    <button type="button" 
+                                            class="btn btn-secondary btn-sm"
+                                            style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#94a3b8;background:#f8fafc;border:1px solid #e2e8f0;cursor:not-allowed;opacity:0.75;"
+                                            title="Terkunci: Status <?= strtoupper(str_replace('_', ' ', $o['status_pemrosesan'] ?? '')) ?>"
+                                            onclick="window.AppAlert ? window.AppAlert({ title: 'Edit Pesanan Terkunci', message: 'Pesanan ini sudah diproses ke tahap <?= strtoupper(str_replace('_', ' ', $o['status_pemrosesan'] ?? '')) ?> (bukan draf PO).\n\nPesanan yang sudah diproses gudang / siap kirim tidak dapat diedit kembali.', type: 'warning', icon: 'lock' }) : alert('Pesanan sudah diproses gudang / siap kirim.')">
+                                        <i data-lucide="lock" style="width:13px;height:13px;color:#94a3b8;"></i>
+                                        <span>Edit</span>
+                                    </button>
                                     <?php endif; ?>
                                 <?php endif; ?>
 
@@ -680,223 +702,250 @@ ob_start();
                         <div>
                             <label class="form-label font-bold" style="font-size:12px;">Driver / Armada Pengantar</label>
                             <div style="padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:10px;font-size:13px;font-weight:600;color:var(--color-ink);" 
-                                 x-text="orderDetail?.nama_sales || 'Belum ditugaskan dari Gudang'"></div>
+                                 x-text="orderDetail?.nama_sales || (orderDetail?.status_pemrosesan === 'po' ? 'Belum ditugaskan (Tahap PO)' : 'Belum ditugaskan dari Gudang')"></div>
                         </div>
 
                         <div>
                             <label class="form-label font-bold" style="font-size:12px;">Nomor Polisi Kendaraan</label>
                             <div style="padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:10px;font-size:13px;font-weight:700;font-family:monospace;color:var(--color-ink-secondary);" 
-                                 x-text="orderDetail?.nopol_driver || 'Tidak ada info'"></div>
+                                 x-text="orderDetail?.nopol_driver || '-'"></div>
                         </div>
                     </div>
 
                     <div>
                         <label class="form-label font-bold" style="font-size:12px;">Status Pengiriman Saat Ini</label>
-                        <div style="padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;">
-                            <i data-lucide="info" style="width:16px;height:16px;color:#3b82f6;"></i>
-                            <span style="color:#1e293b;" x-text="(orderDetail?.status_surat_jalan || 'siap_kirim').replace(/_/g, ' ').toUpperCase()"></span>
+                        <div style="padding:12px 14px;border-radius:10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;"
+                             :style="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
+                                ? 'background:#fef3c7;border:1px solid #fde68a;color:#92400e;'
+                                : (orderDetail?.status_surat_jalan === 'selesai_diterima'
+                                    ? 'background:#dcfce7;border:1px solid #bbf7d0;color:#15803d;'
+                                    : (orderDetail?.status_surat_jalan === 'dalam_perjalanan'
+                                        ? 'background:#f3e8ff;border:1px solid #e9d5ff;color:#6b21a8;'
+                                        : 'background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;'))">
+                            <i data-lucide="info" style="width:16px;height:16px;"></i>
+                            <span x-text="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
+                                ? 'DRAF PO (MENUNGGU PROSES GUDANG)'
+                                : (orderDetail?.status_surat_jalan ? orderDetail.status_surat_jalan.replace(/_/g, ' ').toUpperCase() : 'MENUNGGU PROSES GUDANG (PO)')"></span>
                         </div>
                         <div style="margin-top:8px;font-size:11.5px;color:var(--color-ink-mute);display:flex;gap:6px;align-items:flex-start;">
                             <i data-lucide="help-circle" style="width:14px;height:14px;flex-shrink:0;margin-top:1px;"></i>
-                            <span>Wewenang penugasan driver dan pencetakan surat jalan telah dipindahkan ke menu <strong>Status Pengiriman (Logistik)</strong>. Halaman ini hanya menampilkan informasi secara <em>read-only</em>.</span>
+                            <span>Wewenang penugasan driver dan pencetakan surat jalan diproses pada menu <strong>Daftar PO / Logistik</strong> saat barang siap kirim.</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- TAB 3: PEMBAYARAN & PELUNASAN -->
                 <div x-show="!loadingDetail && activeTab === 'payment'" style="display:flex;flex-direction:column;gap:16px;">
-                    <!-- 3 Financial Metrics (Clean 3-col Grid Symmetrical) -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                        <!-- Metric 1: Total Tagihan -->
-                        <div class="metric-card metric-card-neutral">
-                            <div class="metric-card-title">Total Tagihan</div>
-                            <div class="metric-card-value" x-text="formatRupiah(orderDetail?.total_netto)"></div>
-                        </div>
-
-                        <!-- Metric 2: Sudah Dibayar -->
-                        <div class="metric-card metric-card-success">
-                            <div class="metric-card-title">Sudah Dibayar</div>
-                            <div class="metric-card-value" x-text="formatRupiah(orderDetail?.total_dibayar)"></div>
-                        </div>
-
-                        <!-- Metric 3: Sisa Tagihan -->
-                        <div class="metric-card" :class="calcSisaTagihan() > 0 ? 'metric-card-danger' : 'metric-card-success'">
-                            <div class="metric-card-title">Sisa Tagihan</div>
-                            <div class="metric-card-value" x-text="formatRupiah(calcSisaTagihan())"></div>
-                        </div>
-                    </div>
-
-                    <!-- Info Pembayaran Ringkas -->
-                    <div style="padding:12px 16px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:12px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                        <div>
-                            <span style="color:var(--color-ink-mute);">Metode:</span> 
-                            <strong style="color:var(--color-ink);" x-text="formatTipeBayar(orderDetail?.tipe_pembayaran)"></strong>
-                            <template x-if="orderDetail?.tanggal_jatuh_tempo">
-                                <span> &bull; Jatuh Tempo: <strong class="font-mono text-danger" x-text="formatDateShort(orderDetail?.tanggal_jatuh_tempo)"></strong></span>
-                            </template>
-                        </div>
-                        <div style="font-size:12px;color:var(--color-ink-mute);">
-                            Akun Kas: <strong style="color:var(--color-ink);" x-text="orderDetail?.nama_akun_kas || 'Kasir Utama Toko (Tunai)'"></strong>
-                        </div>
-                    </div>
-
-                    <!-- FORM CATAT BAYAR JIKA BELUM LUNAS -->
-                    <template x-if="calcSisaTagihan() > 0">
-                        <div style="padding:16px;background:var(--color-canvas);border:1.5px solid rgba(30,58,138,0.2);border-radius:14px;">
-                            <div style="font-size:13px;font-weight:800;color:var(--color-ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-                                <i data-lucide="wallet" style="width:16px;height:16px;color:#1e3a8a;"></i>
-                                <span>Input Pembayaran / Pelunasan</span>
+                    <!-- Template Khusus Toko Konsinyasi (Non-Tagihan) -->
+                    <template x-if="orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.adalah_tagihan === false || orderDetail?.adalah_tagihan === 'false'">
+                        <div style="display:flex;flex-direction:column;gap:16px;">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                <div class="metric-card metric-card-neutral">
+                                    <div class="metric-card-title">Valuasi Titipan (HPP)</div>
+                                    <div class="metric-card-value" x-text="formatRupiah(orderDetail?.total_netto)"></div>
+                                </div>
+                                <div class="metric-card metric-card-neutral">
+                                    <div class="metric-card-title">Skema Transaksi</div>
+                                    <div class="metric-card-value" style="font-size:15px;color:#d97706;font-weight:800;">Titip Jual Rak</div>
+                                </div>
+                                <div class="metric-card metric-card-success">
+                                    <div class="metric-card-title">Kewajiban Tagihan</div>
+                                    <div class="metric-card-value" style="font-size:15px;color:#10b981;font-weight:800;">Non-Tagihan (Rp 0)</div>
+                                </div>
                             </div>
-                            <form action="<?= Router::url('/customer-orders/pay') ?>" method="POST" style="display:flex;flex-direction:column;gap:12px;">
-                                <input type="hidden" name="id" :value="orderDetail?.id">
 
+                            <div style="padding:14px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;font-size:12.5px;color:#92400e;line-height:1.5;display:flex;align-items:flex-start;gap:10px;">
+                                <i data-lucide="info" style="width:18px;height:18px;flex-shrink:0;margin-top:2px;"></i>
                                 <div>
-                                    <label class="form-label font-bold" style="font-size:11.5px;">Masuk ke Akun Kas / Bank *</label>
-                                    <select name="akun_kas_id" x-model="paymentForm.akun_kas_id" required class="form-input font-semibold" style="height:40px;font-size:12.5px;border-radius:10px;">
-                                        <template x-for="a in masterCashAccounts" :key="a.id">
-                                            <option :value="a.id" x-text="a.nama_akun + ' (Rp ' + Number(a.saldo_saat_ini || 0).toLocaleString('id-ID') + ')'"></option>
-                                        </template>
-                                    </select>
+                                    <strong style="display:block;margin-bottom:2px;">Informasi Skema Titip Jual Konsinyasi:</strong>
+                                    Pesanan ini bukan merupakan faktur tagihan langsung. Barang yang dikirim dialokasikan ke stok rak mitra toko (<code style="background:rgba(245,158,11,0.15);padding:1px 4px;border-radius:4px;">stok_konsinyasi_toko</code>). Tagihan omzet penjualan akan dihitung dan diterbitkan secara resmi melalui <strong>Portal Konsinyasi &gt; Form Opname Kunjungan Sales</strong> berdasarkan snack yang laku terjual.
                                 </div>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div>
-                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                                            <label class="form-label font-bold" style="margin:0;font-size:11.5px;">Nominal Bayar (Rp) *</label>
-                                            <button type="button" @click="paymentForm.nominal_bayar = String(calcSisaTagihan())" class="btn btn-secondary btn-sm" style="font-size:10.5px;padding:2px 8px;border-radius:6px;">
-                                                Bayar Lunas
-                                            </button>
-                                        </div>
-                                        <input type="text" name="nominal_bayar" x-model="paymentForm.nominal_bayar" required class="form-input font-mono font-bold input-rupiah" style="height:40px;font-size:13px;border-radius:10px;">
-                                    </div>
-                                    <div>
-                                        <label class="form-label font-bold" style="font-size:11.5px;">Tanggal Bayar *</label>
-                                        <input type="date" name="tanggal_bayar" x-model="paymentForm.tanggal_bayar" required class="form-input font-mono" style="height:40px;font-size:12.5px;border-radius:10px;">
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="form-label" style="font-size:11.5px;">Catatan / Keterangan Pembayaran</label>
-                                    <input type="text" name="keterangan" x-model="paymentForm.keterangan" class="form-input" placeholder="Contoh: Titipan pelunasan melalui driver" style="height:40px;font-size:12.5px;border-radius:10px;">
-                                </div>
-
-                                <div style="display:flex;justify-content:flex-end;margin-top:4px;">
-                                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="padding:10px 20px;font-weight:700;font-size:13px;border-radius:10px;">
-                                        <i data-lucide="save"></i>
-                                        <span>Simpan Pembayaran</span>
-                                    </button>
-                                </div>
-                            </form>
+                            </div>
                         </div>
                     </template>
 
-                    <template x-if="calcSisaTagihan() <= 0">
-                        <div style="padding:16px 20px;text-align:center;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:14px;color:#059669;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;">
-                            <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
-                            <span>Faktur penjualan ini telah LUNAS sepenuhnya.</span>
+                    <!-- Template Toko Reguler B2B (Faktur Tagihan) -->
+                    <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && !orderDetail?.is_konsinyasi && orderDetail?.adalah_tagihan !== false && orderDetail?.adalah_tagihan !== 'false'">
+                        <div style="display:flex;flex-direction:column;gap:16px;">
+                            <!-- 3 Financial Metrics (Clean 3-col Grid Symmetrical) -->
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                                <!-- Metric 1: Total Tagihan -->
+                                <div class="metric-card metric-card-neutral">
+                                    <div class="metric-card-title">Total Tagihan</div>
+                                    <div class="metric-card-value" x-text="formatRupiah(orderDetail?.total_netto)"></div>
+                                </div>
+
+                                <!-- Metric 2: Sudah Dibayar -->
+                                <div class="metric-card metric-card-success">
+                                    <div class="metric-card-title">Sudah Dibayar</div>
+                                    <div class="metric-card-value" x-text="formatRupiah(orderDetail?.total_dibayar)"></div>
+                                </div>
+
+                                <!-- Metric 3: Sisa Tagihan -->
+                                <div class="metric-card" :class="calcSisaTagihan() > 0 ? 'metric-card-danger' : 'metric-card-success'">
+                                    <div class="metric-card-title">Sisa Tagihan</div>
+                                    <div class="metric-card-value" x-text="formatRupiah(calcSisaTagihan())"></div>
+                                </div>
+                            </div>
+
+                            <!-- Info Pembayaran Ringkas -->
+                            <div style="padding:12px 16px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:12px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                                <div>
+                                    <span style="color:var(--color-ink-mute);">Metode:</span> 
+                                    <strong style="color:var(--color-ink);" x-text="formatTipeBayar(orderDetail?.tipe_pembayaran)"></strong>
+                                    <template x-if="orderDetail?.tanggal_jatuh_tempo">
+                                        <span> &bull; Jatuh Tempo: <strong class="font-mono text-danger" x-text="formatDateShort(orderDetail?.tanggal_jatuh_tempo)"></strong></span>
+                                    </template>
+                                </div>
+                                <div style="font-size:12px;color:var(--color-ink-mute);">
+                                    Akun Kas: <strong style="color:var(--color-ink);" x-text="orderDetail?.nama_akun_kas || 'Kasir Utama Toko (Tunai)'"></strong>
+                                </div>
+                            </div>
+
+                            <!-- FORM CATAT BAYAR JIKA BELUM LUNAS -->
+                            <template x-if="calcSisaTagihan() > 0">
+                                <div style="padding:16px;background:var(--color-canvas);border:1.5px solid rgba(30,58,138,0.2);border-radius:14px;">
+                                    <div style="font-size:13px;font-weight:800;color:var(--color-ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                                        <i data-lucide="wallet" style="width:16px;height:16px;color:#1e3a8a;"></i>
+                                        <span>Input Pembayaran / Pelunasan</span>
+                                    </div>
+                                    <form action="<?= Router::url('/customer-orders/pay') ?>" method="POST" style="display:flex;flex-direction:column;gap:12px;">
+                                        <input type="hidden" name="id" :value="orderDetail?.id">
+
+                                        <div>
+                                            <label class="form-label font-bold" style="font-size:11.5px;">Masuk ke Akun Kas / Bank *</label>
+                                            <select name="akun_kas_id" x-model="paymentForm.akun_kas_id" required class="form-input font-semibold" style="height:40px;font-size:12.5px;border-radius:10px;">
+                                                <template x-for="a in masterCashAccounts" :key="a.id">
+                                                    <option :value="a.id" x-text="a.nama_akun + ' (Rp ' + Number(a.saldo_saat_ini || 0).toLocaleString('id-ID') + ')'"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                                                    <label class="form-label font-bold" style="margin:0;font-size:11.5px;">Nominal Bayar (Rp) *</label>
+                                                    <button type="button" @click="paymentForm.nominal_bayar = String(calcSisaTagihan())" class="btn btn-secondary btn-sm" style="font-size:10.5px;padding:2px 8px;border-radius:6px;">
+                                                        Bayar Lunas
+                                                    </button>
+                                                </div>
+                                                <input type="number" name="nominal_bayar" x-model.number="paymentForm.nominal_bayar" :max="calcSisaTagihan()" min="1" step="1000" required class="form-input font-mono font-bold text-success" style="height:40px;border-radius:10px;">
+                                            </div>
+
+                                            <div>
+                                                <label class="form-label font-bold" style="font-size:11.5px;">Tanggal Pembayaran *</label>
+                                                <input type="date" name="tanggal_bayar" x-model="paymentForm.tanggal_bayar" required class="form-input font-mono" style="height:40px;border-radius:10px;">
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label class="form-label font-bold" style="font-size:11.5px;">Keterangan / Referensi Bukti</label>
+                                            <input type="text" name="keterangan" x-model="paymentForm.keterangan" placeholder="Contoh: Bukti Transfer BCA an Toko" class="form-input" style="height:40px;border-radius:10px;">
+                                        </div>
+
+                                        <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+                                            <button type="submit" class="btn btn-primary" style="padding:9px 20px;font-size:12.5px;font-weight:800;border-radius:10px;background:#1e3a8a;border-color:#1e3a8a;">
+                                                <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
+                                                <span>Simpan Pelunasan Tagihan</span>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </template>
                         </div>
                     </template>
                 </div>
 
-                <!-- TAB 4: DOKUMEN & TINDAKAN -->
-                <div x-show="!loadingDetail && activeTab === 'actions'" style="display:flex;flex-direction:column;gap:16px;">
-                    <!-- Cetak Dokumen -->
-                    <div class="grid grid-cols-1 gap-3">
-                        <!-- 1. Cetak Faktur -->
-                        <a :href="'<?= Router::url('/customer-orders/invoice?id=') ?>' + orderDetail?.id" target="_blank"
-                           class="card p-4 hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;border:1px solid var(--color-hairline);border-radius:14px;">
-                            <div style="width:42px;height:42px;border-radius:12px;background:#eff6ff;color:#1e3a8a;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <!-- TAB 4: DOKUMEN & AKSI OPERASIONAL -->
+                <div x-show="!loadingDetail && activeTab === 'actions'" style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <!-- Cetak Faktur Penjualan -->
+                        <a :href="'<?= Router::url('/customer-orders/print?id=') ?>' + orderDetail?.id" target="_blank"
+                           class="card p-4 hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;border:1.5px solid var(--color-hairline);border-radius:14px;">
+                            <div style="width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                 <i data-lucide="printer" style="width:20px;height:20px;"></i>
                             </div>
                             <div>
-                                <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);">Cetak Faktur Penjualan</div>
-                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Invoice tagihan resmi B2B Toko</div>
+                                <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);" x-text="orderDetail?.is_konsinyasi || orderDetail?.tipe_pembayaran === 'konsinyasi' ? 'Cetak Bukti Titip Barang' : 'Cetak Faktur Penjualan'"></div>
+                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;" x-text="orderDetail?.is_konsinyasi || orderDetail?.tipe_pembayaran === 'konsinyasi' ? 'Lembar tanda terima titip barang rak toko' : 'Invoice tagihan resmi B2B Toko'"></div>
                             </div>
                         </a>
 
                         <?php if (Auth::can(['orders.edit_all', 'orders.edit_assigned'])): ?>
-                        <template x-if="orderDetail && !['dikirim', 'selesai', 'selesai_diterima', 'dibatalkan'].includes(orderDetail.status_pemrosesan)">
-                            <div>
-                                <template x-if="orderDetail.surat_jalan_id">
-                                    <div class="card p-4" style="border:1.5px solid #e2e8f0;background:#f8fafc;border-radius:14px;display:flex;align-items:center;gap:12px;">
-                                        <div style="width:42px;height:42px;border-radius:12px;background:#94a3b8;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                            <i data-lucide="lock" style="width:20px;height:20px;"></i>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight:800;font-size:13px;color:#475569;">Edit Pesanan Terkunci</div>
-                                            <div style="font-size:11px;color:#64748b;margin-top:2px;">
-                                                Surat Jalan <span class="font-mono font-bold" x-text="'#' + orderDetail.nomor_surat_jalan"></span> aktif. Batalkan Surat Jalan terlebih dahulu jika ingin mengedit.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                                <template x-if="!orderDetail.surat_jalan_id">
-                                    <a :href="'<?= Router::url('/customer-orders/edit?id=') ?>' + orderDetail.id"
-                                       class="card p-4 hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;border:1.5px solid #bfdbfe;background:#eff6ff;border-radius:14px;">
-                                        <div style="width:42px;height:42px;border-radius:12px;background:#2563eb;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                            <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
-                                        </div>
-                                        <div>
-                                            <div style="font-weight:800;font-size:13.5px;color:#1e3a8a;">Edit Rincian Pesanan</div>
-                                            <div style="font-size:11px;color:#3b82f6;margin-top:2px;">Ubah item produk, jumlah kuantiti, dan parameter faktur</div>
-                                        </div>
-                                    </a>
-                                </template>
-                            </div>
-                        </template>
-                        <?php endif; ?>
-
-                        <?php if (Auth::can('orders.retry_delivery')): ?>
-                        <template x-if="orderDetail && ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'].includes(orderDetail.status_pemrosesan)">
-                            <div class="card p-4" style="border:1.5px solid #fecaca;background:#fff1f2;border-radius:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                                <div style="display:flex;align-items:center;gap:12px;">
-                                    <div style="width:42px;height:42px;border-radius:12px;background:#e11d48;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                        <i data-lucide="rotate-cw" style="width:20px;height:20px;"></i>
+                        <div>
+                            <template x-if="orderDetail && orderDetail.status_pemrosesan === 'po'">
+                                <a :href="'<?= Router::url('/customer-orders/edit?id=') ?>' + orderDetail.id"
+                                   class="card p-4 hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;border:1.5px solid #bfdbfe;background:#eff6ff;border-radius:14px;">
+                                    <div style="width:42px;height:42px;border-radius:12px;background:#2563eb;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
                                     </div>
                                     <div>
-                                        <div style="font-weight:800;font-size:13.5px;color:#9f1239;">Jadwalkan Kirim Ulang Pesanan Gagal</div>
-                                        <div style="font-size:11.5px;color:#be123c;margin-top:2px;">
-                                            Kembalikan status pesanan ke "Siap Dikirim" agar dapat diterbitkan Surat Jalan baru di menu Logistik.
+                                        <div style="font-weight:800;font-size:13.5px;color:#1e3a8a;">Edit Rincian Pesanan (PO)</div>
+                                        <div style="font-size:11px;color:#3b82f6;margin-top:2px;">Ubah item produk, jumlah kuantiti, dan parameter faktur</div>
+                                    </div>
+                                </a>
+                            </template>
+                            <template x-if="orderDetail && orderDetail.status_pemrosesan !== 'po'">
+                                <div class="card p-4" style="border:1.5px solid #e2e8f0;background:#f8fafc;border-radius:14px;display:flex;align-items:center;gap:12px;">
+                                    <div style="width:42px;height:42px;border-radius:12px;background:#94a3b8;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="lock" style="width:20px;height:20px;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:800;font-size:13px;color:#475569;">Edit Pesanan Terkunci</div>
+                                        <div style="font-size:11px;color:#64748b;margin-top:2px;">
+                                            Pesanan sudah diproses ke tahap <span class="font-bold uppercase" x-text="orderDetail.status_pemrosesan?.replace(/_/g, ' ')"></span>. Hanya pesanan berstatus draf PO yang dapat diedit.
                                         </div>
                                     </div>
                                 </div>
-                                <form action="<?= Router::url('/customer-orders/retry-delivery') ?>" method="POST"
-                                      data-confirm="Jadwalkan ulang pesanan ini untuk pengiriman? Status pesanan akan menjadi 'Siap Dikirim'."
-                                      data-confirm-title="Kirim Ulang Pesanan"
-                                      data-confirm-type="info"
-                                      data-confirm-btn="Ya, Jadwalkan Kirim Ulang">
-                                    <input type="hidden" name="order_id" :value="orderDetail?.id">
-                                    <button type="submit" class="btn btn-sm" style="background:#e11d48;color:#ffffff;font-weight:800;border-radius:10px;padding:9px 18px;display:inline-flex;align-items:center;gap:6px;">
-                                        <i data-lucide="truck" style="width:15px;height:15px;"></i>
-                                        <span>Jadwalkan Kirim Ulang</span>
-                                    </button>
-                                </form>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
                         <?php endif; ?>
                     </div>
 
                     <!-- Batalkan & Hapus Transaksi (Danger Area) -->
-                    <div style="padding:16px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.22);border-radius:14px;margin-top:4px;">
-                        <div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
-                            <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
-                            <span>Zona Bahaya: Batalkan &amp; Hapus Faktur</span>
+                    <template x-if="orderDetail && ['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail.status_pemrosesan)">
+                        <div style="padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;margin-top:4px;display:flex;align-items:center;gap:12px;">
+                            <div style="width:38px;height:38px;border-radius:10px;background:#94a3b8;color:#ffffff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="lock" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-size:12.5px;font-weight:800;color:#475569;">Pembatalan Transaksi Terkunci</div>
+                                <div style="font-size:11px;color:#64748b;margin-top:2px;">
+                                    Pesanan ini sudah selesai diterima oleh toko mitra. Pembatalan langsung dikunci untuk menjaga integritas kas &amp; kartu piutang. Silakan proses melalui menu <strong>Retur Penjualan</strong> atau <strong>Opname Konsinyasi</strong>.
+                                </div>
+                            </div>
                         </div>
-                        <p style="font-size:12px;color:var(--color-ink-secondary);line-height:1.45;margin-bottom:12px;">
-                            Membatalkan faktur ini akan secara otomatis <strong>mengembalikan seluruh stok produk ke gudang</strong>.
-                        </p>
-                        <form action="<?= Router::url('/customer-orders/cancel') ?>" method="POST"
-                              data-confirm="Apakah Anda YAKIN ingin membatalkan transaksi faktur ini? Seluruh stok produk akan otomatis dikembalikan ke gudang!"
-                              data-confirm-title="Batalkan & Hapus Transaksi Faktur"
-                              data-confirm-type="danger"
-                              data-confirm-btn="Ya, Batalkan Transaksi">
-                            <input type="hidden" name="id" :value="orderDetail?.id">
-                            <button type="submit" class="btn btn-danger w-full sm:w-auto" style="padding:9px 18px;font-size:12.5px;font-weight:700;border-radius:10px;">
-                                <i data-lucide="trash-2"></i>
-                                <span>Batalkan &amp; Hapus Transaksi</span>
-                            </button>
-                        </form>
-                    </div>
+                    </template>
+
+                    <template x-if="orderDetail && !['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail.status_pemrosesan)">
+                        <div style="padding:16px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.22);border-radius:14px;margin-top:4px;">
+                            <div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+                                <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+                                <span>Zona Bahaya: Batalkan &amp; Hapus Transaksi</span>
+                            </div>
+                            <p style="font-size:12px;color:var(--color-ink-secondary);line-height:1.45;margin-bottom:12px;">
+                                <template x-if="orderDetail.status_pemrosesan === 'po'">
+                                    <span>Membatalkan draf PO ini akan menghapus antrean pesanan (stok fisik gudang belum dipotong).</span>
+                                </template>
+                                <template x-if="orderDetail.status_pemrosesan !== 'po'">
+                                    <span>Membatalkan transaksi ini akan secara otomatis <strong>mengembalikan seluruh stok produk ke rak gudang</strong>.</span>
+                                </template>
+                            </p>
+                            <form action="<?= Router::url('/customer-orders/cancel') ?>" method="POST"
+                                  :data-confirm="orderDetail.status_pemrosesan === 'po'
+                                      ? 'Apakah Anda YAKIN ingin membatalkan draf PO #' + orderDetail.nomor_nota + '? Antrean pesanan akan dihapus.'
+                                      : 'Apakah Anda YAKIN ingin membatalkan transaksi #' + orderDetail.nomor_nota + '? Seluruh stok produk akan otomatis dikembalikan ke rak gudang!'"
+                                  data-confirm-title="Batalkan &amp; Hapus Transaksi"
+                                  data-confirm-type="danger"
+                                  data-confirm-btn="Ya, Batalkan Transaksi">
+                                <input type="hidden" name="id" :value="orderDetail?.id">
+                                <button type="submit" class="btn btn-danger w-full sm:w-auto" style="padding:9px 18px;font-size:12.5px;font-weight:700;border-radius:10px;">
+                                    <i data-lucide="trash-2"></i>
+                                    <span>Batalkan &amp; Hapus Transaksi</span>
+                                </button>
+                            </form>
+                        </div>
+                    </template>
                 </div>
 
             </div>
@@ -991,6 +1040,9 @@ function salesOrderListApp() {
 
         calcSisaTagihan() {
             if (!this.orderDetail) return 0;
+            if (this.orderDetail.tipe_pembayaran === 'konsinyasi' || this.orderDetail.is_konsinyasi || this.orderDetail.adalah_tagihan === false || this.orderDetail.adalah_tagihan === 'false') {
+                return 0;
+            }
             const netto = Number(this.orderDetail.total_netto || 0);
             const dibayar = Number(this.orderDetail.total_dibayar || 0);
             return Math.max(0, netto - dibayar);

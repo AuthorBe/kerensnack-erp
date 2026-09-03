@@ -39,11 +39,11 @@ ob_start();
 
             <div>
                 <label class="block text-xs font-bold mb-1" style="color:var(--color-ink);">Filter Toko:</label>
-                <select name="pelanggan_id" class="form-input w-full text-xs" style="height:38px;border-radius:10px;">
+                <select name="pelanggan_id" class="form-input w-full text-xs searchable-select" style="height:38px;border-radius:10px;">
                     <option value="">Semua Toko</option>
                     <?php foreach ($stores as $st): ?>
                     <option value="<?= $st['id'] ?>" <?= $selectedStoreId === $st['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($st['nama_toko']) ?>
+                        <?= htmlspecialchars($st['nama_toko']) ?><?= !empty($st['kode_pelanggan']) ? ' (' . htmlspecialchars($st['kode_pelanggan']) . ')' : '' ?>
                     </option>
                     <?php endforeach; ?>
                 </select>

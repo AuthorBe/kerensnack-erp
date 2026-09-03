@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Helpers\ActivityLog;
 use Database;
 use Throwable;
 
@@ -100,7 +101,7 @@ class DeliveryController extends Controller
         $pesananId = $this->input('pesanan_id');
         $driverId = $this->input('sales_driver_id') ?: null;
         $wilayahId = $this->input('rute_wilayah_id') ?: null;
-        $status = $this->input('status_surat_jalan', 'menunggu_persetujuan');
+        $status = $this->input('status_surat_jalan', 'disetujui_owner');
 
         if (empty($pesananId)) {
             $this->flashError('Pilih pesanan nota toko.');
@@ -130,9 +131,17 @@ class DeliveryController extends Controller
                 'user_id' => $userId
             ]);
 
+            // Sync driver ke pesanan jika ada driver yang ditugaskan
+            if (!empty($driverId)) {
+                Database::execute("UPDATE public.pesanan SET sales_driver_id = :driver WHERE id = :pesanan", [
+                    'driver' => $driverId,
+                    'pesanan' => $pesananId
+                ]);
+            }
+
             ActivityLog::log('Logistik', 'CREATE', "Menerbitkan Surat Jalan #{$nomorSj} (Status: {$status})", 'surat_jalan');
 
-            $this->flashSuccess("Surat jalan {$nomorSj} berhasil diterbitkan (Status: Menunggu Persetujuan)!");
+            $this->flashSuccess("Surat Jalan <strong>{$nomorSj}</strong> berhasil diterbitkan dan siap dikirim!");
             $this->redirect('/deliveries');
 
         } catch (Throwable $e) {
@@ -221,7 +230,19 @@ class DeliveryController extends Controller
 
         // Cek status persetujuan saat ini
         $currentSj = Database::fetchOne("SELECT status_surat_jalan, nomor_surat_jalan FROM public.surat_jalan WHERE id = :id", ['id' => $id]);
-        if ($currentSj && $currentSj['status_surat_jalan'] === 'menunggu_persetujuan' && !Auth::can('owner.approval_delivery')) {
+        if (!$currentSj) {
+            $this->flashError('Surat Jalan tidak ditemukan.');
+            $this->redirect('/deliveries');
+            return;
+        }
+
+        if ($currentSj['status_surat_jalan'] === 'selesai_diterima') {
+            $this->flashError("Surat Jalan #{$currentSj['nomor_surat_jalan']} sudah selesai diterima oleh toko mitra dan tidak dapat diubah lagi.");
+            $this->redirect('/deliveries');
+            return;
+        }
+
+        if ($currentSj['status_surat_jalan'] === 'menunggu_persetujuan' && !Auth::can('owner.approval_delivery')) {
             $this->flashError("Surat Jalan #{$currentSj['nomor_surat_jalan']} belum disetujui oleh Owner/Pimpinan. Armada belum dapat diberangkatkan.");
             $this->redirect('/deliveries');
             return;
@@ -505,7 +526,7 @@ class DeliveryController extends Controller
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.status_pembayaran, p.status_pemrosesan,
                        p.catatan as catatan_pesanan,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik,
-                       pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
+                       pel.nomor_whatsapp, pel.alamat_lengkap, pel.link_google_maps, pel.is_konsinyasi,
                        w.nama_wilayah, w.kode_rute,
                        k.id as driver_id, k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan as nopol_driver,
                        k.nomor_telepon as telp_driver,
@@ -533,23 +554,10 @@ class DeliveryController extends Controller
                 $params['driver_id'] = $driverId;
             }
 
-            // Filter Status Tab
-            if (!empty($statusFilter) && $statusFilter !== 'semua') {
-                if ($statusFilter === 'pending') {
-                    $sql .= " AND sj.status_surat_jalan IN ('menunggu_persetujuan', 'draf_n8n', 'siap_kirim')";
-                } elseif ($statusFilter === 'in_transit') {
-                    $sql .= " AND sj.status_surat_jalan = 'sedang_dikirim'";
-                } elseif ($statusFilter === 'completed') {
-                    $sql .= " AND sj.status_surat_jalan = 'selesai_diterima'";
-                } elseif ($statusFilter === 'failed') {
-                    $sql .= " AND sj.status_surat_jalan = 'gagal_kirim'";
-                }
-            }
-
             $sql .= " ORDER BY 
                 CASE 
                     WHEN sj.status_surat_jalan = 'sedang_dikirim' THEN 1
-                    WHEN sj.status_surat_jalan IN ('siap_kirim', 'menunggu_persetujuan', 'draf_n8n') THEN 2
+                    WHEN sj.status_surat_jalan IN ('siap_kirim', 'disetujui_owner', 'menunggu_persetujuan', 'draf_n8n') THEN 2
                     WHEN sj.status_surat_jalan = 'selesai_diterima' THEN 3
                     WHEN sj.status_surat_jalan = 'gagal_kirim' THEN 4
                     ELSE 5
@@ -557,9 +565,49 @@ class DeliveryController extends Controller
                 sj.dibuat_pada ASC
             ";
 
-            $deliveries = Database::fetchAll($sql, $params);
+            // 1. Ambil seluruh data untuk tanggal & armada ini guna kalkulasi Metrik Global yang presisi
+            $allDeliveries = Database::fetchAll($sql, $params);
 
-            // Ambil item produk untuk setiap rute pengiriman
+            $countTotal = count($allDeliveries);
+            $countPending = 0;
+            $countInTransit = 0;
+            $countCompleted = 0;
+            $countFailed = 0;
+            $totalPcs = 0;
+
+            foreach ($allDeliveries as $d) {
+                $st = $d['status_surat_jalan'];
+                if (in_array($st, ['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'], true)) {
+                    $countPending++;
+                } elseif ($st === 'sedang_dikirim') {
+                    $countInTransit++;
+                } elseif ($st === 'selesai_diterima') {
+                    $countCompleted++;
+                } elseif ($st === 'gagal_kirim') {
+                    $countFailed++;
+                }
+                $totalPcs += (int)$d['total_pcs'];
+            }
+
+            // 2. Terapkan Filter Status Tab hanya pada daftar data yang dirender (tanpa mengacaukan metrik tab & kartu)
+            $deliveries = $allDeliveries;
+            if (!empty($statusFilter) && $statusFilter !== 'semua') {
+                $deliveries = array_values(array_filter($allDeliveries, function($d) use ($statusFilter) {
+                    $st = $d['status_surat_jalan'];
+                    if ($statusFilter === 'pending') {
+                        return in_array($st, ['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'], true);
+                    } elseif ($statusFilter === 'in_transit') {
+                        return ($st === 'sedang_dikirim');
+                    } elseif ($statusFilter === 'completed') {
+                        return ($st === 'selesai_diterima');
+                    } elseif ($statusFilter === 'failed') {
+                        return ($st === 'gagal_kirim');
+                    }
+                    return true;
+                }));
+            }
+
+            // Ambil item produk untuk setiap rute pengiriman yang ditampilkan
             if (!empty($deliveries)) {
                 $orderIds = array_unique(array_column($deliveries, 'pesanan_id'));
                 $inClause = implode("', '", array_map('addslashes', $orderIds));
@@ -581,28 +629,6 @@ class DeliveryController extends Controller
                     $d['items'] = $itemsByOrder[$d['pesanan_id']] ?? [];
                 }
                 unset($d);
-            }
-
-            // Hitung Metrik Hari Ini
-            $countTotal = count($deliveries);
-            $countPending = 0;
-            $countInTransit = 0;
-            $countCompleted = 0;
-            $countFailed = 0;
-            $totalPcs = 0;
-
-            foreach ($deliveries as $d) {
-                $st = $d['status_surat_jalan'];
-                if (in_array($st, ['menunggu_persetujuan', 'draf_n8n', 'siap_kirim'], true)) {
-                    $countPending++;
-                } elseif ($st === 'sedang_dikirim') {
-                    $countInTransit++;
-                } elseif ($st === 'selesai_diterima') {
-                    $countCompleted++;
-                } elseif ($st === 'gagal_kirim') {
-                    $countFailed++;
-                }
-                $totalPcs += (int)$d['total_pcs'];
             }
 
             // Master data drivers untuk filter admin

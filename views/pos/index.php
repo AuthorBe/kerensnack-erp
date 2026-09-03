@@ -384,11 +384,15 @@ function posApp() {
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     });
                 } else {
-                    if (window.AppAction) window.AppAction.hide();
+                    if (window.AppAction) {
+                        await window.AppAction.error(`Gagal: ${json.message || 'Transaksi Ditolak'}`, 1200);
+                    }
                     toast.error(`Gagal memproses transaksi: ${json.message}`);
                 }
             } catch (err) {
-                if (window.AppAction) window.AppAction.hide();
+                if (window.AppAction) {
+                    await window.AppAction.error('Gagal Memproses Transaksi!', 1200);
+                }
                 toast.error('Terjadi kesalahan jaringan/koneksi saat memproses checkout.');
             } finally {
                 this.isSubmitting = false;
