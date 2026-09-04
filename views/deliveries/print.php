@@ -327,15 +327,17 @@ use App\Helpers\Format;
         </div>
     </div>
 
+    <?php if (empty($isPdf)): ?>
     <!-- ACTIONS BAR -->
     <div class="actions-bar">
-        <button onclick="window.print()" class="btn-action btn-print">
-            🖨️ Cetak Surat Jalan
-        </button>
+        <a href="<?= Router::url('/deliveries/pdf?id=' . $delivery['id']) ?>" class="btn-action" style="background:#dc2626; color:white;">
+            📄 Unduh PDF (Surat Jalan)
+        </a>
         <a href="<?= Router::url('/deliveries') ?>" class="btn-action btn-back">
             ← Kembali ke Logistik
         </a>
     </div>
+    <?php endif; ?>
 
 </body>
 </html>

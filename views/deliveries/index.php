@@ -83,10 +83,16 @@ ob_start();
                 </select>
             </div>
 
-            <button @click="openAddModal()" :disabled="pendingOrders.length === 0" class="btn btn-primary" style="height:38px;white-space:nowrap;">
-                <i data-lucide="plus"></i>
-                <span>Terbitkan Surat Jalan</span>
-            </button>
+            <div class="flex items-center gap-2">
+                <a href="<?= Router::url('/deliveries/export/excel') ?>" class="btn btn-secondary" style="height:38px;white-space:nowrap;background:#10b981;color:#fff;border-color:#059669;font-weight:700;">
+                    <i data-lucide="file-spreadsheet"></i>
+                    <span>Export Excel</span>
+                </a>
+                <button @click="openAddModal()" :disabled="pendingOrders.length === 0" class="btn btn-primary" style="height:38px;white-space:nowrap;">
+                    <i data-lucide="plus"></i>
+                    <span>Terbitkan Surat Jalan</span>
+                </button>
+            </div>
         </div>
 
         <!-- TABLE LIST -->
@@ -142,7 +148,14 @@ ob_start();
                                 <div style="font-size:10.5px;color:var(--color-primary-deep);" x-text="d.kode_rute || ''"></div>
                             </td>
                             <?php if (Auth::can(['deliveries.view_all', 'deliveries.create', 'deliveries.update_all'])): ?>
-                            <td class="cell-currency cell-right cell-nowrap" style="color:var(--color-primary-deep);font-weight:700;" x-text="formatRupiah(d.total_netto)"></td>
+                            <td class="cell-currency cell-right cell-nowrap" style="color:var(--color-primary-deep);font-weight:700;">
+                                <template x-if="d.tipe_pembayaran === 'konsinyasi' || d.is_konsinyasi">
+                                    <span class="badge" style="background:rgba(225,29,72,0.08);color:#e11d48;border:1px solid rgba(225,29,72,0.2);font-weight:800;font-size:10.5px;padding:3px 8px;border-radius:6px;">Konsinyasi</span>
+                                </template>
+                                <template x-if="d.tipe_pembayaran !== 'konsinyasi' && !d.is_konsinyasi">
+                                    <span x-text="formatRupiah(d.total_netto)"></span>
+                                </template>
+                            </td>
                             <?php endif; ?>
                             <td class="cell-center cell-nowrap">
                                 <template x-if="d.status_surat_jalan === 'menunggu_persetujuan' || d.status_surat_jalan === 'draf_n8n'">
@@ -190,8 +203,8 @@ ob_start();
                                     </template>
                                     <?php endif; ?>
 
-                                    <a :href="'<?= Router::url('/deliveries/print') ?>?id=' + d.id" target="_blank" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:var(--color-info);" title="Cetak Surat Jalan">
-                                        <i data-lucide="printer" style="width:14px;height:14px;"></i>
+                                    <a :href="'<?= Router::url('/deliveries/pdf') ?>?id=' + d.id" target="_blank" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#dc2626;" title="Unduh PDF Surat Jalan">
+                                        <i data-lucide="file-text" style="width:14px;height:14px;"></i>
                                     </a>
                                     <button @click="openStatusModal(d)" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#38bdf8;" title="Update Status Pengiriman">
                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
@@ -230,8 +243,12 @@ ob_start();
                     <label class="form-label">Pilih Nota Pesanan Toko *</label>
                     <select name="pesanan_id" required class="form-input searchable-select">
                         <option value="">-- Pilih Pesanan Menunggu Kirim --</option>
-                        <?php foreach ($pendingOrders as $po): ?>
-                        <option value="<?= $po['id'] ?>"><?= htmlspecialchars($po['nomor_nota']) ?> - <?= htmlspecialchars($po['nama_toko']) ?> (Rp <?= number_format((float)$po['total_netto'], 0, ',', '.') ?>)</option>
+                        <?php foreach ($pendingOrders as $po): 
+                            $isKonsinyasiPo = ($po['tipe_pembayaran'] === 'konsinyasi') || !empty($po['is_konsinyasi']);
+                        ?>
+                        <option value="<?= $po['id'] ?>">
+                            <?= htmlspecialchars($po['nomor_nota']) ?> - <?= htmlspecialchars($po['nama_toko']) ?> <?= $isKonsinyasiPo ? '(Konsinyasi)' : '(Rp ' . number_format((float)$po['total_netto'], 0, ',', '.') . ')' ?>
+                        </option>
                         <?php endforeach; ?>
                     </select>
                 </div>

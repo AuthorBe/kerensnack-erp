@@ -100,55 +100,55 @@
 }
 
 /* =============================================================================
-   2. DARK MODE OVERRIDES (Antigravity Matte Carbon Standard)
+   2. DARK MODE OVERRIDES (Google Chrome Dark Theme Standard)
    ============================================================================= */
 .dark {
-  /* --- Surfaces (Antigravity Carbon Palette) --- */
-  --color-canvas:        #181818;   /* Elevated Card, Header, Modal, Panel */
-  --color-canvas-soft:   #101010;   /* App Base Background (Deep Matte Charcoal) */
-  --color-surface:       #181818;
-  --color-surface-soft:  #101010;
-  --color-canvas-night:  #141414;   /* Darkest surface / Sidebar */
-  --color-canvas-night-soft: #1c1c1c;
+  /* --- Surfaces (Google Chrome Dark Charcoal Palette) --- */
+  --color-canvas:        #303134;   /* Elevated Card, Header, Modal, Panel */
+  --color-canvas-soft:   #202124;   /* App Base Background (Chrome Dark Charcoal) */
+  --color-surface:       #303134;
+  --color-surface-soft:  #202124;
+  --color-canvas-night:  #1f1f1f;   /* Sidebar / Darkest surface */
+  --color-canvas-night-soft: #28292c;
 
-  /* --- Borders (Subtle Neutral Hairlines) --- */
-  --color-hairline:        #262626;   /* 1px subtle divider */
-  --color-hairline-strong: #333333;   /* Input borders & card edges */
-  --color-hairline-cool:   #1e1e1e;   /* Secondary inner lines */
+  /* --- Borders (Google Hairline & Outlines) --- */
+  --color-hairline:        #3c4043;   /* 1px subtle divider */
+  --color-hairline-strong: #5f6368;   /* Input borders & card edges */
+  --color-hairline-cool:   #303134;   /* Secondary inner lines */
 
-  /* --- Typography (Antigravity Palette: #CCCCCC Off-White Foreground) --- */
-  --color-ink:             #cccccc;   /* Primary text — soft, anti-glare */
-  --color-ink-secondary:   #999999;   /* Sub-headings */
-  --color-ink-mute:        #737373;   /* Helper text, labels, icons */
-  --color-ink-mute-2:      #525252;   /* Tertiary text, timestamps */
-  --color-ink-faint:       #3f3f3f;   /* Placeholders, disabled text */
-  --color-on-dark:         #e5e5e5;
+  /* --- Typography (Google Dark Theme Anti-Glare) --- */
+  --color-ink:             #e8eaed;   /* Primary text — soft, anti-glare off-white */
+  --color-ink-secondary:   #bdc1c6;   /* Sub-headings & secondary */
+  --color-ink-mute:        #9aa0a6;   /* Helper text, labels, icons */
+  --color-ink-mute-2:      #80868b;   /* Tertiary text, timestamps */
+  --color-ink-faint:       #5f6368;   /* Placeholders, disabled text */
+  --color-on-dark:         #e8eaed;
   --color-on-primary:      #ffffff;
 
-  /* --- Brand & Primary (Modern Luminous Slate Blue) --- */
-  --color-primary:         #3b82f6;   /* Blue 500 */
-  --color-primary-deep:    #2563eb;   /* Blue 600 */
-  --color-primary-soft:    rgba(59, 130, 246, 0.14);
-  --color-primary-muted:   rgba(59, 130, 246, 0.08);
+  /* --- Brand & Primary (Google Material Blue Accent) --- */
+  --color-primary:         #8ab4f8;   /* Google Dark Theme Blue Accent */
+  --color-primary-deep:    #1a73e8;   /* Google Blue 600 */
+  --color-primary-soft:    rgba(138, 180, 248, 0.14);
+  --color-primary-muted:   rgba(138, 180, 248, 0.08);
 
-  /* --- Semantic Status (Matte Translucent) --- */
-  --color-success:         #10b981;
-  --color-success-soft:    rgba(16, 185, 129, 0.12);
-  --color-warning:         #f59e0b;
-  --color-warning-soft:    rgba(245, 158, 11, 0.12);
-  --color-danger:          #ef4444;
-  --color-danger-soft:     rgba(239, 68, 68, 0.12);
-  --color-info:            #3b82f6;
-  --color-info-soft:       rgba(59, 130, 246, 0.12);
+  /* --- Semantic Status (Google Dark Pastel) --- */
+  --color-success:         #81c995;
+  --color-success-soft:    rgba(129, 201, 149, 0.14);
+  --color-warning:         #fdd663;
+  --color-warning-soft:    rgba(253, 214, 99, 0.14);
+  --color-danger:          #f28b82;
+  --color-danger-soft:     rgba(242, 139, 130, 0.14);
+  --color-info:            #8ab4f8;
+  --color-info-soft:       rgba(138, 180, 248, 0.14);
 
-  /* --- Sidebar (Antigravity Matte Sidebar) --- */
-  --sidebar-bg:            #121212;
-  --sidebar-bg-soft:       #181818;
-  --sidebar-border:        #222222;
-  --sidebar-text:          #888888;
-  --sidebar-text-hover:    #cccccc;
-  --sidebar-active-text:   #60a5fa;
-  --sidebar-active-bg:     rgba(59, 130, 246, 0.14);
+  /* --- Sidebar (Google Chrome Tab Strip Palette) --- */
+  --sidebar-bg:            #1f1f1f;
+  --sidebar-bg-soft:       #28292c;
+  --sidebar-border:        #3c4043;
+  --sidebar-text:          #9aa0a6;
+  --sidebar-text-hover:    #e8eaed;
+  --sidebar-active-text:   #8ab4f8;
+  --sidebar-active-bg:     rgba(138, 180, 248, 0.14);
 }
 
 /* =============================================================================
@@ -1148,12 +1148,31 @@ html.dark .header-theme-btn .theme-icon-moon {
   border-color: var(--color-ink-mute);
 }
 
-.dark .btn-secondary {
-  background-color: var(--color-canvas);
-  color: var(--color-on-dark);
-  border-color: var(--color-hairline-strong);
+.dark .btn-primary,
+.dark .btn-save {
+  background-color: #1a73e8 !important;
+  color: #ffffff !important;
+  border-color: #1a73e8 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
 }
-.dark .btn-secondary:hover { border-color: #6b7280; }
+
+.dark .btn-primary:hover,
+.dark .btn-save:hover {
+  background-color: #1967d2 !important;
+  border-color: #1967d2 !important;
+}
+
+.dark .btn-secondary {
+  background-color: #303134;
+  color: #e8eaed;
+  border-color: #5f6368;
+}
+
+.dark .btn-secondary:hover {
+  background-color: #3c4043;
+  color: #ffffff;
+  border-color: #8ab4f8;
+}
 
 .btn-danger {
   background-color: var(--color-danger-soft);
@@ -1289,9 +1308,9 @@ html.dark .header-theme-btn .theme-icon-moon {
 }
 
 .dark .form-input, .dark .form-select, .dark textarea.form-input {
-  background-color: #121212;
-  border-color: #2a2a2a;
-  color: #e5e5e5;
+  background-color: #202124;
+  border-color: #3c4043;
+  color: #e8eaed;
 }
 
 .form-input::placeholder, .form-select::placeholder {
@@ -1302,6 +1321,11 @@ html.dark .header-theme-btn .theme-icon-moon {
 .form-input:focus, .form-select:focus, textarea.form-input:focus {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+}
+
+.dark .form-input:focus, .dark .form-select:focus, .dark textarea.form-input:focus {
+  border-color: #8ab4f8;
+  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.2);
 }
 
 .form-input-icon {
@@ -1327,7 +1351,7 @@ html.dark .header-theme-btn .theme-icon-moon {
   margin-bottom: var(--space-xs);
 }
 
-.dark .form-label { color: #8a8a8a; }
+.dark .form-label { color: #bdc1c6; }
 
 /* Input with Fixed System Prefix Addon */
 .input-group-addon {
@@ -1440,9 +1464,9 @@ html.dark .header-theme-btn .theme-icon-moon {
 
 .dark .table thead th,
 .dark .data-table thead th {
-  background-color: #141414;
-  border-bottom-color: #242424;
-  color: #777777;
+  background-color: #28292c;
+  border-bottom-color: #3c4043;
+  color: #9aa0a6;
 }
 
 .table tbody td,
@@ -1456,8 +1480,8 @@ html.dark .header-theme-btn .theme-icon-moon {
 
 .dark .table tbody td,
 .dark .data-table tbody td {
-  border-bottom-color: #202020;
-  color: #cccccc;
+  border-bottom-color: #3c4043;
+  color: #e8eaed;
 }
 
 .table tbody tr:last-child td,
@@ -3484,6 +3508,18 @@ html:not(.dark) .toast-info {
   font-weight: 700;
 }
 
+.dark .keyboard-nav-info {
+  background: #28292c;
+  border-color: #3c4043;
+  border-left: 4px solid #8ab4f8 !important;
+}
+
+.dark .kbd-badge {
+  background: #202124;
+  color: #e8eaed;
+  border-color: #5f6368;
+}
+
 /* =============================================================================
    32. UNIVERSAL ADAPTIVE THEME UTILITIES (Light & Dark Zero-Flicker)
    ============================================================================= */
@@ -3617,6 +3653,13 @@ html:not(.dark) .toast-info {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
+}
+
+html.has-pending-action #app-page-loader {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 /* Floating Status Pill */
@@ -3994,6 +4037,26 @@ html:not(.dark) .toast-info {
   letter-spacing: -0.01em;
   margin: 0;
   transition: color 0.2s ease;
+}
+
+/* Action Subtext (Optional brief description / reference) */
+.action-loader-subtext {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+  margin: -8px 0 0 0;
+  line-height: 1.35;
+  max-width: 260px;
+  word-break: break-word;
+}
+
+.dark .action-loader-subtext {
+  color: #94a3b8;
+}
+
+#app-action-loader.is-success,
+#app-action-loader.is-error {
+  cursor: pointer;
 }
 
 /* Action Progress Bar */

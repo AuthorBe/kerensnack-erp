@@ -7,6 +7,8 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\Format;
 use App\Helpers\ActivityLog;
+use App\Helpers\PdfExport;
+use App\Helpers\ExcelExport;
 use App\Core\Router;
 use Database;
 use Throwable;
@@ -1038,6 +1040,150 @@ class ConsignmentController extends Controller
 
         } catch (Throwable $e) {
             echo "Error Riwayat Kunjungan: " . $e->getMessage();
+        }
+    }
+
+    /**
+     * Export Laporan Penjualan Konsinyasi ke File Excel (PhpSpreadsheet)
+     */
+    public function exportSalesExcel(): void
+    {
+        Auth::requirePermission(['consignment.reports_all', 'consignment.reports_assigned']);
+
+        try {
+            $startDate = (string)$this->input('start_date', date('Y-m-01'));
+            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            $storeId = (string)$this->input('pelanggan_id', '');
+            $driverId = $this->getLoggedInDriverId();
+            $isSales = $this->isSalesPersona();
+
+            $sql = "
+                SELECT kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal,
+                       p.nama_toko, p.kode_pelanggan,
+                       k.nama_karyawan as nama_sales,
+                       pes.nomor_nota, pes.status_pembayaran, pes.total_dibayar, pes.sisa_tagihan
+                FROM public.kunjungan_konsinyasi kk
+                JOIN public.pelanggan p ON kk.pelanggan_id = p.id
+                LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
+                LEFT JOIN public.pesanan pes ON kk.pesanan_id = pes.id
+                WHERE kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
+            ";
+            $params = ['start_date' => $startDate, 'end_date' => $endDate];
+
+            if ($isSales && $driverId) {
+                $sql .= " AND p.sales_driver_id = :driver_id";
+                $params['driver_id'] = $driverId;
+            } elseif (!empty($storeId)) {
+                $sql .= " AND p.id = :store_id";
+                $params['store_id'] = $storeId;
+            }
+
+            $sql .= " ORDER BY kk.tanggal_kunjungan DESC, kk.dibuat_pada DESC";
+            $reports = Database::fetchAll($sql, $params);
+
+            $headers = ['No', 'Tanggal Kunjungan', 'Nomor Kunjungan', 'Kode Toko', 'Nama Toko Konsinyasi', 'Sales / Driver', 'Nomor Faktur B2B', 'Total Terjual (Rp)', 'Total Terbayar (Rp)', 'Sisa Tagihan (Rp)', 'Status Bayar'];
+            $rows = [];
+            $no = 1;
+            $totLaku = 0;
+            $totBayar = 0;
+            $totSisa = 0;
+
+            foreach ($reports as $r) {
+                $laku = (float)$r['total_laku_nominal'];
+                $bayar = (float)($r['total_dibayar'] ?? 0);
+                $sisa = (float)($r['sisa_tagihan'] ?? 0);
+                $totLaku += $laku;
+                $totBayar += $bayar;
+                $totSisa += $sisa;
+
+                $rows[] = [
+                    $no++,
+                    date('d/m/Y', strtotime($r['tanggal_kunjungan'])),
+                    $r['nomor_kunjungan'],
+                    $r['kode_pelanggan'] ?? '-',
+                    $r['nama_toko'],
+                    $r['nama_sales'] ?? '-',
+                    $r['nomor_nota'] ?? '-',
+                    $laku,
+                    $bayar,
+                    $sisa,
+                    strtoupper(str_replace('_', ' ', (string)($r['status_pembayaran'] ?? 'BELUM BAYAR')))
+                ];
+            }
+
+            $rows[] = ['', '', '', '', '', '', 'TOTAL PENJUALAN KONSINYASI:', $totLaku, $totBayar, $totSisa, ''];
+
+            ExcelExport::download("Laporan-Penjualan-Konsinyasi-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Penjualan Konsinyasi");
+        } catch (Throwable $e) {
+            $this->flashError('Gagal export laporan penjualan konsinyasi: ' . $e->getMessage());
+            $this->redirect('/consignment/laporan-penjualan');
+        }
+    }
+
+    /**
+     * Export Laporan Piutang Toko Konsinyasi ke File Excel (PhpSpreadsheet)
+     */
+    public function exportPiutangExcel(): void
+    {
+        Auth::requirePermission(['consignment.piutang_view_all', 'consignment.piutang_view_assigned']);
+
+        try {
+            $driverId = $this->getLoggedInDriverId();
+            $isSales = $this->isSalesPersona();
+
+            $sql = "
+                SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, p.alamat_lengkap,
+                       k.nama_karyawan as nama_sales,
+                       COUNT(pes.id) as total_nota_piutang,
+                       COALESCE(SUM(pes.sisa_tagihan), 0) as total_piutang
+                FROM public.pelanggan p
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                JOIN public.pesanan pes ON pes.pelanggan_id = p.id
+                WHERE p.is_konsinyasi = TRUE
+                  AND pes.sisa_tagihan > 0
+                  AND pes.status_pemrosesan != 'dibatalkan'
+            ";
+            $params = [];
+
+            if ($isSales && $driverId) {
+                $sql .= " AND p.sales_driver_id = :driver_id";
+                $params['driver_id'] = $driverId;
+            }
+
+            $sql .= " GROUP BY p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, p.alamat_lengkap, k.nama_karyawan";
+            $sql .= " HAVING SUM(pes.sisa_tagihan) > 0";
+            $sql .= " ORDER BY total_piutang DESC";
+
+            $stores = Database::fetchAll($sql, $params);
+
+            $headers = ['No', 'Kode Toko', 'Nama Toko Konsinyasi', 'Pemilik Toko', 'No. WhatsApp', 'Alamat Lengkap', 'Sales PIC', 'Jumlah Nota Belum Lunas', 'Total Piutang Berjalan (Rp)'];
+            $rows = [];
+            $no = 1;
+            $grandPiutang = 0;
+
+            foreach ($stores as $s) {
+                $piutang = (float)$s['total_piutang'];
+                $grandPiutang += $piutang;
+
+                $rows[] = [
+                    $no++,
+                    $s['kode_pelanggan'] ?? '-',
+                    $s['nama_toko'],
+                    $s['nama_pemilik'] ?? '-',
+                    $s['nomor_whatsapp'] ?? '-',
+                    $s['alamat_lengkap'] ?? '-',
+                    $s['nama_sales'] ?? '-',
+                    (int)$s['total_nota_piutang'],
+                    $piutang
+                ];
+            }
+
+            $rows[] = ['', '', '', '', '', '', '', 'GRAND TOTAL PIUTANG:', $grandPiutang];
+
+            ExcelExport::download("Laporan-Piutang-Konsinyasi-" . date('Ymd') . ".xlsx", $headers, $rows, "Piutang Konsinyasi");
+        } catch (Throwable $e) {
+            $this->flashError('Gagal export data piutang konsinyasi: ' . $e->getMessage());
+            $this->redirect('/consignment/piutang');
         }
     }
 }

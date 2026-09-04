@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\ActivityLog;
+use App\Helpers\ExcelExport;
 use Database;
 use Throwable;
 
@@ -214,6 +215,61 @@ class InventoryController extends Controller
                 $pdo->rollBack();
             }
             $this->flashError("Gagal mencatat waste: " . $e->getMessage());
+            $this->redirect('/inventory');
+        }
+    }
+
+    /**
+     * Export Seluruh Katalog Produk & Stok Gudang ke File Excel (PhpSpreadsheet)
+     */
+    public function exportExcel(): void
+    {
+        Auth::requirePermission('inventory.view_all');
+
+        try {
+            $items = Database::fetchAll("
+                SELECT i.id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
+                       i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar, i.satuan_distribusi,
+                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup
+                FROM public.item i
+                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                WHERE i.status_aktif = TRUE
+                ORDER BY gp.kode_grup ASC, i.nama_item ASC
+            ");
+
+            $headers = ['No', 'Kode SKU', 'Barcode', 'Nama Produk Snack', 'Varian / Rasa', 'Grup Kemasan', 'Stok Fisik Gudang (Pcs)', 'Peringatan Min Stok', 'Satuan Dasar', 'Harga Pokok (HPP)', 'Estimasi Nilai Stok (Rp)'];
+            $rows = [];
+            $no = 1;
+            $totalPcs = 0;
+            $totalValuation = 0;
+
+            foreach ($items as $it) {
+                $stok = (int)($it['stok_fisik_saat_ini'] ?? 0);
+                $hpp = (float)($it['harga_pokok_pembelian'] ?? 0);
+                $valuation = $stok * $hpp;
+                $totalPcs += $stok;
+                $totalValuation += $valuation;
+
+                $rows[] = [
+                    $no++,
+                    $it['kode_sku'],
+                    $it['barcode'] ?? '-',
+                    $it['nama_item'],
+                    $it['varian_rasa'] ?? '-',
+                    $it['nama_grup'] ?? '-',
+                    $stok,
+                    (int)($it['stok_minimum_peringatan'] ?? 0),
+                    $it['satuan_dasar'],
+                    $hpp,
+                    $valuation
+                ];
+            }
+
+            $rows[] = ['', '', '', '', '', 'TOTAL PERSINGGAHAN STOK GUDANG:', $totalPcs, '', '', 'TOTAL VALUASI (HPP):', $totalValuation];
+
+            ExcelExport::download("Katalog-Stok-Gudang-" . date('Ymd') . ".xlsx", $headers, $rows, "Stok Gudang");
+        } catch (Throwable $e) {
+            $this->flashError("Gagal export data stok gudang: " . $e->getMessage());
             $this->redirect('/inventory');
         }
     }

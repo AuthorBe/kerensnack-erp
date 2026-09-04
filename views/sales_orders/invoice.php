@@ -201,9 +201,16 @@ use App\Helpers\Format;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
 
-        .btn-print {
+        .btn-pdf {
+            background: #dc2626;
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .btn-excel {
             background: #059669;
             color: #ffffff;
+            text-decoration: none;
         }
 
         .btn-back {
@@ -231,15 +238,20 @@ use App\Helpers\Format;
 </head>
 <body>
 
+    <?php if (empty($isPdf)): ?>
     <!-- Floating Action Buttons -->
     <div class="action-bar">
         <a href="<?= Router::url('/sales-orders') ?>" class="btn btn-back">
             <span>&larr; Kembali</span>
         </a>
-        <button onclick="window.print()" class="btn btn-print">
-            <span>🖨️ Cetak Faktur (Print)</span>
-        </button>
+        <a href="<?= Router::url('/customer-orders/invoice/pdf?id=' . $order['id']) ?>" class="btn btn-pdf">
+            <span>📄 Unduh PDF</span>
+        </a>
+        <a href="<?= Router::url('/customer-orders/invoice/excel?id=' . $order['id']) ?>" class="btn btn-excel">
+            <span>📊 Unduh Excel</span>
+        </a>
     </div>
+    <?php endif; ?>
 
     <div class="invoice-container">
         <!-- HEADER -->
@@ -389,16 +401,6 @@ use App\Helpers\Format;
             </div>
         </div>
     </div>
-
-    <?php if (!empty($autoPrint)): ?>
-    <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                window.print();
-            }, 400);
-        });
-    </script>
-    <?php endif; ?>
 
 </body>
 </html>

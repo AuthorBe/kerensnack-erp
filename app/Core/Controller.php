@@ -48,6 +48,15 @@ class Controller
     }
 
     /**
+     * Cek apakah request saat ini adalah AJAX / Fetch
+     */
+    protected function isAjax(): bool
+    {
+        return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+    }
+
+    /**
      * Return JSON response
      * 
      * @param mixed $data

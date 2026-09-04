@@ -7,6 +7,8 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\ActivityLog;
 use App\Helpers\Format;
+use App\Helpers\PdfExport;
+use App\Helpers\ExcelExport;
 use Database;
 use Throwable;
 
@@ -679,6 +681,139 @@ class CashController extends Controller
             if (isset($pdo)) $pdo->rollBack();
             $this->flashError('Gagal melakukan transfer kas: ' . $e->getMessage());
             $this->redirect('/cash');
+        }
+    }
+
+    /**
+     * Export Riwayat Transaksi Kas Masuk & Keluar ke Excel (PhpSpreadsheet)
+     */
+    public function exportTransactionsExcel(): void
+    {
+        Auth::requirePermission('cash.view');
+
+        try {
+            $startDate = $this->input('start_date', date('Y-m-01'));
+            $endDate = $this->input('end_date', date('Y-m-d'));
+            $accountId = $this->input('account_id');
+            $type = $this->input('type');
+            $category = $this->input('category');
+
+            $sql = "
+                SELECT ark.*, ak.nama_akun, u.nama_lengkap as nama_user
+                FROM public.arus_kas ark
+                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+                LEFT JOIN public.pengguna u ON ark.dibuat_oleh = u.id
+                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end
+            ";
+            $params = ['start' => $startDate, 'end' => $endDate];
+
+            if (!empty($accountId)) {
+                $sql .= " AND ark.akun_kas_id = :account_id";
+                $params['account_id'] = $accountId;
+            }
+            if (!empty($type)) {
+                $sql .= " AND ark.jenis_kas = :type";
+                $params['type'] = $type;
+            }
+            if (!empty($category)) {
+                $sql .= " AND ark.kategori = :category";
+                $params['category'] = $category;
+            }
+
+            $sql .= " ORDER BY ark.tanggal_transaksi DESC, ark.dibuat_pada DESC";
+            $transactions = Database::fetchAll($sql, $params);
+
+            $headers = ['No', 'Tanggal Transaksi', 'Nomor Bukti', 'Akun Kas / Bank', 'Jenis Kas', 'Kategori', 'Keterangan', 'Nominal (Rp)', 'Dibuat Oleh'];
+            $rows = [];
+            $no = 1;
+            $totalIn = 0;
+            $totalOut = 0;
+
+            foreach ($transactions as $t) {
+                $isMasuk = ($t['jenis_kas'] === 'masuk');
+                $nom = (float)$t['nominal'];
+                if ($isMasuk) $totalIn += $nom;
+                else $totalOut += $nom;
+
+                $rows[] = [
+                    $no++,
+                    date('d/m/Y', strtotime($t['tanggal_transaksi'])),
+                    $t['nomor_transaksi'] ?? '-',
+                    $t['nama_akun'],
+                    $isMasuk ? 'KAS MASUK' : 'KAS KELUAR',
+                    ucfirst(str_replace('_', ' ', (string)$t['kategori'])),
+                    $t['keterangan'] ?? '-',
+                    $nom,
+                    $t['nama_user'] ?? 'Sistem'
+                ];
+            }
+
+            $rows[] = ['', '', '', '', '', '', 'TOTAL KAS MASUK (Rp):', $totalIn, ''];
+            $rows[] = ['', '', '', '', '', '', 'TOTAL KAS KELUAR (Rp):', $totalOut, ''];
+            $rows[] = ['', '', '', '', '', '', 'ARUS KAS BERSIH (NET) (Rp):', ($totalIn - $totalOut), ''];
+
+            ExcelExport::download("Mutasi-Kas-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Mutasi Kas");
+        } catch (Throwable $e) {
+            $this->flashError('Gagal export data transaksi kas: ' . $e->getMessage());
+            $this->redirect('/cash/transactions');
+        }
+    }
+
+    /**
+     * Export Laporan Arus Kas Periode ke Excel (PhpSpreadsheet)
+     */
+    public function exportReportsExcel(): void
+    {
+        Auth::requirePermission('cash.reports');
+
+        try {
+            $startDate = $this->input('start_date', date('Y-m-01'));
+            $endDate = $this->input('end_date', date('Y-m-d'));
+
+            $params = ['start' => $startDate, 'end' => $endDate];
+
+            $transactions = Database::fetchAll("
+                SELECT ark.*, ak.nama_akun
+                FROM public.arus_kas ark
+                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end
+                ORDER BY ark.tanggal_transaksi ASC, ark.dibuat_pada ASC
+            ", $params);
+
+            $headers = ['No', 'Tanggal', 'Nomor Transaksi', 'Akun Kas', 'Jenis', 'Kategori', 'Keterangan', 'Kas Masuk (Rp)', 'Kas Keluar (Rp)'];
+            $rows = [];
+            $no = 1;
+            $totalIn = 0;
+            $totalOut = 0;
+
+            foreach ($transactions as $t) {
+                $isMasuk = ($t['jenis_kas'] === 'masuk');
+                $nom = (float)$t['nominal'];
+                $masuk = $isMasuk ? $nom : 0;
+                $keluar = !$isMasuk ? $nom : 0;
+                $totalIn += $masuk;
+                $totalOut += $keluar;
+
+                $rows[] = [
+                    $no++,
+                    date('d/m/Y', strtotime($t['tanggal_transaksi'])),
+                    $t['nomor_transaksi'] ?? '-',
+                    $t['nama_akun'],
+                    $isMasuk ? 'MASUK' : 'KELUAR',
+                    ucfirst(str_replace('_', ' ', (string)$t['kategori'])),
+                    $t['keterangan'] ?? '-',
+                    $masuk,
+                    $keluar
+                ];
+            }
+
+            $rows[] = ['', '', '', '', '', '', 'TOTAL ARUS KAS (Rp):', $totalIn, $totalOut];
+            $rows[] = ['', '', '', '', '', '', 'SURPLUS / DEFISIT BERSIH (Rp):', ($totalIn - $totalOut), ''];
+
+            ExcelExport::download("Laporan-Arus-Kas-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Laporan Arus Kas");
+        } catch (Throwable $e) {
+            $this->flashError('Gagal export laporan kas: ' . $e->getMessage());
+            $this->redirect('/cash/reports');
         }
     }
 }

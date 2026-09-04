@@ -23,7 +23,7 @@ ob_start();
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Analisis Cash Flow Masuk vs Keluar serta Ringkasan Kekayaan Usaha' ?></p>
             </div>
         </div>
-        <div class="page-header-actions">
+        <div class="page-header-actions" style="display:flex; gap:8px; align-items:center;">
             <form method="GET" action="<?= Router::url('/cash/reports') ?>" class="flex items-center gap-2">
                 <input type="date" name="start_date" value="<?= htmlspecialchars($startDate) ?>" class="form-input" style="height:38px;font-size:12.5px;">
                 <span style="color:var(--color-ink-mute);font-size:12px;">s/d</span>
@@ -33,6 +33,10 @@ ob_start();
                     <span>Tampilkan</span>
                 </button>
             </form>
+            <a href="<?= Router::url('/cash/reports/export-excel?start_date=' . urlencode($startDate) . '&end_date=' . urlencode($endDate)) ?>" class="btn btn-secondary" style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+                <i data-lucide="file-spreadsheet"></i>
+                <span>Export Excel</span>
+            </a>
         </div>
     </div>
 

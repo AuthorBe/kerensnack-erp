@@ -191,7 +191,7 @@ class PosController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            $nomorNota = 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+            $nomorNota = 'INV-' . date('Ymd-His') . '-' . strtoupper(substr(uniqid(), -4));
             $customerId = $payload['customer_id'];
             $paymentType = ($payload['payment_type'] === 'qris') ? 'qris' : 'cash';
             $catatan = $payload['notes'] ?? 'Transaksi Kasir POS';

@@ -561,11 +561,11 @@ document.addEventListener('alpine:init', () => {
 
             <!-- Pelanggan Kasir -->
             <div>
-                <label class="form-label">Pelanggan Kasir (Ritel)</label>
+                <label class="form-label">Pelanggan Kasir</label>
                 <select x-model="selectedCustomerId" disabled class="form-select font-bold" style="background-color: var(--color-canvas-soft); cursor: not-allowed; appearance: none; padding-right: 12px; opacity: 0.9;">
                     <?php foreach ($customers as $c): ?>
                     <option value="<?= $c['id'] ?>">
-                        <?= htmlspecialchars($c['nama_toko']) ?> (<?= htmlspecialchars($c['grup_nama']) ?>)
+                        <?= htmlspecialchars($c['nama_toko']) ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
@@ -679,10 +679,10 @@ document.addEventListener('alpine:init', () => {
 
             <!-- Pelanggan Mobile -->
             <div>
-                <label class="form-label">Toko Pelanggan</label>
+                <label class="form-label">Customer</label>
                 <select x-model="selectedCustomerId" disabled class="form-select font-semibold" style="background-color: var(--color-canvas-soft); cursor: not-allowed; appearance: none; padding-right: 12px; opacity: 0.9;">
                     <?php foreach ($customers as $c): ?>
-                    <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nama_toko']) ?> (<?= htmlspecialchars($c['grup_nama']) ?>)</option>
+                    <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['nama_toko']) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -925,11 +925,8 @@ document.addEventListener('alpine:init', () => {
                     <span>Kasir: <span x-text="receiptData?.cashier_name"></span></span>
                     <span>Tipe: <strong style="text-transform:uppercase;" x-text="receiptData?.payment_type === 'qris' ? 'QRIS' : 'TUNAI'"></strong></span>
                 </div>
-                <div style="font-size:9.5px;color:#4b5563;margin-top:2px;">
-                    <span>Kas Masuk: <span x-text="receiptData?.akun_kas_nama || (receiptData?.payment_type === 'qris' ? 'Kantong Kas QRIS' : 'Kasir Utama Toko')"></span></span>
-                </div>
                 <div style="font-size:10px;margin-top:2px;">
-                    <span>Toko: <strong x-text="receiptData?.customer_name"></strong> (<span x-text="receiptData?.customer_group"></span>)</span>
+                    <span>Customer: <strong x-text="receiptData?.customer_name"></strong></span>
                 </div>
 
                 <div style="border-top:1px dashed #9ca3af;margin:8px 0;"></div>

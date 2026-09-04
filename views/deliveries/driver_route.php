@@ -735,7 +735,7 @@ ob_start();
                                     </label>
                                     <span class="text-xs font-bold text-emerald-700 font-sans" x-text="'Total Tagihan: Rp ' + formatRupiah(activeDelivery?.total_netto)"></span>
                                 </div>
-                                <input type="number" name="nominal_tunai_diterima" :value="activeDelivery?.total_netto" step="1000" class="form-input font-bold" style="height: 46px; border-radius: 14px; font-size: 16px; color: #047857; background: #ffffff; font-family: var(--font-sans), sans-serif;">
+                                <input type="text" inputmode="numeric" name="nominal_tunai_diterima" :value="activeDelivery?.total_netto ? (window.formatRupiahNumber ? window.formatRupiahNumber(activeDelivery.total_netto) : activeDelivery.total_netto) : ''" class="form-input font-bold input-rupiah" style="height: 46px; border-radius: 14px; font-size: 16px; color: #047857; background: #ffffff; font-family: var(--font-sans), sans-serif;">
                                 <div style="font-size: 12px; color: #15803d;">
                                     Masukkan nominal uang tunai yang diterima langsung dari pihak toko.
                                 </div>
@@ -836,14 +836,14 @@ ob_start();
                  class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3"
                  style="padding: 16px 24px; border-top: 1px solid var(--color-hairline); background: var(--color-canvas); flex-shrink: 0;">
                 
-                <!-- KIRI: Cetak Surat Jalan -->
+                <!-- KIRI: Unduh Surat Jalan PDF -->
                 <div class="flex items-center">
-                    <a :href="'<?= Router::url('/deliveries/print?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
+                    <a :href="'<?= Router::url('/deliveries/pdf?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
                        target="_blank"
                        class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
-                       style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px;">
-                        <i data-lucide="printer" style="width: 15px; height: 15px;"></i>
-                        <span>Cetak Surat Jalan</span>
+                       style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#dc2626; border-color:#fca5a5; background:#fef2f2;">
+                        <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                        <span>Unduh Surat Jalan (PDF)</span>
                     </a>
                 </div>
 

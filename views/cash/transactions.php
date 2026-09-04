@@ -115,9 +115,13 @@ ob_start();
                 </button>
             </form>
 
-            <!-- Buttons: Kas Masuk & Kas Keluar -->
+            <!-- Buttons: Kas Masuk & Kas Keluar & Export -->
             <div class="flex items-center gap-2 w-full lg:w-auto">
-                <button type="button" @click="openInflowModal()" class="btn btn-success" style="height:36px;background:#10b981;color:#fff;font-size:12.5px;">
+                <a href="<?= Router::url('/cash/transactions/export-excel?' . http_build_query($filters)) ?>" class="btn btn-secondary" style="height:36px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; font-size:12.5px; display:inline-flex; align-items:center; gap:6px;">
+                    <i data-lucide="file-spreadsheet" style="width:14px;height:14px;"></i>
+                    <span>Export Excel</span>
+                </a>
+                <button type="button" @click="openInflowModal()" class="btn btn-success" style="height:36px;background:#059669;color:#fff;font-size:12.5px;">
                     <i data-lucide="plus-circle" style="width:14px;height:14px;"></i>
                     <span>+ Kas Masuk</span>
                 </button>

@@ -445,6 +445,7 @@ function purchaseApp() {
                         await window.AppAction.success('Faktur Berhasil Disimpan! ✨', 650);
                     }
                     toast.success('Faktur pembelian berhasil disimpan dan stok otomatis bertambah!');
+                    try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (e) {}
                     setTimeout(() => window.location.reload(), 600);
                 } else {
                     if (window.AppAction) {

@@ -36,12 +36,35 @@ kerensnack-erp/
 
 ---
 
-## 🧪 Pengujian Sistem & Validasi Integritas
+## 🚀 Instalasi & Setup Cepat
 
-Jalankan pengujian integritas modul dan konektivitas basis data via terminal:
-```bash
-php test_db.php
-```
+1. **Clone repositori:**
+   ```bash
+   git clone https://github.com/AuthorBe/kerensnack-erp.git
+   cd kerensnack-erp
+   ```
+
+2. **Instal dependensi Composer (PhpSpreadsheet & Dompdf):**
+   ```bash
+   composer install
+   ```
+
+3. **Konfigurasi Environment:**
+   Salin `.env.example` menjadi `.env` dan lengkapi kredensial koneksi basis data Supabase:
+   ```bash
+   cp .env.example .env
+   ```
+
+4. **Inisialisasi Database (PostgreSQL / Supabase):**
+   Eksekusi berkas skema dan RPC yang terdapat pada folder `database/`:
+   - `01_schema.sql` (Struktur tabel)
+   - `02_triggers_and_rpc.sql` (Stored procedures & kalkulator harga dinamis)
+   - `seeds/` (Master data awal)
+
+5. **Validasi Konektivitas Database:**
+   ```bash
+   php test_db.php
+   ```
 
 ---
 *Copyright © 2026 KEREN SNACK ERP. All rights reserved.*

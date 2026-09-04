@@ -7,6 +7,8 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\Format;
 use App\Helpers\ActivityLog;
+use App\Helpers\PdfExport;
+use App\Helpers\ExcelExport;
 use App\Core\Router;
 use Database;
 use Throwable;
@@ -81,8 +83,17 @@ class CustomerOrderController extends Controller
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
                        p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
                        pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.is_konsinyasi,
-                       COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan) as nama_sales,
-                       COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan) as nopol_driver,
+                       CASE 
+                           WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan)
+                           WHEN p.status_pemrosesan = 'po' THEN NULL
+                           ELSE k_p.nama_karyawan
+                       END as nama_sales,
+                       CASE 
+                           WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan, 'Armada Toko')
+                           WHEN p.status_pemrosesan = 'po' THEN NULL
+                           WHEN k_p.id IS NOT NULL THEN COALESCE(k_p.nomor_polisi_kendaraan, 'Armada Toko')
+                           ELSE NULL
+                       END as nopol_driver,
                        ak.nama_akun as nama_akun_kas,
                        sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
                        w.nama_wilayah,
@@ -211,8 +222,17 @@ class CustomerOrderController extends Controller
                        p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
                        p.sales_driver_id,
-                       COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan) as nama_sales,
-                       COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan) as nopol_driver,
+                       CASE 
+                           WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan)
+                           WHEN p.status_pemrosesan = 'po' THEN NULL
+                           ELSE k_p.nama_karyawan
+                       END as nama_sales,
+                       CASE 
+                           WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan, 'Armada Toko')
+                           WHEN p.status_pemrosesan = 'po' THEN NULL
+                           WHEN k_p.id IS NOT NULL THEN COALESCE(k_p.nomor_polisi_kendaraan, 'Armada Toko')
+                           ELSE NULL
+                       END as nopol_driver,
                        ak.id as akun_kas_id, ak.nama_akun as nama_akun_kas,
                        sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan
                 FROM public.pesanan p
@@ -408,7 +428,6 @@ class CustomerOrderController extends Controller
         $akunKasId = $this->input('akun_kas_id') ?: null;
         $nominalDibayarInput = (float)preg_replace('/[^0-9]/', '', (string)$this->input('nominal_dibayar', '0'));
         $catatan = trim((string)$this->input('catatan', ''));
-        $printDirect = (bool)$this->input('print_direct', false);
 
         $itemsJson = $this->input('items_json');
         $items = json_decode((string)$itemsJson, true);
@@ -451,7 +470,7 @@ class CustomerOrderController extends Controller
             if ($pelangganInfo) {
                 $isKonsinyasi = (bool)$pelangganInfo['is_konsinyasi'];
                 $driverInput = $this->input('sales_driver_id') ?: null;
-                $salesDriverId = $driverInput ?: $pelangganInfo['sales_driver_id']; // PRD: Default ke sales tetap, bisa di-override
+                $salesDriverId = $driverInput ?: null; // PO baru belum memiliki driver (penugasan dilakukan saat pembuatan Surat Jalan / Siap Kirim)
                 $ruteWilayahId = $pelangganInfo['wilayah_id'];
             }
             
@@ -618,13 +637,8 @@ class CustomerOrderController extends Controller
 
             $pdo->commit();
 
-            if ($printDirect) {
-                $this->redirect("/customer-orders/picking-list?id={$orderId}");
-                return;
-            }
-
             $this->flashSuccess("Purchase Order (PO) #{$nomorNota} berhasil diterbitkan dan masuk ke antrean Daftar PO Gudang.");
-            $this->redirect('/customer-orders/po-list');
+            $this->redirect('/customer-orders');
         } catch (\Exception $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -1084,6 +1098,10 @@ class CustomerOrderController extends Controller
         $keterangan = trim((string)$this->input('keterangan', 'Pelunasan Faktur Toko'));
 
         if (empty($id) || empty($akunKasId) || $nominalBayar <= 0) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Mohon pilih akun kas dan nominal pembayaran yang valid.'], 400);
+                return;
+            }
             $this->flashError('Mohon pilih akun kas dan nominal pembayaran yang valid.');
             $this->redirect('/customer-orders');
             return;
@@ -1122,21 +1140,19 @@ class CustomerOrderController extends Controller
                 'id' => $id,
             ]);
 
-            // Tambah Saldo Akun Kas
-            $akunKas = Database::fetchOne("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $akunKasId]);
-            $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
-            $saldoBaru = $saldoLama + $nominalBayar;
-
-            $stmtAkun = $pdo->prepare("
+            // Update Saldo Kas Penerima
+            $stmtKasAkun = $pdo->prepare("
                 UPDATE public.akun_kas
-                SET saldo_saat_ini = :saldo,
+                SET saldo_saat_ini = saldo_saat_ini + :nominal,
                     diubah_pada = NOW()
                 WHERE id = :akun_kas
+                RETURNING saldo_saat_ini
             ");
-            $stmtAkun->execute([
-                'saldo' => $saldoBaru,
+            $stmtKasAkun->execute([
+                'nominal' => $nominalBayar,
                 'akun_kas' => $akunKasId,
             ]);
+            $saldoBaru = (float)$stmtKasAkun->fetchColumn();
 
             // Catat Arus Kas Masuk
             $stmtKas = $pdo->prepare("
@@ -1169,12 +1185,30 @@ class CustomerOrderController extends Controller
 
             $pdo->commit();
 
+            if ($this->isAjax()) {
+                $this->json([
+                    'success' => true,
+                    'message' => "Pembayaran sebesar " . Format::rupiah($nominalBayar) . " untuk Faktur {$order['nomor_nota']} berhasil dicatat!",
+                    'data' => [
+                        'order_id' => $id,
+                        'total_dibayar' => $totalDibayarBaru,
+                        'sisa_tagihan' => $sisaTagihanBaru,
+                        'status_pembayaran' => $statusBaru
+                    ]
+                ]);
+                return;
+            }
+
             $this->flashSuccess("Pembayaran sebesar <strong>" . Format::rupiah($nominalBayar) . "</strong> untuk Faktur <strong>{$order['nomor_nota']}</strong> berhasil dicatat!");
             $this->redirect('/customer-orders');
 
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
+            }
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => $e->getMessage()], 500);
+                return;
             }
             $this->flashError("Gagal mencatat pembayaran: " . $e->getMessage());
             $this->redirect('/customer-orders');
@@ -1473,8 +1507,17 @@ class CustomerOrderController extends Controller
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.status_pembayaran, p.status_pemrosesan,
                        p.catatan, p.dibuat_pada, p.waktu_gagal_kirim,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
-                       COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan) as nama_sales,
-                       COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan) as nopol_driver,
+                       CASE 
+                           WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan)
+                           WHEN p.status_pemrosesan = 'po' THEN NULL
+                           ELSE k_p.nama_karyawan
+                       END as nama_sales,
+                       CASE 
+                           WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan, 'Armada Toko')
+                           WHEN p.status_pemrosesan = 'po' THEN NULL
+                           WHEN k_p.id IS NOT NULL THEN COALESCE(k_p.nomor_polisi_kendaraan, 'Armada Toko')
+                           ELSE NULL
+                       END as nopol_driver,
                        sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
                        w.nama_wilayah,
                        (SELECT COUNT(*) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_sku,
@@ -1869,4 +1912,382 @@ class CustomerOrderController extends Controller
             $this->redirect('/customer-orders');
         }
     }
+
+    /**
+     * Unduh Faktur Pesanan dalam Format PDF (Dompdf Library)
+     */
+    public function invoicePdf(): void
+    {
+        Auth::requirePermission(['orders.view_all', 'orders.view_assigned']);
+        $id = $this->input('id');
+        if (empty($id)) {
+            $this->flashError('ID Pesanan tidak valid.');
+            $this->redirect('/customer-orders');
+            return;
+        }
+
+        try {
+            $order = Database::fetchOne("
+                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
+                       k.nama_karyawan as nama_sales,
+                       ak.nama_akun as nama_akun_kas
+                FROM public.pesanan p
+                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
+                WHERE p.id = :id
+            ", ['id' => $id]);
+
+            if (!$order) {
+                $this->flashError('Faktur pesanan tidak ditemukan.');
+                $this->redirect('/customer-orders');
+                return;
+            }
+
+            $items = Database::fetchAll("
+                SELECT ip.*, i.nama_item, i.kode_sku, i.satuan_dasar, gp.nama_grup
+                FROM public.item_pesanan ip
+                JOIN public.item i ON ip.item_id = i.id
+                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                WHERE ip.pesanan_id = :id
+                ORDER BY ip.dibuat_pada ASC
+            ", ['id' => $id]);
+
+            ob_start();
+            extract(['order' => $order, 'items' => $items, 'isPdf' => true]);
+            require ROOT_PATH . '/views/customer_orders/invoice.php';
+            $html = ob_get_clean();
+
+            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
+            PdfExport::download($html, "Faktur-{$cleanNota}.pdf", 'A4', 'portrait');
+        } catch (Throwable $e) {
+            $this->flashError('Gagal membuat PDF: ' . $e->getMessage());
+            $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));
+        }
+    }
+
+    /**
+     * Unduh Faktur Rincian Item dalam Format Excel (PhpSpreadsheet Library)
+     */
+    public function invoiceExcel(): void
+    {
+        Auth::requirePermission(['orders.view_all', 'orders.view_assigned']);
+        $id = $this->input('id');
+        if (empty($id)) {
+            $this->flashError('ID Pesanan tidak valid.');
+            $this->redirect('/customer-orders');
+            return;
+        }
+
+        try {
+            $order = Database::fetchOne("
+                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
+                       k.nama_karyawan as nama_sales
+                FROM public.pesanan p
+                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                WHERE p.id = :id
+            ", ['id' => $id]);
+
+            if (!$order) {
+                $this->flashError('Faktur pesanan tidak ditemukan.');
+                $this->redirect('/customer-orders');
+                return;
+            }
+
+            $items = Database::fetchAll("
+                SELECT ip.*, i.nama_item, i.kode_sku, i.satuan_dasar, gp.nama_grup
+                FROM public.item_pesanan ip
+                JOIN public.item i ON ip.item_id = i.id
+                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                WHERE ip.pesanan_id = :id
+                ORDER BY ip.dibuat_pada ASC
+            ", ['id' => $id]);
+
+            $headers = ['No', 'Kode SKU', 'Nama Produk Snack', 'Kategori Kemasan', 'Harga Satuan (Rp)', 'Qty (Pcs)', 'Diskon (Rp)', 'Subtotal (Rp)'];
+            $rows = [];
+            $no = 1;
+            foreach ($items as $it) {
+                $rows[] = [
+                    $no++,
+                    $it['kode_sku'] ?? '-',
+                    $it['nama_item'] ?? '-',
+                    $it['nama_grup'] ?? '-',
+                    (float)($it['harga_satuan'] ?? 0),
+                    (int)($it['kuantitas_satuan_dasar'] ?? 0),
+                    (float)($it['diskon_nominal'] ?? 0),
+                    (float)($it['subtotal'] ?? 0)
+                ];
+            }
+
+            // Tambahkan baris total
+            $rows[] = ['', '', '', '', '', '', 'Total Bruto (Rp):', (float)($order['total_bruto'] ?? 0)];
+            $rows[] = ['', '', '', '', '', '', 'Total Diskon (Rp):', (float)($order['total_diskon'] ?? 0)];
+            $rows[] = ['', '', '', '', '', '', 'TOTAL NETTO (Rp):', (float)($order['total_netto'] ?? 0)];
+            $rows[] = ['', '', '', '', '', '', 'Telah Dibayar (Rp):', (float)($order['total_dibayar'] ?? 0)];
+            $rows[] = ['', '', '', '', '', '', 'Sisa Tagihan (Rp):', (float)($order['sisa_tagihan'] ?? 0)];
+
+            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
+            ExcelExport::download("Faktur-{$cleanNota}.xlsx", $headers, $rows, "Faktur {$cleanNota}");
+        } catch (Throwable $e) {
+            $this->flashError('Gagal export Excel: ' . $e->getMessage());
+            $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));
+        }
+    }
+
+    /**
+     * Export Seluruh Daftar Pesanan ke File Excel (PhpSpreadsheet)
+     */
+    public function exportExcel(): void
+    {
+        Auth::requirePermission(['orders.view_all', 'orders.view_assigned']);
+
+        try {
+            $startDate = $this->input('start_date', date('Y-m-01'));
+            $endDate = $this->input('end_date', date('Y-m-d'));
+            $pelangganId = $this->input('pelanggan_id');
+            $statusBayar = $this->input('status_pembayaran');
+            $q = trim((string)$this->input('q', ''));
+
+            $sql = "
+                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.is_konsinyasi,
+                       k.nama_karyawan as nama_sales
+                FROM public.pesanan p
+                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                WHERE p.tanggal_pesanan >= :start AND p.tanggal_pesanan <= :end
+            ";
+            $params = ['start' => $startDate, 'end' => $endDate];
+
+            if (!empty($pelangganId)) {
+                $sql .= " AND p.pelanggan_id = :pelanggan_id";
+                $params['pelanggan_id'] = $pelangganId;
+            }
+            if (!empty($statusBayar)) {
+                $sql .= " AND p.status_pembayaran = :status_bayar";
+                $params['status_bayar'] = $statusBayar;
+            }
+            if (!empty($q)) {
+                $sql .= " AND (p.nomor_nota ILIKE :q OR pel.nama_toko ILIKE :q OR pel.kode_pelanggan ILIKE :q)";
+                $params['q'] = "%{$q}%";
+            }
+
+            $sql .= " ORDER BY p.tanggal_pesanan DESC, p.dibuat_pada DESC";
+            $orders = Database::fetchAll($sql, $params);
+
+            $headers = ['No', 'Nomor Nota', 'Tanggal', 'Kode Toko', 'Nama Toko Pelanggan', 'Sales / PIC', 'Tipe Pembayaran', 'Total Bruto (Rp)', 'Total Diskon (Rp)', 'Total Netto (Rp)', 'Dibayar (Rp)', 'Sisa Tagihan (Rp)', 'Status Bayar', 'Status Proses'];
+            $rows = [];
+            $no = 1;
+            foreach ($orders as $o) {
+                $rows[] = [
+                    $no++,
+                    $o['nomor_nota'],
+                    date('d/m/Y', strtotime($o['tanggal_pesanan'])),
+                    $o['kode_pelanggan'] ?? '-',
+                    $o['nama_toko'],
+                    $o['nama_sales'] ?? 'Armada / Toko',
+                    ucfirst(str_replace('_', ' ', (string)$o['tipe_pembayaran'])),
+                    (float)$o['total_bruto'],
+                    (float)$o['total_diskon'],
+                    (float)$o['total_netto'],
+                    (float)$o['total_dibayar'],
+                    (float)$o['sisa_tagihan'],
+                    strtoupper(str_replace('_', ' ', (string)$o['status_pembayaran'])),
+                    strtoupper(str_replace('_', ' ', (string)$o['status_pemrosesan']))
+                ];
+            }
+
+            ExcelExport::download("Daftar-Pesanan-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Daftar Pesanan");
+        } catch (Throwable $e) {
+            $this->flashError('Gagal export data pesanan: ' . $e->getMessage());
+            $this->redirect('/customer-orders');
+        }
+    }
+
+    /**
+     * Unduh Lembar Ambil Barang (Picking List) dalam Format PDF (Dompdf Library)
+     */
+    public function pickingListPdf(): void
+    {
+        Auth::requirePermission(['orders.po_print', 'orders.po_view_all', 'orders.po_view_assigned']);
+
+        $id = $this->input('id');
+        if (empty($id)) {
+            $this->flashError('ID Pesanan tidak valid.');
+            $this->redirect('/customer-orders/po-list');
+            return;
+        }
+
+        try {
+            $order = Database::fetchOne("
+                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
+                       COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan) as nama_driver,
+                       COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan) as nopol_driver,
+                       w.nama_wilayah, w.kode_rute,
+                       sj.nomor_surat_jalan
+                FROM public.pesanan p
+                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
+                LEFT JOIN public.karyawan k_p ON p.sales_driver_id = k_p.id
+                LEFT JOIN public.karyawan k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
+                WHERE p.id = :id
+            ", ['id' => $id]);
+
+            if (!$order) {
+                $this->flashError('Pesanan tidak ditemukan.');
+                $this->redirect('/customer-orders/po-list');
+                return;
+            }
+
+            $items = Database::fetchAll("
+                SELECT ip.*, it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar
+                FROM public.item_pesanan ip
+                JOIN public.item it ON ip.item_id = it.id
+                WHERE ip.pesanan_id = :id
+                ORDER BY it.nama_item ASC
+            ", ['id' => $id]);
+
+            ob_start();
+            extract(['pageTitle' => 'Picking List #' . $order['nomor_nota'], 'order' => $order, 'items' => $items, 'isPdf' => true]);
+            require ROOT_PATH . '/views/customer_orders/picking_list.php';
+            $html = ob_get_clean();
+
+            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
+            PdfExport::download($html, "PickingList-{$cleanNota}.pdf", 'A4', 'portrait');
+        } catch (Throwable $e) {
+            $this->flashError('Gagal membuat PDF Picking List: ' . $e->getMessage());
+            $this->redirect('/customer-orders/picking-list?id=' . urlencode((string)$id));
+        }
+    }
+
+    /**
+     * Batch export multiple PO item lists into a single consolidated PDF document.
+     */
+    public function batchPickingListPdf(): void
+    {
+        Auth::requirePermission(['orders.po_print', 'orders.po_view_all', 'orders.po_view_assigned']);
+
+        try {
+            $idsParam = $this->input('ids');
+            $orderIdsInput = $this->input('order_ids');
+            $tab = $this->input('tab', 'pending');
+            $q = trim((string)$this->input('q', ''));
+            $pelangganId = $this->input('pelanggan_id', '');
+
+            $targetIds = [];
+            if (!empty($idsParam)) {
+                $targetIds = array_filter(array_map('trim', explode(',', (string)$idsParam)));
+            } elseif (!empty($orderIdsInput) && is_array($orderIdsInput)) {
+                $targetIds = array_filter(array_map('trim', $orderIdsInput));
+            }
+
+            $sql = "
+                SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
+                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.dibuat_pada,
+                       pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
+                       (SELECT COUNT(*) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_sku,
+                       (SELECT COALESCE(SUM(kuantitas_satuan_dasar), 0) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_pcs
+                FROM public.pesanan p
+                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                WHERE p.status_pembayaran != 'dibatalkan'
+            ";
+
+            $params = [];
+
+            // Permission scoping for sales/driver
+            if (!Auth::can('orders.po_view_all')) {
+                $myEmpId = Auth::employeeId();
+                if ($myEmpId) {
+                    $sql .= " AND (p.sales_driver_id = :my_emp_id OR pel.sales_driver_id = :my_emp_id)";
+                    $params['my_emp_id'] = $myEmpId;
+                } else {
+                    $sql .= " AND 1=0";
+                }
+            }
+
+            if (!empty($targetIds)) {
+                $placeholders = [];
+                foreach ($targetIds as $idx => $tId) {
+                    $key = 'target_id_' . $idx;
+                    $placeholders[] = ':' . $key;
+                    $params[$key] = $tId;
+                }
+                $sql .= " AND p.id IN (" . implode(',', $placeholders) . ")";
+            } else {
+                // Filter by tab and criteria
+                if ($tab === 'pending') {
+                    $sql .= " AND p.status_pemrosesan = 'po'";
+                } elseif ($tab === 'ready') {
+                    $sql .= " AND p.status_pemrosesan IN ('siap_dikirim', 'siap_kirim')";
+                } elseif ($tab === 'failed') {
+                    $sql .= " AND p.status_pemrosesan = 'gagal_dikirim'";
+                }
+
+                if (!empty($pelangganId)) {
+                    $sql .= " AND p.pelanggan_id = :pelanggan_id";
+                    $params['pelanggan_id'] = $pelangganId;
+                }
+
+                if (!empty($q)) {
+                    $sql .= " AND (p.nomor_nota ILIKE :q OR pel.nama_toko ILIKE :q OR pel.kode_pelanggan ILIKE :q OR p.catatan ILIKE :q)";
+                    $params['q'] = "%{$q}%";
+                }
+            }
+
+            $sql .= " ORDER BY p.dibuat_pada ASC";
+            $orders = Database::fetchAll($sql, $params);
+
+            if (empty($orders)) {
+                $this->flashError('Tidak ada data PO yang sesuai untuk diunduh sebagai PDF.');
+                $this->redirect('/customer-orders/po-list');
+                return;
+            }
+
+            // Batch fetch items for all selected orders
+            $orderIds = array_column($orders, 'id');
+            $itemParams = [];
+            $itemPlaceholders = [];
+            foreach ($orderIds as $idx => $oId) {
+                $key = 'ord_id_' . $idx;
+                $itemPlaceholders[] = ':' . $key;
+                $itemParams[$key] = $oId;
+            }
+
+            $rawItems = Database::fetchAll("
+                SELECT ip.*, it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar, it.barcode
+                FROM public.item_pesanan ip
+                JOIN public.item it ON ip.item_id = it.id
+                WHERE ip.pesanan_id IN (" . implode(',', $itemPlaceholders) . ")
+                ORDER BY it.nama_item ASC
+            ", $itemParams);
+
+            $itemsByOrder = [];
+            foreach ($rawItems as $ri) {
+                $itemsByOrder[$ri['pesanan_id']][] = $ri;
+            }
+
+            foreach ($orders as &$ord) {
+                $ord['items'] = $itemsByOrder[$ord['id']] ?? [];
+            }
+            unset($ord);
+
+            ob_start();
+            extract([
+                'pageTitle' => 'Batch Item Pesanan PO (' . count($orders) . ' Nota)',
+                'orders' => $orders,
+                'isPdf' => true
+            ]);
+            require ROOT_PATH . '/views/customer_orders/batch_picking_list.php';
+            $html = ob_get_clean();
+
+            $dateSuffix = date('Ymd_Hi');
+            $countSuffix = count($orders);
+            PdfExport::download($html, "Batch_PO_{$countSuffix}Nota_{$dateSuffix}.pdf", 'A4', 'portrait');
+        } catch (Throwable $e) {
+            $this->flashError('Gagal membuat PDF Batch PO: ' . $e->getMessage());
+            $this->redirect('/customer-orders/po-list');
+        }
+    }
 }
+

@@ -36,37 +36,36 @@ ob_start();
     <!-- ========================================================================= -->
     <form id="salesOrderForm" data-add-row-btn="#btnAddRow" data-action-text="Menerbitkan Purchase Order..." action="<?= Router::url('/customer-orders/store') ?>" method="POST">
         <input type="hidden" name="items_json" :value="JSON.stringify(items)">
-        <input type="hidden" name="print_direct" :value="printDirect ? '1' : '0'">
 
         <div class="space-y-5">
 
             <!-- ===================================================================== -->
             <!-- 2. INFORMASI MITRA TOKO & TRANSAKSI (2-ROW MINIMALIST CARD)           -->
             <!-- ===================================================================== -->
-            <div class="card p-4 sm:p-5 flex flex-col gap-4">
+            <div class="card" style="padding:22px 24px;display:flex;flex-direction:column;gap:18px;">
                 <!-- Header Strip -->
-                <div class="flex flex-wrap items-center justify-between gap-3 pb-3" style="border-bottom:1px solid var(--color-hairline);">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(99,102,241,0.12);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--color-hairline);margin-bottom:2px;">
+                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(99,102,241,0.12);color:#818cf8;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <i data-lucide="store" style="width:18px;height:18px;"></i>
                         </div>
                         <div>
-                            <div style="font-size:13.5px;font-weight:800;color:var(--color-ink);line-height:1.2;">Informasi Toko Mitra &amp; Transaksi</div>
-                            <div style="font-size:11px;color:var(--color-ink-mute);margin-top:1px;">Pilih toko mitra tujuan distribusi dan tanggal penerbitan faktur</div>
+                            <div style="font-size:14px;font-weight:800;color:var(--color-ink);line-height:1.3;">Informasi Toko Mitra &amp; Transaksi</div>
+                            <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;">Pilih toko mitra tujuan distribusi dan tanggal penerbitan faktur</div>
                         </div>
                     </div>
                     <template x-if="selectedCustomer">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="badge flex items-center gap-1.5" style="background:rgba(99,102,241,0.1);color:#4f46e5;border:1px solid rgba(99,102,241,0.25);font-weight:800;font-size:11.5px;padding:4px 10px;border-radius:999px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span class="badge" style="display:inline-flex;align-items:center;gap:6px;background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-weight:800;font-size:11.5px;padding:4px 10px;border-radius:999px;">
                                 <i data-lucide="tag" style="width:13px;height:13px;"></i> Level <span x-text="selectedCustomer.level_harga"></span> (<span x-text="selectedCustomer.nama_grup_harga || 'Standar'"></span>)
                             </span>
                             <template x-if="selectedCustomer.is_konsinyasi">
-                                <span style="background:rgba(225,29,72,0.1);color:#e11d48;border:1px solid rgba(225,29,72,0.22);padding:4px 10px;border-radius:999px;font-weight:800;font-size:11px;text-transform:uppercase;">
+                                <span style="background:rgba(225,29,72,0.1);color:#f43f5e;border:1px solid rgba(225,29,72,0.25);padding:4px 10px;border-radius:999px;font-weight:800;font-size:11px;text-transform:uppercase;">
                                     Titip Jual (Konsinyasi)
                                 </span>
                             </template>
                             <template x-if="!selectedCustomer.is_konsinyasi">
-                                <span style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.22);padding:4px 10px;border-radius:999px;font-weight:800;font-size:11px;text-transform:uppercase;">
+                                <span style="background:rgba(16,185,129,0.1);color:#34d399;border:1px solid rgba(16,185,129,0.25);padding:4px 10px;border-radius:999px;font-weight:800;font-size:11px;text-transform:uppercase;">
                                     Penjualan Reguler
                                 </span>
                             </template>
@@ -790,15 +789,11 @@ ob_start();
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="pt-2 flex flex-col gap-2">
-                        <button type="button" @click="submitOrder(false)" :disabled="isSubmitting || !selectedCustomer || items.length === 0" class="btn btn-primary w-full" style="font-weight:700;height:42px;border-radius:10px;">
+                    <!-- Action Button -->
+                    <div class="pt-2">
+                        <button type="button" @click="submitOrder()" :disabled="isSubmitting || !selectedCustomer || items.length === 0" class="btn btn-primary w-full" style="font-weight:700;height:42px;border-radius:10px;">
                             <i data-lucide="inbox"></i>
                             <span x-text="isSubmitting ? 'Menerbitkan...' : 'Terbitkan PO (Ctrl+Enter)'"></span>
-                        </button>
-                        <button type="button" @click="submitOrder(true)" :disabled="isSubmitting || !selectedCustomer || items.length === 0" class="btn btn-secondary w-full" style="font-weight:700;height:40px;border-radius:10px;">
-                            <i data-lucide="printer"></i>
-                            <span>Terbitkan &amp; Cetak Picking List</span>
                         </button>
                     </div>
                 </div>
@@ -957,7 +952,6 @@ function createSalesOrderApp() {
         selectedCustomer: null,
         showAllProducts: false,
         isSubmitting: false,
-        printDirect: false,
 
         // Dropdown Searchable Toko
         customerDropdownOpen: false,
@@ -1554,7 +1548,7 @@ function createSalesOrderApp() {
             return Math.max(0, subtotalItems - diskonFaktur);
         },
 
-        submitOrder(print = false) {
+        submitOrder() {
             if (!this.header.pelanggan_id) {
                 toast.warning('Mohon pilih Toko Pelanggan terlebih dahulu.');
                 return;
@@ -1582,12 +1576,11 @@ function createSalesOrderApp() {
                 }
             }
 
-            this.printDirect = print;
             this.isSubmitting = true;
 
             const actionText = this.selectedCustomer?.is_konsinyasi 
-                ? (print ? 'Menerbitkan & Menyiapkan Cetak Draf...' : 'Menerbitkan Draf Titip Jual...') 
-                : (print ? 'Menerbitkan & Menyiapkan Cetak PO...' : 'Menerbitkan Purchase Order...');
+                ? 'Menerbitkan Draf Titip Jual...' 
+                : 'Menerbitkan Purchase Order...';
 
             if (window.AppAction) {
                 window.AppAction.show(actionText);

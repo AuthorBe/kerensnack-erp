@@ -6,6 +6,8 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\ActivityLog;
+use App\Helpers\PdfExport;
+use App\Helpers\ExcelExport;
 use Database;
 use Throwable;
 
@@ -33,7 +35,7 @@ class DeliveryController extends Controller
                 SELECT sj.id, sj.nomor_surat_jalan, sj.status_surat_jalan, sj.bukti_terima_foto,
                        sj.nama_penerima_toko, sj.waktu_berangkat, sj.waktu_sampai, sj.dibuat_pada,
                        p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran,
-                       cust.nama_toko, cust.alamat_lengkap as alamat_toko, cust.nomor_whatsapp,
+                       cust.nama_toko, cust.alamat_lengkap as alamat_toko, cust.nomor_whatsapp, cust.is_konsinyasi,
                        COALESCE(driver_sj.nama_karyawan, driver_p.nama_karyawan) as nama_driver,
                        COALESCE(driver_sj.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
                        COALESCE(driver_sj.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
@@ -60,7 +62,7 @@ class DeliveryController extends Controller
             // Ambil pesanan yang berstatus 'siap_dikirim' dan belum dibuatkan surat jalan aktif
             $pendingOrders = Database::fetchAll("
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran,
-                       cust.nama_toko, cust.wilayah_id, w.nama_wilayah
+                       cust.nama_toko, cust.wilayah_id, cust.is_konsinyasi, w.nama_wilayah
                 FROM public.pesanan p
                 JOIN public.pelanggan cust ON p.pelanggan_id = cust.id
                 LEFT JOIN public.wilayah w ON cust.wilayah_id = w.id
@@ -141,7 +143,7 @@ class DeliveryController extends Controller
 
             ActivityLog::log('Logistik', 'CREATE', "Menerbitkan Surat Jalan #{$nomorSj} (Status: {$status})", 'surat_jalan');
 
-            $this->flashSuccess("Surat Jalan <strong>{$nomorSj}</strong> berhasil diterbitkan dan siap dikirim!");
+            $this->flashSuccess("Surat Jalan <strong>{$nomorSj}</strong> berhasil dibuat!");
             $this->redirect('/deliveries');
 
         } catch (Throwable $e) {
@@ -1063,6 +1065,132 @@ class DeliveryController extends Controller
             }
             $this->flashError('Gagal melaporkan pengiriman: ' . $e->getMessage());
             $this->redirect('/driver-deliveries');
+        }
+    }
+
+    /**
+     * Unduh Dokumen Surat Jalan dalam Format PDF (Dompdf Library)
+     */
+    public function pdf(): void
+    {
+        Auth::requirePermission('deliveries.print');
+
+        $id = $this->input('id');
+        $orderId = $this->input('order_id');
+
+        if (empty($id) && empty($orderId)) {
+            $this->redirect('/deliveries');
+            return;
+        }
+
+        try {
+            if (!empty($orderId) && empty($id)) {
+                $sj = Database::fetchOne("SELECT id FROM public.surat_jalan WHERE pesanan_id = :order_id", ['order_id' => $orderId]);
+                $id = $sj['id'] ?? null;
+            }
+
+            $delivery = Database::fetchOne("
+                SELECT sj.*,
+                       p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran, p.catatan as catatan_pesanan,
+                       pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
+                       k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan,
+                       w.nama_wilayah, w.kode_rute
+                FROM public.surat_jalan sj
+                JOIN public.pesanan p ON sj.pesanan_id = p.id
+                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                LEFT JOIN public.karyawan k ON sj.sales_driver_id = k.id
+                LEFT JOIN public.wilayah w ON sj.rute_wilayah_id = w.id
+                WHERE sj.id = :id
+            ", ['id' => $id]);
+
+            if (!$delivery) {
+                $this->flashError('Surat jalan tidak ditemukan.');
+                $this->redirect('/deliveries');
+                return;
+            }
+
+            $items = Database::fetchAll("
+                SELECT ip.*, i.nama_item, i.kode_sku, i.varian_rasa, i.satuan_dasar
+                FROM public.item_pesanan ip
+                JOIN public.item i ON ip.item_id = i.id
+                WHERE ip.pesanan_id = :pesanan_id
+                ORDER BY i.nama_item ASC
+            ", ['pesanan_id' => $delivery['pesanan_id']]);
+
+            ob_start();
+            extract(['delivery' => $delivery, 'items' => $items, 'isPdf' => true]);
+            require ROOT_PATH . '/views/deliveries/print.php';
+            $html = ob_get_clean();
+
+            $cleanSj = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$delivery['nomor_surat_jalan']);
+            PdfExport::download($html, "SuratJalan-{$cleanSj}.pdf", 'A4', 'portrait');
+        } catch (Throwable $e) {
+            $this->flashError('Gagal membuat PDF Surat Jalan: ' . $e->getMessage());
+            $this->redirect('/deliveries/print?id=' . urlencode((string)$id));
+        }
+    }
+
+    /**
+     * Export Riwayat Surat Jalan / Logistik ke File Excel (PhpSpreadsheet)
+     */
+    public function exportExcel(): void
+    {
+        Auth::requirePermission(['deliveries.view_all', 'deliveries.view_assigned']);
+
+        try {
+            $startDate = $this->input('start_date', date('Y-m-01'));
+            $endDate = $this->input('end_date', date('Y-m-d'));
+            $driverId = $this->input('driver_id');
+            $status = $this->input('status');
+
+            $sql = "
+                SELECT sj.*, p.nomor_nota, p.tanggal_pesanan,
+                       pel.nama_toko, pel.kode_pelanggan,
+                       k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan,
+                       w.nama_wilayah
+                FROM public.surat_jalan sj
+                JOIN public.pesanan p ON sj.pesanan_id = p.id
+                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                LEFT JOIN public.karyawan k ON sj.sales_driver_id = k.id
+                LEFT JOIN public.wilayah w ON sj.rute_wilayah_id = w.id
+                WHERE sj.dibuat_pada >= :start AND sj.dibuat_pada <= :end
+            ";
+            $params = ['start' => $startDate . ' 00:00:00', 'end' => $endDate . ' 23:59:59'];
+
+            if (!empty($driverId)) {
+                $sql .= " AND sj.sales_driver_id = :driver_id";
+                $params['driver_id'] = $driverId;
+            }
+            if (!empty($status)) {
+                $sql .= " AND sj.status_surat_jalan = :status";
+                $params['status'] = $status;
+            }
+
+            $sql .= " ORDER BY sj.dibuat_pada DESC";
+            $deliveries = Database::fetchAll($sql, $params);
+
+            $headers = ['No', 'Nomor Surat Jalan', 'Nomor Nota B2B', 'Tanggal Diterbitkan', 'Nama Toko Tujuan', 'Wilayah / Rute', 'Driver / Armada', 'Nomor Polisi', 'Status Pengiriman', 'Penerima Toko'];
+            $rows = [];
+            $no = 1;
+            foreach ($deliveries as $d) {
+                $rows[] = [
+                    $no++,
+                    $d['nomor_surat_jalan'],
+                    $d['nomor_nota'],
+                    date('d/m/Y H:i', strtotime($d['dibuat_pada'])),
+                    $d['nama_toko'],
+                    $d['nama_wilayah'] ?? '-',
+                    $d['nama_driver'] ?? 'Armada Toko',
+                    $d['nomor_polisi_kendaraan'] ?? '-',
+                    strtoupper(str_replace('_', ' ', (string)$d['status_surat_jalan'])),
+                    $d['nama_penerima_toko'] ?? '-'
+                ];
+            }
+
+            ExcelExport::download("Daftar-Surat-Jalan-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Surat Jalan");
+        } catch (Throwable $e) {
+            $this->flashError('Gagal export data surat jalan: ' . $e->getMessage());
+            $this->redirect('/deliveries');
         }
     }
 }

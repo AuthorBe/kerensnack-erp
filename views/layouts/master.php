@@ -36,6 +36,12 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
             var t = localStorage.getItem('ksnack_theme') || 'light';
             if (t === 'dark') document.documentElement.classList.add('dark');
             else document.documentElement.classList.remove('dark');
+
+            try {
+                if (sessionStorage.getItem('app_action_triggered') === 'true') {
+                    document.documentElement.classList.add('has-pending-action');
+                }
+            } catch (e) {}
         })();
     </script>
 
@@ -208,6 +214,7 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
                 </div>
             </div>
             <p id="app-action-loader-text" class="action-loader-text">Menyimpan data...</p>
+            <p id="app-action-loader-subtext" class="action-loader-subtext" style="display:none;"></p>
             <div class="action-loader-track">
                 <div class="action-loader-bar"></div>
             </div>

@@ -24,13 +24,17 @@ ob_start();
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Monitoring stok realtime, status ketersediaan & kartu stok gudang' ?></p>
             </div>
         </div>
-        <div class="page-header-actions">
+        <div class="page-header-actions" style="display:flex; gap:10px; align-items:center;">
             <div class="form-input-icon w-full sm:w-80">
                 <i data-lucide="search" class="icon-left"></i>
                 <input type="text" x-model="searchQuery"
                        placeholder="Cari SKU, Nama atau Barcode..."
                        class="form-input" style="height:40px;">
             </div>
+            <a href="<?= Router::url('/inventory/export-excel') ?>" class="btn btn-secondary" style="height:40px; white-space:nowrap; background:#10b981; color:#fff; border-color:#059669; font-weight:700;">
+                <i data-lucide="file-spreadsheet"></i>
+                <span>Export Excel</span>
+            </a>
         </div>
     </div>
 

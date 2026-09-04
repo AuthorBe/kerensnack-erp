@@ -533,20 +533,39 @@
     }
   }
 
-  // Global Native form.submit() Monkey-Patch (Intersepsi seluruh submit form programmatik via JS / modal / Alpine)
+  // Global Native form.submit() & requestSubmit() Monkey-Patch (Intersepsi seluruh submit form via script / Alpine / modal)
   const _nativeFormSubmit = HTMLFormElement.prototype.submit;
   HTMLFormElement.prototype.submit = function() {
     if (!this.classList.contains('no-loader') && this.getAttribute('target') !== '_blank') {
       const method = (this.getAttribute('method') || 'GET').toUpperCase();
       if (method === 'GET') {
-        AppSkeleton.show('Memuat data...');
+        if (typeof AppAction !== 'undefined') AppAction.hide();
+        if (typeof AppSkeleton !== 'undefined') AppSkeleton.show('Memuat data...');
       } else {
+        if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
         const text = getSmartActionText(this);
-        AppAction.show(text);
+        if (typeof AppAction !== 'undefined') AppAction.show(text);
+        try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (e) {}
       }
     }
     return _nativeFormSubmit.apply(this, arguments);
   };
+
+  if (typeof HTMLFormElement.prototype.requestSubmit === 'function') {
+    const _nativeRequestSubmit = HTMLFormElement.prototype.requestSubmit;
+    HTMLFormElement.prototype.requestSubmit = function(submitter) {
+      if (!this.classList.contains('no-loader') && this.getAttribute('target') !== '_blank') {
+        const method = (this.getAttribute('method') || 'GET').toUpperCase();
+        if (method !== 'GET') {
+          if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+          const text = getSmartActionText(this);
+          if (typeof AppAction !== 'undefined') AppAction.show(text);
+          try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (e) {}
+        }
+      }
+      return _nativeRequestSubmit.apply(this, arguments);
+    };
+  }
 
   // Global Declarative data-confirm form submit interceptor
   document.addEventListener('submit', async (e) => {
@@ -571,9 +590,11 @@
 
       if (confirmed) {
         form.removeAttribute('data-confirm'); // prevent infinite loop
+        if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
         const customText = getSmartActionText(form);
-        AppAction.show(customText);
-        form.submit();
+        if (typeof AppAction !== 'undefined') AppAction.show(customText);
+        try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (err) {}
+        _nativeFormSubmit.call(form);
       }
     }
   });
@@ -634,7 +655,7 @@
       }
     },
 
-    show(text = 'Menyimpan data...') {
+    show(text = 'Menyimpan data...', subtext = '') {
       this._active = true;
       try {
         sessionStorage.setItem('app_action_triggered', 'true');
@@ -647,6 +668,7 @@
 
       const loader = document.getElementById('app-action-loader');
       const textEl = document.getElementById('app-action-loader-text');
+      const subtextEl = document.getElementById('app-action-loader-subtext');
       if (!loader) return;
 
       clearTimeout(this.safetyTimer);
@@ -654,6 +676,14 @@
 
       if (textEl && text) {
         textEl.textContent = text;
+      }
+      if (subtextEl) {
+        if (subtext) {
+          subtextEl.textContent = subtext;
+          subtextEl.style.display = 'block';
+        } else {
+          subtextEl.style.display = 'none';
+        }
       }
 
       loader.classList.add('is-active');
@@ -663,7 +693,13 @@
       }, 15000);
     },
 
-    success(text = 'Berhasil Disimpan! ✨', duration = 850) {
+    success(text = 'Berhasil Disimpan! ✨', subtext = '', duration = 1500) {
+      // Jika argumen kedua adalah angka (duration), sesuaikan untuk backwards compatibility
+      if (typeof subtext === 'number') {
+        duration = subtext;
+        subtext = '';
+      }
+
       this._active = false;
       try {
         sessionStorage.removeItem('app_action_triggered');
@@ -672,6 +708,7 @@
       return new Promise((resolve) => {
         const loader = document.getElementById('app-action-loader');
         const textEl = document.getElementById('app-action-loader-text');
+        const subtextEl = document.getElementById('app-action-loader-subtext');
         if (!loader) {
           resolve();
           return;
@@ -683,17 +720,39 @@
         if (textEl && text) {
           textEl.textContent = text;
         }
+        if (subtextEl) {
+          if (subtext) {
+            subtextEl.textContent = subtext;
+            subtextEl.style.display = 'block';
+          } else {
+            subtextEl.style.display = 'none';
+          }
+        }
 
         loader.classList.add('is-active', 'is-success');
 
+        // Tap/click to dismiss immediately
+        const clickDismiss = () => {
+          loader.removeEventListener('click', clickDismiss);
+          this.hide();
+          resolve();
+        };
+        loader.addEventListener('click', clickDismiss, { once: true });
+
         setTimeout(() => {
+          loader.removeEventListener('click', clickDismiss);
           this.hide();
           resolve();
         }, duration);
       });
     },
 
-    error(text = 'Gagal memproses data!', duration = 1400) {
+    error(text = 'Gagal memproses data!', subtext = '', duration = 2200) {
+      if (typeof subtext === 'number') {
+        duration = subtext;
+        subtext = '';
+      }
+
       this._active = false;
       try {
         sessionStorage.removeItem('app_action_triggered');
@@ -702,6 +761,7 @@
       return new Promise((resolve) => {
         const loader = document.getElementById('app-action-loader');
         const textEl = document.getElementById('app-action-loader-text');
+        const subtextEl = document.getElementById('app-action-loader-subtext');
         if (!loader) {
           resolve();
           return;
@@ -713,35 +773,133 @@
         if (textEl && text) {
           textEl.textContent = text;
         }
+        if (subtextEl) {
+          if (subtext) {
+            subtextEl.textContent = subtext;
+            subtextEl.style.display = 'block';
+          } else {
+            subtextEl.style.display = 'none';
+          }
+        }
 
         loader.classList.add('is-active', 'is-error');
 
+        // Tap/click to dismiss immediately
+        const clickDismiss = () => {
+          loader.removeEventListener('click', clickDismiss);
+          this.hide();
+          resolve();
+        };
+        loader.addEventListener('click', clickDismiss, { once: true });
+
         setTimeout(() => {
+          loader.removeEventListener('click', clickDismiss);
           this.hide();
           resolve();
         }, duration);
       });
     },
 
-    fail(text, duration) {
-      return this.error(text, duration);
+    fail(text, subtext, duration) {
+      return this.error(text, subtext, duration);
     },
 
     hide() {
-      this._active = false;
-      try {
-        sessionStorage.removeItem('app_action_triggered');
-      } catch (e) {}
       clearTimeout(this.safetyTimer);
       const loader = document.getElementById('app-action-loader');
       if (loader) {
         loader.classList.remove('is-active');
         setTimeout(() => {
           loader.classList.remove('is-success', 'is-error');
+          const subtextEl = document.getElementById('app-action-loader-subtext');
+          if (subtextEl) subtextEl.style.display = 'none';
         }, 250);
       }
     }
   };
+
+  // Smart Parser: Mengubah pesan server mentah menjadi Judul Elegan + Subtitle Kartu Tengah
+  function formatSmartFeedback(rawMsg, isSuccess = true) {
+    if (!rawMsg) {
+      return {
+        title: isSuccess ? 'Berhasil Disimpan! ✨' : 'Terjadi Kesalahan!',
+        subtext: ''
+      };
+    }
+    const msg = String(rawMsg).trim();
+    const lower = msg.toLowerCase();
+
+    if (isSuccess) {
+      let title = 'Berhasil Diproses! ✨';
+      let subtext = '';
+
+      if (lower.includes('surat jalan') || lower.includes('surat_jalan')) {
+        if (lower.includes('disetujui') || lower.includes('approved') || lower.includes('diberangkatkan')) {
+          title = 'Surat Jalan Disetujui! ✨';
+          subtext = 'Armada / driver dapat memulai pengiriman.';
+        } else if (lower.includes('dimulai')) {
+          title = 'Pengiriman Dimulai! 🚚';
+          subtext = 'Driver dalam perjalanan menuju lokasi pelanggan.';
+        } else if (lower.includes('selesai') || lower.includes('diselesaikan')) {
+          title = 'Pengiriman Selesai! 🎉';
+          subtext = 'Pesanan telah berhasil diterima pelanggan.';
+        } else if (lower.includes('diperbarui') || lower.includes('diubah') || lower.includes('update')) {
+          title = 'Surat Jalan Diperbarui! ✨';
+          subtext = 'Status dan data pengiriman berhasil diperbarui.';
+        } else {
+          title = 'Surat Jalan Berhasil Dibuat! ✨';
+          const sjMatch = msg.match(/SJ-[A-Z0-9\-]+/i);
+          subtext = sjMatch ? `Nomor ${sjMatch[0]} siap untuk proses pengiriman.` : 'Dokumen surat jalan telah berhasil dibuat.';
+        }
+      } else if (lower.includes('disiapkan') || lower.includes('siap dikirim') || lower.includes('siap kirim')) {
+        title = 'PO Berhasil Disiapkan! ✨';
+        subtext = 'Stok fisik gudang telah terpotong.';
+      } else if (lower.includes('terbit') || lower.includes('diterbitkan') || lower.includes('masuk ke antrean')) {
+        title = 'PO Berhasil Diterbitkan! ✨';
+        subtext = 'Pesanan masuk ke antrean daftar PO gudang.';
+      } else if (lower.includes('checkout') || lower.includes('transaksi')) {
+        title = 'Transaksi Berhasil! ✨';
+      } else if (lower.includes('dihapus') || lower.includes('delete')) {
+        title = 'Data Berhasil Dihapus! ✨';
+      } else if (lower.includes('diperbarui') || lower.includes('diubah') || lower.includes('update')) {
+        title = 'Data Berhasil Diperbarui! ✨';
+      } else if (lower.includes('disimpan') || lower.includes('ditambahkan') || lower.includes('simpan')) {
+        title = 'Data Berhasil Disimpan! ✨';
+      } else if (lower.includes('reset')) {
+        title = 'Berhasil Direset! ✨';
+      }
+
+      // Ambil nomor nota atau referensi jika ada
+      const poMatch = msg.match(/(?:PO|Nota)\s*#?([A-Z0-9\-_]+)/i);
+      if (poMatch && poMatch[0] && !subtext) {
+        subtext = `${poMatch[0]} siap diproses.`;
+      }
+
+      return { title, subtext };
+    } else {
+      // Gagal / Error
+      let title = 'Gagal Memproses Data!';
+      let subtext = msg;
+
+      if (lower.includes('stok') && (lower.includes('kurang') || lower.includes('tidak cukup') || lower.includes('mencukupi') || lower.includes('defisit'))) {
+        title = 'Stok Gudang Tidak Cukup!';
+      } else if (lower.includes('ditolak') || lower.includes('melebihi')) {
+        title = 'Transaksi Ditolak Sistem!';
+      } else if (lower.includes('tidak ditemukan')) {
+        title = 'Data Tidak Ditemukan!';
+      } else if (lower.includes('terdaftar') || lower.includes('duplikat') || lower.includes('sudah digunakan')) {
+        title = 'Data Sudah Digunakan!';
+      } else if (lower.includes('izin') || lower.includes('akses') || lower.includes('dibatasi')) {
+        title = 'Akses Dibatasi!';
+      }
+
+      if (subtext.length > 85) {
+        subtext = subtext.substring(0, 82) + '...';
+      }
+
+      return { title, subtext };
+    }
+  }
 
   // Global Exports
   window.AppSkeleton = AppSkeleton;
@@ -755,6 +913,10 @@
     if (isInitialSkeletonDismissed) return;
     isInitialSkeletonDismissed = true;
 
+    try {
+      document.documentElement.classList.remove('has-pending-action');
+    } catch (e) {}
+
     // Check whether a form/action was explicitly submitted (for page-navigation uses)
     let hadAction = false;
     try {
@@ -764,23 +926,25 @@
 
     const flash = window.__FLASH__;
 
-    // Always animate AppAction if there's a server flash — regardless of hadAction.
-    // This covers: data-confirm forms, modal-submit forms, Alpine-rendered forms,
-    // and any redirect from a backend action that produces a flash message.
+    // Tampilkan Animasi di Tengah Layar (Gaya Kasir POS) untuk Seluruh Notifikasi Server
     if (flash && (flash.type === 'error' || flash.type === 'danger')) {
       AppSkeleton.hide();
-      // Suppress corner toast so the animated orb is the sole feedback channel
-      _suppressToast();
-      AppAction.error(flash.message || 'Terjadi Kesalahan!', 1600);
+      const feedback = formatSmartFeedback(flash.message, false);
+      AppAction.error(feedback.title, feedback.subtext, 2200);
     } else if (flash && flash.type === 'success') {
       AppSkeleton.hide();
-      _suppressToast();
-      AppAction.success(flash.message || 'Berhasil! ✨', 1200);
+      const feedback = formatSmartFeedback(flash.message, true);
+      AppAction.success(feedback.title, feedback.subtext, 1500);
     } else if (flash && (flash.type === 'warning' || flash.type === 'info')) {
       AppSkeleton.hide();
-      // For warnings and info, keep the corner toast (they are informational, not action results)
-      _showToast();
+      if (typeof window.showToast === 'function') {
+        window.showToast(flash.message, flash.type, 4500);
+      }
       setTimeout(() => { AppAction.hide(); }, 100);
+    } else if (hadAction) {
+      // Jika sebelumnya ada aksi form CRUD POST namun tidak ada flash message dari backend
+      AppSkeleton.hide();
+      AppAction.success('Aksi Berhasil Diproses! ✨', '', 1200);
     } else {
       setTimeout(() => {
         AppSkeleton.hide();
@@ -788,39 +952,6 @@
       }, 120);
     }
   };
-
-  // Suppress the PHP-flash corner toast element so the kinetic orb is the sole feedback channel
-  function _suppressToast() {
-    try {
-      const el = document.getElementById('php-flash-toast');
-      if (el) {
-        el.style.transition = 'none';
-        el.style.opacity = '0';
-        setTimeout(() => { if (el.parentNode) el.remove(); }, 10);
-      }
-    } catch (e) {}
-  }
-
-  // Re-show the PHP-flash corner toast for non-action feedback (info/warning)
-  function _showToast() {
-    try {
-      const el = document.getElementById('php-flash-toast');
-      if (el) {
-        el.style.animation = 'toastSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards';
-        el.style.pointerEvents = '';
-        el.style.opacity = '';
-        // Auto-hide after 5 seconds
-        setTimeout(() => {
-          if (el.parentNode) {
-            el.style.opacity = '0';
-            el.style.transform = 'translateY(-8px) scale(0.96)';
-            el.style.transition = 'all 0.2s ease';
-            setTimeout(() => { if (el.parentNode) el.remove(); }, 200);
-          }
-        }, 5000);
-      }
-    } catch (e) {}
-  }
 
   if (document.readyState === 'complete') {
     dismissInitialSkeleton();
@@ -834,13 +965,19 @@
   // Restore on bfcache (Back/Forward navigation)
   window.addEventListener('pageshow', (event) => {
     AppSkeleton.hide();
-    AppAction.hide();
+    if (!AppAction.isActive() && !window.__FLASH__) {
+      AppAction.hide();
+    }
   });
 
   // Intercept Refresh / Page Reload (F5, Ctrl+R, Reload button)
   window.addEventListener('beforeunload', () => {
-    // Jika proses aksi CRUD (AppAction) sedang aktif, pertahankan AppAction dan JANGAN timpa dengan AppSkeleton!
+    // Jika proses aksi CRUD (AppAction) sedang aktif atau ada submit in-flight, JANGAN PERNAH timpa dengan AppSkeleton!
     if (AppAction.isActive()) {
+      const pageLoader = document.getElementById('app-page-skeleton') || document.getElementById('app-page-loader');
+      if (pageLoader) {
+        pageLoader.classList.remove('is-active');
+      }
       return;
     }
     const loader = document.getElementById('app-page-skeleton') || document.getElementById('app-page-loader');
@@ -874,6 +1011,7 @@
         if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) {
           return;
         }
+        AppAction.hide();
         AppSkeleton.show('Memuat halaman...');
       }
     } catch (err) {}
@@ -882,7 +1020,18 @@
   // Intercept standard form submissions -> Trigger Action Blur Processing Loader (POST) or Skeleton (GET)
   document.addEventListener('submit', (e) => {
     const form = e.target;
-    if (e.defaultPrevented || !form || form.classList.contains('no-loader') || form.getAttribute('target') === '_blank') {
+    if (!form || !form.tagName || form.tagName.toLowerCase() !== 'form') return;
+    if (e.defaultPrevented || form.classList.contains('no-loader') || form.getAttribute('target') === '_blank') {
+      return;
+    }
+
+    // Form dengan data-confirm ditangani secara terpisah oleh listener data-confirm
+    if (form.hasAttribute('data-confirm')) {
+      return;
+    }
+
+    // Validasi form HTML5 bawaan: jika belum valid, jangan jalankan loader
+    if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
       return;
     }
 
@@ -890,18 +1039,18 @@
     
     // 1. Form GET (Filter, Pencarian, Parameter Laporan) -> Trigger Page Transition Skeleton
     if (method === 'GET') {
+      AppAction.hide();
       AppSkeleton.show('Memuat data...');
       return;
     }
 
-    // 2. Form dengan data-confirm akan diproses oleh listener data-confirm setelah dialog dikonfirmasi
-    if (form.hasAttribute('data-confirm')) {
-      return;
-    }
-
-    // 3. Form POST / PUT / DELETE (Operasi CRUD) -> Trigger AppAction Processing Loader
+    // 2. Form POST / PUT / DELETE (Operasi CRUD) -> Trigger AppAction Processing Loader
+    AppSkeleton.hide();
     const customText = getSmartActionText(form);
     AppAction.show(customText);
+    try {
+      sessionStorage.setItem('app_action_triggered', 'true');
+    } catch (err) {}
   });
 
   // Escape key cancels loaders in emergency
@@ -950,7 +1099,15 @@
     handleInput(e) {
       const input = e.target;
       if (!input || !input.matches) return;
-      if (!input.matches('input.input-rupiah, input.input-currency, input[data-rupiah], input[data-currency]')) return;
+      if (!input.matches('input.input-rupiah, input.input-currency, input.format-rupiah, input.currency-input, input[data-rupiah], input[data-currency], input[data-type="currency"]')) return;
+
+      // Jika input awalnya bertipe number, ubah ke text numeric agar browser mengizinkan titik pemisah ribuan
+      if (input.type === 'number') {
+        try {
+          input.type = 'text';
+          input.inputMode = 'numeric';
+        } catch (err) {}
+      }
 
       const originalValue = input.value;
       const cursorPosition = input.selectionStart || 0;
@@ -972,6 +1129,9 @@
       if (digitsBeforeCursor === 0) newCursorPos = 0;
       input.setSelectionRange(newCursorPos, newCursorPos);
 
+      // Simpan raw value di dataset
+      input.dataset.rawValue = RupiahFormatter.unformat(formatted);
+
       input.dispatchEvent(new CustomEvent('rupiah-change', {
         bubbles: true,
         detail: {
@@ -981,9 +1141,26 @@
       }));
     },
 
+    handleFocus(e) {
+      const input = e.target;
+      if (!input || !input.matches) return;
+      if (!input.matches('input.input-rupiah, input.input-currency, input.format-rupiah, input.currency-input, input[data-rupiah], input[data-currency], input[data-type="currency"]')) return;
+
+      if (input.type === 'number') {
+        try {
+          input.type = 'text';
+          input.inputMode = 'numeric';
+          if (input.value) {
+            input.value = RupiahFormatter.format(input.value);
+          }
+        } catch (err) {}
+      }
+    },
+
     init() {
-      // Zero MutationObserver! Pure single event-listener on document
+      // Pure delegated event listeners on document
       document.addEventListener('input', this.handleInput, { passive: true });
+      document.addEventListener('focusin', this.handleFocus, { passive: true });
     }
   };
 
@@ -991,6 +1168,14 @@
   window.formatRupiah = (val) => 'Rp ' + Number(val || 0).toLocaleString('id-ID');
   window.formatRupiahNumber = (val) => RupiahFormatter.format(val);
   window.unformatRupiah = (val) => RupiahFormatter.unformat(val);
+  window.attachRupiahMask = (el) => {
+    if (!el) return;
+    el.classList.add('input-rupiah');
+    if (el.type === 'number') {
+      try { el.type = 'text'; el.inputMode = 'numeric'; } catch (e) {}
+    }
+    if (el.value) el.value = RupiahFormatter.format(el.value);
+  };
 
   /* =====================================================================
      8. GLOBAL MOUSE DRAG & GRAB-TO-SCROLL (Desktop & Touchscreen Laptops)

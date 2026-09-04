@@ -2,46 +2,24 @@
 use App\Helpers\Flash;
 
 $flash = Flash::get();
-$iconMap = [
-    'success' => 'check-circle',
-    'error'   => 'x-circle',
-    'warning' => 'alert-triangle',
-    'info'    => 'info',
-];
 ?>
-<!-- GLOBAL TOAST NOTIFICATION CONTAINER -->
-<div id="toast-container" class="toast-container">
-    <?php if ($flash): ?>
-    <div class="toast toast-<?= htmlspecialchars($flash['type']) ?>" id="php-flash-toast" style="opacity:0; pointer-events:none; animation:none;">
-        <i data-lucide="<?= htmlspecialchars($iconMap[$flash['type']] ?? 'info') ?>" class="toast-icon"></i>
-        <span class="toast-msg"><?= $flash['message'] ?></span>
-        <button class="toast-close" onclick="this.closest('.toast').remove()" aria-label="Tutup">
-            <i data-lucide="x"></i>
-        </button>
-    </div>
-    <script>
-        window.__FLASH__ = <?= json_encode([
-            'type' => $flash['type'],
-            'message' => strip_tags($flash['message']),
-            'raw_message' => $flash['message']
-        ]) ?>;
-    </script>
-    <?php else: ?>
-    <script>
-        window.__FLASH__ = null;
-    </script>
-    <?php endif; ?>
-</div>
+<!-- GLOBAL TOAST NOTIFICATION CONTAINER (Utility container for JS toasts) -->
+<div id="toast-container" class="toast-container"></div>
+
+<script>
+    window.__FLASH__ = <?= $flash ? json_encode([
+        'type' => $flash['type'],
+        'message' => strip_tags($flash['message']),
+        'raw_message' => $flash['message']
+    ]) : 'null' ?>;
+</script>
 
 <script>
 /**
  * Global Antigravity Toast Notification Engine
- * Usage:
- *   showToast('Pesan notifikasi', 'success'|'error'|'warning'|'info', 4500);
- *   toast.success('Berhasil disimpan!');
- *   toast.warning('Mohon pilih driver pengiriman.');
+ * Bulletproof SVG Icons (0% dependency on Lucide initialization delay)
  */
-window.showToast = function(message, type = 'info', duration = 4500) {
+window.showToast = function(message, type = 'info', duration = 4800) {
     var container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -50,28 +28,27 @@ window.showToast = function(message, type = 'info', duration = 4500) {
         document.body.appendChild(container);
     }
 
-    var icons = {
-        success: 'check-circle',
-        error: 'x-circle',
-        warning: 'alert-triangle',
-        info: 'info'
+    var normalizedType = (type === 'danger' || type === 'error') ? 'error' : type;
+    var svgs = {
+        success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>',
+        error:   '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>',
+        warning: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+        info:    '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
     };
 
     var toastEl = document.createElement('div');
-    toastEl.className = 'toast toast-' + type;
-    toastEl.innerHTML = `
-        <i data-lucide="${icons[type] || 'info'}" class="toast-icon"></i>
-        <span class="toast-msg">${message}</span>
-        <button class="toast-close" onclick="this.closest('.toast').remove()" aria-label="Tutup">
-            <i data-lucide="x"></i>
-        </button>
-    `;
+    toastEl.className = 'toast toast-' + normalizedType;
+    toastEl.style.animation = 'toastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+    toastEl.innerHTML = (svgs[normalizedType] || svgs.info) + 
+        '<span class="toast-msg">' + message + '</span>' +
+        '<button class="toast-close" onclick="this.closest(\'.toast\').remove()" aria-label="Tutup">' +
+            '<svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<line x1="18" y1="6" x2="6" y2="18"></line>' +
+                '<line x1="6" y1="6" x2="18" y2="18"></line>' +
+            '</svg>' +
+        '</button>';
 
     container.appendChild(toastEl);
-
-    if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
-        lucide.createIcons();
-    }
 
     if (duration > 0) {
         setTimeout(function() {
@@ -88,9 +65,21 @@ window.showToast = function(message, type = 'info', duration = 4500) {
 };
 
 window.toast = {
-    success: function(msg, dur) { window.showToast(msg, 'success', dur || 4500); },
-    error: function(msg, dur) { window.showToast(msg, 'error', dur || 5000); },
-    warning: function(msg, dur) { window.showToast(msg, 'warning', dur || 4500); },
-    info: function(msg, dur) { window.showToast(msg, 'info', dur || 4000); }
+    success: function(msg, dur) {
+        if (window.AppAction && typeof window.AppAction.success === 'function') {
+            window.AppAction.success(msg);
+        } else {
+            window.showToast(msg, 'success', dur || 4800);
+        }
+    },
+    error: function(msg, dur) {
+        if (window.AppAction && typeof window.AppAction.error === 'function') {
+            window.AppAction.error(msg);
+        } else {
+            window.showToast(msg, 'error', dur || 5000);
+        }
+    },
+    warning: function(msg, dur) { window.showToast(msg, 'warning', dur || 4800); },
+    info: function(msg, dur) { window.showToast(msg, 'info', dur || 4200); }
 };
 </script>

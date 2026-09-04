@@ -202,8 +202,20 @@ use App\Helpers\Format;
         }
 
         .btn-print {
+            background: #0f172a;
+            color: #ffffff;
+        }
+
+        .btn-pdf {
+            background: #dc2626;
+            color: #ffffff;
+            text-decoration: none;
+        }
+
+        .btn-excel {
             background: #059669;
             color: #ffffff;
+            text-decoration: none;
         }
 
         .btn-back {
@@ -231,15 +243,20 @@ use App\Helpers\Format;
 </head>
 <body>
 
+    <?php if (empty($isPdf)): ?>
     <!-- Floating Action Buttons -->
     <div class="action-bar">
         <a href="<?= Router::url('/customer-orders') ?>" class="btn btn-back">
             <span>&larr; Kembali</span>
         </a>
-        <button onclick="window.print()" class="btn btn-print">
-            <span>🖨️ Cetak Faktur (Print)</span>
-        </button>
+        <a href="<?= Router::url('/customer-orders/invoice/pdf?id=' . $order['id']) ?>" class="btn btn-pdf">
+            <span>📄 Unduh PDF</span>
+        </a>
+        <a href="<?= Router::url('/customer-orders/invoice/excel?id=' . $order['id']) ?>" class="btn btn-excel">
+            <span>📊 Unduh Excel</span>
+        </a>
     </div>
+    <?php endif; ?>
 
 <?php
 $isKonsinyasi = !empty($order['is_konsinyasi']) || (($order['tipe_pembayaran'] ?? '') === 'konsinyasi') || (isset($order['adalah_tagihan']) && ($order['adalah_tagihan'] === false || $order['adalah_tagihan'] === 'f' || $order['adalah_tagihan'] === 0 || $order['adalah_tagihan'] === 'false'));
@@ -407,16 +424,6 @@ $isKonsinyasi = !empty($order['is_konsinyasi']) || (($order['tipe_pembayaran'] ?
             </div>
         </div>
     </div>
-
-    <?php if (!empty($autoPrint)): ?>
-    <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                window.print();
-            }, 400);
-        });
-    </script>
-    <?php endif; ?>
 
 </body>
 </html>

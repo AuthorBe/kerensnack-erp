@@ -22,6 +22,12 @@ ob_start();
                 <p class="page-subtitle text-xs sm:text-sm">Daftar faktur hasil penjualan konsinyasi yang belum dilunasi oleh toko mitra.</p>
             </div>
         </div>
+        <div class="page-header-actions">
+            <a href="<?= Router::url('/consignment/piutang/export-excel') ?>" class="btn btn-secondary" style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; border-radius:12px; display:inline-flex; align-items:center; gap:6px;">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                <span>Export Excel</span>
+            </a>
+        </div>
     </div>
 
     <!-- SUMMARY METRIC -->

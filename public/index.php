@@ -38,7 +38,11 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
 }
 
-// 2. Autoloader
+// 2. Autoloader (Composer Vendor & App PSR-4)
+if (file_exists(ROOT_PATH . '/vendor/autoload.php')) {
+    require_once ROOT_PATH . '/vendor/autoload.php';
+}
+
 spl_autoload_register(function (string $class) {
     $prefix = 'App\\';
     $baseDir = ROOT_PATH . '/app/';
@@ -104,9 +108,15 @@ Router::post('/api/pos/checkout', [PosController::class, 'checkout']);
 
 // --- TRANSAKSI 2: PESANAN PELANGGAN (FAKTUR B2B & DAFTAR PO) ---
 Router::get('/customer-orders', [CustomerOrderController::class, 'index']);
+Router::get('/customer-orders/export/excel', [CustomerOrderController::class, 'exportExcel']);
 Router::get('/customer-orders/po-list', [CustomerOrderController::class, 'poList']);
+Router::get('/customer-orders/po-list/batch-pdf', [CustomerOrderController::class, 'batchPickingListPdf']);
+Router::post('/customer-orders/po-list/batch-pdf', [CustomerOrderController::class, 'batchPickingListPdf']);
 Router::post('/customer-orders/process-po', [CustomerOrderController::class, 'processPoToReady']);
 Router::get('/customer-orders/picking-list', [CustomerOrderController::class, 'printPickingList']);
+Router::get('/customer-orders/picking-list/pdf', [CustomerOrderController::class, 'pickingListPdf']);
+Router::get('/customer-orders/picking-list/batch-pdf', [CustomerOrderController::class, 'batchPickingListPdf']);
+Router::post('/customer-orders/picking-list/batch-pdf', [CustomerOrderController::class, 'batchPickingListPdf']);
 Router::post('/customer-orders/retry-delivery', [CustomerOrderController::class, 'retryDelivery']);
 Router::get('/customer-orders/create', [CustomerOrderController::class, 'create']);
 Router::post('/customer-orders/store', [CustomerOrderController::class, 'store']);
@@ -114,6 +124,8 @@ Router::get('/customer-orders/edit', [CustomerOrderController::class, 'edit']);
 Router::post('/customer-orders/update', [CustomerOrderController::class, 'update']);
 Router::get('/customer-orders/detail-ajax', [CustomerOrderController::class, 'detailAjax']);
 Router::get('/customer-orders/invoice', [CustomerOrderController::class, 'invoice']);
+Router::get('/customer-orders/invoice/pdf', [CustomerOrderController::class, 'invoicePdf']);
+Router::get('/customer-orders/invoice/excel', [CustomerOrderController::class, 'invoiceExcel']);
 Router::get('/customer-orders/print', [CustomerOrderController::class, 'invoice']);
 Router::post('/customer-orders/pay', [CustomerOrderController::class, 'pay']);
 Router::post('/customer-orders/cancel', [CustomerOrderController::class, 'cancel']);
@@ -121,12 +133,16 @@ Router::post('/customer-orders/update-delivery-status', [CustomerOrderController
 
 // Alias / Compatibility Routes untuk Sales Orders
 Router::get('/sales-orders', [CustomerOrderController::class, 'index']);
+Router::get('/sales-orders/export/excel', [CustomerOrderController::class, 'exportExcel']);
 Router::get('/sales-orders/create', [CustomerOrderController::class, 'create']);
 Router::post('/sales-orders/store', [CustomerOrderController::class, 'store']);
 Router::get('/sales-orders/edit', [CustomerOrderController::class, 'edit']);
 Router::post('/sales-orders/update', [CustomerOrderController::class, 'update']);
 Router::get('/sales-orders/detail-ajax', [CustomerOrderController::class, 'detailAjax']);
 Router::get('/sales-orders/invoice', [CustomerOrderController::class, 'invoice']);
+Router::get('/sales-orders/invoice/pdf', [CustomerOrderController::class, 'invoicePdf']);
+Router::get('/sales-orders/invoice/excel', [CustomerOrderController::class, 'invoiceExcel']);
+Router::get('/sales-orders/picking-list/pdf', [CustomerOrderController::class, 'pickingListPdf']);
 Router::get('/sales-orders/print', [CustomerOrderController::class, 'invoice']);
 Router::post('/sales-orders/pay', [CustomerOrderController::class, 'pay']);
 Router::post('/sales-orders/cancel', [CustomerOrderController::class, 'cancel']);
@@ -142,6 +158,7 @@ Router::post('/pricing/delete-group', [PricingController::class, 'deleteCustomer
 
 // --- GUDANG 1: KATALOG & OPNAME STOK FISIK ---
 Router::get('/inventory', [InventoryController::class, 'index']);
+Router::get('/inventory/export-excel', [InventoryController::class, 'exportExcel']);
 Router::post('/inventory/adjust', [InventoryController::class, 'adjustStock']);
 Router::post('/inventory/waste', [InventoryController::class, 'recordWaste']);
 
@@ -157,7 +174,9 @@ Router::post('/driver-deliveries/fail', [DeliveryController::class, 'failDeliver
 
 // --- DELIVERY 2: SURAT JALAN PENGIRIMAN ---
 Router::get('/deliveries', [DeliveryController::class, 'index']);
+Router::get('/deliveries/export/excel', [DeliveryController::class, 'exportExcel']);
 Router::get('/deliveries/print', [DeliveryController::class, 'print']);
+Router::get('/deliveries/pdf', [DeliveryController::class, 'pdf']);
 Router::post('/deliveries/store', [DeliveryController::class, 'store']);
 Router::post('/deliveries/approve', [DeliveryController::class, 'approve']);
 Router::post('/deliveries/update-status', [DeliveryController::class, 'updateStatus']);
@@ -170,7 +189,9 @@ Router::post('/consignment/opname/proses', [ConsignmentController::class, 'opnam
 Router::get('/consignment/opname/hasil', [ConsignmentController::class, 'hasilKunjungan']);
 Router::post('/consignment/konfirmasi-terima', [ConsignmentController::class, 'konfirmasiTerima']);
 Router::get('/consignment/laporan-penjualan', [ConsignmentController::class, 'laporanPenjualan']);
+Router::get('/consignment/laporan-penjualan/export-excel', [ConsignmentController::class, 'exportSalesExcel']);
 Router::get('/consignment/piutang', [ConsignmentController::class, 'piutang']);
+Router::get('/consignment/piutang/export-excel', [ConsignmentController::class, 'exportPiutangExcel']);
 Router::post('/consignment/piutang/bayar', [ConsignmentController::class, 'catatPembayaran']);
 Router::get('/consignment/assignment-sales', [ConsignmentController::class, 'assignmentSales']);
 Router::post('/consignment/assignment-sales/save', [ConsignmentController::class, 'saveAssignment']);
@@ -191,7 +212,9 @@ Router::get('/consignment/summary', function () {
 // --- KEUANGAN & KAS: BUKU KAS, TRANSAKSI & LAPORAN ARUS KAS ---
 Router::get('/cash', [CashController::class, 'index']);
 Router::get('/cash/transactions', [CashController::class, 'transactions']);
+Router::get('/cash/transactions/export-excel', [CashController::class, 'exportTransactionsExcel']);
 Router::get('/cash/reports', [CashController::class, 'reports']);
+Router::get('/cash/reports/export-excel', [CashController::class, 'exportReportsExcel']);
 Router::post('/cash/store-account', [CashController::class, 'storeAccount']);
 Router::post('/cash/update-account', [CashController::class, 'updateAccount']);
 Router::post('/cash/store-inflow', [CashController::class, 'storeInflow']);

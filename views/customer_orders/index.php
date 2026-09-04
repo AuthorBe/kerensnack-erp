@@ -24,7 +24,11 @@ ob_start();
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Daftar Transaksi & Faktur Penjualan Toko Mitra' ?></p>
             </div>
         </div>
-        <div class="page-header-actions">
+        <div class="page-header-actions" style="display:flex; gap:8px;">
+            <a href="<?= Router::url('/customer-orders/export/excel?' . http_build_query($filter)) ?>" class="btn btn-secondary" style="font-weight:700; background:#10b981; color:#fff; border-color:#059669;">
+                <i data-lucide="file-spreadsheet"></i>
+                <span>Export Excel</span>
+            </a>
             <a href="<?= Router::url('/customer-orders/create') ?>" class="btn btn-primary" style="font-weight:700;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Penjualan Baru</span>
@@ -99,7 +103,12 @@ ob_start();
     <!-- FILTER BAR (IPOS STYLE)                                                   -->
     <!-- ========================================================================= -->
     <div class="card p-4">
-        <form action="<?= Router::url('/customer-orders') ?>" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+        <form action="<?= Router::url('/customer-orders') ?>" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 items-end">
+            <div>
+                <label class="form-label" style="font-size:11px;">Cari No. Nota / Toko</label>
+                <input type="text" name="q" value="<?= htmlspecialchars($filter['q'] ?? '') ?>" placeholder="Ketik nota / toko..." class="form-input" style="height:36px;font-size:12.5px;">
+            </div>
+
             <div>
                 <label class="form-label" style="font-size:11px;">Dari Tanggal</label>
                 <input type="date" name="start_date" value="<?= htmlspecialchars($filter['start_date']) ?>" class="form-input font-mono" style="height:36px;font-size:12.5px;">
@@ -443,10 +452,17 @@ ob_start();
                     <div style="min-width:0;flex:1;">
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <span class="font-mono font-black" style="font-size:16px;color:var(--color-ink);letter-spacing:-0.02em;" x-text="orderDetail?.nomor_nota"></span>
-                            <span class="badge" 
-                                  :class="orderDetail?.status_pembayaran === 'lunas' ? 'badge-success' : 'badge-warning'" 
-                                  style="font-size:10px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;" 
-                                  x-text="orderDetail?.status_pembayaran === 'lunas' ? 'LUNAS' : 'BELUM LUNAS'"></span>
+                            <template x-if="orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.adalah_tagihan === false || orderDetail?.adalah_tagihan === 'false'">
+                                <span class="badge" style="background:rgba(225,29,72,0.1);color:#e11d48;border:1px solid rgba(225,29,72,0.22);font-weight:800;font-size:10px;padding:2px 8px;border-radius:6px;text-transform:uppercase;">
+                                    Titip Jual (Konsinyasi)
+                                </span>
+                            </template>
+                            <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && !orderDetail?.is_konsinyasi && orderDetail?.adalah_tagihan !== false && orderDetail?.adalah_tagihan !== 'false'">
+                                <span class="badge" 
+                                      :class="orderDetail?.status_pembayaran === 'lunas' ? 'badge-success' : 'badge-warning'" 
+                                      style="font-size:10px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;" 
+                                      x-text="orderDetail?.status_pembayaran === 'lunas' ? 'LUNAS' : 'BELUM LUNAS'"></span>
+                            </template>
                             <template x-if="orderDetail?.status_surat_jalan">
                                 <span class="badge badge-mono" style="font-size:10px;text-transform:capitalize;padding:2px 7px;" x-text="orderDetail?.status_surat_jalan.replace('_', ' ')"></span>
                             </template>
@@ -488,7 +504,7 @@ ob_start();
                     </template>
                 </button>
                 <button type="button" @click="activeTab = 'actions'" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'actions' }">
-                    <i data-lucide="printer" style="width:14px;height:14px;"></i>
+                    <i data-lucide="file-text" style="width:14px;height:14px;"></i>
                     <span>Dokumen &amp; Aksi</span>
                 </button>
             </div>
@@ -690,46 +706,85 @@ ob_start();
                 </div>
 
                 <!-- TAB 2: DRIVER & PENGIRIMAN -->
-                <div x-show="!loadingDetail && activeTab === 'shipping'" style="display:flex;flex-direction:column;gap:16px;">
+                <div x-show="!loadingDetail && activeTab === 'shipping'" style="display:flex;flex-direction:column;gap:20px;">
                     
-                    <div style="padding:14px 16px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:4px;">
+                    <div style="padding:16px 18px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:5px;margin-bottom:4px;">
                         <div style="font-size:10px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Tujuan Pengiriman:</div>
-                        <div style="font-size:14px;font-weight:800;color:var(--color-ink);" x-text="orderDetail?.nama_toko"></div>
+                        <div style="font-size:14.5px;font-weight:800;color:var(--color-ink);" x-text="orderDetail?.nama_toko"></div>
                         <div style="font-size:12px;color:var(--color-ink-secondary);line-height:1.45;" x-text="orderDetail?.alamat_lengkap || 'Alamat toko belum diatur lengkap di master pelanggan.'"></div>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        <div>
-                            <label class="form-label font-bold" style="font-size:12px;">Driver / Armada Pengantar</label>
-                            <div style="padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:10px;font-size:13px;font-weight:600;color:var(--color-ink);" 
-                                 x-text="orderDetail?.nama_sales || (orderDetail?.status_pemrosesan === 'po' ? 'Belum ditugaskan (Tahap PO)' : 'Belum ditugaskan dari Gudang')"></div>
+                    <!-- Dua Kolom Informasi Driver & Armada -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" style="gap:16px;row-gap:16px;column-gap:16px;margin-bottom:4px;">
+                        <!-- Kolom Driver -->
+                        <div style="padding:16px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-strong);border-radius:12px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                            <div style="width:38px;height:38px;border-radius:10px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="user-check" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div style="min-width:0;flex:1;">
+                                <div style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
+                                    Driver / Armada Pengantar
+                                </div>
+                                <div style="font-size:13.5px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" 
+                                     :style="orderDetail?.nama_sales ? 'color:var(--color-ink);' : 'color:var(--color-ink-mute);font-style:italic;font-weight:600;'"
+                                     x-text="orderDetail?.nama_sales || 'Belum ditugaskan (Tahap PO)'"></div>
+                            </div>
                         </div>
 
-                        <div>
-                            <label class="form-label font-bold" style="font-size:12px;">Nomor Polisi Kendaraan</label>
-                            <div style="padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:10px;font-size:13px;font-weight:700;font-family:monospace;color:var(--color-ink-secondary);" 
-                                 x-text="orderDetail?.nopol_driver || '-'"></div>
+                        <!-- Kolom Plat Kendaraan -->
+                        <div style="padding:16px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-strong);border-radius:12px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                            <div style="width:38px;height:38px;border-radius:10px;background:rgba(99,102,241,0.1);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="truck" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div style="min-width:0;flex:1;">
+                                <div style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
+                                    Nomor Polisi Kendaraan
+                                </div>
+                                <div class="font-mono" style="font-size:13.5px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" 
+                                     :style="orderDetail?.nopol_driver ? 'color:var(--color-ink);' : 'color:var(--color-ink-mute);'"
+                                     x-text="orderDetail?.nopol_driver || '-'"></div>
+                            </div>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="form-label font-bold" style="font-size:12px;">Status Pengiriman Saat Ini</label>
-                        <div style="padding:12px 14px;border-radius:10px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;"
-                             :style="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
-                                ? 'background:#fef3c7;border:1px solid #fde68a;color:#92400e;'
-                                : (orderDetail?.status_surat_jalan === 'selesai_diterima'
-                                    ? 'background:#dcfce7;border:1px solid #bbf7d0;color:#15803d;'
-                                    : (orderDetail?.status_surat_jalan === 'dalam_perjalanan'
-                                        ? 'background:#f3e8ff;border:1px solid #e9d5ff;color:#6b21a8;'
-                                        : 'background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;'))">
-                            <i data-lucide="info" style="width:16px;height:16px;"></i>
-                            <span x-text="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
-                                ? 'DRAF PO (MENUNGGU PROSES GUDANG)'
-                                : (orderDetail?.status_surat_jalan ? orderDetail.status_surat_jalan.replace(/_/g, ' ').toUpperCase() : 'MENUNGGU PROSES GUDANG (PO)')"></span>
+                    <!-- Status Pengiriman Box -->
+                    <div style="padding:18px 20px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:14px;">
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                            <div>
+                                <div style="font-size:10.5px;font-weight:700;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">
+                                    Status Pengiriman Saat Ini
+                                </div>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <span style="display:inline-flex;align-items:center;">
+                                        <i data-lucide="clock" style="width:18px;height:18px;color:#d97706;" x-show="!orderDetail?.status_surat_jalan && (orderDetail?.status_pemrosesan === 'po' || !orderDetail?.status_pemrosesan)"></i>
+                                        <i data-lucide="truck" style="width:18px;height:18px;color:#4f46e5;" x-show="orderDetail?.status_surat_jalan === 'dalam_perjalanan' || orderDetail?.status_pemrosesan === 'sedang_dikirim'"></i>
+                                        <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#059669;" x-show="orderDetail?.status_surat_jalan === 'selesai_diterima' || orderDetail?.status_pemrosesan === 'selesai'"></i>
+                                        <i data-lucide="package" style="width:18px;height:18px;color:#2563eb;" x-show="orderDetail?.status_surat_jalan && orderDetail?.status_surat_jalan !== 'selesai_diterima' && orderDetail?.status_surat_jalan !== 'dalam_perjalanan'"></i>
+                                    </span>
+                                    <span style="font-size:14.5px;font-weight:800;color:var(--color-ink);"
+                                          x-text="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
+                                            ? 'Draf PO (Menunggu Proses Gudang)'
+                                            : (orderDetail?.status_surat_jalan ? orderDetail.status_surat_jalan.replace(/_/g, ' ').toUpperCase() : 'Menunggu Proses Gudang')"></span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="badge" style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;"
+                                      :style="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
+                                        ? 'background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.25);'
+                                        : (orderDetail?.status_surat_jalan === 'selesai_diterima'
+                                            ? 'background:rgba(16,185,129,0.12);color:#047857;border:1px solid rgba(16,185,129,0.25);'
+                                            : (orderDetail?.status_surat_jalan === 'dalam_perjalanan' || orderDetail?.status_pemrosesan === 'sedang_dikirim'
+                                                ? 'background:rgba(99,102,241,0.12);color:#4338ca;border:1px solid rgba(99,102,241,0.25);'
+                                                : 'background:rgba(37,99,235,0.12);color:#1d4ed8;border:1px solid rgba(37,99,235,0.25);'))">
+                                    <span x-text="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan ? 'Tahap 1: PO' : (orderDetail?.nomor_surat_jalan ? ('SJ: ' + orderDetail.nomor_surat_jalan) : 'Siap Kirim')"></span>
+                                </span>
+                            </div>
                         </div>
-                        <div style="margin-top:8px;font-size:11.5px;color:var(--color-ink-mute);display:flex;gap:6px;align-items:flex-start;">
-                            <i data-lucide="help-circle" style="width:14px;height:14px;flex-shrink:0;margin-top:1px;"></i>
-                            <span>Wewenang penugasan driver dan pencetakan surat jalan diproses pada menu <strong>Daftar PO / Logistik</strong> saat barang siap kirim.</span>
+
+                        <div style="font-size:11.5px;color:var(--color-ink-secondary);line-height:1.45;padding-top:10px;border-top:1px dashed var(--color-hairline);display:flex;align-items:center;gap:7px;">
+                            <i data-lucide="info" style="width:14px;height:14px;color:var(--color-ink-mute);flex-shrink:0;"></i>
+                            <span>Wewenang penugasan driver &amp; surat jalan diproses pada menu <strong style="color:var(--color-ink);">Surat Jalan</strong> saat pesanan siap dikirim.</span>
                         </div>
                     </div>
                 </div>
@@ -739,26 +794,77 @@ ob_start();
                     <!-- Template Khusus Toko Konsinyasi (Non-Tagihan) -->
                     <template x-if="orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.adalah_tagihan === false || orderDetail?.adalah_tagihan === 'false'">
                         <div style="display:flex;flex-direction:column;gap:16px;">
+                            <!-- 3 Kartu Metrik Konsinyasi yang Selaras & Elegan -->
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                                <div class="metric-card metric-card-neutral">
-                                    <div class="metric-card-title">Valuasi Titipan (HPP)</div>
-                                    <div class="metric-card-value" x-text="formatRupiah(orderDetail?.total_netto)"></div>
+                                <div style="padding:14px 16px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                                        <span style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Valuasi Titipan</span>
+                                        <div style="width:28px;height:28px;border-radius:8px;background:rgba(99,102,241,0.1);color:#6366f1;display:flex;align-items:center;justify-content:center;">
+                                            <i data-lucide="package" style="width:14px;height:14px;"></i>
+                                        </div>
+                                    </div>
+                                    <div class="font-mono font-black" style="font-size:17px;color:var(--color-ink);" x-text="formatRupiah(orderDetail?.total_netto)"></div>
+                                    <div style="font-size:11px;color:var(--color-ink-mute);">Estimasi nilai stok produk</div>
                                 </div>
-                                <div class="metric-card metric-card-neutral">
-                                    <div class="metric-card-title">Skema Transaksi</div>
-                                    <div class="metric-card-value" style="font-size:15px;color:#d97706;font-weight:800;">Titip Jual Rak</div>
+
+                                <div style="padding:14px 16px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                                        <span style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Skema Distribusi</span>
+                                        <div style="width:28px;height:28px;border-radius:8px;background:rgba(225,29,72,0.1);color:#e11d48;display:flex;align-items:center;justify-content:center;">
+                                            <i data-lucide="store" style="width:14px;height:14px;"></i>
+                                        </div>
+                                    </div>
+                                    <div style="font-size:15px;font-weight:800;color:#e11d48;line-height:1.2;">Titip Jual Rak</div>
+                                    <div style="font-size:11px;color:var(--color-ink-mute);">Stok rak toko konsinyasi</div>
                                 </div>
-                                <div class="metric-card metric-card-success">
-                                    <div class="metric-card-title">Kewajiban Tagihan</div>
-                                    <div class="metric-card-value" style="font-size:15px;color:#10b981;font-weight:800;">Non-Tagihan (Rp 0)</div>
+
+                                <div style="padding:14px 16px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                                        <span style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Kewajiban Tagihan</span>
+                                        <div style="width:28px;height:28px;border-radius:8px;background:rgba(16,185,129,0.1);color:#059669;display:flex;align-items:center;justify-content:center;">
+                                            <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
+                                        </div>
+                                    </div>
+                                    <div style="font-size:15px;font-weight:800;color:#059669;line-height:1.2;">Non-Tagihan (Rp 0)</div>
+                                    <div style="font-size:11px;color:var(--color-ink-mute);">Bukan piutang tempo langsung</div>
                                 </div>
                             </div>
 
-                            <div style="padding:14px 16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;font-size:12.5px;color:#92400e;line-height:1.5;display:flex;align-items:flex-start;gap:10px;">
-                                <i data-lucide="info" style="width:18px;height:18px;flex-shrink:0;margin-top:2px;"></i>
-                                <div>
-                                    <strong style="display:block;margin-bottom:2px;">Informasi Skema Titip Jual Konsinyasi:</strong>
-                                    Pesanan ini bukan merupakan faktur tagihan langsung. Barang yang dikirim dialokasikan ke stok rak mitra toko (<code style="background:rgba(245,158,11,0.15);padding:1px 4px;border-radius:4px;">stok_konsinyasi_toko</code>). Tagihan omzet penjualan akan dihitung dan diterbitkan secara resmi melalui <strong>Portal Konsinyasi &gt; Form Opname Kunjungan Sales</strong> berdasarkan snack yang laku terjual.
+                            <!-- Card Informasi Penjelasan Konsinyasi (Modern Enterprise Notice) -->
+                            <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.02);">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--color-hairline);">
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(225,29,72,0.1);color:#e11d48;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                            <i data-lucide="info" style="width:18px;height:18px;"></i>
+                                        </div>
+                                        <div>
+                                            <div style="font-size:13.5px;font-weight:800;color:var(--color-ink);">Tata Kelola Skema Titip Jual (Konsinyasi)</div>
+                                            <div style="font-size:11.5px;color:var(--color-ink-mute);">Pencatatan alokasi stok rak dan mekanisme pelunasan omzet</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge" style="background:rgba(225,29,72,0.08);color:#e11d48;border:1px solid rgba(225,29,72,0.2);font-weight:800;font-size:11px;padding:3px 9px;border-radius:999px;">
+                                        Bebas Piutang Langsung
+                                    </span>
+                                </div>
+
+                                <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+                                    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--color-canvas-soft);border-radius:12px;border:1px solid var(--color-hairline);">
+                                        <div style="width:26px;height:26px;border-radius:7px;background:rgba(99,102,241,0.1);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                                            <i data-lucide="layers" style="width:14px;height:14px;"></i>
+                                        </div>
+                                        <div style="font-size:12px;color:var(--color-ink-secondary);line-height:1.5;">
+                                            <strong style="color:var(--color-ink);">Pengiriman Stok Titipan:</strong> Pesanan ini bukan merupakan faktur tagihan langsung. Barang yang dikirim akan dialokasikan langsung ke <strong>Stok Rak Konsinyasi</strong> mitra toko sehingga tidak membebani kewajiban piutang toko.
+                                        </div>
+                                    </div>
+
+                                    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--color-canvas-soft);border-radius:12px;border:1px solid var(--color-hairline);">
+                                        <div style="width:26px;height:26px;border-radius:7px;background:rgba(16,185,129,0.1);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                                            <i data-lucide="receipt" style="width:14px;height:14px;"></i>
+                                        </div>
+                                        <div style="font-size:12px;color:var(--color-ink-secondary);line-height:1.5;">
+                                            <strong style="color:var(--color-ink);">Penagihan Omzet Penjualan:</strong> Tagihan resmi omzet penjualan baru akan dihitung dan diterbitkan saat Sales melakukan kunjungan melalui menu <strong style="color:#2563eb;">Portal Konsinyasi &rarr; Form Opname Kunjungan Sales</strong> berdasarkan snack yang telah laku terjual.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -807,9 +913,9 @@ ob_start();
                                 <div style="padding:16px;background:var(--color-canvas);border:1.5px solid rgba(30,58,138,0.2);border-radius:14px;">
                                     <div style="font-size:13px;font-weight:800;color:var(--color-ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
                                         <i data-lucide="wallet" style="width:16px;height:16px;color:#1e3a8a;"></i>
-                                        <span>Input Pembayaran / Pelunasan</span>
+                                        <span x-text="Number(paymentForm.nominal_bayar || 0) >= calcSisaTagihan() ? 'Input Pelunasan Tagihan' : 'Input Pembayaran Sebagian Tagihan'">Input Pembayaran / Pelunasan</span>
                                     </div>
-                                    <form action="<?= Router::url('/customer-orders/pay') ?>" method="POST" style="display:flex;flex-direction:column;gap:12px;">
+                                    <form @submit.prevent="submitPayment()" action="<?= Router::url('/customer-orders/pay') ?>" method="POST" style="display:flex;flex-direction:column;gap:12px;">
                                         <input type="hidden" name="id" :value="orderDetail?.id">
 
                                         <div>
@@ -825,11 +931,22 @@ ob_start();
                                             <div>
                                                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                                                     <label class="form-label font-bold" style="margin:0;font-size:11.5px;">Nominal Bayar (Rp) *</label>
-                                                    <button type="button" @click="paymentForm.nominal_bayar = String(calcSisaTagihan())" class="btn btn-secondary btn-sm" style="font-size:10.5px;padding:2px 8px;border-radius:6px;">
+                                                    <button type="button" @click="setPaymentLunas()" class="btn btn-secondary btn-sm" style="font-size:10.5px;padding:2px 8px;border-radius:6px;">
                                                         Bayar Lunas
                                                     </button>
                                                 </div>
-                                                <input type="number" name="nominal_bayar" x-model.number="paymentForm.nominal_bayar" :max="calcSisaTagihan()" min="1" step="1000" required class="form-input font-mono font-bold text-success" style="height:40px;border-radius:10px;">
+                                                <div style="position:relative;">
+                                                    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-weight:700;color:var(--color-ink-mute);font-size:12.5px;pointer-events:none;">Rp</span>
+                                                    <input type="text"
+                                                           inputmode="numeric"
+                                                           x-model="paymentDisplay"
+                                                           @input="onPaymentInput($event)"
+                                                           required
+                                                           placeholder="0"
+                                                           class="form-input font-mono font-bold text-success input-rupiah"
+                                                           style="height:40px;border-radius:10px;padding-left:36px;">
+                                                    <input type="hidden" name="nominal_bayar" :value="paymentForm.nominal_bayar">
+                                                </div>
                                             </div>
 
                                             <div>
@@ -844,9 +961,9 @@ ob_start();
                                         </div>
 
                                         <div style="display:flex;justify-content:flex-end;margin-top:4px;">
-                                            <button type="submit" class="btn btn-primary" style="padding:9px 20px;font-size:12.5px;font-weight:800;border-radius:10px;background:#1e3a8a;border-color:#1e3a8a;">
+                                            <button type="submit" :disabled="isSubmittingPayment" class="btn btn-primary" style="padding:9px 20px;font-size:12.5px;font-weight:800;border-radius:10px;background:#1e3a8a;border-color:#1e3a8a;">
                                                 <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
-                                                <span>Simpan Pelunasan Tagihan</span>
+                                                <span x-text="Number(paymentForm.nominal_bayar || 0) >= calcSisaTagihan() ? 'Simpan Pelunasan Tagihan' : 'Simpan Pembayaran Tagihan'">Simpan Pelunasan Tagihan</span>
                                             </button>
                                         </div>
                                     </form>
@@ -859,17 +976,32 @@ ob_start();
                 <!-- TAB 4: DOKUMEN & AKSI OPERASIONAL -->
                 <div x-show="!loadingDetail && activeTab === 'actions'" style="display:flex;flex-direction:column;gap:14px;">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        <!-- Cetak Faktur Penjualan -->
-                        <a :href="'<?= Router::url('/customer-orders/print?id=') ?>' + orderDetail?.id" target="_blank"
-                           class="card p-4 hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;border:1.5px solid var(--color-hairline);border-radius:14px;">
-                            <div style="width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                <i data-lucide="printer" style="width:20px;height:20px;"></i>
+                        <!-- Unduh PDF Faktur -->
+                        <a :href="'<?= Router::url('/customer-orders/invoice/pdf?id=') ?>' + orderDetail?.id" target="_blank"
+                           class="card p-4 hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;border:1.5px solid rgba(220,38,38,0.2);border-radius:14px;background:#fef2f2;">
+                            <div style="width:42px;height:42px;border-radius:12px;background:rgba(220,38,38,0.1);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="file-text" style="width:20px;height:20px;"></i>
                             </div>
                             <div>
-                                <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);" x-text="orderDetail?.is_konsinyasi || orderDetail?.tipe_pembayaran === 'konsinyasi' ? 'Cetak Bukti Titip Barang' : 'Cetak Faktur Penjualan'"></div>
-                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;" x-text="orderDetail?.is_konsinyasi || orderDetail?.tipe_pembayaran === 'konsinyasi' ? 'Lembar tanda terima titip barang rak toko' : 'Invoice tagihan resmi Toko Reguler'"></div>
+                                <div style="font-weight:800;font-size:13px;color:#991b1b;">Unduh PDF Faktur</div>
+                                <div style="font-size:11px;color:#dc2626;margin-top:2px;">Dokumen PDF resmi siap arsip / share</div>
                             </div>
                         </a>
+
+                        <!-- Unduh Excel Rincian Faktur -->
+                        <a :href="'<?= Router::url('/customer-orders/invoice/excel?id=') ?>' + orderDetail?.id" target="_blank"
+                           class="card p-4 hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;border:1.5px solid rgba(16,185,129,0.2);border-radius:14px;background:#ecfdf5;">
+                            <div style="width:42px;height:42px;border-radius:12px;background:rgba(16,185,129,0.1);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="file-spreadsheet" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:800;font-size:13px;color:#065f46;">Unduh Excel Faktur</div>
+                                <div style="font-size:11px;color:#059669;margin-top:2px;">Spreadsheet rincian pesanan &amp; item</div>
+                            </div>
+                        </a>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
 
                         <?php if (Auth::can(['orders.edit_all', 'orders.edit_assigned'])): ?>
                         <div>
@@ -979,8 +1111,15 @@ function salesOrderListApp() {
             tanggal_bayar: '<?= date('Y-m-d') ?>',
             keterangan: 'Pelunasan Faktur Toko'
         },
+        paymentDisplay: '',
+        isSubmittingPayment: false,
 
         init() {
+            this.$watch('activeTab', () => {
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             });
@@ -1005,6 +1144,8 @@ function salesOrderListApp() {
                 tanggal_bayar: new Date().toISOString().split('T')[0],
                 keterangan: 'Pelunasan Faktur Toko ' + (order.nomor_nota || '')
             };
+            this.paymentDisplay = sisa > 0 ? (window.formatRupiahNumber ? window.formatRupiahNumber(sisa) : Number(sisa).toLocaleString('id-ID')) : '';
+            this.syncPaymentKeterangan(true);
 
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -1022,6 +1163,11 @@ function salesOrderListApp() {
                     this.shippingForm.driver_id = data.order.sales_driver_id || '';
                     this.shippingForm.status = data.order.status_surat_jalan || 'disetujui_owner';
                     this.syncDriverNopol();
+
+                    const sisaTerbaru = this.calcSisaTagihan();
+                    this.paymentForm.nominal_bayar = String(sisaTerbaru);
+                    this.paymentDisplay = sisaTerbaru > 0 ? (window.formatRupiahNumber ? window.formatRupiahNumber(sisaTerbaru) : Number(sisaTerbaru).toLocaleString('id-ID')) : '';
+                    this.syncPaymentKeterangan(true);
                 }
             } catch (err) {
                 console.error('Failed to load order detail:', err);
@@ -1046,6 +1192,109 @@ function salesOrderListApp() {
             const netto = Number(this.orderDetail.total_netto || 0);
             const dibayar = Number(this.orderDetail.total_dibayar || 0);
             return Math.max(0, netto - dibayar);
+        },
+
+        syncPaymentKeterangan(force = false) {
+            const sisa = this.calcSisaTagihan();
+            const bayar = Number(this.paymentForm.nominal_bayar || 0);
+            const nota = (this.orderDetail?.nomor_nota || '').trim();
+            const isFull = sisa > 0 && bayar >= sisa;
+            const currentKet = (this.paymentForm.keterangan || '').trim();
+
+            const textFull = 'Pelunasan Faktur Toko ' + nota;
+            const textPartial = 'Pembayaran Sebagian Faktur Toko ' + nota;
+
+            if (force || !currentKet || currentKet === textFull || currentKet === textPartial || currentKet.startsWith('Pelunasan') || currentKet.startsWith('Pembayaran Sebagian') || currentKet.startsWith('Pembayaran Faktur')) {
+                this.paymentForm.keterangan = isFull ? textFull : textPartial;
+            }
+        },
+
+        setPaymentLunas() {
+            const sisa = this.calcSisaTagihan();
+            this.paymentForm.nominal_bayar = String(sisa);
+            this.paymentDisplay = sisa > 0 ? (window.formatRupiahNumber ? window.formatRupiahNumber(sisa) : Number(sisa).toLocaleString('id-ID')) : '';
+            this.syncPaymentKeterangan();
+        },
+
+        onPaymentInput(e) {
+            const raw = (e.target.value || '').replace(/[^0-9]/g, '');
+            let num = parseInt(raw, 10) || 0;
+            const max = this.calcSisaTagihan();
+            if (max > 0 && num > max) {
+                num = max;
+            }
+            this.paymentForm.nominal_bayar = String(num);
+            this.paymentDisplay = num > 0 ? (window.formatRupiahNumber ? window.formatRupiahNumber(num) : Number(num).toLocaleString('id-ID')) : '';
+            this.syncPaymentKeterangan();
+        },
+
+        async submitPayment() {
+            if (this.isSubmittingPayment) return;
+            const nominal = Number(this.paymentForm.nominal_bayar || 0);
+            if (nominal <= 0) {
+                if (window.AppAction) {
+                    window.AppAction.error('Nominal Pembayaran Kosong!', 'Mohon masukkan nominal yang valid.');
+                }
+                return;
+            }
+            if (!this.paymentForm.akun_kas_id) {
+                if (window.AppAction) {
+                    window.AppAction.error('Akun Kas Kosong!', 'Mohon pilih akun kas / bank penerima.');
+                }
+                return;
+            }
+
+            this.isSubmittingPayment = true;
+            if (window.AppAction) {
+                window.AppAction.show('Memproses pencatatan pembayaran...');
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('id', this.orderDetail?.id);
+                formData.append('akun_kas_id', this.paymentForm.akun_kas_id);
+                formData.append('nominal_bayar', this.paymentForm.nominal_bayar);
+                formData.append('tanggal_bayar', this.paymentForm.tanggal_bayar);
+                formData.append('keterangan', this.paymentForm.keterangan);
+
+                const res = await fetch('<?= Router::url('/customer-orders/pay') ?>', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+                const json = await res.json();
+                if (json.success) {
+                    const isLunas = nominal >= this.calcSisaTagihan();
+                    const title = isLunas ? 'Pelunasan Berhasil Dicatat! ✨' : 'Pembayaran Berhasil Dicatat! ✨';
+                    const sisaSisa = json.data?.sisa_tagihan ? ('Sisa tagihan: Rp ' + Number(json.data.sisa_tagihan).toLocaleString('id-ID')) : 'Tagihan telah lunas.';
+                    
+                    if (window.AppAction) {
+                        await window.AppAction.success(title, sisaSisa, 1500);
+                    }
+
+                    // Kunci agar reload tidak pernah memicu skeleton page loader
+                    try {
+                        sessionStorage.setItem('app_action_triggered', 'true');
+                    } catch (e) {}
+
+                    this.showDetailModal = false;
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 100);
+                } else {
+                    if (window.AppAction) {
+                        await window.AppAction.error('Gagal Mencatat Pembayaran!', json.message || 'Terjadi kesalahan sistem.', 2400);
+                    }
+                }
+            } catch (err) {
+                if (window.AppAction) {
+                    await window.AppAction.error('Gagal Menghubungi Server!', err.message, 2400);
+                }
+            } finally {
+                this.isSubmittingPayment = false;
+            }
         },
 
         cleanWa(wa) {

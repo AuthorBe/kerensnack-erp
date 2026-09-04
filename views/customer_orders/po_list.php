@@ -182,6 +182,35 @@ ob_start();
     color: #f87171;
     border-color: rgba(239, 68, 68, 0.3);
 }
+
+/* 5. PO NOTE BADGE (FIT CONTENT, NO OVERFLOW) */
+.po-note-badge {
+    display: inline-block;
+    width: fit-content;
+    max-width: 100%;
+    background: var(--color-canvas-soft);
+    border: 1px solid var(--color-hairline);
+    border-radius: 8px;
+    padding: 3.5px 10px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--color-ink-secondary);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+}
+.po-note-label {
+    font-weight: 800;
+    color: var(--color-ink);
+    margin-right: 4px;
+}
+.po-note-text {
+    color: var(--color-ink-secondary);
+}
+.dark .po-note-badge {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.08);
+}
 </style>
 
 <div x-data="poCompactApp()" x-init="init()" class="space-y-6">
@@ -369,6 +398,26 @@ ob_start();
 
         </form>
 
+        <?php if (!empty($poList)): ?>
+        <!-- Baris 3: Batch Action & Pilih Semua Toolbar -->
+        <div class="flex items-center justify-between border-t border-hairline flex-wrap gap-3" style="font-size: 12.5px; margin-top: 16px; padding-top: 16px; padding-bottom: 4px;">
+            <label class="flex items-center gap-2 cursor-pointer font-bold text-ink-secondary hover:text-ink" style="user-select: none;">
+                <input type="checkbox" @change="toggleSelectAll()" :checked="isAllSelected()" style="width: 17px; height: 17px; border-radius: 5px; accent-color: #2563eb; cursor: pointer;">
+                <span>Pilih Semua (<?= count($poList) ?> PO)</span>
+            </label>
+            <div class="flex items-center gap-2">
+                <a href="<?= Router::url('/customer-orders/po-list/batch-pdf?tab=' . urlencode($tab) . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '')) ?>"
+                   target="_blank"
+                   class="btn btn-secondary btn-sm"
+                   style="font-weight: 700; color: #dc2626; border-color: #fca5a5; background: #fef2f2; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px;"
+                   title="Unduh seluruh PO pada tab & filter ini ke dalam 1 file PDF gabungan">
+                    <i data-lucide="file-text" style="width: 14px; height: 14px;"></i>
+                    <span>Unduh Semua PO Aktif (PDF)</span>
+                </a>
+            </div>
+        </div>
+        <?php endif; ?>
+
     </div>
 
     <!-- ========================================================================= -->
@@ -395,7 +444,12 @@ ob_start();
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
                 
                 <!-- SISI KIRI: NAMA TOKO (UTAMA/BESAR) & INFO MINIMALIS -->
-                <div class="flex items-start gap-4 min-w-0 flex-1">
+                <div class="flex items-start gap-3.5 min-w-0 flex-1">
+                    <!-- Checkbox Seleksi -->
+                    <label class="flex items-center cursor-pointer" style="margin-top: 13px;">
+                        <input type="checkbox" :value="'<?= $po['id'] ?>'" x-model="selectedPoIds" style="width: 18px; height: 18px; border-radius: 5px; accent-color: #2563eb; cursor: pointer;">
+                    </label>
+
                     <div style="width: 46px; height: 46px; border-radius: 14px; background: rgba(37, 99, 235, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
                         <i data-lucide="store" style="width: 22px; height: 22px;"></i>
                     </div>
@@ -426,16 +480,18 @@ ob_start();
 
                         <!-- 3. CATATAN PO (JIKA ADA) -->
                         <?php if (!empty($po['catatan'])): ?>
-                        <div class="inline-flex items-center gap-1.5 text-xs text-ink-secondary mt-1 px-2.5 py-1 rounded-md" style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); font-size: 11.5px;">
-                            <span class="font-bold text-ink">Catatan:</span>
-                            <span><?= htmlspecialchars($po['catatan']) ?></span>
+                        <div style="margin-top: 8px;">
+                            <div class="po-note-badge">
+                                <strong class="po-note-label">Catatan:</strong>
+                                <span class="po-note-text"><?= nl2br(htmlspecialchars($po['catatan'])) ?></span>
+                            </div>
                         </div>
                         <?php endif; ?>
                     </div>
                 </div>
 
                 <!-- SISI TENGAH & KANAN: RINGKASAN BARANG, KESIAPAN STOK & TOMBOL AKSI -->
-                <div class="flex items-center justify-between lg:justify-end gap-4 sm:gap-5 flex-wrap pt-3 lg:pt-0 border-t lg:border-t-0 border-hairline">
+                <div class="flex items-center justify-between lg:justify-end gap-4 sm:gap-5 flex-wrap pt-3 lg:pt-0 border-t lg:border-t-0 border-hairline flex-shrink-0">
                     
                     <!-- Kuantitas Barang -->
                     <div class="text-left lg:text-right">
@@ -480,41 +536,15 @@ ob_start();
                         <?php endif; ?>
                     </div>
 
-                    <!-- Tombol Aksi: Rincian Item (Modal) & Siap Dikirim -->
-                    <div class="flex items-center gap-2.5">
-                        
-                        <!-- 1. Tombol Lihat Rincian Item (Buka Modal) -->
+                    <!-- Tombol Aksi: Cukup Rincian Item (Aksi lainnya di dalam Modal Pop-up agar kartu rapi) -->
+                    <div class="flex items-center">
                         <button type="button" 
                                 class="btn btn-secondary btn-sm"
-                                style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px;"
+                                style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 16px; display: inline-flex; align-items: center; gap: 6px;"
                                 @click="openItemModal(<?= htmlspecialchars(json_encode($po)) ?>)">
                             <i data-lucide="list" style="width: 15px; height: 15px; color: var(--color-primary);"></i>
                             <span>Rincian Item</span>
                         </button>
-
-                        <!-- 2. Tombol Siap Dikirim (Direct Action jika Pending) -->
-                        <?php if ($isPending && Auth::can('orders.po_process')): ?>
-                            <?php if ($po['is_stock_sufficient']): ?>
-                                <form action="<?= Router::url('/customer-orders/process-po') ?>" method="POST"
-                                      data-confirm="Pastikan seluruh barang fisik untuk <?= htmlspecialchars($po['nama_toko']) ?> (PO #<?= htmlspecialchars($po['nomor_nota']) ?>) telah selesai disiapkan. Lanjutkan dan potong stok gudang?"
-                                      data-confirm-title="Konfirmasi Penyiapan Barang"
-                                      data-confirm-type="info"
-                                      data-confirm-btn="Ya, Siap Dikirim"
-                                      style="display: inline;">
-                                    <input type="hidden" name="order_id" value="<?= htmlspecialchars($po['id']) ?>">
-                                    <button type="submit" class="btn btn-primary btn-sm" style="font-weight: 800; font-size: 12.5px; border-radius: 10px; padding: 8px 16px; display: inline-flex; align-items: center; gap: 6px;">
-                                        <i data-lucide="package-check" style="width: 15px; height: 15px;"></i>
-                                        <span>Siap Dikirim</span>
-                                    </button>
-                                </form>
-                            <?php else: ?>
-                                <button type="button" disabled class="btn btn-secondary btn-sm" style="font-weight: 700; font-size: 12px; border-radius: 10px; padding: 8px 14px; opacity: 0.55; cursor: not-allowed;" title="Stok fisik gudang belum mencukupi">
-                                    <i data-lucide="alert-octagon" style="width: 15px; height: 15px; color: #dc2626;"></i>
-                                    <span>Stok Kurang</span>
-                                </button>
-                            <?php endif; ?>
-                        <?php endif; ?>
-
                     </div>
 
                 </div>
@@ -604,9 +634,9 @@ ob_start();
 
             <!-- CATATAN PO -->
             <template x-if="activePo?.catatan">
-                <div style="margin-bottom: 18px; padding: 10px 14px; background: var(--color-canvas-soft); border-radius: 10px; font-size: 12px; color: var(--color-ink-secondary);">
+                <div style="margin-bottom: 18px; padding: 10px 14px; background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 10px; font-size: 12px; color: var(--color-ink-secondary); line-height: 1.5; word-break: break-word;">
                     <span style="font-weight: 800; color: var(--color-ink); text-transform: uppercase; font-size: 10.5px;">Catatan:</span>
-                    <span x-text="activePo?.catatan"></span>
+                    <span x-text="activePo?.catatan" style="word-break: break-word;"></span>
                 </div>
             </template>
 
@@ -616,7 +646,18 @@ ob_start();
                     Tutup
                 </button>
 
+                <!-- Tombol Unduh PDF List Item PO -->
+                <a :href="'<?= Router::url('/customer-orders/picking-list/pdf?id=') ?>' + (activePo ? activePo.id : '')"
+                   target="_blank"
+                   class="btn btn-secondary"
+                   style="border-radius: 10px; font-weight: 700; font-size: 13px; padding: 8px 16px; display: inline-flex; align-items: center; gap: 6px; color:#dc2626; border-color:#fca5a5; background:#fef2f2;"
+                   title="Unduh PDF Daftar Item Pesanan (PO)">
+                    <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                    <span>Unduh PDF</span>
+                </a>
+
                 <!-- Tombol Siap Dikirim Langsung Dari Modal -->
+                <?php if (Auth::can('orders.po_process')): ?>
                 <template x-if="activePo?.status_pemrosesan === 'po'">
                     <div>
                         <template x-if="activePo?.is_stock_sufficient">
@@ -641,8 +682,40 @@ ob_start();
                         </template>
                     </div>
                 </template>
+                <?php endif; ?>
             </div>
 
+        </div>
+    </div>
+    </template>
+
+    <!-- ========================================================================= -->
+    <!-- 6. FLOATING BATCH ACTION BAR (KETIKA >= 1 PO DICENTANG)                   -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="selectedPoIds.length > 0" x-cloak
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 translate-y-8"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-8"
+         style="position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9990; max-width: 92%; width: 520px;">
+        <div style="background: #0f172a; color: #ffffff; border-radius: 16px; padding: 12px 18px; box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.4), 0 8px 12px -6px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(255, 255, 255, 0.12);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="badge" style="background: #2563eb; color: #ffffff; font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 8px;" x-text="selectedPoIds.length + ' PO'"></span>
+                <span style="font-size: 13px; font-weight: 600; color: #f8fafc;">Dipilih</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" @click="selectedPoIds = []" class="btn btn-sm" style="background: rgba(255,255,255,0.12); color: #cbd5e1; border: none; font-weight: 600; padding: 7px 14px; border-radius: 10px;">
+                    Batal
+                </button>
+                <a :href="'<?= Router::url('/customer-orders/po-list/batch-pdf?ids=') ?>' + selectedPoIds.join(',')" target="_blank"
+                   class="btn btn-sm" style="background: #dc2626; color: #ffffff; border: none; font-weight: 800; padding: 7px 18px; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
+                    <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                    <span x-text="'Unduh PDF (' + selectedPoIds.length + ' PO)'">Unduh PDF</span>
+                </a>
+            </div>
         </div>
     </div>
     </template>
@@ -654,11 +727,25 @@ function poCompactApp() {
     return {
         showItemModal: false,
         activePo: null,
+        selectedPoIds: [],
+        allPoIds: <?= json_encode(array_column($poList, 'id')) ?>,
 
         init() {
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             });
+        },
+
+        toggleSelectAll() {
+            if (this.isAllSelected()) {
+                this.selectedPoIds = [];
+            } else {
+                this.selectedPoIds = [...this.allPoIds];
+            }
+        },
+
+        isAllSelected() {
+            return this.allPoIds.length > 0 && this.selectedPoIds.length === this.allPoIds.length;
         },
 
         openItemModal(po) {
