@@ -119,7 +119,7 @@ ob_start();
                             </td>
 
                             <td class="py-3.5 px-4 text-right">
-                                <a href="<?= Router::url('/consignment/opname/hasil?kunjungan_id=' . urlencode((string)$v['id'])) ?>" class="btn btn-secondary btn-sm p-1.5 rounded-lg flex items-center justify-center gap-1 text-[11px] font-bold" title="Buka Detail">
+                                <a href="<?= Router::url('/consignment/opname/hasil?kunjungan_id=' . urlencode((string)$v['id']) . '&ref=riwayat') ?>" class="btn btn-secondary btn-sm p-1.5 rounded-lg flex items-center justify-center gap-1 text-[11px] font-bold" title="Buka Detail">
                                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                                     <span>Detail</span>
                                 </a>

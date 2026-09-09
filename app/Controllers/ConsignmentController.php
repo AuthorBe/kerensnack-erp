@@ -181,22 +181,6 @@ class ConsignmentController extends Controller
                 return;
             }
 
-            // Cek apakah ada kiriman masuk berstatus 'sedang_dikirim'
-            $incomingDeliveries = Database::fetchAll("
-                SELECT sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.waktu_berangkat,
-                       pes.id as pesanan_id, pes.nomor_nota,
-                       COUNT(ip.id) as total_sku,
-                       COALESCE(SUM(ip.kuantitas_satuan_dasar), 0) as total_pcs
-                FROM public.surat_jalan sj
-                JOIN public.pesanan pes ON sj.pesanan_id = pes.id
-                LEFT JOIN public.item_pesanan ip ON ip.pesanan_id = pes.id
-                WHERE pes.pelanggan_id = :cust_id 
-                  AND sj.status_surat_jalan = 'sedang_dikirim'
-                  AND pes.tipe_pembayaran = 'konsinyasi'
-                GROUP BY sj.id, sj.nomor_surat_jalan, sj.waktu_berangkat, pes.id, pes.nomor_nota
-                ORDER BY sj.waktu_berangkat DESC
-            ", ['cust_id' => $storeId]);
-
             // Ambil semua item yang ada di rak toko ini (termasuk yang 0 pcs)
             $shelfItems = Database::fetchAll("
                 SELECT skt.item_id, skt.stok_titip_saat_ini, skt.terakhir_opname_pada,
@@ -234,10 +218,12 @@ class ConsignmentController extends Controller
                     $sisaFisik = (int)$si['stok_titip_saat_ini'];
                     $rBagus = 0;
                     $rRusak = 0;
+                    $laku = 0;
                     $isTouched = false;
 
                     if ($savedInput && isset($savedInput[$si['item_id']])) {
                         $sisaFisik = (int)($savedInput[$si['item_id']]['sisa_fisik_di_rak'] ?? $sisaFisik);
+                        $laku = (int)($savedInput[$si['item_id']]['jumlah_laku'] ?? 0);
                         $rBagus = (int)($savedInput[$si['item_id']]['retur_bagus'] ?? 0);
                         $rRusak = (int)($savedInput[$si['item_id']]['retur_rusak'] ?? 0);
                         $isTouched = true;
@@ -251,6 +237,7 @@ class ConsignmentController extends Controller
                         'stok_titip_saat_ini' => (int)$si['stok_titip_saat_ini'],
                         'harga_deal' => $dealPrice,
                         'sisa_fisik_di_rak' => $sisaFisik,
+                        'jumlah_laku' => $laku,
                         'retur_bagus' => $rBagus,
                         'retur_rusak' => $rRusak,
                         'is_touched' => $isTouched
@@ -264,7 +251,6 @@ class ConsignmentController extends Controller
                 'step' => 2,
                 'customer' => $customer,
                 'items' => $items,
-                'incomingDeliveries' => $incomingDeliveries,
             ]);
 
         } catch (Throwable $e) {
@@ -404,14 +390,17 @@ class ConsignmentController extends Controller
 
         try {
             $visit = Database::fetchOne("
-                SELECT kk.*, p.nama_toko, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_telepon,
+                SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
                        COALESCE(peng.nama_lengkap, k.nama_karyawan, 'Sales') as sales_name,
-                       pes.nomor_nota, pes.total_netto, pes.status_pembayaran, pes.sisa_tagihan
+                       k.posisi as sales_role,
+                       COALESCE(pes.id, tk.pesanan_id) as pesanan_id,
+                       pes.nomor_nota, pes.total_netto, pes.total_dibayar, pes.status_pembayaran, pes.sisa_tagihan, pes.tanggal_pesanan
                 FROM public.kunjungan_konsinyasi kk
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                 LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
                 LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
-                LEFT JOIN public.pesanan pes ON kk.pesanan_id = pes.id
+                LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
+                LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
                 WHERE kk.id = :id
             ", ['id' => $kunjunganId]);
 
@@ -429,15 +418,122 @@ class ConsignmentController extends Controller
                 ORDER BY rkk.subtotal_laku DESC, i.nama_item ASC
             ", ['id' => $kunjunganId]);
 
+            // Cek kunjungan lain dari toko ini yang belum ditagih
+            $otherUnbilledVisits = Database::fetchAll("
+                SELECT kk.id, kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal
+                FROM public.kunjungan_konsinyasi kk
+                WHERE kk.pelanggan_id = :pelanggan_id
+                  AND kk.total_laku_nominal > 0
+                  AND NOT EXISTS (
+                      SELECT 1 FROM public.tagihan_kunjungan tk WHERE tk.kunjungan_id = kk.id
+                  )
+                ORDER BY kk.tanggal_kunjungan DESC
+            ", ['pelanggan_id' => $visit['pelanggan_id']]);
+
+            // Akun kas untuk modal bayar (jika sudah ada nota dan belum lunas)
+            $cashAccounts = Database::fetchAll("
+                SELECT id, nama_akun, tipe_akun, saldo_saat_ini 
+                FROM public.akun_kas 
+                WHERE status_aktif = TRUE 
+                ORDER BY is_default_pos DESC, nama_akun ASC
+            ");
+
+            $canManageTagihan = Auth::can('consignment.piutang') && (Auth::isAdmin() || Auth::isOwner());
+
             $this->view('consignment.opname_hasil', [
                 'pageTitle' => 'Hasil Kunjungan Konsinyasi',
                 'pageSubtitle' => 'Ringkasan Opname & Faktur Penjualan',
                 'visit' => $visit,
                 'details' => $details,
+                'otherUnbilledVisits' => $otherUnbilledVisits,
+                'cashAccounts' => $cashAccounts,
+                'canManageTagihan' => $canManageTagihan,
             ]);
 
         } catch (Throwable $e) {
             echo "Error Hasil Kunjungan: " . $e->getMessage();
+        }
+    }
+
+    /**
+     * 5b. Unduh Nota Tagihan Resmi Konsinyasi dalam format PDF
+     * (GET /consignment/opname/hasil/pdf?kunjungan_id=... atau ?pesanan_id=...)
+     */
+    public function notaPdf(): void
+    {
+        Auth::requirePermission(['consignment.opname_all', 'consignment.opname_assigned', 'consignment.view_all', 'consignment.view_assigned']);
+
+        $kunjunganId = (string)$this->input('kunjungan_id');
+        $pesananId = (string)$this->input('pesanan_id');
+
+        if (empty($kunjunganId) && empty($pesananId)) {
+            $this->flashError('Parameter ID kunjungan atau nota tidak ditemukan.');
+            $this->redirect('/consignment/opname');
+            return;
+        }
+
+        try {
+            $sql = "
+                SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
+                       COALESCE(peng.nama_lengkap, k.nama_karyawan, 'Sales') as sales_name,
+                       COALESCE(pes.id, tk.pesanan_id) as pesanan_id,
+                       pes.nomor_nota, pes.total_netto, pes.total_dibayar, pes.status_pembayaran, pes.sisa_tagihan, pes.tanggal_pesanan
+                FROM public.kunjungan_konsinyasi kk
+                JOIN public.pelanggan p ON kk.pelanggan_id = p.id
+                LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
+                LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
+                LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
+                LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
+                WHERE " . (!empty($kunjunganId) ? "kk.id = :id" : "(kk.pesanan_id = :id OR pes.id = :id)");
+
+            $visit = Database::fetchOne($sql, ['id' => !empty($kunjunganId) ? $kunjunganId : $pesananId]);
+
+            if (!$visit) {
+                $this->flashError('Data kunjungan / faktur konsinyasi tidak ditemukan.');
+                $this->redirect('/consignment/opname');
+                return;
+            }
+
+            $details = Database::fetchAll("
+                SELECT rkk.*, i.nama_item, i.kode_sku, i.satuan_dasar
+                FROM public.rincian_kunjungan_konsinyasi rkk
+                JOIN public.item i ON rkk.item_id = i.id
+                WHERE rkk.kunjungan_id = :id
+                ORDER BY rkk.subtotal_laku DESC, i.nama_item ASC
+            ", ['id' => $visit['id']]);
+
+            // Ambil data rekening kas utama/BCA jika ada
+            $bankAccount = Database::fetchOne("
+                SELECT nama_akun, nomor_rekening, atas_nama
+                FROM public.akun_kas
+                WHERE status_aktif = TRUE 
+                  AND tipe_akun = 'bank'
+                  AND nomor_rekening IS NOT NULL 
+                  AND nomor_rekening != '' 
+                  AND nomor_rekening != '-'
+                ORDER BY (nama_akun ILIKE '%BCA%') DESC, id ASC
+                LIMIT 1
+            ");
+
+            ob_start();
+            extract([
+                'visit' => $visit,
+                'details' => $details,
+                'bankAccount' => $bankAccount,
+                'isPdf' => true
+            ]);
+            require ROOT_PATH . '/views/consignment/nota_pdf.php';
+            $html = ob_get_clean();
+
+            $cleanNota = !empty($visit['nomor_nota']) 
+                ? preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$visit['nomor_nota']) 
+                : 'KONSIN_' . date('Ymd_His');
+
+            PdfExport::download($html, "Nota-Tagihan-{$cleanNota}.pdf", 'A4', 'portrait');
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal membuat dokumen PDF: ' . $e->getMessage());
+            $this->redirect('/consignment/opname/hasil?kunjungan_id=' . urlencode((string)($kunjunganId ?: '')));
         }
     }
 
@@ -509,14 +605,15 @@ class ConsignmentController extends Controller
         Auth::requirePermission(['consignment.reports_all', 'consignment.reports_assigned']);
 
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
-            $storeId = (string)$this->input('pelanggan_id', '');
-            $driverId = $this->getLoggedInDriverId();
-            $isSales = $this->isSalesPersona();
+            $startDate  = (string)$this->input('start_date', date('Y-m-01'));
+            $endDate    = (string)$this->input('end_date', date('Y-m-d'));
+            $storeId    = (string)$this->input('pelanggan_id', '');
+            $salesId    = (string)$this->input('sales_id', '');
+            $driverId   = $this->getLoggedInDriverId();
+            $isSales    = $this->isSalesPersona();
 
-            // Daftar filter toko
-            $storeQuery = "SELECT id, nama_toko, kode_pelanggan FROM public.pelanggan WHERE is_konsinyasi = TRUE AND status_aktif = TRUE";
+            // Daftar toko (untuk filter dropdown)
+            $storeQuery  = "SELECT id, nama_toko, kode_pelanggan FROM public.pelanggan WHERE is_konsinyasi = TRUE AND status_aktif = TRUE";
             $storeParams = [];
             if ($isSales && $driverId) {
                 $storeQuery .= " AND sales_driver_id = :driver_id";
@@ -525,64 +622,158 @@ class ConsignmentController extends Controller
             $storeQuery .= " ORDER BY nama_toko ASC";
             $stores = Database::fetchAll($storeQuery, $storeParams);
 
-            // Data Laporan Penjualan
-            $sql = "
-                SELECT kk.id as kunjungan_id, kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal,
-                       p.nama_toko, p.kode_pelanggan,
-                       k.nama_karyawan as nama_sales,
-                       pes.id as pesanan_id, pes.nomor_nota, pes.status_pembayaran, pes.total_dibayar, pes.sisa_tagihan,
-                       (SELECT COUNT(*) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_sku_laku,
-                       (SELECT COALESCE(SUM(jumlah_laku_terjual), 0) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_qty_laku
-                FROM public.kunjungan_konsinyasi kk
-                JOIN public.pelanggan p ON kk.pelanggan_id = p.id
-                LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
-                LEFT JOIN public.pesanan pes ON kk.pesanan_id = pes.id
-                WHERE kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
-            ";
-            $params = [
-                'start_date' => $startDate,
-                'end_date' => $endDate
-            ];
-
-            if ($isSales && $driverId) {
-                $sql .= " AND p.sales_driver_id = :driver_id";
-                $params['driver_id'] = $driverId;
-            } elseif (!empty($storeId)) {
-                $sql .= " AND p.id = :store_id";
-                $params['store_id'] = $storeId;
+            // Daftar sales (untuk filter dropdown, admin/owner saja)
+            $salesList = [];
+            if (!$isSales) {
+                $salesList = Database::fetchAll("
+                    SELECT id, nama_karyawan
+                    FROM public.karyawan
+                    WHERE posisi IN ('sales', 'sales_driver') AND status_aktif = TRUE
+                    ORDER BY nama_karyawan ASC
+                ");
             }
 
-            $sql .= " ORDER BY kk.tanggal_kunjungan DESC, kk.dibuat_pada DESC";
-            $reports = Database::fetchAll($sql, $params);
+            // Build WHERE clause shared params
+            $whereExtra  = '';
+            $queryParams = ['start_date' => $startDate, 'end_date' => $endDate];
 
-            // Agregasi
-            $totalLaku = 0.0;
-            $totalNotaCount = 0;
-            $totalDibayar = 0.0;
-            $totalPiutang = 0.0;
-
-            foreach ($reports as $r) {
-                $totalLaku += (float)$r['total_laku_nominal'];
-                if (!empty($r['nomor_nota'])) {
-                    $totalNotaCount++;
-                    $totalDibayar += (float)($r['total_dibayar'] ?? 0);
-                    $totalPiutang += (float)($r['sisa_tagihan'] ?? 0);
+            if ($isSales && $driverId) {
+                $whereExtra .= " AND p.sales_driver_id = :driver_id";
+                $queryParams['driver_id'] = $driverId;
+            } else {
+                if (!empty($storeId)) {
+                    $whereExtra .= " AND p.id = :store_id";
+                    $queryParams['store_id'] = $storeId;
+                }
+                if (!empty($salesId)) {
+                    $whereExtra .= " AND k.id = :sales_id";
+                    $queryParams['sales_id'] = $salesId;
                 }
             }
 
+            // Hitung MoM (Bulan Lalu)
+            $prevStartDate = date('Y-m-d', strtotime($startDate . ' -1 month'));
+            $prevEndDate = date('Y-m-d', strtotime($endDate . ' -1 month'));
+            $prevQueryParams = ['start_date' => $prevStartDate, 'end_date' => $prevEndDate];
+            if ($isSales && $driverId) {
+                $prevQueryParams['driver_id'] = $driverId;
+            } else {
+                if (!empty($storeId)) $prevQueryParams['store_id'] = $storeId;
+                if (!empty($salesId)) $prevQueryParams['sales_id'] = $salesId;
+            }
+
+            $sqlPrevMonth = "
+                SELECT COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet_prev
+                FROM public.kunjungan_konsinyasi kk
+                JOIN public.pelanggan p ON kk.pelanggan_id = p.id
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                WHERE kk.tanggal_kunjungan >= :start_date
+                  AND kk.tanggal_kunjungan <= :end_date
+                  AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+                {$whereExtra}
+            ";
+            $prevTotalRow = Database::fetchOne($sqlPrevMonth, $prevQueryParams);
+            $prevTotalOmzet = (float)($prevTotalRow['total_omzet_prev'] ?? 0);
+
+            // Query 1: KPI per toko (untuk bar chart ranking + donut + tabel)
+            $sqlPerStore = "
+                SELECT
+                    p.id as pelanggan_id,
+                    p.nama_toko,
+                    p.kode_pelanggan,
+                    k.nama_karyawan as nama_sales,
+                    COUNT(kk.id) as total_kunjungan,
+                    COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet,
+                    COALESCE(AVG(kk.total_laku_nominal), 0) as avg_per_kunjungan,
+                    MAX(kk.tanggal_kunjungan) as last_visit_period,
+                    (SELECT MAX(tanggal_kunjungan) FROM public.kunjungan_konsinyasi WHERE pelanggan_id = p.id) as last_visit
+                FROM public.pelanggan p
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.kunjungan_konsinyasi kk
+                    ON kk.pelanggan_id = p.id
+                    AND kk.tanggal_kunjungan >= :start_date
+                    AND kk.tanggal_kunjungan <= :end_date
+                WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+                {$whereExtra}
+                GROUP BY p.id, p.nama_toko, p.kode_pelanggan, k.nama_karyawan
+                ORDER BY total_omzet DESC, p.nama_toko ASC
+            ";
+            $storeStats = Database::fetchAll($sqlPerStore, $queryParams);
+
+            // Hitung % kontribusi per toko di PHP
+            $grandTotal = array_sum(array_column($storeStats, 'total_omzet'));
+            foreach ($storeStats as &$s) {
+                $s['persen_kontribusi'] = $grandTotal > 0
+                    ? round((float)$s['total_omzet'] / $grandTotal * 100, 1)
+                    : 0;
+                $s['avg_per_kunjungan'] = round((float)$s['avg_per_kunjungan'], 0);
+                
+                // Cek Idle Status (>14 hari belum dikunjungi)
+                $lastVisitDate = $s['last_visit'];
+                $s['is_idle'] = false;
+                $s['idle_days'] = 0;
+                if ($lastVisitDate) {
+                    $diff = date_diff(date_create($lastVisitDate), date_create(date('Y-m-d')));
+                    $s['idle_days'] = $diff->days;
+                    if ($diff->days > 14) {
+                        $s['is_idle'] = true;
+                    }
+                } else {
+                    $s['is_idle'] = true; // Belum pernah dikunjungi
+                }
+            }
+            unset($s);
+
+            // Query 2: Tren harian (untuk line chart)
+            $sqlTrend = "
+                SELECT
+                    kk.tanggal_kunjungan,
+                    COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet_hari,
+                    COUNT(kk.id) as jumlah_kunjungan
+                FROM public.kunjungan_konsinyasi kk
+                JOIN public.pelanggan p ON kk.pelanggan_id = p.id
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                WHERE kk.tanggal_kunjungan >= :start_date
+                  AND kk.tanggal_kunjungan <= :end_date
+                  AND p.is_konsinyasi = TRUE
+                {$whereExtra}
+                GROUP BY kk.tanggal_kunjungan
+                ORDER BY kk.tanggal_kunjungan ASC
+            ";
+            $trendData = Database::fetchAll($sqlTrend, $queryParams);
+
+            // KPI summary keseluruhan
+            $totalOmzet      = (float)$grandTotal;
+            $totalKunjungan  = (int)array_sum(array_column($storeStats, 'total_kunjungan'));
+            $tokoAktif       = count(array_filter($storeStats, fn($s) => (int)$s['total_kunjungan'] > 0));
+            $avgPerKunjungan = $totalKunjungan > 0 ? round($totalOmzet / $totalKunjungan, 0) : 0;
+
+            // Kalkulasi MoM Growth %
+            $momGrowth = 0;
+            if ($prevTotalOmzet > 0) {
+                $momGrowth = round((($totalOmzet - $prevTotalOmzet) / $prevTotalOmzet) * 100, 1);
+            } elseif ($totalOmzet > 0) {
+                $momGrowth = 100; // Jika bulan lalu 0 dan bulan ini ada omzet
+            }
+
             $this->view('consignment.laporan_penjualan', [
-                'pageTitle' => 'Laporan Penjualan Konsinyasi',
-                'pageSubtitle' => 'Rekapitulasi Penjualan & Penerbitan Nota Hasil Opname',
-                'reports' => $reports,
-                'stores' => $stores,
-                'startDate' => $startDate,
-                'endDate' => $endDate,
+                'pageTitle'       => 'Laporan Penjualan Konsinyasi',
+                'pageSubtitle'    => 'Dashboard Performa Penjualan Semua Toko Konsinyasi',
+                'storeStats'      => $storeStats,
+                'trendData'       => $trendData,
+                'stores'          => $stores,
+                'salesList'       => $salesList,
+                'startDate'       => $startDate,
+                'endDate'         => $endDate,
                 'selectedStoreId' => $storeId,
-                'totalLaku' => $totalLaku,
-                'totalNotaCount' => $totalNotaCount,
-                'totalDibayar' => $totalDibayar,
-                'totalPiutang' => $totalPiutang,
-                'isSales' => $isSales,
+                'selectedSalesId' => $salesId,
+                'totalOmzet'      => $totalOmzet,
+                'totalKunjungan'  => $totalKunjungan,
+                'tokoAktif'       => $tokoAktif,
+                'avgPerKunjungan' => $avgPerKunjungan,
+                'isSales'         => $isSales,
+                'prevTotalOmzet'  => $prevTotalOmzet,
+                'momGrowth'       => $momGrowth
             ]);
 
         } catch (Throwable $e) {
@@ -591,115 +782,436 @@ class ConsignmentController extends Controller
     }
 
     /**
-     * 8. Sub-halaman: Piutang Konsinyasi (GET /consignment/piutang)
+     * AJAX endpoint: Mengambil data detail toko untuk pop-up modal
      */
-    public function piutang(): void
+    public function detailTokoAjax(): void
+    {
+        Auth::requirePermission(['consignment.reports_all', 'consignment.reports_assigned']);
+        header('Content-Type: application/json');
+
+        try {
+            $pelangganId = (string)$this->input('pelanggan_id');
+            $startDate   = (string)$this->input('start_date', date('Y-m-01'));
+            $endDate     = (string)$this->input('end_date', date('Y-m-d'));
+            
+            if (!$pelangganId) {
+                echo json_encode(['error' => 'ID Pelanggan tidak valid']);
+                return;
+            }
+
+            // 1. Profil Toko
+            $tokoInfo = Database::fetchOne("
+                SELECT p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, 
+                       k.nama_karyawan as nama_sales
+                FROM public.pelanggan p
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                WHERE p.id = :id
+            ", ['id' => $pelangganId]);
+
+            // 2. Trend Omzet
+            $trendOmzet = Database::fetchAll("
+                SELECT tanggal_kunjungan, total_laku_nominal as omzet
+                FROM public.kunjungan_konsinyasi
+                WHERE pelanggan_id = :id AND tanggal_kunjungan >= :sd AND tanggal_kunjungan <= :ed
+                ORDER BY tanggal_kunjungan ASC
+            ", ['id' => $pelangganId, 'sd' => $startDate, 'ed' => $endDate]);
+
+            // 3. Top Items (dari kunjungan di periode tersebut)
+            $topItems = Database::fetchAll("
+                SELECT i.nama_item, SUM(rkk.jumlah_laku_terjual) as total_qty, SUM(rkk.subtotal_laku) as total_omzet
+                FROM public.rincian_kunjungan_konsinyasi rkk
+                JOIN public.kunjungan_konsinyasi kk ON rkk.kunjungan_id = kk.id
+                JOIN public.item i ON rkk.item_id = i.id
+                WHERE kk.pelanggan_id = :id AND kk.tanggal_kunjungan >= :sd AND kk.tanggal_kunjungan <= :ed
+                GROUP BY i.nama_item
+                ORDER BY total_omzet DESC
+                LIMIT 5
+            ", ['id' => $pelangganId, 'sd' => $startDate, 'ed' => $endDate]);
+
+            // 4. Stok Rak Terakhir (dari 1 kunjungan paling akhir, terlepas dari filter tanggal)
+            $lastVisit = Database::fetchOne("
+                SELECT id, tanggal_kunjungan, nomor_kunjungan
+                FROM public.kunjungan_konsinyasi 
+                WHERE pelanggan_id = :id 
+                ORDER BY tanggal_kunjungan DESC LIMIT 1
+            ", ['id' => $pelangganId]);
+
+            $stokRak = [];
+            if ($lastVisit) {
+                $stokRak = Database::fetchAll("
+                    SELECT i.nama_item, rkk.sisa_fisik_di_rak, rkk.retur_bagus, rkk.retur_rusak
+                    FROM public.rincian_kunjungan_konsinyasi rkk
+                    JOIN public.item i ON rkk.item_id = i.id
+                    WHERE rkk.kunjungan_id = :visit_id
+                    ORDER BY rkk.sisa_fisik_di_rak DESC
+                ", ['visit_id' => $lastVisit['id']]);
+            }
+
+            // 5. Outstanding Tagihan
+            $tagihan = Database::fetchAll("
+                SELECT nomor_nota, tanggal_pesanan, sisa_tagihan
+                FROM public.pesanan
+                WHERE pelanggan_id = :id 
+                  AND tipe_pembayaran = 'konsinyasi' 
+                  AND sisa_tagihan > 0
+                  AND status_pembayaran != 'dibatalkan'
+                ORDER BY tanggal_pesanan ASC
+            ", ['id' => $pelangganId]);
+
+            echo json_encode([
+                'toko_info' => $tokoInfo,
+                'trend_omzet' => $trendOmzet,
+                'top_items' => $topItems,
+                'stok_rak' => $stokRak,
+                'last_visit' => $lastVisit,
+                'tagihan' => $tagihan
+            ]);
+
+        } catch (Throwable $e) {
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 8. Sub-halaman: Tagihan Konsinyasi (GET /consignment/tagihan)
+     * 2 Tab: Tab 1 = Kunjungan belum ditagih (buat tagihan), Tab 2 = Daftar semua tagihan
+     */
+    public function tagihanIndex(): void
     {
         Auth::requirePermission('consignment.piutang');
 
         try {
             $isOwner = Auth::isOwner();
             $isAdmin = Auth::isAdmin() && !$isOwner;
+            $activeTab = (string)$this->input('tab', 'buat');
 
-            // Query seluruh piutang konsinyasi aktif
-            $invoices = Database::fetchAll("
-                SELECT pes.id as pesanan_id, pes.nomor_nota, pes.tanggal_pesanan, pes.total_netto, pes.total_dibayar, pes.sisa_tagihan,
-                       pes.status_pembayaran, pes.catatan,
-                       p.id as pelanggan_id, p.nama_toko, p.kode_pelanggan, p.nomor_whatsapp,
-                       k.nama_karyawan as nama_sales
-                FROM public.pesanan pes
-                JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-                LEFT JOIN public.karyawan k ON pes.sales_driver_id = k.id
-                WHERE pes.tipe_pembayaran = 'konsinyasi'
-                  AND pes.adalah_tagihan = TRUE
-                  AND pes.status_pembayaran IN ('belum_lunas', 'sebagian')
-                ORDER BY pes.tanggal_pesanan ASC, pes.dibuat_pada ASC
+            // Filter untuk tab Buat Tagihan
+            $filterStoreId  = (string)$this->input('pelanggan_id', '');
+            $filterStart    = (string)$this->input('start_date', date('Y-m-01'));
+            $filterEnd      = (string)$this->input('end_date', date('Y-m-d'));
+
+            // Filter untuk tab Daftar Tagihan
+            $filterStatus   = (string)$this->input('status', '');
+
+            // Daftar toko untuk filter dropdown
+            $stores = Database::fetchAll("
+                SELECT id, nama_toko, kode_pelanggan 
+                FROM public.pelanggan 
+                WHERE is_konsinyasi = TRUE AND status_aktif = TRUE
+                ORDER BY nama_toko ASC
             ");
 
-            // Master akun kas aktif untuk modal catat pembayaran (Admin only)
+            // TAB 1: Kunjungan yang BELUM ditagih (total_laku > 0 dan belum ada di tagihan_kunjungan)
+            $sqlUnbilled = "
+                SELECT 
+                    kk.id, kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal,
+                    p.nama_toko, p.kode_pelanggan, p.id as pelanggan_id,
+                    COALESCE(kar.nama_karyawan, 'N/A') as nama_sales,
+                    (SELECT COUNT(*) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_sku
+                FROM public.kunjungan_konsinyasi kk
+                JOIN public.pelanggan p ON kk.pelanggan_id = p.id
+                LEFT JOIN public.karyawan kar ON kk.sales_driver_id = kar.id
+                WHERE kk.total_laku_nominal > 0
+                  AND NOT EXISTS (
+                      SELECT 1 FROM public.tagihan_kunjungan tk WHERE tk.kunjungan_id = kk.id
+                  )
+                  AND kk.tanggal_kunjungan >= :start_date
+                  AND kk.tanggal_kunjungan <= :end_date
+            ";
+            $unbilledParams = ['start_date' => $filterStart, 'end_date' => $filterEnd];
+
+            if (!empty($filterStoreId)) {
+                $sqlUnbilled .= " AND p.id = :pelanggan_id";
+                $unbilledParams['pelanggan_id'] = $filterStoreId;
+            }
+            $sqlUnbilled .= " ORDER BY kk.tanggal_kunjungan DESC, p.nama_toko ASC";
+            $unbilledVisits = Database::fetchAll($sqlUnbilled, $unbilledParams);
+
+            // TAB 2: Semua tagihan konsinyasi (aktif + lunas + history)
+            $sqlTagihan = "
+                SELECT 
+                    pes.id as pesanan_id, pes.nomor_nota, pes.tanggal_pesanan, pes.total_netto,
+                    pes.total_dibayar, pes.sisa_tagihan, pes.status_pembayaran, pes.catatan,
+                    p.id as pelanggan_id, p.nama_toko, p.kode_pelanggan, p.nomor_whatsapp,
+                    COALESCE(kar.nama_karyawan, 'N/A') as nama_sales,
+                    (SELECT COUNT(*) FROM public.tagihan_kunjungan tk WHERE tk.pesanan_id = pes.id) as jumlah_kunjungan
+                FROM public.pesanan pes
+                JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                LEFT JOIN public.karyawan kar ON pes.sales_driver_id = kar.id
+                WHERE pes.tipe_pembayaran = 'konsinyasi'
+                  AND pes.adalah_tagihan = TRUE
+                  AND pes.status_pembayaran != 'dibatalkan'
+            ";
+            $tagihanParams = [];
+
+            if (!empty($filterStatus)) {
+                $sqlTagihan .= " AND pes.status_pembayaran = :status";
+                $tagihanParams['status'] = $filterStatus;
+            }
+            $sqlTagihan .= " ORDER BY pes.tanggal_pesanan DESC, pes.dibuat_pada DESC";
+            $tagihan = Database::fetchAll($sqlTagihan, $tagihanParams);
+
+            // Akun kas untuk modal bayar
             $cashAccounts = Database::fetchAll("
-                SELECT id, nama_akun, tipe_akun, saldo_saat_ini 
+                SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_default_pos 
                 FROM public.akun_kas 
                 WHERE status_aktif = TRUE 
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
-            $totalPiutang = array_sum(array_column($invoices, 'sisa_tagihan'));
+            $totalOutstanding = array_sum(array_column(
+                array_filter($tagihan, fn($t) => in_array($t['status_pembayaran'], ['belum_lunas', 'sebagian'])),
+                'sisa_tagihan'
+            ));
 
-            $this->view('consignment.piutang', [
-                'pageTitle' => 'Piutang Konsinyasi',
-                'pageSubtitle' => 'Daftar Faktur Hasil Kunjungan yang Belum Dilunasi Toko',
-                'invoices' => $invoices,
-                'cashAccounts' => $cashAccounts,
-                'totalPiutang' => $totalPiutang,
-                'isOwner' => $isOwner,
-                'isAdmin' => $isAdmin,
+            $this->view('consignment.tagihan', [
+                'pageTitle'       => 'Tagihan Konsinyasi',
+                'pageSubtitle'    => 'Buat & Kelola Tagihan Penjualan Toko Konsinyasi',
+                'csrfToken'       => \App\Helpers\CSRF::token(),
+                'unbilledVisits'  => $unbilledVisits,
+                'tagihan'         => $tagihan,
+                'stores'          => $stores,
+                'cashAccounts'    => $cashAccounts,
+                'totalOutstanding'=> $totalOutstanding,
+                'filterStoreId'   => $filterStoreId,
+                'filterStart'     => $filterStart,
+                'filterEnd'       => $filterEnd,
+                'filterStatus'    => $filterStatus,
+                'activeTab'       => $activeTab,
+                'isOwner'         => $isOwner,
+                'isAdmin'         => $isAdmin,
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Piutang Konsinyasi: " . $e->getMessage();
+            echo "Error Tagihan Konsinyasi: " . $e->getMessage();
         }
     }
 
     /**
-     * 9. Action: Catat Pembayaran Piutang Konsinyasi (POST /consignment/piutang/bayar)
+     * 8b. Action: Generate Tagihan Manual dari kunjungan terpilih (POST /consignment/tagihan/generate)
      */
-    public function catatPembayaran(): void
+    public function tagihanGenerate(): void
     {
         Auth::requirePermission('consignment.piutang');
+        $this->requireAdminOrOwner();
 
         if (!$this->validateCsrf()) {
-            $this->redirect('/consignment/piutang');
+            $this->redirect('/consignment/tagihan');
             return;
         }
 
-        $pesananId = (string)$this->input('pesanan_id');
-        $accountId = (string)$this->input('akun_kas_id');
-        $nominal = (float)$this->input('nominal', 0);
-        $keterangan = trim((string)$this->input('keterangan', ''));
+        $kunjunganIds = (array)$this->input('kunjungan_ids', []);
+        $kunjunganIds = array_values(array_filter(array_unique($kunjunganIds)));
 
-        if (empty($pesananId) || empty($accountId) || $nominal <= 0) {
-            $this->flashError('Pilih nota pesanan, rekening kas penerima, dan masukkan nominal pembayaran yang valid.');
-            $this->redirect('/consignment/piutang');
+        if (empty($kunjunganIds)) {
+            $this->flashError('Pilih minimal 1 kunjungan untuk dibuatkan tagihan.');
+            $this->redirect('/consignment/tagihan');
             return;
         }
 
         try {
+            // Format array untuk PostgreSQL: {uuid1,uuid2,...}
+            $pgArray = '{' . implode(',', array_map('strval', $kunjunganIds)) . '}';
+
             $res = Database::fetchOne("
-                SELECT public.fn_catat_pembayaran_konsinyasi(:p, :a, :nom, :user_id, :ket) as json_res
+                SELECT public.fn_buat_tagihan_konsinyasi(:kunjungan_ids::uuid[], :user_id) AS json_res
             ", [
-                'p' => $pesananId,
-                'a' => $accountId,
-                'nom' => $nominal,
-                'user_id' => Auth::id(),
-                'ket' => !empty($keterangan) ? $keterangan : null
+                'kunjungan_ids' => $pgArray,
+                'user_id'       => Auth::id(),
             ]);
 
             $jsonResult = json_decode($res['json_res'] ?? '{}', true);
 
             if (empty($jsonResult['success'])) {
-                throw new \Exception('Pembayaran ditolak oleh database.');
+                throw new \Exception('Pembuatan tagihan ditolak oleh database.');
             }
 
-            $statusText = $jsonResult['status_pembayaran'] === 'lunas' ? 'LUNAS' : 'SEBAGIAN (Cicil)';
-            $sisaRp = Format::rupiah((float)($jsonResult['sisa_tagihan'] ?? 0));
+            $nomor     = $jsonResult['nomor_nota'] ?? '-';
+            $total     = Format::rupiah((float)($jsonResult['total_tagihan'] ?? 0));
+            $jmlKunj   = (int)($jsonResult['jumlah_kunjungan'] ?? count($kunjunganIds));
 
             ActivityLog::log(
                 'keuangan',
                 'INSERT',
-                "Pencatatan pembayaran nota konsinyasi sebesar " . Format::rupiah($nominal) . " disetorkan ke kas. Status: {$statusText}.",
+                "Tagihan konsinyasi {$nomor} dibuat manual dari {$jmlKunj} kunjungan. Total: {$total}.",
+                'pesanan',
+                $jsonResult['pesanan_id'] ?? null
+            );
+
+            $redirectUrl = (string)$this->input('redirect_url', '/consignment/tagihan?tab=daftar');
+            $this->flashSuccess("Tagihan {$nomor} berhasil dibuat! Total: {$total} ({$jmlKunj} kunjungan).");
+            $this->redirect($redirectUrl);
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal membuat tagihan: ' . $e->getMessage());
+            $redirectUrl = (string)$this->input('redirect_url', '/consignment/tagihan');
+            $this->redirect($redirectUrl);
+        }
+    }
+
+    /**
+     * 8c. Action: Catat Pembayaran Tagihan (POST /consignment/tagihan/bayar)
+     */
+    public function tagihanBayar(): void
+    {
+        Auth::requirePermission('consignment.piutang');
+
+        $redirectUrl = (string)$this->input('redirect_url', '/consignment/tagihan?tab=daftar');
+
+        if (!$this->validateCsrf()) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Sesi kedaluwarsa (CSRF token invalid). Silakan refresh halaman.'], 403);
+                return;
+            }
+            $this->flashError('Sesi kedaluwarsa. Silakan muat ulang halaman dan coba lagi.');
+            $this->redirect($redirectUrl);
+            return;
+        }
+
+        $pesananId    = trim((string)$this->input('pesanan_id', ''));
+        $accountId    = trim((string)$this->input('akun_kas_id', ''));
+        $rawNominal   = $this->input('nominal') ?? $this->input('nominal_bayar', '0');
+        $nominal      = (float)preg_replace('/[^0-9]/', '', (string)$rawNominal);
+        $tanggalBayar = trim((string)$this->input('tanggal_bayar', ''));
+        if (empty($tanggalBayar)) {
+            $tanggalBayar = date('Y-m-d');
+        }
+
+        $keterangan   = trim((string)($this->input('keterangan') ?? $this->input('catatan', '')));
+
+        if (empty($pesananId) || empty($accountId) || $nominal <= 0) {
+            $msg = 'Pilih faktur tagihan, rekening kas penerima, dan masukkan nominal pembayaran yang valid (lebih dari Rp 0).';
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => $msg], 400);
+                return;
+            }
+            $this->flashError($msg);
+            $this->redirect($redirectUrl);
+            return;
+        }
+
+        try {
+            $res = Database::fetchOne("
+                SELECT public.fn_catat_pembayaran_konsinyasi(:p, :a, :nom, :user_id, :ket, :tgl) as json_res
+            ", [
+                'p'       => $pesananId,
+                'a'       => $accountId,
+                'nom'     => $nominal,
+                'user_id' => Auth::id(),
+                'ket'     => !empty($keterangan) ? $keterangan : null,
+                'tgl'     => $tanggalBayar,
+            ]);
+
+            $jsonResult = json_decode($res['json_res'] ?? '{}', true);
+
+            if (empty($jsonResult['success'])) {
+                throw new \Exception('Pembayaran ditolak oleh sistem database.');
+            }
+
+            $statusText = ($jsonResult['status_pembayaran'] ?? '') === 'lunas' ? 'LUNAS' : 'SEBAGIAN (Cicil)';
+            $sisaRp     = Format::rupiah((float)($jsonResult['sisa_tagihan'] ?? 0));
+            $notaNum    = htmlspecialchars($jsonResult['nomor_nota'] ?? '');
+
+            ActivityLog::log(
+                'keuangan',
+                'INSERT',
+                "Pembayaran tagihan konsinyasi {$notaNum} sebesar " . Format::rupiah($nominal) . " dicatat ({$statusText}) pada tanggal {$tanggalBayar}.",
                 'pesanan',
                 $pesananId
             );
 
-            $this->flashSuccess("Pembayaran sebesar " . Format::rupiah($nominal) . " berhasil dicatat! Status: {$statusText} (Sisa: {$sisaRp}).");
-            $this->redirect('/consignment/piutang');
+            $successMsg = "Pembayaran faktur {$notaNum} sebesar " . Format::rupiah($nominal) . " berhasil dicatat! Status: {$statusText} (Sisa Piutang: {$sisaRp}).";
+
+            if ($this->isAjax()) {
+                $this->json([
+                    'success' => true,
+                    'message' => $successMsg,
+                    'data'    => $jsonResult
+                ]);
+                return;
+            }
+
+            $this->flashSuccess($successMsg);
+            $this->redirect($redirectUrl);
 
         } catch (Throwable $e) {
-            $this->flashError('Gagal mencatat pembayaran: ' . $e->getMessage());
-            $this->redirect('/consignment/piutang');
+            $errMsg = 'Gagal mencatat pembayaran: ' . $e->getMessage();
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => $errMsg], 500);
+                return;
+            }
+            $this->flashError($errMsg);
+            $this->redirect($redirectUrl);
         }
     }
+
+    /**
+     * 8d. Export Daftar Tagihan ke Excel (GET /consignment/tagihan/export-excel)
+     */
+    public function tagihanExportExcel(): void
+    {
+        Auth::requirePermission('consignment.piutang');
+
+        try {
+            $filterStatus = (string)$this->input('status', '');
+
+            $sql = "
+                SELECT 
+                    pes.nomor_nota, pes.tanggal_pesanan, pes.total_netto,
+                    pes.total_dibayar, pes.sisa_tagihan, pes.status_pembayaran,
+                    p.nama_toko, p.kode_pelanggan, p.nomor_whatsapp,
+                    COALESCE(kar.nama_karyawan, 'N/A') as nama_sales,
+                    (SELECT COUNT(*) FROM public.tagihan_kunjungan tk WHERE tk.pesanan_id = pes.id) as jumlah_kunjungan
+                FROM public.pesanan pes
+                JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                LEFT JOIN public.karyawan kar ON pes.sales_driver_id = kar.id
+                WHERE pes.tipe_pembayaran = 'konsinyasi'
+                  AND pes.adalah_tagihan = TRUE
+                  AND pes.status_pembayaran != 'dibatalkan'
+            ";
+            $params = [];
+
+            if (!empty($filterStatus)) {
+                $sql .= " AND pes.status_pembayaran = :status";
+                $params['status'] = $filterStatus;
+            }
+            $sql .= " ORDER BY pes.tanggal_pesanan DESC";
+            $rows_data = Database::fetchAll($sql, $params);
+
+            $headers = ['No', 'No. Tagihan', 'Tanggal', 'Nama Toko', 'Kode Toko', 'Sales PIC', 'Jml Kunjungan', 'Total Tagihan (Rp)', 'Terbayar (Rp)', 'Sisa (Rp)', 'Status'];
+            $rows    = [];
+            $no      = 1;
+            $totTotal = $totBayar = $totSisa = 0;
+
+            foreach ($rows_data as $r) {
+                $tot   = (float)$r['total_netto'];
+                $bayar = (float)$r['total_dibayar'];
+                $sisa  = (float)$r['sisa_tagihan'];
+                $totTotal += $tot; $totBayar += $bayar; $totSisa += $sisa;
+
+                $rows[] = [
+                    $no++,
+                    $r['nomor_nota'] ?? '-',
+                    date('d/m/Y', strtotime($r['tanggal_pesanan'])),
+                    $r['nama_toko'],
+                    $r['kode_pelanggan'] ?? '-',
+                    $r['nama_sales'],
+                    (int)$r['jumlah_kunjungan'],
+                    $tot, $bayar, $sisa,
+                    strtoupper(str_replace('_', ' ', (string)($r['status_pembayaran'] ?? '-')))
+                ];
+            }
+
+            $rows[] = ['', '', '', '', '', '', 'GRAND TOTAL:', $totTotal, $totBayar, $totSisa, ''];
+
+            ExcelExport::download("Tagihan-Konsinyasi-" . date('Ymd') . ".xlsx", $headers, $rows, "Tagihan Konsinyasi");
+        } catch (Throwable $e) {
+            $this->flashError('Gagal export tagihan konsinyasi: ' . $e->getMessage());
+            $this->redirect('/consignment/tagihan');
+        }
+    }
+
+
 
     /**
      * 10. Sub-halaman: Assignment Sales ↔ Toko (GET /consignment/assignment-sales)
@@ -1051,139 +1563,80 @@ class ConsignmentController extends Controller
         Auth::requirePermission(['consignment.reports_all', 'consignment.reports_assigned']);
 
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
-            $storeId = (string)$this->input('pelanggan_id', '');
-            $driverId = $this->getLoggedInDriverId();
-            $isSales = $this->isSalesPersona();
+            $startDate  = (string)$this->input('start_date', date('Y-m-01'));
+            $endDate    = (string)$this->input('end_date', date('Y-m-d'));
+            $storeId    = (string)$this->input('pelanggan_id', '');
+            $salesId    = (string)$this->input('sales_id', '');
+            $driverId   = $this->getLoggedInDriverId();
+            $isSales    = $this->isSalesPersona();
 
-            $sql = "
-                SELECT kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal,
-                       p.nama_toko, p.kode_pelanggan,
-                       k.nama_karyawan as nama_sales,
-                       pes.nomor_nota, pes.status_pembayaran, pes.total_dibayar, pes.sisa_tagihan
-                FROM public.kunjungan_konsinyasi kk
-                JOIN public.pelanggan p ON kk.pelanggan_id = p.id
-                LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
-                LEFT JOIN public.pesanan pes ON kk.pesanan_id = pes.id
-                WHERE kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
-            ";
-            $params = ['start_date' => $startDate, 'end_date' => $endDate];
+            $whereExtra  = '';
+            $queryParams = ['start_date' => $startDate, 'end_date' => $endDate];
 
             if ($isSales && $driverId) {
-                $sql .= " AND p.sales_driver_id = :driver_id";
-                $params['driver_id'] = $driverId;
-            } elseif (!empty($storeId)) {
-                $sql .= " AND p.id = :store_id";
-                $params['store_id'] = $storeId;
+                $whereExtra .= " AND p.sales_driver_id = :driver_id";
+                $queryParams['driver_id'] = $driverId;
+            } else {
+                if (!empty($storeId)) {
+                    $whereExtra .= " AND p.id = :store_id";
+                    $queryParams['store_id'] = $storeId;
+                }
+                if (!empty($salesId)) {
+                    $whereExtra .= " AND k.id = :sales_id";
+                    $queryParams['sales_id'] = $salesId;
+                }
             }
-
-            $sql .= " ORDER BY kk.tanggal_kunjungan DESC, kk.dibuat_pada DESC";
-            $reports = Database::fetchAll($sql, $params);
-
-            $headers = ['No', 'Tanggal Kunjungan', 'Nomor Kunjungan', 'Kode Toko', 'Nama Toko Konsinyasi', 'Sales / Driver', 'Nomor Faktur B2B', 'Total Terjual (Rp)', 'Total Terbayar (Rp)', 'Sisa Tagihan (Rp)', 'Status Bayar'];
-            $rows = [];
-            $no = 1;
-            $totLaku = 0;
-            $totBayar = 0;
-            $totSisa = 0;
-
-            foreach ($reports as $r) {
-                $laku = (float)$r['total_laku_nominal'];
-                $bayar = (float)($r['total_dibayar'] ?? 0);
-                $sisa = (float)($r['sisa_tagihan'] ?? 0);
-                $totLaku += $laku;
-                $totBayar += $bayar;
-                $totSisa += $sisa;
-
-                $rows[] = [
-                    $no++,
-                    date('d/m/Y', strtotime($r['tanggal_kunjungan'])),
-                    $r['nomor_kunjungan'],
-                    $r['kode_pelanggan'] ?? '-',
-                    $r['nama_toko'],
-                    $r['nama_sales'] ?? '-',
-                    $r['nomor_nota'] ?? '-',
-                    $laku,
-                    $bayar,
-                    $sisa,
-                    strtoupper(str_replace('_', ' ', (string)($r['status_pembayaran'] ?? 'BELUM BAYAR')))
-                ];
-            }
-
-            $rows[] = ['', '', '', '', '', '', 'TOTAL PENJUALAN KONSINYASI:', $totLaku, $totBayar, $totSisa, ''];
-
-            ExcelExport::download("Laporan-Penjualan-Konsinyasi-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Penjualan Konsinyasi");
-        } catch (Throwable $e) {
-            $this->flashError('Gagal export laporan penjualan konsinyasi: ' . $e->getMessage());
-            $this->redirect('/consignment/laporan-penjualan');
-        }
-    }
-
-    /**
-     * Export Laporan Piutang Toko Konsinyasi ke File Excel (PhpSpreadsheet)
-     */
-    public function exportPiutangExcel(): void
-    {
-        Auth::requirePermission(['consignment.piutang_view_all', 'consignment.piutang_view_assigned']);
-
-        try {
-            $driverId = $this->getLoggedInDriverId();
-            $isSales = $this->isSalesPersona();
 
             $sql = "
-                SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, p.alamat_lengkap,
-                       k.nama_karyawan as nama_sales,
-                       COUNT(pes.id) as total_nota_piutang,
-                       COALESCE(SUM(pes.sisa_tagihan), 0) as total_piutang
+                SELECT
+                    p.kode_pelanggan, p.nama_toko,
+                    COALESCE(k.nama_karyawan, '-') as nama_sales,
+                    COUNT(kk.id) as total_kunjungan,
+                    COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet,
+                    COALESCE(AVG(kk.total_laku_nominal), 0) as avg_per_kunjungan,
+                    MAX(kk.tanggal_kunjungan) as last_visit
                 FROM public.pelanggan p
                 LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
-                JOIN public.pesanan pes ON pes.pelanggan_id = p.id
-                WHERE p.is_konsinyasi = TRUE
-                  AND pes.sisa_tagihan > 0
-                  AND pes.status_pemrosesan != 'dibatalkan'
+                LEFT JOIN public.kunjungan_konsinyasi kk
+                    ON kk.pelanggan_id = p.id
+                    AND kk.tanggal_kunjungan >= :start_date
+                    AND kk.tanggal_kunjungan <= :end_date
+                WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+                {$whereExtra}
+                GROUP BY p.id, p.kode_pelanggan, p.nama_toko, k.nama_karyawan
+                ORDER BY total_omzet DESC, p.nama_toko ASC
             ";
-            $params = [];
+            $storeStats = Database::fetchAll($sql, $queryParams);
 
-            if ($isSales && $driverId) {
-                $sql .= " AND p.sales_driver_id = :driver_id";
-                $params['driver_id'] = $driverId;
-            }
+            $grandTotal = array_sum(array_column($storeStats, 'total_omzet'));
 
-            $sql .= " GROUP BY p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, p.alamat_lengkap, k.nama_karyawan";
-            $sql .= " HAVING SUM(pes.sisa_tagihan) > 0";
-            $sql .= " ORDER BY total_piutang DESC";
+            $headers = ['No', 'Kode Toko', 'Nama Toko Konsinyasi', 'Sales PIC', 'Total Kunjungan', 'Total Omzet (Rp)', 'Rata-rata / Kunjungan (Rp)', 'Kontribusi (%)', 'Terakhir Kunjungan'];
+            $rows    = [];
+            $no      = 1;
 
-            $stores = Database::fetchAll($sql, $params);
-
-            $headers = ['No', 'Kode Toko', 'Nama Toko Konsinyasi', 'Pemilik Toko', 'No. WhatsApp', 'Alamat Lengkap', 'Sales PIC', 'Jumlah Nota Belum Lunas', 'Total Piutang Berjalan (Rp)'];
-            $rows = [];
-            $no = 1;
-            $grandPiutang = 0;
-
-            foreach ($stores as $s) {
-                $piutang = (float)$s['total_piutang'];
-                $grandPiutang += $piutang;
-
+            foreach ($storeStats as $s) {
+                $omzet = (float)$s['total_omzet'];
+                $pct   = $grandTotal > 0 ? round($omzet / $grandTotal * 100, 1) : 0;
                 $rows[] = [
                     $no++,
                     $s['kode_pelanggan'] ?? '-',
                     $s['nama_toko'],
-                    $s['nama_pemilik'] ?? '-',
-                    $s['nomor_whatsapp'] ?? '-',
-                    $s['alamat_lengkap'] ?? '-',
-                    $s['nama_sales'] ?? '-',
-                    (int)$s['total_nota_piutang'],
-                    $piutang
+                    $s['nama_sales'],
+                    (int)$s['total_kunjungan'],
+                    $omzet,
+                    round((float)$s['avg_per_kunjungan'], 0),
+                    $pct . '%',
+                    $s['last_visit'] ? date('d/m/Y', strtotime($s['last_visit'])) : '-',
                 ];
             }
 
-            $rows[] = ['', '', '', '', '', '', '', 'GRAND TOTAL PIUTANG:', $grandPiutang];
+            $rows[] = ['', '', '', 'GRAND TOTAL:', '', $grandTotal, '', '100%', ''];
 
-            ExcelExport::download("Laporan-Piutang-Konsinyasi-" . date('Ymd') . ".xlsx", $headers, $rows, "Piutang Konsinyasi");
+            ExcelExport::download("Laporan-Penjualan-KPI-Toko-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "KPI Penjualan Toko");
         } catch (Throwable $e) {
-            $this->flashError('Gagal export data piutang konsinyasi: ' . $e->getMessage());
-            $this->redirect('/consignment/piutang');
+            $this->flashError('Gagal export laporan penjualan: ' . $e->getMessage());
+            $this->redirect('/consignment/laporan-penjualan');
         }
     }
 }
+

@@ -211,6 +211,22 @@ ob_start();
     background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.08);
 }
+
+/* 6. FLOATING BATCH ACTION BAR (Desktop Sidebar Aware) */
+.po-floating-bar {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 35;
+    max-width: 92%;
+    width: 520px;
+}
+@media (min-width: 1024px) {
+    .po-floating-bar {
+        left: calc(50% + 130px);
+    }
+}
 </style>
 
 <div x-data="poCompactApp()" x-init="init()" class="space-y-6">
@@ -462,6 +478,11 @@ ob_start();
                             <span class="badge badge-mono" style="font-size: 11px; padding: 2px 6px; color: var(--color-ink-mute); border-color: var(--color-hairline);">
                                 <?= htmlspecialchars($po['kode_pelanggan']) ?>
                             </span>
+                            <?php if (!empty($po['catatan']) && str_contains($po['catatan'], '[Kirim Ulang]')): ?>
+                            <span class="badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-weight:800;font-size:11px;padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
+                                🔁 Kirim Ulang
+                            </span>
+                            <?php endif; ?>
                         </div>
 
                         <!-- 2. KODE TRANSAKSI & DETAIL LAIN (MINIMALIS / BERSIH) -->
@@ -569,7 +590,14 @@ ob_start();
                         <i data-lucide="package" style="width: 22px; height: 22px;"></i>
                     </div>
                     <div>
-                        <div class="modal-title" style="font-size: 16px; font-weight: 900; color: var(--color-ink);" x-text="activePo?.nama_toko"></div>
+                        <div class="flex items-center gap-2">
+                            <div class="modal-title" style="font-size: 16px; font-weight: 900; color: var(--color-ink);" x-text="activePo?.nama_toko"></div>
+                            <template x-if="activePo?.catatan && activePo.catatan.includes('[Kirim Ulang]')">
+                                <span class="badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-weight:800;font-size:11px;padding:2px 8px;border-radius:6px;">
+                                    🔁 Kirim Ulang
+                                </span>
+                            </template>
+                        </div>
                         <div style="font-size: 12px; color: var(--color-ink-mute); margin-top: 1px;">
                             <span class="font-mono font-bold" x-text="activePo?.nomor_nota"></span> &bull; 
                             <span x-text="activePo?.total_pcs + ' Pcs (' + activePo?.total_sku + ' SKU)'"></span>
@@ -700,7 +728,7 @@ ob_start();
          x-transition:leave="transition ease-in duration-150"
          x-transition:leave-start="opacity-100 translate-y-0"
          x-transition:leave-end="opacity-0 translate-y-8"
-         style="position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 9990; max-width: 92%; width: 520px;">
+         class="po-floating-bar">
         <div style="background: #0f172a; color: #ffffff; border-radius: 16px; padding: 12px 18px; box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.4), 0 8px 12px -6px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(255, 255, 255, 0.12);">
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span class="badge" style="background: #2563eb; color: #ffffff; font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 8px;" x-text="selectedPoIds.length + ' PO'"></span>

@@ -219,7 +219,7 @@ ob_start();
 
                 <div style="display:flex;gap:8px;padding-top:4px;">
                     <button type="button" @click="showWasteModal = false" class="btn btn-secondary" style="flex:1;justify-content:center;">Batal</button>
-                    <button type="submit" class="btn btn-danger" style="flex:1;justify-content:center;background:#dc2626;">
+                    <button type="submit" class="btn btn-danger-solid" style="flex:1;justify-content:center;background:#dc2626;color:#fff;">
                         <i data-lucide="trash-2"></i>
                         Potong Stok Waste
                     </button>

@@ -187,10 +187,18 @@ BEGIN
     FOR r_item IN 
         SELECT 
             (elem->>'item_id')::UUID AS item_id,
-            COALESCE((elem->>'sisa_fisik_di_rak')::INT, 0) AS sisa_fisik_di_rak,
+            CASE 
+                WHEN (elem->>'sisa_fisik_di_rak') IS NOT NULL AND (elem->>'sisa_fisik_di_rak') != '' 
+                THEN (elem->>'sisa_fisik_di_rak')::INT 
+                ELSE NULL 
+            END AS sisa_fisik_param,
             COALESCE((elem->>'retur_bagus')::INT, 0) AS retur_bagus,
             COALESCE((elem->>'retur_rusak')::INT, 0) AS retur_rusak,
-            COALESCE((elem->>'jumlah_laku')::INT, NULL) AS jumlah_laku_param,
+            CASE 
+                WHEN (elem->>'jumlah_laku')::INT IS NOT NULL 
+                THEN GREATEST(0, (elem->>'jumlah_laku')::INT) 
+                ELSE NULL 
+            END AS jumlah_laku_param,
             COALESCE((elem->>'selisih_qty')::INT, 0) AS selisih_qty
         FROM jsonb_array_elements(p_rincian) AS elem
     LOOP
@@ -243,14 +251,24 @@ BEGIN
             );
         END IF;
 
-        -- C. Hitung Qty Laku Terjual
-        IF r_item.jumlah_laku_param IS NOT NULL THEN
-            v_laku := GREATEST(0, r_item.jumlah_laku_param);
+        -- C. Hitung Qty Laku Terjual & Saldo Rak Baru Secara Konsisten Dua Arah
+        IF r_item.sisa_fisik_param IS NOT NULL THEN
+            v_stok_rak_baru := GREATEST(0, r_item.sisa_fisik_param);
+            IF r_item.jumlah_laku_param IS NOT NULL THEN
+                v_laku := r_item.jumlah_laku_param;
+            ELSE
+                v_laku := GREATEST(0, v_stok_titip_lama - (v_stok_rak_baru + r_item.retur_bagus + r_item.retur_rusak));
+            END IF;
         ELSE
-            v_laku := GREATEST(0, v_stok_titip_lama - (r_item.sisa_fisik_di_rak + r_item.retur_bagus + r_item.retur_rusak));
+            IF r_item.jumlah_laku_param IS NOT NULL THEN
+                v_laku := r_item.jumlah_laku_param;
+                v_stok_rak_baru := GREATEST(0, v_stok_titip_lama - (v_laku + r_item.retur_bagus + r_item.retur_rusak));
+            ELSE
+                v_laku := 0;
+                v_stok_rak_baru := GREATEST(0, v_stok_titip_lama - (r_item.retur_bagus + r_item.retur_rusak));
+            END IF;
         END IF;
 
-        v_stok_rak_baru := GREATEST(0, r_item.sisa_fisik_di_rak);
         v_selisih := r_item.selisih_qty;
 
         -- D. Hitung harga satuan deal toko
@@ -359,7 +377,8 @@ CREATE OR REPLACE FUNCTION public.fn_catat_pembayaran_konsinyasi(
     p_akun_kas_id uuid,
     p_nominal_bayar numeric,
     p_dicatat_oleh uuid DEFAULT NULL,
-    p_keterangan text DEFAULT NULL
+    p_keterangan text DEFAULT NULL,
+    p_tanggal_bayar date DEFAULT CURRENT_DATE
 ) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
@@ -369,7 +388,10 @@ DECLARE
     v_saldo_lama NUMERIC(15,2);
     v_saldo_baru NUMERIC(15,2);
     v_pengguna_id UUID := p_dicatat_oleh;
+    v_tgl_transaksi DATE := COALESCE(p_tanggal_bayar, CURRENT_DATE);
+    v_ket_kas TEXT;
 BEGIN
+    -- Kunci baris pesanan untuk mencegah race condition pembayaran ganda
     SELECT * INTO v_pesanan FROM public.pesanan WHERE id = p_pesanan_id FOR UPDATE;
 
     IF v_pesanan IS NULL THEN
@@ -378,6 +400,14 @@ BEGIN
 
     IF v_pesanan.adalah_tagihan = FALSE THEN
         RAISE EXCEPTION 'Pesanan ini adalah dokumen pengiriman/titip, bukan tagihan. Tidak bisa dicatat pembayarannya.';
+    END IF;
+
+    IF v_pesanan.status_pembayaran = 'dibatalkan' THEN
+        RAISE EXCEPTION 'Tagihan % telah dibatalkan. Pembayaran tidak dapat diproses.', v_pesanan.nomor_nota;
+    END IF;
+
+    IF v_pesanan.status_pembayaran = 'lunas' OR v_pesanan.sisa_tagihan <= 0 THEN
+        RAISE EXCEPTION 'Tagihan % sudah berstatus LUNAS. Tidak ada sisa piutang.', v_pesanan.nomor_nota;
     END IF;
 
     IF p_nominal_bayar <= 0 THEN
@@ -398,9 +428,10 @@ BEGIN
         SELECT id INTO v_pengguna_id FROM public.pengguna WHERE status_aktif = TRUE ORDER BY dibuat_pada ASC LIMIT 1;
     END IF;
 
-    v_sisa_baru := v_pesanan.sisa_tagihan - p_nominal_bayar;
+    v_sisa_baru := GREATEST(0, v_pesanan.sisa_tagihan - p_nominal_bayar);
     v_status_baru := CASE WHEN v_sisa_baru <= 0 THEN 'lunas' ELSE 'sebagian' END;
 
+    -- Update Pesanan
     UPDATE public.pesanan
     SET total_dibayar = COALESCE(total_dibayar, 0) + p_nominal_bayar,
         sisa_tagihan = v_sisa_baru,
@@ -409,12 +440,14 @@ BEGIN
         diubah_pada = NOW()
     WHERE id = p_pesanan_id;
 
+    -- Update total piutang berjalan di master pelanggan
     UPDATE public.pelanggan
     SET total_piutang_berjalan = GREATEST(0, COALESCE(total_piutang_berjalan, 0) - p_nominal_bayar),
         diubah_pada = NOW()
     WHERE id = v_pesanan.pelanggan_id;
 
-    SELECT saldo_saat_ini INTO v_saldo_lama FROM public.akun_kas WHERE id = p_akun_kas_id;
+    -- Kunci dan update saldo kas penerima
+    SELECT saldo_saat_ini INTO v_saldo_lama FROM public.akun_kas WHERE id = p_akun_kas_id FOR UPDATE;
     IF v_saldo_lama IS NULL THEN
         RAISE EXCEPTION 'Akun kas % tidak ditemukan/tidak aktif', p_akun_kas_id;
     END IF;
@@ -424,21 +457,29 @@ BEGIN
     SET saldo_saat_ini = v_saldo_baru, diubah_pada = NOW()
     WHERE id = p_akun_kas_id;
 
+    -- Format keterangan arus kas terstruktur
+    v_ket_kas := 'Pembayaran Nota ' || v_pesanan.nomor_nota;
+    IF p_keterangan IS NOT NULL AND TRIM(p_keterangan) != '' THEN
+        v_ket_kas := v_ket_kas || ' - ' || TRIM(p_keterangan);
+    END IF;
+
+    -- Catat Arus Kas Masuk
     INSERT INTO public.arus_kas (
         akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
         referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
     ) VALUES (
-        p_akun_kas_id, CURRENT_DATE, 'masuk', 'penjualan', p_nominal_bayar,
-        COALESCE(p_keterangan, 'Pelunasan Nota Konsinyasi: ' || v_pesanan.nomor_nota),
-        'pesanan', p_pesanan_id, v_saldo_baru, v_pengguna_id, NOW()
+        p_akun_kas_id, v_tgl_transaksi, 'masuk', 'penjualan', p_nominal_bayar,
+        v_ket_kas, 'pesanan', p_pesanan_id, v_saldo_baru, v_pengguna_id, NOW()
     );
 
     RETURN jsonb_build_object(
         'success', true,
         'pesanan_id', p_pesanan_id,
-        'total_dibayar', v_pesanan.total_dibayar + p_nominal_bayar,
+        'nomor_nota', v_pesanan.nomor_nota,
+        'total_dibayar', COALESCE(v_pesanan.total_dibayar, 0) + p_nominal_bayar,
         'sisa_tagihan', v_sisa_baru,
-        'status_pembayaran', v_status_baru
+        'status_pembayaran', v_status_baru,
+        'tanggal_transaksi', v_tgl_transaksi
     );
 END;
 $$;

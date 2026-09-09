@@ -77,23 +77,23 @@ ob_start();
             </div>
             <div class="mt-3 sm:mt-4">
                 <h3 class="text-xs sm:text-sm font-black transition-colors" style="color:var(--color-ink);">Laporan Penjualan</h3>
-                <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Rekap omzet settlement &amp; faktur</p>
+                <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Grafik performa & KPI toko</p>
             </div>
         </a>
         <?php endif; ?>
 
-        <!-- CARD 3: Piutang Konsinyasi -->
+        <!-- CARD 3: Tagihan Konsinyasi -->
         <?php if (Auth::can('consignment.piutang')): ?>
-        <a href="<?= Router::url('/consignment/piutang') ?>" 
+        <a href="<?= Router::url('/consignment/tagihan') ?>" 
            class="card p-3.5 sm:p-5 group flex flex-col justify-between hover:shadow-lg transition-all"
            style="border-radius:18px;text-decoration:none;min-height:125px;border:1px solid var(--color-hairline);">
             <div class="flex items-start justify-between">
-                <i data-lucide="receipt" class="w-6 sm:w-7 h-6 sm:h-7 group-hover:scale-110 transition-transform" style="color:#f43f5e;"></i>
+                <i data-lucide="file-text" class="w-6 sm:w-7 h-6 sm:h-7 group-hover:scale-110 transition-transform" style="color:#f43f5e;"></i>
                 <i data-lucide="arrow-up-right" class="w-3.5 sm:w-4 h-3.5 sm:h-4 transition-colors" style="color:var(--color-ink-mute);"></i>
             </div>
             <div class="mt-3 sm:mt-4">
-                <h3 class="text-xs sm:text-sm font-black transition-colors" style="color:var(--color-ink);">Piutang Konsinyasi</h3>
-                <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Tagihan aktif &amp; catat kas</p>
+                <h3 class="text-xs sm:text-sm font-black transition-colors" style="color:var(--color-ink);">Tagihan Konsinyasi</h3>
+                <p class="text-[11px] mt-0.5 line-clamp-1" style="color:var(--color-ink-mute);">Buat tagihan & catat pembayaran</p>
             </div>
         </a>
         <?php endif; ?>

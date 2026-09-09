@@ -52,19 +52,19 @@ if (!function_exists('isActiveSection')) {
         </a>
         <?php endif; ?>
 
-        <?php if (Auth::can(['orders.po_view_all', 'orders.po_view_assigned'])): ?>
-        <a href="<?= Router::url('/customer-orders/po-list') ?>"
-           class="sidebar-link <?= ($currentPath === $base . '/customer-orders/po-list' || $currentPath === '/customer-orders/po-list') ? 'is-active' : '' ?>">
-            <i data-lucide="inbox"></i>
-            <span>Daftar PO</span>
-        </a>
-        <?php endif; ?>
-
         <?php if (Auth::can(['orders.view_all', 'orders.view_assigned'])): ?>
         <a href="<?= Router::url('/customer-orders') ?>"
            class="sidebar-link <?= (($currentPath !== $base . '/customer-orders/po-list' && $currentPath !== '/customer-orders/po-list') && (isActiveSection('/customer-orders', $currentPath, $base) || isActiveSection('/sales-orders', $currentPath, $base))) ? 'is-active' : '' ?>">
             <i data-lucide="clipboard-list"></i>
             <span>Pesanan Pelanggan</span>
+        </a>
+        <?php endif; ?>
+
+        <?php if (Auth::can(['orders.po_view_all', 'orders.po_view_assigned'])): ?>
+        <a href="<?= Router::url('/customer-orders/po-list') ?>"
+           class="sidebar-link <?= ($currentPath === $base . '/customer-orders/po-list' || $currentPath === '/customer-orders/po-list') ? 'is-active' : '' ?>">
+            <i data-lucide="inbox"></i>
+            <span>Daftar PO</span>
         </a>
         <?php endif; ?>
 
@@ -81,16 +81,16 @@ if (!function_exists('isActiveSection')) {
         <?php if (Auth::can(['deliveries.view_all', 'deliveries.view_assigned'])): ?>
         <div class="sidebar-section-label">Delivery</div>
 
-        <a href="<?= Router::url('/driver-deliveries') ?>"
-           class="sidebar-link <?= isActiveSection('/driver-deliveries', $currentPath, $base) ? 'is-active' : '' ?>">
-            <i data-lucide="truck"></i>
-            <span>Pengiriman</span>
-        </a>
-
         <a href="<?= Router::url('/deliveries') ?>"
            class="sidebar-link <?= (isActiveSection('/deliveries', $currentPath, $base) && !isActiveSection('/driver-deliveries', $currentPath, $base)) ? 'is-active' : '' ?>">
             <i data-lucide="file-text"></i>
             <span>Surat Jalan</span>
+        </a>
+
+        <a href="<?= Router::url('/driver-deliveries') ?>"
+           class="sidebar-link <?= isActiveSection('/driver-deliveries', $currentPath, $base) ? 'is-active' : '' ?>">
+            <i data-lucide="truck"></i>
+            <span>Pengiriman</span>
         </a>
         <?php endif; ?>
 
@@ -212,6 +212,26 @@ if (!function_exists('isActiveSection')) {
         <?php endif; ?>
 
     </nav>
+
+    <!-- Instant Zero-Flicker Pre-Paint Scroll Restoration -->
+    <script>
+        (function() {
+            try {
+                var sidebar = document.getElementById('app-sidebar');
+                var nav = sidebar ? sidebar.querySelector('.sidebar-nav') : null;
+                if (!nav) return;
+                var saved = sessionStorage.getItem('sidebar_scroll');
+                if (saved !== null) {
+                    nav.scrollTop = parseInt(saved, 10) || 0;
+                } else {
+                    var active = nav.querySelector('.sidebar-link.is-active');
+                    if (active) {
+                        active.scrollIntoView({ block: 'center' });
+                    }
+                }
+            } catch (e) {}
+        })();
+    </script>
 
     <!-- Profile Footer (Pinned Bottom) -->
     <div class="sidebar-footer">

@@ -39,6 +39,7 @@ $headerSub = $pageSubtitle ?? match(true) {
     str_contains($uri, '/purchases')        => 'Pengadaan Bahan & PO Vendor',
     str_contains($uri, '/deliveries')       => 'Manifest Rute Sales-Driver',
     str_contains($uri, '/consignment/sales')=> 'Kunjungan Toko, Opname Rak & Kiriman Titip',
+    str_contains($uri, '/consignment/tagihan')    => 'Buat Tagihan & Kelola Piutang Konsinyasi',
     str_contains($uri, '/consignment')      => 'Titip Jual Rak & Opname',
     str_contains($uri, '/cash/transactions')=> 'Mutasi Operasional & Beban',
     str_contains($uri, '/cash/reports')     => 'Analisis Cash Flow Masuk-Keluar',

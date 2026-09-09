@@ -63,6 +63,9 @@ spl_autoload_register(function (string $class) {
 // 3. Database Connection
 require_once ROOT_PATH . '/config/database.php';
 
+// 4. Pastikan Seluruh Folder Unggahan & Proteksi (.htaccess & .gitkeep) Terbuat Otomatis
+\App\Helpers\Upload::initDirectories();
+
 use App\Core\Router;
 use App\Controllers\AuthController;
 use App\Controllers\PosController;
@@ -164,7 +167,10 @@ Router::post('/inventory/waste', [InventoryController::class, 'recordWaste']);
 
 // --- GUDANG 2: PEMBELIAN / PO MASUK VENDOR ---
 Router::get('/purchases', [PurchaseController::class, 'index']);
+Router::get('/purchases/detail', [PurchaseController::class, 'detailAjax']);
 Router::post('/purchases/store', [PurchaseController::class, 'store']);
+Router::post('/purchases/pay', [PurchaseController::class, 'payDebt']);
+Router::post('/purchases/cancel', [PurchaseController::class, 'cancel']);
 
 // --- DELIVERY 1: PORTAL PENGIRIMAN DRIVER ---
 Router::get('/driver-deliveries', [DeliveryController::class, 'driverRoute']);
@@ -187,12 +193,16 @@ Router::get('/consignment/stok-rak', [ConsignmentController::class, 'stokRak']);
 Router::get('/consignment/opname', [ConsignmentController::class, 'opname']);
 Router::post('/consignment/opname/proses', [ConsignmentController::class, 'opnameProses']);
 Router::get('/consignment/opname/hasil', [ConsignmentController::class, 'hasilKunjungan']);
+Router::get('/consignment/opname/hasil/pdf', [ConsignmentController::class, 'notaPdf']);
+Router::get('/consignment/nota-pdf', [ConsignmentController::class, 'notaPdf']);
 Router::post('/consignment/konfirmasi-terima', [ConsignmentController::class, 'konfirmasiTerima']);
 Router::get('/consignment/laporan-penjualan', [ConsignmentController::class, 'laporanPenjualan']);
+Router::get('/consignment/laporan-penjualan/detail-toko', [ConsignmentController::class, 'detailTokoAjax']);
 Router::get('/consignment/laporan-penjualan/export-excel', [ConsignmentController::class, 'exportSalesExcel']);
-Router::get('/consignment/piutang', [ConsignmentController::class, 'piutang']);
-Router::get('/consignment/piutang/export-excel', [ConsignmentController::class, 'exportPiutangExcel']);
-Router::post('/consignment/piutang/bayar', [ConsignmentController::class, 'catatPembayaran']);
+Router::get('/consignment/tagihan', [ConsignmentController::class, 'tagihanIndex']);
+Router::post('/consignment/tagihan/generate', [ConsignmentController::class, 'tagihanGenerate']);
+Router::post('/consignment/tagihan/bayar', [ConsignmentController::class, 'tagihanBayar']);
+Router::get('/consignment/tagihan/export-excel', [ConsignmentController::class, 'tagihanExportExcel']);
 Router::get('/consignment/assignment-sales', [ConsignmentController::class, 'assignmentSales']);
 Router::post('/consignment/assignment-sales/save', [ConsignmentController::class, 'saveAssignment']);
 Router::get('/consignment/riwayat-kunjungan', [ConsignmentController::class, 'riwayatKunjungan']);
@@ -208,6 +218,11 @@ Router::get('/consignment/summary', function () {
     $kId = $_GET['kunjungan_id'] ?? '';
     Router::redirect('/consignment/opname/hasil' . (!empty($kId) ? '?kunjungan_id=' . urlencode($kId) : ''));
 });
+// Redirect lama /consignment/piutang → /consignment/tagihan
+Router::get('/consignment/piutang', function () {
+    Router::redirect('/consignment/tagihan');
+});
+
 
 // --- KEUANGAN & KAS: BUKU KAS, TRANSAKSI & LAPORAN ARUS KAS ---
 Router::get('/cash', [CashController::class, 'index']);

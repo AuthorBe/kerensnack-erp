@@ -294,7 +294,8 @@ CREATE OR REPLACE FUNCTION public.fn_catat_pembayaran_konsinyasi(
     p_akun_kas_id uuid,
     p_nominal_bayar numeric,
     p_dicatat_oleh uuid DEFAULT NULL,
-    p_keterangan text DEFAULT NULL
+    p_keterangan text DEFAULT NULL,
+    p_tanggal_bayar date DEFAULT CURRENT_DATE
 ) RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
@@ -304,7 +305,10 @@ DECLARE
     v_saldo_lama NUMERIC(15,2);
     v_saldo_baru NUMERIC(15,2);
     v_pengguna_id UUID := p_dicatat_oleh;
+    v_tgl_transaksi DATE := COALESCE(p_tanggal_bayar, CURRENT_DATE);
+    v_ket_kas TEXT;
 BEGIN
+    -- Kunci baris pesanan untuk mencegah race condition pembayaran ganda
     SELECT * INTO v_pesanan FROM public.pesanan WHERE id = p_pesanan_id FOR UPDATE;
 
     IF v_pesanan IS NULL THEN
@@ -313,6 +317,14 @@ BEGIN
 
     IF v_pesanan.adalah_tagihan = FALSE THEN
         RAISE EXCEPTION 'Pesanan ini adalah dokumen pengiriman/titip, bukan tagihan. Tidak bisa dicatat pembayarannya.';
+    END IF;
+
+    IF v_pesanan.status_pembayaran = 'dibatalkan' THEN
+        RAISE EXCEPTION 'Tagihan % telah dibatalkan. Pembayaran tidak dapat diproses.', v_pesanan.nomor_nota;
+    END IF;
+
+    IF v_pesanan.status_pembayaran = 'lunas' OR v_pesanan.sisa_tagihan <= 0 THEN
+        RAISE EXCEPTION 'Tagihan % sudah berstatus LUNAS. Tidak ada sisa piutang.', v_pesanan.nomor_nota;
     END IF;
 
     IF p_nominal_bayar <= 0 THEN
@@ -333,9 +345,10 @@ BEGIN
         SELECT id INTO v_pengguna_id FROM public.pengguna WHERE status_aktif = TRUE ORDER BY dibuat_pada ASC LIMIT 1;
     END IF;
 
-    v_sisa_baru := v_pesanan.sisa_tagihan - p_nominal_bayar;
+    v_sisa_baru := GREATEST(0, v_pesanan.sisa_tagihan - p_nominal_bayar);
     v_status_baru := CASE WHEN v_sisa_baru <= 0 THEN 'lunas' ELSE 'sebagian' END;
 
+    -- Update Pesanan
     UPDATE public.pesanan
     SET total_dibayar = COALESCE(total_dibayar, 0) + p_nominal_bayar,
         sisa_tagihan = v_sisa_baru,
@@ -344,12 +357,14 @@ BEGIN
         diubah_pada = NOW()
     WHERE id = p_pesanan_id;
 
+    -- Update total piutang berjalan di master pelanggan
     UPDATE public.pelanggan
     SET total_piutang_berjalan = GREATEST(0, COALESCE(total_piutang_berjalan, 0) - p_nominal_bayar),
         diubah_pada = NOW()
     WHERE id = v_pesanan.pelanggan_id;
 
-    SELECT saldo_saat_ini INTO v_saldo_lama FROM public.akun_kas WHERE id = p_akun_kas_id;
+    -- Kunci dan update saldo kas penerima
+    SELECT saldo_saat_ini INTO v_saldo_lama FROM public.akun_kas WHERE id = p_akun_kas_id FOR UPDATE;
     IF v_saldo_lama IS NULL THEN
         RAISE EXCEPTION 'Akun kas % tidak ditemukan/tidak aktif', p_akun_kas_id;
     END IF;
@@ -359,21 +374,29 @@ BEGIN
     SET saldo_saat_ini = v_saldo_baru, diubah_pada = NOW()
     WHERE id = p_akun_kas_id;
 
+    -- Format keterangan arus kas terstruktur
+    v_ket_kas := 'Pembayaran Nota ' || v_pesanan.nomor_nota;
+    IF p_keterangan IS NOT NULL AND TRIM(p_keterangan) != '' THEN
+        v_ket_kas := v_ket_kas || ' - ' || TRIM(p_keterangan);
+    END IF;
+
+    -- Catat Arus Kas Masuk
     INSERT INTO public.arus_kas (
         akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
         referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
     ) VALUES (
-        p_akun_kas_id, CURRENT_DATE, 'masuk', 'penjualan', p_nominal_bayar,
-        COALESCE(p_keterangan, 'Pelunasan Nota Konsinyasi: ' || v_pesanan.nomor_nota),
-        'pesanan', p_pesanan_id, v_saldo_baru, v_pengguna_id, NOW()
+        p_akun_kas_id, v_tgl_transaksi, 'masuk', 'penjualan', p_nominal_bayar,
+        v_ket_kas, 'pesanan', p_pesanan_id, v_saldo_baru, v_pengguna_id, NOW()
     );
 
     RETURN jsonb_build_object(
         'success', true,
         'pesanan_id', p_pesanan_id,
-        'total_dibayar', v_pesanan.total_dibayar + p_nominal_bayar,
+        'nomor_nota', v_pesanan.nomor_nota,
+        'total_dibayar', COALESCE(v_pesanan.total_dibayar, 0) + p_nominal_bayar,
         'sisa_tagihan', v_sisa_baru,
-        'status_pembayaran', v_status_baru
+        'status_pembayaran', v_status_baru,
+        'tanggal_transaksi', v_tgl_transaksi
     );
 END;
 $$;

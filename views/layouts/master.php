@@ -254,5 +254,28 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
     <script src="<?= Router::asset('/js/searchable-select.js') ?>?v=<?= $jsV ?>"></script>
     <script src="<?= Router::asset('/js/keyboard-nav.js') ?>?v=<?= $jsV ?>"></script>
 
+    <!-- Failsafe: Pastikan loader skeleton selalu tersembunyi jika script selesai/timeout -->
+    <script>
+        (function() {
+            var removePageLoader = function() {
+                var l = document.getElementById('app-page-loader');
+                if (l && l.classList.contains('is-active')) {
+                    l.classList.remove('is-active');
+                }
+                var a = document.getElementById('app-action-loader');
+                if (a && !a.classList.contains('is-active')) {
+                    try { sessionStorage.removeItem('app_action_triggered'); } catch (e) {}
+                }
+            };
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                setTimeout(removePageLoader, 150);
+            } else {
+                document.addEventListener('DOMContentLoaded', function() { setTimeout(removePageLoader, 150); });
+                window.addEventListener('load', function() { setTimeout(removePageLoader, 60); });
+            }
+            setTimeout(removePageLoader, 1200);
+        })();
+    </script>
+
 </body>
 </html>

@@ -170,6 +170,177 @@ ob_start();
 .dark .driver-tab-btn.is-active {
     color: #60a5fa !important;
 }
+
+/* Konfirmasi Gagal Kirim Action Button */
+.btn-driver-fail-confirm {
+    background: #e11d48 !important;
+    border: 1px solid #e11d48 !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    font-size: 13.5px !important;
+    border-radius: 12px !important;
+    padding: 10px 24px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.25) !important;
+    transition: all 0.18s ease !important;
+    cursor: pointer;
+}
+.btn-driver-fail-confirm:hover {
+    background: #be123c !important;
+    border-color: #be123c !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.38) !important;
+    transform: translateY(-1px);
+}
+.btn-driver-fail-confirm:active {
+    background: #9f1239 !important;
+    border-color: #9f1239 !important;
+    transform: translateY(0);
+}
+.btn-driver-fail-confirm i,
+.btn-driver-fail-confirm svg {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
+}
+
+/* ========================================================================= */
+/* STYLES INTERACTIVE PHOTO VIEWER (PINCH, PAN & MOBILE FULLSCREEN)          */
+/* ========================================================================= */
+.receipt-backdrop {
+    z-index: 99999;
+    background: rgba(15, 23, 42, 0.65) !important;
+    backdrop-filter: blur(14px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    position: fixed;
+    inset: 0;
+    overscroll-behavior: contain;
+    touch-action: none;
+}
+.receipt-container {
+    width: 100%;
+    max-width: 980px;
+    height: 88vh;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface, #ffffff);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--color-hairline);
+    position: relative;
+}
+.receipt-viewport {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050811;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.receipt-floating-toolbar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    padding: 5px 8px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    color: #f8fafc;
+    user-select: none;
+}
+.receipt-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+.receipt-tool-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}
+.receipt-tool-btn:active:not(:disabled) {
+    transform: scale(0.92);
+}
+.receipt-tool-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.receipt-tool-badge {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #f8fafc;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.receipt-tool-badge:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+.receipt-tool-divider {
+    width: 1px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 3px;
+}
+
+@media (max-width: 640px) {
+    .receipt-backdrop {
+        padding: 0 !important;
+    }
+    .receipt-container {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+    .receipt-floating-toolbar {
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        gap: 6px;
+        padding: 6px 12px;
+    }
+    .receipt-tool-btn {
+        width: 40px;
+        height: 40px;
+    }
+    .receipt-tool-badge {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+}
 </style>
 
 <div x-data="driverDeliveryApp()" x-init="init()" class="space-y-6 sm:space-y-7">
@@ -412,14 +583,34 @@ ob_start();
                     </span>
                 </div>
 
-                <!-- Tombol Buka Pop-up Detail -->
-                <button type="button" 
-                        class="btn btn-secondary btn-sm" 
-                        style="font-size: 12.5px; font-weight: 700; border-radius: 11px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;"
-                        @click.stop="openDetailModal(<?= htmlspecialchars(json_encode($deliv)) ?>)">
-                    <i data-lucide="eye" style="width: 14px; height: 14px; color: #2563eb;"></i>
-                    <span>Detail Rute</span>
-                </button>
+                <!-- Tombol Aksi Cepat & Detail Rute -->
+                <div class="flex items-center gap-2">
+                    <?php if ($isCompleted && !empty($deliv['bukti_terima_foto'])): ?>
+                        <button type="button" 
+                                class="btn btn-secondary btn-sm" 
+                                style="font-size: 12px; font-weight: 700; border-radius: 11px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 5px; color: #059669; border-color: #a7f3d0; background: #ecfdf5;"
+                                @click.stop="openPhotoViewer('<?= htmlspecialchars($deliv['bukti_terima_foto']) ?>', 'Bukti Serah Terima - <?= htmlspecialchars(addslashes($deliv['nama_toko'])) ?>')">
+                            <i data-lucide="image" style="width: 14px; height: 14px;"></i>
+                            <span>Foto Bukti</span>
+                        </button>
+                    <?php elseif ($isFailed && !empty($deliv['foto_bukti_gagal'])): ?>
+                        <button type="button" 
+                                class="btn btn-secondary btn-sm" 
+                                style="font-size: 12px; font-weight: 700; border-radius: 11px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 5px; color: #e11d48; border-color: #fecaca; background: #fff1f2;"
+                                @click.stop="openPhotoViewer('<?= htmlspecialchars($deliv['foto_bukti_gagal']) ?>', 'Bukti Gagal Kirim - <?= htmlspecialchars(addslashes($deliv['nama_toko'])) ?>')">
+                            <i data-lucide="image" style="width: 14px; height: 14px;"></i>
+                            <span>Foto Gagal</span>
+                        </button>
+                    <?php endif; ?>
+
+                    <button type="button" 
+                            class="btn btn-secondary btn-sm" 
+                            style="font-size: 12.5px; font-weight: 700; border-radius: 11px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px;"
+                            @click.stop="openDetailModal(<?= htmlspecialchars(json_encode($deliv)) ?>)">
+                        <i data-lucide="eye" style="width: 14px; height: 14px; color: #2563eb;"></i>
+                        <span>Detail Rute</span>
+                    </button>
+                </div>
             </div>
 
         </div>
@@ -586,22 +777,33 @@ ob_start();
 
                         <!-- Box Info Penyelesaian (Jika Selesai Diterima) -->
                         <template x-if="activeDelivery?.status_surat_jalan === 'selesai_diterima' && activeDelivery?.nama_penerima_toko">
-                            <div class="p-4.5 bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl text-xs sm:text-sm text-emerald-900 dark:text-emerald-300 flex items-center justify-between gap-3.5 flex-wrap">
-                                <div class="flex items-center gap-3">
-                                    <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #059669; flex-shrink: 0;"></i>
-                                    <div>
-                                        <strong>Penerima di Toko:</strong> <span x-text="activeDelivery?.nama_penerima_toko"></span>
-                                        <template x-if="activeDelivery?.waktu_sampai">
-                                            <span class="text-emerald-700 dark:text-emerald-400 ml-1.5">&bull; Selesai: <span x-text="formatDateTime(activeDelivery?.waktu_sampai)"></span></span>
-                                        </template>
-                                    </div>
+                            <div class="p-4.5 bg-emerald-50 dark:bg-emerald-950/25 rounded-2xl text-xs sm:text-sm text-emerald-900 dark:text-emerald-300 flex items-center gap-3" style="border: none;">
+                                <i data-lucide="check-circle" style="width: 20px; height: 20px; color: #059669; flex-shrink: 0;"></i>
+                                <div>
+                                    <strong>Penerima di Toko:</strong> <span x-text="activeDelivery?.nama_penerima_toko"></span>
+                                    <template x-if="activeDelivery?.waktu_sampai">
+                                        <span class="text-emerald-700 dark:text-emerald-400 ml-1.5">&bull; Selesai: <span x-text="formatDateTime(activeDelivery?.waktu_sampai)"></span></span>
+                                    </template>
                                 </div>
-                                <template x-if="activeDelivery?.bukti_terima_foto">
-                                    <a :href="'<?= Router::url('/') ?>' + activeDelivery?.bukti_terima_foto" target="_blank" class="btn btn-sm btn-secondary" style="border-radius: 11px; font-weight: 700; font-size: 12px; padding: 7px 14px;">
-                                        <i data-lucide="image" style="width: 14px; height: 14px;"></i>
-                                        <span>Lihat Foto Bukti</span>
-                                    </a>
-                                </template>
+                            </div>
+                        </template>
+
+                        <!-- Box Info Kendala (Jika Gagal Kirim) -->
+                        <template x-if="activeDelivery?.status_surat_jalan === 'gagal_kirim'">
+                            <div class="p-4.5 bg-rose-50 dark:bg-rose-950/25 rounded-2xl text-xs sm:text-sm text-rose-900 dark:text-rose-300 flex items-start gap-3" style="border: none;">
+                                <i data-lucide="alert-octagon" style="width: 20px; height: 20px; color: #e11d48; flex-shrink: 0; margin-top: 2px;"></i>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-bold text-rose-950 dark:text-rose-200">
+                                        <span>Kendala: </span>
+                                        <span x-text="activeDelivery?.alasan_gagal || 'Pengiriman Gagal'"></span>
+                                    </div>
+                                    <template x-if="activeDelivery?.catatan_gagal">
+                                        <div class="text-rose-700 dark:text-rose-400 mt-1 text-xs" x-text="activeDelivery.catatan_gagal"></div>
+                                    </template>
+                                    <template x-if="activeDelivery?.waktu_gagal_kirim">
+                                        <div class="text-rose-600 dark:text-rose-400 mt-1 text-[11px]" x-text="'Waktu: ' + formatDateTime(activeDelivery.waktu_gagal_kirim)"></div>
+                                    </template>
+                                </div>
                             </div>
                         </template>
 
@@ -714,7 +916,7 @@ ob_start();
                         </div>
                     </div>
 
-                    <form action="<?= Router::url('/driver-deliveries/complete') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left"
+                    <form id="completeDeliveryForm" action="<?= Router::url('/driver-deliveries/complete') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left"
                           data-action-text="Menyimpan serah terima...">
                         <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
 
@@ -747,7 +949,28 @@ ob_start();
                             <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
                                 Foto Bukti Serah Terima Toko
                             </label>
-                            <input type="file" name="bukti_foto" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;">
+                            <input type="file" name="bukti_foto" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleCompletePhotoChange($event)" x-ref="completePhotoInput">
+                            
+                            <!-- Thumbnail Preview & Clear Button Card -->
+                            <template x-if="completePhotoPreview">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
+                                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                                        <img :src="completePhotoPreview" alt="Preview Foto Serah Terima" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;">
+                                        <div style="min-width:0;">
+                                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Siap Diunggah</div>
+                                            <div style="font-size:11.5px;color:#059669;font-weight:600;display:flex;align-items:center;gap:4px;">
+                                                <i data-lucide="check" style="width:13px;height:13px;"></i>
+                                                <span>Terkompresi Otomatis</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" @click="clearCompletePhoto()" class="btn btn-ghost btn-sm" style="padding:6px 12px;border-radius:10px;color:#e11d48;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.2);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex-shrink:0;" title="Hapus Foto">
+                                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+                                        <span>Hapus</span>
+                                    </button>
+                                </div>
+                            </template>
+
                             <div style="font-size: 12px; color: var(--color-ink-mute);">
                                 Ambil foto serah terima barang di toko atau nota bertanda tangan.
                             </div>
@@ -759,17 +982,6 @@ ob_start();
                                 Catatan Tambahan Lapangan (Opsional)
                             </label>
                             <textarea name="catatan_driver" rows="3" placeholder="Catatan kondisi serah terima..." class="form-input font-medium" style="border-radius: 14px; font-size: 13.5px; padding: 12px;"></textarea>
-                        </div>
-
-                        <!-- Form Footer Actions (Spacious & Distinct Border Spacing) -->
-                        <div style="padding-top: 24px; margin-top: 28px; border-top: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: flex-end; gap: 14px;">
-                            <button type="button" @click="viewMode = 'detail'" class="btn btn-secondary" style="border-radius: 13px; font-weight: 700; padding: 11px 24px; font-size: 13.5px;">
-                                Batal
-                            </button>
-                            <button type="submit" class="btn btn-primary" style="background: #059669; border-color: #059669; font-weight: 800; border-radius: 13px; padding: 11px 26px; font-size: 13.5px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.2);">
-                                <i data-lucide="check" style="width: 17px; height: 17px;"></i>
-                                <span>Simpan &amp; Selesai Kirim</span>
-                            </button>
                         </div>
                     </form>
                 </div>
@@ -790,7 +1002,7 @@ ob_start();
                         </div>
                     </div>
 
-                    <form action="<?= Router::url('/driver-deliveries/fail') ?>" method="POST" class="space-y-5 text-left"
+                    <form id="failDeliveryForm" action="<?= Router::url('/driver-deliveries/fail') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left"
                           data-action-text="Melaporkan gagal kirim...">
                         <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
 
@@ -808,6 +1020,38 @@ ob_start();
                             </select>
                         </div>
 
+                        <!-- Upload Foto Bukti Kendala Gagal Kirim -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                Foto Bukti Kendala (Kamera / Galeri HP)
+                            </label>
+                            <input type="file" name="foto_bukti_gagal" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleFailPhotoChange($event)" x-ref="failPhotoInput">
+                            
+                            <!-- Thumbnail Preview & Clear Button Card -->
+                            <template x-if="failPhotoPreview">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
+                                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                                        <img :src="failPhotoPreview" alt="Preview Foto Kendala" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;">
+                                        <div style="min-width:0;">
+                                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Kendala Dipilih</div>
+                                            <div style="font-size:11.5px;color:#059669;font-weight:600;display:flex;align-items:center;gap:4px;">
+                                                <i data-lucide="check" style="width:13px;height:13px;"></i>
+                                                <span>Terkompresi Otomatis</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" @click="clearFailPhoto()" class="btn btn-ghost btn-sm" style="padding:6px 12px;border-radius:10px;color:#e11d48;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.2);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex-shrink:0;" title="Hapus Foto">
+                                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+                                        <span>Hapus</span>
+                                    </button>
+                                </div>
+                            </template>
+
+                            <div style="font-size: 12px; color: var(--color-ink-mute);">
+                                Ambil foto kondisi toko (tutup / akses terhalang) sebagai bukti otentik lapangan.
+                            </div>
+                        </div>
+
                         <!-- Catatan Penjelasan -->
                         <div class="space-y-2">
                             <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
@@ -815,88 +1059,252 @@ ob_start();
                             </label>
                             <textarea name="catatan_gagal" rows="3" placeholder="Jelaskan detail kondisi di lokasi toko..." class="form-input font-medium" style="border-radius: 14px; font-size: 13.5px; padding: 12px;"></textarea>
                         </div>
-
-                        <!-- Form Footer Actions (Spacious & Distinct Border Spacing) -->
-                        <div style="padding-top: 24px; margin-top: 28px; border-top: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: flex-end; gap: 14px;">
-                            <button type="button" @click="viewMode = 'detail'" class="btn btn-secondary" style="border-radius: 13px; font-weight: 700; padding: 11px 24px; font-size: 13.5px;">
-                                Batal
-                            </button>
-                            <button type="submit" class="btn btn-danger" style="font-weight: 800; border-radius: 13px; padding: 11px 26px; font-size: 13.5px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.2);">
-                                <i data-lucide="alert-triangle" style="width: 17px; height: 17px;"></i>
-                                <span>Konfirmasi Gagal Kirim</span>
-                            </button>
-                        </div>
                     </form>
                 </div>
 
             </div>
 
             <!-- 4. MODAL FOOTER AKSI OPERASIONAL TETAP (CLEAN, PROPORTIONAL & RESPONSIVE) -->
-            <div x-show="viewMode === 'detail'"
-                 class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3"
+            <div class="modal-footer"
                  style="padding: 16px 24px; border-top: 1px solid var(--color-hairline); background: var(--color-canvas); flex-shrink: 0;">
                 
-                <!-- KIRI: Unduh Surat Jalan PDF -->
-                <div class="flex items-center">
-                    <a :href="'<?= Router::url('/deliveries/pdf?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
-                       target="_blank"
-                       class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
-                       style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#dc2626; border-color:#fca5a5; background:#fef2f2;">
-                        <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
-                        <span>Unduh Surat Jalan (PDF)</span>
-                    </a>
-                </div>
+                <!-- A. FOOTER MODE DETAIL (RINGKASAN & AKSI UTAMA RUTE) -->
+                <template x-if="viewMode === 'detail'">
+                    <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+                        <!-- KIRI: Unduh Surat Jalan PDF -->
+                        <div class="flex items-center">
+                            <a :href="'<?= Router::url('/deliveries/pdf?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
+                               target="_blank"
+                               class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
+                               style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#dc2626; border-color:#fca5a5; background:#fef2f2;">
+                                <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                                <span>Unduh Surat Jalan (PDF)</span>
+                            </a>
+                        </div>
 
-                <!-- KANAN: Tombol Aksi Operasional -->
-                <div class="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
-                    <!-- Tutup -->
-                    <button type="button" @click="closeDetailModal()" class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
-                            style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 18px;">
-                        Tutup
-                    </button>
+                        <!-- KANAN: Tombol Aksi Operasional -->
+                        <div class="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+                            <!-- Tombol Lihat Foto Bukti Selesai (Jika Selesai) -->
+                            <template x-if="activeDelivery?.status_surat_jalan === 'selesai_diterima' && activeDelivery?.bukti_terima_foto">
+                                <button type="button" 
+                                        @click="openPhotoViewer(activeDelivery.bukti_terima_foto, 'Bukti Serah Terima - ' + (activeDelivery?.nama_toko || ''))"
+                                        class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                        style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #059669; border-color: #a7f3d0; background: #ecfdf5; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="image" style="width: 15px; height: 15px;"></i>
+                                    <span>Lihat Foto Bukti</span>
+                                </button>
+                            </template>
 
-                    <!-- Form Mulai Kirim (Jika Masih Status Siap Berangkat) -->
-                    <form action="<?= Router::url('/driver-deliveries/start') ?>" method="POST"
-                          style="display: contents;"
-                          :data-confirm="'Mulai perjalanan pengiriman ke ' + (activeDelivery?.nama_toko || '') + '?'"
-                          data-confirm-title="Mulai Pengiriman"
-                          data-confirm-type="info"
-                          data-confirm-btn="Ya, Mulai Berangkat"
-                          data-action-text="Memulai pengiriman...">
-                        <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
-                        <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'].includes(activeDelivery?.status_surat_jalan)">
-                            <button type="submit" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
-                                    style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; display: inline-flex; align-items: center; gap: 7px; background: #2563eb; border-color: #2563eb; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
-                                <i data-lucide="send" style="width: 15px; height: 15px;"></i>
-                                <span>Mulai Kirim</span>
-                            </button>
-                        </template>
-                    </form>
+                            <!-- Tombol Lihat Foto Bukti Gagal (Jika Gagal) -->
+                            <template x-if="activeDelivery?.status_surat_jalan === 'gagal_kirim' && activeDelivery?.foto_bukti_gagal">
+                                <button type="button" 
+                                        @click="openPhotoViewer(activeDelivery.foto_bukti_gagal, 'Bukti Gagal Kirim - ' + (activeDelivery?.nama_toko || ''))"
+                                        class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                        style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #e11d48; border-color: #fecaca; background: #fff1f2; display: inline-flex; align-items: center; gap: 6px;">
+                                    <i data-lucide="image" style="width: 15px; height: 15px;"></i>
+                                    <span>Lihat Foto Gagal</span>
+                                </button>
+                            </template>
 
-                    <!-- Lapor Gagal (Jika Sedang Dikirim) -->
-                    <template x-if="activeDelivery?.status_surat_jalan === 'sedang_dikirim'">
-                        <button type="button" class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
-                                style="font-weight: 700; font-size: 13px; border-radius: 12px; padding: 9px 16px; color: #e11d48; border-color: #fecaca; display: inline-flex; align-items: center; gap: 6px;"
-                                @click="viewMode = 'fail_form'; $nextTick(() => lucide.createIcons())">
-                            <i data-lucide="x-circle" style="width: 15px; height: 15px;"></i>
-                            <span>Lapor Gagal</span>
+                            <!-- Form Mulai Kirim (Jika Masih Status Siap Berangkat) -->
+                            <form action="<?= Router::url('/driver-deliveries/start') ?>" method="POST"
+                                  style="display: contents;"
+                                  :data-confirm="'Mulai perjalanan pengiriman ke ' + (activeDelivery?.nama_toko || '') + '?'"
+                                  data-confirm-title="Mulai Pengiriman"
+                                  data-confirm-type="info"
+                                  data-confirm-btn="Ya, Mulai Berangkat"
+                                  data-action-text="Memulai pengiriman...">
+                                <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
+                                <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'].includes(activeDelivery?.status_surat_jalan)">
+                                    <button type="submit" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
+                                            style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; display: inline-flex; align-items: center; gap: 7px; background: #2563eb; border-color: #2563eb; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
+                                        <i data-lucide="send" style="width: 15px; height: 15px;"></i>
+                                        <span>Mulai Kirim</span>
+                                    </button>
+                                </template>
+                            </form>
+
+                            <!-- Lapor Gagal (Jika Sedang Dikirim) -->
+                            <template x-if="activeDelivery?.status_surat_jalan === 'sedang_dikirim'">
+                                <button type="button" class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                        style="font-weight: 700; font-size: 13px; border-radius: 12px; padding: 9px 16px; color: #e11d48; border-color: #fecaca; background: #fff1f2; display: inline-flex; align-items: center; gap: 6px;"
+                                        @click="viewMode = 'fail_form'">
+                                    <i data-lucide="x-circle" style="width: 15px; height: 15px;"></i>
+                                    <span>Lapor Gagal</span>
+                                </button>
+                            </template>
+
+                            <!-- Selesai Kirim (Jika Sedang Dikirim) -->
+                            <template x-if="activeDelivery?.status_surat_jalan === 'sedang_dikirim'">
+                                <button type="button" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
+                                        style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; background: #059669; border-color: #059669; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);"
+                                        @click="viewMode = 'complete_form'">
+                                    <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                                    <span>Selesai Kirim</span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- B. FOOTER MODE COMPLETE FORM (KONFIRMASI SERAH TERIMA PENGIRIMAN) -->
+                <template x-if="viewMode === 'complete_form'">
+                    <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+                        <!-- Kiri: Batal & Kembali ke Detail -->
+                        <button type="button" @click="viewMode = 'detail'"
+                                class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 20px; display: inline-flex; align-items: center; gap: 7px;">
+                            <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
+                            <span>Batal &amp; Kembali</span>
                         </button>
-                    </template>
 
-                    <!-- Selesai Kirim (Jika Sedang Dikirim) -->
-                    <template x-if="activeDelivery?.status_surat_jalan === 'sedang_dikirim'">
-                        <button type="button" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
-                                style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; background: #059669; border-color: #059669; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);"
-                                @click="viewMode = 'complete_form'; $nextTick(() => lucide.createIcons())">
-                            <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
-                            <span>Selesai Kirim</span>
+                        <!-- Kanan: Simpan & Selesai Kirim (Submit Form Serah Terima) -->
+                        <button type="submit" form="completeDeliveryForm"
+                                class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
+                                style="font-weight: 800; font-size: 13.5px; border-radius: 12px; padding: 10px 24px; background: #059669; border-color: #059669; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);">
+                            <i data-lucide="check" style="width: 17px; height: 17px;"></i>
+                            <span>Simpan &amp; Selesai Kirim</span>
                         </button>
-                    </template>
-                </div>
+                    </div>
+                </template>
+
+                <!-- C. FOOTER MODE FAIL FORM (LAPOR KENDALA / GAGAL KIRIM) -->
+                <template x-if="viewMode === 'fail_form'">
+                    <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+                        <!-- Kiri: Batal & Kembali ke Detail -->
+                        <button type="button" @click="viewMode = 'detail'"
+                                class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 20px; display: inline-flex; align-items: center; gap: 7px;">
+                            <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
+                            <span>Batal &amp; Kembali</span>
+                        </button>
+
+                        <!-- Kanan: Konfirmasi Gagal Kirim (Submit Form Lapor Gagal) -->
+                        <button type="submit" form="failDeliveryForm"
+                                class="btn btn-driver-fail-confirm btn-sm flex-1 sm:flex-none justify-center">
+                            <i data-lucide="alert-triangle" style="width: 17px; height: 17px;"></i>
+                            <span>Konfirmasi Gagal Kirim</span>
+                        </button>
+                    </div>
+                </template>
 
             </div>
 
+        </div>
+    </div>
+    </template>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI PENGIRIMAN (TOUCH PINCH & PAN VIEWER) -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="showPhotoModal" 
+         x-cloak 
+         class="receipt-backdrop" 
+         @keydown.window="handleViewerKeydown($event)">
+        
+        <div class="receipt-container" @click.stop>
+            <!-- Header Modal -->
+            <div class="receipt-header" style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--color-hairline);background:var(--color-surface, #ffffff);z-index:10;">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;color:#3b82f6;flex-shrink:0;">
+                        <i data-lucide="image" style="width:18px;height:18px;"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Pengiriman</h3>
+                        <div style="font-size:11px;color:var(--color-ink-mute);font-family:monospace;" x-text="photoModalSubtitle"></div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <button type="button" @click="closePhotoViewer()" class="btn btn-ghost btn-sm" style="padding:6px;border-radius:8px;" title="Tutup">
+                        <i data-lucide="x" style="width:20px;height:20px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport) -->
+            <div class="receipt-viewport" 
+                 x-ref="photoViewport"
+                 @wheel.prevent="handleWheel($event)"
+                 @mousedown="handleMouseDown($event)"
+                 @touchstart="handleTouchStart($event)"
+                 @touchmove.prevent="handleTouchMove($event)"
+                 @touchend="handleTouchEnd($event)"
+                 @touchcancel="handleTouchEnd($event)"
+                 @dblclick="toggleDoubleTap($event.clientX, $event.clientY)">
+
+                <!-- State Error jika file fisik tidak ditemukan / dibersihkan -->
+                <div x-show="photoLoadError" style="margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:440px;width:100%;padding:32px 16px;z-index:5;">
+                    <div style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;color:#ef4444;margin:0 auto 16px auto;box-shadow:0 4px 12px rgba(239,68,68,0.12);">
+                        <i data-lucide="image-off" style="width:28px;height:28px;display:block;"></i>
+                    </div>
+                    <div style="font-size:15px;font-weight:700;color:#f8fafc;margin-bottom:6px;text-align:center;width:100%;">Foto Bukti Tidak Ditemukan</div>
+                    <div style="font-size:12.5px;color:#94a3b8;max-width:380px;line-height:1.6;margin:0 auto;text-align:center;width:100%;">
+                        Berkas foto bukti ini tidak ditemukan di direktori server. Kemungkinan merupakan berkas lama yang telah dibersihkan atau belum berhasil terunggah.
+                    </div>
+                </div>
+
+                <!-- Gambar Bukti Utama (Hardware-Accelerated CSS Transform) -->
+                <template x-if="photoModalUrl">
+                    <img :src="photoModalUrl" 
+                         alt="Foto Bukti Pengiriman" 
+                         x-show="!photoLoadError"
+                         @load="onPhotoImageLoaded()"
+                         @error="photoLoadError = true; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });"
+                         draggable="false"
+                         :style="{
+                             display: photoLoadError ? 'none' : 'block',
+                             maxWidth: '100%',
+                             maxHeight: '100%',
+                             objectFit: 'contain',
+                             transform: 'translate3d(' + zoomPanX + 'px, ' + zoomPanY + 'px, 0) scale(' + zoomScale + ') rotate(' + zoomRotate + 'deg)',
+                             transformOrigin: 'center center',
+                             transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)',
+                             cursor: zoomScale > 1.05 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                             userSelect: 'none',
+                             webkitUserDrag: 'none'
+                         }">
+                </template>
+
+                <!-- Floating Glassmorphism Controls (Bar Alat Sentuh Mengambang) -->
+                <div x-show="!photoLoadError" class="receipt-floating-toolbar">
+                    <!-- Zoom Out -->
+                    <button type="button" @click="zoomStep(-0.3)" class="receipt-tool-btn" title="Perkecil Zoom (-)" :disabled="zoomScale <= 0.6">
+                        <i data-lucide="minus" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <!-- Persentase & Reset -->
+                    <button type="button" @click="resetZoom()" class="receipt-tool-badge" title="Klik untuk Reset Tampilan Fit">
+                        <span x-text="Math.round(zoomScale * 100) + '%'"></span>
+                    </button>
+
+                    <!-- Zoom In -->
+                    <button type="button" @click="zoomStep(0.3)" class="receipt-tool-btn" title="Perbesar Zoom (+)" :disabled="zoomScale >= 5.0">
+                        <i data-lucide="plus" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <div class="receipt-tool-divider"></div>
+
+                    <!-- Rotate 90° Clockwise -->
+                    <button type="button" @click="rotateClockwise()" class="receipt-tool-btn" title="Putar Posisi 90°">
+                        <i data-lucide="rotate-cw" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <!-- Fit / Reset -->
+                    <button type="button" @click="resetZoom()" class="receipt-tool-btn" title="Reset Ukuran Normal (Fit Layar)">
+                        <i data-lucide="maximize-2" style="width:15px;height:15px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer Modal (Petunjuk Gestur - Cukup petunjuk, tanpa tombol tutup redundant) -->
+            <div class="receipt-footer" style="display:flex;align-items:center;justify-content:center;padding:10px 18px;border-top:1px solid var(--color-hairline);background:var(--color-canvas-soft);font-size:11.5px;color:var(--color-ink-mute);z-index:10;text-align:center;">
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
+                    <span class="hidden sm:inline">Geser untuk memindahkan foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x untuk zoom cepat</span>
+                    <span class="inline sm:hidden">Cubit 2 jari untuk zoom • Geser foto • Ketuk 2x zoom</span>
+                </div>
+            </div>
         </div>
     </div>
     </template>
@@ -911,7 +1319,45 @@ function driverDeliveryApp() {
         activeTab: 'info', // 'info', 'items', 'payment'
         viewMode: 'detail', // 'detail', 'complete_form', 'fail_form'
 
+        // Photo viewer states
+        showPhotoModal: false,
+        photoModalUrl: '',
+        photoModalTitle: '',
+        photoModalSubtitle: '',
+        photoLoadError: false,
+        zoomScale: 1.0,
+        zoomPanX: 0,
+        zoomPanY: 0,
+        zoomRotate: 0,
+        isDragging: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        isPinching: false,
+        pinchStartDist: 0,
+        pinchStartScale: 1.0,
+        lastTapTime: 0,
+
+        // Upload previews
+        completePhotoFile: null,
+        completePhotoPreview: null,
+        failPhotoFile: null,
+        failPhotoPreview: null,
+
         init() {
+            this.$watch('viewMode', () => {
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
+            this.$watch('showPhotoModal', (val) => {
+                if (val) {
+                    document.body.style.overflow = 'hidden';
+                    document.documentElement.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                    document.documentElement.style.overflow = '';
+                }
+            });
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             });
@@ -921,6 +1367,8 @@ function driverDeliveryApp() {
             this.activeDelivery = deliv;
             this.activeTab = 'info';
             this.viewMode = 'detail';
+            this.clearCompletePhoto();
+            this.clearFailPhoto();
             this.showDetailModal = true;
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -930,6 +1378,284 @@ function driverDeliveryApp() {
         closeDetailModal() {
             this.showDetailModal = false;
             this.viewMode = 'detail';
+        },
+
+        // Photo viewer methods
+        openPhotoViewer(url, title, subtitle) {
+            if (!url) return;
+            this.resetZoom();
+            this.photoLoadError = false;
+            this.photoModalUrl = '<?= Router::url('/') ?>' + url.replace(/^\//, '');
+            this.photoModalTitle = title || 'Foto Bukti Pengiriman';
+            this.photoModalSubtitle = subtitle || '';
+            this.showPhotoModal = true;
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        closePhotoViewer() {
+            this.showPhotoModal = false;
+            this.photoModalUrl = '';
+            this.resetZoom();
+            this.photoLoadError = false;
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        },
+
+        resetZoom() {
+            this.zoomScale = 1.0;
+            this.zoomPanX = 0;
+            this.zoomPanY = 0;
+            this.zoomRotate = 0;
+            this.isDragging = false;
+            this.isPinching = false;
+        },
+
+        zoomStep(step) {
+            const next = Math.min(5.0, Math.max(0.6, Number((this.zoomScale + step).toFixed(2))));
+            this.zoomScale = next;
+            if (next <= 1.0) {
+                this.zoomPanX = 0;
+                this.zoomPanY = 0;
+            } else {
+                this.clampPan();
+            }
+        },
+
+        rotateClockwise() {
+            this.zoomRotate = (this.zoomRotate + 90) % 360;
+        },
+
+        clampPan() {
+            if (this.zoomScale <= 1.0) {
+                this.zoomPanX = 0;
+                this.zoomPanY = 0;
+                return;
+            }
+            const bound = Math.max(100, 480 * (this.zoomScale - 0.7));
+            this.zoomPanX = Math.max(-bound, Math.min(bound, this.zoomPanX));
+            this.zoomPanY = Math.max(-bound, Math.min(bound, this.zoomPanY));
+        },
+
+        onPhotoImageLoaded() {
+            this.photoLoadError = false;
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        toggleDoubleTap(clientX, clientY) {
+            if (this.photoLoadError) return;
+            if (this.zoomScale > 1.2) {
+                this.resetZoom();
+            } else {
+                this.zoomScale = 2.4;
+                this.zoomPanX = 0;
+                this.zoomPanY = 0;
+            }
+        },
+
+        handleMouseDown(e) {
+            if (e.button !== 0 || this.photoLoadError) return;
+            this.isDragging = true;
+            this.dragStartX = e.clientX - this.zoomPanX;
+            this.dragStartY = e.clientY - this.zoomPanY;
+
+            const onMouseMove = (ev) => {
+                if (!this.isDragging) return;
+                this.zoomPanX = ev.clientX - this.dragStartX;
+                this.zoomPanY = ev.clientY - this.dragStartY;
+                this.clampPan();
+            };
+
+            const onMouseUp = () => {
+                this.isDragging = false;
+                this.clampPan();
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        },
+
+        handleTouchStart(e) {
+            if (this.photoLoadError) return;
+            if (e.touches.length === 2) {
+                this.isPinching = true;
+                this.isDragging = false;
+                this.pinchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                this.pinchStartScale = this.zoomScale;
+            } else if (e.touches.length === 1) {
+                const now = Date.now();
+                if (now - this.lastTapTime < 300) {
+                    this.toggleDoubleTap(e.touches[0].clientX, e.touches[0].clientY);
+                    this.lastTapTime = 0;
+                    return;
+                }
+                this.lastTapTime = now;
+
+                this.isDragging = true;
+                this.dragStartX = e.touches[0].clientX - this.zoomPanX;
+                this.dragStartY = e.touches[0].clientY - this.zoomPanY;
+            }
+        },
+
+        handleTouchMove(e) {
+            if (this.photoLoadError) return;
+            if (this.isPinching && e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                if (this.pinchStartDist > 0) {
+                    const factor = dist / this.pinchStartDist;
+                    this.zoomScale = Math.min(5.0, Math.max(0.6, Number((this.pinchStartScale * factor).toFixed(2))));
+                }
+            } else if (this.isDragging && e.touches.length === 1) {
+                this.zoomPanX = e.touches[0].clientX - this.dragStartX;
+                this.zoomPanY = e.touches[0].clientY - this.dragStartY;
+                this.clampPan();
+            }
+        },
+
+        handleTouchEnd(e) {
+            if (e.touches.length < 2) {
+                this.isPinching = false;
+            }
+            if (e.touches.length === 0) {
+                this.isDragging = false;
+                this.clampPan();
+            }
+        },
+
+        handleWheel(e) {
+            if (this.photoLoadError) return;
+            const delta = e.deltaY < 0 ? 0.25 : -0.25;
+            this.zoomStep(delta);
+        },
+
+        handleViewerKeydown(e) {
+            if (!this.showPhotoModal || this.photoLoadError) return;
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                this.zoomStep(0.3);
+            } else if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                this.zoomStep(-0.3);
+            } else if (e.key === '0') {
+                e.preventDefault();
+                this.resetZoom();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                this.rotateClockwise();
+            }
+        },
+
+        // Client-side canvas image compression helper
+        compressImage(file, callback) {
+            if (!file) return;
+            if (file.size > 15 * 1024 * 1024) {
+                if (typeof toast !== 'undefined') toast.warning('Ukuran file foto maksimal 15MB!');
+                return;
+            }
+            if (!file.type.match(/^image\//i)) {
+                if (typeof toast !== 'undefined') toast.warning('Format file harus berupa gambar (JPG, PNG, atau WebP)!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxDim = 1600;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w >= h) {
+                            h = Math.round((h / w) * maxDim);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w / h) * maxDim);
+                            h = maxDim;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
+                            callback(newFile, canvas.toDataURL('image/jpeg', 0.82));
+                        } else {
+                            callback(file, e.target.result);
+                        }
+                    }, 'image/jpeg', 0.82);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        },
+
+        handleCompletePhotoChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            this.compressImage(file, (compressedFile, previewDataUrl) => {
+                this.completePhotoFile = compressedFile;
+                this.completePhotoPreview = previewDataUrl;
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(compressedFile);
+                    event.target.files = dt.files;
+                } catch (e) {}
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
+        },
+
+        clearCompletePhoto() {
+            this.completePhotoFile = null;
+            this.completePhotoPreview = null;
+            if (this.$refs.completePhotoInput) {
+                this.$refs.completePhotoInput.value = '';
+            }
+        },
+
+        handleFailPhotoChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            this.compressImage(file, (compressedFile, previewDataUrl) => {
+                this.failPhotoFile = compressedFile;
+                this.failPhotoPreview = previewDataUrl;
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(compressedFile);
+                    event.target.files = dt.files;
+                } catch (e) {}
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
+        },
+
+        clearFailPhoto() {
+            this.failPhotoFile = null;
+            this.failPhotoPreview = null;
+            if (this.$refs.failPhotoInput) {
+                this.$refs.failPhotoInput.value = '';
+            }
         },
 
         cleanWa(raw) {

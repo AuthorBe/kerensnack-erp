@@ -10,6 +10,7 @@ function posApp() {
         items: <?= json_encode($items) ?>,
         customers: <?= json_encode($customers) ?>,
         customerItemsMap: <?= json_encode($customerItemsMap ?? []) ?>,
+        cashAccounts: <?= json_encode($cashAccounts ?? []) ?>,
         selectedCustomerId: '<?= $customers[0]['id'] ?? '' ?>',
         filterStoreOnly: true,
         selectedGroup: 'all',
@@ -28,7 +29,37 @@ function posApp() {
         paymentType: 'cash',
         paidAmount: 0,
         paidAmountDisplay: '0',
+        forceCashChange: false,
         isSubmitting: false,
+
+        get activeCashDrawer() {
+            if (!this.cashAccounts || !Array.isArray(this.cashAccounts) || this.cashAccounts.length === 0) return null;
+            if (this.paymentType === 'qris') {
+                return this.cashAccounts.find(a => (a.nama_akun || '').toLowerCase().includes('qris')) || this.cashAccounts[0];
+            }
+            return this.cashAccounts.find(a => Boolean(a.is_default_pos)) ||
+                   this.cashAccounts.find(a => (a.nama_akun || '').toLowerCase().includes('kasir')) ||
+                   this.cashAccounts[0];
+        },
+
+        get changeAmount() {
+            if (this.paymentType !== 'cash') return 0;
+            return Math.max(0, (Number(this.paidAmount) || 0) - this.grandTotal);
+        },
+
+        get isCashDrawerInsufficient() {
+            if (this.paymentType !== 'cash') return false;
+            const change = this.changeAmount;
+            if (change <= 0) return false;
+            const drawerBalance = Number(this.activeCashDrawer?.saldo_saat_ini || 0);
+            return change > drawerBalance;
+        },
+
+        get shortageAmount() {
+            if (!this.isCashDrawerInsufficient) return 0;
+            const drawerBalance = Number(this.activeCashDrawer?.saldo_saat_ini || 0);
+            return this.changeAmount - drawerBalance;
+        },
 
         init() {
             window.posInstance = this;
@@ -302,6 +333,7 @@ function posApp() {
             this.paymentType = 'cash';
             this.paidAmount = this.grandTotal;
             this.paidAmountDisplay = window.formatRupiahNumber ? window.formatRupiahNumber(this.grandTotal) : String(this.grandTotal);
+            this.forceCashChange = false;
             this.showPaymentModal = true;
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -313,32 +345,54 @@ function posApp() {
         setQuickCash(amount) {
             this.paidAmount = amount;
             this.paidAmountDisplay = window.formatRupiahNumber ? window.formatRupiahNumber(amount) : String(amount);
+            this.forceCashChange = false;
+            this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
         },
 
         setExactCash() {
             this.paidAmount = this.grandTotal;
             this.paidAmountDisplay = window.formatRupiahNumber ? window.formatRupiahNumber(this.grandTotal) : String(this.grandTotal);
+            this.forceCashChange = false;
+            this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
         },
 
         onPaidInput(e) {
             const rawVal = e.target.value.replace(/[^0-9]/g, '');
             this.paidAmount = rawVal ? parseInt(rawVal, 10) : 0;
             this.paidAmountDisplay = window.formatRupiahNumber ? window.formatRupiahNumber(this.paidAmount) : String(this.paidAmount);
+            this.forceCashChange = false;
+            this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
         },
 
         async submitCheckout() {
-            if (this.paymentType === 'cash' && this.paidAmount < this.grandTotal) {
-                if (window.AppAlert) {
-                    window.AppAlert({
-                        title: 'Nominal Kurang',
-                        message: `Uang tunai yang dibayarkan (Rp ${Number(this.paidAmount).toLocaleString('id-ID')}) kurang dari total tagihan (Rp ${Number(this.grandTotal).toLocaleString('id-ID')}).`,
-                        type: 'warning',
-                        icon: 'alert-triangle'
-                    });
-                } else if (typeof toast !== 'undefined') {
-                    toast.warning('Nominal uang tunai kurang dari total tagihan!');
+            if (this.paymentType === 'cash') {
+                if (this.paidAmount < this.grandTotal) {
+                    if (window.AppAlert) {
+                        window.AppAlert({
+                            title: 'Nominal Kurang',
+                            message: `Uang tunai yang dibayarkan (Rp ${Number(this.paidAmount).toLocaleString('id-ID')}) kurang dari total tagihan (Rp ${Number(this.grandTotal).toLocaleString('id-ID')}).`,
+                            type: 'warning',
+                            icon: 'alert-triangle'
+                        });
+                    } else if (typeof toast !== 'undefined') {
+                        toast.warning('Nominal uang tunai kurang dari total tagihan!');
+                    }
+                    return;
                 }
-                return;
+
+                if (this.isCashDrawerInsufficient && !this.forceCashChange) {
+                    if (window.AppAlert) {
+                        window.AppAlert({
+                            title: 'Saldo Kas Laci Tidak Cukup',
+                            message: `Saldo di laci kasir (${this.formatRupiah(this.activeCashDrawer?.saldo_saat_ini || 0)}) tidak cukup untuk membayar kembalian ${this.formatRupiah(this.changeAmount)} (Kurang ${this.formatRupiah(this.shortageAmount)}). Silakan alihkan ke QRIS atau lakukan tukar uang.`,
+                            type: 'warning',
+                            icon: 'alert-triangle'
+                        });
+                    } else if (typeof toast !== 'undefined') {
+                        toast.warning('Saldo kasir tidak mencukupi untuk bayar kembalian!');
+                    }
+                    return;
+                }
             }
 
             this.isSubmitting = true;
@@ -354,7 +408,9 @@ function posApp() {
                         customer_id: this.selectedCustomerId,
                         payment_type: this.paymentType,
                         cart: this.cart,
-                        paid_amount: this.paymentType === 'qris' ? this.grandTotal : this.paidAmount
+                        paid_amount: this.paymentType === 'qris' ? this.grandTotal : this.paidAmount,
+                        force_cash_change: this.forceCashChange,
+                        cash_account_id: this.activeCashDrawer?.id || null
                     })
                 });
                 const json = await res.json();
@@ -372,9 +428,17 @@ function posApp() {
                         });
                     }
 
+                    // Sinkronisasi saldo laci kasir secara lokal
+                    if (json.data && json.data.saldo_kas_terbaru !== undefined && this.activeCashDrawer) {
+                        this.activeCashDrawer.saldo_saat_ini = json.data.saldo_kas_terbaru;
+                        const matchInAccounts = this.cashAccounts.find(a => a.id === this.activeCashDrawer.id);
+                        if (matchInAccounts) matchInAccounts.saldo_saat_ini = json.data.saldo_kas_terbaru;
+                    }
+
                     this.receiptData = {
                         ...json.data,
-                        paid_amount: this.paymentType === 'qris' ? this.grandTotal : this.paidAmount
+                        paid_amount: this.paymentType === 'qris' ? this.grandTotal : this.paidAmount,
+                        kembalian: this.paymentType === 'qris' ? 0 : this.changeAmount
                     };
                     this.cart = [];
                     this.showPaymentModal = false;
@@ -385,9 +449,18 @@ function posApp() {
                     });
                 } else {
                     if (window.AppAction) {
-                        await window.AppAction.error(`Gagal: ${json.message || 'Transaksi Ditolak'}`, 1200);
+                        await window.AppAction.error(`Gagal: ${json.message || 'Transaksi Ditolak'}`, 1400);
                     }
-                    toast.error(`Gagal memproses transaksi: ${json.message}`);
+                    if (window.AppAlert) {
+                        window.AppAlert({
+                            title: json.code === 'INSUFFICIENT_CASH_DRAWER' ? 'Saldo Kasir Tidak Cukup' : 'Transaksi Ditolak',
+                            message: json.message,
+                            type: 'warning',
+                            icon: 'alert-triangle'
+                        });
+                    } else {
+                        toast.error(`Gagal memproses transaksi: ${json.message}`);
+                    }
                 }
             } catch (err) {
                 if (window.AppAction) {
@@ -765,8 +838,9 @@ document.addEventListener('alpine:init', () => {
     <!-- ====================================================================== -->
     <!-- MODAL 2: PEMBAYARAN KASIR POS (OFFICIAL MATERIAL DESIGN 3 DIALOG)       -->
     <!-- ====================================================================== -->
-    <div x-show="showPaymentModal" x-cloak class="modal-backdrop" @click.self="showPaymentModal = false" style="display:none;">
+    <div x-show="showPaymentModal" x-cloak class="modal-backdrop m3-payment-backdrop" @click.self="showPaymentModal = false" style="display:none;">
         <div class="m3-dialog" @click.stop>
+            <div class="m3-drag-handle"></div>
             
             <!-- M3 Dialog Header -->
             <div class="m3-dialog-header">
@@ -789,6 +863,23 @@ document.addEventListener('alpine:init', () => {
                     <div class="m3-hero-total-amount" x-text="formatRupiah(grandTotal)"></div>
                 </div>
                 <div class="m3-hero-total-badge" x-text="cartTotalQty + ' Pcs Item'"></div>
+            </div>
+
+            <!-- M3 Cash Drawer Status Indicator -->
+            <div class="m3-drawer-indicator">
+                <div class="m3-drawer-indicator-left">
+                    <div class="m3-drawer-icon-box">
+                        <i data-lucide="inbox" style="width: 15px; height: 15px;"></i>
+                    </div>
+                    <div class="m3-drawer-meta">
+                        <span class="m3-drawer-label" x-text="paymentType === 'cash' ? 'Laci Kasir' : 'Rekening Kas'"></span>
+                        <span class="m3-drawer-name" :title="activeCashDrawer?.nama_akun || 'Kasir Toko'" x-text="activeCashDrawer?.nama_akun || 'Kasir Toko'"></span>
+                    </div>
+                </div>
+                <div class="m3-drawer-indicator-right">
+                    <span class="m3-drawer-balance-label">Saldo Kasir</span>
+                    <span class="m3-drawer-balance-val font-mono" x-text="formatRupiah(activeCashDrawer?.saldo_saat_ini || 0)"></span>
+                </div>
             </div>
 
             <!-- M3 Segmented Button Group (Payment Method Selection) -->
@@ -845,13 +936,55 @@ document.addEventListener('alpine:init', () => {
 
                 <!-- M3 Kembalian Status Card -->
                 <div class="m3-status-banner"
-                     :class="paidAmount >= grandTotal ? 'is-success' : 'is-error'">
+                     :class="{
+                         'is-error': paidAmount < grandTotal,
+                         'is-warning': paidAmount >= grandTotal && isCashDrawerInsufficient,
+                         'is-success': paidAmount >= grandTotal && !isCashDrawerInsufficient
+                     }">
                     <div class="m3-status-banner-left">
-                        <i :data-lucide="paidAmount >= grandTotal ? 'check-circle' : 'alert-circle'" style="width: 18px; height: 18px;"></i>
-                        <span x-text="paidAmount >= grandTotal ? 'Kembalian:' : 'Uang Kurang:'"></span>
+                        <i :data-lucide="paidAmount < grandTotal ? 'alert-circle' : (isCashDrawerInsufficient ? 'alert-triangle' : 'check-circle')" style="width: 18px; height: 18px;"></i>
+                        <span x-text="paidAmount < grandTotal ? 'Uang Kurang:' : 'Kembalian:'"></span>
                     </div>
                     <div class="m3-status-banner-amount font-mono"
-                         x-text="paidAmount >= grandTotal ? formatRupiah(paidAmount - grandTotal) : 'Kurang ' + formatRupiah(grandTotal - paidAmount)"></div>
+                         x-text="paidAmount >= grandTotal ? formatRupiah(changeAmount) : 'Kurang ' + formatRupiah(grandTotal - paidAmount)"></div>
+                </div>
+
+                <!-- Warning & Quick Actions when Cash Drawer is Insufficient -->
+                <div x-show="isCashDrawerInsufficient" x-cloak class="m3-drawer-shortage-card">
+                    <div class="m3-shortage-header">
+                        <div class="m3-shortage-icon-box">
+                            <i data-lucide="alert-triangle" style="width: 16px; height: 16px;"></i>
+                        </div>
+                        <div class="m3-shortage-body">
+                            <div class="m3-shortage-title">Saldo Laci Kasir Tidak Cukup!</div>
+                            <div class="m3-shortage-desc">
+                                Kembalian <strong x-text="formatRupiah(changeAmount)"></strong> melebihi saldo laci (<span x-text="formatRupiah(activeCashDrawer?.saldo_saat_ini || 0)"></span>).
+                                Kekurangan uang kembalian: <strong style="color:#b45309;" class="dark:text-amber-400" x-text="formatRupiah(shortageAmount)"></strong>.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tombol Solusi Cepat -->
+                    <div class="m3-shortage-actions">
+                        <button type="button" 
+                                @click="paymentType = 'qris'; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })"
+                                class="m3-shortage-btn">
+                            <i data-lucide="qr-code" style="width: 13px; height: 13px;"></i>
+                            <span>Alihkan ke QRIS</span>
+                        </button>
+                        <button type="button" 
+                                @click="setExactCash()"
+                                class="m3-shortage-btn">
+                            <i data-lucide="sparkles" style="width: 13px; height: 13px;"></i>
+                            <span>Minta Uang Pas</span>
+                        </button>
+                    </div>
+
+                    <!-- Checkbox Konfirmasi Tukar Uang Fisik di Luar Kasir -->
+                    <label class="m3-shortage-checkbox-label">
+                        <input type="checkbox" x-model="forceCashChange" style="width: 15px; height: 15px; accent-color: #d97706; cursor: pointer; flex-shrink: 0;">
+                        <span>Saya sudah menukar / menyediakan uang kembalian fisik di luar laci</span>
+                    </label>
                 </div>
             </div>
 
@@ -876,7 +1009,7 @@ document.addEventListener('alpine:init', () => {
                     Batal
                 </button>
                 <button type="button" @click="submitCheckout()"
-                        :disabled="isSubmitting || (paymentType === 'cash' && paidAmount < grandTotal)"
+                        :disabled="isSubmitting || (paymentType === 'cash' && paidAmount < grandTotal) || (paymentType === 'cash' && isCashDrawerInsufficient && !forceCashChange)"
                         class="m3-btn-filled">
                     <i data-lucide="check" style="width: 18px; height: 18px;"></i>
                     <span x-show="!isSubmitting">Selesaikan Transaksi</span>
@@ -960,7 +1093,7 @@ document.addEventListener('alpine:init', () => {
                         </div>
                         <div style="display:flex;justify-content:space-between;">
                             <span>KEMBALIAN:</span>
-                            <span style="font-weight:700;" x-text="formatRupiah(Math.max(0, (receiptData?.paid_amount || receiptData?.total_netto) - receiptData?.total_netto))"></span>
+                            <span style="font-weight:700;" x-text="formatRupiah(receiptData?.kembalian !== undefined ? receiptData.kembalian : Math.max(0, (receiptData?.paid_amount || receiptData?.total_netto) - receiptData?.total_netto))"></span>
                         </div>
                     </div>
                 </template>

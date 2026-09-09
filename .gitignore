@@ -12,6 +12,13 @@
 *.log
 storage/logs/*
 !storage/logs/.gitkeep
+# =============================================================================
+# USER UPLOADED FILES & ATTACHMENTS (STRICT SECURITY & NO REPO BLOAT)
+# =============================================================================
+public/uploads/**/*
+!public/uploads/**/
+!public/uploads/**/.gitkeep
+!public/uploads/**/.htaccess
 
 # =============================================================================
 # PROPRIETARY BUSINESS DATA & RAW PROMPTS

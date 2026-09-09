@@ -206,9 +206,6 @@ ob_start();
                                     <a :href="'<?= Router::url('/deliveries/pdf') ?>?id=' + d.id" target="_blank" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#dc2626;" title="Unduh PDF Surat Jalan">
                                         <i data-lucide="file-text" style="width:14px;height:14px;"></i>
                                     </a>
-                                    <button @click="openStatusModal(d)" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#38bdf8;" title="Update Status Pengiriman">
-                                        <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
-                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -255,9 +252,9 @@ ob_start();
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="form-label">Sales-Driver Penanggung Jawab</label>
-                        <select name="sales_driver_id" class="form-input">
-                            <option value="">-- Tanpa Driver Khusus --</option>
+                        <label class="form-label">Sales-Driver Penanggung Jawab *</label>
+                        <select name="sales_driver_id" required class="form-input">
+                            <option value="">-- Pilih Driver --</option>
                             <?php foreach ($drivers as $d): ?>
                             <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?></option>
                             <?php endforeach; ?>
@@ -289,51 +286,7 @@ ob_start();
     </div>
     </template>
 
-    <!-- MODAL 2: UPDATE STATUS PENGIRIMAN -->
-    <template x-teleport="body">
-    <div x-show="showStatusModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:440px;padding:24px;">
-            <div class="modal-header">
-                <div class="modal-title">Update Status Pengiriman</div>
-                <button @click="showStatusModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
-            </div>
 
-            <form action="<?= Router::url('/deliveries/update-status') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <input type="hidden" name="id" :value="statusForm.id">
-
-                <div>
-                    <label class="form-label">Nomor Surat Jalan</label>
-                    <input type="text" :value="statusForm.nomor_surat_jalan" disabled class="form-input font-mono" style="opacity:0.8;">
-                </div>
-
-                <div>
-                    <label class="form-label">Ubah Status Pengiriman *</label>
-                    <select name="status_surat_jalan" x-model="statusForm.status_surat_jalan" required class="form-input">
-                        <option value="siap_kirim">Siap Berangkat (Disiapkan)</option>
-                        <option value="sedang_dikirim">Sedang Dikirim (Driver di Jalan)</option>
-                        <option value="selesai_diterima">Selesai Diterima Toko (Konfirmasi Sampai)</option>
-                        <option value="gagal_kirim">Gagal Dikirim / Retur Jalan</option>
-                    </select>
-                </div>
-
-                <div x-show="statusForm.status_surat_jalan === 'selesai_diterima'">
-                    <label class="form-label">Nama Penerima Toko (Stempel/TTD)</label>
-                    <input type="text" name="nama_penerima_toko" x-model="statusForm.nama_penerima_toko" class="form-input" placeholder="Contoh: Koh Hendra">
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showStatusModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
-                        <span>Simpan Status</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-    </template>
 
 </div>
 
@@ -345,13 +298,6 @@ function deliveryApp() {
         searchQuery: '',
         filterStatus: 'all',
         showAddModal: false,
-        showStatusModal: false,
-        statusForm: {
-            id: '',
-            nomor_surat_jalan: '',
-            status_surat_jalan: '',
-            nama_penerima_toko: ''
-        },
 
         init() {
             this.$nextTick(() => lucide.createIcons());
@@ -377,17 +323,6 @@ function deliveryApp() {
 
         openAddModal() {
             this.showAddModal = true;
-            this.$nextTick(() => lucide.createIcons());
-        },
-
-        openStatusModal(d) {
-            this.statusForm = {
-                id: d.id,
-                nomor_surat_jalan: d.nomor_surat_jalan,
-                status_surat_jalan: d.status_surat_jalan,
-                nama_penerima_toko: d.nama_penerima_toko || ''
-            };
-            this.showStatusModal = true;
             this.$nextTick(() => lucide.createIcons());
         }
     }

@@ -315,7 +315,7 @@ ob_start();
                         <button type="button" @click="rejectShipmentModal = false" class="btn btn-secondary" style="flex:1;font-weight:700;">
                             Batal
                         </button>
-                        <button type="submit" class="btn btn-danger" style="flex:1;font-weight:800;background:var(--color-danger);border-color:var(--color-danger);">
+                        <button type="submit" class="btn btn-danger-solid" style="flex:1;font-weight:800;background:var(--color-danger);border-color:var(--color-danger);color:#fff;">
                             Ya, Tolak Pengiriman
                         </button>
                     </div>

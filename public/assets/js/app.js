@@ -55,17 +55,77 @@
   const SidebarCtrl = {
     sidebar: null,
     overlay: null,
+    navEl: null,
+
+    saveScroll() {
+      if (this.navEl) {
+        try {
+          sessionStorage.setItem('sidebar_scroll', this.navEl.scrollTop);
+        } catch (e) {}
+      }
+    },
+
+    ensureActiveVisible() {
+      if (!this.navEl) return;
+      const activeEl = this.navEl.querySelector('.sidebar-link.is-active');
+      if (!activeEl) return;
+
+      const navRect = this.navEl.getBoundingClientRect();
+      const activeRect = activeEl.getBoundingClientRect();
+
+      // Check if active item is outside or partially cut off vertically
+      const isAbove = activeRect.top < navRect.top;
+      const isBelow = activeRect.bottom > navRect.bottom;
+
+      if (isAbove || isBelow) {
+        activeEl.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+        this.saveScroll();
+      }
+    },
 
     init() {
       this.sidebar = document.getElementById('app-sidebar');
       this.overlay = document.getElementById('sidebar-overlay');
+      this.navEl = this.sidebar?.querySelector('.sidebar-nav');
 
-      // Restore scroll position
-      const savedScroll = sessionStorage.getItem('sidebar_scroll');
-      const navEl = this.sidebar?.querySelector('.sidebar-nav');
-      if (navEl && savedScroll) {
-        navEl.scrollTop = parseInt(savedScroll, 10) || 0;
-      }
+      if (!this.navEl) return;
+
+      // 1. Restore scroll position from session storage
+      try {
+        const savedScroll = sessionStorage.getItem('sidebar_scroll');
+        if (savedScroll !== null) {
+          this.navEl.scrollTop = parseInt(savedScroll, 10) || 0;
+        }
+      } catch (e) {}
+
+      // 2. Ensure active menu item is visible inside the viewport
+      this.ensureActiveVisible();
+
+      // 3. Persist scroll position continuously using passive listener
+      let scrollTimer = null;
+      this.navEl.addEventListener('scroll', () => {
+        if (!scrollTimer) {
+          scrollTimer = requestAnimationFrame(() => {
+            this.saveScroll();
+            scrollTimer = null;
+          });
+        }
+      }, { passive: true });
+
+      // 4. Save immediately when clicking any link inside sidebar
+      this.navEl.addEventListener('click', (e) => {
+        if (e.target.closest('a')) {
+          this.saveScroll();
+        }
+      });
+
+      // 5. Save on page unload / page hide as final safeguard
+      window.addEventListener('beforeunload', () => {
+        this.saveScroll();
+      });
+      window.addEventListener('pagehide', () => {
+        this.saveScroll();
+      });
     },
 
     open() {
@@ -79,6 +139,9 @@
       }
       document.body.classList.add('sidebar-open');
       document.documentElement.classList.add('sidebar-open');
+
+      // In mobile mode, ensure active link is visible inside opened drawer
+      setTimeout(() => this.ensureActiveVisible(), 50);
     },
 
     close() {
@@ -753,6 +816,11 @@
         subtext = '';
       }
 
+      // Hitung durasi membaca dinamis agar pesan error panjang sempat terbaca dengan nyaman
+      const totalLen = (text ? String(text).length : 0) + (subtext ? String(subtext).length : 0);
+      const calculatedDuration = Math.max(duration, Math.min(8000, 2400 + totalLen * 35));
+      const finalDuration = duration > 2200 ? duration : calculatedDuration;
+
       this._active = false;
       try {
         sessionStorage.removeItem('app_action_triggered');
@@ -796,7 +864,7 @@
           loader.removeEventListener('click', clickDismiss);
           this.hide();
           resolve();
-        }, duration);
+        }, finalDuration);
       });
     },
 
@@ -1196,6 +1264,16 @@
         if (container && container.scrollWidth > container.clientWidth + 2) {
           return container;
         }
+        const table = target.closest('table');
+        if (table) {
+          let parent = table.parentElement;
+          while (parent && parent !== document.body) {
+            if (parent.scrollWidth > parent.clientWidth + 2) {
+              return parent;
+            }
+            parent = parent.parentElement;
+          }
+        }
         return null;
       };
 
@@ -1214,6 +1292,10 @@
 
       updateScrollableContainers();
       window.addEventListener('resize', updateScrollableContainers, { passive: true });
+      window.addEventListener('load', updateScrollableContainers, { passive: true });
+      document.addEventListener('alpine:initialized', () => {
+        setTimeout(updateScrollableContainers, 120);
+      });
 
       try {
         const observer = new MutationObserver(() => {
@@ -1337,8 +1419,9 @@
   document.addEventListener('submit', function (e) {
     const form = e.target;
     if (form && form.tagName === 'FORM' && form.method && form.method.toUpperCase() === 'POST') {
-      if (!form.querySelector('input[name="csrf_token"]')) {
-        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      const csrfInput = form.querySelector('input[name="csrf_token"]');
+      const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+      if (!csrfInput) {
         if (token) {
           const input = document.createElement('input');
           input.type = 'hidden';
@@ -1346,6 +1429,8 @@
           input.value = token;
           form.appendChild(input);
         }
+      } else if ((!csrfInput.value || !csrfInput.value.trim()) && token) {
+        csrfInput.value = token;
       }
 
       // Prevent double submit

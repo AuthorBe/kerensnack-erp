@@ -82,6 +82,7 @@ class CustomerOrderController extends Controller
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
                        p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
+                       p.waktu_gagal_kirim, p.diubah_pada,
                        pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.is_konsinyasi,
                        CASE 
                            WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan)
@@ -96,12 +97,18 @@ class CustomerOrderController extends Controller
                        END as nopol_driver,
                        ak.nama_akun as nama_akun_kas,
                        sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
+                       sj.dibuat_pada as waktu_surat_jalan, sj.waktu_berangkat, sj.waktu_sampai,
                        w.nama_wilayah,
                        (SELECT COUNT(*) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_sku_items,
                        (SELECT COALESCE(SUM(kuantitas_satuan_dasar), 0) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_pcs_items
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
+                LEFT JOIN (
+                    SELECT DISTINCT ON (pesanan_id) id, nomor_surat_jalan, status_surat_jalan, sales_driver_id, pesanan_id,
+                           dibuat_pada, waktu_berangkat, waktu_sampai, rute_wilayah_id
+                    FROM public.surat_jalan
+                    ORDER BY pesanan_id, (status_surat_jalan NOT IN ('gagal_kirim', 'dibatalkan')) DESC, dibuat_pada DESC
+                ) sj ON sj.pesanan_id = p.id
                 LEFT JOIN public.karyawan k_p ON p.sales_driver_id = k_p.id
                 LEFT JOIN public.karyawan k_sj ON sj.sales_driver_id = k_sj.id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
@@ -148,6 +155,30 @@ class CustomerOrderController extends Controller
             $sql .= " ORDER BY p.tanggal_pesanan DESC, p.dibuat_pada DESC";
 
             $orders = Database::fetchAll($sql, $params);
+
+            // Perkaya data order dengan stempel waktu tahapan logistik
+            foreach ($orders as &$o) {
+                $waktuPacking = $o['waktu_surat_jalan'] ?? null;
+                if (!$waktuPacking && !in_array($o['status_pemrosesan'] ?? '', ['po'])) {
+                    $waktuPacking = $o['diubah_pada'] ?? null;
+                }
+                $o['waktu_packing'] = $waktuPacking;
+
+                $waktuKirim = $o['waktu_berangkat'] ?? null;
+                if (!$waktuKirim && ($o['status_pemrosesan'] ?? '') === 'gagal_dikirim') {
+                    $waktuKirim = $o['waktu_gagal_kirim'] ?? $o['diubah_pada'] ?? null;
+                } elseif (!$waktuKirim && in_array($o['status_pemrosesan'] ?? '', ['sedang_dikirim', 'selesai_dikirim', 'selesai_diterima', 'selesai'])) {
+                    $waktuKirim = $o['waktu_surat_jalan'] ?? $o['diubah_pada'] ?? null;
+                }
+                $o['waktu_pengiriman'] = $waktuKirim;
+
+                $waktuSelesai = $o['waktu_sampai'] ?? null;
+                if (!$waktuSelesai && in_array($o['status_pemrosesan'] ?? '', ['selesai_dikirim', 'selesai_diterima', 'selesai'])) {
+                    $waktuSelesai = $o['diubah_pada'] ?? null;
+                }
+                $o['waktu_selesai'] = $waktuSelesai;
+            }
+            unset($o);
 
             // Metrik Ringkasan
             $totalOmset = 0;
@@ -220,6 +251,7 @@ class CustomerOrderController extends Controller
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
                        p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
+                       p.waktu_gagal_kirim, p.diubah_pada,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
                        p.sales_driver_id,
                        CASE 
@@ -234,10 +266,16 @@ class CustomerOrderController extends Controller
                            ELSE NULL
                        END as nopol_driver,
                        ak.id as akun_kas_id, ak.nama_akun as nama_akun_kas,
-                       sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan
+                       sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
+                       sj.dibuat_pada as waktu_surat_jalan, sj.waktu_berangkat, sj.waktu_sampai
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
+                LEFT JOIN (
+                    SELECT DISTINCT ON (pesanan_id) id, nomor_surat_jalan, status_surat_jalan, sales_driver_id, pesanan_id,
+                           dibuat_pada, waktu_berangkat, waktu_sampai
+                    FROM public.surat_jalan
+                    ORDER BY pesanan_id, (status_surat_jalan NOT IN ('gagal_kirim', 'dibatalkan')) DESC, dibuat_pada DESC
+                ) sj ON sj.pesanan_id = p.id
                 LEFT JOIN public.karyawan k_p ON p.sales_driver_id = k_p.id
                 LEFT JOIN public.karyawan k_sj ON sj.sales_driver_id = k_sj.id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
@@ -249,6 +287,27 @@ class CustomerOrderController extends Controller
                 echo json_encode(['success' => false, 'message' => 'Pesanan tidak ditemukan.']);
                 exit;
             }
+
+            // Perkaya data detail dengan waktu tahapan logistik
+            $waktuPacking = $order['waktu_surat_jalan'] ?? null;
+            if (!$waktuPacking && !in_array($order['status_pemrosesan'] ?? '', ['po'])) {
+                $waktuPacking = $order['diubah_pada'] ?? null;
+            }
+            $order['waktu_packing'] = $waktuPacking;
+
+            $waktuKirim = $order['waktu_berangkat'] ?? null;
+            if (!$waktuKirim && ($order['status_pemrosesan'] ?? '') === 'gagal_dikirim') {
+                $waktuKirim = $order['waktu_gagal_kirim'] ?? $order['diubah_pada'] ?? null;
+            } elseif (!$waktuKirim && in_array($order['status_pemrosesan'] ?? '', ['sedang_dikirim', 'selesai_dikirim', 'selesai_diterima', 'selesai'])) {
+                $waktuKirim = $order['waktu_surat_jalan'] ?? $order['diubah_pada'] ?? null;
+            }
+            $order['waktu_pengiriman'] = $waktuKirim;
+
+            $waktuSelesai = $order['waktu_sampai'] ?? null;
+            if (!$waktuSelesai && in_array($order['status_pemrosesan'] ?? '', ['selesai_dikirim', 'selesai_diterima', 'selesai'])) {
+                $waktuSelesai = $order['diubah_pada'] ?? null;
+            }
+            $order['waktu_selesai'] = $waktuSelesai;
 
             // 2. Daftar Item Pesanan
             $sqlItems = "
@@ -283,12 +342,54 @@ class CustomerOrderController extends Controller
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
+            // 4. Riwayat Pembayaran Terkait Pesanan Ini (dari Arus Kas)
+            $sqlPayments = "
+                SELECT ak.id, ak.tanggal_transaksi, ak.nominal, ak.keterangan, ak.saldo_berjalan, ak.dibuat_pada,
+                       kas.id as akun_kas_id, kas.nama_akun as akun_kas_nama,
+                       COALESCE(p.nama_lengkap, 'Petugas Kasir') as dicatat_oleh_nama
+                FROM public.arus_kas ak
+                JOIN public.akun_kas kas ON ak.akun_kas_id = kas.id
+                LEFT JOIN public.pengguna p ON ak.dicatat_oleh = p.id
+                WHERE ak.referensi_tabel = 'pesanan' AND ak.referensi_id = :id AND ak.jenis_kas = 'masuk'
+                ORDER BY ak.dibuat_pada ASC
+            ";
+            $payments = Database::fetchAll($sqlPayments, ['id' => $id]);
+
+            // 5. Riwayat Seluruh Surat Jalan Terkait Pesanan Ini (Termasuk Arsip Gagal Kirim)
+            $sqlShipping = "
+                SELECT sj.id, sj.nomor_surat_jalan, sj.status_surat_jalan, sj.waktu_berangkat, sj.waktu_sampai,
+                       sj.bukti_terima_foto, sj.nama_penerima_toko, sj.dibuat_pada,
+                       k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan as nopol_driver, k.nomor_telepon as telp_driver,
+                       w.nama_wilayah
+                FROM public.surat_jalan sj
+                LEFT JOIN public.karyawan k ON sj.sales_driver_id = k.id
+                LEFT JOIN public.wilayah w ON sj.rute_wilayah_id = w.id
+                WHERE sj.pesanan_id = :id
+                ORDER BY sj.dibuat_pada DESC
+            ";
+            $shippingHistory = Database::fetchAll($sqlShipping, ['id' => $id]);
+
+            // 6. Audit Trail Aktivitas Terkait Pesanan Ini
+            $sqlLogs = "
+                SELECT la.id, la.nama_aktor, la.peran_aktor, la.kategori_aktivitas, la.jenis_aksi,
+                       la.deskripsi_aktivitas, la.waktu_kejadian, la.tabel_terdampak
+                FROM public.log_aktivitas la
+                WHERE (la.tabel_terdampak = 'pesanan' AND la.id_referensi = :id)
+                   OR (la.tabel_terdampak = 'surat_jalan' AND la.id_referensi IN (SELECT id FROM public.surat_jalan WHERE pesanan_id = :id_sj))
+                ORDER BY la.waktu_kejadian DESC
+                LIMIT 50
+            ";
+            $activityLogs = Database::fetchAll($sqlLogs, ['id' => (string)$id, 'id_sj' => $id]);
+
             echo json_encode([
                 'success' => true,
                 'order' => $order,
                 'items' => $items,
                 'drivers' => $drivers,
                 'cashAccounts' => $cashAccounts,
+                'payments' => $payments,
+                'shippingHistory' => $shippingHistory,
+                'activityLogs' => $activityLogs,
             ]);
             exit;
 
@@ -689,24 +790,25 @@ class CustomerOrderController extends Controller
                 }
             }
 
-            // Validasi Surat Jalan: Jika sudah dibuat surat jalan, tolak edit
+            // Validasi Surat Jalan: Jika sudah dibuat surat jalan aktif, tolak edit (abaikan surat jalan gagal_kirim atau dibatalkan)
             $sj = Database::fetchOne("
                 SELECT id, nomor_surat_jalan, status_surat_jalan 
                 FROM public.surat_jalan 
-                WHERE pesanan_id = :id AND status_surat_jalan NOT IN ('dibatalkan')
+                WHERE pesanan_id = :id AND status_surat_jalan NOT IN ('dibatalkan', 'gagal_kirim')
                 LIMIT 1
             ", ['id' => $id]);
 
             if ($sj) {
-                $this->flashError("Pesanan ini sudah memiliki Surat Jalan aktif (#{$sj['nomor_surat_jalan']}). Untuk mengedit pesanan, silakan batalkan/hapus Surat Jalan terlebih dahulu.");
+                $this->flashError("Pesanan ini sedang memiliki Surat Jalan aktif (#{$sj['nomor_surat_jalan']}). Untuk mengedit pesanan, silakan selesaikan atau batalkan Surat Jalan tersebut terlebih dahulu.");
                 $this->redirectBack('/customer-orders');
                 return;
             }
 
-            // Validasi Status: Hanya izinkan edit jika pesanan masih berstatus draf PO
-            if (($order['status_pemrosesan'] ?? '') !== 'po') {
+            // Validasi Status: Izinkan edit jika pesanan berstatus draf PO atau Gagal Dikirim (untuk kirim ulang)
+            $isAllowedStatus = in_array($order['status_pemrosesan'] ?? '', ['po', 'gagal_dikirim'], true);
+            if (!$isAllowedStatus) {
                 $statusLabel = strtoupper(str_replace('_', ' ', $order['status_pemrosesan'] ?? ''));
-                $this->flashError("Hanya pesanan berstatus 'PO' yang dapat diedit. Pesanan ini sudah berstatus '{$statusLabel}'.");
+                $this->flashError("Hanya pesanan berstatus 'PO' atau 'Gagal Dikirim' yang dapat diedit. Pesanan ini sudah berstatus '{$statusLabel}'.");
                 $this->redirectBack('/customer-orders');
                 return;
             }
@@ -768,9 +870,11 @@ class CustomerOrderController extends Controller
             $rawWhitelist = Database::fetchAll("SELECT pelanggan_id, item_id FROM public.pelanggan_item WHERE pelanggan_id = :pid", ['pid' => $order['pelanggan_id']]);
             $whitelistMap = [$order['pelanggan_id'] => array_column($rawWhitelist, 'item_id')];
 
+            $isRetryEdit = ($order['status_pemrosesan'] === 'gagal_dikirim') || ($this->input('retry') === '1');
+
             $this->view('customer_orders.edit', [
-                'pageTitle' => 'Edit Pesanan Pelanggan #' . $order['nomor_nota'],
-                'pageSubtitle' => 'Perbarui rincian produk, kuantiti, dan skema harga pesanan',
+                'pageTitle' => ($isRetryEdit ? 'Kirim Ulang Pesanan #' : 'Edit Pesanan Pelanggan #') . $order['nomor_nota'],
+                'pageSubtitle' => $isRetryEdit ? 'Sesuaikan rincian produk sebelum dijadwalkan kirim ulang ke gudang' : 'Perbarui rincian produk, kuantiti, dan skema harga pesanan',
                 'order' => $order,
                 'existingItems' => $existingItems,
                 'drivers' => $drivers,
@@ -778,6 +882,7 @@ class CustomerOrderController extends Controller
                 'products' => $products,
                 'priceMatrix' => $priceMatrix,
                 'whitelistMap' => $whitelistMap,
+                'isRetryEdit' => $isRetryEdit,
             ]);
 
         } catch (Throwable $e) {
@@ -853,24 +958,25 @@ class CustomerOrderController extends Controller
                 }
             }
 
-            // Surat Jalan Check
+            // Surat Jalan Check (abaikan surat jalan gagal_kirim atau dibatalkan)
             $sj = Database::fetchOne("
                 SELECT id, nomor_surat_jalan 
                 FROM public.surat_jalan 
-                WHERE pesanan_id = :id AND status_surat_jalan NOT IN ('dibatalkan')
+                WHERE pesanan_id = :id AND status_surat_jalan NOT IN ('dibatalkan', 'gagal_kirim')
                 LIMIT 1
             ", ['id' => $id]);
 
             if ($sj) {
-                $this->flashError("Pesanan ini sudah memiliki Surat Jalan aktif (#{$sj['nomor_surat_jalan']}). Untuk mengedit pesanan, silakan batalkan/hapus Surat Jalan terlebih dahulu.");
+                $this->flashError("Pesanan ini sedang memiliki Surat Jalan aktif (#{$sj['nomor_surat_jalan']}). Untuk mengedit pesanan, silakan selesaikan atau batalkan Surat Jalan tersebut terlebih dahulu.");
                 $this->redirect('/customer-orders');
                 return;
             }
 
-            // Validasi Status: Hanya izinkan edit jika pesanan masih berstatus draf PO
-            if (($order['status_pemrosesan'] ?? '') !== 'po') {
+            // Validasi Status: Hanya izinkan edit jika pesanan masih berstatus draf PO atau gagal dikirim
+            $isAllowedStatus = in_array($order['status_pemrosesan'] ?? '', ['po', 'gagal_dikirim'], true);
+            if (!$isAllowedStatus) {
                 $statusLabel = strtoupper(str_replace('_', ' ', $order['status_pemrosesan'] ?? ''));
-                $this->flashError("Hanya pesanan berstatus 'PO' yang dapat diedit. Pesanan ini sudah berstatus '{$statusLabel}'.");
+                $this->flashError("Hanya pesanan berstatus 'PO' atau 'Gagal Dikirim' yang dapat diedit. Pesanan ini sudah berstatus '{$statusLabel}'.");
                 $this->redirect('/customer-orders');
                 return;
             }
@@ -878,6 +984,10 @@ class CustomerOrderController extends Controller
             $pdo->beginTransaction();
 
             $isKonsinyasi = (bool)$order['is_konsinyasi'];
+            $isRetryFromFailed = ($order['status_pemrosesan'] === 'gagal_dikirim');
+            $totalDibayarLama = (float)($order['total_dibayar'] ?? 0);
+            $refundAkunKasId = $this->input('refund_akun_kas_id');
+            $nominalRefundDilakukan = 0;
 
             // 1. Hapus detail item lama (Stok belum terpotong di tahap PO)
             $pdo->prepare("DELETE FROM public.item_pesanan WHERE pesanan_id = :id")->execute(['id' => $id]);
@@ -914,6 +1024,53 @@ class CustomerOrderController extends Controller
                 $totalDibayar = 0;
                 $sisaTagihan = 0;
                 $statusBayar = 'lunas';
+            } elseif ($isRetryFromFailed) {
+                // Skema pesanan kirim ulang yang diedit
+                if ($totalNetto < $totalDibayarLama) {
+                    $selisihRefund = $totalDibayarLama - $totalNetto;
+                    if (!empty($refundAkunKasId)) {
+                        $akunKasRefund = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE", ['id' => $refundAkunKasId]);
+                        if (!$akunKasRefund) {
+                            $pdo->rollBack();
+                            $this->flashError("Akun kas pengembalian dana (refund) tidak valid atau nonaktif.");
+                            $this->redirect('/customer-orders/edit?id=' . urlencode($id));
+                            return;
+                        }
+                        $saldoKasBaru = max(0, (float)$akunKasRefund['saldo_saat_ini'] - $selisihRefund);
+                        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")->execute(['saldo' => $saldoKasBaru, 'id' => $refundAkunKasId]);
+                        $pdo->prepare("
+                            INSERT INTO public.arus_kas (
+                                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                                keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                            ) VALUES (
+                                :akun_kas, CURRENT_DATE, 'keluar', 'koreksi', :nominal,
+                                :ket, 'pesanan', :ref_id, :saldo_berjalan, :user_id, NOW()
+                            )
+                        ")->execute([
+                            'akun_kas' => $refundAkunKasId,
+                            'nominal' => $selisihRefund,
+                            'ket' => "Refund Kelebihan Bayar Pesanan Gagal Kirim #{$order['nomor_nota']} ({$order['nama_toko']})",
+                            'ref_id' => $id,
+                            'saldo_berjalan' => $saldoKasBaru,
+                            'user_id' => Auth::id() ?: null
+                        ]);
+                        ActivityLog::log(
+                            'keuangan',
+                            'REFUND',
+                            "Pengembalian dana kelebihan bayar pesanan #{$order['nomor_nota']} sebesar " . Format::rupiah($selisihRefund) . " dari {$akunKasRefund['nama_akun']}",
+                            'pesanan',
+                            (string)$id
+                        );
+                        $nominalRefundDilakukan = $selisihRefund;
+                    }
+                    $totalDibayar = $totalNetto;
+                    $sisaTagihan = 0;
+                    $statusBayar = 'lunas';
+                } else {
+                    $totalDibayar = $totalDibayarLama;
+                    $sisaTagihan = max(0, $totalNetto - $totalDibayar);
+                    $statusBayar = ($sisaTagihan <= 0) ? 'lunas' : (($totalDibayar > 0) ? 'sebagian' : 'belum_lunas');
+                }
             } elseif ($tipePembayaran === 'cash' || $tipePembayaran === 'qris' || $tipePembayaran === 'transfer') {
                 $totalDibayar = $totalNetto;
                 $sisaTagihan = 0;
@@ -923,7 +1080,7 @@ class CustomerOrderController extends Controller
                 if ($nominalDibayar <= 0) {
                     $pdo->rollBack();
                     $this->flashError('Pembaruan pesanan ditolak: Skema Pembayaran Sebagian (DP) mewajibkan nominal uang muka lebih dari Rp 0.');
-                    $this->redirect('/customer-orders/' . $id . '/edit');
+                    $this->redirect('/customer-orders/edit?id=' . urlencode($id));
                     return;
                 }
                 if ($nominalDibayar > $totalNetto) {
@@ -933,7 +1090,7 @@ class CustomerOrderController extends Controller
                         number_format($nominalDibayar, 0, ',', '.'),
                         number_format($totalNetto, 0, ',', '.')
                     ));
-                    $this->redirect('/customer-orders/' . $id . '/edit');
+                    $this->redirect('/customer-orders/edit?id=' . urlencode($id));
                     return;
                 }
                 $totalDibayar = $nominalDibayar;
@@ -949,7 +1106,12 @@ class CustomerOrderController extends Controller
             $driverId = $order['sales_driver_id'];
             $adalahTagihan = $isKonsinyasi ? false : true;
 
-            // 3. Update Header Pesanan
+            $catatanFinal = $catatan ?: 'Pesanan Toko Mitra (Diperbarui)';
+            if ($isRetryFromFailed && strpos($catatanFinal, '[Kirim Ulang]') === false) {
+                $catatanFinal .= "\n[Kirim Ulang: Diedit]";
+            }
+
+            // 3. Update Header Pesanan (kembalikan status_pemrosesan ke 'po')
             $stmtUpdateOrder = $pdo->prepare("
                 UPDATE public.pesanan SET
                     tanggal_pesanan = :tgl,
@@ -964,6 +1126,8 @@ class CustomerOrderController extends Controller
                     sales_driver_id = :driver_id,
                     catatan = :catatan,
                     adalah_tagihan = :adalah_tagihan,
+                    status_pemrosesan = 'po',
+                    waktu_gagal_kirim = NULL,
                     diubah_pada = NOW()
                 WHERE id = :id
             ");
@@ -978,7 +1142,7 @@ class CustomerOrderController extends Controller
                 'tipe' => $tipePembayaran,
                 'tempo' => $tanggalJatuhTempo,
                 'driver_id' => $driverId,
-                'catatan' => $catatan ?: 'Pesanan Toko Mitra (Diperbarui)',
+                'catatan' => $catatanFinal,
                 'adalah_tagihan' => $adalahTagihan ? 'true' : 'false',
                 'id' => $id,
             ]);
@@ -1016,15 +1180,23 @@ class CustomerOrderController extends Controller
 
             $pdo->commit();
 
+            $actionDesc = $isRetryFromFailed
+                ? "Pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) diedit dan dijadwalkan KIRIM ULANG ke antrean PO Gudang. Total Netto: Rp " . number_format($totalNetto, 0, ',', '.') . ($nominalRefundDilakukan > 0 ? " (Refund Kas: Rp " . number_format($nominalRefundDilakukan, 0, ',', '.') . ")" : "")
+                : "Memperbarui rincian pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) - Total Netto: Rp " . number_format($totalNetto, 0, ',', '.');
+
             ActivityLog::log(
-                'Pesanan',
+                'pesanan',
                 'UPDATE',
-                "Memperbarui rincian pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) - Total Netto: Rp " . number_format($totalNetto, 0, ',', '.'),
+                $actionDesc,
                 'pesanan',
                 (string)$id
             );
 
-            $this->flashSuccess("Pesanan #{$order['nomor_nota']} berhasil diperbarui!");
+            $successMsg = $isRetryFromFailed
+                ? "Pesanan #{$order['nomor_nota']} berhasil diedit dan dijadwalkan ulang ke antrean Daftar PO Gudang!" . ($nominalRefundDilakukan > 0 ? " Kelebihan bayar sebesar " . Format::rupiah($nominalRefundDilakukan) . " telah dikembalikan (refund)." : "")
+                : "Pesanan #{$order['nomor_nota']} berhasil diperbarui!";
+
+            $this->flashSuccess($successMsg);
             $this->redirect('/customer-orders');
 
         } catch (Throwable $e) {
@@ -1099,10 +1271,10 @@ class CustomerOrderController extends Controller
 
         if (empty($id) || empty($akunKasId) || $nominalBayar <= 0) {
             if ($this->isAjax()) {
-                $this->json(['success' => false, 'message' => 'Mohon pilih akun kas dan nominal pembayaran yang valid.'], 400);
+                $this->json(['success' => false, 'message' => 'Mohon pilih akun kas dan masukkan nominal pembayaran yang valid (lebih dari Rp 0).'], 400);
                 return;
             }
-            $this->flashError('Mohon pilih akun kas dan nominal pembayaran yang valid.');
+            $this->flashError('Mohon pilih akun kas dan masukkan nominal pembayaran yang valid (lebih dari Rp 0).');
             $this->redirect('/customer-orders');
             return;
         }
@@ -1116,8 +1288,53 @@ class CustomerOrderController extends Controller
                 throw new \Exception('Data faktur tidak ditemukan.');
             }
 
+            // 1. Validasi Status Pesanan
+            if (($order['status_pemrosesan'] ?? '') === 'dibatalkan') {
+                throw new \Exception("Pesanan #{$order['nomor_nota']} telah dibatalkan. Pembayaran tidak dapat diproses.");
+            }
+
+            if (in_array($order['status_pemrosesan'] ?? '', ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'], true)) {
+                throw new \Exception("Pesanan #{$order['nomor_nota']} dalam status Gagal Kirim. Stok produk telah berada di rak gudang. Harap selesaikan jadwal Kirim Ulang terlebih dahulu sebelum mencatat pembayaran.");
+            }
+
+            if (($order['status_pembayaran'] ?? '') === 'lunas') {
+                throw new \Exception("Faktur #{$order['nomor_nota']} sudah lunas sepenuhnya. Tidak ada tagihan tersisa.");
+            }
+
+            if (($order['tipe_pembayaran'] ?? '') === 'konsinyasi' || !empty($order['is_konsinyasi']) || (isset($order['adalah_tagihan']) && ($order['adalah_tagihan'] === false || $order['adalah_tagihan'] === 'false'))) {
+                throw new \Exception("Pesanan konsinyasi bukan merupakan faktur tagihan langsung. Pembayaran diproses melalui Form Opname Kunjungan Sales.");
+            }
+
+            // 2. Validasi Batas Nominal (Anti-Overpayment / Proteksi Lebih Bayar)
             $totalNetto = (float)$order['total_netto'];
             $totalDibayarLama = (float)$order['total_dibayar'];
+            $sisaTagihanSaatIni = max(0, $totalNetto - $totalDibayarLama);
+
+            if ($sisaTagihanSaatIni <= 0) {
+                throw new \Exception("Faktur #{$order['nomor_nota']} tidak memiliki sisa tagihan.");
+            }
+
+            if ($nominalBayar > $sisaTagihanSaatIni) {
+                throw new \Exception("Nominal pembayaran (" . Format::rupiah($nominalBayar) . ") melebihi sisa tagihan yang belum lunas (" . Format::rupiah($sisaTagihanSaatIni) . ").");
+            }
+
+            // 3. Validasi & Lock Akun Kas Tujuan (Pencegahan Race Condition & Akun Nonaktif)
+            $akunKas = Database::fetchOne("
+                SELECT id, nama_akun, saldo_saat_ini 
+                FROM public.akun_kas 
+                WHERE id = :id AND status_aktif = TRUE 
+                FOR UPDATE
+            ", ['id' => $akunKasId]);
+
+            if (!$akunKas) {
+                throw new \Exception("Akun kas / bank penerima tidak ditemukan atau dalam status nonaktif.");
+            }
+
+            $saldoKasAwal = (float)$akunKas['saldo_saat_ini'];
+            $saldoKasBaru = $saldoKasAwal + $nominalBayar;
+            $namaAkunKas = $akunKas['nama_akun'];
+
+            // 4. Hitung Nilai Baru Pesanan
             $totalDibayarBaru = $totalDibayarLama + $nominalBayar;
             $sisaTagihanBaru = max(0, $totalNetto - $totalDibayarBaru);
             $statusBaru = ($sisaTagihanBaru <= 0) ? 'lunas' : 'belum_lunas';
@@ -1128,7 +1345,7 @@ class CustomerOrderController extends Controller
                 SET total_dibayar = :dibayar,
                     sisa_tagihan = :sisa,
                     status_pembayaran = :status,
-                    akun_kas_id = :akun_kas,
+                    akun_kas_id = COALESCE(akun_kas_id, :akun_kas),
                     diubah_pada = NOW()
                 WHERE id = :id
             ");
@@ -1143,16 +1360,14 @@ class CustomerOrderController extends Controller
             // Update Saldo Kas Penerima
             $stmtKasAkun = $pdo->prepare("
                 UPDATE public.akun_kas
-                SET saldo_saat_ini = saldo_saat_ini + :nominal,
+                SET saldo_saat_ini = :saldo,
                     diubah_pada = NOW()
                 WHERE id = :akun_kas
-                RETURNING saldo_saat_ini
             ");
             $stmtKasAkun->execute([
-                'nominal' => $nominalBayar,
+                'saldo' => $saldoKasBaru,
                 'akun_kas' => $akunKasId,
             ]);
-            $saldoBaru = (float)$stmtKasAkun->fetchColumn();
 
             // Catat Arus Kas Masuk
             $stmtKas = $pdo->prepare("
@@ -1171,14 +1386,14 @@ class CustomerOrderController extends Controller
                 'nominal' => $nominalBayar,
                 'ket' => "{$keterangan} - Faktur #{$order['nomor_nota']}",
                 'ref_id' => $id,
-                'saldo_berjalan' => $saldoBaru,
+                'saldo_berjalan' => $saldoKasBaru,
                 'user_id' => $userId,
             ]);
 
             ActivityLog::log(
                 'keuangan',
                 'INSERT',
-                "Penerimaan Pembayaran Piutang Faktur #{$order['nomor_nota']} sebesar " . Format::rupiah($nominalBayar),
+                "Penerimaan Pembayaran Piutang Faktur #{$order['nomor_nota']} sebesar " . Format::rupiah($nominalBayar) . " ke {$namaAkunKas}",
                 'pesanan',
                 $id
             );
@@ -1191,9 +1406,11 @@ class CustomerOrderController extends Controller
                     'message' => "Pembayaran sebesar " . Format::rupiah($nominalBayar) . " untuk Faktur {$order['nomor_nota']} berhasil dicatat!",
                     'data' => [
                         'order_id' => $id,
+                        'nominal_dibayar' => $nominalBayar,
                         'total_dibayar' => $totalDibayarBaru,
                         'sisa_tagihan' => $sisaTagihanBaru,
-                        'status_pembayaran' => $statusBaru
+                        'status_pembayaran' => $statusBaru,
+                        'akun_kas_nama' => $namaAkunKas
                     ]
                 ]);
                 return;
@@ -1207,7 +1424,7 @@ class CustomerOrderController extends Controller
                 $pdo->rollBack();
             }
             if ($this->isAjax()) {
-                $this->json(['success' => false, 'message' => $e->getMessage()], 500);
+                $this->json(['success' => false, 'message' => $e->getMessage()], 422);
                 return;
             }
             $this->flashError("Gagal mencatat pembayaran: " . $e->getMessage());
@@ -1244,8 +1461,8 @@ class CustomerOrderController extends Controller
                 return;
             }
 
-            // 1. Kembalikan stok fisik ke gudang HANYA JIKA pesanan sudah pernah diproses potong stok (status selain 'po')
-            $isPhysicalStockCut = in_array($order['status_pemrosesan'] ?? '', ['siap_dikirim', 'siap_kirim', 'sedang_dikirim', 'gagal_dikirim'], true);
+            // 1. Kembalikan stok fisik ke gudang HANYA JIKA pesanan sudah pernah diproses potong stok dan belum dikembalikan (status gagal_dikirim sudah dikembalikan saat delivery gagal)
+            $isPhysicalStockCut = in_array($order['status_pemrosesan'] ?? '', ['siap_dikirim', 'siap_kirim', 'sedang_dikirim'], true);
 
             if ($isPhysicalStockCut) {
                 $items = Database::fetchAll("SELECT * FROM public.item_pesanan WHERE pesanan_id = :id", ['id' => $id]);
@@ -1771,6 +1988,14 @@ class CustomerOrderController extends Controller
                 'id' => $orderId
             ]);
 
+            ActivityLog::log(
+                'gudang',
+                'UPDATE',
+                "Petugas gudang menyelesaikan penyiapan barang PO #{$order['nomor_nota']} ({$order['nama_toko']}). Stok fisik gudang terpotong, status pesanan menjadi Siap Dikirim.",
+                'pesanan',
+                (string)$orderId
+            );
+
             $pdo->commit();
 
             $this->flashSuccess("PO #{$order['nomor_nota']} ({$order['nama_toko']}) berhasil disiapkan! Stok fisik gudang telah terpotong.");
@@ -1881,27 +2106,87 @@ class CustomerOrderController extends Controller
                 $failedTime = strtotime($order['waktu_gagal_kirim']);
                 $diffDays = (time() - $failedTime) / 86400;
                 if ($diffDays > 7) {
-                    throw new \Exception("Masa tenggang kirim ulang (7 hari) telah habis. Pesanan ini sudah kedaluwarsa.");
+                    // Otomatis batalkan pesanan kedaluwarsa
+                    $catatanBatal = trim((string)$order['catatan'] . "\n[Dibatalkan Otomatis: Masa tenggang kirim ulang > 7 hari]");
+                    $pdo->prepare("
+                        UPDATE public.pesanan 
+                        SET status_pemrosesan = 'dibatalkan',
+                            status_pembayaran = 'dibatalkan',
+                            catatan = :catatan,
+                            diubah_pada = NOW()
+                        WHERE id = :id
+                    ")->execute([
+                        'catatan' => $catatanBatal,
+                        'id' => $orderId
+                    ]);
+
+                    $pdo->commit();
+
+                    ActivityLog::log(
+                        'penjualan',
+                        'CANCEL',
+                        "Pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) otomatis DIBATALKAN oleh sistem karena telah melewati batas tenggang kirim ulang (7 hari).",
+                        'pesanan',
+                        (string)$orderId
+                    );
+
+                    if ($this->isAjax()) {
+                        $this->json([
+                            'success' => false,
+                            'expired' => true,
+                            'message' => "Masa tenggang kirim ulang (7 hari) telah habis. Pesanan #{$order['nomor_nota']} kedaluwarsa dan otomatis DIBATALKAN oleh sistem."
+                        ], 422);
+                        return;
+                    }
+
+                    $this->flashError("Masa tenggang kirim ulang (7 hari) telah habis. Pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) kedaluwarsa dan otomatis dibatalkan oleh sistem.");
+                    $this->redirect('/customer-orders');
+                    return;
                 }
             }
 
-            // Arsipkan surat jalan lama menjadi status gagal_kirim
+            // Arsipkan surat jalan lama menjadi status gagal_kirim (tidak dihapus)
             $stmtArchive = $pdo->prepare("UPDATE public.surat_jalan SET status_surat_jalan = 'gagal_kirim', diubah_pada = NOW() WHERE pesanan_id = :id AND status_surat_jalan != 'gagal_kirim'");
             $stmtArchive->execute(['id' => $orderId]);
 
-            // Kembalikan status pesanan ke siap_dikirim (Surat Jalan baru dapat diterbitkan di menu Deliveries)
+            // Kembalikan status pesanan ke 'po' (antrean daftar PO gudang)
+            $catatanBaru = (strpos((string)$order['catatan'], '[Kirim Ulang]') === false)
+                ? trim((string)$order['catatan'] . "\n[Kirim Ulang]")
+                : (string)$order['catatan'];
+
             $stmtUpdateOrder = $pdo->prepare("
                 UPDATE public.pesanan 
-                SET status_pemrosesan = 'siap_dikirim',
+                SET status_pemrosesan = 'po',
                     waktu_gagal_kirim = NULL,
+                    catatan = :catatan,
                     diubah_pada = NOW()
                 WHERE id = :id
             ");
-            $stmtUpdateOrder->execute(['id' => $orderId]);
+            $stmtUpdateOrder->execute([
+                'catatan' => $catatanBaru,
+                'id' => $orderId
+            ]);
 
             $pdo->commit();
 
-            $this->flashSuccess("Pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) berhasil dijadwalkan ulang! Status kini 'Siap Dikirim' dan siap diterbitkan Surat Jalan baru di menu Pengiriman.");
+            ActivityLog::log(
+                'penjualan',
+                'UPDATE',
+                "Pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) dijadwalkan KIRIM ULANG dan masuk ke antrean Daftar PO Gudang.",
+                'pesanan',
+                (string)$orderId
+            );
+
+            if ($this->isAjax()) {
+                $this->json([
+                    'success' => true,
+                    'message' => "Pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) berhasil dijadwalkan ulang! Status kini 'PO' dan masuk antrean penyiapan barang gudang.",
+                    'redirect' => Router::url('/customer-orders')
+                ]);
+                return;
+            }
+
+            $this->flashSuccess("Pesanan #{$order['nomor_nota']} ({$order['nama_toko']}) berhasil dijadwalkan ulang! Status kini 'PO' dan masuk ke antrean penyiapan barang gudang.");
             $this->redirect('/customer-orders');
 
         } catch (\Exception $e) {

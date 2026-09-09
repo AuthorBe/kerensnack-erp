@@ -111,6 +111,12 @@ class DeliveryController extends Controller
             return;
         }
 
+        if (empty($driverId)) {
+            $this->flashError('Pilih sales-driver penanggung jawab pengiriman.');
+            $this->redirect('/deliveries');
+            return;
+        }
+
         try {
             $count = Database::fetchOne("SELECT count(*) as total FROM public.surat_jalan")['total'] ?? 0;
             $nomorSj = 'SJ-' . date('Ymd') . '-' . str_pad((string)($count + 1), 3, '0', STR_PAD_LEFT);
@@ -293,35 +299,58 @@ class DeliveryController extends Controller
                     if ($status === 'sedang_dikirim') {
                         $pdo->prepare("UPDATE public.pesanan SET status_pemrosesan = 'sedang_dikirim', diubah_pada = NOW() WHERE id = :id")->execute(['id' => $orderId]);
                     } elseif ($status === 'gagal_kembali' || $status === 'gagal_kirim') {
-                        $pdo->prepare("UPDATE public.pesanan SET status_pemrosesan = 'gagal_dikirim', waktu_gagal_kirim = NOW(), diubah_pada = NOW() WHERE id = :id")->execute(['id' => $orderId]);
-                    } elseif ($status === 'selesai_diterima') {
-                        $pdo->prepare("UPDATE public.pesanan SET status_pemrosesan = 'selesai_dikirim', diubah_pada = NOW() WHERE id = :id")->execute(['id' => $orderId]);
-
-                        if ($isKonsinyasi) {
-                            // 1. Konsinyasi: Masukkan barang titipan ke stok rak toko mitra
-                            $orderedItems = Database::fetchAll("
-                                SELECT item_id, kuantitas_satuan_dasar 
-                                FROM public.item_pesanan 
-                                WHERE pesanan_id = :id
-                            ", ['id' => $orderId]);
-
+                        // Kembalikan stok fisik ke gudang jika pesanan sebelumnya sudah dipotong stok
+                        if (in_array($orderData['status_pemrosesan'] ?? '', ['siap_dikirim', 'siap_kirim', 'sedang_dikirim'], true)) {
+                            $orderedItems = Database::fetchAll("SELECT item_id, kuantitas_satuan_dasar FROM public.item_pesanan WHERE pesanan_id = :id", ['id' => $orderId]);
+                            $stmtStok = $pdo->prepare("UPDATE public.item SET stok_fisik_saat_ini = stok_fisik_saat_ini + :qty, diubah_pada = NOW() WHERE id = :item_id");
+                            $stmtRiwayat = $pdo->prepare("
+                                INSERT INTO public.riwayat_stok (
+                                    item_id, tipe_mutasi, jumlah_perubahan,
+                                    stok_sebelum, stok_sesudah, referensi_tabel, referensi_id,
+                                    keterangan, dibuat_oleh, dibuat_pada
+                                ) VALUES (
+                                    :item_id, 'penyesuaian_opname_tambah', :qty,
+                                    :stok_sebelum, :stok_sesudah, 'pesanan', :ref_id,
+                                    :ket, :user_id, NOW()
+                                )
+                            ");
+                            $userId = Auth::id() ?: null;
                             foreach ($orderedItems as $oit) {
-                                $pdo->prepare("
-                                    INSERT INTO public.stok_konsinyasi_toko (
-                                        pelanggan_id, item_id, stok_titip_saat_ini, terakhir_opname_pada, dibuat_pada, diubah_pada
-                                    ) VALUES (
-                                        :pelanggan_id, :item_id, :qty, NOW(), NOW(), NOW()
-                                    )
-                                    ON CONFLICT (pelanggan_id, item_id) DO UPDATE SET
-                                        stok_titip_saat_ini = public.stok_konsinyasi_toko.stok_titip_saat_ini + EXCLUDED.stok_titip_saat_ini,
-                                        diubah_pada = NOW()
-                                ")->execute([
-                                    'pelanggan_id' => $orderData['pelanggan_id'],
+                                $qtyPcs = (int)$oit['kuantitas_satuan_dasar'];
+                                if ($qtyPcs <= 0) continue;
+                                $itemData = Database::fetchOne("SELECT stok_fisik_saat_ini FROM public.item WHERE id = :id FOR UPDATE", ['id' => $oit['item_id']]);
+                                $stokSebelum = $itemData ? (float)$itemData['stok_fisik_saat_ini'] : 0;
+                                $stokSesudah = $stokSebelum + $qtyPcs;
+
+                                $stmtStok->execute(['qty' => $qtyPcs, 'item_id' => $oit['item_id']]);
+                                $stmtRiwayat->execute([
                                     'item_id' => $oit['item_id'],
-                                    'qty' => (int)$oit['kuantitas_satuan_dasar']
+                                    'qty' => $qtyPcs,
+                                    'stok_sebelum' => $stokSebelum,
+                                    'stok_sesudah' => $stokSesudah,
+                                    'ref_id' => $orderId,
+                                    'ket' => "Pengembalian Barang Gagal Kirim #{$orderData['nomor_nota']}",
+                                    'user_id' => $userId
                                 ]);
                             }
+                        }
+
+                        $pdo->prepare("UPDATE public.pesanan SET status_pemrosesan = 'gagal_dikirim', waktu_gagal_kirim = NOW(), diubah_pada = NOW() WHERE id = :id")->execute(['id' => $orderId]);
+                        
+                        ActivityLog::log(
+                            'Delivery',
+                            'UPDATE',
+                            "Pengiriman pesanan #{$orderData['nomor_nota']} ({$orderData['nama_toko']}) ditandai Gagal Kirim. Stok fisik produk otomatis dikembalikan ke rak gudang.",
+                            'pesanan',
+                            (string)$orderId
+                        );
+                    } elseif ($status === 'selesai_diterima') {
+                        if ($isKonsinyasi) {
+                            // Konsinyasi: Pemotongan stok gudang, riwayat mutasi stok konsinyasi keluar,
+                            // dan penambahan saldo rak toko diproses secara atomik oleh trigger DB: trg_proses_pengiriman_konsinyasi.
                         } else {
+                            $pdo->prepare("UPDATE public.pesanan SET status_pemrosesan = 'selesai_dikirim', diubah_pada = NOW() WHERE id = :id")->execute(['id' => $orderId]);
+
                             // 2. Reguler: Catat Pengakuan Piutang & Arus Kas Masuk
                             $sisaTagihan = (float)$orderData['sisa_tagihan'];
                             $totalDibayar = (float)$orderData['total_dibayar'];
@@ -454,7 +483,7 @@ class DeliveryController extends Controller
             $delivery = Database::fetchOne("
                 SELECT sj.*, 
                        p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran, p.catatan as catatan_pesanan,
-                       cust.nama_toko, cust.alamat_lengkap as alamat_toko, cust.nomor_whatsapp, cust.nama_pemilik,
+                       cust.nama_toko, cust.kode_pelanggan, cust.alamat_lengkap as alamat_toko, cust.nomor_whatsapp, cust.nama_pemilik, cust.is_konsinyasi,
                        COALESCE(driver_sj.nama_karyawan, driver_p.nama_karyawan) as nama_driver,
                        COALESCE(driver_sj.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
                        COALESCE(driver_sj.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
@@ -523,10 +552,11 @@ class DeliveryController extends Controller
             $sql = "
                 SELECT sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
                        sj.waktu_berangkat, sj.waktu_sampai, sj.nama_penerima_toko, sj.bukti_terima_foto,
+                       sj.foto_bukti_gagal, sj.alasan_gagal, sj.catatan_gagal,
                        sj.dibuat_pada as waktu_terbit_sj,
                        p.id as pesanan_id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_netto,
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.status_pembayaran, p.status_pemrosesan,
-                       p.catatan as catatan_pesanan,
+                       p.catatan as catatan_pesanan, p.waktu_gagal_kirim,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik,
                        pel.nomor_whatsapp, pel.alamat_lengkap, pel.link_google_maps, pel.is_konsinyasi,
                        w.nama_wilayah, w.kode_rute,
@@ -805,36 +835,16 @@ class DeliveryController extends Controller
                 return;
             }
 
-            // Handle Upload Foto Bukti Serah Terima
+            // Handle Upload Foto Bukti Serah Terima via Upload Helper (Anti Dobel Folder & Validasi Gambar)
             $fotoPath = null;
-            if (isset($_FILES['bukti_foto']) && $_FILES['bukti_foto']['error'] === UPLOAD_ERR_OK) {
-                $file = $_FILES['bukti_foto'];
-                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-                $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-
-                if (!in_array($ext, $allowed, true)) {
-                    $this->flashError('Format foto bukti harus JPG, JPEG, PNG, atau WEBP.');
+            if (isset($_FILES['bukti_foto']) && $_FILES['bukti_foto']['error'] !== UPLOAD_ERR_NO_FILE) {
+                $uploadRes = \App\Helpers\Upload::storeImage($_FILES['bukti_foto'], 'delivery_proofs', 'PROOF');
+                if (!$uploadRes['success']) {
+                    $this->flashError($uploadRes['error']);
                     $this->redirect('/driver-deliveries');
                     return;
                 }
-
-                if ($file['size'] > 5 * 1024 * 1024) {
-                    $this->flashError('Ukuran foto bukti maksimal 5MB.');
-                    $this->redirect('/driver-deliveries');
-                    return;
-                }
-
-                $uploadDir = ROOT_PATH . '/public/uploads/delivery_proofs';
-                if (!is_dir($uploadDir)) {
-                    mkdir($uploadDir, 0755, true);
-                }
-
-                $fileName = 'PROOF-' . date('Ymd-His') . '-' . bin2hex(random_bytes(4)) . '.' . $ext;
-                $targetFile = $uploadDir . '/' . $fileName;
-
-                if (move_uploaded_file($file['tmp_name'], $targetFile)) {
-                    $fotoPath = '/uploads/delivery_proofs/' . $fileName;
-                }
+                $fotoPath = $uploadRes['path'];
             }
 
             $pdo = Database::getConnection();
@@ -912,10 +922,13 @@ class DeliveryController extends Controller
 
             $sqlOrder = "
                 UPDATE public.pesanan 
-                SET status_pemrosesan = 'selesai_dikirim',
+                SET status_pemrosesan = :st_proc,
                     diubah_pada = NOW()
             ";
-            $paramsOrder = ['id' => $orderId];
+            $paramsOrder = [
+                'id' => $orderId,
+                'st_proc' => $isKonsinyasi ? 'selesai' : 'selesai_dikirim'
+            ];
 
             if ($nominalTunai > 0 && $newStatusBayar !== null) {
                 $sqlOrder .= ", total_dibayar = :tot_bayar, sisa_tagihan = GREATEST(0, total_netto - :tot_bayar), status_pembayaran = :st_bayar";
@@ -935,31 +948,9 @@ class DeliveryController extends Controller
             $sqlOrder .= " WHERE id = :id";
             $pdo->prepare($sqlOrder)->execute($paramsOrder);
 
-            // 3. Jika Konsinyasi: Masukkan barang titipan ke stok rak toko mitra
-            if ($isKonsinyasi) {
-                $orderedItems = Database::fetchAll("
-                    SELECT item_id, kuantitas_satuan_dasar 
-                    FROM public.item_pesanan 
-                    WHERE pesanan_id = :id
-                ", ['id' => $orderId]);
-
-                foreach ($orderedItems as $oit) {
-                    $pdo->prepare("
-                        INSERT INTO public.stok_konsinyasi_toko (
-                            pelanggan_id, item_id, stok_titip_saat_ini, terakhir_opname_pada, dibuat_pada, diubah_pada
-                        ) VALUES (
-                            :pelanggan_id, :item_id, :qty, NOW(), NOW(), NOW()
-                        )
-                        ON CONFLICT (pelanggan_id, item_id) DO UPDATE SET
-                            stok_titip_saat_ini = public.stok_konsinyasi_toko.stok_titip_saat_ini + EXCLUDED.stok_titip_saat_ini,
-                            diubah_pada = NOW()
-                    ")->execute([
-                        'pelanggan_id' => $sj['pelanggan_id'],
-                        'item_id' => $oit['item_id'],
-                        'qty' => (int)$oit['kuantitas_satuan_dasar']
-                    ]);
-                }
-            }
+            // Catatan: Jika pesanan adalah konsinyasi, pemotongan stok gudang (item.stok_fisik_saat_ini),
+            // pencatatan kartu stok (riwayat_stok: konsinyasi_keluar), dan penambahan saldo stok rak toko (stok_konsinyasi_toko)
+            // sudah dieksekusi secara otomatis dan atomik oleh database trigger: trg_proses_pengiriman_konsinyasi.
 
             $pdo->commit();
 
@@ -1021,18 +1012,82 @@ class DeliveryController extends Controller
                 return;
             }
 
+            // Handle Upload Foto Bukti Gagal Kirim via Upload Helper (Anti Dobel Folder, Kompresi WebP & Acak Hash)
+            $fotoGagalPath = null;
+            $fileInput = $_FILES['foto_bukti_gagal'] ?? $_FILES['bukti_foto_gagal'] ?? null;
+            if ($fileInput && ($fileInput['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $uploadRes = \App\Helpers\Upload::storeImage($fileInput, 'delivery_proofs', 'FAIL');
+                if (!$uploadRes['success']) {
+                    $this->flashError($uploadRes['error']);
+                    $this->redirect('/driver-deliveries');
+                    return;
+                }
+                $fotoGagalPath = $uploadRes['path'];
+            }
+
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
             // 1. Update Surat Jalan
-            $pdo->prepare("
+            $sqlSj = "
                 UPDATE public.surat_jalan 
                 SET status_surat_jalan = 'gagal_kirim',
+                    alasan_gagal = :alasan,
+                    catatan_gagal = :catatan,
                     diubah_pada = NOW()
-                WHERE id = :id
-            ")->execute(['id' => $sjId]);
+            ";
+            $paramsSj = [
+                'id' => $sjId,
+                'alasan' => $alasan,
+                'catatan' => $catatan
+            ];
+            if (!empty($fotoGagalPath)) {
+                $sqlSj .= ", foto_bukti_gagal = :foto";
+                $paramsSj['foto'] = $fotoGagalPath;
+            }
+            $sqlSj .= " WHERE id = :id";
+            $pdo->prepare($sqlSj)->execute($paramsSj);
 
-            // 2. Update Pesanan
+            // 2. Kembalikan stok fisik ke gudang jika pesanan sebelumnya sudah dipotong stok
+            $orderBefore = Database::fetchOne("SELECT id, nomor_nota, status_pemrosesan, catatan FROM public.pesanan WHERE id = :id FOR UPDATE", ['id' => $sj['pesanan_id']]);
+            $isPhysicalStockCut = $orderBefore && in_array($orderBefore['status_pemrosesan'] ?? '', ['siap_dikirim', 'siap_kirim', 'sedang_dikirim'], true);
+
+            if ($isPhysicalStockCut) {
+                $orderedItems = Database::fetchAll("SELECT item_id, kuantitas_satuan_dasar FROM public.item_pesanan WHERE pesanan_id = :id", ['id' => $sj['pesanan_id']]);
+                $stmtStok = $pdo->prepare("UPDATE public.item SET stok_fisik_saat_ini = stok_fisik_saat_ini + :qty, diubah_pada = NOW() WHERE id = :item_id");
+                $stmtRiwayat = $pdo->prepare("
+                    INSERT INTO public.riwayat_stok (
+                        item_id, tipe_mutasi, jumlah_perubahan,
+                        stok_sebelum, stok_sesudah, referensi_tabel, referensi_id,
+                        keterangan, dibuat_oleh, dibuat_pada
+                    ) VALUES (
+                        :item_id, 'penyesuaian_opname_tambah', :qty,
+                        :stok_sebelum, :stok_sesudah, 'pesanan', :ref_id,
+                        :ket, :user_id, NOW()
+                    )
+                ");
+                $userId = Auth::id() ?: null;
+                foreach ($orderedItems as $oit) {
+                    $qtyPcs = (int)$oit['kuantitas_satuan_dasar'];
+                    if ($qtyPcs <= 0) continue;
+                    $itemData = Database::fetchOne("SELECT stok_fisik_saat_ini FROM public.item WHERE id = :id FOR UPDATE", ['id' => $oit['item_id']]);
+                    $stokSebelum = $itemData ? (float)$itemData['stok_fisik_saat_ini'] : 0;
+                    $stokSesudah = $stokSebelum + $qtyPcs;
+
+                    $stmtStok->execute(['qty' => $qtyPcs, 'item_id' => $oit['item_id']]);
+                    $stmtRiwayat->execute([
+                        'item_id' => $oit['item_id'],
+                        'qty' => $qtyPcs,
+                        'stok_sebelum' => $stokSebelum,
+                        'stok_sesudah' => $stokSesudah,
+                        'ref_id' => $sj['pesanan_id'],
+                        'ket' => "Pengembalian Barang Gagal Kirim #{$sj['nomor_nota']} ({$alasan})",
+                        'user_id' => $userId
+                    ]);
+                }
+            }
+
+            // 3. Update Pesanan
             $keteranganGagal = "[Gagal Kirim: {$alasan}]" . (!empty($catatan) ? " Catatan: {$catatan}" : "");
             $pdo->prepare("
                 UPDATE public.pesanan 
@@ -1051,12 +1106,19 @@ class DeliveryController extends Controller
             ActivityLog::log(
                 'Delivery',
                 'UPDATE',
-                "Driver melaporkan gagal kirim ke {$sj['nama_toko']} - Alasan: {$alasan}",
+                "Driver melaporkan gagal kirim ke {$sj['nama_toko']} - Alasan: {$alasan}" . ($isPhysicalStockCut ? " (Stok produk otomatis dikembalikan ke rak gudang)" : ""),
                 'surat_jalan',
                 (string)$sjId
             );
+            ActivityLog::log(
+                'Delivery',
+                'UPDATE',
+                "Pengiriman pesanan #{$sj['nomor_nota']} ({$sj['nama_toko']}) GAGAL KIRIM. Alasan: {$alasan}." . (!empty($catatan) ? " Catatan: {$catatan}." : "") . ($isPhysicalStockCut ? " Seluruh stok fisik produk otomatis dikembalikan ke rak gudang." : ""),
+                'pesanan',
+                (string)$sj['pesanan_id']
+            );
 
-            $this->flashWarning("Pengiriman ke {$sj['nama_toko']} ditandai Gagal Kirim ({$alasan}).");
+            $this->flashWarning("Pengiriman ke {$sj['nama_toko']} ditandai Gagal Kirim ({$alasan}). Stok fisik telah dikembalikan ke rak gudang.");
             $this->redirect('/driver-deliveries');
 
         } catch (Throwable $e) {
@@ -1092,14 +1154,18 @@ class DeliveryController extends Controller
             $delivery = Database::fetchOne("
                 SELECT sj.*,
                        p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran, p.catatan as catatan_pesanan,
-                       pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
-                       k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan,
+                       pel.nama_toko, pel.kode_pelanggan, pel.nama_pemilik, pel.nomor_whatsapp, 
+                       pel.alamat_lengkap, pel.alamat_lengkap as alamat_toko, pel.is_konsinyasi,
+                       COALESCE(k.nama_karyawan, driver_p.nama_karyawan) as nama_driver,
+                       COALESCE(k.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
+                       COALESCE(k.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
                        w.nama_wilayah, w.kode_rute
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
                 LEFT JOIN public.karyawan k ON sj.sales_driver_id = k.id
-                LEFT JOIN public.wilayah w ON sj.rute_wilayah_id = w.id
+                LEFT JOIN public.karyawan driver_p ON p.sales_driver_id = driver_p.id
+                LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 WHERE sj.id = :id
             ", ['id' => $id]);
 

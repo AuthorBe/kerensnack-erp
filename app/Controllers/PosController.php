@@ -76,11 +76,12 @@ class PosController extends Controller
                 $customerItemsMap[$ci['pelanggan_id']][] = $ci['item_id'];
             }
 
-            // 4. Ambil akun kas aktif
+            // 4. Ambil akun kas aktif (Default POS teratas)
             $cashAccounts = Database::fetchAll("
-                SELECT id, nama_akun, saldo_saat_ini 
+                SELECT id, nama_akun, saldo_saat_ini, is_default_pos 
                 FROM public.akun_kas 
                 WHERE status_aktif = TRUE
+                ORDER BY is_default_pos DESC, (LOWER(nama_akun) LIKE '%kasir%' OR LOWER(nama_akun) LIKE '%tunai%') DESC, dibuat_pada ASC
             ");
 
             $this->view('pos.index', [
@@ -187,42 +188,84 @@ class PosController extends Controller
             return;
         }
 
+        $paymentType = ($payload['payment_type'] === 'qris') ? 'qris' : 'cash';
+        $paidAmount = (float)($payload['paid_amount'] ?? 0);
+        $forceCashChange = !empty($payload['force_cash_change']);
+
+        // Validasi Nominal Pembayaran Tunai (Proteksi Backend)
+        if ($paymentType === 'cash') {
+            if ($paidAmount < $totalNetto) {
+                $this->json([
+                    'success' => false,
+                    'message' => 'Nominal uang tunai yang dibayarkan (Rp ' . number_format($paidAmount, 0, ',', '.') . ') kurang dari total tagihan (Rp ' . number_format($totalNetto, 0, ',', '.') . ').'
+                ], 400);
+                return;
+            }
+            $kembalian = $paidAmount - $totalNetto;
+        } else {
+            $paidAmount = $totalNetto;
+            $kembalian = 0.0;
+        }
+
         try {
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
             $nomorNota = 'INV-' . date('Ymd-His') . '-' . strtoupper(substr(uniqid(), -4));
             $customerId = $payload['customer_id'];
-            $paymentType = ($payload['payment_type'] === 'qris') ? 'qris' : 'cash';
             $catatan = $payload['notes'] ?? 'Transaksi Kasir POS';
             $cart = $validCart;
 
             $totalBruto = $totalNetto; // Dihitung dari akumulasi netto item
             $totalDiskon = 0.0;
 
-            // Cari Akun Kas Tujuan berdasarkan Tipe Pembayaran (Cash vs QRIS)
+            // Cari & Lock Akun Kas Tujuan (FOR UPDATE untuk mencegah race condition / lost update)
             $requestedKasId = $payload['cash_account_id'] ?? $payload['akun_kas_id'] ?? null;
             $akunKas = null;
 
             if (!empty($requestedKasId)) {
-                $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE", ['id' => $requestedKasId]);
+                $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE", ['id' => $requestedKasId]);
             }
 
             if (!$akunKas) {
                 if ($paymentType === 'qris') {
                     // Masuk ke Kantong Kas QRIS
-                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE AND LOWER(nama_akun) LIKE '%qris%' ORDER BY dibuat_pada ASC LIMIT 1");
+                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND LOWER(nama_akun) LIKE '%qris%' ORDER BY dibuat_pada ASC LIMIT 1 FOR UPDATE");
                 } else {
                     // Masuk ke Kasir Utama Toko (Tunai)
-                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE AND (is_default_pos = TRUE OR LOWER(nama_akun) LIKE '%kasir%' OR LOWER(nama_akun) LIKE '%tunai%') ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1");
+                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND (is_default_pos = TRUE OR LOWER(nama_akun) LIKE '%kasir%' OR LOWER(nama_akun) LIKE '%tunai%') ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1 FOR UPDATE");
                 }
 
                 if (!$akunKas) {
-                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1");
+                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1 FOR UPDATE");
                 }
             }
 
             $akunKasId = $akunKas['id'] ?? null;
+            $namaKas = $akunKas['nama_akun'] ?? 'Kasir';
+            $saldoKasAwal = (float)($akunKas['saldo_saat_ini'] ?? 0);
+
+            // Validasi Ketersediaan Uang Kembalian di Laci Kasir (Strict Cash Drawer Validation)
+            if ($paymentType === 'cash' && $kembalian > $saldoKasAwal && !$forceCashChange) {
+                $pdo->rollBack();
+                $kurang = $kembalian - $saldoKasAwal;
+                $this->json([
+                    'success' => false,
+                    'code' => 'INSUFFICIENT_CASH_DRAWER',
+                    'message' => "Saldo kas di laci kasir ({$namaKas}) tidak mencukupi untuk bayar kembalian!\n" .
+                                 "Saldo Kasir: Rp " . number_format($saldoKasAwal, 0, ',', '.') . "\n" .
+                                 "Kembalian Dibutuhkan: Rp " . number_format($kembalian, 0, ',', '.') . "\n" .
+                                 "Kekurangan Kas: Rp " . number_format($kurang, 0, ',', '.') . ".\n" .
+                                 "Silakan gunakan QRIS, minta uang pas, atau lakukan tukar uang fisik.",
+                    'data' => [
+                        'saldo_kas' => $saldoKasAwal,
+                        'kembalian' => $kembalian,
+                        'kurang_kembalian' => $kurang,
+                        'akun_kas_nama' => $namaKas
+                    ]
+                ], 422);
+                return;
+            }
 
             // 1. Ambil data pelanggan & toko
             $customer = Database::fetchOne("
@@ -238,16 +281,29 @@ class PosController extends Controller
                 $storeSettings[$sr['kunci']] = $sr['nilai'];
             }
 
-            // 2. Insert ke tabel pesanan (Langsung Lunas dengan Akun Kas Tercatat)
+            // Susun Catatan Transaksi & Penanda Audit
+            $catatanAudit = $catatan;
+            if ($paymentType === 'cash') {
+                $catatanAudit .= " [Tunai: Rp " . number_format($paidAmount, 0, ',', '.') . " | Kembali: Rp " . number_format($kembalian, 0, ',', '.');
+                if ($kembalian > $saldoKasAwal && $forceCashChange) {
+                    $catatanAudit .= " (Uang Kembalian Ditukar/Disediakan di Luar Laci)]";
+                } else {
+                    $catatanAudit .= "]";
+                }
+            } else {
+                $catatanAudit .= " [QRIS Toko: Rp " . number_format($totalNetto, 0, ',', '.') . "]";
+            }
+
+            // 2. Insert ke tabel pesanan (Menyimpan uang_diterima & kembalian untuk audit)
             $stmtPesanan = $pdo->prepare("
                 INSERT INTO public.pesanan (
                     nomor_nota, pelanggan_id, tanggal_pesanan, total_bruto, total_diskon, total_netto,
                     tipe_pembayaran, tanggal_jatuh_tempo, status_pembayaran, status_pemrosesan, catatan, dibuat_oleh,
-                    akun_kas_id, total_dibayar, sisa_tagihan
+                    akun_kas_id, total_dibayar, sisa_tagihan, uang_diterima, kembalian
                 ) VALUES (
                     :nomor_nota, :pelanggan_id, CURRENT_DATE, :total_bruto, :total_diskon, :total_netto,
                     :tipe_pembayaran, NULL, 'lunas', 'selesai', :catatan, :dibuat_oleh,
-                    :akun_kas_id, :total_dibayar, 0
+                    :akun_kas_id, :total_dibayar, 0, :uang_diterima, :kembalian
                 ) RETURNING id
             ");
 
@@ -259,10 +315,12 @@ class PosController extends Controller
                 'total_diskon' => $totalDiskon,
                 'total_netto' => $totalNetto,
                 'tipe_pembayaran' => $paymentType,
-                'catatan' => $catatan,
+                'catatan' => $catatanAudit,
                 'dibuat_oleh' => $userId,
                 'akun_kas_id' => $akunKasId,
-                'total_dibayar' => $totalNetto
+                'total_dibayar' => $totalNetto,
+                'uang_diterima' => $paidAmount,
+                'kembalian' => $kembalian
             ]);
 
             $pesananId = $stmtPesanan->fetchColumn();
@@ -368,8 +426,7 @@ class PosController extends Controller
             // 4. Catat Kas Masuk & Update Saldo Kas Toko (Cash -> Kasir Utama Toko, QRIS -> Kantong Kas QRIS)
             $saldoKasAkhir = 0;
             if ($akunKas) {
-                $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
-                $saldoKasAkhir = $saldoLama + $totalNetto;
+                $saldoKasAkhir = $saldoKasAwal + $totalNetto;
 
                 $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
                     ->execute(['saldo' => $saldoKasAkhir, 'id' => $akunKasId]);
@@ -405,13 +462,23 @@ class PosController extends Controller
                 )
             ");
 
-            $namaKas = $akunKas['nama_akun'] ?? 'Kasir';
             $stmtLog->execute([
                 'nama' => Auth::name(),
                 'peran' => Auth::role(),
                 'pesanan_id' => $pesananId,
-                'desc' => "Transaksi POS Kasir ({$paymentType} -> {$namaKas}): {$nomorNota} total Rp " . number_format($totalNetto, 0, ',', '.'),
-                'data_json' => json_encode(['nomor_nota' => $nomorNota, 'total' => $totalNetto, 'tipe_pembayaran' => $paymentType, 'akun_kas' => $namaKas, 'items_count' => count($cart)])
+                'desc' => "Transaksi POS Kasir ({$paymentType} -> {$namaKas}): {$nomorNota} total Rp " . number_format($totalNetto, 0, ',', '.') . ($paymentType === 'cash' ? " (Diterima: Rp " . number_format($paidAmount, 0, ',', '.') . ", Kembali: Rp " . number_format($kembalian, 0, ',', '.') . ")" : ""),
+                'data_json' => json_encode([
+                    'nomor_nota' => $nomorNota,
+                    'total' => $totalNetto,
+                    'uang_diterima' => $paidAmount,
+                    'kembalian' => $kembalian,
+                    'tipe_pembayaran' => $paymentType,
+                    'akun_kas' => $namaKas,
+                    'saldo_kas_sebelum' => $saldoKasAwal,
+                    'saldo_kas_sesudah' => $saldoKasAkhir,
+                    'is_override_tukar_uang' => ($paymentType === 'cash' && $kembalian > $saldoKasAwal && $forceCashChange),
+                    'items_count' => count($cart)
+                ])
             ]);
 
             $pdo->commit();
@@ -427,11 +494,15 @@ class PosController extends Controller
                     'customer_group' => $customer['nama_grup'] ?? 'Ritel',
                     'cashier_name' => Auth::name(),
                     'payment_type' => $paymentType,
+                    'akun_kas_id' => $akunKasId,
                     'akun_kas_nama' => $namaKas,
+                    'saldo_kas_terbaru' => $saldoKasAkhir,
                     'total_bruto' => $totalBruto,
                     'total_diskon' => $totalDiskon,
                     'total_netto' => $totalNetto,
-                    'notes' => $catatan,
+                    'paid_amount' => $paidAmount,
+                    'kembalian' => $kembalian,
+                    'notes' => $catatanAudit,
                     'items' => $receiptItems,
                     'store' => [
                         'nama' => $storeSettings['nama_toko'] ?? 'KEREN SNACK',

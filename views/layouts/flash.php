@@ -4,7 +4,7 @@ use App\Helpers\Flash;
 $flash = Flash::get();
 ?>
 <!-- GLOBAL TOAST NOTIFICATION CONTAINER (Utility container for JS toasts) -->
-<div id="toast-container" class="toast-container"></div>
+<div id="toast-container" class="toast-container" style="z-index: 9999999 !important;"></div>
 
 <script>
     window.__FLASH__ = <?= $flash ? json_encode([

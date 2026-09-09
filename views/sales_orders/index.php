@@ -388,10 +388,18 @@ ob_start();
                                 </div>
 
                                 <!-- Catat Pelunasan Piutang (Jika belum lunas) -->
-                                <?php if (!$isLunas): ?>
+                                <?php 
+                                $isGagalKirim = in_array($o['status_pemrosesan'] ?? '', ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'], true) || ($o['status_surat_jalan'] ?? '') === 'gagal_kembali';
+                                ?>
+                                <?php if (!$isLunas && !$isGagalKirim): ?>
                                 <button type="button" @click="openPaymentModal(<?= htmlspecialchars(json_encode($o)) ?>)" class="btn btn-primary btn-sm" style="padding:4px 8px;font-size:11px;" title="Catat Pembayaran Toko">
                                     <i data-lucide="wallet" style="width:14px;height:14px;"></i>
                                     <span>Bayar</span>
+                                </button>
+                                <?php elseif (!$isLunas && $isGagalKirim): ?>
+                                <button type="button" @click="openPaymentModal(<?= htmlspecialchars(json_encode($o)) ?>)" class="btn btn-sm" style="padding:4px 8px;font-size:11px;background:#fee2e2;color:#991b1b;border:1px solid #fecdd3;" title="Pembayaran ditangguhkan: Pengiriman Gagal Kirim">
+                                    <i data-lucide="alert-triangle" style="width:13px;height:13px;"></i>
+                                    <span>Tertunda</span>
                                 </button>
                                 <?php endif; ?>
 
@@ -429,54 +437,77 @@ ob_start();
                 </button>
             </div>
 
-            <form action="<?= Router::url('/sales-orders/pay') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <input type="hidden" name="id" :value="selectedOrder?.id">
-
-                <!-- Ringkasan Tagihan -->
-                <div style="padding:12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;justify-content:space-between;align-items:center;">
-                    <div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);">Sisa Tagihan Belum Lunas:</div>
-                        <div style="font-size:16px;font-weight:900;font-family:var(--font-mono);color:#ef4444;" x-text="formatRupiah(calcSisaTagihan())"></div>
+            <!-- Tampilan Peringatan Jika Pesanan Gagal Kirim -->
+            <template x-if="['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'].includes(selectedOrder?.status_pemrosesan) || selectedOrder?.status_surat_jalan === 'gagal_kembali'">
+                <div style="display:flex;flex-direction:column;gap:16px;">
+                    <div style="padding:16px;background:#fff1f2;border:1.5px solid #fecdd3;border-radius:var(--rounded-md);display:flex;align-items:flex-start;gap:12px;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:#ffe4e6;color:#e11d48;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="alert-triangle" style="width:18px;height:18px;"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-size:13.5px;font-weight:800;color:#9f1239;">Pembayaran Ditangguhkan: Gagal Kirim</div>
+                            <div style="font-size:12px;color:#be123c;margin-top:2px;line-height:1.45;">
+                                Pesanan ini berstatus <strong>Gagal Kirim</strong>. Seluruh stok fisik produk telah aman dikembalikan ke rak gudang. Pelunasan tagihan tidak dapat dicatat sebelum dilakukan penjadwalan kirim ulang.
+                            </div>
+                        </div>
                     </div>
-                    <button type="button" @click="paymentForm.nominal_bayar = formatRupiahNumber(calcSisaTagihan())" class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 8px;">
-                        Bayar Lunas
-                    </button>
-                </div>
-
-                <div>
-                    <label class="form-label">Masuk ke Akun Kas / Bank *</label>
-                    <select name="akun_kas_id" x-model="paymentForm.akun_kas_id" required class="form-input">
-                        <option value="">-- Pilih Akun Kas Penerima --</option>
-                        <?php foreach ($cashAccounts as $a): ?>
-                        <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Nominal Pembayaran (Rp) *</label>
-                        <input type="text" name="nominal_bayar" x-model="paymentForm.nominal_bayar" required class="form-input font-mono input-rupiah" placeholder="0">
-                    </div>
-                    <div>
-                        <label class="form-label">Tanggal Bayar *</label>
-                        <input type="date" name="tanggal_bayar" x-model="paymentForm.tanggal_bayar" required class="form-input font-mono">
+                    <div style="display:flex;justify-content:flex-end;gap:8px;">
+                        <button type="button" @click="showPaymentModal = false" class="btn btn-secondary">Tutup</button>
                     </div>
                 </div>
+            </template>
 
-                <div>
-                    <label class="form-label">Catatan / Keterangan</label>
-                    <input type="text" name="keterangan" x-model="paymentForm.keterangan" class="form-input" placeholder="Contoh: Titipan pembayaran tagihan lewat Driver">
-                </div>
+            <!-- Form Catat Pembayaran Jika Bukan Gagal Kirim -->
+            <template x-if="!['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'].includes(selectedOrder?.status_pemrosesan) && selectedOrder?.status_surat_jalan !== 'gagal_kembali'">
+                <form action="<?= Router::url('/sales-orders/pay') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+                    <input type="hidden" name="id" :value="selectedOrder?.id">
 
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showPaymentModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
-                        <span>Simpan Pembayaran</span>
-                    </button>
-                </div>
-            </form>
+                    <!-- Ringkasan Tagihan -->
+                    <div style="padding:12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div style="font-size:11px;color:var(--color-ink-mute);">Sisa Tagihan Belum Lunas:</div>
+                            <div style="font-size:16px;font-weight:900;font-family:var(--font-mono);color:#ef4444;" x-text="formatRupiah(calcSisaTagihan())"></div>
+                        </div>
+                        <button type="button" @click="paymentForm.nominal_bayar = formatRupiahNumber(calcSisaTagihan())" class="btn btn-secondary btn-sm" style="font-size:11px;padding:4px 8px;">
+                            Bayar Lunas
+                        </button>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Masuk ke Akun Kas / Bank *</label>
+                        <select name="akun_kas_id" x-model="paymentForm.akun_kas_id" required class="form-input">
+                            <option value="">-- Pilih Akun Kas Penerima --</option>
+                            <?php foreach ($cashAccounts as $a): ?>
+                            <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Nominal Pembayaran (Rp) *</label>
+                            <input type="text" name="nominal_bayar" x-model="paymentForm.nominal_bayar" required class="form-input font-mono input-rupiah" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="form-label">Tanggal Bayar *</label>
+                            <input type="date" name="tanggal_bayar" x-model="paymentForm.tanggal_bayar" required class="form-input font-mono">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Catatan / Keterangan</label>
+                        <input type="text" name="keterangan" x-model="paymentForm.keterangan" class="form-input" placeholder="Contoh: Titipan pembayaran tagihan lewat Driver">
+                    </div>
+
+                    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+                        <button type="button" @click="showPaymentModal = false" class="btn btn-secondary">Batal</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i data-lucide="save"></i>
+                            <span>Simpan Pembayaran</span>
+                        </button>
+                    </div>
+                </form>
+            </template>
         </div>
     </div>
 

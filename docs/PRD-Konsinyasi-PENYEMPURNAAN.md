@@ -587,7 +587,6 @@ ConsignmentController::stokRak()           → GET /consignment/stok-rak
 ConsignmentController::opname()            → GET /consignment/opname (atau ?pelanggan_id=...)
 ConsignmentController::opnameProses()      → POST /consignment/opname/proses
 ConsignmentController::hasilKunjungan()    → GET /consignment/opname/hasil (?kunjungan_id=...)
-ConsignmentController::konfirmasiTerima()  → POST /consignment/konfirmasi-terima
 ConsignmentController::laporanPenjualan()  → GET /consignment/laporan-penjualan
 ConsignmentController::piutang()           → GET /consignment/piutang
 ConsignmentController::catatPembayaran()   → POST /consignment/piutang/bayar
@@ -687,10 +686,9 @@ Card di portal ditampilkan atau disembunyikan berdasarkan role user yang sedang 
 
 **Step 2 — Form Opname Rak (`GET /consignment/opname?pelanggan_id={id}`):**
 - **Header:** Tombol navigasi *"← Kembali ke Daftar Toko"*, nama toko, alamat, tombol telepon/WA langsung.
-- **Banner Kiriman Masuk Interaktif (SOP Restock saat Kunjungan):**
-  - Jika ada `surat_jalan` berstatus `sedang_dikirim` untuk toko tersebut, tampilkan banner interaktif di atas form:
-    *"🚚 Ada Kiriman Masuk: [No. Surat Jalan] ([Total SKU] SKU / [Total Qty] pcs) sedang menuju toko ini."*
-  - Tombol aksi **[Konfirmasi Barang Diterima Toko]** $\rightarrow$ kirim request ke `POST /consignment/konfirmasi-terima` $\rightarrow$ trigger database `trg_proses_pengiriman_konsinyasi` otomatis memindahkan stok gudang ke saldo rak toko seketika $\rightarrow$ form opname otomatis memuat ulang saldo stok titip terbaru sebelum sales mulai menghitung fisik.
+- **Alur Restock Otomatis (Driver Delivery):**
+  - Stok rak konsinyasi bertambah secara otomatis begitu driver menyelesaikan serah terima pengiriman (`status_surat_jalan = 'selesai_diterima'`) melalui trigger database `trg_proses_pengiriman_konsinyasi`.
+  - Form opname difokuskan murni untuk pengecekan fisik rak toko dan pencatatan hasil kunjungan. Tidak ada tombol konfirmasi barang masuk manual oleh sales.
   - **Catatan:** Form opname **TIDAK memiliki input manual `tambah_titip_baru`**. Semua penambahan titipan wajib melalui alur pengiriman resmi satu pintu yang telah disetujui Owner.
 - Jika toko belum pernah ada riwayat titipan (`COUNT(stok_konsinyasi_toko) = 0`) → tampilkan CTA: *"Toko ini belum ada barang titipan. Buat pesanan pengiriman pertama di menu Customer Orders."* (link ke `/customer-orders/create`).
 - **Daftar Item:** Semua SKU yang terdaftar di rak toko (termasuk saldo 0 pcs — beri badge *"Habis: 0 pcs"*).
