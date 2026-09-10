@@ -1221,28 +1221,56 @@ class ConsignmentController extends Controller
         Auth::requirePermission('consignment.assignment');
 
         try {
-            $stores = Database::fetchAll("
-                SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, p.alamat_lengkap,
-                       p.sales_driver_id,
-                       k.nama_karyawan as nama_sales, k.nomor_telepon as sales_telepon
-                FROM public.pelanggan p
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
-                WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
-                ORDER BY (p.sales_driver_id IS NULL) DESC, p.nama_toko ASC
+            // 1. Ambil daftar Karyawan dengan posisi 'sales'
+            $salesList = Database::fetchAll("
+                SELECT k.id, k.nama_karyawan, k.nomor_telepon, k.posisi,
+                       COUNT(p.id) as total_toko,
+                       STRING_AGG(DISTINCT CASE WHEN p.id IS NOT NULL THEN COALESCE(w.nama_wilayah, 'Tanpa Wilayah') END, ', ') as wilayah_tercover
+                FROM public.karyawan k
+                LEFT JOIN public.pelanggan p ON p.sales_driver_id = k.id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+                LEFT JOIN public.wilayah w ON p.wilayah_id = w.id
+                WHERE k.posisi = 'sales' AND k.status_aktif = TRUE
+                GROUP BY k.id, k.nama_karyawan, k.nomor_telepon, k.posisi
+                ORDER BY k.nama_karyawan ASC
             ");
 
-            $salesList = Database::fetchAll("
-                SELECT id, nama_karyawan, nomor_telepon, posisi 
-                FROM public.karyawan 
-                WHERE posisi IN ('sales', 'sales_driver') AND status_aktif = TRUE 
-                ORDER BY nama_karyawan ASC
+            // 2. Ambil seluruh Toko Konsinyasi Aktif
+            $stores = Database::fetchAll("
+                SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, p.alamat_lengkap,
+                       p.sales_driver_id, p.wilayah_id,
+                       COALESCE(w.nama_wilayah, 'Tanpa Wilayah') as nama_wilayah,
+                       k.nama_karyawan as nama_sales
+                FROM public.pelanggan p
+                LEFT JOIN public.wilayah w ON p.wilayah_id = w.id
+                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+                ORDER BY p.nama_toko ASC
             ");
+
+            // 3. Ambil daftar Wilayah / Rute aktif untuk filter modal
+            $territories = Database::fetchAll("
+                SELECT id, nama_wilayah, kode_rute 
+                FROM public.wilayah 
+                WHERE status_aktif = TRUE 
+                ORDER BY nama_wilayah ASC
+            ");
+
+            // 4. Kalkulasi Statistik & Toko Unassigned
+            $totalSales = count($salesList);
+            $assignedStores = count(array_filter($stores, fn($s) => !empty($s['sales_driver_id'])));
+            $unassignedStores = array_values(array_filter($stores, fn($s) => empty($s['sales_driver_id'])));
+            $totalUnassigned = count($unassignedStores);
 
             $this->view('consignment.assignment_sales', [
                 'pageTitle' => 'Assignment Sales ↔ Toko',
-                'pageSubtitle' => 'Penetapan Sales Penanggung Jawab Toko Konsinyasi Tetap',
-                'stores' => $stores,
+                'pageSubtitle' => 'Penetapan Toko Konsinyasi Binaan per Sales Lapangan',
                 'salesList' => $salesList,
+                'stores' => $stores,
+                'territories' => $territories,
+                'totalSales' => $totalSales,
+                'assignedStores' => $assignedStores,
+                'unassignedStores' => $unassignedStores,
+                'totalUnassigned' => $totalUnassigned,
             ]);
 
         } catch (Throwable $e) {
@@ -1258,60 +1286,94 @@ class ConsignmentController extends Controller
         Auth::requirePermission('consignment.assignment');
 
         if (!$this->validateCsrf()) {
+            $this->flashError('Sesi kedaluwarsa (CSRF token invalid). Silakan coba lagi.');
             $this->redirect('/consignment/assignment-sales');
             return;
         }
 
+        $salesId = trim((string)$this->input('sales_id', ''));
         $storeIds = (array)$this->input('store_ids', []);
-        $singleStoreId = (string)$this->input('pelanggan_id', '');
-        $salesDriverId = (string)$this->input('sales_driver_id', '');
+        $storeIds = array_values(array_filter(array_unique(array_map('trim', $storeIds))));
 
-        if (!empty($singleStoreId)) {
-            $storeIds[] = $singleStoreId;
-        }
-
-        $storeIds = array_filter(array_unique($storeIds));
-
-        if (empty($storeIds)) {
-            $this->flashError('Pilih minimal satu toko konsinyasi.');
+        if (empty($salesId)) {
+            $this->flashError('Pilih sales penanggung jawab terlebih dahulu.');
             $this->redirect('/consignment/assignment-sales');
             return;
         }
 
-        $salesUuid = !empty($salesDriverId) ? $salesDriverId : null;
+        $sales = Database::fetchOne("
+            SELECT id, nama_karyawan 
+            FROM public.karyawan 
+            WHERE id = :id AND posisi = 'sales' AND status_aktif = TRUE
+        ", ['id' => $salesId]);
+
+        if (!$sales) {
+            $this->flashError('Data sales tidak ditemukan atau sudah tidak aktif.');
+            $this->redirect('/consignment/assignment-sales');
+            return;
+        }
+
+        $pdo = Database::getConnection();
 
         try {
-            $count = 0;
-            foreach ($storeIds as $sid) {
-                Database::execute("
-                    UPDATE public.pelanggan 
-                    SET sales_driver_id = :d, diubah_pada = NOW() 
-                    WHERE id = :c
-                ", ['d' => $salesUuid, 'c' => $sid]);
-                $count++;
+            $pdo->beginTransaction();
+
+            if (!empty($storeIds)) {
+                // 1. Unassign toko milik sales ini yang di-uncheck (tidak ada di storeIds baru)
+                $inClause = implode(',', array_fill(0, count($storeIds), '?'));
+                $stmtUnassign = $pdo->prepare("
+                    UPDATE public.pelanggan
+                    SET sales_driver_id = NULL, diubah_pada = NOW()
+                    WHERE sales_driver_id = ?
+                      AND is_konsinyasi = TRUE
+                      AND id NOT IN ($inClause)
+                ");
+                $stmtUnassign->execute(array_merge([$salesId], $storeIds));
+
+                // 2. Assign / Reassign seluruh toko yang dicentang ke sales ini (1 toko = 1 sales)
+                $stmtAssign = $pdo->prepare("
+                    UPDATE public.pelanggan
+                    SET sales_driver_id = ?, diubah_pada = NOW()
+                    WHERE id IN ($inClause)
+                      AND is_konsinyasi = TRUE
+                ");
+                $stmtAssign->execute(array_merge([$salesId], $storeIds));
+            } else {
+                // Jika semua toko di-uncheck / dilepas untuk sales ini
+                $stmtClear = $pdo->prepare("
+                    UPDATE public.pelanggan
+                    SET sales_driver_id = NULL, diubah_pada = NOW()
+                    WHERE sales_driver_id = ?
+                      AND is_konsinyasi = TRUE
+                ");
+                $stmtClear->execute([$salesId]);
             }
 
-            $salesName = 'Tidak Ada (Unassigned)';
-            if ($salesUuid) {
-                $salesName = Database::fetchOne("SELECT nama_karyawan FROM public.karyawan WHERE id = :id", ['id' => $salesUuid])['nama_karyawan'] ?? 'Sales';
-            }
+            $pdo->commit();
+
+            $count = count($storeIds);
+            $salesName = $sales['nama_karyawan'];
 
             ActivityLog::log(
                 'master_data',
                 'UPDATE',
-                "Admin memperbarui penugasan {$count} toko konsinyasi ke sales: {$salesName}.",
-                'pelanggan',
-                $storeIds[0] ?? null
+                "Admin memperbarui penugasan toko konsinyasi untuk sales {$salesName}: {$count} toko ditugaskan.",
+                'karyawan',
+                $salesId
             );
 
-            $this->flashSuccess("Berhasil meng-assign {$count} toko konsinyasi ke {$salesName}!");
+            $this->flashSuccess("Berhasil memperbarui toko binaan {$salesName}! ({$count} toko aktif ditugaskan)");
             $this->redirect('/consignment/assignment-sales');
 
         } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $this->flashError('Gagal menyimpan assignment sales: ' . $e->getMessage());
             $this->redirect('/consignment/assignment-sales');
         }
     }
+
 
     /**
      * 12. Sub-halaman: Rekap Komisi Sales (GET /consignment/komisi-sales)
