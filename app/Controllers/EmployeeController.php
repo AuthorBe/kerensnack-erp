@@ -31,7 +31,7 @@ class EmployeeController extends Controller
                        k.status_aktif,
                        COALESCE(t.saldo, 0) as saldo_tabungan,
                        COALESCE(kb.sisa_kasbon, 0) as sisa_kasbon
-                FROM public.karyawan k
+                FROM public.v_karyawan_info k
                 LEFT JOIN public.tabungan t ON k.id = t.karyawan_id
                 LEFT JOIN (
                     SELECT karyawan_id, SUM(sisa_pinjaman) as sisa_kasbon
@@ -44,7 +44,7 @@ class EmployeeController extends Controller
 
             $totalEmployees = count($employees);
             $totalBorongan = count(array_filter($employees, fn($e) => $e['posisi'] === 'pengemasan'));
-            $totalSales = count(array_filter($employees, fn($e) => in_array($e['posisi'], ['sales', 'sales_driver'], true)));
+            $totalSales = count(array_filter($employees, fn($e) => $e['posisi'] === 'sales'));
             $totalDriver = count(array_filter($employees, fn($e) => $e['posisi'] === 'driver'));
             $totalAdminGudang = count(array_filter($employees, fn($e) => in_array($e['posisi'], ['admin', 'gudang', 'mandor'], true)));
 
@@ -101,30 +101,18 @@ class EmployeeController extends Controller
             $pdo->beginTransaction();
 
             $stmt = $pdo->prepare("
-                INSERT INTO public.karyawan (
-                    nik, nama_karyawan, posisi, tipe_penggajian, gaji_pokok_bulanan,
-                    uang_kehadiran_harian, tunjangan_bulanan, persentase_komisi_sales,
-                    nomor_telepon, alamat, nomor_polisi_kendaraan, tanggal_bergabung,
-                    bank_nama, bank_nomor_rekening, bank_atas_nama,
-                    status_aktif
+                INSERT INTO public.pengguna (
+                    nama_lengkap, nik, posisi, nomor_telepon, alamat, nomor_polisi_kendaraan,
+                    tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif
                 ) VALUES (
-                    :nik, :nama, :posisi, :tipe, :gapok,
-                    :hadir, :tunjangan, :komisi,
-                    :telp, :alamat, :nopol, :tgl,
-                    :bank, :rek, :an,
-                    TRUE
+                    :nama, :nik, :posisi, :telp, :alamat, :nopol, :tgl,
+                    :bank, :rek, :an, TRUE
                 ) RETURNING id
             ");
-
             $stmt->execute([
-                'nik' => $nik,
                 'nama' => $nama,
+                'nik' => $nik,
                 'posisi' => $posisi,
-                'tipe' => $tipeGaji,
-                'gapok' => $gajiPokok,
-                'hadir' => $uangHadir,
-                'tunjangan' => $tunjangan,
-                'komisi' => $komisi,
                 'telp' => $telepon ?: null,
                 'alamat' => $alamat,
                 'nopol' => $nopol ?: null,
@@ -133,7 +121,25 @@ class EmployeeController extends Controller
                 'rek' => $bankRek ?: null,
                 'an' => $bankAn ?: null
             ]);
+            $penggunaId = $stmt->fetchColumn();
 
+            $stmt = $pdo->prepare("
+                INSERT INTO public.karyawan (
+                    pengguna_id, tipe_penggajian, gaji_pokok_bulanan,
+                    uang_kehadiran_harian, tunjangan_bulanan, persentase_komisi_sales
+                ) VALUES (
+                    :pengguna_id, :tipe, :gapok, :hadir, :tunjangan, :komisi
+                ) RETURNING id
+            ");
+            $stmt->execute([
+                'pengguna_id' => $penggunaId,
+                'tipe' => $tipeGaji,
+                'gapok' => $gajiPokok,
+                'hadir' => $uangHadir,
+                'tunjangan' => $tunjangan,
+                'komisi' => $komisi
+            ]);
+            
             $karyawanId = $stmt->fetchColumn();
 
             // Inisialisasi rekening tabungan
@@ -184,43 +190,69 @@ class EmployeeController extends Controller
         }
 
         try {
-            Database::execute("
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
+
+            $karyawan = Database::fetchOne("SELECT pengguna_id FROM public.karyawan WHERE id = :id", ['id' => $id]);
+            if (!$karyawan) {
+                $pdo->rollBack();
+                $this->flashError('Data karyawan tidak ditemukan.');
+                $this->redirect('/employees');
+                return;
+            }
+
+            if ($karyawan && $karyawan['pengguna_id']) {
+                $stmtP = $pdo->prepare("
+                    UPDATE public.pengguna SET
+                        nik = :nik,
+                        nama_lengkap = :nama,
+                        posisi = :posisi,
+                        nomor_telepon = :telp,
+                        nomor_whatsapp = :telp,
+                        alamat = :alamat,
+                        nomor_polisi_kendaraan = :nopol,
+                        bank_nama = :bank,
+                        bank_nomor_rekening = :rek,
+                        bank_atas_nama = :an,
+                        status_aktif = :aktif,
+                        diubah_pada = NOW()
+                    WHERE id = :pengguna_id
+                ");
+                $stmtP->execute([
+                    'pengguna_id' => $karyawan['pengguna_id'],
+                    'nik' => $nik,
+                    'nama' => $nama,
+                    'posisi' => $posisi,
+                    'telp' => $telepon ?: null,
+                    'alamat' => $alamat,
+                    'nopol' => $nopol ?: null,
+                    'bank' => $bankNama ?: 'Tunai',
+                    'rek' => $bankRek ?: null,
+                    'an' => $bankAn ?: null,
+                    'aktif' => $statusAktif ? 'true' : 'false'
+                ]);
+            }
+
+            $stmtK = $pdo->prepare("
                 UPDATE public.karyawan SET
-                    nik = :nik,
-                    nama_karyawan = :nama,
-                    posisi = :posisi,
                     tipe_penggajian = :tipe,
                     gaji_pokok_bulanan = :gapok,
                     uang_kehadiran_harian = :hadir,
                     tunjangan_bulanan = :tunjangan,
                     persentase_komisi_sales = :komisi,
-                    nomor_telepon = :telp,
-                    alamat = :alamat,
-                    nomor_polisi_kendaraan = :nopol,
-                    bank_nama = :bank,
-                    bank_nomor_rekening = :rek,
-                    bank_atas_nama = :an,
-                    status_aktif = :aktif,
                     diubah_pada = NOW()
                 WHERE id = :id
-            ", [
+            ");
+            $stmtK->execute([
                 'id' => $id,
-                'nik' => $nik,
-                'nama' => $nama,
-                'posisi' => $posisi,
                 'tipe' => $tipeGaji,
                 'gapok' => $gajiPokok,
                 'hadir' => $uangHadir,
                 'tunjangan' => $tunjangan,
-                'komisi' => $komisi,
-                'telp' => $telepon ?: null,
-                'alamat' => $alamat,
-                'nopol' => $nopol ?: null,
-                'bank' => $bankNama ?: 'Tunai',
-                'rek' => $bankRek ?: null,
-                'an' => $bankAn ?: null,
-                'aktif' => $statusAktif ? 'true' : 'false'
+                'komisi' => $komisi
             ]);
+
+            $pdo->commit();
 
             $this->flashSuccess("Data karyawan {$nama} berhasil diperbarui!");
             $this->redirect('/employees');
@@ -241,10 +273,41 @@ class EmployeeController extends Controller
         }
 
         try {
-            Database::execute("DELETE FROM public.karyawan WHERE id = :id", ['id' => $id]);
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
+
+            // Cari pengguna yang terhubung dengan karyawan ini
+            $karyawan = Database::fetchOne(
+                "SELECT pengguna_id FROM public.karyawan WHERE id = :id",
+                ['id' => $id]
+            );
+
+            // Hapus record karyawan
+            $stmtK = $pdo->prepare("DELETE FROM public.karyawan WHERE id = :id");
+            $stmtK->execute(['id' => $id]);
+
+            // Jika pengguna terhubung, cek apakah pengguna ini hanya karyawan (tanpa akun login)
+            if ($karyawan && $karyawan['pengguna_id']) {
+                $penggunaId = $karyawan['pengguna_id'];
+                $penggunaData = Database::fetchOne(
+                    "SELECT nama_pengguna, peran_id FROM public.pengguna WHERE id = :id",
+                    ['id' => $penggunaId]
+                );
+
+                // Jika pengguna tidak punya nama_pengguna (akun login), hapus sekalian dari pengguna
+                // Jika punya akun login, biarkan pengguna tetap ada (hanya hilangkan data karyawan)
+                if ($penggunaData && empty($penggunaData['nama_pengguna'])) {
+                    $stmtP = $pdo->prepare("DELETE FROM public.pengguna WHERE id = :id");
+                    $stmtP->execute(['id' => $penggunaId]);
+                }
+            }
+
+            $pdo->commit();
             $this->flashSuccess('Karyawan berhasil dihapus.');
             $this->redirect('/employees');
+
         } catch (Throwable $e) {
+            if (isset($pdo)) $pdo->rollBack();
             $this->flashError('Gagal menghapus karyawan: ' . $e->getMessage());
             $this->redirect('/employees');
         }

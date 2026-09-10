@@ -43,8 +43,8 @@ class DeliveryController extends Controller
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan cust ON p.pelanggan_id = cust.id
-                LEFT JOIN public.karyawan driver_sj ON sj.sales_driver_id = driver_sj.id
-                LEFT JOIN public.karyawan driver_p ON p.sales_driver_id = driver_p.id
+                LEFT JOIN public.v_karyawan_info driver_sj ON sj.sales_driver_id = driver_sj.id
+                LEFT JOIN public.v_karyawan_info driver_p ON p.sales_driver_id = driver_p.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, cust.wilayah_id) = w.id
             ";
 
@@ -76,7 +76,7 @@ class DeliveryController extends Controller
             // Karyawan yang bisa ditugaskan sebagai pengemudi: Posisi Driver atau Sales
             $drivers = Database::fetchAll("
                 SELECT id, nama_karyawan, nomor_telepon, nomor_polisi_kendaraan, posisi 
-                FROM public.karyawan 
+                FROM public.v_karyawan_info 
                 WHERE posisi IN ('driver', 'sales') AND status_aktif = TRUE
                 ORDER BY (posisi = 'driver') DESC, nama_karyawan ASC
             ");
@@ -491,8 +491,8 @@ class DeliveryController extends Controller
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan cust ON p.pelanggan_id = cust.id
-                LEFT JOIN public.karyawan driver_sj ON sj.sales_driver_id = driver_sj.id
-                LEFT JOIN public.karyawan driver_p ON p.sales_driver_id = driver_p.id
+                LEFT JOIN public.v_karyawan_info driver_sj ON sj.sales_driver_id = driver_sj.id
+                LEFT JOIN public.v_karyawan_info driver_p ON p.sales_driver_id = driver_p.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, cust.wilayah_id) = w.id
                 WHERE sj.id = :id
             ", ['id' => $id]);
@@ -568,7 +568,7 @@ class DeliveryController extends Controller
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
-                LEFT JOIN public.karyawan k ON COALESCE(sj.sales_driver_id, p.sales_driver_id) = k.id
+                LEFT JOIN public.v_karyawan_info k ON COALESCE(sj.sales_driver_id, p.sales_driver_id) = k.id
                 WHERE p.status_pembayaran != 'dibatalkan'
             ";
 
@@ -666,7 +666,7 @@ class DeliveryController extends Controller
             // Master data drivers untuk filter admin
             $drivers = Database::fetchAll("
                 SELECT id, nama_karyawan, nomor_polisi_kendaraan, nomor_telepon, posisi 
-                FROM public.karyawan 
+                FROM public.v_karyawan_info 
                 WHERE posisi IN ('driver', 'sales') AND status_aktif = TRUE
                 ORDER BY (posisi = 'driver') DESC, nama_karyawan ASC
             ");
@@ -684,7 +684,7 @@ class DeliveryController extends Controller
                     }
                 }
                 if (!$myDriverName) {
-                    $emp = Database::fetchOne("SELECT nama_karyawan, nomor_polisi_kendaraan FROM public.karyawan WHERE id = :id", ['id' => $myEmpId]);
+                    $emp = Database::fetchOne("SELECT nama_karyawan, nomor_polisi_kendaraan FROM public.v_karyawan_info WHERE id = :id", ['id' => $myEmpId]);
                     if ($emp) {
                         $myDriverName = $emp['nama_karyawan'] . (!empty($emp['nomor_polisi_kendaraan']) ? ' (' . $emp['nomor_polisi_kendaraan'] . ')' : '');
                     }
@@ -1163,8 +1163,8 @@ class DeliveryController extends Controller
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.karyawan k ON sj.sales_driver_id = k.id
-                LEFT JOIN public.karyawan driver_p ON p.sales_driver_id = driver_p.id
+                LEFT JOIN public.v_karyawan_info k ON sj.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info driver_p ON p.sales_driver_id = driver_p.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 WHERE sj.id = :id
             ", ['id' => $id]);
@@ -1217,7 +1217,7 @@ class DeliveryController extends Controller
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.karyawan k ON sj.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON sj.sales_driver_id = k.id
                 LEFT JOIN public.wilayah w ON sj.rute_wilayah_id = w.id
                 WHERE sj.dibuat_pada >= :start AND sj.dibuat_pada <= :end
             ";

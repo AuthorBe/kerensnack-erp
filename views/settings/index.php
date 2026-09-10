@@ -179,6 +179,9 @@ ob_start();
             <div class="min-w-0">
                 <div class="text-[10px] sm:text-[11px] font-bold truncate" style="color:var(--color-ink-mute);">Pengguna Terdaftar</div>
                 <div class="text-sm sm:text-base font-black truncate" style="color:var(--color-ink);"><?= $totalUsers ?> Akun Aktif</div>
+                <?php if (isset($totalEmployees) && $totalEmployees > 0): ?>
+                    <div class="text-[10px] sm:text-[10.5px] truncate" style="color:var(--color-ink-mute);margin-top:1px;">dari <?= $totalEmployees ?> Total Karyawan</div>
+                <?php endif; ?>
             </div>
         </div>
 

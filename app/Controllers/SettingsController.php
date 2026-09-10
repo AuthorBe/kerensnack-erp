@@ -26,7 +26,8 @@ class SettingsController extends Controller
     public function index(): void
     {
         try {
-            $totalUsers = (int)(Database::fetchOne("SELECT count(*) as total FROM public.pengguna WHERE status_aktif = TRUE")['total'] ?? 0);
+            $totalUsers = (int)(Database::fetchOne("SELECT count(*) as total FROM public.pengguna WHERE nama_pengguna IS NOT NULL AND status_aktif = TRUE")['total'] ?? 0);
+            $totalEmployees = (int)(Database::fetchOne("SELECT count(*) as total FROM public.karyawan")['total'] ?? 0);
             $totalRoles = (int)(Database::fetchOne("SELECT count(*) as total FROM public.peran")['total'] ?? 0);
             $totalPerms = (int)(Database::fetchOne("SELECT count(*) as total FROM public.izin")['total'] ?? 0);
 
@@ -34,6 +35,7 @@ class SettingsController extends Controller
                 'pageTitle' => 'Pengaturan Sistem',
                 'pageSubtitle' => 'Pusat Manajemen Konfigurasi Aplikasi, Hak Akses & Akun Pengguna',
                 'totalUsers' => $totalUsers,
+                'totalEmployees' => $totalEmployees,
                 'totalRoles' => $totalRoles,
                 'totalPerms' => $totalPerms,
                 'userRole' => Auth::role(),

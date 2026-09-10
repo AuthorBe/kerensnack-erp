@@ -29,9 +29,15 @@ class ProfileController extends Controller
         $userDb = null;
         try {
             $userDb = Database::fetchOne("
-                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi, pr.nama_peran as peran, p.status_aktif, p.dibuat_pada, p.diubah_pada
+                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi, pr.nama_peran as peran, 
+                       p.status_aktif, p.dibuat_pada, p.diubah_pada,
+                       p.nik, p.posisi, p.nomor_telepon, p.alamat, p.tanggal_bergabung,
+                       p.bank_nama, p.bank_nomor_rekening, p.bank_atas_nama,
+                       p.nomor_polisi_kendaraan, p.nomor_whatsapp, p.id_telegram,
+                       k.id as karyawan_id, k.tipe_penggajian
                 FROM public.pengguna p
-                JOIN public.peran pr ON p.peran_id = pr.id
+                LEFT JOIN public.peran pr ON p.peran_id = pr.id
+                LEFT JOIN public.karyawan k ON k.pengguna_id = p.id
                 WHERE p.id = :id OR LOWER(p.nama_pengguna) = LOWER(:username)
                 LIMIT 1
             ", [

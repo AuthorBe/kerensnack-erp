@@ -48,12 +48,32 @@ class Database
     }
 
     /**
+     * Bind parameter dengan tipe data PDO yang tepat (khususnya boolean & null untuk PostgreSQL)
+     */
+    private static function bindAndExecute(PDOStatement $stmt, array $params = []): bool
+    {
+        foreach ($params as $key => $val) {
+            $paramKey = is_int($key) ? $key + 1 : (str_starts_with((string)$key, ':') ? $key : ':' . $key);
+            if (is_bool($val)) {
+                $stmt->bindValue($paramKey, $val, PDO::PARAM_BOOL);
+            } elseif (is_null($val)) {
+                $stmt->bindValue($paramKey, null, PDO::PARAM_NULL);
+            } elseif (is_int($val)) {
+                $stmt->bindValue($paramKey, $val, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($paramKey, (string)$val, PDO::PARAM_STR);
+            }
+        }
+        return $stmt->execute();
+    }
+
+    /**
      * Helper untuk eksekusi query SELECT dan ambil semua baris
      */
     public static function fetchAll(string $sql, array $params = []): array
     {
         $stmt = self::getConnection()->prepare($sql);
-        $stmt->execute($params);
+        self::bindAndExecute($stmt, $params);
         return $stmt->fetchAll();
     }
 
@@ -63,7 +83,7 @@ class Database
     public static function fetchOne(string $sql, array $params = []): ?array
     {
         $stmt = self::getConnection()->prepare($sql);
-        $stmt->execute($params);
+        self::bindAndExecute($stmt, $params);
         $result = $stmt->fetch();
         return $result !== false ? $result : null;
     }
@@ -74,6 +94,65 @@ class Database
     public static function execute(string $sql, array $params = []): bool
     {
         $stmt = self::getConnection()->prepare($sql);
-        return $stmt->execute($params);
+        return self::bindAndExecute($stmt, $params);
+    }
+
+    /**
+     * Helper untuk insert data: Database::insert('public.peran', ['nama_peran' => 'staff'])
+     */
+    public static function insert(string $table, array $data): bool
+    {
+        if (empty($data)) {
+            return false;
+        }
+        $columns = array_keys($data);
+        $fields = implode(', ', $columns);
+        $placeholders = ':' . implode(', :', $columns);
+        $sql = "INSERT INTO {$table} ({$fields}) VALUES ({$placeholders})";
+        return self::execute($sql, $data);
+    }
+
+    /**
+     * Helper untuk update data: Database::update('public.peran', ['deskripsi' => '...'], ['id' => $id])
+     */
+    public static function update(string $table, array $data, array $where): bool
+    {
+        if (empty($data) || empty($where)) {
+            return false;
+        }
+        $setClauses = [];
+        $params = [];
+        foreach ($data as $col => $val) {
+            $paramName = 'set_' . str_replace('.', '_', $col);
+            $setClauses[] = "{$col} = :{$paramName}";
+            $params[$paramName] = $val;
+        }
+        $whereClauses = [];
+        foreach ($where as $col => $val) {
+            $paramName = 'where_' . str_replace('.', '_', $col);
+            $whereClauses[] = "{$col} = :{$paramName}";
+            $params[$paramName] = $val;
+        }
+        $sql = "UPDATE {$table} SET " . implode(', ', $setClauses) . " WHERE " . implode(' AND ', $whereClauses);
+        return self::execute($sql, $params);
+    }
+
+    /**
+     * Helper untuk delete data: Database::delete('public.peran', ['id' => $id])
+     */
+    public static function delete(string $table, array $where): bool
+    {
+        if (empty($where)) {
+            return false;
+        }
+        $whereClauses = [];
+        $params = [];
+        foreach ($where as $col => $val) {
+            $paramName = 'del_' . str_replace('.', '_', $col);
+            $whereClauses[] = "{$col} = :{$paramName}";
+            $params[$paramName] = $val;
+        }
+        $sql = "DELETE FROM {$table} WHERE " . implode(' AND ', $whereClauses);
+        return self::execute($sql, $params);
     }
 }

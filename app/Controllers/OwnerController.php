@@ -88,7 +88,7 @@ class OwnerController extends Controller
                 FROM public.surat_jalan sj
                 JOIN public.pesanan pes ON sj.pesanan_id = pes.id
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-                LEFT JOIN public.karyawan k ON sj.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON sj.sales_driver_id = k.id
                 LEFT JOIN public.pengguna peng ON pes.dibuat_oleh = peng.id
                 WHERE sj.status_surat_jalan = 'draf_n8n'
                 ORDER BY sj.dibuat_pada DESC
@@ -108,14 +108,14 @@ class OwnerController extends Controller
             // C3: Rekap Komisi Karyawan Sales (Bulan Ini)
             $salesCommissions = Database::fetchAll("
                 SELECT k.id as sales_id, k.nama_karyawan, k.nomor_telepon,
-                       COALESCE(k.persentase_komisi_sales, 5.0) as persentase_komisi,
+                       COALESCE(NULLIF(k.persentase_komisi_sales, 0), 2.50) as persentase_komisi,
                        COUNT(DISTINCT p.id) as total_toko_binaan,
                        COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet_laku,
-                       (COALESCE(SUM(kk.total_laku_nominal), 0) * COALESCE(k.persentase_komisi_sales, 5.0) / 100.0) as estimasi_komisi_rp
-                FROM public.karyawan k
-                JOIN public.pelanggan p ON p.sales_driver_id = k.id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+                       (COALESCE(SUM(kk.total_laku_nominal), 0) * COALESCE(NULLIF(k.persentase_komisi_sales, 0), 2.50) / 100.0) as estimasi_komisi_rp
+                FROM public.v_karyawan_info k
+                LEFT JOIN public.pelanggan p ON p.sales_driver_id = k.id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
                 LEFT JOIN public.kunjungan_konsinyasi kk ON kk.pelanggan_id = p.id AND kk.tanggal_kunjungan >= DATE_TRUNC('month', CURRENT_DATE)
-                WHERE k.posisi IN ('sales', 'sales_driver') AND k.status_aktif = TRUE
+                WHERE k.posisi = 'sales' AND k.status_aktif = TRUE
                 GROUP BY k.id, k.nama_karyawan, k.nomor_telepon, k.persentase_komisi_sales
                 ORDER BY total_omzet_laku DESC
             ");
@@ -138,7 +138,7 @@ class OwnerController extends Controller
                        COUNT(pes.id) as total_nota_belum_lunas
                 FROM public.pesanan pes
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-                LEFT JOIN public.karyawan k ON pes.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON pes.sales_driver_id = k.id
                 WHERE pes.tipe_pembayaran = 'konsinyasi' AND pes.adalah_tagihan = TRUE AND pes.status_pembayaran != 'lunas' AND pes.status_pembayaran != 'dibatalkan'
                 GROUP BY p.id, p.nama_toko, p.kode_pelanggan, k.nama_karyawan
                 ORDER BY total_sisa_tagihan DESC
@@ -175,7 +175,7 @@ class OwnerController extends Controller
                        k.nama_karyawan as nama_sales,
                        (SELECT MAX(skt.terakhir_opname_pada) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id) as terakhir_opname
                 FROM public.pelanggan p
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
                   AND (
                       (SELECT MAX(skt.terakhir_opname_pada) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id) IS NULL

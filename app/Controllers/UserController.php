@@ -28,28 +28,27 @@ class UserController extends Controller
         // Ambil daftar peran untuk filter & dropdown modal
         $roles = Database::fetchAll("SELECT id, nama_peran, deskripsi FROM public.peran ORDER BY nama_peran ASC");
 
-        // Ambil daftar karyawan aktif untuk penautan di modal
-        $employees = Database::fetchAll("
-            SELECT id, nama_karyawan, nik, posisi 
-            FROM public.karyawan 
-            WHERE status_aktif = TRUE 
-            ORDER BY nama_karyawan ASC
+        // Ambil daftar karyawan aktif yang belum memiliki akun login sistem
+        $availableEmployees = Database::fetchAll("
+            SELECT id, nama_lengkap, posisi, nomor_whatsapp, nik
+            FROM public.pengguna
+            WHERE nama_pengguna IS NULL AND status_aktif = TRUE
+            ORDER BY nama_lengkap ASC
         ");
 
         $sql = "
             SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.id_telegram, p.nomor_whatsapp, 
-                   p.status_aktif, p.dibuat_pada, p.karyawan_id,
+                   p.status_aktif, p.dibuat_pada,
                    pr.id as peran_id, pr.nama_peran as peran,
-                   k.nama_karyawan, k.posisi as posisi_karyawan
+                   p.posisi as posisi_karyawan
             FROM public.pengguna p
             JOIN public.peran pr ON p.peran_id = pr.id
-            LEFT JOIN public.karyawan k ON p.karyawan_id = k.id
             WHERE 1=1
         ";
         $params = [];
 
         if ($search !== '') {
-            $sql .= " AND (p.nama_lengkap ILIKE :search OR p.nama_pengguna ILIKE :search OR k.nama_karyawan ILIKE :search)";
+            $sql .= " AND (p.nama_lengkap ILIKE :search OR p.nama_pengguna ILIKE :search OR p.posisi ILIKE :search)";
             $params['search'] = "%{$search}%";
         }
 
@@ -71,7 +70,8 @@ class UserController extends Controller
             'pageSubtitle' => 'Kelola Akun Pengguna, Kredensial, Tautan Pegawai & Status Akses Sistem',
             'users' => $users,
             'roles' => $roles,
-            'employees' => $employees,
+            'availableEmployees' => $availableEmployees,
+            'employees' => $availableEmployees,
             'search' => $search,
             'roleFilter' => $roleFilter,
             'statusFilter' => $statusFilter,
@@ -88,21 +88,34 @@ class UserController extends Controller
     {
         Auth::requirePermission('rbac.users_manage');
 
-        $namaLengkap = trim((string)$this->input('nama_lengkap'));
+        $penggunaId = trim((string)$this->input('pengguna_id'));
         $username = strtolower(trim((string)$this->input('nama_pengguna')));
         $password = (string)$this->input('password');
         $peranId = trim((string)$this->input('peran_id'));
-        $karyawanId = trim((string)$this->input('karyawan_id')) ?: null;
         $nomorWa = trim((string)$this->input('nomor_whatsapp')) ?: null;
         $idTelegram = trim((string)$this->input('id_telegram')) ?: null;
 
-        if (empty($namaLengkap) || empty($username) || empty($password) || empty($peranId)) {
-            Flash::danger('Mohon lengkapi Nama Lengkap, Username, Password, dan Peran.');
+        if (empty($penggunaId) || empty($username) || empty($password) || empty($peranId)) {
+            Flash::danger('Mohon pilih Karyawan, lengkapi Username, Kata Sandi, dan Peran Jabatan.');
             $this->redirect('/users');
             return;
         }
 
-        // Proteksi 4: Larang pembuatan akun developer baru
+        // Ambil data karyawan yang dipilih
+        $emp = Database::fetchOne("SELECT id, nama_lengkap, nama_pengguna, nomor_whatsapp FROM public.pengguna WHERE id = :id", ['id' => $penggunaId]);
+        if (!$emp) {
+            Flash::danger('Data karyawan tidak ditemukan.');
+            $this->redirect('/users');
+            return;
+        }
+
+        if (!empty($emp['nama_pengguna'])) {
+            Flash::danger("Karyawan {$emp['nama_lengkap']} sudah memiliki akun login sistem (@{$emp['nama_pengguna']}).");
+            $this->redirect('/users');
+            return;
+        }
+
+        // Proteksi 4: Larang pembuatan/pemberian akun developer baru
         $targetRole = Database::fetchOne("SELECT nama_peran FROM public.peran WHERE id = :id", ['id' => $peranId]);
         if (($targetRole['nama_peran'] ?? '') === 'developer') {
             Flash::danger('Akses Ditolak: Tidak diperbolehkan membuat akun Developer baru (Single Root Account).');
@@ -110,7 +123,7 @@ class UserController extends Controller
             return;
         }
 
-        // Cek username unik
+        // Cek username unik (case-insensitive)
         $existing = Database::fetchOne("SELECT id FROM public.pengguna WHERE LOWER(nama_pengguna) = :username", ['username' => $username]);
         if ($existing) {
             Flash::danger("Username '{$username}' sudah digunakan. Silakan pilih username lain.");
@@ -122,14 +135,20 @@ class UserController extends Controller
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
             Database::execute("
-                INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, peran_id, karyawan_id, nomor_whatsapp, id_telegram, status_aktif, dibuat_pada, diubah_pada)
-                VALUES (:nama, :username, :pass, :peran_id, :karyawan_id, :wa, :telegram, TRUE, NOW(), NOW())
+                UPDATE public.pengguna 
+                SET nama_pengguna = :username,
+                    kata_sandi = :pass,
+                    peran_id = :peran_id,
+                    nomor_whatsapp = COALESCE(:wa, nomor_whatsapp),
+                    id_telegram = COALESCE(:telegram, id_telegram),
+                    status_aktif = TRUE,
+                    diubah_pada = NOW()
+                WHERE id = :id
             ", [
-                'nama' => $namaLengkap,
+                'id' => $penggunaId,
                 'username' => $username,
                 'pass' => $hashedPassword,
                 'peran_id' => $peranId,
-                'karyawan_id' => $karyawanId,
                 'wa' => $nomorWa,
                 'telegram' => $idTelegram ? (int)$idTelegram : null,
             ]);
@@ -138,12 +157,12 @@ class UserController extends Controller
             ActivityLog::record(
                 Auth::id(),
                 'CREATE_USER',
-                "Membuat akun pengguna baru: {$namaLengkap} (@{$username})"
+                "Mengaktifkan akun login sistem untuk karyawan: {$emp['nama_lengkap']} (@{$username})"
             );
 
-            Flash::success("Akun pengguna @{$username} berhasil dibuat.");
+            Flash::success("Akun login @{$username} untuk {$emp['nama_lengkap']} berhasil diaktifkan.");
         } catch (Throwable $e) {
-            Flash::danger('Gagal membuat pengguna: ' . $e->getMessage());
+            Flash::danger('Gagal mengaktifkan akun pengguna: ' . $e->getMessage());
         }
 
         $this->redirect('/users');
@@ -163,10 +182,9 @@ class UserController extends Controller
         $username = strtolower(trim((string)$this->input('nama_pengguna')));
         $password = (string)$this->input('password');
         $peranId = trim((string)$this->input('peran_id'));
-        $karyawanId = trim((string)$this->input('karyawan_id')) ?: null;
-        $nomorWa = trim((string)$this->input('nomor_whatsapp')) ?: null;
-        $idTelegram = trim((string)$this->input('id_telegram')) ?: null;
-        $statusAktif = (bool)$this->input('status_aktif', true);
+        $idTelegram = trim((string)$this->input('id_telegram'));
+        $idTelegram = ($idTelegram !== '' && is_numeric($idTelegram)) ? (int)$idTelegram : null;
+        $statusAktif = isset($_POST['status_aktif']) && in_array($_POST['status_aktif'], [1, '1', 'true', true, 'on'], true);
 
         if (empty($id) || empty($namaLengkap) || empty($username)) {
             Flash::danger('Mohon lengkapi seluruh kolom wajib.');
@@ -176,7 +194,7 @@ class UserController extends Controller
 
         // Ambil data akun yang sedang diedit
         $targetUser = Database::fetchOne("
-            SELECT p.id, p.nama_pengguna, p.peran_id, p.status_aktif, pr.nama_peran as peran 
+            SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.peran_id, p.status_aktif, pr.nama_peran as peran 
             FROM public.pengguna p
             JOIN public.peran pr ON p.peran_id = pr.id
             WHERE p.id = :id
@@ -189,6 +207,11 @@ class UserController extends Controller
         }
 
         $isTargetDev = ($targetUser['peran'] === 'developer');
+
+        // Nama lengkap selalu mengikuti data master karyawan (hanya dapat diubah via modul Karyawan)
+        if (!$isTargetDev) {
+            $namaLengkap = $targetUser['nama_lengkap'];
+        }
 
         // Proteksi 1: Akun developer hanya bisa diedit oleh developer itu sendiri
         if ($isTargetDev) {
@@ -231,6 +254,20 @@ class UserController extends Controller
             return;
         }
 
+        // Cek Telegram ID unik untuk akun lain (jika diisi)
+        if ($idTelegram !== null) {
+            $existingTg = Database::fetchOne("
+                SELECT id, nama_pengguna FROM public.pengguna 
+                WHERE id_telegram = :telegram AND id != :id
+            ", ['telegram' => $idTelegram, 'id' => $id]);
+
+            if ($existingTg) {
+                Flash::danger("ID Telegram '{$idTelegram}' sudah digunakan oleh akun @{$existingTg['nama_pengguna']}.");
+                $this->redirect('/users');
+                return;
+            }
+        }
+
         try {
             if (!empty($password)) {
                 $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
@@ -240,8 +277,6 @@ class UserController extends Controller
                         nama_pengguna = :username,
                         kata_sandi = :pass,
                         peran_id = :peran_id,
-                        karyawan_id = :karyawan_id,
-                        nomor_whatsapp = :wa,
                         id_telegram = :telegram,
                         status_aktif = :status,
                         diubah_pada = NOW()
@@ -252,9 +287,7 @@ class UserController extends Controller
                     'username' => $username,
                     'pass' => $hashedPassword,
                     'peran_id' => $peranId,
-                    'karyawan_id' => $karyawanId,
-                    'wa' => $nomorWa,
-                    'telegram' => $idTelegram ? (int)$idTelegram : null,
+                    'telegram' => $idTelegram,
                     'status' => $statusAktif,
                 ]);
             } else {
@@ -263,8 +296,6 @@ class UserController extends Controller
                     SET nama_lengkap = :nama,
                         nama_pengguna = :username,
                         peran_id = :peran_id,
-                        karyawan_id = :karyawan_id,
-                        nomor_whatsapp = :wa,
                         id_telegram = :telegram,
                         status_aktif = :status,
                         diubah_pada = NOW()
@@ -274,9 +305,7 @@ class UserController extends Controller
                     'nama' => $namaLengkap,
                     'username' => $username,
                     'peran_id' => $peranId,
-                    'karyawan_id' => $karyawanId,
-                    'wa' => $nomorWa,
-                    'telegram' => $idTelegram ? (int)$idTelegram : null,
+                    'telegram' => $idTelegram,
                     'status' => $statusAktif,
                 ]);
             }
@@ -327,7 +356,8 @@ class UserController extends Controller
             return;
         }
 
-        $newStatus = !$user['status_aktif'];
+        $currentStatus = in_array($user['status_aktif'], [true, 1, '1', 't', 'true'], true);
+        $newStatus = !$currentStatus;
         Database::execute("UPDATE public.pengguna SET status_aktif = :status, diubah_pada = NOW() WHERE id = :id", [
             'id' => $id,
             'status' => $newStatus,
@@ -372,16 +402,36 @@ class UserController extends Controller
         }
 
         try {
-            // Hapus izin khusus pengguna
+            // Hapus izin kustom pengguna jika ada
             Database::execute("DELETE FROM public.izin_pengguna WHERE pengguna_id = :id", ['id' => $id]);
-            // Hapus pengguna
-            Database::execute("DELETE FROM public.pengguna WHERE id = :id", ['id' => $id]);
 
-            Auth::touchPermissionsCache();
-            ActivityLog::record(Auth::id(), 'DELETE_USER', "Menghapus akun pengguna: @{$user['nama_pengguna']}");
-            Flash::success("Akun @{$user['nama_pengguna']} berhasil dihapus.");
+            // Cek apakah user terdaftar sebagai karyawan di modul HR
+            $isEmployee = (bool)Database::fetchOne("SELECT id FROM public.karyawan WHERE pengguna_id = :id", ['id' => $id]);
+
+            if ($isEmployee) {
+                // Cabut akses login saja, data identitas dan riwayat penggajian karyawan tetap tersimpan utuh
+                Database::execute("
+                    UPDATE public.pengguna 
+                    SET nama_pengguna = NULL, 
+                        kata_sandi = NULL, 
+                        peran_id = NULL, 
+                        diubah_pada = NOW() 
+                    WHERE id = :id
+                ", ['id' => $id]);
+
+                Auth::touchPermissionsCache();
+                ActivityLog::record(Auth::id(), 'REVOKE_USER_ACCESS', "Mencabut akses login pengguna: @{$user['nama_pengguna']}");
+                Flash::success("Akses login untuk @{$user['nama_pengguna']} berhasil dicabut. Profil karyawan tetap tersimpan aman.");
+            } else {
+                // Hapus pengguna murni jika bukan karyawan
+                Database::execute("DELETE FROM public.pengguna WHERE id = :id", ['id' => $id]);
+
+                Auth::touchPermissionsCache();
+                ActivityLog::record(Auth::id(), 'DELETE_USER', "Menghapus akun pengguna: @{$user['nama_pengguna']}");
+                Flash::success("Akun @{$user['nama_pengguna']} berhasil dihapus.");
+            }
         } catch (Throwable $e) {
-            Flash::danger('Gagal menghapus pengguna: ' . $e->getMessage());
+            Flash::danger('Gagal memproses pencabutan pengguna: ' . $e->getMessage());
         }
 
         $this->redirect('/users');

@@ -151,7 +151,7 @@ $scopeDefs = [
                 <span>Pilih Role (Jabatan)</span>
             </label>
             <div>
-                <select class="form-select" name="role_id" id="role_select" onchange="this.form.submit()" 
+                <select class="form-select" name="role_id" id="role_select" onchange="if (window.AppAction) window.AppAction.show('Memuat data role...', 'Mengambil konfigurasi izin jabatan'); try { sessionStorage.setItem('app_action_triggered', 'true'); } catch(e){}; this.form.submit()" 
                         style="width: 100%; height: 50px; border-radius: 14px; border: 1.5px solid #e2e8f0; background-color: #ffffff; padding: 0.55rem 1.1rem; font-size: 0.88rem; font-weight: 600; color: #1e293b; outline: none; cursor: pointer;">
                     <option value="">-- Pilih role / jabatan --</option>
                     <?php foreach ($roles as $r): ?>
@@ -230,7 +230,7 @@ $scopeDefs = [
             </div>
 
             <!-- 4. Form Simpan Izin Role -->
-            <form action="<?= Router::url('/permissions/save-role-permissions') ?>" method="POST" id="form-role-permissions">
+            <form action="<?= Router::url('/permissions/save-role-permissions') ?>" method="POST" id="form-role-permissions" data-action-text="Menyimpan izin role...">
                 <input type="hidden" name="role_id" value="<?= htmlspecialchars($selectedRoleId) ?>">
 
                 <!-- Empty State jika Pencarian Tidak Ada -->

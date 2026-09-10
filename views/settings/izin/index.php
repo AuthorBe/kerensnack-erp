@@ -685,6 +685,8 @@ ob_start();
             window.history.pushState(null, '', url.toString());
         }
 
+        if (window.AppAction) window.AppAction.show('Memuat izin pengguna...', 'Mengambil data hak akses & override');
+
         container.innerHTML = `
             <div class="card shadow-sm border-0 rounded-4 p-5 text-center my-4" style="border-radius: 16px; border: 1.5px solid #edf2f7; background: #ffffff; padding: 40px 20px; text-align: center;">
                 <div class="spinner-border mb-3" style="width: 2.5rem; height: 2.5rem; color: var(--iz-primary); display: inline-block; border: 3px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-border .75s linear infinite;" role="status"></div>
@@ -700,6 +702,7 @@ ob_start();
             return response.text();
         })
         .then(function(html) {
+            if (window.AppAction) window.AppAction.hide();
             container.innerHTML = html;
             currentFilterMode = 'all';
             updateCustomCount();
@@ -707,6 +710,7 @@ ob_start();
             if (typeof lucide !== 'undefined') lucide.createIcons();
         })
         .catch(function(error) {
+            if (window.AppAction) window.AppAction.error('Gagal Memuat Izin', error.message);
             lastLoadedUserId = null;
             container.innerHTML = `
                 <div class="card shadow-sm border-0 rounded-4 p-4 text-center my-4" style="border-radius: 16px; border: 1.5px solid #fecdd3; background: #fff1f2; padding: 24px; text-align: center;">

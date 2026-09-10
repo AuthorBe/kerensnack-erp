@@ -20,7 +20,7 @@ ob_start();
                     <span>SDM &amp; Tenaga Kerja</span>
                 </div>
                 <h1 class="page-title"><?= $pageTitle ?? 'Master Data Karyawan' ?></h1>
-                <p class="page-subtitle"><?= $pageSubtitle ?? 'Kelola Data Pegawai Admin, Gudang, Pengemasan &amp; Sales-Driver' ?></p>
+                <p class="page-subtitle"><?= $pageSubtitle ?? 'Kelola Data Pegawai Admin, Gudang, Pengemasan, Sales &amp; Driver' ?></p>
             </div>
         </div>
         <div class="page-header-actions">
@@ -109,7 +109,7 @@ ob_start();
     <div class="card p-0 overflow-hidden" style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--rounded-lg);">
 
         <!-- ACTION & FILTER BAR -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
             
             <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto flex-1">
                 <div class="form-input-icon flex-1 sm:max-w-xs">
@@ -117,20 +117,20 @@ ob_start();
                     <input type="text" x-model="searchQuery" placeholder="Cari nama / NIK / HP..." class="form-input" style="height:38px;font-size:13px;">
                 </div>
 
-                <select x-model="filterPosition" class="form-input" style="height:38px;font-size:13px;max-width:200px;">
+                <select x-model="filterPosition" class="form-input" style="height:38px;font-size:13px;max-width:220px;">
                     <option value="all">Semua Divisi / Posisi</option>
-                    <option value="pengemasan">Pengemasan (Packing Borongan)</option>
-                    <option value="sales_driver">Sales &amp; Driver (Kanvas)</option>
-                    <option value="gudang">Staff Gudang &amp; Logistik</option>
-                    <option value="admin">Admin &amp; Keuangan</option>
-                    <option value="mandor">Mandor / Supervisor</option>
+                    <option value="sales">💼 Sales Toko</option>
+                    <option value="driver">🚚 Driver Logistik</option>
+                    <option value="pengemasan">🍿 Pengemasan (Borongan)</option>
+                    <option value="gudang">📦 Staff Gudang &amp; Logistik</option>
+                    <option value="admin">👩‍💼 Admin &amp; Keuangan</option>
+                    <option value="mandor">👷 Mandor / Supervisor</option>
                 </select>
             </div>
 
-            <button @click="openAddModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
-                <i data-lucide="plus"></i>
-                <span>Tambah Karyawan Baru</span>
-            </button>
+            <div class="text-xs" style="color:var(--color-ink-mute);font-weight:600;white-space:nowrap;">
+                Menampilkan <span class="font-mono" style="font-weight:800;color:var(--color-primary);" x-text="filteredEmployees.length"></span> dari <span class="font-mono" style="font-weight:700;color:var(--color-ink);" x-text="employees.length"></span> karyawan
+            </div>
         </div>
 
         <!-- TABLE LIST -->
@@ -173,9 +173,6 @@ ob_start();
                                 <template x-if="e.posisi === 'driver'">
                                     <span class="badge badge-info" style="font-weight:700;">🚚 Driver Logistik</span>
                                 </template>
-                                <template x-if="e.posisi === 'sales_driver'">
-                                    <span class="badge badge-warning" style="font-weight:700;">💼 Sales-Driver</span>
-                                </template>
                                 <template x-if="e.posisi === 'pengemasan'">
                                     <span class="badge badge-info" style="font-weight:700;">🍿 Pengemasan</span>
                                 </template>
@@ -197,7 +194,7 @@ ob_start();
 
                             <!-- Gaji Pokok & Komisi -->
                             <td class="cell-currency cell-right cell-nowrap">
-                                <template x-if="e.posisi === 'sales_driver'">
+                                <template x-if="e.posisi === 'sales'">
                                     <div>
                                         <div style="font-weight:800;" x-text="formatRupiah(e.gaji_pokok_bulanan)"></div>
                                         <template x-if="Number(e.persentase_komisi_sales) > 0">
@@ -208,7 +205,7 @@ ob_start();
                                         </template>
                                     </div>
                                 </template>
-                                <template x-if="e.posisi !== 'sales_driver'">
+                                <template x-if="e.posisi !== 'sales'">
                                     <div style="font-weight:700;" x-text="formatRupiah(e.gaji_pokok_bulanan)"></div>
                                 </template>
                             </td>
@@ -322,7 +319,6 @@ ob_start();
                     <select name="posisi" x-model="form.posisi" @change="onPosisiChange()" required class="form-input" style="font-weight:600;">
                         <option value="sales">💼 Sales (Canvaser &amp; Komisi Toko)</option>
                         <option value="driver">🚚 Driver (Supir Logistik &amp; Pengantar)</option>
-                        <option value="sales_driver">💼 Sales-Driver (Merangkap)</option>
                         <option value="pengemasan">🍿 Pengemasan (Packing Borongan)</option>
                         <option value="gudang">📦 Staff Gudang &amp; Sortir</option>
                         <option value="admin">👩‍💼 Admin &amp; Kasir Kantor</option>
@@ -361,7 +357,7 @@ ob_start();
                 </template>
 
                 <!-- DYNAMIC CASE 2: SALES (DENGAN KOMISI) -->
-                <template x-if="form.posisi === 'sales' || form.posisi === 'sales_driver'">
+                <template x-if="form.posisi === 'sales'">
                     <div style="display:flex;flex-direction:column;gap:12px;">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
@@ -610,13 +606,21 @@ function employeeApp() {
                     this.form.tunjangan_bulanan = '50.000';
                     this.form.persentase_komisi_sales = 0;
                 }
-            } else if (this.form.posisi === 'sales_driver') {
+            } else if (this.form.posisi === 'sales') {
                 if (!this.isEdit) {
                     this.form.tipe_penggajian = 'bulanan';
                     this.form.gaji_pokok_bulanan = '1.000.000';
                     this.form.uang_kehadiran_harian = '15.000';
                     this.form.tunjangan_bulanan = '50.000';
                     this.form.persentase_komisi_sales = 2.0;
+                }
+            } else if (this.form.posisi === 'driver') {
+                if (!this.isEdit) {
+                    this.form.tipe_penggajian = 'bulanan';
+                    this.form.gaji_pokok_bulanan = '2.500.000';
+                    this.form.uang_kehadiran_harian = '15.000';
+                    this.form.tunjangan_bulanan = '100.000';
+                    this.form.persentase_komisi_sales = 0;
                 }
             } else if (this.form.posisi === 'gudang') {
                 if (!this.isEdit) {

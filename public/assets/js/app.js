@@ -575,6 +575,8 @@
       return 'Memverifikasi akun...';
     } else if (formAction.includes('/logout') || formId.includes('logout')) {
       return 'Keluar sistem...';
+    } else if (formAction.includes('toggle-status')) {
+      return 'Mengubah status akun pengguna...';
     } else if (formAction.includes('delete') || formAction.includes('hapus') || formId.includes('delete') || formId.includes('hapus')) {
       return 'Menghapus data...';
     } else if (formAction.includes('update') || formAction.includes('edit')) {
@@ -601,7 +603,16 @@
   HTMLFormElement.prototype.submit = function() {
     if (!this.classList.contains('no-loader') && this.getAttribute('target') !== '_blank') {
       const method = (this.getAttribute('method') || 'GET').toUpperCase();
-      if (method === 'GET') {
+      const wantsAction = this.hasAttribute('data-action-text') || this.getAttribute('data-loader') === 'action';
+      if (wantsAction) {
+        if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+        const text = getSmartActionText(this);
+        if (typeof AppAction !== 'undefined') AppAction.show(text);
+        try {
+          sessionStorage.setItem('app_action_triggered', 'true');
+          if (method === 'GET') sessionStorage.setItem('app_action_dismiss_on_load', 'true');
+        } catch (e) {}
+      } else if (method === 'GET') {
         if (typeof AppAction !== 'undefined') AppAction.hide();
         if (typeof AppSkeleton !== 'undefined') AppSkeleton.show('Memuat data...');
       } else {
@@ -619,11 +630,18 @@
     HTMLFormElement.prototype.requestSubmit = function(submitter) {
       if (!this.classList.contains('no-loader') && this.getAttribute('target') !== '_blank') {
         const method = (this.getAttribute('method') || 'GET').toUpperCase();
-        if (method !== 'GET') {
+        const wantsAction = this.hasAttribute('data-action-text') || this.getAttribute('data-loader') === 'action';
+        if (wantsAction || method !== 'GET') {
           if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
           const text = getSmartActionText(this);
           if (typeof AppAction !== 'undefined') AppAction.show(text);
-          try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (e) {}
+          try {
+            sessionStorage.setItem('app_action_triggered', 'true');
+            if (method === 'GET') sessionStorage.setItem('app_action_dismiss_on_load', 'true');
+          } catch (e) {}
+        } else if (method === 'GET') {
+          if (typeof AppAction !== 'undefined') AppAction.hide();
+          if (typeof AppSkeleton !== 'undefined') AppSkeleton.show('Memuat data...');
         }
       }
       return _nativeRequestSubmit.apply(this, arguments);
@@ -931,7 +949,7 @@
         title = 'Data Berhasil Dihapus! ✨';
       } else if (lower.includes('diperbarui') || lower.includes('diubah') || lower.includes('update')) {
         title = 'Data Berhasil Diperbarui! ✨';
-      } else if (lower.includes('disimpan') || lower.includes('ditambahkan') || lower.includes('simpan')) {
+      } else if (lower.includes('disimpan') || lower.includes('ditambahkan') || lower.includes('dibuat') || lower.includes('simpan')) {
         title = 'Data Berhasil Disimpan! ✨';
       } else if (lower.includes('reset')) {
         title = 'Berhasil Direset! ✨';
@@ -941,6 +959,17 @@
       const poMatch = msg.match(/(?:PO|Nota)\s*#?([A-Z0-9\-_]+)/i);
       if (poMatch && poMatch[0] && !subtext) {
         subtext = `${poMatch[0]} siap diproses.`;
+      }
+
+      if (!subtext && msg) {
+        const cleanTitle = title.toLowerCase().replace(/[!✨🎉🚚]/g, '').trim();
+        if (lower !== cleanTitle && lower !== cleanTitle.replace(/^data\s+/, '')) {
+          subtext = msg;
+        }
+      }
+
+      if (subtext && subtext.length > 95) {
+        subtext = subtext.substring(0, 92) + '...';
       }
 
       return { title, subtext };
@@ -987,9 +1016,12 @@
 
     // Check whether a form/action was explicitly submitted (for page-navigation uses)
     let hadAction = false;
+    let dismissOnLoad = false;
     try {
       hadAction = sessionStorage.getItem('app_action_triggered') === 'true';
+      dismissOnLoad = sessionStorage.getItem('app_action_dismiss_on_load') === 'true';
       sessionStorage.removeItem('app_action_triggered');
+      sessionStorage.removeItem('app_action_dismiss_on_load');
     } catch (e) {}
 
     const flash = window.__FLASH__;
@@ -1009,6 +1041,10 @@
         window.showToast(flash.message, flash.type, 4500);
       }
       setTimeout(() => { AppAction.hide(); }, 100);
+    } else if (hadAction && dismissOnLoad) {
+      // Untuk request GET (filter / cari dengan pop up loading), tutup loader langsung saat konten halaman siap
+      AppSkeleton.hide();
+      AppAction.hide();
     } else if (hadAction) {
       // Jika sebelumnya ada aksi form CRUD POST namun tidak ada flash message dari backend
       AppSkeleton.hide();
@@ -1079,6 +1115,19 @@
         if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) {
           return;
         }
+
+        const wantsAction = link.getAttribute('data-loader') === 'action' || link.hasAttribute('data-action-text');
+        if (wantsAction) {
+          const text = link.getAttribute('data-action-text') || 'Memuat data...';
+          AppSkeleton.hide();
+          AppAction.show(text);
+          try {
+            sessionStorage.setItem('app_action_triggered', 'true');
+            sessionStorage.setItem('app_action_dismiss_on_load', 'true');
+          } catch (err) {}
+          return;
+        }
+
         AppAction.hide();
         AppSkeleton.show('Memuat halaman...');
       }
@@ -1104,15 +1153,30 @@
     }
 
     const method = (form.getAttribute('method') || 'GET').toUpperCase();
+    const wantsAction = form.hasAttribute('data-action-text') || form.getAttribute('data-loader') === 'action';
     
-    // 1. Form GET (Filter, Pencarian, Parameter Laporan) -> Trigger Page Transition Skeleton
+    // 1. Form dengan deklarasi eksplisit Action Loader (data-action-text atau data-loader="action")
+    if (wantsAction) {
+      AppSkeleton.hide();
+      const customText = getSmartActionText(form);
+      AppAction.show(customText);
+      try {
+        sessionStorage.setItem('app_action_triggered', 'true');
+        if (method === 'GET') {
+          sessionStorage.setItem('app_action_dismiss_on_load', 'true');
+        }
+      } catch (err) {}
+      return;
+    }
+
+    // 2. Form GET standar (Filter, Pencarian, Parameter Laporan) -> Trigger Page Transition Skeleton
     if (method === 'GET') {
       AppAction.hide();
       AppSkeleton.show('Memuat data...');
       return;
     }
 
-    // 2. Form POST / PUT / DELETE (Operasi CRUD) -> Trigger AppAction Processing Loader
+    // 3. Form POST / PUT / DELETE (Operasi CRUD) -> Trigger AppAction Processing Loader
     AppSkeleton.hide();
     const customText = getSmartActionText(form);
     AppAction.show(customText);

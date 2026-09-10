@@ -84,7 +84,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                                             <?= htmlspecialchars(ucfirst($row['nama_peran'])) ?>
                                         </div>
                                         <?php if ($row['nama_peran'] !== 'developer'): ?>
-                                            <a href="javascript:void(0)" @click="setTab('role'); const url = new URL(window.location.href); url.searchParams.set('role_id', '<?= urlencode($row['id']) ?>'); window.history.replaceState({}, '', url.toString()); window.location.reload();" 
+                                            <a href="javascript:void(0)" @click="if (window.AppAction) window.AppAction.show('Memuat izin role...', 'Membuka konfigurasi hak akses role'); try { sessionStorage.setItem('app_action_triggered', 'true'); } catch(e){}; window.location.href = '<?= Router::url('/permissions') ?>?tab=role&role_id=' + encodeURIComponent('<?= $row['id'] ?>');" 
                                                style="color: var(--iz-primary); font-size: 0.78rem; font-weight: 600; text-decoration: none;">
                                                 <i data-lucide="sliders" style="width: 12px; height: 12px; display: inline-block; vertical-align: -1px;"></i> Atur Izin Default &rarr;
                                             </a>
@@ -249,7 +249,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                     </button>
                 </div>
 
-                <form action="<?= Router::url('/permissions/store-role') ?>" method="POST">
+                <form action="<?= Router::url('/permissions/store-role') ?>" method="POST" data-action-text="Menyimpan role baru...">
                     <div style="display:flex;flex-direction:column;gap:18px;">
                         <div>
                             <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
@@ -282,7 +282,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                                 onmouseover="this.style.background='#e2e8f0';" onmouseout="this.style.background='#f1f5f9';">
                             Batal
                         </button>
-                        <button type="submit" 
+                        <button type="submit"
                                 style="height:42px;padding:0 24px;border-radius:10px;background:var(--iz-primary, #2563eb);color:#ffffff;font-weight:700;font-size:0.88rem;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.25);display:inline-flex;align-items:center;gap:8px;transition:all 0.15s;"
                                 onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='none';">
                             <i data-lucide="check" style="width:16px;height:16px;"></i>
@@ -320,7 +320,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                     </button>
                 </div>
 
-                <form action="<?= Router::url('/permissions/update-role') ?>" method="POST">
+                <form action="<?= Router::url('/permissions/update-role') ?>" method="POST" data-action-text="Memperbarui deskripsi role...">
                     <input type="hidden" name="id" :value="editRole.id">
 
                     <div style="display:flex;flex-direction:column;gap:18px;">
@@ -353,7 +353,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                                 onmouseover="this.style.background='#e2e8f0';" onmouseout="this.style.background='#f1f5f9';">
                             Batal
                         </button>
-                        <button type="submit" 
+                        <button type="submit"
                                 style="height:42px;padding:0 24px;border-radius:10px;background:var(--iz-primary, #2563eb);color:#ffffff;font-weight:700;font-size:0.88rem;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.25);display:inline-flex;align-items:center;gap:8px;transition:all 0.15s;"
                                 onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='none';">
                             <i data-lucide="check" style="width:16px;height:16px;"></i>
@@ -398,7 +398,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                 </div>
 
                 <!-- Action buttons -->
-                <form :action="'<?= Router::url('/permissions/delete-role') ?>'" method="POST">
+                <form action="<?= Router::url('/permissions/delete-role') ?>" method="POST" data-action-text="Menghapus role...">
                     <input type="hidden" name="id" :value="deleteRoleTarget.id">
                     <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;">
                         <button type="button" @click="deleteRoleModalOpen = false"

@@ -100,7 +100,7 @@ class ConsignmentController extends Controller
                        (SELECT COUNT(*) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id AND skt.stok_titip_saat_ini > 0) as total_sku_titip,
                        (SELECT COALESCE(SUM(skt.stok_titip_saat_ini), 0) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id) as total_pcs_titip
                 FROM public.pelanggan p
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
             ";
 
@@ -171,7 +171,7 @@ class ConsignmentController extends Controller
             $customer = Database::fetchOne("
                 SELECT p.*, k.nama_karyawan as nama_sales 
                 FROM public.pelanggan p
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE p.id = :id AND p.is_konsinyasi = TRUE
             ", ['id' => $storeId]);
 
@@ -398,7 +398,7 @@ class ConsignmentController extends Controller
                 FROM public.kunjungan_konsinyasi kk
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                 LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
-                LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON kk.sales_driver_id = k.id
                 LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                 LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
                 WHERE kk.id = :id
@@ -481,7 +481,7 @@ class ConsignmentController extends Controller
                 FROM public.kunjungan_konsinyasi kk
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                 LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
-                LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON kk.sales_driver_id = k.id
                 LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                 LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
                 WHERE " . (!empty($kunjunganId) ? "kk.id = :id" : "(kk.pesanan_id = :id OR pes.id = :id)");
@@ -627,8 +627,8 @@ class ConsignmentController extends Controller
             if (!$isSales) {
                 $salesList = Database::fetchAll("
                     SELECT id, nama_karyawan
-                    FROM public.karyawan
-                    WHERE posisi IN ('sales', 'sales_driver') AND status_aktif = TRUE
+                    FROM public.v_karyawan_info
+                    WHERE posisi = 'sales' AND status_aktif = TRUE
                     ORDER BY nama_karyawan ASC
                 ");
             }
@@ -666,7 +666,7 @@ class ConsignmentController extends Controller
                 SELECT COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet_prev
                 FROM public.kunjungan_konsinyasi kk
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE kk.tanggal_kunjungan >= :start_date
                   AND kk.tanggal_kunjungan <= :end_date
                   AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
@@ -688,7 +688,7 @@ class ConsignmentController extends Controller
                     MAX(kk.tanggal_kunjungan) as last_visit_period,
                     (SELECT MAX(tanggal_kunjungan) FROM public.kunjungan_konsinyasi WHERE pelanggan_id = p.id) as last_visit
                 FROM public.pelanggan p
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 LEFT JOIN public.kunjungan_konsinyasi kk
                     ON kk.pelanggan_id = p.id
                     AND kk.tanggal_kunjungan >= :start_date
@@ -732,7 +732,7 @@ class ConsignmentController extends Controller
                     COUNT(kk.id) as jumlah_kunjungan
                 FROM public.kunjungan_konsinyasi kk
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE kk.tanggal_kunjungan >= :start_date
                   AND kk.tanggal_kunjungan <= :end_date
                   AND p.is_konsinyasi = TRUE
@@ -804,7 +804,7 @@ class ConsignmentController extends Controller
                 SELECT p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, 
                        k.nama_karyawan as nama_sales
                 FROM public.pelanggan p
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE p.id = :id
             ", ['id' => $pelangganId]);
 
@@ -910,7 +910,7 @@ class ConsignmentController extends Controller
                     (SELECT COUNT(*) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_sku
                 FROM public.kunjungan_konsinyasi kk
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
-                LEFT JOIN public.karyawan kar ON kk.sales_driver_id = kar.id
+                LEFT JOIN public.v_karyawan_info kar ON kk.sales_driver_id = kar.id
                 WHERE kk.total_laku_nominal > 0
                   AND NOT EXISTS (
                       SELECT 1 FROM public.tagihan_kunjungan tk WHERE tk.kunjungan_id = kk.id
@@ -937,7 +937,7 @@ class ConsignmentController extends Controller
                     (SELECT COUNT(*) FROM public.tagihan_kunjungan tk WHERE tk.pesanan_id = pes.id) as jumlah_kunjungan
                 FROM public.pesanan pes
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-                LEFT JOIN public.karyawan kar ON pes.sales_driver_id = kar.id
+                LEFT JOIN public.v_karyawan_info kar ON pes.sales_driver_id = kar.id
                 WHERE pes.tipe_pembayaran = 'konsinyasi'
                   AND pes.adalah_tagihan = TRUE
                   AND pes.status_pembayaran != 'dibatalkan'
@@ -1164,7 +1164,7 @@ class ConsignmentController extends Controller
                     (SELECT COUNT(*) FROM public.tagihan_kunjungan tk WHERE tk.pesanan_id = pes.id) as jumlah_kunjungan
                 FROM public.pesanan pes
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-                LEFT JOIN public.karyawan kar ON pes.sales_driver_id = kar.id
+                LEFT JOIN public.v_karyawan_info kar ON pes.sales_driver_id = kar.id
                 WHERE pes.tipe_pembayaran = 'konsinyasi'
                   AND pes.adalah_tagihan = TRUE
                   AND pes.status_pembayaran != 'dibatalkan'
@@ -1226,7 +1226,7 @@ class ConsignmentController extends Controller
                 SELECT k.id, k.nama_karyawan, k.nomor_telepon, k.posisi,
                        COUNT(p.id) as total_toko,
                        STRING_AGG(DISTINCT CASE WHEN p.id IS NOT NULL THEN COALESCE(w.nama_wilayah, 'Tanpa Wilayah') END, ', ') as wilayah_tercover
-                FROM public.karyawan k
+                FROM public.v_karyawan_info k
                 LEFT JOIN public.pelanggan p ON p.sales_driver_id = k.id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
                 LEFT JOIN public.wilayah w ON p.wilayah_id = w.id
                 WHERE k.posisi = 'sales' AND k.status_aktif = TRUE
@@ -1242,7 +1242,7 @@ class ConsignmentController extends Controller
                        k.nama_karyawan as nama_sales
                 FROM public.pelanggan p
                 LEFT JOIN public.wilayah w ON p.wilayah_id = w.id
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
                 ORDER BY p.nama_toko ASC
             ");
@@ -1303,7 +1303,7 @@ class ConsignmentController extends Controller
 
         $sales = Database::fetchOne("
             SELECT id, nama_karyawan 
-            FROM public.karyawan 
+            FROM public.v_karyawan_info 
             WHERE id = :id AND posisi = 'sales' AND status_aktif = TRUE
         ", ['id' => $salesId]);
 
@@ -1383,21 +1383,82 @@ class ConsignmentController extends Controller
         Auth::requirePermission(['consignment.komisi_all', 'consignment.komisi_self']);
 
         try {
-            $month = (string)$this->input('month', date('Y-m'));
-            $startDate = $month . '-01';
-            $endDate = date('Y-m-t', strtotime($startDate));
+            // 1. Validasi Input Rentang Tanggal Fleksibel (Default: Bulan Saat Ini)
+            $inputStart = trim((string)$this->input('start_date', ''));
+            $inputEnd   = trim((string)$this->input('end_date', ''));
+            $inputMonth = trim((string)$this->input('month', ''));
 
+            if (!empty($inputStart) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $inputStart)) {
+                $startDate = $inputStart;
+            } elseif (!empty($inputMonth) && preg_match('/^\d{4}-\d{2}$/', $inputMonth)) {
+                $startDate = $inputMonth . '-01';
+            } else {
+                $startDate = date('Y-m-01');
+            }
+
+            if (!empty($inputEnd) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $inputEnd)) {
+                $endDate = $inputEnd;
+            } elseif (!empty($inputMonth) && preg_match('/^\d{4}-\d{2}$/', $inputMonth)) {
+                $endDate = date('Y-m-t', strtotime($startDate));
+            } else {
+                $endDate = date('Y-m-t', strtotime($startDate));
+            }
+
+            // Keamanan: pastikan tanggal mulai tidak melebihi tanggal akhir
+            if ($startDate > $endDate) {
+                $tmp = $startDate;
+                $startDate = $endDate;
+                $endDate = $tmp;
+            }
+
+            $month = date('Y-m', strtotime($startDate));
+
+            // 2. Evaluasi Hak Akses & Penguncian Filter Sales
+            $canViewAll = Auth::can('consignment.komisi_all');
+            $myEmpId = Auth::employeeId();
+            $isSalesLocked = !$canViewAll;
+            $unlinkedAccount = false;
+            $selectedSalesId = '';
+            $currentSalesName = '';
+            $salesOptions = [];
+
+            if ($canViewAll) {
+                // Admin / Owner: Bebas memilih sales tertentu atau melihat semua
+                $selectedSalesId = trim((string)$this->input('sales_id', ''));
+                $salesOptions = Database::fetchAll("
+                    SELECT id, nama_karyawan 
+                    FROM public.v_karyawan_info 
+                    WHERE posisi = 'sales' AND status_aktif = TRUE 
+                    ORDER BY nama_karyawan ASC
+                ");
+            } else {
+                // Karyawan Sales: Filter otomatis terkunci ke dirinya sendiri
+                if (!empty($myEmpId)) {
+                    $selectedSalesId = $myEmpId; // Anti-tampering: paksa employee_id sesi
+                    $salesData = Database::fetchOne("
+                        SELECT nama_karyawan FROM public.v_karyawan_info WHERE id = :id
+                    ", ['id' => $myEmpId]);
+                    $currentSalesName = $salesData['nama_karyawan'] ?? 'Sales Saya';
+                    $salesOptions = [['id' => $myEmpId, 'nama_karyawan' => $currentSalesName]];
+                } else {
+                    $unlinkedAccount = true;
+                    $selectedSalesId = '';
+                    $currentSalesName = 'Akun Belum Ditautkan';
+                }
+            }
+
+            // 3. Query Rekapitulasi Komisi Utama (LEFT JOIN pelanggan, Default Rate 2.50%)
             $sql = "
-                SELECT k.id as sales_id, k.nama_karyawan, k.nomor_telepon,
-                       COALESCE(k.persentase_komisi_sales, 5.0) as persentase_komisi,
+                SELECT k.id as sales_id, k.nama_karyawan, k.nomor_telepon, k.posisi,
+                       COALESCE(NULLIF(k.persentase_komisi_sales, 0), 2.50) as persentase_komisi,
                        COUNT(DISTINCT p.id) as total_toko_assigned,
                        COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet,
-                       (COALESCE(SUM(kk.total_laku_nominal), 0) * COALESCE(k.persentase_komisi_sales, 5.0) / 100.0) as nominal_komisi
-                FROM public.karyawan k
-                JOIN public.pelanggan p ON p.sales_driver_id = k.id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+                       (COALESCE(SUM(kk.total_laku_nominal), 0) * COALESCE(NULLIF(k.persentase_komisi_sales, 0), 2.50) / 100.0) as nominal_komisi
+                FROM public.v_karyawan_info k
+                LEFT JOIN public.pelanggan p ON p.sales_driver_id = k.id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
                 LEFT JOIN public.kunjungan_konsinyasi kk ON kk.pelanggan_id = p.id 
                      AND kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
-                WHERE k.posisi IN ('sales', 'sales_driver') AND k.status_aktif = TRUE
+                WHERE k.posisi = 'sales' AND k.status_aktif = TRUE
             ";
 
             $params = [
@@ -1405,32 +1466,71 @@ class ConsignmentController extends Controller
                 'end_date' => $endDate
             ];
 
-            // Penyekatan scope: jika hanya punya hak lihat komisi sendiri
-            if (!Auth::can('consignment.komisi_all')) {
-                $myEmpId = Auth::employeeId();
-                if ($myEmpId) {
-                    $sql .= " AND k.id = :my_emp_id";
-                    $params['my_emp_id'] = $myEmpId;
-                } else {
-                    $sql .= " AND 1=0";
-                }
+            if (!empty($selectedSalesId)) {
+                $sql .= " AND k.id = :selected_sales_id";
+                $params['selected_sales_id'] = $selectedSalesId;
+            } elseif ($isSalesLocked && $unlinkedAccount) {
+                $sql .= " AND 1=0";
             }
 
-            $sql .= " GROUP BY k.id, k.nama_karyawan, k.nomor_telepon, k.persentase_komisi_sales ORDER BY total_omzet DESC";
+            $sql .= " GROUP BY k.id, k.nama_karyawan, k.nomor_telepon, k.posisi, k.persentase_komisi_sales ORDER BY total_omzet DESC, k.nama_karyawan ASC";
             $commissions = Database::fetchAll($sql, $params);
 
+            // 4. Query Breakdown Rincian Toko Binaan per Sales untuk Modal Detail
+            $breakdownSql = "
+                SELECT p.sales_driver_id as sales_id, p.id as store_id, p.kode_pelanggan, p.nama_toko, p.alamat_lengkap,
+                       COALESCE(w.nama_wilayah, 'Tanpa Wilayah') as nama_wilayah,
+                       COUNT(kk.id) as total_kunjungan,
+                       MAX(kk.tanggal_kunjungan) as terakhir_kunjungan,
+                       COALESCE(SUM(kk.total_laku_nominal), 0) as omzet_toko
+                FROM public.pelanggan p
+                JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id AND k.status_aktif = TRUE
+                LEFT JOIN public.wilayah w ON p.wilayah_id = w.id
+                LEFT JOIN public.kunjungan_konsinyasi kk ON kk.pelanggan_id = p.id 
+                     AND kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
+                WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+            ";
+            $bParams = [
+                'start_date' => $startDate,
+                'end_date' => $endDate
+            ];
+            if (!empty($selectedSalesId)) {
+                $breakdownSql .= " AND p.sales_driver_id = :b_sales_id";
+                $bParams['b_sales_id'] = $selectedSalesId;
+            } elseif ($isSalesLocked && $unlinkedAccount) {
+                $breakdownSql .= " AND 1=0";
+            }
+            $breakdownSql .= " GROUP BY p.sales_driver_id, p.id, p.kode_pelanggan, p.nama_toko, p.alamat_lengkap, w.nama_wilayah ORDER BY omzet_toko DESC, p.nama_toko ASC";
+            $breakdownRaw = Database::fetchAll($breakdownSql, $bParams);
+
+            // Kelompokkan breakdown per sales_id
+            $storeBreakdown = [];
+            foreach ($breakdownRaw as $b) {
+                $storeBreakdown[$b['sales_id']][] = $b;
+            }
+
+            // 5. Kalkulasi Ringkasan KPI
             $grandOmzet = array_sum(array_column($commissions, 'total_omzet'));
             $grandKomisi = array_sum(array_column($commissions, 'nominal_komisi'));
+            $totalStoresInvolved = array_sum(array_column($commissions, 'total_toko_assigned'));
 
             $this->view('consignment.komisi_sales', [
-                'pageTitle' => 'Rekap Komisi Sales',
-                'pageSubtitle' => 'Komisi Bulanan Berdasarkan Toko Konsinyasi Binaan Tetap',
+                'pageTitle' => $isSalesLocked ? 'Komisi Penjualan Saya' : 'Rekap Komisi Sales',
+                'pageSubtitle' => $isSalesLocked ? 'Perhitungan komisi bulanan toko binaan tetap Anda' : 'Insentif omzet bulanan toko konsinyasi binaan per sales',
                 'commissions' => $commissions,
+                'storeBreakdown' => $storeBreakdown,
                 'month' => $month,
                 'startDate' => $startDate,
                 'endDate' => $endDate,
                 'grandOmzet' => $grandOmzet,
                 'grandKomisi' => $grandKomisi,
+                'totalStoresInvolved' => $totalStoresInvolved,
+                'canViewAll' => $canViewAll,
+                'isSalesLocked' => $isSalesLocked,
+                'selectedSalesId' => $selectedSalesId,
+                'salesOptions' => $salesOptions,
+                'currentSalesName' => $currentSalesName,
+                'unlinkedAccount' => $unlinkedAccount,
             ]);
 
         } catch (Throwable $e) {
@@ -1467,7 +1567,7 @@ class ConsignmentController extends Controller
                 JOIN public.kunjungan_konsinyasi kk ON rkk.kunjungan_id = kk.id
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                 JOIN public.item i ON rkk.item_id = i.id
-                LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON kk.sales_driver_id = k.id
                 WHERE rkk.retur_rusak > 0
                   AND kk.tanggal_kunjungan >= :start_date
                   AND kk.tanggal_kunjungan <= :end_date
@@ -1525,7 +1625,7 @@ class ConsignmentController extends Controller
                             ELSE EXTRACT(DAY FROM NOW() - (SELECT MAX(skt.terakhir_opname_pada) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id))::int
                        END as hari_sejak_opname
                 FROM public.pelanggan p
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
                   AND (
                       (SELECT MAX(skt.terakhir_opname_pada) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id) IS NULL
@@ -1582,7 +1682,7 @@ class ConsignmentController extends Controller
                 FROM public.kunjungan_konsinyasi kk
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                 LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
-                LEFT JOIN public.karyawan k ON kk.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON kk.sales_driver_id = k.id
                 LEFT JOIN public.pesanan pes ON kk.pesanan_id = pes.id
                 WHERE kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
             ";
@@ -1658,7 +1758,7 @@ class ConsignmentController extends Controller
                     COALESCE(AVG(kk.total_laku_nominal), 0) as avg_per_kunjungan,
                     MAX(kk.tanggal_kunjungan) as last_visit
                 FROM public.pelanggan p
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 LEFT JOIN public.kunjungan_konsinyasi kk
                     ON kk.pelanggan_id = p.id
                     AND kk.tanggal_kunjungan >= :start_date

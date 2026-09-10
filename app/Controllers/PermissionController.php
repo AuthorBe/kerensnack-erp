@@ -416,7 +416,19 @@ class PermissionController extends Controller
             );
 
             Flash::success("Izin default untuk role " . ucfirst($role['nama_peran']) . " berhasil disimpan ({$totalActive} izin aktif).");
+
+            if ($this->isAjax()) {
+                $this->json([
+                    'success' => true,
+                    'message' => "Izin default untuk role " . ucfirst($role['nama_peran']) . " berhasil disimpan ({$totalActive} izin aktif)."
+                ]);
+                return;
+            }
         } catch (Throwable $e) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Gagal menyimpan izin peran: ' . $e->getMessage()], 500);
+                return;
+            }
             Flash::danger('Gagal menyimpan izin peran: ' . $e->getMessage());
         }
 
@@ -435,6 +447,10 @@ class PermissionController extends Controller
         $deskripsi = trim((string)$this->input('deskripsi', ''));
 
         if (empty($namaPeran)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Nama peran wajib diisi.'], 400);
+                return;
+            }
             Flash::danger('Nama peran wajib diisi.');
             $this->redirect('/permissions?tab=manage_roles');
             return;
@@ -444,19 +460,31 @@ class PermissionController extends Controller
 
         $exists = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = :nama", ['nama' => $namaPeran]);
         if ($exists) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => "Peran '{$namaPeran}' sudah terdaftar."], 400);
+                return;
+            }
             Flash::danger("Peran '{$namaPeran}' sudah terdaftar.");
             $this->redirect('/permissions?tab=manage_roles');
             return;
         }
 
-        Database::insert('public.peran', [
+        Database::execute("
+            INSERT INTO public.peran (nama_peran, deskripsi, dibuat_pada, diubah_pada)
+            VALUES (:nama_peran, :deskripsi, NOW(), NOW())
+        ", [
             'nama_peran' => $namaPeran,
             'deskripsi' => $deskripsi,
-            'dibuat_pada' => date('Y-m-d H:i:s'),
         ]);
 
         ActivityLog::record(Auth::id(), 'ROLE_CREATE', "Membuat peran baru: {$namaPeran}");
         Flash::success("Peran '{$namaPeran}' berhasil dibuat.");
+
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'message' => "Peran '{$namaPeran}' berhasil dibuat."]);
+            return;
+        }
+
         $this->redirect('/permissions?tab=manage_roles');
     }
 
@@ -468,6 +496,10 @@ class PermissionController extends Controller
         $deskripsi = trim((string)$this->input('deskripsi', ''));
 
         if (empty($id)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'ID Peran tidak valid.'], 400);
+                return;
+            }
             Flash::danger('ID Peran tidak valid.');
             $this->redirect('/permissions?tab=manage_roles');
             return;
@@ -475,15 +507,32 @@ class PermissionController extends Controller
 
         $role = Database::fetchOne("SELECT id, nama_peran FROM public.peran WHERE id = :id", ['id' => $id]);
         if (!$role) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Peran tidak ditemukan.'], 404);
+                return;
+            }
             Flash::danger('Peran tidak ditemukan.');
             $this->redirect('/permissions?tab=manage_roles');
             return;
         }
 
-        Database::update('public.peran', ['deskripsi' => $deskripsi], ['id' => $id]);
+        Database::execute("
+            UPDATE public.peran 
+            SET deskripsi = :deskripsi, diubah_pada = NOW() 
+            WHERE id = :id
+        ", [
+            'deskripsi' => $deskripsi,
+            'id' => $id,
+        ]);
 
         ActivityLog::record(Auth::id(), 'ROLE_UPDATE', "Memperbarui deskripsi peran {$role['nama_peran']}");
         Flash::success("Deskripsi peran '{$role['nama_peran']}' berhasil diperbarui.");
+
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'message' => "Deskripsi peran '{$role['nama_peran']}' berhasil diperbarui."]);
+            return;
+        }
+
         $this->redirect('/permissions?tab=manage_roles');
     }
 
@@ -493,6 +542,10 @@ class PermissionController extends Controller
 
         $id = trim((string)$this->input('id', ''));
         if (empty($id)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'ID Peran tidak valid.'], 400);
+                return;
+            }
             Flash::danger('ID Peran tidak valid.');
             $this->redirect('/permissions?tab=manage_roles');
             return;
@@ -500,12 +553,20 @@ class PermissionController extends Controller
 
         $role = Database::fetchOne("SELECT id, nama_peran FROM public.peran WHERE id = :id", ['id' => $id]);
         if (!$role) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Peran tidak ditemukan.'], 404);
+                return;
+            }
             Flash::danger('Peran tidak ditemukan.');
             $this->redirect('/permissions?tab=manage_roles');
             return;
         }
 
         if (in_array($role['nama_peran'], self::PROTECTED_ROLES, true)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => "Peran sistem '{$role['nama_peran']}' dilindungi dan tidak dapat dihapus."], 403);
+                return;
+            }
             Flash::danger("Peran sistem '{$role['nama_peran']}' dilindungi dan tidak dapat dihapus.");
             $this->redirect('/permissions?tab=manage_roles');
             return;
@@ -513,17 +574,27 @@ class PermissionController extends Controller
 
         $userCount = Database::fetchOne("SELECT count(*) as total FROM public.pengguna WHERE peran_id = :id", ['id' => $id])['total'] ?? 0;
         if ((int)$userCount > 0) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => "Tidak dapat menghapus peran '{$role['nama_peran']}' karena masih digunakan oleh {$userCount} akun pengguna."], 400);
+                return;
+            }
             Flash::danger("Tidak dapat menghapus peran '{$role['nama_peran']}' karena masih digunakan oleh {$userCount} akun pengguna.");
             $this->redirect('/permissions?tab=manage_roles');
             return;
         }
 
-        Database::delete('public.izin_peran', ['peran_id' => $id]);
-        Database::delete('public.peran', ['id' => $id]);
+        Database::execute("DELETE FROM public.izin_peran WHERE peran_id = :peran_id", ['peran_id' => $id]);
+        Database::execute("DELETE FROM public.peran WHERE id = :id", ['id' => $id]);
 
         Auth::touchPermissionsCache();
         ActivityLog::record(Auth::id(), 'ROLE_DELETE', "Menghapus peran: {$role['nama_peran']}");
         Flash::success("Peran '{$role['nama_peran']}' berhasil dihapus.");
+
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'message' => "Peran '{$role['nama_peran']}' berhasil dihapus."]);
+            return;
+        }
+
         $this->redirect('/permissions?tab=manage_roles');
     }
 

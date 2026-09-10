@@ -156,12 +156,12 @@ class AuthController extends Controller
         try {
             // 1. Cari pengguna dari Database PostgreSQL
             $userDb = Database::fetchOne("
-                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi, p.karyawan_id,
-                       p.peran_id, pr.nama_peran as peran, p.status_aktif,
-                       k.posisi as posisi_karyawan
+                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi,
+                       p.posisi, p.peran_id, pr.nama_peran as peran, p.status_aktif,
+                       k.id as karyawan_id
                 FROM public.pengguna p
                 JOIN public.peran pr ON p.peran_id = pr.id
-                LEFT JOIN public.karyawan k ON p.karyawan_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON k.pengguna_id = p.id
                 WHERE LOWER(p.nama_pengguna) = LOWER(:username)
                 LIMIT 1
             ", ['username' => $username]);
@@ -180,9 +180,13 @@ class AuthController extends Controller
                     $needsRehash = true;
                 }
             } elseif ($userDb && empty($userDb['kata_sandi'])) {
-                // Inisialisasi password akun baru
-                $passwordMatch = true;
-                $needsRehash = true;
+                // Inisialisasi password akun baru (HANYA JIKA PUNYA AKUN)
+                if (empty($userDb['nama_pengguna'])) {
+                    $passwordMatch = false; // Karyawan tanpa akun login tidak bisa masuk
+                } else {
+                    $passwordMatch = true;
+                    $needsRehash = true;
+                }
             }
 
             // Anti-brute-force guard: Jika IP diblokir, HANYA izinkan jika role developer dengan password benar
@@ -226,11 +230,11 @@ class AuthController extends Controller
 
                 Auth::login($userDb);
                 ActivityLog::log(
-                    'keamanan',
+                    'keamanan_auth',
                     'LOGIN',
-                    "Pengguna {$userDb['nama_lengkap']} ({$userDb['nama_pengguna']}) berhasil login ke sistem",
                     'pengguna',
                     $userDb['id'],
+                    "Pengguna {$userDb['nama_lengkap']} berhasil login ke sistem.",
                     null,
                     null,
                     'web_app',
@@ -240,7 +244,7 @@ class AuthController extends Controller
                 );
 
                 // Smart Redirect sesuai Role & Hak Akses
-                if ($userDb['peran'] === 'driver' || ($userDb['peran'] === 'sales' && ($userDb['posisi_karyawan'] ?? '') === 'driver')) {
+                if ($userDb['peran'] === 'driver' || ($userDb['peran'] === 'sales' && ($userDb['posisi'] ?? '') === 'driver')) {
                     $this->redirect('/deliveries');
                     return;
                 }

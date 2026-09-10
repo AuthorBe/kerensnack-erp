@@ -67,20 +67,12 @@ class Auth
         return self::user()['karyawan_id'] ?? null;
     }
 
+    /**
+     * Get the position of the logged-in employee (sales, driver, dll)
+     */
     public static function employeePosition(): ?string
     {
-        $cached = self::user()['posisi_karyawan'] ?? null;
-        if ($cached) return $cached;
-
-        $kId = self::employeeId();
-        if ($kId) {
-            $pos = Database::fetchOne("SELECT posisi FROM public.karyawan WHERE id = :id", ['id' => $kId])['posisi'] ?? null;
-            if ($pos && isset($_SESSION['user'])) {
-                $_SESSION['user']['posisi_karyawan'] = $pos;
-            }
-            return $pos;
-        }
-        return null;
+        return self::user()['posisi'] ?? null;
     }
 
     // --- ROLE CHECK HELPERS ---
@@ -218,7 +210,7 @@ class Auth
             $userDb = Database::fetchOne("
                 SELECT p.id, p.status_aktif, p.peran_id, pr.nama_peran as peran
                 FROM public.pengguna p
-                JOIN public.peran pr ON p.peran_id = pr.id
+                LEFT JOIN public.peran pr ON p.peran_id = pr.id
                 WHERE p.id = :id
                 LIMIT 1
             ", ['id' => $userId]);

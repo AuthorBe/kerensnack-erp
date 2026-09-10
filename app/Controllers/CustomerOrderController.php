@@ -109,8 +109,8 @@ class CustomerOrderController extends Controller
                     FROM public.surat_jalan
                     ORDER BY pesanan_id, (status_surat_jalan NOT IN ('gagal_kirim', 'dibatalkan')) DESC, dibuat_pada DESC
                 ) sj ON sj.pesanan_id = p.id
-                LEFT JOIN public.karyawan k_p ON p.sales_driver_id = k_p.id
-                LEFT JOIN public.karyawan k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.v_karyawan_info k_p ON p.sales_driver_id = k_p.id
+                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 WHERE p.tanggal_pesanan >= :start_date AND p.tanggal_pesanan <= :end_date
@@ -202,7 +202,7 @@ class CustomerOrderController extends Controller
 
             // Master Filter
             $customers = Database::fetchAll("SELECT id, kode_pelanggan, nama_toko FROM public.pelanggan WHERE status_aktif = TRUE ORDER BY nama_toko ASC");
-            $drivers = Database::fetchAll("SELECT id, nama_karyawan, nomor_polisi_kendaraan FROM public.karyawan WHERE posisi = 'sales_driver' AND status_aktif = TRUE ORDER BY nama_karyawan ASC");
+            $drivers = Database::fetchAll("SELECT id, nama_karyawan, nomor_polisi_kendaraan FROM public.v_karyawan_info WHERE posisi IN ('sales', 'driver') AND status_aktif = TRUE ORDER BY nama_karyawan ASC");
             $cashAccounts = Database::fetchAll("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY is_default_pos DESC, nama_akun ASC");
 
             $this->view('customer_orders.index', [
@@ -276,8 +276,8 @@ class CustomerOrderController extends Controller
                     FROM public.surat_jalan
                     ORDER BY pesanan_id, (status_surat_jalan NOT IN ('gagal_kirim', 'dibatalkan')) DESC, dibuat_pada DESC
                 ) sj ON sj.pesanan_id = p.id
-                LEFT JOIN public.karyawan k_p ON p.sales_driver_id = k_p.id
-                LEFT JOIN public.karyawan k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.v_karyawan_info k_p ON p.sales_driver_id = k_p.id
+                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 WHERE p.id = :id
             ";
@@ -330,8 +330,8 @@ class CustomerOrderController extends Controller
             // 3. Driver & Kas Master
             $drivers = Database::fetchAll("
                 SELECT id, nama_karyawan, nomor_polisi_kendaraan, nomor_telepon
-                FROM public.karyawan 
-                WHERE posisi = 'sales_driver' AND status_aktif = TRUE 
+                FROM public.v_karyawan_info 
+                WHERE posisi IN ('sales', 'driver') AND status_aktif = TRUE 
                 ORDER BY nama_karyawan ASC
             ");
 
@@ -362,7 +362,7 @@ class CustomerOrderController extends Controller
                        k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan as nopol_driver, k.nomor_telepon as telp_driver,
                        w.nama_wilayah
                 FROM public.surat_jalan sj
-                LEFT JOIN public.karyawan k ON sj.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON sj.sales_driver_id = k.id
                 LEFT JOIN public.wilayah w ON sj.rute_wilayah_id = w.id
                 WHERE sj.pesanan_id = :id
                 ORDER BY sj.dibuat_pada DESC
@@ -436,7 +436,7 @@ class CustomerOrderController extends Controller
             // 2. Ambil Master Sales-Driver Lengkap dengan Plat Nomor
             $drivers = Database::fetchAll("
                 SELECT id, nik, nama_karyawan, nomor_telepon, nomor_polisi_kendaraan
-                FROM public.karyawan
+                FROM public.v_karyawan_info
                 WHERE status_aktif = TRUE
                 ORDER BY nama_karyawan ASC
             ");
@@ -829,7 +829,7 @@ class CustomerOrderController extends Controller
             // Ambil Master Sales-Driver
             $drivers = Database::fetchAll("
                 SELECT id, nik, nama_karyawan, nomor_telepon, nomor_polisi_kendaraan
-                FROM public.karyawan
+                FROM public.v_karyawan_info
                 WHERE status_aktif = TRUE
                 ORDER BY nama_karyawan ASC
             ");
@@ -1225,7 +1225,7 @@ class CustomerOrderController extends Controller
                        ak.nama_akun as nama_akun_kas
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 WHERE p.id = :id
             ", ['id' => $id]);
@@ -1742,8 +1742,8 @@ class CustomerOrderController extends Controller
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
                 LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
-                LEFT JOIN public.karyawan k_p ON p.sales_driver_id = k_p.id
-                LEFT JOIN public.karyawan k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.v_karyawan_info k_p ON p.sales_driver_id = k_p.id
+                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 WHERE p.status_pembayaran != 'dibatalkan'
             ";
@@ -1862,7 +1862,7 @@ class CustomerOrderController extends Controller
             $countDeficit = count($deficitOrders);
 
             $customers = Database::fetchAll("SELECT id, kode_pelanggan, nama_toko FROM public.pelanggan WHERE status_aktif = TRUE ORDER BY nama_toko ASC");
-            $drivers = Database::fetchAll("SELECT id, nama_karyawan, nomor_polisi_kendaraan, posisi FROM public.karyawan WHERE posisi IN ('sales', 'driver', 'sales_driver') AND status_aktif = TRUE ORDER BY (posisi = 'driver') DESC, nama_karyawan ASC");
+            $drivers = Database::fetchAll("SELECT id, nama_karyawan, nomor_polisi_kendaraan, posisi FROM public.v_karyawan_info WHERE posisi IN ('sales', 'driver') AND status_aktif = TRUE ORDER BY (posisi = 'driver') DESC, nama_karyawan ASC");
 
             $this->view('customer_orders.po_list', [
                 'pageTitle' => 'Daftar PO Pelanggan',
@@ -2034,8 +2034,8 @@ class CustomerOrderController extends Controller
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
                 LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
-                LEFT JOIN public.karyawan k_p ON p.sales_driver_id = k_p.id
-                LEFT JOIN public.karyawan k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.v_karyawan_info k_p ON p.sales_driver_id = k_p.id
+                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 WHERE p.id = :id
             ", ['id' => $id]);
@@ -2218,7 +2218,7 @@ class CustomerOrderController extends Controller
                        ak.nama_akun as nama_akun_kas
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 WHERE p.id = :id
             ", ['id' => $id]);
@@ -2270,7 +2270,7 @@ class CustomerOrderController extends Controller
                        k.nama_karyawan as nama_sales
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE p.id = :id
             ", ['id' => $id]);
 
@@ -2339,7 +2339,7 @@ class CustomerOrderController extends Controller
                        k.nama_karyawan as nama_sales
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.karyawan k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 WHERE p.tanggal_pesanan >= :start AND p.tanggal_pesanan <= :end
             ";
             $params = ['start' => $startDate, 'end' => $endDate];
@@ -2413,8 +2413,8 @@ class CustomerOrderController extends Controller
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
                 LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
-                LEFT JOIN public.karyawan k_p ON p.sales_driver_id = k_p.id
-                LEFT JOIN public.karyawan k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.v_karyawan_info k_p ON p.sales_driver_id = k_p.id
+                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 WHERE p.id = :id
             ", ['id' => $id]);
