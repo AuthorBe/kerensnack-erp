@@ -17,21 +17,21 @@ INSERT INTO public.grup_pelanggan (id, kode_grup, nama_grup, default_level_harga
 ('44444444-4444-4444-4444-444444444404', 'GRP-KONSINYASI', 'Grup Toko Titip Jual', 5, 0.00, 0.00)
 ON CONFLICT (kode_grup) DO NOTHING;
 
--- 3. Master Pemasok (Vendor Bahan Mentah & Kemasan)
+-- 3. Master Pemasok (Vendor Bahan Mentah & Kemasan - Data Dummy)
 INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, alamat_lengkap, nomor_telepon) VALUES
-('SUP-001', 'MM JAYA', 'Sentra Bahan Kerupuk & Curah', '081234567890'),
-('SUP-002', 'JENGKOL SUPPLIER', 'Pasar Induk Kramat Jati', '081398765432'),
-('SUP-003', 'TETEH SAGU', 'Sentra Sagu & Tepung', '081512345678'),
-('SUP-004', 'PT SUMBER PLASTIK KEMASAN', 'Kawasan Industri Tangerang', '082188889999')
+('SUP-001', 'Pemasok Bahan Curah A', 'Sentra Bahan Kerupuk & Curah', '081200000001'),
+('SUP-002', 'Pemasok Bumbu & Sayur B', 'Kawasan Sentra Rempah', '081200000002'),
+('SUP-003', 'Pemasok Tepung Sagu C', 'Sentra Sagu & Tepung', '081200000003'),
+('SUP-004', 'Mitra Kemasan Plastik D', 'Kawasan Industri Kemasan', '081200000004')
 ON CONFLICT (kode_pemasok) DO NOTHING;
 
--- 4. Master Pelanggan (Toko Langganan Reguler & Toko Konsinyasi)
+-- 4. Master Pelanggan (Toko Langganan Reguler & Toko Konsinyasi - Data Dummy)
 INSERT INTO public.pelanggan (kode_pelanggan, nama_toko, grup_pelanggan_id, is_konsinyasi, alamat_lengkap, nomor_telepon, tipe_pembayaran_default, plafon_piutang) VALUES
-('CUST-001', 'UMUM/CASH', '44444444-4444-4444-4444-444444444401', FALSE, 'Toko Langsung / Walk-in', '', 'cash', 0.00),
-('CUST-002', 'MAJESTYK CIPUTAT', '44444444-4444-4444-4444-444444444404', TRUE, 'Jl. Raya Ciputat No. 45', '081299991111', 'konsinyasi', 5000000.00),
-('CUST-003', 'MAJESTYK M KAHFI', '44444444-4444-4444-4444-444444444404', TRUE, 'Jl. Moch Kahfi Jagakarsa', '081388882222', 'konsinyasi', 5000000.00),
-('CUST-004', 'TOKO BERKAH CILEDUG', '44444444-4444-4444-4444-444444444402', FALSE, 'Pasar Ciledug Blok A No. 12', '081577773333', 'tempo_7_hari', 3000000.00),
-('CUST-005', 'TOKO MAJU JAYA CIPONDOH', '44444444-4444-4444-4444-444444444403', FALSE, 'Jl. KH Hasyim Ashari No. 88', '081766664444', 'tempo_14_hari', 10000000.00)
+('CUST-001', 'Toko Umum / Walk-in Cash', '44444444-4444-4444-4444-444444444401', FALSE, 'Toko Langsung / Walk-in', '', 'cash', 0.00),
+('CUST-002', 'Toko Konsinyasi Contoh A', '44444444-4444-4444-4444-444444444404', TRUE, 'Jl. Contoh Raya No. 10', '081200000011', 'konsinyasi', 5000000.00),
+('CUST-003', 'Toko Konsinyasi Contoh B', '44444444-4444-4444-4444-444444444404', TRUE, 'Jl. Contoh Boulevard No. 25', '081200000012', 'konsinyasi', 5000000.00),
+('CUST-004', 'Toko Grosir Berkah C', '44444444-4444-4444-4444-444444444402', FALSE, 'Pasar Grosir Blok A No. 12', '081200000013', 'tempo_7_hari', 3000000.00),
+('CUST-005', 'Toko Swalayan Maju D', '44444444-4444-4444-4444-444444444403', FALSE, 'Jl. Pertokoan Raya No. 88', '081200000014', 'tempo_14_hari', 10000000.00)
 ON CONFLICT (kode_pelanggan) DO UPDATE SET 
     nama_toko = EXCLUDED.nama_toko, 
     grup_pelanggan_id = EXCLUDED.grup_pelanggan_id,

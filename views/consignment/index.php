@@ -26,24 +26,6 @@ ob_start();
         </div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- QUICK BANNER INFORMASI LOGISTIK OWNER (JIKA MEMILIKI IZIN APPROVAL)        -->
-    <!-- ========================================================================= -->
-    <?php if (Auth::can(['owner.dashboard', 'owner.approval_delivery'])): ?>
-    <div class="p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm" style="background:rgba(2,132,199,0.04);border:1px solid var(--color-hairline);">
-        <div class="flex items-center gap-3">
-            <i data-lucide="shield-check" class="w-6 h-6 flex-shrink-0" style="color:#0284c7;"></i>
-            <div>
-                <div class="text-xs sm:text-sm font-bold" style="color:var(--color-ink);">Approval Pengiriman Konsinyasi</div>
-                <div class="text-[11px] sm:text-xs" style="color:var(--color-ink-mute);">Persetujuan draft surat jalan konsinyasi baru dipusatkan di Owner Command Center.</div>
-            </div>
-        </div>
-        <a href="<?= Router::url('/owner') ?>" class="btn btn-primary btn-sm w-full sm:w-auto flex items-center justify-center gap-1.5" style="background:#0284c7;border-color:#0284c7;">
-            <span>Buka Command Center</span>
-            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-        </a>
-    </div>
-    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- GRID CARD NAVIGASI PORTAL (RESPONSIVE & CLEAN - ZERO DUPLICATION)         -->

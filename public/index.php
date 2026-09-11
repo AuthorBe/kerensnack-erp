@@ -8,17 +8,28 @@ declare(strict_types=1);
 
 date_default_timezone_set('Asia/Jakarta');
 
-// Reset OPcache in development / Laragon Apache
-if (function_exists('opcache_reset')) {
+// Root Path Constant
+define('ROOT_PATH', dirname(__DIR__));
+
+// Load Environment Variables (.env)
+require_once ROOT_PATH . '/config/env.php';
+
+$isDev = (getenv('APP_ENV') === 'local' || getenv('APP_DEBUG') === 'true');
+
+// Reset OPcache only in development environment
+if ($isDev && function_exists('opcache_reset')) {
     @opcache_reset();
 }
 
 // Error Reporting Configuration
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-
-// Root Path Constant
-define('ROOT_PATH', dirname(__DIR__));
+if ($isDev) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', '1');
+} else {
+    error_reporting(E_ALL & ~E_DEPRECATED & ~E_STRICT);
+    ini_set('display_errors', '0');
+    ini_set('log_errors', '1');
+}
 
 // Gzip Output Compression (Reduces HTML/JSON bandwidth by ~80%+)
 if (!ob_get_level() && extension_loaded('zlib') && !ini_get('zlib.output_compression')) {
@@ -193,6 +204,7 @@ Router::get('/consignment/stok-rak', [ConsignmentController::class, 'stokRak']);
 Router::get('/consignment/opname', [ConsignmentController::class, 'opname']);
 Router::post('/consignment/opname/proses', [ConsignmentController::class, 'opnameProses']);
 Router::get('/consignment/opname/hasil', [ConsignmentController::class, 'hasilKunjungan']);
+Router::post('/consignment/opname/bayar-langsung', [ConsignmentController::class, 'bayarLangsungKunjungan']);
 Router::get('/consignment/opname/hasil/pdf', [ConsignmentController::class, 'notaPdf']);
 Router::get('/consignment/nota-pdf', [ConsignmentController::class, 'notaPdf']);
 Router::post('/consignment/konfirmasi-terima', [ConsignmentController::class, 'konfirmasiTerima']);
@@ -208,6 +220,7 @@ Router::post('/consignment/assignment-sales/save', [ConsignmentController::class
 Router::get('/consignment/riwayat-kunjungan', [ConsignmentController::class, 'riwayatKunjungan']);
 Router::get('/consignment/komisi-sales', [ConsignmentController::class, 'komisiSales']);
 Router::get('/consignment/kerugian-rusak', [ConsignmentController::class, 'kerugianRusak']);
+Router::get('/consignment/kerugian-rusak/export-excel', [ConsignmentController::class, 'exportKerugianExcel']);
 Router::get('/consignment/early-warning', [ConsignmentController::class, 'earlyWarning']);
 
 // Legacy / Compatibility Redirects

@@ -175,15 +175,7 @@ class AuthController extends Controller
                     if (password_needs_rehash($userDb['kata_sandi'], PASSWORD_BCRYPT)) {
                         $needsRehash = true;
                     }
-                } elseif ($password === $userDb['kata_sandi']) {
-                    $passwordMatch = true;
-                    $needsRehash = true;
-                }
-            } elseif ($userDb && empty($userDb['kata_sandi'])) {
-                // Inisialisasi password akun baru (HANYA JIKA PUNYA AKUN)
-                if (empty($userDb['nama_pengguna'])) {
-                    $passwordMatch = false; // Karyawan tanpa akun login tidak bisa masuk
-                } else {
+                } elseif (hash_equals((string)$userDb['kata_sandi'], (string)$password)) {
                     $passwordMatch = true;
                     $needsRehash = true;
                 }
@@ -199,6 +191,14 @@ class AuthController extends Controller
                 }
                 // Khusus Developer dengan password benar: buka kunci limit secara otomatis
                 $this->resetRateLimit($ip);
+            }
+
+            // Tolak akun yang belum disetel kata sandinya
+            if ($userDb && empty($userDb['kata_sandi'])) {
+                $this->recordFailedAttempt($ip);
+                $_SESSION['auth_error'] = 'Akun belum aktif atau kata sandi belum disetel. Hubungi Administrator.';
+                $this->redirect('/login');
+                return;
             }
 
             if ($userDb && $passwordMatch) {
@@ -232,9 +232,9 @@ class AuthController extends Controller
                 ActivityLog::log(
                     'keamanan_auth',
                     'LOGIN',
-                    'pengguna',
-                    $userDb['id'],
                     "Pengguna {$userDb['nama_lengkap']} berhasil login ke sistem.",
+                    'public.pengguna',
+                    (string)$userDb['id'],
                     null,
                     null,
                     'web_app',

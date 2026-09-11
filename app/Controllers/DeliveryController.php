@@ -641,26 +641,34 @@ class DeliveryController extends Controller
 
             // Ambil item produk untuk setiap rute pengiriman yang ditampilkan
             if (!empty($deliveries)) {
-                $orderIds = array_unique(array_column($deliveries, 'pesanan_id'));
-                $inClause = implode("', '", array_map('addslashes', $orderIds));
-                $rawItems = Database::fetchAll("
-                    SELECT ip.pesanan_id, ip.item_id, ip.kuantitas_satuan_dasar, ip.harga_satuan_deal, ip.subtotal,
-                           it.nama_item, it.kode_sku, it.varian_rasa, it.satuan_dasar
-                    FROM public.item_pesanan ip
-                    JOIN public.item it ON ip.item_id = it.id
-                    WHERE ip.pesanan_id IN ('{$inClause}')
-                    ORDER BY it.nama_item ASC
-                ");
+                $orderIds = array_values(array_filter(array_unique(array_column($deliveries, 'pesanan_id'))));
+                if (!empty($orderIds)) {
+                    $itemParams = [];
+                    $itemPlaceholders = [];
+                    foreach ($orderIds as $idx => $oid) {
+                        $key = 'ord_id_' . $idx;
+                        $itemPlaceholders[] = ':' . $key;
+                        $itemParams[$key] = (string)$oid;
+                    }
+                    $rawItems = Database::fetchAll("
+                        SELECT ip.pesanan_id, ip.item_id, ip.kuantitas_satuan_dasar, ip.harga_satuan_deal, ip.subtotal,
+                               it.nama_item, it.kode_sku, it.varian_rasa, it.satuan_dasar
+                        FROM public.item_pesanan ip
+                        JOIN public.item it ON ip.item_id = it.id
+                        WHERE ip.pesanan_id IN (" . implode(', ', $itemPlaceholders) . ")
+                        ORDER BY it.nama_item ASC
+                    ", $itemParams);
 
-                $itemsByOrder = [];
-                foreach ($rawItems as $rit) {
-                    $itemsByOrder[$rit['pesanan_id']][] = $rit;
-                }
+                    $itemsByOrder = [];
+                    foreach ($rawItems as $rit) {
+                        $itemsByOrder[$rit['pesanan_id']][] = $rit;
+                    }
 
-                foreach ($deliveries as &$d) {
-                    $d['items'] = $itemsByOrder[$d['pesanan_id']] ?? [];
+                    foreach ($deliveries as &$d) {
+                        $d['items'] = $itemsByOrder[$d['pesanan_id']] ?? [];
+                    }
+                    unset($d);
                 }
-                unset($d);
             }
 
             // Master data drivers untuk filter admin

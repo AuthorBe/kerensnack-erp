@@ -251,10 +251,16 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
 }
+@media (min-width: 640px) {
+    .opname-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+}
 @media (min-width: 1024px) {
     .opname-kpi-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
     }
 }
 .opname-kpi-card {
@@ -579,16 +585,40 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     color: #0284c7;
 }
 
-/* DUAL STEPPER GRID (SISA RAK & LAKU DUA ARAH) */
-.opname-dual-grid {
+.opname-card-pending-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* 5-COLUMN RESPONSIVE PENTA GRID (SISA RAK, LAKU, RETUR RUSAK, RETUR BAGUS, SELISIH) */
+.opname-penta-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     margin-top: 14px;
 }
-@media (min-width: 640px) {
-    .opname-dual-grid {
-        gap: 16px;
+@media (max-width: 767px) {
+    .opname-col-selisih {
+        grid-column: span 2;
+    }
+}
+@media (min-width: 768px) {
+    .opname-penta-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+    }
+}
+@media (min-width: 1100px) {
+    .opname-penta-grid {
+        gap: 12px;
     }
 }
 .opname-input-group {
@@ -601,31 +631,62 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     font-size: 11.5px;
     font-weight: 800;
     color: var(--color-ink);
-    margin-bottom: 6px;
+    margin-bottom: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .opname-stepper {
     display: flex;
     align-items: stretch;
-    height: 42px;
+    height: 40px;
     border: 1.5px solid var(--color-hairline-strong);
     border-radius: 12px;
     background: var(--color-canvas);
     overflow: hidden;
     width: 100%;
     box-sizing: border-box;
-    transition: border-color 0.15s ease;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.opname-stepper:focus-within {
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 .opname-stepper.is-laku-stepper {
     border-color: rgba(16, 185, 129, 0.45);
     background: rgba(16, 185, 129, 0.04);
 }
+.opname-stepper.is-laku-stepper:focus-within {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+.opname-stepper.is-rusak-stepper {
+    border-color: rgba(244, 63, 94, 0.4);
+    background: rgba(244, 63, 94, 0.03);
+}
+.opname-stepper.is-rusak-stepper:focus-within {
+    box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2);
+}
+.opname-stepper.is-bagus-stepper {
+    border-color: rgba(2, 132, 199, 0.4);
+    background: rgba(2, 132, 199, 0.03);
+}
+.opname-stepper.is-bagus-stepper:focus-within {
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2);
+}
+.opname-stepper.is-selisih-lost {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.04);
+}
+.opname-stepper.is-selisih-found {
+    border-color: rgba(16, 185, 129, 0.45);
+    background: rgba(16, 185, 129, 0.04);
+}
 .opname-stepper-btn {
-    width: 38px;
-    height: 39px;
+    width: 32px;
+    height: 37px;
     border: none;
     background: var(--color-canvas-soft);
     color: var(--color-ink);
-    font-size: 19px;
+    font-size: 17px;
     font-weight: 900;
     display: flex;
     align-items: center;
@@ -635,6 +696,11 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     user-select: none;
     padding: 0;
     flex-shrink: 0;
+}
+@media (min-width: 1200px) {
+    .opname-stepper-btn {
+        width: 36px;
+    }
 }
 .opname-stepper-btn:hover {
     background: rgba(0, 0, 0, 0.08);
@@ -652,11 +718,32 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
 .opname-stepper-btn.is-laku-btn:hover {
     background: rgba(16, 185, 129, 0.25);
 }
+.opname-stepper-btn.is-rusak-btn {
+    background: rgba(244, 63, 94, 0.12);
+    color: #f43f5e;
+}
+.opname-stepper-btn.is-rusak-btn:hover {
+    background: rgba(244, 63, 94, 0.22);
+}
+.opname-stepper-btn.is-bagus-btn {
+    background: rgba(2, 132, 199, 0.12);
+    color: #0284c7;
+}
+.opname-stepper-btn.is-bagus-btn:hover {
+    background: rgba(2, 132, 199, 0.22);
+}
+.opname-stepper-btn.is-selisih-btn {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+}
+.opname-stepper-btn.is-selisih-btn:hover {
+    background: rgba(245, 158, 11, 0.22);
+}
 .opname-stepper-input {
     flex: 1;
     width: 100%;
     min-width: 0;
-    height: 39px;
+    height: 37px;
     border: none !important;
     outline: none !important;
     box-shadow: none !important;
@@ -664,24 +751,41 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     text-align: center;
     font-family: var(--font-mono);
     font-weight: 900;
-    font-size: 17px;
+    font-size: 15px;
     color: var(--color-ink);
     padding: 0;
     margin: 0;
     -moz-appearance: textfield;
 }
+@media (min-width: 1200px) {
+    .opname-stepper-input {
+        font-size: 16px;
+    }
+}
 .opname-stepper-input.is-laku-input {
     color: #10b981;
+}
+.opname-stepper-input.is-bagus-input {
+    color: #0284c7;
 }
 .opname-stepper-input::-webkit-outer-spin-button,
 .opname-stepper-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
+.opname-field-hint {
+    font-size: 10px;
+    color: var(--color-ink-mute);
+    margin-top: 4px;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 /* Card Subrow (Presets & Live Outcome) */
 .opname-card-subrow {
-    margin-top: 10px;
+    margin-top: 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -699,8 +803,8 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     gap: 8px;
 }
 .opname-quick-btn {
-    height: 36px;
-    padding: 0 11px;
+    height: 34px;
+    padding: 0 12px;
     border-radius: 10px;
     border: 1px solid var(--color-hairline);
     background: var(--color-canvas-soft);
@@ -710,9 +814,14 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     cursor: pointer;
     transition: all 0.12s ease;
     user-select: none;
+}
+.opname-quick-btn i,
+.opname-quick-btn svg {
+    flex-shrink: 0;
 }
 .opname-quick-btn:hover {
     border-color: var(--color-hairline-strong);
@@ -760,10 +869,26 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     color: var(--color-ink-mute);
     border: 1px solid var(--color-hairline);
 }
+.opname-outcome-pill.is-lost {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.opname-outcome-pill.is-found {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
 .opname-outcome-pill.is-warn {
     background: rgba(244, 63, 94, 0.1);
     color: #f43f5e;
     border: 1px solid rgba(244, 63, 94, 0.25);
+}
+
+.opname-chip.active-warn {
+    background: #d97706 !important;
+    border-color: #d97706 !important;
+    color: #ffffff !important;
 }
 
 /* Retur Section */
@@ -1059,12 +1184,16 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
             <i data-lucide="info" style="width:16px;height:16px;color:#0284c7;flex-shrink:0;margin-top:2px;"></i>
             <div class="opname-guide-content">
                 <div class="opname-guide-title">
-                    Rumus Dua Arah: Sisa Fisik di Rak &harr; Barang Laku Terjual
+                    Panduan 5 Kolom Opname &amp; Penanganan Selisih Fisik Rak
                 </div>
                 <div class="opname-guide-body">
-                    • <strong>Input Bebas:</strong> Kamu bisa isi <em>Sisa Rak</em> (Laku otomatis dihitung) ATAU isi <em>Laku</em> (Sisa Rak otomatis dihitung).<br>
-                    • <strong>Retur Bagus:</strong> Produk layak jual yang ditarik kembali ke gudang.<br>
-                    • <strong>Retur Rusak (BS):</strong> Produk bocor, pecah, atau kadaluarsa (diakui kerugian HPP).
+                    • <strong>Sisa di Rak:</strong> Hitung fisik produk di rak toko saat ini.<br>
+                    • <strong>Laku Terjual:</strong> Jumlah produk terjual yang ditagihkan ke toko.<br>
+                    • <strong>Retur Rusak (BS):</strong> Produk bocor, pecah, atau kadaluarsa (diakui beban kerugian HPP).<br>
+                    • <strong>Retur Bagus:</strong> Produk layak jual yang ditarik kembali ke gudang pusat.<br>
+                    • <strong>Selisih Rak:</strong> Perbedaan antara stok fisik aktual dengan titipan sistem.<br>
+                    &nbsp;&nbsp;- <em>Minus (Hilang):</em> Barang tidak ada di rak. <strong>Ditangguhkan / tidak ditagihkan</strong> ke toko.<br>
+                    &nbsp;&nbsp;- <em>Plus (Ketemu):</em> Barang yang sebelumnya hilang ditemukan kembali dan memulihkan stok pending.
                 </div>
             </div>
         </div>
@@ -1088,7 +1217,7 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     <?php else: ?>
 
     <!-- ========================================================================= -->
-    <!-- 2. QUICK KPI SUMMARY CHIPS & METRICS STRIP                                -->
+    <!-- 2. QUICK KPI SUMMARY CHIPS & METRICS STRIP (6 METRICS)                    -->
     <!-- ========================================================================= -->
     <div class="opname-kpi-grid">
         
@@ -1139,6 +1268,34 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
             </div>
         </div>
 
+        <!-- Metric 5: Retur Bagus (Tarik Gudang) -->
+        <div class="opname-kpi-card">
+            <div class="opname-kpi-icon" 
+                 :style="grandTotalBagusPcs > 0 ? 'background:rgba(2,132,199,0.12);color:#0284c7;' : 'background:var(--color-canvas-soft);color:var(--color-ink-mute);'">
+                <i data-lucide="package-minus" style="width:18px;height:18px;"></i>
+            </div>
+            <div class="opname-kpi-text">
+                <span class="opname-kpi-label">Retur Bagus</span>
+                <span class="opname-kpi-value" 
+                      :style="grandTotalBagusPcs > 0 ? 'color:#0284c7;' : ''" 
+                      x-text="grandTotalBagusPcs + ' pcs'">0 pcs</span>
+            </div>
+        </div>
+
+        <!-- Metric 6: Selisih Rak (Signed Hilang/Ketemu) -->
+        <div class="opname-kpi-card">
+            <div class="opname-kpi-icon" 
+                 :style="grandTotalSelisihPcs !== 0 ? (grandTotalSelisihPcs < 0 ? 'background:rgba(245,158,11,0.12);color:#d97706;' : 'background:rgba(16,185,129,0.12);color:#10b981;') : 'background:var(--color-canvas-soft);color:var(--color-ink-mute);'">
+                <i data-lucide="scale" style="width:18px;height:18px;"></i>
+            </div>
+            <div class="opname-kpi-text">
+                <span class="opname-kpi-label">Selisih Rak</span>
+                <span class="opname-kpi-value" 
+                      :style="grandTotalSelisihPcs < 0 ? 'color:#d97706;' : (grandTotalSelisihPcs > 0 ? 'color:#10b981;' : '')" 
+                      x-text="grandTotalSelisihPcs === 0 ? '0 pcs' : (grandTotalSelisihPcs > 0 ? '+' + grandTotalSelisihPcs + ' pcs' : grandTotalSelisihPcs + ' pcs')">0 pcs</span>
+            </div>
+        </div>
+
     </div>
 
     <!-- ========================================================================= -->
@@ -1155,10 +1312,10 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                        placeholder="Cari nama snack atau kode SKU..." 
                        class="opname-search-input">
                 <button type="button" 
-                        x-show="searchQuery" 
-                        @click="searchQuery = ''" 
-                        class="opname-search-clear"
-                        title="Hapus pencarian">
+                       x-show="searchQuery" 
+                       @click="searchQuery = ''" 
+                       class="opname-search-clear"
+                       title="Hapus pencarian">
                     <i data-lucide="x" style="width:14px;height:14px;"></i>
                 </button>
             </div>
@@ -1215,13 +1372,22 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                       :style="activeTab === 'return' ? 'background:rgba(255,255,255,0.25);color:#fff;' : 'background:rgba(244,63,94,0.15);color:#f43f5e;'"
                       x-text="returnCount"></span>
             </button>
+            <button type="button" 
+                    @click="activeTab = 'discrepancy'" 
+                    class="opname-chip"
+                    :class="activeTab === 'discrepancy' ? 'active-warn' : ''">
+                <span>Ada Selisih</span>
+                <span class="opname-chip-count" 
+                      :style="activeTab === 'discrepancy' ? 'background:rgba(255,255,255,0.25);color:#fff;' : 'background:rgba(245,158,11,0.15);color:#d97706;'"
+                      x-text="discrepancyCount"></span>
+            </button>
         </div>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 4. SKU PRODUCT CARDS LIST (DUAL INPUT TWO-WAY SYNCHRONIZED)               -->
+    <!-- 4. SKU PRODUCT CARDS LIST (OPTION B: 4-BOX OPEN COLUMNS)                  -->
     <!-- ========================================================================= -->
-    <form id="opnameForm" action="<?= Router::url('/consignment/opname/proses') ?>" method="POST" data-action-text="Menyimpan hasil opname konsinyasi...">
+    <form id="opnameForm" action="<?= Router::url('/consignment/opname/proses') ?>" method="POST" enctype="multipart/form-data" data-action-text="Menyimpan hasil opname konsinyasi...">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="pelanggan_id" value="<?= htmlspecialchars((string)$customer['id']) ?>">
         <input type="hidden" name="items_json" :value="JSON.stringify(items)">
@@ -1231,9 +1397,8 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                 <div x-show="filterItem(item)" 
                      class="opname-card"
                      :class="{
-                         'is-sold': item.jumlah_laku > 0 && !itemWarning(item),
-                         'is-warning': itemWarning(item),
-                         'is-touched': item.is_touched && item.jumlah_laku === 0 && !itemWarning(item)
+                         'is-sold': item.jumlah_laku > 0,
+                         'is-touched': item.is_touched && item.jumlah_laku === 0
                      }">
 
                     <!-- TOP SECTION: PRODUCT INFO & STOCK PILL -->
@@ -1244,6 +1409,12 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                                 <span class="opname-card-price" x-text="'@ ' + formatRupiah(item.harga_deal)"></span>
                                 <template x-if="item.stok_titip_saat_ini === 0">
                                     <span class="opname-card-empty-badge">Stok Kosong</span>
+                                </template>
+                                <template x-if="(item.stok_hilang_pending || 0) > 0">
+                                    <span class="opname-card-pending-badge" :title="'Terdapat ' + item.stok_hilang_pending + ' pcs barang hilang gantung dari kunjungan sebelumnya'">
+                                        <i data-lucide="help-circle" style="width:11px;height:11px;"></i>
+                                        <span x-text="'Gantung: ' + item.stok_hilang_pending + ' pcs'"></span>
+                                    </span>
                                 </template>
                             </div>
                             <h3 class="opname-card-title" x-text="item.nama_item"></h3>
@@ -1259,13 +1430,13 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                         </div>
                     </div>
 
-                    <!-- DUAL STEPPERS: SISA FISIK & LAKU TERJUAL (SINKRON DUA ARAH) -->
-                    <div class="opname-dual-grid">
+                    <!-- 5 OPEN INPUT BOXES GRID (SISA RAK, LAKU, RETUR RUSAK, RETUR BAGUS, SELISIH) -->
+                    <div class="opname-penta-grid">
                         
-                        <!-- Kolom 1: Sisa Fisik di Rak -->
-                        <div class="opname-input-group">
+                        <!-- Box 1: Sisa Fisik di Rak -->
+                        <div class="opname-input-group opname-col-sisa">
                             <label class="opname-field-label">
-                                <span>Sisa Fisik di Rak</span>
+                                <span>Sisa di Rak</span>
                                 <span style="font-size:10px;color:var(--color-ink-mute);" x-text="item.satuan_dasar"></span>
                             </label>
                             <div class="opname-stepper">
@@ -1279,19 +1450,23 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                                        pattern="[0-9]*" 
                                        min="0"
                                        x-model.number="item.sisa_fisik_di_rak" 
-                                       @input="onSisaChange(item)"
-                                       class="opname-stepper-input"
-                                       :style="itemWarning(item) ? 'color:#f43f5e !important;' : ''">
+                                       @focus="$event.target.select()"
+                                       @click="$event.target.select()"
+                                       @keydown="handleStepperKeydown($event, item, 'sisa_fisik_di_rak')"
+                                       @input="handleStepperInput($event, item, 'sisa_fisik_di_rak')"
+                                       @blur="handleStepperBlur(item, 'sisa_fisik_di_rak', $event)"
+                                       class="opname-stepper-input">
 
                                 <button type="button" 
                                         @click="incrementSisa(item)"
                                         class="opname-stepper-btn"
                                         title="Tambah 1 Sisa">+</button>
                             </div>
+                            <span class="opname-field-hint">Fisik di rak saat ini</span>
                         </div>
 
-                        <!-- Kolom 2: Laku Terjual -->
-                        <div class="opname-input-group">
+                        <!-- Box 2: Laku Terjual -->
+                        <div class="opname-input-group opname-col-laku">
                             <label class="opname-field-label">
                                 <span style="color:#10b981;">Laku Terjual</span>
                                 <span style="font-size:10px;color:#10b981;" x-text="item.satuan_dasar"></span>
@@ -1307,136 +1482,170 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                                        pattern="[0-9]*" 
                                        min="0"
                                        x-model.number="item.jumlah_laku" 
-                                       @input="onLakuChange(item)"
-                                       class="opname-stepper-input is-laku-input"
-                                       :style="itemWarning(item) ? 'color:#f43f5e !important;' : ''">
+                                       @focus="$event.target.select()"
+                                       @click="$event.target.select()"
+                                       @keydown="handleStepperKeydown($event, item, 'jumlah_laku')"
+                                       @input="handleStepperInput($event, item, 'jumlah_laku')"
+                                       @blur="handleStepperBlur(item, 'jumlah_laku', $event)"
+                                       class="opname-stepper-input is-laku-input">
 
                                 <button type="button" 
                                         @click="incrementLaku(item)"
                                         class="opname-stepper-btn is-laku-btn"
                                         title="Tambah 1 Laku">+</button>
                             </div>
+                            <span class="opname-field-hint" style="color:#10b981;font-weight:700;" x-text="formatRupiah(item.jumlah_laku * item.harga_deal)"></span>
+                        </div>
+
+                        <!-- Box 3: Retur Rusak (BS) -->
+                        <div class="opname-input-group opname-col-rusak">
+                            <label class="opname-field-label">
+                                <span style="color:#f43f5e;">Retur Rusak (BS)</span>
+                                <span style="font-size:10px;color:#f43f5e;" x-text="item.satuan_dasar"></span>
+                            </label>
+                            <div class="opname-stepper is-rusak-stepper">
+                                <button type="button" 
+                                        @click="decrementRetur(item, 'retur_rusak')"
+                                        class="opname-stepper-btn is-rusak-btn"
+                                        title="Kurang 1 Rusak">−</button>
+
+                                <input type="number" 
+                                       inputmode="numeric" 
+                                       pattern="[0-9]*" 
+                                       min="0"
+                                       x-model.number="item.retur_rusak" 
+                                       @focus="$event.target.select()"
+                                       @click="$event.target.select()"
+                                       @keydown="handleStepperKeydown($event, item, 'retur_rusak')"
+                                       @input="handleStepperInput($event, item, 'retur_rusak')"
+                                       @blur="handleStepperBlur(item, 'retur_rusak', $event)"
+                                       class="opname-stepper-input"
+                                       :style="item.retur_rusak > 0 ? 'color:#f43f5e !important;' : ''">
+
+                                <button type="button" 
+                                        @click="incrementRetur(item, 'retur_rusak')"
+                                        class="opname-stepper-btn is-rusak-btn"
+                                        title="Tambah 1 Rusak">+</button>
+                            </div>
+                            <span class="opname-field-hint" :style="item.retur_rusak > 0 ? 'color:#f43f5e;' : ''">Bocor / BS (HPP)</span>
+                        </div>
+
+                        <!-- Box 4: Retur Bagus (Tarik Gudang) -->
+                        <div class="opname-input-group opname-col-bagus">
+                            <label class="opname-field-label">
+                                <span style="color:#0284c7;">Retur Bagus</span>
+                                <span style="font-size:10px;color:#0284c7;" x-text="item.satuan_dasar"></span>
+                            </label>
+                            <div class="opname-stepper is-bagus-stepper">
+                                <button type="button" 
+                                        @click="decrementRetur(item, 'retur_bagus')"
+                                        class="opname-stepper-btn is-bagus-btn"
+                                        title="Kurang 1 Retur Bagus">−</button>
+
+                                <input type="number" 
+                                       inputmode="numeric" 
+                                       pattern="[0-9]*" 
+                                       min="0"
+                                       x-model.number="item.retur_bagus" 
+                                       @focus="$event.target.select()"
+                                       @click="$event.target.select()"
+                                       @keydown="handleStepperKeydown($event, item, 'retur_bagus')"
+                                       @input="handleStepperInput($event, item, 'retur_bagus')"
+                                       @blur="handleStepperBlur(item, 'retur_bagus', $event)"
+                                       class="opname-stepper-input is-bagus-input"
+                                       :style="item.retur_bagus > 0 ? 'color:#0284c7 !important;' : ''">
+
+                                <button type="button" 
+                                        @click="incrementRetur(item, 'retur_bagus')"
+                                        class="opname-stepper-btn is-bagus-btn"
+                                        title="Tambah 1 Retur Bagus">+</button>
+                            </div>
+                            <span class="opname-field-hint" 
+                                  :style="item.retur_bagus > 0 ? 'color:#0284c7;font-weight:700;' : ''"
+                                  x-text="item.retur_bagus > 0 ? 'Tarik ' + item.retur_bagus + ' ' + item.satuan_dasar : 'Tarik ke gudang'"></span>
+                        </div>
+
+                        <!-- Box 5: Selisih Rak (Signed Hilang/Ketemu) -->
+                        <div class="opname-input-group opname-col-selisih">
+                            <label class="opname-field-label">
+                                <span :style="(item.selisih_qty === '-' || item.selisih_qty < 0) ? 'color:#d97706;' : (item.selisih_qty > 0 ? 'color:#10b981;' : '')">Selisih Rak</span>
+                                <span style="font-size:10px;" :style="(item.selisih_qty === '-' || item.selisih_qty < 0) ? 'color:#d97706;' : (item.selisih_qty > 0 ? 'color:#10b981;' : 'color:var(--color-ink-mute);')" x-text="item.satuan_dasar"></span>
+                            </label>
+                            <div class="opname-stepper" 
+                                 :class="{
+                                     'is-selisih-lost': item.selisih_qty === '-' || item.selisih_qty < 0,
+                                     'is-selisih-found': item.selisih_qty > 0
+                                 }">
+                                <button type="button" 
+                                        @click="decrementSelisih(item)"
+                                        class="opname-stepper-btn is-selisih-btn"
+                                        title="Kurang 1 Selisih">−</button>
+
+                                <input type="text" 
+                                       inputmode="text" 
+                                       x-model="item.selisih_qty" 
+                                       @focus="$event.target.select()"
+                                       @click="$event.target.select()"
+                                       @keydown="handleSelisihKeydown($event, item)"
+                                       @input="handleSelisihInput($event, item)"
+                                       @blur="handleSelisihBlur(item, $event)"
+                                       class="opname-stepper-input"
+                                       :style="(item.selisih_qty === '-' || item.selisih_qty < 0) ? 'color:#d97706 !important;' : (item.selisih_qty > 0 ? 'color:#10b981 !important;' : '')">
+
+                                <button type="button" 
+                                        @click="incrementSelisih(item)"
+                                        class="opname-stepper-btn is-selisih-btn"
+                                        title="Tambah 1 Selisih">+</button>
+                            </div>
+                            <span class="opname-field-hint font-bold" 
+                                  :style="(item.selisih_qty === '-' || item.selisih_qty < 0) ? 'color:#d97706;' : (item.selisih_qty > 0 ? 'color:#10b981;' : '')" 
+                                  x-text="item.selisih_qty === '-' ? 'Ketik angka minus...' : (item.selisih_qty < 0 ? 'Hilang ' + Math.abs(item.selisih_qty) + ' (Gantung)' : (item.selisih_qty > 0 ? 'Ketemu +' + item.selisih_qty + ' (Surplus)' : 'Seimbang (0)'))"></span>
                         </div>
 
                     </div>
 
                     <!-- CARD SUBROW: PRESETS & LIVE OUTCOME FEEDBACK -->
                     <div class="opname-card-subrow">
-                        <!-- Quick Preset Buttons -->
+                        <!-- Quick Preset Action Buttons -->
                         <div class="opname-presets-wrap">
                             <button type="button" 
                                     @click="setHabis(item)" 
                                     class="opname-quick-btn btn-habis"
                                     title="Semua terjual habis (Sisa 0)">
-                                Habis (0 Sisa)
+                                <i data-lucide="check" style="width:13px;height:13px;"></i>
+                                <span>Habis (0 Sisa)</span>
                             </button>
                             <button type="button" 
                                     @click="setUtuh(item)" 
                                     class="opname-quick-btn btn-utuh"
                                     title="Tidak ada yang terjual (Laku 0)">
-                                Utuh (0 Laku)
+                                <i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i>
+                                <span>Utuh (0 Laku)</span>
                             </button>
                         </div>
 
-                        <!-- Live Outcome Pill / Subtotal -->
+                        <!-- Live Outcome Status Pill (Hanya muncul saat ada penjualan atau barang selisih) -->
                         <div class="opname-outcome-wrap">
-                            <!-- State 1: Warning Over Capacity -->
-                            <template x-if="itemWarning(item)">
-                                <div class="opname-outcome-pill is-warn">
-                                    <i data-lucide="alert-circle" style="width:15px;height:15px;flex-shrink:0;"></i>
-                                    <span>Melebihi Titip (<span x-text="item.stok_titip_saat_ini"></span> pcs)!</span>
+                            <template x-if="item.selisih_qty < 0">
+                                <div class="opname-outcome-pill is-lost">
+                                    <i data-lucide="alert-triangle" style="width:14px;height:14px;flex-shrink:0;"></i>
+                                    <span>Hilang <strong x-text="Math.abs(item.selisih_qty) + ' ' + item.satuan_dasar"></strong> (Gantung / Tidak ditagihkan)</span>
                                 </div>
                             </template>
-
-                            <!-- State 2: Normal Valid Calculation -->
-                            <template x-if="!itemWarning(item)">
-                                <div>
-                                    <template x-if="item.jumlah_laku > 0">
-                                        <div class="opname-outcome-pill is-laku">
-                                            <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
-                                            <span>Laku: <strong class="opname-val-mono" x-text="item.jumlah_laku + ' ' + item.satuan_dasar"></strong></span>
-                                            <span style="opacity:0.4;">•</span>
-                                            <span class="opname-val-mono font-bold" x-text="formatRupiah(item.jumlah_laku * item.harga_deal)"></span>
-                                        </div>
-                                    </template>
-                                    <template x-if="item.jumlah_laku === 0">
-                                        <div class="opname-outcome-pill is-utuh">
-                                            <span>Utuh (0 laku)</span>
-                                        </div>
-                                    </template>
+                            <template x-if="item.selisih_qty > 0">
+                                <div class="opname-outcome-pill is-found">
+                                    <i data-lucide="sparkles" style="width:14px;height:14px;flex-shrink:0;"></i>
+                                    <span>Ketemu <strong x-text="'+' + item.selisih_qty + ' ' + item.satuan_dasar"></strong> (Ditemukan Kembali)</span>
                                 </div>
                             </template>
-                        </div>
-                    </div>
-
-                    <!-- COLLAPSIBLE RETUR SECTION -->
-                    <div class="opname-retur-section">
-                        
-                        <!-- Toggle Button -->
-                        <button type="button" 
-                                @click="item.showRetur = !item.showRetur" 
-                                class="opname-retur-toggle"
-                                :class="(item.retur_bagus > 0 || item.retur_rusak > 0) ? 'has-retur' : ''">
-                            <i data-lucide="package-minus" style="width:14px;height:14px;"></i>
-                            <span x-text="(item.retur_bagus > 0 || item.retur_rusak > 0) 
-                                         ? 'Retur: ' + (item.retur_bagus || 0) + ' Bagus, ' + (item.retur_rusak || 0) + ' Rusak' 
-                                         : '+ Catat Retur (Bagus / Rusak)'"></span>
-                            <i data-lucide="chevron-down" style="width:14px;height:14px;transition:transform 0.2s;" :style="item.showRetur ? 'transform:rotate(180deg);' : ''"></i>
-                        </button>
-
-                        <!-- Drawer Fields -->
-                        <div x-show="item.showRetur" 
-                             x-cloak 
-                             class="opname-retur-box">
-                            
-                            <!-- Field Retur Bagus -->
-                            <div>
-                                <label class="opname-retur-label">
-                                    Retur Bagus (Tarik Gudang)
-                                </label>
-                                <div class="opname-retur-stepper">
-                                    <button type="button" 
-                                            @click="decrementRetur(item, 'retur_bagus')"
-                                            class="opname-retur-stepper-btn">−</button>
-                                    <input type="number" 
-                                           inputmode="numeric" 
-                                           pattern="[0-9]*" 
-                                           min="0"
-                                           x-model.number="item.retur_bagus" 
-                                           @input="onReturChange(item)"
-                                           class="opname-retur-stepper-input">
-                                    <button type="button" 
-                                            @click="incrementRetur(item, 'retur_bagus')"
-                                            class="opname-retur-stepper-btn">+</button>
+                            <template x-if="item.selisih_qty === 0 && item.jumlah_laku > 0">
+                                <div class="opname-outcome-pill is-laku">
+                                    <i data-lucide="check-circle" style="width:14px;height:14px;"></i>
+                                    <span>Laku: <strong class="opname-val-mono" x-text="item.jumlah_laku + ' ' + item.satuan_dasar"></strong></span>
+                                    <span style="opacity:0.4;">•</span>
+                                    <span class="opname-val-mono font-bold" x-text="formatRupiah(item.jumlah_laku * item.harga_deal)"></span>
                                 </div>
-                                <span class="opname-retur-hint">Barang bagus ditarik kembali ke gudang.</span>
-                            </div>
-
-                            <!-- Field Retur Rusak -->
-                            <div>
-                                <label class="opname-retur-label">
-                                    Retur Rusak / BS (Kerugian)
-                                </label>
-                                <div class="opname-retur-stepper" 
-                                     :style="item.retur_rusak > 0 ? 'border-color:rgba(244,63,94,0.4);' : ''">
-                                    <button type="button" 
-                                            @click="decrementRetur(item, 'retur_rusak')"
-                                            class="opname-retur-stepper-btn">−</button>
-                                    <input type="number" 
-                                           inputmode="numeric" 
-                                           pattern="[0-9]*" 
-                                           min="0"
-                                           x-model.number="item.retur_rusak" 
-                                           @input="onReturChange(item)"
-                                           class="opname-retur-stepper-input"
-                                           :style="item.retur_rusak > 0 ? 'color:#f43f5e !important;' : ''">
-                                    <button type="button" 
-                                            @click="incrementRetur(item, 'retur_rusak')"
-                                            class="opname-retur-stepper-btn">+</button>
-                                </div>
-                                <span class="opname-retur-hint">Pecah/bocor/expired diakui sebagai beban kerugian HPP.</span>
-                            </div>
-
+                            </template>
                         </div>
                     </div>
 
@@ -1456,6 +1665,61 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                         style="padding:6px 14px;border-radius:10px;font-weight:700;font-size:12px;">
                     Reset Filter Pencarian
                 </button>
+            </div>
+        </div>
+
+        <!-- FOTO BUKTI KUNJUNGAN / RETUR BS (OPSIONAL) -->
+        <div class="card" style="margin-top:16px;border-radius:18px;border:1px solid var(--color-hairline);background:var(--color-surface);padding:16px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:var(--color-ink);margin:0;">
+                    <i data-lucide="camera" style="width:15px;height:15px;color:#0284c7;"></i>
+                    <span>Foto Bukti Kunjungan / Barang Retur BS:</span>
+                    <span style="font-size:10.5px;font-weight:600;color:var(--color-ink-mute);">(Opsional)</span>
+                </label>
+                <template x-if="photoPreview">
+                    <button type="button" @click="clearPhoto()" style="background:transparent;border:none;color:#f43f5e;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                        <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                        <span>Hapus Foto</span>
+                    </button>
+                </template>
+            </div>
+
+            <!-- Drop / Capture Zone -->
+            <div>
+                <input type="file" 
+                       id="foto_kunjungan" 
+                       name="foto_kunjungan" 
+                       accept="image/*" 
+                       capture="environment" 
+                       class="hidden" 
+                       @change="handlePhotoChange($event)">
+
+                <template x-if="!photoPreview">
+                    <label for="foto_kunjungan" 
+                           style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 16px;border:1.5px dashed var(--color-hairline-strong);border-radius:14px;background:var(--color-canvas-soft);cursor:pointer;transition:all 0.15s ease;"
+                           class="hover:border-sky-500">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(2,132,199,0.1);color:#0284c7;display:flex;align-items:center;justify-content:center;">
+                            <i data-lucide="camera" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div style="text-align:center;">
+                            <strong style="font-size:12px;color:var(--color-ink);display:block;">Ambil Foto Kamera / Unggah Galeri</strong>
+                            <span style="font-size:11px;color:var(--color-ink-mute);">Format JPG, PNG, WEBP (Maksimal 5MB)</span>
+                        </div>
+                    </label>
+                </template>
+
+                <template x-if="photoPreview">
+                    <div style="display:flex;align-items:center;gap:14px;padding:10px;border-radius:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
+                        <img :src="photoPreview" alt="Preview Foto" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);">
+                        <div style="min-width:0;flex:1;">
+                            <strong style="font-size:12px;color:var(--color-ink);display:block;" x-text="photoName || 'Foto Terpilih'"></strong>
+                            <span style="font-size:11px;color:#10b981;display:flex;align-items:center;gap:4px;margin-top:2px;">
+                                <i data-lucide="check-circle" style="width:13px;height:13px;"></i>
+                                <span>Foto siap diunggah</span>
+                            </span>
+                        </div>
+                    </div>
+                </template>
             </div>
         </div>
 
@@ -1567,6 +1831,25 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                         <span style="color:var(--color-ink-mute);">Total Retur Bagus:</span>
                         <strong style="color:var(--color-ink);font-weight:800;font-family:var(--font-mono);" x-text="grandTotalBagusPcs + ' pcs'"></strong>
                     </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="color:var(--color-ink-mute);">Status Selisih Rak:</span>
+                        <template x-if="grandTotalSelisihPcs < 0">
+                            <strong style="color:#d97706;font-weight:900;font-family:var(--font-mono);" x-text="'Hilang ' + Math.abs(grandTotalSelisihPcs) + ' pcs (Ditangguhkan)'"></strong>
+                        </template>
+                        <template x-if="grandTotalSelisihPcs > 0">
+                            <strong style="color:#10b981;font-weight:900;font-family:var(--font-mono);" x-text="'Ditemukan +' + grandTotalSelisihPcs + ' pcs'"></strong>
+                        </template>
+                        <template x-if="grandTotalSelisihPcs === 0">
+                            <strong style="color:var(--color-ink);font-weight:800;font-family:var(--font-mono);">0 (Seimbang)</strong>
+                        </template>
+                    </div>
+
+                    <template x-if="grandTotalSelisihPcs < 0">
+                        <div style="margin-top:4px;font-size:11px;color:#b45309;line-height:1.4;background:rgba(245,158,11,0.08);padding:8px 10px;border-radius:10px;border:1px solid rgba(245,158,11,0.2);">
+                            <strong>Info Barang Selisih Hilang:</strong> Selisih kurang tidak ditagihkan ke mitra toko. Sistem mencatatnya sebagai stok pending hilang dan otomatis pulih saat barang ditemukan di kunjungan berikutnya.
+                        </div>
+                    </template>
+
                     <div style="padding-top:8px;border-top:1px solid var(--color-hairline);margin-top:2px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span style="color:var(--color-ink-mute);">Penerbitan Faktur:</span>
@@ -1617,14 +1900,17 @@ function opnameApp() {
         activeTab: 'all',
         showGuide: false,
         showConfirmModal: false,
+        photoPreview: null,
+        photoName: '',
         items: <?= json_encode($items ?? []) ?>,
 
         init() {
             this.items.forEach(item => {
                 item.stok_titip_saat_ini = parseInt(item.stok_titip_saat_ini) || 0;
+                item.stok_hilang_pending = parseInt(item.stok_hilang_pending) || 0;
                 item.retur_bagus = parseInt(item.retur_bagus) || 0;
                 item.retur_rusak = parseInt(item.retur_rusak) || 0;
-                item.showRetur = (item.retur_bagus > 0 || item.retur_rusak > 0);
+                item.showReturBagus = (item.retur_bagus > 0);
 
                 if (item.sisa_fisik_di_rak !== undefined && item.sisa_fisik_di_rak !== null) {
                     item.sisa_fisik_di_rak = parseInt(item.sisa_fisik_di_rak);
@@ -1637,6 +1923,12 @@ function opnameApp() {
                 } else {
                     item.jumlah_laku = Math.max(0, item.stok_titip_saat_ini - (item.sisa_fisik_di_rak + item.retur_bagus + item.retur_rusak));
                 }
+
+                if (item.selisih_qty !== undefined && item.selisih_qty !== null) {
+                    item.selisih_qty = parseInt(item.selisih_qty);
+                } else {
+                    item.selisih_qty = (item.sisa_fisik_di_rak + item.jumlah_laku + item.retur_bagus + item.retur_rusak) - item.stok_titip_saat_ini;
+                }
             });
 
             this.$nextTick(() => {
@@ -1646,106 +1938,257 @@ function opnameApp() {
             this.$watch('activeTab', () => this.$nextTick(() => window.lucide && window.lucide.createIcons()));
         },
 
-        // 1. Aksi ketika Sisa Fisik diubah langsung (manual type)
+        // Helper: Input Cerdas (Otomatis mengganti 0 saat diketik, bukan 01 atau 10)
+        handleStepperInput(e, item, field) {
+            let val = e.target.value;
+            if (val === '') {
+                item[field] = '';
+                return;
+            }
+            // Bersihkan leading zero: misal "01" -> "1", "-02" -> "-2"
+            if (/^-?0+[0-9]+$/.test(val)) {
+                val = String(parseInt(val, 10));
+                e.target.value = val;
+            }
+            item[field] = parseInt(val, 10) || 0;
+            this.triggerFieldChange(item, field);
+        },
+
+        handleStepperKeydown(e, item, field) {
+            // Jika isi saat ini "0" dan user mengetik angka 0-9
+            if (e.key >= '0' && e.key <= '9') {
+                const isAllSelected = (e.target.selectionStart === 0 && e.target.selectionEnd === e.target.value.length);
+                if (e.target.value === '0' && !isAllSelected) {
+                    e.preventDefault();
+                    e.target.value = e.key;
+                    item[field] = parseInt(e.key, 10);
+                    this.triggerFieldChange(item, field);
+                }
+            }
+        },
+
+        handleStepperBlur(item, field, e) {
+            if (item[field] === '' || item[field] === null || isNaN(item[field])) {
+                item[field] = 0;
+                if (e && e.target) e.target.value = 0;
+                this.triggerFieldChange(item, field);
+            }
+        },
+
+        triggerFieldChange(item, field) {
+            if (field === 'sisa_fisik_di_rak') {
+                this.onSisaChange(item);
+            } else if (field === 'jumlah_laku') {
+                this.onLakuChange(item);
+            } else if (field === 'retur_rusak' || field === 'retur_bagus') {
+                this.onReturChange(item);
+            } else if (field === 'selisih_qty') {
+                this.onSelisihChange(item);
+            }
+        },
+
+        // Helper khusus Selisih Rak (Signed: Mengizinkan input minus [-] langsung secara fleksibel)
+        handleSelisihKeydown(e, item) {
+            // 1. Jika user menekan tombol minus ('-' atau '-' numpad)
+            if (e.key === '-' || e.key === 'Subtract') {
+                e.preventDefault();
+                const isAllSelected = (e.target.selectionStart === 0 && e.target.selectionEnd === e.target.value.length);
+                const isZeroOrEmpty = e.target.value === '0' || e.target.value === '' || e.target.value === '-';
+                
+                if (isZeroOrEmpty || isAllSelected) {
+                    item.selisih_qty = '-';
+                    e.target.value = '-';
+                } else {
+                    let currentNum = parseInt(item.selisih_qty, 10);
+                    if (!isNaN(currentNum) && currentNum > 0) {
+                        item.selisih_qty = -currentNum;
+                        e.target.value = item.selisih_qty;
+                        this.onSelisihChange(item);
+                    } else if (!isNaN(currentNum) && currentNum < 0) {
+                        item.selisih_qty = Math.abs(currentNum);
+                        e.target.value = item.selisih_qty;
+                        this.onSelisihChange(item);
+                    } else {
+                        item.selisih_qty = '-';
+                        e.target.value = '-';
+                    }
+                }
+                return;
+            }
+
+            // 2. Jika isi saat ini "0" atau "-" dan user mengetik angka 0-9
+            if (e.key >= '0' && e.key <= '9') {
+                const isAllSelected = (e.target.selectionStart === 0 && e.target.selectionEnd === e.target.value.length);
+                if (e.target.value === '0' && !isAllSelected) {
+                    e.preventDefault();
+                    e.target.value = e.key;
+                    item.selisih_qty = parseInt(e.key, 10);
+                    this.onSelisihChange(item);
+                } else if (e.target.value === '-') {
+                    e.preventDefault();
+                    const newSignedStr = '-' + e.key;
+                    e.target.value = newSignedStr;
+                    item.selisih_qty = parseInt(newSignedStr, 10);
+                    this.onSelisihChange(item);
+                }
+            }
+        },
+
+        handleSelisihInput(e, item) {
+            let raw = String(e.target.value || '').trim();
+
+            // 1. Jika kosong: izinkan sementara
+            if (raw === '') {
+                item.selisih_qty = '';
+                return;
+            }
+
+            // 2. Jika user mengetik tanda minus saja atau ada variasi minus dengan 0 (contoh: "-", "-0", "0-", "--")
+            if (raw === '-' || raw === '-0' || raw === '0-' || raw === '--') {
+                item.selisih_qty = '-';
+                e.target.value = '-';
+                return;
+            }
+
+            // 3. Cek apakah ada tanda minus di teks input
+            const hasMinus = raw.includes('-');
+
+            // Ambil hanya digit angka
+            let digits = raw.replace(/[^0-9]/g, '');
+
+            // Jika tidak ada digit sama sekali
+            if (digits === '') {
+                item.selisih_qty = hasMinus ? '-' : '';
+                e.target.value = item.selisih_qty;
+                return;
+            }
+
+            // Bersihkan leading zero jika lebih dari 1 digit (misal "05" -> "5", "00" -> "0")
+            if (digits.length > 1 && digits.startsWith('0')) {
+                digits = String(parseInt(digits, 10));
+            }
+
+            // Bentuk string bersih yang valid
+            let cleanStr = (hasMinus && digits !== '0') ? ('-' + digits) : digits;
+
+            e.target.value = cleanStr;
+            item.selisih_qty = parseInt(cleanStr, 10);
+            this.onSelisihChange(item);
+        },
+
+        handleSelisihBlur(item, e) {
+            if (item.selisih_qty === '-' || item.selisih_qty === '' || item.selisih_qty === null || isNaN(item.selisih_qty)) {
+                item.selisih_qty = 0;
+                if (e && e.target) e.target.value = 0;
+            } else {
+                item.selisih_qty = parseInt(item.selisih_qty, 10) || 0;
+                if (e && e.target) e.target.value = item.selisih_qty;
+            }
+            this.onSelisihChange(item);
+        },
+
+        // Helper: hitung selisih dari sisa + laku + retur - titip
+        calcSelisih(item) {
+            const titip = item.stok_titip_saat_ini;
+            const sisa = Math.max(0, parseInt(item.sisa_fisik_di_rak) || 0);
+            const laku = Math.max(0, parseInt(item.jumlah_laku) || 0);
+            const rBagus = Math.max(0, parseInt(item.retur_bagus) || 0);
+            const rRusak = Math.max(0, parseInt(item.retur_rusak) || 0);
+            return (sisa + laku + rBagus + rRusak) - titip;
+        },
+
+        // 1. Aksi ketika Sisa Fisik diubah langsung
         onSisaChange(item) {
             item.is_touched = true;
-            const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-            const sisa = Math.max(0, parseInt(item.sisa_fisik_di_rak) || 0);
-            item.sisa_fisik_di_rak = sisa;
-
-            // Hitung laku dari sisa fisik
-            item.jumlah_laku = Math.max(0, titip - (sisa + rBagus + rRusak));
-        },
-
-        // 2. Aksi ketika Jumlah Laku diubah langsung (manual type)
-        onLakuChange(item) {
-            item.is_touched = true;
-            const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-            const laku = Math.max(0, parseInt(item.jumlah_laku) || 0);
-            item.jumlah_laku = laku;
-
-            // Hitung sisa fisik dari laku
-            item.sisa_fisik_di_rak = Math.max(0, titip - (laku + rBagus + rRusak));
-        },
-
-        // 3. Stepper Sisa Fisik (+ / -)
-        incrementSisa(item) {
-            item.is_touched = true;
-            const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-            const maxSisa = Math.max(0, titip - (rBagus + rRusak));
-
-            if ((item.sisa_fisik_di_rak || 0) < maxSisa) {
-                item.sisa_fisik_di_rak = (item.sisa_fisik_di_rak || 0) + 1;
+            item.sisa_fisik_di_rak = Math.max(0, parseInt(item.sisa_fisik_di_rak) || 0);
+            if ((parseInt(item.selisih_qty, 10) || 0) === 0) {
+                const titip = item.stok_titip_saat_ini;
+                const rBagus = Math.max(0, parseInt(item.retur_bagus) || 0);
+                const rRusak = Math.max(0, parseInt(item.retur_rusak) || 0);
                 item.jumlah_laku = Math.max(0, titip - (item.sisa_fisik_di_rak + rBagus + rRusak));
             }
+            item.selisih_qty = this.calcSelisih(item);
+        },
+
+        // 2. Aksi ketika Jumlah Laku diubah langsung
+        onLakuChange(item) {
+            item.is_touched = true;
+            item.jumlah_laku = Math.max(0, parseInt(item.jumlah_laku) || 0);
+            item.selisih_qty = this.calcSelisih(item);
+        },
+
+        // 3. Aksi ketika Selisih diubah langsung
+        onSelisihChange(item) {
+            item.is_touched = true;
+            if (item.selisih_qty !== '-' && item.selisih_qty !== '') {
+                item.selisih_qty = parseInt(item.selisih_qty, 10) || 0;
+            }
+            const selisih = parseInt(item.selisih_qty, 10) || 0;
+            const titip = item.stok_titip_saat_ini;
+            const sisa = Math.max(0, parseInt(item.sisa_fisik_di_rak) || 0);
+            const rBagus = Math.max(0, parseInt(item.retur_bagus) || 0);
+            const rRusak = Math.max(0, parseInt(item.retur_rusak) || 0);
+            item.jumlah_laku = Math.max(0, (titip + selisih) - (sisa + rBagus + rRusak));
+        },
+
+        // 4. Steppers Sisa Fisik (+ / -)
+        incrementSisa(item) {
+            item.is_touched = true;
+            item.sisa_fisik_di_rak = (parseInt(item.sisa_fisik_di_rak) || 0) + 1;
+            if (item.selisih_qty === 0) {
+                const titip = item.stok_titip_saat_ini;
+                const rBagus = Math.max(0, parseInt(item.retur_bagus) || 0);
+                const rRusak = Math.max(0, parseInt(item.retur_rusak) || 0);
+                item.jumlah_laku = Math.max(0, titip - (item.sisa_fisik_di_rak + rBagus + rRusak));
+            }
+            item.selisih_qty = this.calcSelisih(item);
         },
 
         decrementSisa(item) {
             item.is_touched = true;
-            const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-
-            if ((item.sisa_fisik_di_rak || 0) > 0) {
-                item.sisa_fisik_di_rak = (item.sisa_fisik_di_rak || 0) - 1;
-                item.jumlah_laku = Math.max(0, titip - (item.sisa_fisik_di_rak + rBagus + rRusak));
+            const current = parseInt(item.sisa_fisik_di_rak) || 0;
+            if (current > 0) {
+                item.sisa_fisik_di_rak = current - 1;
+                if (item.selisih_qty === 0) {
+                    const titip = item.stok_titip_saat_ini;
+                    const rBagus = Math.max(0, parseInt(item.retur_bagus) || 0);
+                    const rRusak = Math.max(0, parseInt(item.retur_rusak) || 0);
+                    item.jumlah_laku = Math.max(0, titip - (item.sisa_fisik_di_rak + rBagus + rRusak));
+                }
+                item.selisih_qty = this.calcSelisih(item);
             }
         },
 
-        // 4. Stepper Laku Terjual (+ / -)
+        // 5. Steppers Laku Terjual (+ / -)
         incrementLaku(item) {
             item.is_touched = true;
-            const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-            const maxLaku = Math.max(0, titip - (rBagus + rRusak));
-
-            if ((item.jumlah_laku || 0) < maxLaku) {
-                item.jumlah_laku = (item.jumlah_laku || 0) + 1;
-                item.sisa_fisik_di_rak = Math.max(0, titip - (item.jumlah_laku + rBagus + rRusak));
-            }
+            item.jumlah_laku = (parseInt(item.jumlah_laku) || 0) + 1;
+            item.selisih_qty = this.calcSelisih(item);
         },
 
         decrementLaku(item) {
             item.is_touched = true;
-            const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-
-            if ((item.jumlah_laku || 0) > 0) {
-                item.jumlah_laku = (item.jumlah_laku || 0) - 1;
-                item.sisa_fisik_di_rak = Math.max(0, titip - (item.jumlah_laku + rBagus + rRusak));
+            const current = parseInt(item.jumlah_laku) || 0;
+            if (current > 0) {
+                item.jumlah_laku = current - 1;
+                item.selisih_qty = this.calcSelisih(item);
             }
         },
 
-        // 5. Presets
-        setHabis(item) {
+        // 6. Steppers Selisih (+ / -)
+        incrementSelisih(item) {
             item.is_touched = true;
-            const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-
-            item.sisa_fisik_di_rak = 0;
-            item.jumlah_laku = Math.max(0, titip - (rBagus + rRusak));
+            item.selisih_qty = (parseInt(item.selisih_qty) || 0) + 1;
+            this.onSelisihChange(item);
         },
 
-        setUtuh(item) {
+        decrementSelisih(item) {
             item.is_touched = true;
-            const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-
-            item.jumlah_laku = 0;
-            item.sisa_fisik_di_rak = Math.max(0, titip - (rBagus + rRusak));
+            item.selisih_qty = (parseInt(item.selisih_qty) || 0) - 1;
+            this.onSelisihChange(item);
         },
 
-        // 6. Retur Stepper (+ / -)
+        // 7. Retur Steppers (+ / -)
         incrementRetur(item, field) {
             item.is_touched = true;
             item[field] = (parseInt(item[field]) || 0) + 1;
@@ -1764,15 +2207,34 @@ function opnameApp() {
         onReturChange(item) {
             item.is_touched = true;
             const titip = item.stok_titip_saat_ini;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
+            const rBagus = Math.max(0, parseInt(item.retur_bagus) || 0);
+            const rRusak = Math.max(0, parseInt(item.retur_rusak) || 0);
             const sisa = Math.max(0, parseInt(item.sisa_fisik_di_rak) || 0);
-
-            // Selalu pertahankan sisa rak aktual dan sesuaikan sisa kapasitas laku
-            item.jumlah_laku = Math.max(0, titip - (sisa + rBagus + rRusak));
+            item.jumlah_laku = Math.max(0, (titip + item.selisih_qty) - (sisa + rBagus + rRusak));
+            item.selisih_qty = this.calcSelisih(item);
         },
 
-        // 7. Batch Actions
+        // 8. Presets
+        setHabis(item) {
+            item.is_touched = true;
+            const titip = item.stok_titip_saat_ini;
+            const rBagus = Math.max(0, parseInt(item.retur_bagus) || 0);
+            const rRusak = Math.max(0, parseInt(item.retur_rusak) || 0);
+            item.sisa_fisik_di_rak = 0;
+            item.jumlah_laku = Math.max(0, titip - (rBagus + rRusak));
+            item.selisih_qty = 0;
+        },
+
+        setUtuh(item) {
+            item.is_touched = true;
+            const titip = item.stok_titip_saat_ini;
+            const rBagus = Math.max(0, parseInt(item.retur_bagus) || 0);
+            const rRusak = Math.max(0, parseInt(item.retur_rusak) || 0);
+            item.jumlah_laku = 0;
+            item.sisa_fisik_di_rak = Math.max(0, titip - (rBagus + rRusak));
+            item.selisih_qty = 0;
+        },
+
         setAllIntact() {
             this.items.forEach(item => this.setUtuh(item));
             if (window.toast) window.toast.info('Semua produk diatur UTUH (0 Laku).');
@@ -1780,25 +2242,50 @@ function opnameApp() {
 
         resetAll() {
             this.items.forEach(item => {
-                item.is_touched = false;
                 item.retur_bagus = 0;
                 item.retur_rusak = 0;
-                item.showRetur = false;
+                item.showReturBagus = false;
                 this.setUtuh(item);
                 item.is_touched = false;
             });
             if (window.toast) window.toast.info('Hitungan opname telah di-reset ke kondisi awal.');
         },
 
-        // 8. Warning Over Capacity
-        itemWarning(item) {
-            const sisa = parseInt(item.sisa_fisik_di_rak) || 0;
-            const laku = parseInt(item.jumlah_laku) || 0;
-            const rBagus = parseInt(item.retur_bagus) || 0;
-            const rRusak = parseInt(item.retur_rusak) || 0;
-            const titip = parseInt(item.stok_titip_saat_ini) || 0;
+        // Photo Upload Handler
+        handlePhotoChange(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    if (window.toast) window.toast.error('Ukuran file foto maksimal 5MB.');
+                    event.target.value = '';
+                    return;
+                }
+                this.photoName = file.name;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.photoPreview = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
 
-            return (sisa + rBagus + rRusak) > titip || (laku + rBagus + rRusak) > titip;
+        clearPhoto() {
+            this.photoPreview = null;
+            this.photoName = '';
+            const input = document.getElementById('foto_kunjungan');
+            if (input) input.value = '';
+        },
+
+        // Validations
+        itemWarning(item) {
+            const sisa = parseInt(item.sisa_fisik_di_rak);
+            const laku = parseInt(item.jumlah_laku);
+            const rBagus = parseInt(item.retur_bagus);
+            const rRusak = parseInt(item.retur_rusak);
+            if (isNaN(sisa) || sisa < 0 || isNaN(laku) || laku < 0 || isNaN(rBagus) || rBagus < 0 || isNaN(rRusak) || rRusak < 0) {
+                return true;
+            }
+            return false;
         },
 
         get hasAnyWarning() {
@@ -1821,6 +2308,10 @@ function opnameApp() {
             return this.items.filter(item => (item.retur_bagus > 0 || item.retur_rusak > 0)).length;
         },
 
+        get discrepancyCount() {
+            return this.items.filter(item => (parseInt(item.selisih_qty) || 0) !== 0).length;
+        },
+
         get grandTotalLakuPcs() {
             return this.items.reduce((sum, i) => sum + Math.max(0, parseInt(i.jumlah_laku) || 0), 0);
         },
@@ -1833,12 +2324,15 @@ function opnameApp() {
             return this.items.reduce((sum, i) => sum + Math.max(0, parseInt(i.retur_bagus) || 0), 0);
         },
 
+        get grandTotalSelisihPcs() {
+            return this.items.reduce((sum, i) => sum + (parseInt(i.selisih_qty) || 0), 0);
+        },
+
         get grandTotalLakuRp() {
             return this.items.reduce((sum, i) => sum + (i.jumlah_laku > 0 ? (i.jumlah_laku * i.harga_deal) : 0), 0);
         },
 
         filterItem(item) {
-            // 1. Filter Search Text
             if (this.searchQuery.trim() !== '') {
                 const q = this.searchQuery.toLowerCase();
                 const matchName = (item.nama_item || '').toLowerCase().includes(q);
@@ -1846,15 +2340,17 @@ function opnameApp() {
                 if (!matchName && !matchSku) return false;
             }
 
-            // 2. Filter Active Tab
             if (this.activeTab === 'sold') {
                 return item.jumlah_laku > 0;
             }
             if (this.activeTab === 'intact') {
-                return item.jumlah_laku === 0 && (item.retur_bagus === 0 && item.retur_rusak === 0);
+                return item.jumlah_laku === 0 && (item.retur_bagus === 0 && item.retur_rusak === 0 && (parseInt(item.selisih_qty) || 0) === 0);
             }
             if (this.activeTab === 'return') {
                 return (item.retur_bagus > 0 || item.retur_rusak > 0);
+            }
+            if (this.activeTab === 'discrepancy') {
+                return (parseInt(item.selisih_qty) || 0) !== 0;
             }
             return true;
         },
@@ -1873,13 +2369,13 @@ function opnameApp() {
 
             if (this.hasAnyWarning) {
                 if (window.toast) {
-                    window.toast.error('Jumlah sisa fisik / laku + retur tidak boleh melebihi stok titip rak awal.');
+                    window.toast.error('Jumlah angka fisik, laku, atau retur tidak valid (tidak boleh negatif).');
                 }
                 return;
             }
 
             // Validasi: Ingatkan jika belum ada item yang dihitung sama sekali
-            if (!this.hasAnyTouched && this.grandTotalLakuPcs === 0 && this.grandTotalRusakPcs === 0 && this.grandTotalBagusPcs === 0) {
+            if (!this.hasAnyTouched && this.grandTotalLakuPcs === 0 && this.grandTotalRusakPcs === 0 && this.grandTotalBagusPcs === 0 && this.grandTotalSelisihPcs === 0) {
                 if (window.toast) {
                     window.toast.warning('Data Opname Belum Diisi! Silakan periksa atau sesuaikan sisa fisik di rak.');
                 }
@@ -1893,6 +2389,9 @@ function opnameApp() {
         },
 
         submitForm() {
+            this.items.forEach(item => {
+                item.selisih_qty = parseInt(item.selisih_qty, 10) || 0;
+            });
             const form = document.getElementById('opnameForm');
             if (form) form.submit();
         },

@@ -696,7 +696,18 @@ class PermissionController extends Controller
     {
         if (empty($permIds)) return [];
 
-        $allPerms = Database::fetchAll("SELECT id, kode_izin FROM public.izin WHERE id IN ('" . implode("','", array_map('addslashes', $permIds)) . "')");
+        $permParams = [];
+        $permPlaceholders = [];
+        foreach (array_values($permIds) as $idx => $pId) {
+            $key = 'pid_' . $idx;
+            $permPlaceholders[] = ':' . $key;
+            $permParams[$key] = (string)$pId;
+        }
+
+        $allPerms = Database::fetchAll(
+            "SELECT id, kode_izin FROM public.izin WHERE id IN (" . implode(', ', $permPlaceholders) . ")",
+            $permParams
+        );
         $codeToId = [];
         foreach ($allPerms as $p) {
             $codeToId[$p['kode_izin']] = (string)$p['id'];

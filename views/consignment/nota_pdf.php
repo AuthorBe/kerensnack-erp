@@ -17,12 +17,17 @@ $dibayar = (float)($visit['total_dibayar'] ?? ($totalNetto - $sisaTagihan));
 if ($dibayar < 0) {
     $dibayar = 0;
 }
+
+$isInvoiced = !empty($isInvoiced);
+$docMainTitle = $isInvoiced ? 'FAKTUR PENJUALAN KONSINYASI' : 'BERITA ACARA AUDIT RAK';
+$docSubTitle  = $isInvoiced ? 'NOTA PENAGIHAN RESMI' : 'BUKTI KUNJUNGAN & AUDIT OPNAME FISIK';
+$docIdentifier = $isInvoiced ? ($visit['nomor_nota'] ?? '-') : ($visit['nomor_kunjungan'] ?? '-');
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Faktur Penjualan Konsinyasi - <?= htmlspecialchars($visit['nomor_nota'] ?? $visit['nomor_kunjungan']) ?></title>
+    <title><?= $docMainTitle ?> - <?= htmlspecialchars($docIdentifier) ?></title>
     <style>
         @page {
             margin: 15mm 18mm 15mm 18mm;
@@ -298,33 +303,55 @@ if ($dibayar < 0) {
                 </div>
             </td>
             <td style="width: 50%; vertical-align: top;">
-                <div class="doc-title-main">FAKTUR PENJUALAN KONSINYASI</div>
-                <div class="doc-title-sub">NOTA PENAGIHAN RESMI</div>
+                <div class="doc-title-main"><?= $docMainTitle ?></div>
+                <div class="doc-title-sub"><?= $docSubTitle ?></div>
 
                 <!-- Perataan Barisan Sempurna: Kotak Kanan Lebar Tetap & Titik Dua Lurus -->
                 <table class="doc-meta-table">
+                    <?php if ($isInvoiced): ?>
                     <tr>
-                        <td style="width: 105px; font-weight: bold;">No. Faktur / Nota</td>
+                        <td style="width: 105px; font-weight: bold;">No. Faktur</td>
                         <td style="width: 10px; text-align: center; font-weight: bold;">:</td>
-                        <td style="font-weight: bold;"><?= htmlspecialchars($visit['nomor_nota'] ?? $visit['nomor_kunjungan']) ?></td>
+                        <td style="font-weight: bold;"><?= htmlspecialchars($visit['nomor_nota'] ?? '-') ?></td>
                     </tr>
                     <tr>
-                        <td style="font-weight: bold;">Tanggal Tagihan</td>
+                        <td style="font-weight: bold;">Tanggal Faktur</td>
                         <td style="text-align: center; font-weight: bold;">:</td>
                         <td><?= date('d F Y', strtotime($visit['tanggal_kunjungan'])) ?></td>
                     </tr>
+                    <?php if (!empty($visit['nomor_kunjungan'])): ?>
                     <tr>
-                        <td style="font-weight: bold;">No. Kunjungan</td>
+                        <td style="font-weight: bold;">Ref. Kunjungan</td>
                         <td style="text-align: center; font-weight: bold;">:</td>
                         <td><?= htmlspecialchars($visit['nomor_kunjungan']) ?></td>
                     </tr>
+                    <?php endif; ?>
                     <tr>
-                        <td style="font-weight: bold;">Status Tagihan</td>
+                        <td style="font-weight: bold;">Status Bayar</td>
                         <td style="text-align: center; font-weight: bold;">:</td>
                         <td>
                             <span class="status-box"><?= $statusBayar ?></span>
                         </td>
                     </tr>
+                    <?php else: ?>
+                    <tr>
+                        <td style="width: 105px; font-weight: bold;">No. Kunjungan</td>
+                        <td style="width: 10px; text-align: center; font-weight: bold;">:</td>
+                        <td style="font-weight: bold;"><?= htmlspecialchars($visit['nomor_kunjungan'] ?? '-') ?></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Tanggal Audit</td>
+                        <td style="text-align: center; font-weight: bold;">:</td>
+                        <td><?= date('d F Y', strtotime($visit['tanggal_kunjungan'])) ?></td>
+                    </tr>
+                    <tr>
+                        <td style="font-weight: bold;">Status Dokumen</td>
+                        <td style="text-align: center; font-weight: bold;">:</td>
+                        <td>
+                            <span class="status-box">MENUNGGU TAGIHAN</span>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
                 </table>
             </td>
         </tr>
@@ -379,10 +406,17 @@ if ($dibayar < 0) {
                 <!-- Perataan Barisan Simetris: Lebar Label 95px, Titik Dua 10px -->
                 <table class="info-table-inner">
                     <tr>
-                        <td style="width: 95px; font-weight: bold;">Sales / Driver</td>
+                        <td style="width: 95px; font-weight: bold;">Sales Lapangan</td>
                         <td style="width: 10px; text-align: center; font-weight: bold;">:</td>
                         <td style="font-weight: bold;"><?= htmlspecialchars($visit['sales_name']) ?></td>
                     </tr>
+                    <?php if (!empty($visit['auditor_name']) && strcasecmp(trim($visit['sales_name']), trim($visit['auditor_name'])) !== 0): ?>
+                    <tr>
+                        <td style="width: 95px; font-weight: bold; color: #64748b;">Diopname Oleh</td>
+                        <td style="width: 10px; text-align: center; font-weight: bold; color: #64748b;">:</td>
+                        <td style="color: #64748b; font-size: 8.5pt;"><?= htmlspecialchars($visit['auditor_name']) ?></td>
+                    </tr>
+                    <?php endif; ?>
                     <tr>
                         <td style="font-weight: bold;">Tgl. Kunjungan</td>
                         <td style="text-align: center; font-weight: bold;">:</td>
@@ -470,15 +504,21 @@ if ($dibayar < 0) {
                 <!-- KETENTUAN & REKENING PEMBAYARAN -->
                 <div class="payment-info-box">
                     <div style="font-weight: bold; text-transform: uppercase; margin-bottom: 3px; border-bottom: 0.5px solid #cccccc; padding-bottom: 2px;">
-                        Ketentuan &amp; Pembayaran:
+                        <?= $isInvoiced ? 'Ketentuan &amp; Pembayaran:' : 'Catatan Berita Acara Audit Rak:' ?>
                     </div>
+                    <?php if ($isInvoiced): ?>
                     1. Pembayaran via Transfer Bank Resmi:<br>
                     &nbsp;&nbsp;&nbsp;<strong><?= htmlspecialchars($bankAccount['nama_akun'] ?? 'Bank BCA') ?></strong> &bull; No. Rekening: <strong><?= htmlspecialchars($bankAccount['nomor_rekening'] ?? '8830192831') ?></strong><br>
                     &nbsp;&nbsp;&nbsp;Atas Nama: <strong><?= htmlspecialchars($bankAccount['atas_nama'] ?? 'Owner KEREN Snack') ?></strong><br>
-                    2. Pembayaran tunai sah apabila diserahkan langsung kepada petugas resmi dengan tanda terima sah.<br>
+                    2. Pembayaran tunai sah apabila diserahkan langsung kepada petugas resmi dengan bukti tanda terima sah.<br>
                     3. Sisa fisik barang di rak (<strong><?= number_format($totalSisaRak, 0, ',', '.') ?> pcs</strong>) tetap menjadi titipan konsinyasi untuk periode berikutnya.<br>
+                    <?php else: ?>
+                    1. Dokumen ini merupakan Berita Acara Audit Fisik Rak Toko Konsinyasi yang sah.<br>
+                    2. Faktur tagihan resmi dan penagihan akan diproses terpisah oleh kantor sesuai siklus penagihan toko mitra.<br>
+                    3. Sisa fisik barang di rak (<strong><?= number_format($totalSisaRak, 0, ',', '.') ?> pcs</strong>) telah diverifikasi bersama dan menjadi saldo awal titipan berikutnya.<br>
+                    <?php endif; ?>
                     <?php if (!empty($visit['catatan'])): ?>
-                    4. Catatan Kunjungan: <em><?= htmlspecialchars($visit['catatan']) ?></em>
+                    4. Catatan Petugas: <em><?= htmlspecialchars($visit['catatan']) ?></em>
                     <?php endif; ?>
                 </div>
             </td>
@@ -497,10 +537,11 @@ if ($dibayar < 0) {
                         <td class="text-right font-bold">Rp 0</td>
                     </tr>
                     <tr class="grand-row">
-                        <td style="font-weight: bold;">TOTAL TAGIHAN</td>
+                        <td style="font-weight: bold;"><?= $isInvoiced ? 'TOTAL TAGIHAN' : 'NILAI LAKU' ?></td>
                         <td style="text-align: center; font-weight: bold;">:</td>
                         <td class="text-right font-bold">Rp <?= number_format($totalLakuRp, 0, ',', '.') ?></td>
                     </tr>
+                    <?php if ($isInvoiced): ?>
                     <tr>
                         <td>Sudah Dibayar</td>
                         <td style="text-align: center; font-weight: bold;">:</td>
@@ -511,6 +552,13 @@ if ($dibayar < 0) {
                         <td style="text-align: center; font-weight: bold;">:</td>
                         <td class="text-right font-bold" style="font-size: 8.5pt;">Rp <?= number_format($sisaTagihan, 0, ',', '.') ?></td>
                     </tr>
+                    <?php else: ?>
+                    <tr>
+                        <td>Status Tagihan</td>
+                        <td style="text-align: center; font-weight: bold;">:</td>
+                        <td class="text-right font-bold text-amber-600">MENUNGGU TAGIHAN</td>
+                    </tr>
+                    <?php endif; ?>
                 </table>
             </td>
         </tr>
@@ -536,7 +584,9 @@ if ($dibayar < 0) {
     </table>
 
     <div class="doc-footer">
-        Faktur ini dicetak secara otomatis melalui Sistem ERP Keren Snack pada <?= date('d/m/Y H:i:s') ?> dan merupakan bukti penagihan sah.
+        <?= $isInvoiced 
+            ? "Faktur ini dicetak secara otomatis melalui Sistem ERP Keren Snack pada " . date('d/m/Y H:i:s') . " dan merupakan bukti penagihan sah."
+            : "Dokumen Berita Acara Audit Rak dicetak secara otomatis melalui Sistem ERP Keren Snack pada " . date('d/m/Y H:i:s') . " dan merupakan bukti fisik kunjungan sah." ?>
     </div>
 
 </body>

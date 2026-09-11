@@ -12,27 +12,27 @@ INSERT INTO public.kelompok_upah_borongan (id, id_legacy, nama_kelompok, upah_pe
 ('33333333-3333-3333-3333-333333333309', 9, 'Kelompok 300', 300.00, 'Tarif borongan pack bungkus Rp 300/pcs')
 ON CONFLICT (nama_kelompok) DO NOTHING;
 
--- 2. Master Karyawan Operasional
+-- 2. Master Karyawan Operasional (Data Dummy / Contoh untuk Seeding)
 INSERT INTO public.karyawan (id_legacy, nama_karyawan, posisi, tipe_penggajian, uang_kehadiran_harian, tunjangan_bulanan, gaji_pokok_bulanan, persentase_komisi_sales, status_aktif) VALUES
-(17, 'Teh ika', 'pengemasan', 'borongan', 15000.00, 200000.00, 0.00, 0.00, TRUE),
-(18, 'Mpo asiah', 'pengemasan', 'borongan', 12000.00, 100000.00, 0.00, 0.00, TRUE),
-(19, 'Mba erni', 'pengemasan', 'borongan', 15000.00, 150000.00, 0.00, 0.00, TRUE),
-(20, 'Mba mona', 'pengemasan', 'borongan', 15000.00, 250000.00, 0.00, 0.00, TRUE),
-(21, 'Bu yanti', 'pengemasan', 'borongan', 10000.00, 50000.00, 0.00, 0.00, TRUE),
-(22, 'Bu husnul', 'pengemasan', 'borongan', 10000.00, 50000.00, 0.00, 0.00, TRUE),
-(23, 'Teh tati', 'pengemasan', 'borongan', 10000.00, 50000.00, 0.00, 0.00, TRUE),
-(24, 'Nida', 'pengemasan', 'borongan', 10000.00, 50000.00, 0.00, 0.00, TRUE),
-(25, 'Nabila', 'pengemasan', 'borongan', 10000.00, 50000.00, 0.00, 0.00, TRUE),
-(26, 'Bu maryati', 'pengemasan', 'borongan', 10000.00, 50000.00, 0.00, 0.00, TRUE),
-(27, 'Nur', 'pengemasan', 'borongan', 10000.00, 50000.00, 0.00, 0.00, TRUE),
-(28, 'Bu ira', 'admin', 'bulanan', 50000.00, 100000.00, 0.00, 0.00, TRUE),
-(29, 'ka janah', 'admin', 'bulanan', 50000.00, 100000.00, 0.00, 0.00, TRUE),
-(30, 'Ka karyati', 'mandor', 'bulanan', 50000.00, 600000.00, 0.00, 0.00, TRUE),
-(31, 'Nazala', 'admin', 'bulanan', 50000.00, 200000.00, 0.00, 0.00, TRUE),
-(32, 'Pak Slamet', 'sales_driver', 'bulanan', 0.00, 0.00, 1700000.00, 2.50, TRUE),
-(33, 'Yayat', 'sales_driver', 'bulanan', 0.00, 0.00, 1500000.00, 2.50, TRUE),
-(34, 'Asep', 'sales_driver', 'bulanan', 0.00, 0.00, 700000.00, 2.50, TRUE),
-(39, 'Mpo Wiwi', 'mandor', 'bulanan', 0.00, 0.00, 5200000.00, 0.00, TRUE)
+(17, 'Operator Packing 01', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(18, 'Operator Packing 02', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(19, 'Operator Packing 03', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(20, 'Operator Packing 04', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(21, 'Operator Packing 05', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(22, 'Operator Packing 06', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(23, 'Operator Packing 07', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(24, 'Operator Packing 08', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(25, 'Operator Packing 09', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(26, 'Operator Packing 10', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(27, 'Operator Packing 11', 'pengemasan', 'borongan', 15000.00, 100000.00, 0.00, 0.00, TRUE),
+(28, 'Staff Admin 01', 'admin', 'bulanan', 50000.00, 200000.00, 1500000.00, 0.00, TRUE),
+(29, 'Staff Admin 02', 'admin', 'bulanan', 50000.00, 200000.00, 1500000.00, 0.00, TRUE),
+(30, 'Mandor Produksi 01', 'mandor', 'bulanan', 50000.00, 300000.00, 2000000.00, 0.00, TRUE),
+(31, 'Staff Kasir 01', 'admin', 'bulanan', 50000.00, 200000.00, 1500000.00, 0.00, TRUE),
+(32, 'Sales Driver 01', 'sales_driver', 'bulanan', 0.00, 0.00, 1500000.00, 2.50, TRUE),
+(33, 'Sales Driver 02', 'sales_driver', 'bulanan', 0.00, 0.00, 1500000.00, 2.50, TRUE),
+(34, 'Sales Driver 03', 'sales_driver', 'bulanan', 0.00, 0.00, 1500000.00, 2.50, TRUE),
+(39, 'Mandor Lapangan', 'mandor', 'bulanan', 0.00, 0.00, 2500000.00, 0.00, TRUE)
 ON CONFLICT (id_legacy) DO UPDATE SET 
     posisi = EXCLUDED.posisi, 
     nama_karyawan = EXCLUDED.nama_karyawan, 

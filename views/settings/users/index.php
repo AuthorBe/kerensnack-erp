@@ -550,9 +550,8 @@ ob_start();
                         </div>
 
                         <!-- Row 3: Tautan Karyawan -->
-                        <div>
-                            <!-- Jika Developer: Banner Informatif Universal Access -->
-                            <template x-if="editUser.is_developer">
+                        <template x-if="editUser.is_developer">
+                            <div>
                                 <div style="padding:14px 18px;border:1.5px solid #bfdbfe;border-radius:12px;background:#eff6ff;color:#1e40af;font-size:0.84rem;display:flex;align-items:flex-start;gap:12px;line-height:1.5;">
                                     <i data-lucide="info" style="width:18px;height:18px;flex-shrink:0;color:#2563eb;margin-top:1px;"></i>
                                     <div>
@@ -560,26 +559,34 @@ ob_start();
                                         Akun Developer memegang hak akses sistem tertinggi secara mandiri dan tidak memerlukan penautan ke data master karyawan.
                                     </div>
                                 </div>
-                            </template>
-
+                            </div>
+                        </template>
 
                         <!-- Row 4: ID Telegram (Untuk grup internal & integrasi bot) -->
                         <div>
-                            <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
-                                ID Akun Telegram <span style="font-size:0.76rem;color:#64748b;font-weight:400;">(Opsional • Numerik Chat/User ID)</span>
-                            </label>
-                            <div style="position:relative;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+                                <label style="font-size:0.85rem;font-weight:700;color:#1e293b;margin:0;display:flex;align-items:center;gap:6px;">
+                                    <span>ID Akun Telegram</span>
+                                </label>
+                                <span style="font-size:0.72rem;font-weight:600;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 8px;border-radius:6px;">
+                                    Opsional • Numerik ID
+                                </span>
+                            </div>
+                            <div style="position:relative;display:flex;align-items:center;">
+                                <div style="position:absolute;left:10px;width:30px;height:30px;border-radius:8px;background:rgba(2,132,199,0.1);color:#0284c7;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                                    <i data-lucide="send" style="width:15px;height:15px;transform:rotate(-10deg);"></i>
+                                </div>
                                 <input type="text" name="id_telegram" x-model="editUser.id_telegram" 
                                        @input="editUser.id_telegram = $event.target.value.replace(/[^0-9]/g, '')"
-                                       placeholder="Contoh: 123456789 (Numerik)" 
-                                       style="width:100%;height:44px;padding:0 14px;padding-left:38px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;font-family:monospace;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                       onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
+                                       placeholder="Contoh: 123456789" 
+                                       style="width:100%;height:44px;padding:0 14px 0 48px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
+                                       onfocus="this.style.borderColor='#0284c7';this.style.boxShadow='0 0 0 3px rgba(2,132,199,0.12)';"
                                        onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
-                                <i data-lucide="send" style="position:absolute;left:13px;top:14px;width:16px;height:16px;color:#0284c7;pointer-events:none;"></i>
                             </div>
-                            <p style="font-size:0.75rem;color:#64748b;margin:5px 0 0 0;">
-                                ID numerik Telegram pengguna untuk keperluan integrasi grup Telegram khusus karyawan berakun sistem.
-                            </p>
+                            <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+                                <i data-lucide="info" style="width:13px;height:13px;color:#94a3b8;flex-shrink:0;"></i>
+                                <span style="font-size:0.75rem;color:#64748b;">ID numerik Telegram untuk keperluan integrasi bot &amp; notifikasi grup internal.</span>
+                            </div>
                         </div>
 
                         <!-- Row 5: Status Akun Aktif (Hanya untuk Non-Developer) -->
@@ -589,15 +596,56 @@ ob_start();
                             </template>
 
                             <template x-if="!editUser.is_developer">
-                                <div style="padding:14px 18px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f8fafc;transition:all 0.15s;">
-                                    <label style="display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;margin:0;">
-                                        <input type="checkbox" name="status_aktif" value="1" x-model="editUser.status_aktif" 
-                                               style="width:18px;height:18px;accent-color:#2563eb;cursor:pointer;flex-shrink:0;">
-                                        <div>
-                                            <div style="font-size:0.88rem;font-weight:700;color:#0f172a;margin-bottom:2px;">Status Akun Aktif</div>
-                                            <div style="font-size:0.78rem;color:#64748b;">Hilangkan centang untuk memblokir atau menonaktifkan akses login akun ini secara instan</div>
+                                <div>
+                                    <input type="checkbox" name="status_aktif" value="1" x-model="editUser.status_aktif" style="display:none;">
+
+                                    <div @click="editUser.status_aktif = !editUser.status_aktif"
+                                         role="button"
+                                         tabindex="0"
+                                         @keydown.space.prevent="editUser.status_aktif = !editUser.status_aktif"
+                                         :style="editUser.status_aktif 
+                                            ? 'padding:14px 18px;border:1.5px solid #bbf7d0;border-radius:14px;background:#f0fdf4;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;user-select:none;transition:all 0.2s ease;' 
+                                            : 'padding:14px 18px;border:1.5px solid #fecaca;border-radius:14px;background:#fef2f2;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;user-select:none;transition:all 0.2s ease;'"
+                                         :title="editUser.status_aktif ? 'Klik untuk menonaktifkan akun' : 'Klik untuk mengaktifkan akun'"
+                                         onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.04)';"
+                                         onmouseout="this.style.transform='none';this.style.boxShadow='none';">
+
+                                        <!-- Sisi Kiri: Status Icon & Info Teks -->
+                                        <div style="display:flex;align-items:center;gap:14px;min-width:0;">
+                                            <div :style="editUser.status_aktif 
+                                                    ? 'width:42px;height:42px;border-radius:12px;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;' 
+                                                    : 'width:42px;height:42px;border-radius:12px;background:#fee2e2;color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;'">
+                                                <i data-lucide="user-check" x-show="editUser.status_aktif" style="width:22px;height:22px;"></i>
+                                                <i data-lucide="user-x" x-show="!editUser.status_aktif" style="width:22px;height:22px;"></i>
+                                            </div>
+
+                                            <div style="min-width:0;">
+                                                <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;flex-wrap:wrap;">
+                                                    <span style="font-size:0.92rem;font-weight:700;color:#0f172a;">Status Akun</span>
+                                                    <span :style="editUser.status_aktif 
+                                                            ? 'font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:9999px;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;display:inline-flex;align-items:center;gap:4px;' 
+                                                            : 'font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:9999px;background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;display:inline-flex;align-items:center;gap:4px;'">
+                                                        <span :style="editUser.status_aktif ? 'width:6px;height:6px;border-radius:50%;background:#16a34a;' : 'width:6px;height:6px;border-radius:50%;background:#dc2626;'"></span>
+                                                        <span x-text="editUser.status_aktif ? 'Aktif' : 'Nonaktif / Diblokir'"></span>
+                                                    </span>
+                                                </div>
+                                                <div style="font-size:0.78rem;color:#64748b;line-height:1.4;" 
+                                                     x-text="editUser.status_aktif 
+                                                        ? 'Akun aktif dan memiliki izin untuk login serta mengakses sistem.' 
+                                                        : 'Akses login ditangguhkan. Pengguna tidak dapat masuk ke sistem.'">
+                                                </div>
+                                            </div>
                                         </div>
-                                    </label>
+
+                                        <!-- Sisi Kanan: Switch Toggle iOS/Modern -->
+                                        <div style="flex-shrink:0;position:relative;width:46px;height:26px;border-radius:9999px;transition:background-color 0.25s ease;"
+                                             :style="editUser.status_aktif ? 'background:#16a34a;' : 'background:#cbd5e1;'">
+                                            <div style="position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#ffffff;box-shadow:0 2px 4px rgba(0,0,0,0.2);transition:transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);"
+                                                 :style="editUser.status_aktif ? 'transform:translateX(23px);' : 'transform:translateX(3px);'">
+                                            </div>
+                                        </div>
+
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -660,7 +708,7 @@ function userManagementApp() {
                 peran_id: user.peran_id || '',
                 nomor_whatsapp: user.nomor_whatsapp || '',
                 id_telegram: user.id_telegram || '',
-                status_aktif: user.status_aktif ? true : false,
+                status_aktif: (user.status_aktif === true || user.status_aktif === 1 || user.status_aktif === '1' || user.status_aktif === 't'),
                 is_developer: user.peran === 'developer'
             };
             this.editModalOpen = true;

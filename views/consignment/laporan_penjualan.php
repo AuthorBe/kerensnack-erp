@@ -1526,27 +1526,33 @@ document.addEventListener('alpine:init', () => {
                                 </div>
 
                                 <div class="modal-table-wrap custom-scrollbar">
-                                    <table class="data-table" style="font-size:12px;width:100%;min-width:340px;margin:0;">
+                                    <table class="data-table" style="font-size:12px;width:100%;min-width:360px;margin:0;">
                                         <thead>
                                             <tr>
-                                                <th style="padding:9px 14px;">Produk Snack</th>
-                                                <th class="cell-center" style="padding:9px 14px;width:75px;">Sisa Rak</th>
-                                                <th class="cell-center" style="padding:9px 14px;width:75px;">Rtr Bagus</th>
-                                                <th class="cell-center" style="padding:9px 14px;width:75px;">Rtr Rusak</th>
+                                                <th style="padding:9px 12px;">Produk Snack</th>
+                                                <th class="cell-center" style="padding:9px 8px;width:68px;">Sisa Rak</th>
+                                                <th class="cell-center" style="padding:9px 8px;width:65px;">Rtr Bagus</th>
+                                                <th class="cell-center" style="padding:9px 8px;width:65px;">Rtr Rusak</th>
+                                                <th class="cell-center" style="padding:9px 8px;width:68px;">Selisih</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             <template x-for="(r, idx) in modalData?.stok_rak || []" :key="idx">
                                                 <tr>
-                                                    <td style="padding:9px 14px;font-weight:600;color:var(--color-ink);" x-text="r.nama_item"></td>
-                                                    <td class="cell-center font-mono font-bold" style="padding:9px 14px;color:var(--color-ink);" x-text="`${r.sisa_fisik_di_rak} pcs`"></td>
-                                                    <td class="cell-center font-mono font-bold text-amber-600 dark:text-amber-400" style="padding:9px 14px;" x-text="r.retur_bagus"></td>
-                                                    <td class="cell-center font-mono font-bold text-rose-600 dark:text-rose-400" style="padding:9px 14px;" x-text="r.retur_rusak"></td>
+                                                    <td style="padding:9px 12px;font-weight:600;color:var(--color-ink);" x-text="r.nama_item"></td>
+                                                    <td class="cell-center font-mono font-bold" style="padding:9px 8px;color:var(--color-ink);" x-text="`${r.sisa_fisik_di_rak} pcs`"></td>
+                                                    <td class="cell-center font-mono font-bold text-sky-600 dark:text-sky-400" style="padding:9px 8px;" x-text="r.retur_bagus"></td>
+                                                    <td class="cell-center font-mono font-bold text-rose-600 dark:text-rose-400" style="padding:9px 8px;" x-text="r.retur_rusak"></td>
+                                                    <td class="cell-center font-mono font-bold" style="padding:9px 8px;">
+                                                        <span x-show="r.selisih_qty < 0" class="text-amber-600 dark:text-amber-400" x-text="`${r.selisih_qty}`" title="Hilang di rak (Ditangguhkan)"></span>
+                                                        <span x-show="r.selisih_qty > 0" class="text-emerald-600 dark:text-emerald-400" x-text="`+${r.selisih_qty}`" title="Surplus rak"></span>
+                                                        <span x-show="!r.selisih_qty || r.selisih_qty == 0" style="color:var(--color-ink-mute);">0</span>
+                                                    </td>
                                                 </tr>
                                             </template>
                                             <template x-if="!modalData?.stok_rak?.length">
                                                 <tr>
-                                                    <td colspan="4" class="p-6 text-center text-xs" style="color:var(--color-ink-mute);">
+                                                    <td colspan="5" class="p-6 text-center text-xs" style="color:var(--color-ink-mute);">
                                                         Belum ada catatan rincian opname fisik di rak.
                                                     </td>
                                                 </tr>
@@ -1554,6 +1560,73 @@ document.addEventListener('alpine:init', () => {
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+
+                            <!-- Card Monitoring Barang Hilang / Selisih Gantung Toko -->
+                            <div class="modal-detail-card" :style="modalData?.pending_lost?.total_pcs > 0 ? 'border-color:rgba(245,158,11,0.35);' : ''">
+                                <div class="modal-detail-card-header" :style="modalData?.pending_lost?.total_pcs > 0 ? 'background:rgba(245,158,11,0.06);' : ''">
+                                    <div class="flex items-center gap-2">
+                                        <i data-lucide="help-circle" class="w-4 h-4 text-amber-500"></i>
+                                        <h4 style="font-size:12.5px;font-weight:800;color:var(--color-ink);margin:0;">Barang Hilang / Selisih Gantung</h4>
+                                    </div>
+                                    <template x-if="modalData?.pending_lost?.total_pcs > 0">
+                                        <span class="badge badge-warning font-mono" style="font-size:10px;" x-text="`${modalData.pending_lost.total_pcs} pcs Gantung`"></span>
+                                    </template>
+                                    <template x-if="!modalData?.pending_lost?.total_pcs">
+                                        <span class="badge badge-success font-mono" style="font-size:10px;">0 Hilang (Akurat)</span>
+                                    </template>
+                                </div>
+
+                                <!-- JIKA ADA BARANG HILANG GANTUNG -->
+                                <template x-if="modalData?.pending_lost?.total_pcs > 0">
+                                    <div>
+                                        <!-- Banner Ringkasan Estimasi Nilai HPP Gantung -->
+                                        <div style="padding:10px 14px;background:rgba(245,158,11,0.08);border-bottom:1px solid rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                            <span style="font-size:11.5px;color:#b45309;font-weight:700;">Potensi Kerugian HPP:</span>
+                                            <span class="font-mono font-black" style="font-size:13px;color:#d97706;" x-text="formatRupiah(modalData.pending_lost.total_nilai_hpp)"></span>
+                                        </div>
+
+                                        <!-- List Item Hilang Gantung -->
+                                        <div class="modal-table-wrap custom-scrollbar" style="max-height:180px;">
+                                            <table class="data-table" style="font-size:11.5px;width:100%;margin:0;">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="padding:7px 12px;">Produk Gantung</th>
+                                                        <th class="cell-center" style="padding:7px 10px;width:75px;">Hilang</th>
+                                                        <th class="cell-right" style="padding:7px 12px;width:100px;">Nilai HPP</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <template x-for="(pl, pIdx) in modalData.pending_lost.items" :key="pIdx">
+                                                        <tr>
+                                                            <td style="padding:7px 12px;">
+                                                                <div style="font-weight:700;color:var(--color-ink);" x-text="pl.nama_item"></div>
+                                                                <div class="font-mono" style="font-size:10px;color:var(--color-ink-mute);" x-text="`[${pl.kode_sku}] @ ${formatRupiah(pl.hpp)}`"></div>
+                                                            </td>
+                                                            <td class="cell-center font-mono font-bold text-amber-600 dark:text-amber-400" style="padding:7px 10px;" x-text="`${pl.stok_hilang_pending} ${pl.satuan_dasar}`"></td>
+                                                            <td class="cell-right font-mono font-bold" style="padding:7px 12px;color:var(--color-ink);" x-text="formatRupiah(pl.subtotal_hpp_hilang)"></td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Keterangan Kebijakan Selisih Gantung -->
+                                        <div style="padding:8px 12px;background:var(--color-canvas-soft);border-top:1px solid var(--color-hairline);font-size:10.5px;color:var(--color-ink-mute);display:flex;align-items:flex-start;gap:6px;">
+                                            <i data-lucide="info" style="width:13px;height:13px;flex-shrink:0;margin-top:2px;color:#d97706;"></i>
+                                            <span>Barang hilang berstatus <strong>gantung</strong> (tidak ditagihkan ke toko). Saldo pending akan otomatis berkurang/pulih jika barang ditemukan kembali pada opname berikutnya.</span>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- JIKA 0 HILANG (BERSIH) -->
+                                <template x-if="!modalData?.pending_lost?.total_pcs">
+                                    <div class="p-4 text-center space-y-1">
+                                        <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500 mx-auto"></i>
+                                        <div class="font-bold text-emerald-600 dark:text-emerald-400" style="font-size:12px;">Stok Rak Terkontrol Seimbang</div>
+                                        <div style="font-size:11px;color:var(--color-ink-mute);">Tidak ada barang hilang yang sedang ditangguhkan di toko mitra ini.</div>
+                                    </div>
+                                </template>
                             </div>
 
                         </div>

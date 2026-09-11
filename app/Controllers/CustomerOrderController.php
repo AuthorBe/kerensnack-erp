@@ -1786,15 +1786,21 @@ class CustomerOrderController extends Controller
             $orderIds = array_column($poList, 'id');
             $itemsByOrder = [];
             if (!empty($orderIds)) {
-                $placeholders = implode("','", array_map('addslashes', $orderIds));
+                $itemParams = [];
+                $itemPlaceholders = [];
+                foreach (array_values($orderIds) as $idx => $oid) {
+                    $key = 'oid_' . $idx;
+                    $itemPlaceholders[] = ':' . $key;
+                    $itemParams[$key] = (string)$oid;
+                }
                 $rawItems = Database::fetchAll("
                     SELECT ip.pesanan_id, ip.item_id, ip.kuantitas_satuan_dasar, ip.harga_satuan_deal, ip.diskon_item_nominal, ip.subtotal,
                            it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar
                     FROM public.item_pesanan ip
                     JOIN public.item it ON ip.item_id = it.id
-                    WHERE ip.pesanan_id IN ('{$placeholders}')
+                    WHERE ip.pesanan_id IN (" . implode(', ', $itemPlaceholders) . ")
                     ORDER BY it.nama_item ASC
-                ");
+                ", $itemParams);
                 foreach ($rawItems as $ri) {
                     $itemsByOrder[$ri['pesanan_id']][] = $ri;
                 }

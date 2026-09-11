@@ -354,7 +354,7 @@ ob_start();
                                                 </span>
                                             </template>
 
-                                            <!-- Toko dipegang sales lain (Belum dicentang) -> Opsi A: Minimalis "Sales: [Nama]" -->
+                                            <!-- Toko dipegang sales lain (Belum dicentang) -> Badge Minimalis "Sales: [Nama]" -->
                                             <template x-if="st.sales_driver_id && st.sales_driver_id !== activeSales.id && !selectedStoreIds.includes(st.id)">
                                                 <span class="badge badge-muted text-[10px]" x-text="'Sales: ' + st.nama_sales"></span>
                                             </template>
