@@ -30,6 +30,27 @@ class ActivityLog
         ?string $userRole = null
     ): bool {
         try {
+            $validKategori = [
+                'keuangan', 'penjualan', 'logistik', 'gudang_stok',
+                'produksi_bom', 'hr_payroll', 'master_data', 'keamanan_auth', 'ai_interaction'
+            ];
+
+            $kategoriLower = strtolower(trim($kategori));
+            $kategoriFinal = match(true) {
+                in_array($kategoriLower, $validKategori, true) => $kategoriLower,
+                str_contains($kategoriLower, 'auth') || str_contains($kategoriLower, 'user') || str_contains($kategoriLower, 'pengguna') || str_contains($kategoriLower, 'peran') || str_contains($kategoriLower, 'role') || str_contains($kategoriLower, 'perm') || str_contains($kategoriLower, 'akses') || str_contains($kategoriLower, 'login') => 'keamanan_auth',
+                str_contains($kategoriLower, 'uang') || str_contains($kategoriLower, 'kas') || str_contains($kategoriLower, 'biaya') || str_contains($kategoriLower, 'refund') => 'keuangan',
+                str_contains($kategoriLower, 'jual') || str_contains($kategoriLower, 'order') || str_contains($kategoriLower, 'pesanan') || str_contains($kategoriLower, 'pos') => 'penjualan',
+                str_contains($kategoriLower, 'kirim') || str_contains($kategoriLower, 'jalan') || str_contains($kategoriLower, 'antar') || str_contains($kategoriLower, 'driver') => 'logistik',
+                str_contains($kategoriLower, 'stok') || str_contains($kategoriLower, 'gudang') || str_contains($kategoriLower, 'opname') || str_contains($kategoriLower, 'beli') || str_contains($kategoriLower, 'bahan') => 'gudang_stok',
+                str_contains($kategoriLower, 'gaji') || str_contains($kategoriLower, 'payroll') || str_contains($kategoriLower, 'karyawan') => 'hr_payroll',
+                str_contains($kategoriLower, 'ai') || str_contains($kategoriLower, 'gemini') => 'ai_interaction',
+                default => 'master_data'
+            };
+
+            $validSumber = ['telegram_bot', 'whatsapp_bot', 'web_app', 'n8n_automation', 'database_trigger', 'system_cron'];
+            $sumberFinal = in_array($sumberAksi, $validSumber, true) ? $sumberAksi : 'web_app';
+
             $uid = $userId ?? (Auth::id() ?: null);
             $nama = $userName ?? (Auth::user()['nama_lengkap'] ?? Auth::name() ?? 'Staff ERP');
             $peran = $userRole ?? (Auth::role() ?? 'admin');
@@ -54,8 +75,8 @@ class ActivityLog
                 'uid' => $uid,
                 'nama' => $nama,
                 'peran' => $peran,
-                'sumber' => $sumberAksi,
-                'kategori' => $kategori,
+                'sumber' => $sumberFinal,
+                'kategori' => $kategoriFinal,
                 'jenis' => $jenisAksi,
                 'tabel' => $tabelTerdampak,
                 'id_ref' => $idReferensi,
@@ -85,15 +106,12 @@ class ActivityLog
         array|object|null $dataSebelum = null,
         array|object|null $dataSesudah = null
     ): bool {
-        $kategori = 'Hak Akses & Sistem';
         $upperAction = strtoupper($jenisAksi);
 
-        if (str_contains($upperAction, 'ROLE')) {
-            $kategori = 'Manajemen Peran';
-        } elseif (str_contains($upperAction, 'USER')) {
-            $kategori = 'Manajemen Pengguna';
-        } elseif (str_contains($upperAction, 'PERM')) {
-            $kategori = 'Hak Akses';
+        if (str_contains($upperAction, 'ROLE') || str_contains($upperAction, 'USER') || str_contains($upperAction, 'PERM') || str_contains($upperAction, 'AUTH') || str_contains($upperAction, 'SYSTEM') || str_contains($upperAction, 'BACKUP') || str_contains($upperAction, 'SECURITY')) {
+            $kategori = 'keamanan_auth';
+        } else {
+            $kategori = 'master_data';
         }
 
         return self::log(

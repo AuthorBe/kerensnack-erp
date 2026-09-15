@@ -1,5 +1,8 @@
 <?php
 use App\Core\Router;
+use App\Helpers\CompanySetting;
+
+$comp = CompanySetting::getAll();
 
 $grandTotalPcs = 0;
 $masterItems = [];
@@ -184,7 +187,7 @@ foreach ($orders as $o) {
     <table class="header-table">
         <tr>
             <td style="border: none; padding: 0; vertical-align: top;">
-                <div class="brand-title">KEREN SNACK INDONESIA</div>
+                <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
                 <div class="doc-title">DAFTAR REKAPITULASI PO GUDANG</div>
             </td>
             <td style="border: none; padding: 0; vertical-align: top; text-align: right;">

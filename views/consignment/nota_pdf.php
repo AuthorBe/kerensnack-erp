@@ -1,5 +1,8 @@
 <?php
 use App\Helpers\Format;
+use App\Helpers\CompanySetting;
+
+$comp = CompanySetting::getAll();
 
 $totalLakuRp = (float)($visit['total_laku_nominal'] ?? 0);
 $totalQtyLaku = (int)array_sum(array_column($details, 'jumlah_laku_terjual'));
@@ -295,11 +298,11 @@ $docIdentifier = $isInvoiced ? ($visit['nomor_nota'] ?? '-') : ($visit['nomor_ku
     <table class="kop-table">
         <tr>
             <td style="width: 50%; vertical-align: top;">
-                <div class="company-name">KEREN SNACK INDONESIA</div>
-                <div class="company-tagline">Produsen &amp; Distribusi Camilan Konsinyasi Berkualitas</div>
+                <div class="company-name"><?= htmlspecialchars($comp['nama']) ?></div>
+                <div class="company-tagline"><?= htmlspecialchars($comp['tagline']) ?></div>
                 <div class="company-contact">
-                    Jl. Industri Snack No. 88, Jawa Barat &bull; Telp/WA: 0812-3456-7890<br>
-                    Email: finance@kerensnack.com &bull; Website: www.kerensnack.com
+                    <?= htmlspecialchars($comp['alamat']) ?> &bull; Telp/WA: <?= htmlspecialchars($comp['telepon']) ?><br>
+                    <?= !empty($comp['email']) ? 'Email: ' . htmlspecialchars($comp['email']) : '' ?><?= (!empty($comp['email']) && !empty($comp['website'])) ? ' &bull; ' : '' ?><?= !empty($comp['website']) ? 'Website: ' . htmlspecialchars($comp['website']) : '' ?>
                 </div>
             </td>
             <td style="width: 50%; vertical-align: top;">
@@ -439,6 +442,42 @@ $docIdentifier = $isInvoiced ? ($visit['nomor_nota'] ?? '-') : ($visit['nomor_ku
 
     <!-- TABEL RINCIAN ITEM PRODUK RESMI -->
     <table class="items-table">
+        <?php if ($isInvoiced): ?>
+        <thead>
+            <tr>
+                <th style="width: 5%;" class="text-center">NO</th>
+                <th style="width: 15%;" class="text-center">KODE SKU</th>
+                <th style="width: 42%;" class="text-left" style="padding-left: 6px;">NAMA PRODUK / BARANG</th>
+                <th style="width: 11%;" class="text-center">QTY LAKU</th>
+                <th style="width: 13%;" class="text-right" style="padding-right: 6px;">HARGA (RP)</th>
+                <th style="width: 14%;" class="text-right" style="padding-right: 6px;">SUBTOTAL (RP)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($details as $idx => $d): 
+                $laku = (int)$d['jumlah_laku_terjual'];
+                $subtotal = (float)$d['subtotal_laku'];
+                $hargaDeal = (float)$d['harga_satuan_deal'];
+            ?>
+            <tr>
+                <td class="text-center"><?= $idx + 1 ?></td>
+                <td class="text-center font-bold"><?= htmlspecialchars($d['kode_sku'] ?? '') ?></td>
+                <td style="padding-left: 6px;"><?= htmlspecialchars($d['nama_item']) ?></td>
+                <td class="text-center font-bold"><?= number_format($laku, 0, ',', '.') ?> <?= htmlspecialchars($d['satuan_dasar'] ?? 'pcs') ?></td>
+                <td class="text-right" style="padding-right: 6px;"><?= number_format($hargaDeal, 0, ',', '.') ?></td>
+                <td class="text-right font-bold" style="padding-right: 6px;"><?= number_format($subtotal, 0, ',', '.') ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" class="text-right font-bold" style="padding-right: 8px;">TOTAL KUANTITAS TERJUAL :</td>
+                <td class="text-center font-bold"><?= number_format($totalQtyLaku, 0, ',', '.') ?></td>
+                <td class="text-right font-bold" style="padding-right: 6px; white-space: nowrap;">TOTAL:</td>
+                <td class="text-right font-bold" style="font-size: 8.5pt; padding-right: 6px; white-space: nowrap;"><?= number_format($totalLakuRp, 0, ',', '.') ?></td>
+            </tr>
+        </tfoot>
+        <?php else: ?>
         <thead>
             <tr>
                 <th style="width: 4%;" class="text-center">NO</th>
@@ -487,6 +526,7 @@ $docIdentifier = $isInvoiced ? ($visit['nomor_nota'] ?? '-') : ($visit['nomor_ku
                 <td class="text-right font-bold" style="font-size: 8.5pt; padding-right: 6px; white-space: nowrap;"><?= number_format($totalLakuRp, 0, ',', '.') ?></td>
             </tr>
         </tfoot>
+        <?php endif; ?>
     </table>
 
     <!-- BOTTOM SECTION: TERBILANG, PEMBAYARAN, RINGKASAN AKUNTANSI -->
@@ -575,7 +615,7 @@ $docIdentifier = $isInvoiced ? ($visit['nomor_nota'] ?? '-') : ($visit['nomor_ku
             </td>
 
             <td class="sig-cell">
-                <div class="sig-title">Hormat Kami,<br>KEREN SNACK INDONESIA</div>
+                <div class="sig-title">Hormat Kami,<br><?= htmlspecialchars($comp['nama']) ?></div>
                 <div class="sig-space"></div>
                 <div class="sig-line">( <?= htmlspecialchars($visit['sales_name']) ?> )</div>
                 <div class="sig-caption">Sales / Petugas Konsinyasi</div>
@@ -585,8 +625,8 @@ $docIdentifier = $isInvoiced ? ($visit['nomor_nota'] ?? '-') : ($visit['nomor_ku
 
     <div class="doc-footer">
         <?= $isInvoiced 
-            ? "Faktur ini dicetak secara otomatis melalui Sistem ERP Keren Snack pada " . date('d/m/Y H:i:s') . " dan merupakan bukti penagihan sah."
-            : "Dokumen Berita Acara Audit Rak dicetak secara otomatis melalui Sistem ERP Keren Snack pada " . date('d/m/Y H:i:s') . " dan merupakan bukti fisik kunjungan sah." ?>
+            ? "Faktur ini dicetak secara otomatis melalui Sistem ERP " . htmlspecialchars($comp['nama']) . " pada " . date('d/m/Y H:i:s') . " dan merupakan bukti penagihan sah."
+            : "Dokumen Berita Acara Audit Rak dicetak secara otomatis melalui Sistem ERP " . htmlspecialchars($comp['nama']) . " pada " . date('d/m/Y H:i:s') . " dan merupakan bukti fisik kunjungan sah." ?>
     </div>
 
 </body>

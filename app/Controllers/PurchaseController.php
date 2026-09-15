@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Helpers\DocumentNumber;
 use Database;
 use Throwable;
 
@@ -25,12 +26,17 @@ class PurchaseController extends Controller
             $purchases = Database::fetchAll("
                 SELECT pb.id, pb.nomor_faktur_pembelian, pb.tanggal_pembelian, pb.total_biaya,
                        pb.status_pembayaran, pb.status_penerimaan, pb.catatan, pb.url_foto_nota, pb.dibuat_pada,
+                       pb.jenis_dokumen, pb.metode_logistik, pb.sales_driver_id, pb.tanggal_jadwal_belanja,
+                       pb.instruksi_driver, pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
+                       pb.waktu_diambil, pb.waktu_diterima_gudang,
                        sup.id as pemasok_id, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon,
                        p.nama_lengkap as pembuat,
+                       drv.nama_karyawan as nama_driver, drv.nomor_polisi_kendaraan as nopol_driver,
                        (SELECT COUNT(*) FROM public.rincian_pembelian WHERE pembelian_id = pb.id) as total_items
                 FROM public.pembelian pb
                 LEFT JOIN public.pemasok sup ON pb.pemasok_id = sup.id
                 LEFT JOIN public.pengguna p ON pb.dibuat_oleh = p.id
+                LEFT JOIN public.v_karyawan_info drv ON pb.sales_driver_id = drv.id
                 ORDER BY pb.tanggal_pembelian DESC, pb.dibuat_pada DESC
             ");
 
@@ -55,25 +61,16 @@ class PurchaseController extends Controller
                 ORDER BY nama_akun ASC
             ");
 
-            // Generate Next Suggested PB Number (PB-YYYYMMDD-XXX) based on current records today
-            $todayDate = date('Ymd');
-            $todayPrefix = 'PB-' . $todayDate . '-';
-            $latestPb = Database::fetchOne("
-                SELECT nomor_faktur_pembelian 
-                FROM public.pembelian 
-                WHERE nomor_faktur_pembelian LIKE :pref 
-                ORDER BY nomor_faktur_pembelian DESC 
-                LIMIT 1
-            ", ['pref' => $todayPrefix . '%']);
+            $drivers = Database::fetchAll("
+                SELECT id, nama_karyawan, nomor_telepon, nomor_polisi_kendaraan, posisi 
+                FROM public.v_karyawan_info 
+                WHERE posisi IN ('driver', 'sales') AND status_aktif = TRUE
+                ORDER BY (posisi = 'driver') DESC, nama_karyawan ASC
+            ");
 
-            if ($latestPb && !empty($latestPb['nomor_faktur_pembelian'])) {
-                $lastStr = (string)$latestPb['nomor_faktur_pembelian'];
-                $parts = explode('-', $lastStr);
-                $seq = (int)end($parts);
-                $suggestedPbSuffix = $todayDate . '-' . str_pad((string)($seq + 1), 3, '0', STR_PAD_LEFT);
-            } else {
-                $suggestedPbSuffix = $todayDate . '-001';
-            }
+            // Generate Next Suggested PB Number (PB-YYYYMMDD-XXX) based on current records today
+            $suggestedPb = DocumentNumber::suggestPurchaseNumber();
+            $suggestedPbSuffix = substr($suggestedPb, 3);
 
             $this->view('purchases.index', [
                 'pageTitle' => 'Pembelian & Faktur Vendor',
@@ -82,11 +79,13 @@ class PurchaseController extends Controller
                 'suppliers' => $suppliers,
                 'items' => $items,
                 'cashAccounts' => $cashAccounts,
+                'drivers' => $drivers,
                 'suggestedPbSuffix' => $suggestedPbSuffix
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            $this->flashError("Gagal memuat daftar pembelian: " . $e->getMessage());
+            $this->redirect('/dashboard');
         }
     }
 
@@ -103,14 +102,19 @@ class PurchaseController extends Controller
             $purchase = Database::fetchOne("
                 SELECT pb.id, pb.nomor_faktur_pembelian, pb.tanggal_pembelian, pb.total_biaya,
                        pb.status_pembayaran, pb.status_penerimaan, pb.url_foto_nota, pb.catatan, pb.dibuat_pada,
+                       pb.jenis_dokumen, pb.metode_logistik, pb.sales_driver_id, pb.tanggal_jadwal_belanja,
+                       pb.instruksi_driver, pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
+                       pb.foto_bukti_kendala, pb.alasan_kendala, pb.waktu_diambil, pb.waktu_diterima_gudang,
                        sup.id as pemasok_id, sup.kode_pemasok, sup.nama_pemasok, sup.nomor_telepon, sup.alamat_lengkap,
                        sup.nama_bank, sup.nomor_rekening, sup.atas_nama_rekening,
                        p.nama_lengkap as pembuat,
+                       drv.nama_karyawan as nama_driver, drv.nomor_telepon as telp_driver, drv.nomor_polisi_kendaraan as nopol_driver,
                        ak_info.nama_akun as akun_kas_nama,
                        ak_info.tanggal_transaksi as tanggal_bayar_kas
                 FROM public.pembelian pb
                 LEFT JOIN public.pemasok sup ON pb.pemasok_id = sup.id
                 LEFT JOIN public.pengguna p ON pb.dibuat_oleh = p.id
+                LEFT JOIN public.v_karyawan_info drv ON pb.sales_driver_id = drv.id
                 LEFT JOIN LATERAL (
                     SELECT ak.nama_akun, ak_ref.tanggal_transaksi
                     FROM public.arus_kas ak_ref
@@ -130,18 +134,32 @@ class PurchaseController extends Controller
             }
 
             $items = Database::fetchAll("
-                SELECT rp.id, rp.kuantitas, rp.satuan, rp.harga_satuan, rp.subtotal,
-                       it.nama_item, it.kode_sku, it.tipe_item
+                SELECT rp.id, rp.kuantitas, rp.satuan, rp.harga_satuan, rp.subtotal, rp.item_id,
+                       it.nama_item, it.kode_sku, it.tipe_item, it.stok_fisik_saat_ini
                 FROM public.rincian_pembelian rp
                 JOIN public.item it ON rp.item_id = it.id
                 WHERE rp.pembelian_id = :id
                 ORDER BY rp.dibuat_pada ASC
             ", ['id' => $id]);
 
+            // Riwayat Audit Trail
+            $activityLogs = Database::fetchAll("
+                SELECT id, nama_aktor, peran_aktor, jenis_aksi, deskripsi_aktivitas, waktu_kejadian
+                FROM public.log_aktivitas
+                WHERE (tabel_terdampak = 'pembelian' AND id_referensi = :id)
+                   OR (deskripsi_aktivitas LIKE :faktur_match)
+                ORDER BY waktu_kejadian DESC
+                LIMIT 20
+            ", [
+                'id' => $id,
+                'faktur_match' => '%' . ($purchase['nomor_faktur_pembelian'] ?? '---') . '%'
+            ]);
+
             $this->json([
                 'success' => true,
                 'purchase' => $purchase,
-                'items' => $items
+                'items' => $items,
+                'activityLogs' => $activityLogs
             ]);
         } catch (Throwable $e) {
             $this->json(['success' => false, 'message' => 'Gagal memuat detail faktur: ' . $e->getMessage()], 500);
@@ -198,10 +216,9 @@ class PurchaseController extends Controller
             }
             $seenItemIds[$itemId] = true;
 
-            $qty = (float)($it['qty'] ?? 0);
-            $qtyInt = (int)round($qty);
-            if ($qtyInt <= 0) {
-                $this->json(['success' => false, 'message' => 'Kuantitas setiap item minimal 1.'], 400);
+            $qty = round((float)($it['qty'] ?? 0), 2);
+            if ($qty <= 0.0001) {
+                $this->json(['success' => false, 'message' => 'Kuantitas setiap item harus lebih dari 0.'], 400);
                 return;
             }
 
@@ -212,10 +229,10 @@ class PurchaseController extends Controller
             }
 
             // Hitung subtotal mutlak di server untuk akurasi finansial
-            $subtotal = round($qtyInt * $harga, 2);
+            $subtotal = round($qty * $harga, 2);
             $validItems[] = [
                 'item_id' => $itemId,
-                'qty' => $qtyInt,
+                'qty' => $qty,
                 'harga_satuan' => $harga,
                 'subtotal' => $subtotal
             ];
@@ -227,11 +244,30 @@ class PurchaseController extends Controller
             return;
         }
 
-        $statusBayar = $payload['status_pembayaran'] ?? 'lunas';
+        $jenisDokumen = $payload['jenis_dokumen'] ?? 'faktur';
+        if (!in_array($jenisDokumen, ['faktur', 'po'], true)) {
+            $jenisDokumen = 'faktur';
+        }
+
+        $metodeLogistik = $payload['metode_logistik'] ?? 'diantar_supplier';
+        $driverId = (!empty($payload['sales_driver_id']) && $metodeLogistik === 'diambil_driver') ? $payload['sales_driver_id'] : null;
+        $tglJadwal = !empty($payload['tanggal_jadwal_belanja']) ? $payload['tanggal_jadwal_belanja'] : $tanggal;
+        $instruksi = trim((string)($payload['instruksi_driver'] ?? ''));
+        $metodeBayarBelanja = $payload['metode_bayar_belanja'] ?? 'tempo_vendor';
+        $nomorNotaVendor = trim((string)($payload['nomor_nota_vendor'] ?? ''));
+
+        if ($jenisDokumen === 'po') {
+            $statusPenerimaan = ($metodeLogistik === 'diambil_driver') ? 'ditugaskan_driver' : 'menunggu_supplier';
+            $statusBayar = $payload['status_pembayaran'] ?? 'belum_lunas';
+        } else {
+            $statusPenerimaan = 'diterima';
+            $statusBayar = $payload['status_pembayaran'] ?? 'lunas';
+        }
+
         $akunKasId = !empty($payload['akun_kas_id']) ? $payload['akun_kas_id'] : null;
 
-        // 3. Validasi Pembayaran Lunas & Kecukupan Saldo Kas
-        if ($statusBayar === 'lunas') {
+        // 3. Validasi Pembayaran Lunas & Kecukupan Saldo Kas (Khusus Faktur Langsung)
+        if ($jenisDokumen === 'faktur' && $statusBayar === 'lunas') {
             if (empty($akunKasId)) {
                 $this->json(['success' => false, 'message' => 'Akun kas sumber dana wajib dipilih untuk pembayaran lunas.'], 400);
                 return;
@@ -253,7 +289,7 @@ class PurchaseController extends Controller
             }
         }
 
-        // 4. Handle Upload Foto Bukti Nota Fisik via Upload Helper (Anti Dobel Folder & Validasi Gambar)
+        // 4. Handle Upload Foto Bukti Nota Fisik via Upload Helper
         $fotoPath = null;
         if (isset($_FILES['foto_nota']) && $_FILES['foto_nota']['error'] !== UPLOAD_ERR_NO_FILE) {
             $uploadRes = \App\Helpers\Upload::storeImage($_FILES['foto_nota'], 'purchases', 'NOTA');
@@ -268,43 +304,24 @@ class PurchaseController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            // Kunci advisory lock transaksi PostgreSQL untuk menjamin nomor berurutan bebas dari race condition
-            $pdo->query("SELECT pg_advisory_xact_lock(hashtext('pembelian_nomor_faktur'))");
+            // Penomoran Pembelian Konsisten Selalu Berawalan PB-YYYYMMDD-XXX
+            $nomorFaktur = DocumentNumber::nextPurchaseNumber($pdo);
 
-            // Penomoran Faktur Pembelian Otomatis & Terkunci oleh Sistem (PB-YYYYMMDD-XXX)
-            $todayDate = date('Ymd');
-            $todayPrefix = 'PB-' . $todayDate . '-';
-            
-            $stmtLatest = $pdo->prepare("
-                SELECT nomor_faktur_pembelian 
-                FROM public.pembelian 
-                WHERE nomor_faktur_pembelian LIKE :pref 
-                ORDER BY nomor_faktur_pembelian DESC 
-                LIMIT 1
-            ");
-            $stmtLatest->execute(['pref' => $todayPrefix . '%']);
-            $latestPb = $stmtLatest->fetch();
-
-            if ($latestPb && !empty($latestPb['nomor_faktur_pembelian'])) {
-                $lastStr = (string)$latestPb['nomor_faktur_pembelian'];
-                $parts = explode('-', $lastStr);
-                $seq = (int)end($parts);
-                $nomorFaktur = $todayPrefix . str_pad((string)($seq + 1), 3, '0', STR_PAD_LEFT);
-            } else {
-                $nomorFaktur = $todayPrefix . '001';
-            }
-
-            $catatan = trim($payload['catatan'] ?? 'Penerimaan barang dari supplier');
+            $catatan = trim($payload['catatan'] ?? ($jenisDokumen === 'po' ? 'Rencana PO Pembelian vendor' : 'Penerimaan barang dari supplier'));
             $userId = Auth::id() ?: null;
 
             // 1. Insert Header Pembelian
             $stmtPb = $pdo->prepare("
                 INSERT INTO public.pembelian (
                     nomor_faktur_pembelian, pemasok_id, tanggal_pembelian, total_biaya,
-                    status_pembayaran, status_penerimaan, url_foto_nota, catatan, dibuat_oleh, dibuat_pada
+                    status_pembayaran, status_penerimaan, url_foto_nota, catatan, dibuat_oleh, dibuat_pada,
+                    jenis_dokumen, metode_logistik, sales_driver_id, tanggal_jadwal_belanja,
+                    instruksi_driver, metode_bayar_belanja, nomor_nota_vendor
                 ) VALUES (
                     :no_faktur, :pemasok, :tgl, :total,
-                    :bayar, 'diterima', :foto, :catatan, :user_id, NOW()
+                    :bayar, :penerimaan, :foto, :catatan, :user_id, NOW(),
+                    :jenis, :logistik, :driver_id, :tgl_jadwal,
+                    :instruksi, :metode_bayar, :nota_vendor
                 ) RETURNING id
             ");
 
@@ -314,14 +331,22 @@ class PurchaseController extends Controller
                 'tgl' => $tanggal,
                 'total' => $totalBiaya,
                 'bayar' => $statusBayar,
+                'penerimaan' => $statusPenerimaan,
                 'foto' => $fotoPath,
                 'catatan' => $catatan,
-                'user_id' => $userId
+                'user_id' => $userId,
+                'jenis' => $jenisDokumen,
+                'logistik' => $metodeLogistik,
+                'driver_id' => $driverId,
+                'tgl_jadwal' => $tglJadwal,
+                'instruksi' => $instruksi,
+                'metode_bayar' => $metodeBayarBelanja,
+                'nota_vendor' => $nomorNotaVendor
             ]);
 
             $pembelianId = $stmtPb->fetchColumn();
 
-            // 2. Insert Items & Auto Increment Stok Fisik
+            // 2. Insert Items
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.rincian_pembelian (
                     pembelian_id, item_id, kuantitas, satuan, harga_satuan, subtotal
@@ -357,58 +382,59 @@ class PurchaseController extends Controller
 
             foreach ($validItems as $it) {
                 $itemId = $it['item_id'];
-                $qtyInt = $it['qty'];
-                $harga = $it['harga_satuan'];
-                $subtotal = $it['subtotal'];
+                $qtyItem = (float)$it['qty'];
+                $harga = (float)$it['harga_satuan'];
+                $subtotal = (float)$it['subtotal'];
 
-                // Kunci baris item untuk kalkulasi stok & HPP yang 100% konsisten
                 $stmtItemLock->execute(['id' => $itemId]);
                 $current = $stmtItemLock->fetch();
-
-                $stokSebelum = (int)($current['stok_fisik_saat_ini'] ?? 0);
-                $stokSesudah = $stokSebelum + $qtyInt;
                 $satuan = $current['satuan_dasar'] ?? 'pcs';
-                $hppLama = (float)($current['harga_pokok_pembelian'] ?? 0);
-
-                // Hitung Weighted Moving Average HPP
-                if ($harga > 0) {
-                    if ($stokSebelum > 0 && $hppLama > 0) {
-                        $hppBaru = round((($stokSebelum * $hppLama) + ($qtyInt * $harga)) / $stokSesudah, 2);
-                    } else {
-                        $hppBaru = $harga;
-                    }
-                } else {
-                    $hppBaru = $hppLama;
-                }
 
                 $stmtItem->execute([
                     'pb_id' => $pembelianId,
                     'item_id' => $itemId,
-                    'qty' => $qtyInt,
+                    'qty' => $qtyItem,
                     'satuan' => $satuan,
                     'harga' => $harga,
                     'subtotal' => $subtotal
                 ]);
 
-                $stmtUpdateStock->execute([
-                    'qty' => $qtyInt,
-                    'harga_baru' => $hppBaru,
-                    'item_id' => $itemId
-                ]);
+                // Khusus Faktur Langsung: Langsung update stok fisik & hitung HPP
+                if ($jenisDokumen === 'faktur') {
+                    $stokSebelum = (float)($current['stok_fisik_saat_ini'] ?? 0);
+                    $stokSesudah = $stokSebelum + $qtyItem;
+                    $hppLama = (float)($current['harga_pokok_pembelian'] ?? 0);
 
-                $stmtRiwayat->execute([
-                    'item_id' => $itemId,
-                    'qty' => $qtyInt,
-                    'sebelum' => $stokSebelum,
-                    'sesudah' => $stokSesudah,
-                    'pb_id' => $pembelianId,
-                    'ket' => "Penerimaan barang vendor faktur: {$nomorFaktur}",
-                    'user_id' => $userId
-                ]);
+                    if ($harga > 0) {
+                        if ($stokSebelum > 0 && $hppLama > 0) {
+                            $hppBaru = round((($stokSebelum * $hppLama) + ($qtyItem * $harga)) / $stokSesudah, 2);
+                        } else {
+                            $hppBaru = $harga;
+                        }
+                    } else {
+                        $hppBaru = $hppLama;
+                    }
+
+                    $stmtUpdateStock->execute([
+                        'qty' => $qtyItem,
+                        'harga_baru' => $hppBaru,
+                        'item_id' => $itemId
+                    ]);
+
+                    $stmtRiwayat->execute([
+                        'item_id' => $itemId,
+                        'qty' => $qtyItem,
+                        'sebelum' => $stokSebelum,
+                        'sesudah' => $stokSesudah,
+                        'pb_id' => $pembelianId,
+                        'ket' => "Penerimaan barang vendor faktur: {$nomorFaktur}",
+                        'user_id' => $userId
+                    ]);
+                }
             }
 
-            // 3. Catat Kas Keluar jika Lunas & ada akun_kas_id
-            if ($statusBayar === 'lunas' && $akunKasId) {
+            // 3. Catat Kas Keluar (Hanya jika Faktur Langsung, Lunas & ada akun_kas_id)
+            if ($jenisDokumen === 'faktur' && $statusBayar === 'lunas' && $akunKasId) {
                 $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
                 $stmtKasLock->execute(['id' => $akunKasId]);
                 $akunKasRow = $stmtKasLock->fetch();
@@ -449,6 +475,10 @@ class PurchaseController extends Controller
             }
 
             // 4. Catat Audit Trail
+            $descLog = ($jenisDokumen === 'po')
+                ? "Menerbitkan PO Pembelian #{$nomorFaktur} ke vendor {$supplier['nama_pemasok']} (Metode: " . ($metodeLogistik === 'diambil_driver' ? 'Diambil Driver' : 'Diantar Supplier') . ")"
+                : "Mencatat Faktur Pembelian Langsung #{$nomorFaktur} vendor {$supplier['nama_pemasok']} total Rp " . number_format($totalBiaya, 0, ',', '.') . " (" . ($statusBayar === 'lunas' ? 'LUNAS' : 'TEMPO/HUTANG') . ")";
+
             $pdo->prepare("
                 INSERT INTO public.log_aktivitas (
                     nama_aktor, peran_aktor, sumber_aksi, kategori_aktivitas, jenis_aksi,
@@ -461,26 +491,514 @@ class PurchaseController extends Controller
                 'nama' => Auth::name(),
                 'peran' => Auth::role(),
                 'pb_id' => $pembelianId,
-                'desc' => "Faktur Pembelian Vendor: {$nomorFaktur} total Rp " . number_format($totalBiaya, 0, ',', '.') . " (" . ($statusBayar === 'lunas' ? 'LUNAS' : 'TEMPO/HUTANG') . ")",
+                'desc' => $descLog,
                 'data_json' => json_encode([
                     'nomor_faktur' => $nomorFaktur,
+                    'jenis_dokumen' => $jenisDokumen,
                     'total' => $totalBiaya,
                     'status_pembayaran' => $statusBayar,
+                    'status_penerimaan' => $statusPenerimaan,
+                    'metode_logistik' => $metodeLogistik,
                     'items_count' => count($validItems)
                 ])
             ]);
 
             $pdo->commit();
 
+            $msg = ($jenisDokumen === 'po')
+                ? "PO Pembelian {$nomorFaktur} berhasil diterbitkan dan dijadwalkan!"
+                : "Faktur pembelian langsung {$nomorFaktur} berhasil disimpan dan stok gudang otomatis bertambah!";
+
             $this->json([
                 'success' => true,
-                'message' => 'Faktur pembelian berhasil disimpan dan stok gudang otomatis bertambah!',
+                'message' => $msg,
                 'data' => ['pembelian_id' => $pembelianId, 'nomor_faktur' => $nomorFaktur]
             ]);
 
         } catch (Throwable $e) {
-            if (isset($pdo)) $pdo->rollBack();
+            if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
             $this->json(['success' => false, 'message' => 'Gagal simpan pembelian: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Memperbarui Data PO Pembelian (Metode Logistik, Driver, Jadwal, Item)
+     */
+    public function updatePo(): void
+    {
+        Auth::requirePermission('purchases.create');
+
+        $payload = null;
+        if (!empty($_POST)) {
+            $payload = $_POST;
+            if (isset($_POST['items']) && is_string($_POST['items'])) {
+                $payload['items'] = json_decode($_POST['items'], true) ?: [];
+            }
+        } else {
+            $rawBody = file_get_contents('php://input');
+            $payload = json_decode($rawBody, true);
+        }
+
+        $id = $payload['id'] ?? null;
+        if (empty($id)) {
+            $this->json(['success' => false, 'message' => 'ID PO pembelian tidak ditemukan.'], 400);
+            return;
+        }
+
+        $purchase = Database::fetchOne("SELECT * FROM public.pembelian WHERE id = :id", ['id' => $id]);
+        if (!$purchase) {
+            $this->json(['success' => false, 'message' => 'Data pembelian/PO tidak ditemukan.'], 404);
+            return;
+        }
+
+        if ($purchase['status_penerimaan'] === 'diterima') {
+            $this->json(['success' => false, 'message' => 'PO yang sudah berstatus Diterima di gudang tidak dapat diedit.'], 400);
+            return;
+        }
+
+        if ($purchase['status_pembayaran'] === 'batal') {
+            $this->json(['success' => false, 'message' => 'PO yang telah dibatalkan tidak dapat diedit.'], 400);
+            return;
+        }
+
+        $pemasokId = $payload['pemasok_id'] ?? $purchase['pemasok_id'];
+        $metodeLogistik = $payload['metode_logistik'] ?? $purchase['metode_logistik'] ?? 'diantar_supplier';
+        $driverId = (!empty($payload['sales_driver_id']) && $metodeLogistik === 'diambil_driver') ? $payload['sales_driver_id'] : null;
+        $tglJadwal = !empty($payload['tanggal_jadwal_belanja']) ? $payload['tanggal_jadwal_belanja'] : $purchase['tanggal_jadwal_belanja'];
+        $instruksi = trim((string)($payload['instruksi_driver'] ?? $purchase['instruksi_driver'] ?? ''));
+        $metodeBayar = $payload['metode_bayar_belanja'] ?? $purchase['metode_bayar_belanja'] ?? 'tempo_vendor';
+        $statusBayar = $payload['status_pembayaran'] ?? $purchase['status_pembayaran'] ?? 'belum_lunas';
+        $catatan = trim((string)($payload['catatan'] ?? $purchase['catatan'] ?? ''));
+
+        // Status penerimaan menyesuaikan metode logistik jika belum diambil
+        $statusPenerimaan = ($metodeLogistik === 'diambil_driver') ? 'ditugaskan_driver' : 'menunggu_supplier';
+        if ($purchase['status_penerimaan'] === 'sudah_diambil') {
+            $statusPenerimaan = 'sudah_diambil';
+        }
+
+        // Validasi Items jika ada perubahan
+        $rawItems = $payload['items'] ?? [];
+        $validItems = [];
+        $totalBiaya = 0.0;
+        if (!empty($rawItems) && is_array($rawItems)) {
+            $seen = [];
+            foreach ($rawItems as $it) {
+                $itemId = $it['item_id'] ?? null;
+                if (empty($itemId) || isset($seen[$itemId])) continue;
+                $seen[$itemId] = true;
+                $qty = round((float)($it['qty'] ?? 0), 2);
+                $harga = (float)($it['harga_satuan'] ?? 0);
+                if ($qty <= 0.0001) continue;
+                $sub = round($qty * $harga, 2);
+                $validItems[] = [
+                    'item_id' => $itemId,
+                    'qty' => $qty,
+                    'harga_satuan' => $harga,
+                    'subtotal' => $sub
+                ];
+                $totalBiaya += $sub;
+            }
+        }
+
+        try {
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
+
+            $sqlUpdate = "
+                UPDATE public.pembelian
+                SET pemasok_id = :pemasok_id,
+                    metode_logistik = :metode_logistik,
+                    sales_driver_id = :sales_driver_id,
+                    tanggal_jadwal_belanja = :tanggal_jadwal_belanja,
+                    instruksi_driver = :instruksi_driver,
+                    metode_bayar_belanja = :metode_bayar_belanja,
+                    status_pembayaran = :status_pembayaran,
+                    catatan = :catatan,
+                    status_penerimaan = :status_penerimaan
+            ";
+            $params = [
+                'id' => $id,
+                'pemasok_id' => $pemasokId,
+                'metode_logistik' => $metodeLogistik,
+                'sales_driver_id' => $driverId,
+                'tanggal_jadwal_belanja' => $tglJadwal,
+                'instruksi_driver' => $instruksi,
+                'metode_bayar_belanja' => $metodeBayar,
+                'status_pembayaran' => $statusBayar,
+                'catatan' => $catatan,
+                'status_penerimaan' => $statusPenerimaan
+            ];
+
+            if (!empty($validItems)) {
+                $sqlUpdate .= ", total_biaya = :total_biaya";
+                $params['total_biaya'] = $totalBiaya;
+
+                $pdo->prepare("DELETE FROM public.rincian_pembelian WHERE pembelian_id = :id")->execute(['id' => $id]);
+                $stmtIns = $pdo->prepare("
+                    INSERT INTO public.rincian_pembelian (pembelian_id, item_id, kuantitas, satuan, harga_satuan, subtotal)
+                    VALUES (:pb_id, :item_id, :qty, :satuan, :harga, :subtotal)
+                ");
+                $stmtGetSatuan = $pdo->prepare("SELECT satuan_dasar FROM public.item WHERE id = :id");
+                foreach ($validItems as $vi) {
+                    $stmtGetSatuan->execute(['id' => $vi['item_id']]);
+                    $satuan = $stmtGetSatuan->fetchColumn() ?: 'pcs';
+                    $stmtIns->execute([
+                        'pb_id' => $id,
+                        'item_id' => $vi['item_id'],
+                        'qty' => $vi['qty'],
+                        'satuan' => $satuan,
+                        'harga' => $vi['harga_satuan'],
+                        'subtotal' => $vi['subtotal']
+                    ]);
+                }
+            }
+
+            $sqlUpdate .= " WHERE id = :id";
+            $pdo->prepare($sqlUpdate)->execute($params);
+
+            $pdo->commit();
+
+            \App\Helpers\ActivityLog::log(
+                'Pembelian',
+                'UPDATE',
+                "Memperbarui data PO Pembelian #{$purchase['nomor_faktur_pembelian']} (Metode: " . ($metodeLogistik === 'diambil_driver' ? 'Diambil Driver' : 'Diantar Supplier') . ")",
+                'pembelian',
+                (string)$id
+            );
+
+            $this->json(['success' => true, 'message' => 'PO Pembelian berhasil diperbarui!']);
+
+        } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+            $this->json(['success' => false, 'message' => 'Gagal memperbarui PO: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Konfirmasi Penerimaan Barang Fisik di Gudang (Verifikasi Qty/Harga, Tambah Stok & Kas)
+     */
+    public function receiveGoods(): void
+    {
+        Auth::requirePermission('purchases.create');
+
+        $payload = null;
+        if (!empty($_POST)) {
+            $payload = $_POST;
+            if (isset($_POST['items']) && is_string($_POST['items'])) {
+                $payload['items'] = json_decode($_POST['items'], true) ?: [];
+            }
+        } else {
+            $rawBody = file_get_contents('php://input');
+            $payload = json_decode($rawBody, true);
+        }
+
+        $id = $payload['id'] ?? null;
+        if (empty($id)) {
+            $this->json(['success' => false, 'message' => 'ID dokumen pembelian tidak valid.'], 400);
+            return;
+        }
+
+        try {
+            // Upload Foto Nota Fisik terlebih dahulu jika diunggah baru
+            $fotoPath = null;
+            if (isset($_FILES['foto_nota']) && $_FILES['foto_nota']['error'] !== UPLOAD_ERR_NO_FILE) {
+                $uploadRes = \App\Helpers\Upload::storeImage($_FILES['foto_nota'], 'purchases', 'NOTA');
+                if (!$uploadRes['success']) {
+                    $this->json(['success' => false, 'message' => $uploadRes['error']], 400);
+                    return;
+                }
+                $fotoPath = $uploadRes['path'];
+            }
+
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
+
+            // 1. Kunci dan Validasi Dokumen Pembelian via FOR UPDATE (Anti Race Condition & Double Stock Receipt)
+            $stmtLock = $pdo->prepare("SELECT * FROM public.pembelian WHERE id = :id FOR UPDATE");
+            $stmtLock->execute(['id' => $id]);
+            $purchase = $stmtLock->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$purchase) {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'Dokumen pembelian tidak ditemukan.'], 404);
+                return;
+            }
+
+            if ($purchase['status_penerimaan'] === 'diterima') {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'Dokumen ini sudah berstatus Diterima sebelumnya.'], 400);
+                return;
+            }
+
+            if ($purchase['status_pembayaran'] === 'batal') {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'Dokumen yang telah dibatalkan tidak dapat dikonfirmasi penerimaannya.'], 400);
+                return;
+            }
+
+            if ($purchase['status_penerimaan'] === 'kendala_batal') {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'PO ini berstatus Kendala Belanja. Silakan lakukan penjadwalan ulang atau ganti driver terlebih dahulu sebelum melakukan verifikasi fisik.'], 400);
+                return;
+            }
+
+            if ($fotoPath === null) {
+                $fotoPath = $purchase['url_foto_nota'] ?? null;
+            }
+
+            $rawItems = $payload['items'] ?? [];
+            if (empty($rawItems) || !is_array($rawItems)) {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'Rincian item penerimaan fisik tidak valid.'], 400);
+                return;
+            }
+
+            $validItems = [];
+            $totalBiaya = 0.0;
+            foreach ($rawItems as $it) {
+                $itemId = $it['item_id'] ?? null;
+                $qty = round((float)($it['qty'] ?? 0), 2);
+                $harga = (float)($it['harga_satuan'] ?? 0);
+                if (empty($itemId) || $qty <= 0) continue;
+                $sub = round($qty * $harga, 2);
+                $validItems[] = [
+                    'item_id' => $itemId,
+                    'qty' => $qty,
+                    'harga_satuan' => $harga,
+                    'subtotal' => $sub
+                ];
+                $totalBiaya += $sub;
+            }
+
+            if (empty($validItems)) {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'Penerimaan harus memiliki minimal 1 item dengan kuantitas > 0.'], 400);
+                return;
+            }
+
+            $statusBayar = $payload['status_pembayaran'] ?? 'lunas';
+            $akunKasId = !empty($payload['akun_kas_id']) ? $payload['akun_kas_id'] : null;
+            $nomorNotaVendor = trim((string)($payload['nomor_nota_vendor'] ?? ''));
+
+            if ($statusBayar === 'lunas') {
+                if (empty($akunKasId)) {
+                    $pdo->rollBack();
+                    $this->json(['success' => false, 'message' => 'Pilih akun kas sumber dana untuk pembayaran tunai/lunas.'], 400);
+                    return;
+                }
+                $stmtKasLockCheck = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
+                $stmtKasLockCheck->execute(['id' => $akunKasId]);
+                $akunKas = $stmtKasLockCheck->fetch(\PDO::FETCH_ASSOC);
+                if (!$akunKas || (float)$akunKas['saldo_saat_ini'] < $totalBiaya) {
+                    $pdo->rollBack();
+                    $this->json(['success' => false, 'message' => 'Saldo akun kas tidak mencukupi untuk pembayaran lunas ini.'], 400);
+                    return;
+                }
+            }
+
+            $userId = Auth::id() ?: null;
+            $nomorFaktur = $purchase['nomor_faktur_pembelian'];
+
+            // 1. Re-sync items in rincian_pembelian
+            $pdo->prepare("DELETE FROM public.rincian_pembelian WHERE pembelian_id = :id")->execute(['id' => $id]);
+            $stmtItemIns = $pdo->prepare("
+                INSERT INTO public.rincian_pembelian (pembelian_id, item_id, kuantitas, satuan, harga_satuan, subtotal)
+                VALUES (:pb_id, :item_id, :qty, :satuan, :harga, :subtotal)
+            ");
+
+            $stmtUpdateStock = $pdo->prepare("
+                UPDATE public.item 
+                SET stok_fisik_saat_ini = stok_fisik_saat_ini + :qty,
+                    harga_pokok_pembelian = :harga_baru,
+                    diubah_pada = NOW() 
+                WHERE id = :item_id
+            ");
+
+            $stmtRiwayat = $pdo->prepare("
+                INSERT INTO public.riwayat_stok (
+                    item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
+                    referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
+                ) VALUES (
+                    :item_id, 'pembelian_masuk', :qty, :sebelum, :sesudah,
+                    'pembelian', :pb_id, :ket, :user_id, NOW()
+                )
+            ");
+
+            $stmtItemLock = $pdo->prepare("SELECT stok_fisik_saat_ini, satuan_dasar, harga_pokok_pembelian FROM public.item WHERE id = :id FOR UPDATE");
+
+            foreach ($validItems as $vit) {
+                $itemId = $vit['item_id'];
+                $qtyVal = $vit['qty'];
+                $harga = $vit['harga_satuan'];
+                $subtotal = $vit['subtotal'];
+
+                $stmtItemLock->execute(['id' => $itemId]);
+                $curr = $stmtItemLock->fetch(\PDO::FETCH_ASSOC);
+                $stokSebelum = (float)($curr['stok_fisik_saat_ini'] ?? 0);
+                $stokSesudah = round($stokSebelum + $qtyVal, 2);
+                $satuan = $curr['satuan_dasar'] ?? 'pcs';
+                $hppLama = (float)($curr['harga_pokok_pembelian'] ?? 0);
+
+                if ($harga > 0) {
+                    if ($stokSebelum > 0 && $hppLama > 0) {
+                        $hppBaru = round((($stokSebelum * $hppLama) + ($qtyVal * $harga)) / $stokSesudah, 2);
+                    } else {
+                        $hppBaru = $harga;
+                    }
+                } else {
+                    $hppBaru = $hppLama;
+                }
+
+                $stmtItemIns->execute([
+                    'pb_id' => $id,
+                    'item_id' => $itemId,
+                    'qty' => $qtyVal,
+                    'satuan' => $satuan,
+                    'harga' => $harga,
+                    'subtotal' => $subtotal
+                ]);
+
+                $stmtUpdateStock->execute([
+                    'qty' => $qtyVal,
+                    'harga_baru' => $hppBaru,
+                    'item_id' => $itemId
+                ]);
+
+                $stmtRiwayat->execute([
+                    'item_id' => $itemId,
+                    'qty' => $qtyVal,
+                    'sebelum' => $stokSebelum,
+                    'sesudah' => $stokSesudah,
+                    'pb_id' => $id,
+                    'ket' => "Penerimaan fisik barang PO/Faktur: {$nomorFaktur}",
+                    'user_id' => $userId
+                ]);
+            }
+
+            // 2. Potong kas jika lunas
+            if ($statusBayar === 'lunas' && $akunKasId) {
+                $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtKasLock->execute(['id' => $akunKasId]);
+                $kasRow = $stmtKasLock->fetch();
+                $saldoLama = (float)($kasRow['saldo_saat_ini'] ?? 0);
+                $saldoBaru = $saldoLama - $totalBiaya;
+
+                $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                    ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
+
+                $driverKet = '';
+                if (!empty($purchase['sales_driver_id'])) {
+                    $drvInfo = Database::fetchOne("SELECT nama_karyawan FROM public.v_karyawan_info WHERE id = :id", ['id' => $purchase['sales_driver_id']]);
+                    if ($drvInfo) {
+                        $driverKet = " (Belanja Driver: {$drvInfo['nama_karyawan']})";
+                    }
+                }
+
+                $pdo->prepare("
+                    INSERT INTO public.arus_kas (
+                        akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                        referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                    ) VALUES (
+                        :akun_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nominal, :ket,
+                        'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
+                    )
+                ")->execute([
+                    'akun_id' => $akunKasId,
+                    'nominal' => $totalBiaya,
+                    'ket' => "Pembayaran faktur vendor penerimaan fisik: {$nomorFaktur}{$driverKet}",
+                    'pb_id' => $id,
+                    'saldo_berjalan' => $saldoBaru,
+                    'user_id' => $userId
+                ]);
+            }
+
+            // 3. Update header pembelian
+            $pdo->prepare("
+                UPDATE public.pembelian
+                SET status_penerimaan = 'diterima',
+                    waktu_diterima_gudang = NOW(),
+                    total_biaya = :total,
+                    status_pembayaran = :status_bayar,
+                    nomor_nota_vendor = :nota_vendor,
+                    url_foto_nota = :foto
+                WHERE id = :id
+            ")->execute([
+                'id' => $id,
+                'total' => $totalBiaya,
+                'status_bayar' => $statusBayar,
+                'nota_vendor' => $nomorNotaVendor,
+                'foto' => $fotoPath
+            ]);
+
+            $pdo->commit();
+
+            \App\Helpers\ActivityLog::log(
+                'Pembelian',
+                'UPDATE',
+                "Konfirmasi penerimaan barang PO #{$nomorFaktur} di gudang pusat (Total Rp " . number_format($totalBiaya, 0, ',', '.') . ")",
+                'pembelian',
+                (string)$id
+            );
+
+            $this->json(['success' => true, 'message' => 'Barang berhasil diverifikasi, stok gudang otomatis bertambah!']);
+
+        } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+            $this->json(['success' => false, 'message' => 'Gagal konfirmasi penerimaan barang: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Cetak Dokumen PDF Surat Pesanan Pembelian (PO)
+     */
+    public function pdf(): void
+    {
+        Auth::requirePermission('purchases.view');
+        $id = $this->input('id');
+        if (empty($id)) {
+            $this->flashError('ID Pembelian/PO tidak ditemukan.');
+            $this->redirect('/purchases');
+            return;
+        }
+
+        try {
+            $purchase = Database::fetchOne("
+                SELECT pb.*, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon, sup.alamat_lengkap,
+                       p.nama_lengkap as pembuat,
+                       drv.nama_karyawan as nama_driver, drv.nomor_telepon as telp_driver, drv.nomor_polisi_kendaraan as nopol_driver
+                FROM public.pembelian pb
+                JOIN public.pemasok sup ON pb.pemasok_id = sup.id
+                LEFT JOIN public.pengguna p ON pb.dibuat_oleh = p.id
+                LEFT JOIN public.v_karyawan_info drv ON pb.sales_driver_id = drv.id
+                WHERE pb.id = :id
+            ", ['id' => $id]);
+
+            if (!$purchase) {
+                $this->flashError('Dokumen tidak ditemukan.');
+                $this->redirect('/purchases');
+                return;
+            }
+
+            $items = Database::fetchAll("
+                SELECT rp.*, it.nama_item, it.kode_sku 
+                FROM public.rincian_pembelian rp
+                JOIN public.item it ON rp.item_id = it.id
+                WHERE rp.pembelian_id = :id
+                ORDER BY it.nama_item ASC
+            ", ['id' => $id]);
+
+            $company = \App\Helpers\CompanySetting::getAll();
+
+            ob_start();
+            require __DIR__ . '/../../views/purchases/po_pdf.php';
+            $html = ob_get_clean();
+
+            $filename = "SURAT_PESANAN_" . str_replace(['/', '\\', ' '], '_', $purchase['nomor_faktur_pembelian']) . ".pdf";
+            \App\Helpers\PdfExport::stream($html, $filename);
+
+        } catch (Throwable $e) {
+            $this->flashError("Gagal cetak PDF: " . $e->getMessage());
+            $this->redirect('/purchases');
         }
     }
 
@@ -660,134 +1178,139 @@ class PurchaseController extends Controller
             $userId = Auth::id() ?: null;
             $totalBiaya = (float)$purchase['total_biaya'];
 
-            // 1. Ambil rincian item pembelian
-            $items = Database::fetchAll("
-                SELECT rp.*, it.nama_item, it.satuan_dasar 
-                FROM public.rincian_pembelian rp
-                JOIN public.item it ON rp.item_id = it.id
-                WHERE rp.pembelian_id = :id
-            ", ['id' => $pembelianId]);
+            $isAlreadyReceived = ($purchase['status_penerimaan'] === 'diterima');
 
-            // Cek terlebih dahulu apakah stok fisik saat ini mencukupi untuk di-reverse (tidak terpakai produksi)
-            $stmtCheck = $pdo->prepare("SELECT id, nama_item, stok_fisik_saat_ini, satuan_dasar FROM public.item WHERE id = :id FOR UPDATE");
-            foreach ($items as $it) {
-                $stmtCheck->execute(['id' => $it['item_id']]);
-                $itemDb = $stmtCheck->fetch();
-                $curStock = (int)($itemDb['stok_fisik_saat_ini'] ?? 0);
-                $buyQty = (int)$it['kuantitas'];
-
-                if ($curStock < $buyQty) {
-                    $pdo->rollBack();
-                    $this->json([
-                        'success' => false,
-                        'message' => "Faktur {$nomorFaktur} tidak dapat dibatalkan karena sisa stok fisik '{$itemDb['nama_item']}' di gudang saat ini ({$curStock} {$itemDb['satuan_dasar']}) lebih sedikit dari jumlah pembelian ({$buyQty} {$itemDb['satuan_dasar']}). Sebagian bahan kemungkinan telah digunakan dalam operasional produksi. Lakukan penyesuaian opname manual jika terdapat koreksi fisik."
-                    ], 400);
-                    return;
-                }
-            }
-
-            // 2. Reverse stok item di gudang & pulihkan HPP terakhir sebelum faktur ini
-            $stmtUpdateStock = $pdo->prepare("
-                UPDATE public.item 
-                SET stok_fisik_saat_ini = stok_fisik_saat_ini - :qty,
-                    harga_pokok_pembelian = :restored_hpp,
-                    diubah_pada = NOW() 
-                WHERE id = :item_id
-            ");
-
-            $stmtRiwayat = $pdo->prepare("
-                INSERT INTO public.riwayat_stok (
-                    item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
-                    referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
-                ) VALUES (
-                    :item_id, 'penyesuaian_opname_kurang', :qty, :sebelum, :sesudah,
-                    'pembelian', :pb_id, :ket, :user_id, NOW()
-                )
-            ");
-
-            foreach ($items as $it) {
-                $itemId = $it['item_id'];
-                $qty = (int)$it['kuantitas'];
-                if ($qty <= 0) continue;
-
-                $current = Database::fetchOne("SELECT stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE id = :id FOR UPDATE", ['id' => $itemId]);
-                $stokSebelum = (int)($current['stok_fisik_saat_ini'] ?? 0);
-                $stokSesudah = $stokSebelum - $qty;
-
-                // Cari riwayat harga pembelian valid terakhir sebelum faktur ini
-                $prevPb = Database::fetchOne("
-                    SELECT rp.harga_satuan 
-                    FROM public.rincian_pembelian rp 
-                    JOIN public.pembelian pb ON rp.pembelian_id = pb.id 
-                    WHERE rp.item_id = :item_id 
-                      AND pb.status_pembayaran != 'batal' 
-                      AND pb.id != :pb_id 
-                    ORDER BY pb.tanggal_pembelian DESC, pb.dibuat_pada DESC 
-                    LIMIT 1
-                ", ['item_id' => $itemId, 'pb_id' => $pembelianId]);
-
-                $restoredHpp = $prevPb ? (float)$prevPb['harga_satuan'] : (float)$current['harga_pokok_pembelian'];
-
-                $stmtUpdateStock->execute([
-                    'qty' => $qty,
-                    'restored_hpp' => $restoredHpp,
-                    'item_id' => $itemId
-                ]);
-
-                $stmtRiwayat->execute([
-                    'item_id' => $itemId,
-                    'qty' => $qty,
-                    'sebelum' => $stokSebelum,
-                    'sesudah' => $stokSesudah,
-                    'pb_id' => $pembelianId,
-                    'ket' => "Batal faktur pembelian: {$nomorFaktur} ({$alasan})",
-                    'user_id' => $userId
-                ]);
-            }
-
-            // 3. Jika berstatus lunas, kembalikan saldo kas
-            if ($purchase['status_pembayaran'] === 'lunas') {
-                $arusKas = Database::fetchOne("
-                    SELECT akun_kas_id 
-                    FROM public.arus_kas 
-                    WHERE referensi_tabel = 'pembelian' AND referensi_id = :id AND jenis_kas = 'keluar'
-                    ORDER BY dibuat_pada DESC LIMIT 1
+            if ($isAlreadyReceived) {
+                // 1. Ambil rincian item pembelian
+                $items = Database::fetchAll("
+                    SELECT rp.*, it.nama_item, it.satuan_dasar 
+                    FROM public.rincian_pembelian rp
+                    JOIN public.item it ON rp.item_id = it.id
+                    WHERE rp.pembelian_id = :id
                 ", ['id' => $pembelianId]);
 
-                if ($arusKas && !empty($arusKas['akun_kas_id'])) {
-                    $akunKasId = $arusKas['akun_kas_id'];
-                    $akunKas = Database::fetchOne("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE", ['id' => $akunKasId]);
-                    if ($akunKas) {
-                        $saldoLama = (float)$akunKas['saldo_saat_ini'];
-                        $saldoBaru = $saldoLama + $totalBiaya;
+                // Cek terlebih dahulu apakah stok fisik saat ini mencukupi untuk di-reverse (tidak terpakai produksi)
+                $stmtCheck = $pdo->prepare("SELECT id, nama_item, stok_fisik_saat_ini, satuan_dasar FROM public.item WHERE id = :id FOR UPDATE");
+                foreach ($items as $it) {
+                    $stmtCheck->execute(['id' => $it['item_id']]);
+                    $itemDb = $stmtCheck->fetch();
+                    $curStock = (float)($itemDb['stok_fisik_saat_ini'] ?? 0);
+                    $buyQty = (float)$it['kuantitas'];
 
-                        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
-                            ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
+                    if ($curStock < $buyQty) {
+                        $pdo->rollBack();
+                        $this->json([
+                            'success' => false,
+                            'message' => "Dokumen {$nomorFaktur} tidak dapat dibatalkan karena sisa stok fisik '{$itemDb['nama_item']}' di gudang saat ini ({$curStock} {$itemDb['satuan_dasar']}) lebih sedikit dari jumlah pembelian ({$buyQty} {$itemDb['satuan_dasar']}). Sebagian bahan kemungkinan telah digunakan dalam operasional produksi."
+                        ], 400);
+                        return;
+                    }
+                }
 
-                        $pdo->prepare("
-                            INSERT INTO public.arus_kas (
-                                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
-                                referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
-                            ) VALUES (
-                                :akun_id, CURRENT_DATE, 'masuk', 'pembelian_bahan', :nominal, :ket,
-                                'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
-                            )
-                        ")->execute([
-                            'akun_id' => $akunKasId,
-                            'nominal' => $totalBiaya,
-                            'ket' => "Pengembalian dana pembatalan faktur vendor: {$nomorFaktur} ({$alasan})",
-                            'pb_id' => $pembelianId,
-                            'saldo_berjalan' => $saldoBaru,
-                            'user_id' => $userId
-                        ]);
+                // 2. Reverse stok item di gudang & pulihkan HPP terakhir sebelum faktur ini
+                $stmtUpdateStock = $pdo->prepare("
+                    UPDATE public.item 
+                    SET stok_fisik_saat_ini = stok_fisik_saat_ini - :qty,
+                        harga_pokok_pembelian = :restored_hpp,
+                        diubah_pada = NOW() 
+                    WHERE id = :item_id
+                ");
+
+                $stmtRiwayat = $pdo->prepare("
+                    INSERT INTO public.riwayat_stok (
+                        item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
+                        referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
+                    ) VALUES (
+                        :item_id, 'penyesuaian_opname_kurang', :qty, :sebelum, :sesudah,
+                        'pembelian', :pb_id, :ket, :user_id, NOW()
+                    )
+                ");
+
+                foreach ($items as $it) {
+                    $itemId = $it['item_id'];
+                    $qty = (float)$it['kuantitas'];
+                    if ($qty <= 0.0001) continue;
+
+                    $current = Database::fetchOne("SELECT stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE id = :id FOR UPDATE", ['id' => $itemId]);
+                    $stokSebelum = (float)($current['stok_fisik_saat_ini'] ?? 0);
+                    $stokSesudah = $stokSebelum - $qty;
+
+                    // Cari riwayat harga pembelian valid terakhir sebelum faktur ini
+                    $prevPb = Database::fetchOne("
+                        SELECT rp.harga_satuan 
+                        FROM public.rincian_pembelian rp 
+                        JOIN public.pembelian pb ON rp.pembelian_id = pb.id 
+                        WHERE rp.item_id = :item_id 
+                          AND pb.status_pembayaran != 'batal' 
+                          AND pb.id != :pb_id 
+                        ORDER BY pb.tanggal_pembelian DESC, pb.dibuat_pada DESC 
+                        LIMIT 1
+                    ", ['item_id' => $itemId, 'pb_id' => $pembelianId]);
+
+                    $restoredHpp = $prevPb ? (float)$prevPb['harga_satuan'] : (float)$current['harga_pokok_pembelian'];
+
+                    $stmtUpdateStock->execute([
+                        'qty' => $qty,
+                        'restored_hpp' => $restoredHpp,
+                        'item_id' => $itemId
+                    ]);
+
+                    $stmtRiwayat->execute([
+                        'item_id' => $itemId,
+                        'qty' => $qty,
+                        'sebelum' => $stokSebelum,
+                        'sesudah' => $stokSesudah,
+                        'pb_id' => $pembelianId,
+                        'ket' => "Batal faktur pembelian: {$nomorFaktur} ({$alasan})",
+                        'user_id' => $userId
+                    ]);
+                }
+
+                // 3. Jika berstatus lunas, kembalikan saldo kas
+                if ($purchase['status_pembayaran'] === 'lunas') {
+                    $arusKas = Database::fetchOne("
+                        SELECT akun_kas_id 
+                        FROM public.arus_kas 
+                        WHERE referensi_tabel = 'pembelian' AND referensi_id = :id AND jenis_kas = 'keluar'
+                        ORDER BY dibuat_pada DESC LIMIT 1
+                    ", ['id' => $pembelianId]);
+
+                    if ($arusKas && !empty($arusKas['akun_kas_id'])) {
+                        $akunKasId = $arusKas['akun_kas_id'];
+                        $akunKas = Database::fetchOne("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE", ['id' => $akunKasId]);
+                        if ($akunKas) {
+                            $saldoLama = (float)$akunKas['saldo_saat_ini'];
+                            $saldoBaru = $saldoLama + $totalBiaya;
+
+                            $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                                ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
+
+                            $pdo->prepare("
+                                INSERT INTO public.arus_kas (
+                                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                                    referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                                ) VALUES (
+                                    :akun_id, CURRENT_DATE, 'masuk', 'pembelian_bahan', :nominal, :ket,
+                                    'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
+                                )
+                            ")->execute([
+                                'akun_id' => $akunKasId,
+                                'nominal' => $totalBiaya,
+                                'ket' => "Pengembalian dana pembatalan faktur vendor: {$nomorFaktur} ({$alasan})",
+                                'pb_id' => $pembelianId,
+                                'saldo_berjalan' => $saldoBaru,
+                                'user_id' => $userId
+                            ]);
+                        }
                     }
                 }
             }
 
-            // 4. Update status pembelian jadi batal
+            // 4. Update status pembelian jadi batal & status_penerimaan = kendala_batal
             $pdo->prepare("
                 UPDATE public.pembelian 
                 SET status_pembayaran = 'batal',
+                    status_penerimaan = 'kendala_batal',
                     catatan = COALESCE(catatan, '') || ' [DIBATALKAN: ' || :alasan || ']'
                 WHERE id = :id
             ")->execute(['id' => $pembelianId, 'alasan' => $alasan]);

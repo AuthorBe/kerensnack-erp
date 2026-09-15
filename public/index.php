@@ -41,11 +41,14 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 
-// 1. Session Initialization
+// 1. Session Initialization (Maksimal 12 jam / 43.200 detik)
+ini_set('session.gc_maxlifetime', '43200');
 if (session_status() === PHP_SESSION_NONE) {
     session_start([
         'cookie_httponly' => true,
-        'cookie_samesite' => 'Lax'
+        'cookie_samesite' => 'Lax',
+        'cookie_lifetime' => 43200,
+        'gc_maxlifetime'  => 43200
     ]);
 }
 
@@ -93,6 +96,7 @@ use App\Controllers\PurchaseController;
 use App\Controllers\DeliveryController;
 use App\Controllers\CashController;
 use App\Controllers\CustomerOrderController;
+use App\Controllers\OrderDocumentController;
 use App\Controllers\SalesOrderController;
 use App\Controllers\DeveloperController;
 use App\Controllers\UserController;
@@ -111,7 +115,7 @@ Router::get('/logout', [AuthController::class, 'logout']);
 
 // --- ROOT REDIRECT ---
 Router::get('/', function () {
-    Router::redirect('/pos');
+    Router::redirect('/login');
 });
 
 // --- TRANSAKSI 1: POS KASIR (RITEL UMUM) ---
@@ -122,15 +126,15 @@ Router::post('/api/pos/checkout', [PosController::class, 'checkout']);
 
 // --- TRANSAKSI 2: PESANAN PELANGGAN (FAKTUR B2B & DAFTAR PO) ---
 Router::get('/customer-orders', [CustomerOrderController::class, 'index']);
-Router::get('/customer-orders/export/excel', [CustomerOrderController::class, 'exportExcel']);
+Router::get('/customer-orders/export/excel', [OrderDocumentController::class, 'exportExcel']);
 Router::get('/customer-orders/po-list', [CustomerOrderController::class, 'poList']);
-Router::get('/customer-orders/po-list/batch-pdf', [CustomerOrderController::class, 'batchPickingListPdf']);
-Router::post('/customer-orders/po-list/batch-pdf', [CustomerOrderController::class, 'batchPickingListPdf']);
+Router::get('/customer-orders/po-list/batch-pdf', [OrderDocumentController::class, 'batchPickingListPdf']);
+Router::post('/customer-orders/po-list/batch-pdf', [OrderDocumentController::class, 'batchPickingListPdf']);
 Router::post('/customer-orders/process-po', [CustomerOrderController::class, 'processPoToReady']);
-Router::get('/customer-orders/picking-list', [CustomerOrderController::class, 'printPickingList']);
-Router::get('/customer-orders/picking-list/pdf', [CustomerOrderController::class, 'pickingListPdf']);
-Router::get('/customer-orders/picking-list/batch-pdf', [CustomerOrderController::class, 'batchPickingListPdf']);
-Router::post('/customer-orders/picking-list/batch-pdf', [CustomerOrderController::class, 'batchPickingListPdf']);
+Router::get('/customer-orders/picking-list', [OrderDocumentController::class, 'printPickingList']);
+Router::get('/customer-orders/picking-list/pdf', [OrderDocumentController::class, 'pickingListPdf']);
+Router::get('/customer-orders/picking-list/batch-pdf', [OrderDocumentController::class, 'batchPickingListPdf']);
+Router::post('/customer-orders/picking-list/batch-pdf', [OrderDocumentController::class, 'batchPickingListPdf']);
 Router::post('/customer-orders/retry-delivery', [CustomerOrderController::class, 'retryDelivery']);
 Router::get('/customer-orders/create', [CustomerOrderController::class, 'create']);
 Router::post('/customer-orders/store', [CustomerOrderController::class, 'store']);
@@ -138,8 +142,8 @@ Router::get('/customer-orders/edit', [CustomerOrderController::class, 'edit']);
 Router::post('/customer-orders/update', [CustomerOrderController::class, 'update']);
 Router::get('/customer-orders/detail-ajax', [CustomerOrderController::class, 'detailAjax']);
 Router::get('/customer-orders/invoice', [CustomerOrderController::class, 'invoice']);
-Router::get('/customer-orders/invoice/pdf', [CustomerOrderController::class, 'invoicePdf']);
-Router::get('/customer-orders/invoice/excel', [CustomerOrderController::class, 'invoiceExcel']);
+Router::get('/customer-orders/invoice/pdf', [OrderDocumentController::class, 'invoicePdf']);
+Router::get('/customer-orders/invoice/excel', [OrderDocumentController::class, 'invoiceExcel']);
 Router::get('/customer-orders/print', [CustomerOrderController::class, 'invoice']);
 Router::post('/customer-orders/pay', [CustomerOrderController::class, 'pay']);
 Router::post('/customer-orders/cancel', [CustomerOrderController::class, 'cancel']);
@@ -147,16 +151,16 @@ Router::post('/customer-orders/update-delivery-status', [CustomerOrderController
 
 // Alias / Compatibility Routes untuk Sales Orders
 Router::get('/sales-orders', [CustomerOrderController::class, 'index']);
-Router::get('/sales-orders/export/excel', [CustomerOrderController::class, 'exportExcel']);
+Router::get('/sales-orders/export/excel', [OrderDocumentController::class, 'exportExcel']);
 Router::get('/sales-orders/create', [CustomerOrderController::class, 'create']);
 Router::post('/sales-orders/store', [CustomerOrderController::class, 'store']);
 Router::get('/sales-orders/edit', [CustomerOrderController::class, 'edit']);
 Router::post('/sales-orders/update', [CustomerOrderController::class, 'update']);
 Router::get('/sales-orders/detail-ajax', [CustomerOrderController::class, 'detailAjax']);
 Router::get('/sales-orders/invoice', [CustomerOrderController::class, 'invoice']);
-Router::get('/sales-orders/invoice/pdf', [CustomerOrderController::class, 'invoicePdf']);
-Router::get('/sales-orders/invoice/excel', [CustomerOrderController::class, 'invoiceExcel']);
-Router::get('/sales-orders/picking-list/pdf', [CustomerOrderController::class, 'pickingListPdf']);
+Router::get('/sales-orders/invoice/pdf', [OrderDocumentController::class, 'invoicePdf']);
+Router::get('/sales-orders/invoice/excel', [OrderDocumentController::class, 'invoiceExcel']);
+Router::get('/sales-orders/picking-list/pdf', [OrderDocumentController::class, 'pickingListPdf']);
 Router::get('/sales-orders/print', [CustomerOrderController::class, 'invoice']);
 Router::post('/sales-orders/pay', [CustomerOrderController::class, 'pay']);
 Router::post('/sales-orders/cancel', [CustomerOrderController::class, 'cancel']);
@@ -166,20 +170,30 @@ Router::post('/sales-orders/update-delivery-status', [CustomerOrderController::c
 Router::get('/pricing', [PricingController::class, 'index']);
 Router::post('/pricing/update-level', [PricingController::class, 'updateLevelPrice']);
 Router::post('/pricing/delete-level', [PricingController::class, 'deleteLevelPrice']);
-Router::post('/pricing/store-group', [PricingController::class, 'storeCustomerGroup']);
-Router::post('/pricing/update-group', [PricingController::class, 'updateCustomerGroup']);
-Router::post('/pricing/delete-group', [PricingController::class, 'deleteCustomerGroup']);
+Router::post('/pricing/store-group', [CustomerController::class, 'storeGroup']);
+Router::post('/pricing/update-group', [CustomerController::class, 'updateGroup']);
+Router::post('/pricing/delete-group', [CustomerController::class, 'deleteGroup']);
 
 // --- GUDANG 1: KATALOG & OPNAME STOK FISIK ---
 Router::get('/inventory', [InventoryController::class, 'index']);
 Router::get('/inventory/export-excel', [InventoryController::class, 'exportExcel']);
 Router::post('/inventory/adjust', [InventoryController::class, 'adjustStock']);
 Router::post('/inventory/waste', [InventoryController::class, 'recordWaste']);
+Router::get('/inventory/bulk-opname', [InventoryController::class, 'bulkOpname']);
+Router::post('/inventory/bulk-opname/store', [InventoryController::class, 'storeBulkOpname']);
+Router::get('/inventory/api/item-history', [InventoryController::class, 'apiItemHistory']);
+Router::get('/inventory/opname/detail', [InventoryController::class, 'opnameDetail']);
+Router::get('/inventory/opname/history', [InventoryController::class, 'opnameHistory']);
+Router::get('/inventory/opname/pdf', [InventoryController::class, 'exportOpnamePdf']);
+Router::get('/inventory/opname/excel', [InventoryController::class, 'exportOpnameExcel']);
 
 // --- GUDANG 2: PEMBELIAN / PO MASUK VENDOR ---
 Router::get('/purchases', [PurchaseController::class, 'index']);
 Router::get('/purchases/detail', [PurchaseController::class, 'detailAjax']);
 Router::post('/purchases/store', [PurchaseController::class, 'store']);
+Router::post('/purchases/update-po', [PurchaseController::class, 'updatePo']);
+Router::post('/purchases/receive', [PurchaseController::class, 'receiveGoods']);
+Router::get('/purchases/pdf', [PurchaseController::class, 'pdf']);
 Router::post('/purchases/pay', [PurchaseController::class, 'payDebt']);
 Router::post('/purchases/cancel', [PurchaseController::class, 'cancel']);
 
@@ -188,6 +202,8 @@ Router::get('/driver-deliveries', [DeliveryController::class, 'driverRoute']);
 Router::post('/driver-deliveries/start', [DeliveryController::class, 'startTrip']);
 Router::post('/driver-deliveries/complete', [DeliveryController::class, 'completeDelivery']);
 Router::post('/driver-deliveries/fail', [DeliveryController::class, 'failDelivery']);
+Router::post('/driver-deliveries/shopping/complete', [DeliveryController::class, 'completeShoppingTask']);
+Router::post('/driver-deliveries/shopping/report-issue', [DeliveryController::class, 'reportShoppingIssue']);
 
 // --- DELIVERY 2: SURAT JALAN PENGIRIMAN ---
 Router::get('/deliveries', [DeliveryController::class, 'index']);
@@ -195,6 +211,7 @@ Router::get('/deliveries/export/excel', [DeliveryController::class, 'exportExcel
 Router::get('/deliveries/print', [DeliveryController::class, 'print']);
 Router::get('/deliveries/pdf', [DeliveryController::class, 'pdf']);
 Router::post('/deliveries/store', [DeliveryController::class, 'store']);
+Router::post('/deliveries/update', [DeliveryController::class, 'update']);
 Router::post('/deliveries/approve', [DeliveryController::class, 'approve']);
 Router::post('/deliveries/update-status', [DeliveryController::class, 'updateStatus']);
 
@@ -267,6 +284,7 @@ Router::post('/customers/delete-group', [CustomerController::class, 'deleteGroup
 Router::get('/suppliers', [SupplierController::class, 'index']);
 Router::post('/suppliers/store', [SupplierController::class, 'store']);
 Router::post('/suppliers/update', [SupplierController::class, 'update']);
+Router::post('/suppliers/delete', [SupplierController::class, 'delete']);
 
 // --- MASTER DATA 3: MASTER DATA KARYAWAN ---
 Router::get('/employees', [EmployeeController::class, 'index']);
@@ -322,9 +340,13 @@ Router::get('/permissions/bulk', [PermissionController::class, 'bulk']);
 Router::post('/permissions/save-bulk-overrides', [PermissionController::class, 'saveBulkOverrides']);
 Router::get('/permissions/matrix', [PermissionController::class, 'matrix']);
 
-// --- PENGATURAN SISTEM: PORTAL HUB ---
+// --- PENGATURAN SISTEM: PORTAL HUB & PROFIL PERUSAHAAN ---
 Router::get('/settings', [SettingsController::class, 'index']);
 Router::get('/pengaturan', [SettingsController::class, 'index']);
+Router::get('/settings/company', [SettingsController::class, 'company']);
+Router::post('/settings/company', [SettingsController::class, 'updateCompany']);
+Router::get('/pengaturan/perusahaan', [SettingsController::class, 'company']);
+Router::post('/pengaturan/perusahaan', [SettingsController::class, 'updateCompany']);
 Router::get('/settings/activity-logs', [ActivityLogController::class, 'index']);
 Router::get('/settings/logs', [ActivityLogController::class, 'index']);
 

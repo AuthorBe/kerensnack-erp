@@ -21,7 +21,7 @@ ob_start();
                     <span>Logistik &amp; Distribusi</span>
                 </div>
                 <h1 class="page-title"><?= $pageTitle ?? 'Status Pengiriman' ?></h1>
-                <p class="page-subtitle"><?= $pageSubtitle ?? 'Manifest Rute Sales-Driver &amp; Status Pengiriman Toko' ?></p>
+                <p class="page-subtitle"><?= $pageSubtitle ?? 'Manifest Rute Pengiriman &amp; Status Antar Toko' ?></p>
             </div>
         </div>
     </div>
@@ -117,6 +117,10 @@ ob_start();
                             <td class="cell-nowrap">
                                 <span class="badge badge-mono" x-text="d.nomor_surat_jalan"></span>
                                 <div style="font-size:11px;font-family:var(--font-mono);color:var(--color-ink-mute);margin-top:2px;" x-text="d.nomor_nota"></div>
+                                <div class="flex items-center gap-1.5" style="font-size:11px;color:var(--color-ink-secondary);margin-top:4px;" title="Tanggal Rencana Pengiriman">
+                                    <i data-lucide="calendar" style="width:12px;height:12px;color:var(--color-primary);flex-shrink:0;"></i>
+                                    <span style="font-weight:600;" x-text="formatDateIndo(d.tanggal_surat_jalan || d.dibuat_pada)"></span>
+                                </div>
                             </td>
                             <td>
                                 <div class="flex items-center justify-between gap-2">
@@ -203,6 +207,18 @@ ob_start();
                                     </template>
                                     <?php endif; ?>
 
+                                    <?php if (Auth::can(['deliveries.create', 'deliveries.update_all'])): ?>
+                                    <template x-if="!['selesai_diterima', 'gagal_kirim', 'gagal_kembali', 'dibatalkan'].includes(d.status_surat_jalan)">
+                                        <button type="button" @click="openEditModal(d)" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:var(--color-primary);" title="Ubah Driver & Tanggal Pengiriman">
+                                            <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
+                                    <?php endif; ?>
+
+                                    <a :href="'<?= Router::url('/deliveries/print') ?>?id=' + d.id" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#0284c7;" title="Cetak Surat Jalan (Standar / Dot Matrix)">
+                                        <i data-lucide="printer" style="width:14px;height:14px;"></i>
+                                    </a>
+
                                     <a :href="'<?= Router::url('/deliveries/pdf') ?>?id=' + d.id" target="_blank" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#dc2626;" title="Unduh PDF Surat Jalan">
                                         <i data-lucide="file-text" style="width:14px;height:14px;"></i>
                                     </a>
@@ -252,20 +268,23 @@ ob_start();
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="form-label">Sales-Driver Penanggung Jawab *</label>
-                        <select name="sales_driver_id" required class="form-input">
-                            <option value="">-- Pilih Driver --</option>
+                        <label class="form-label font-bold">Tanggal Kirim / Surat Jalan *</label>
+                        <input type="date" name="tanggal_surat_jalan" x-model="defaultDeliveryDate" required class="form-input font-medium" style="height:40px;">
+                    </div>
+                    <div>
+                        <label class="form-label font-bold">Driver / Petugas Pengantar *</label>
+                        <select name="sales_driver_id" required class="form-input" style="height:40px;">
+                            <option value="">-- Pilih Driver / Petugas Pengantar --</option>
                             <?php foreach ($drivers as $d): ?>
-                            <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?></option>
+                            <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?><?= !empty($d['nomor_polisi_kendaraan']) ? ' (' . htmlspecialchars($d['nomor_polisi_kendaraan']) . ')' : '' ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div>
-                        <label class="form-label">Tujuan Wilayah / Rute</label>
-                        <select name="rute_wilayah_id" class="form-input" disabled style="background-color: var(--color-canvas-soft); cursor: not-allowed; appearance: none; padding-right: 12px; opacity: 0.9;">
-                            <option value="">-- Sesuai Rute Toko --</option>
-                        </select>
-                    </div>
+                </div>
+
+                <div style="font-size:11.5px;color:var(--color-ink-mute);display:flex;align-items:center;gap:6px;padding:0 2px;">
+                    <i data-lucide="clock" style="width:13px;height:13px;color:var(--color-primary);flex-shrink:0;"></i>
+                    <span x-text="isAfternoon ? 'Dibuat siang/sore (>= 12:00 WIB): default tanggal otomatis diset untuk pengiriman BESOK.' : 'Dibuat pagi (< 12:00 WIB): default tanggal otomatis diset untuk pengiriman HARI INI.'"></span>
                 </div>
 
                 <div style="padding:10px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;font-size:12px;color:#1e40af;display:flex;align-items:center;gap:8px;">
@@ -286,7 +305,68 @@ ob_start();
     </div>
     </template>
 
+    <!-- ========================================================================= -->
+    <!-- 4. MODAL UBAH SURAT JALAN (DRIVER & TANGGAL PENGIRIMAN)                  -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="showEditModal" x-cloak class="modal-backdrop" @click.self="showEditModal = false" @keydown.escape.window="showEditModal = false" style="z-index:9999;">
+        <div class="modal-box" style="max-width:500px;padding:24px;">
+            <div class="modal-header" style="margin-bottom:16px;">
+                <div class="flex items-center gap-3">
+                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="edit-3" style="width:18px;height:18px;"></i>
+                    </div>
+                    <div>
+                        <div class="modal-title" style="font-size:16px;font-weight:800;color:var(--color-ink);">Ubah Surat Jalan</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Ubah Pengemudi/Sales &amp; Tanggal Pengiriman</div>
+                    </div>
+                </div>
+                <button @click="showEditModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
+                    <i data-lucide="x" style="width:16px;height:16px;"></i>
+                </button>
+            </div>
 
+            <form action="<?= Router::url('/deliveries/update') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+                <input type="hidden" name="id" :value="editData.id">
+
+                <!-- Ringkasan Toko & Dokumen (Read-Only) -->
+                <div style="background:var(--color-canvas-soft);padding:12px 14px;border-radius:12px;border:1px solid var(--color-hairline);font-size:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span class="badge badge-mono font-bold" x-text="editData.nomor_surat_jalan"></span>
+                        <span class="font-mono text-ink-mute" style="font-size:11.5px;font-weight:700;" x-text="editData.nomor_nota"></span>
+                    </div>
+                    <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);margin-top:6px;" x-text="editData.nama_toko"></div>
+                    <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="editData.alamat_toko"></div>
+                </div>
+
+                <!-- Tanggal Pengiriman -->
+                <div>
+                    <label class="form-label font-bold">Tanggal Pengiriman / Surat Jalan *</label>
+                    <input type="date" name="tanggal_surat_jalan" x-model="editData.tanggal_surat_jalan" required class="form-input font-medium" style="height:40px;">
+                </div>
+
+                <!-- Driver / Petugas Pengantar -->
+                <div>
+                    <label class="form-label font-bold">Driver / Petugas Pengantar *</label>
+                    <select name="sales_driver_id" required class="form-input" x-model="editData.sales_driver_id" style="height:40px;">
+                        <option value="">-- Pilih Driver / Petugas Pengantar --</option>
+                        <?php foreach ($drivers as $d): ?>
+                        <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?><?= !empty($d['nomor_polisi_kendaraan']) ? ' (' . htmlspecialchars($d['nomor_polisi_kendaraan']) . ')' : '' ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+                    <button type="button" @click="showEditModal = false" class="btn btn-secondary">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">
+                        <i data-lucide="save" style="width:15px;height:15px;"></i>
+                        <span>Simpan Perubahan</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </template>
 
 </div>
 
@@ -298,9 +378,38 @@ function deliveryApp() {
         searchQuery: '',
         filterStatus: 'all',
         showAddModal: false,
+        showEditModal: false,
+        defaultDeliveryDate: <?= json_encode($defaultDeliveryDate ?? date('Y-m-d')) ?>,
+        isAfternoon: <?= json_encode($isAfternoon ?? false) ?>,
+        editData: {
+            id: '',
+            nomor_surat_jalan: '',
+            nomor_nota: '',
+            nama_toko: '',
+            alamat_toko: '',
+            sales_driver_id: '',
+            tanggal_surat_jalan: ''
+        },
 
         init() {
-            this.$nextTick(() => lucide.createIcons());
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoOrderId = urlParams.get('create_for_order');
+            if (autoOrderId) {
+                this.showAddModal = true;
+                this.$nextTick(() => {
+                    const select = document.querySelector('select[name="pesanan_id"]');
+                    if (select) {
+                        select.value = autoOrderId;
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                    if (typeof window.initSearchableSelects === 'function') {
+                        window.initSearchableSelects();
+                    }
+                    lucide.createIcons();
+                });
+            } else {
+                this.$nextTick(() => lucide.createIcons());
+            }
         },
 
         get filteredDeliveries() {
@@ -309,7 +418,8 @@ function deliveryApp() {
                 const matchQuery = !q ||
                     d.nomor_surat_jalan.toLowerCase().includes(q) ||
                     d.nama_toko.toLowerCase().includes(q) ||
-                    (d.nama_driver && d.nama_driver.toLowerCase().includes(q));
+                    (d.nama_driver && d.nama_driver.toLowerCase().includes(q)) ||
+                    (d.tanggal_surat_jalan && d.tanggal_surat_jalan.includes(q));
 
                 const matchStatus = this.filterStatus === 'all' || d.status_surat_jalan === this.filterStatus;
 
@@ -321,8 +431,37 @@ function deliveryApp() {
             return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
         },
 
+        formatDateIndo(dateStr) {
+            if (!dateStr) return '-';
+            const cleanStr = dateStr.substring(0, 10);
+            const parts = cleanStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+            return cleanStr;
+        },
+
         openAddModal() {
             this.showAddModal = true;
+            this.$nextTick(() => {
+                if (typeof window.initSearchableSelects === 'function') {
+                    window.initSearchableSelects();
+                }
+                lucide.createIcons();
+            });
+        },
+
+        openEditModal(item) {
+            this.editData = {
+                id: item.id,
+                nomor_surat_jalan: item.nomor_surat_jalan,
+                nomor_nota: item.nomor_nota,
+                nama_toko: item.nama_toko,
+                alamat_toko: item.alamat_toko,
+                sales_driver_id: item.sales_driver_id || '',
+                tanggal_surat_jalan: item.tanggal_surat_jalan || item.dibuat_pada?.substring(0, 10) || ''
+            };
+            this.showEditModal = true;
             this.$nextTick(() => lucide.createIcons());
         }
     }

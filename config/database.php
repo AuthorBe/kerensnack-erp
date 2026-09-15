@@ -37,6 +37,7 @@ class Database
 
             try {
                 self::$instance = new PDO($dsn, $user, $password, $options);
+                self::$instance->exec("SET TIME ZONE 'Asia/Jakarta'");
             } catch (PDOException $e) {
                 // Log pesan error dan lempar exception yang ramah
                 error_log("Database Connection Error: " . $e->getMessage());
@@ -45,6 +46,14 @@ class Database
         }
 
         return self::$instance;
+    }
+
+    /**
+     * Alias singkat untuk getConnection()
+     */
+    public static function pdo(): PDO
+    {
+        return self::getConnection();
     }
 
     /**

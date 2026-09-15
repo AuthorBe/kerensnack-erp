@@ -1,11 +1,12 @@
 -- ==============================================================================
--- KEREN SNACK - SINGLE SOURCE OF TRUTH (SSOT) DATABASE SCHEMA v2.0
+-- KEREN SNACK - SINGLE SOURCE OF TRUTH (SSOT) CANONICAL DATABASE SCHEMA v2.0
 -- Model: Custom AI ERP untuk Toko & Manufaktur Repacking KEREN Snack
 -- Fitur Khusus:
 --   1. Dynamic Pricing Matrix (Harga Level per Grup Produk x Grup Pelanggan)
 --   2. Dedicated Consignment Ledger (Stok Titip Rak Toko vs Gudang Pusat)
 --   3. Universal Barcode Disambiguation (Satu Barcode Kemasan untuk Banyak Varian Rasa)
---   4. Integrated Sales-Driver (Canvaser Rute), HR Payroll Borongan & AI Telegram
+--   4. Dedicated Sales (Toko Binaan & Komisi), Dedicated Driver (Logistik Armada), HR Payroll Borongan & AI Telegram
+-- Status: 100% Terverifikasi & Selaras Penuh dengan Live Database Supabase PostgreSQL
 -- ==============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -17,10 +18,11 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS public.peran (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nama_peran VARCHAR(50) NOT NULL UNIQUE, -- 'owner', 'admin', 'mandor', 'sales_driver'
+    nama_peran VARCHAR(50) NOT NULL UNIQUE, -- 'owner', 'admin', 'mandor', 'sales', 'driver', 'developer'
     deskripsi TEXT,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_peran_no_sales_driver CHECK (nama_peran != 'sales_driver')
 );
 
 CREATE TABLE IF NOT EXISTS public.izin (
@@ -42,16 +44,27 @@ CREATE TABLE IF NOT EXISTS public.izin_peran (
 );
 
 CREATE TABLE IF NOT EXISTS public.pengguna (
-    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    karyawan_id UUID,
-    peran_id UUID NOT NULL REFERENCES public.peran(id),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    peran_id UUID REFERENCES public.peran(id) ON DELETE SET NULL,
     nama_lengkap VARCHAR(150) NOT NULL,
-    nama_pengguna VARCHAR(100) NOT NULL UNIQUE,
+    nama_pengguna VARCHAR(100) UNIQUE,
+    kata_sandi VARCHAR(255),
     id_telegram BIGINT UNIQUE,
-    nomor_whatsapp VARCHAR(25) UNIQUE,
+    nomor_whatsapp VARCHAR(25),
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
+    nik VARCHAR(30) UNIQUE,
+    posisi VARCHAR(50), -- 'pengemasan', 'admin', 'mandor', 'sales', 'driver', 'developer'
+    nomor_telepon VARCHAR(25),
+    nomor_polisi_kendaraan VARCHAR(20),
+    alamat TEXT,
+    tanggal_bergabung DATE DEFAULT CURRENT_DATE,
+    bank_nama VARCHAR(50),
+    bank_nomor_rekening VARCHAR(50),
+    bank_atas_nama VARCHAR(100),
+    karyawan_legacy_id INT UNIQUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_pengguna_posisi_valid CHECK (posisi IN ('developer', 'owner', 'admin', 'mandor', 'pengemasan', 'sales', 'driver'))
 );
 
 CREATE TABLE IF NOT EXISTS public.izin_pengguna (
@@ -64,7 +77,7 @@ CREATE TABLE IF NOT EXISTS public.izin_pengguna (
 );
 
 -- ==============================================================================
--- MODUL 2: MASTER ENTITAS, GRUP PELANGGAN & RELASI BISNIS
+-- MODUL 2: MASTER ENTITAS, WILAYAH, KARYAWAN & GRUP PELANGGAN
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS public.wilayah (
@@ -79,27 +92,45 @@ CREATE TABLE IF NOT EXISTS public.wilayah (
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Tabel Karyawan (Profil Penggajian 1-to-1 Terpadu dengan Akun Pengguna)
 CREATE TABLE IF NOT EXISTS public.karyawan (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
-    nik VARCHAR(50) UNIQUE,
-    nama_karyawan VARCHAR(150) NOT NULL,
-    posisi VARCHAR(50) NOT NULL, -- 'pengemasan', 'sales_driver', 'admin', 'mandor'
+    pengguna_id UUID UNIQUE REFERENCES public.pengguna(id) ON DELETE SET NULL,
     tipe_penggajian VARCHAR(30) NOT NULL CHECK (tipe_penggajian IN ('borongan', 'harian', 'bulanan')),
     gaji_pokok_bulanan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     uang_kehadiran_harian NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     tunjangan_bulanan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     persentase_komisi_sales NUMERIC(5, 2) NOT NULL DEFAULT 0.00, -- Contoh: 2.50%
-    nomor_telepon VARCHAR(25),
-    alamat TEXT,
-    tanggal_bergabung DATE DEFAULT CURRENT_DATE,
-    status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-ALTER TABLE public.pengguna 
-    ADD CONSTRAINT fk_pengguna_karyawan FOREIGN KEY (karyawan_id) REFERENCES public.karyawan(id) ON DELETE SET NULL;
+-- View Kanonikal Info Karyawan Terpadu (Menggabungkan Identitas Pengguna & Parameter Gaji)
+CREATE OR REPLACE VIEW public.v_karyawan_info AS
+SELECT
+    k.id,
+    k.pengguna_id,
+    p.nama_lengkap AS nama_karyawan,
+    p.nik,
+    p.posisi,
+    p.nomor_telepon,
+    p.nomor_polisi_kendaraan,
+    p.alamat,
+    p.tanggal_bergabung,
+    p.bank_nama,
+    p.bank_nomor_rekening,
+    p.bank_atas_nama,
+    p.status_aktif,
+    k.tipe_penggajian,
+    k.gaji_pokok_bulanan,
+    k.uang_kehadiran_harian,
+    k.tunjangan_bulanan,
+    k.persentase_komisi_sales,
+    p.nama_pengguna,
+    p.peran_id,
+    p.karyawan_legacy_id AS id_legacy
+FROM public.karyawan k
+JOIN public.pengguna p ON p.id = k.pengguna_id;
 
 CREATE TABLE IF NOT EXISTS public.pemasok (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -109,6 +140,9 @@ CREATE TABLE IF NOT EXISTS public.pemasok (
     alamat_lengkap TEXT,
     nomor_telepon VARCHAR(25),
     detail_bank JSONB NOT NULL DEFAULT '[]'::jsonb,
+    nama_bank VARCHAR(50) DEFAULT NULL,
+    nomor_rekening VARCHAR(50) DEFAULT NULL,
+    atas_nama_rekening VARCHAR(100) DEFAULT NULL,
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -142,11 +176,12 @@ CREATE TABLE IF NOT EXISTS public.pelanggan (
     tipe_pembayaran_default VARCHAR(30) NOT NULL DEFAULT 'cash' CHECK (tipe_pembayaran_default IN ('cash', 'qris', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi')),
     plafon_piutang NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     total_piutang_berjalan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
-    sales_driver_id UUID REFERENCES public.karyawan(id), -- Sales pemegang toko tetap
-    override_level_harga INT CHECK (override_level_harga >= 1), -- Bebas, tanpa batas maksimal
-    override_diskon_persen NUMERIC(5, 2) DEFAULT 0.00,
-    override_diskon_nominal NUMERIC(15, 2) DEFAULT 0.00,
+    sales_driver_id UUID REFERENCES public.pengguna(id), -- Sales Pembina / Penanggung Jawab Toko (Khusus Posisi Sales, dikunci oleh trg_guard_pelanggan_sales_driver)
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
+    nama_bank VARCHAR(50) DEFAULT NULL,
+    nomor_rekening VARCHAR(50) DEFAULT NULL,
+    atas_nama_rekening VARCHAR(100) DEFAULT NULL,
+    link_google_maps TEXT DEFAULT NULL,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -210,12 +245,21 @@ CREATE TABLE IF NOT EXISTS public.item (
     kelompok_borongan_id UUID REFERENCES public.kelompok_upah_borongan(id),
     pemasok_utama_id UUID REFERENCES public.pemasok(id),
     harga_pokok_pembelian NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
-    stok_minimum_peringatan INT NOT NULL DEFAULT 10,
-    stok_fisik_saat_ini INT NOT NULL DEFAULT 0, -- Snapshot otomatis dari riwayat_stok
+    stok_minimum_peringatan NUMERIC(15, 2) NOT NULL DEFAULT 10.00,
+    stok_fisik_saat_ini NUMERIC(15, 2) NOT NULL DEFAULT 0.00, -- Snapshot otomatis dari riwayat_stok
     status_jual BOOLEAN NOT NULL DEFAULT TRUE,
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Relasi Item Khusus / Whitelist Produk Pelanggan
+CREATE TABLE IF NOT EXISTS public.pelanggan_item (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id) ON DELETE CASCADE,
+    item_id UUID NOT NULL REFERENCES public.item(id) ON DELETE RESTRICT,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_pelanggan_item UNIQUE (pelanggan_id, item_id)
 );
 
 -- Bill of Materials / Resep Repacking (Bal Curah -> Pcs Jadi)
@@ -229,7 +273,7 @@ CREATE TABLE IF NOT EXISTS public.komposisi_item (
 );
 
 -- ==============================================================================
--- MODUL 4: MANAJEMEN GUDANG & LEDGER MUTASI STOK
+-- MODUL 4: MANAJEMEN GUDANG, MUTASI STOK & AUDIT OPNAME
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS public.pembelian (
@@ -243,6 +287,18 @@ CREATE TABLE IF NOT EXISTS public.pembelian (
     url_foto_nota TEXT,
     catatan TEXT,
     dibuat_oleh UUID REFERENCES public.pengguna(id),
+    jenis_dokumen VARCHAR(20) DEFAULT 'langsung',
+    metode_logistik VARCHAR(20) DEFAULT 'mandiri',
+    sales_driver_id UUID REFERENCES public.pengguna(id) ON DELETE SET NULL, -- Driver / Petugas Pengambil Belanjaan Vendor (Bisa Driver atau Sales)
+    tanggal_jadwal_belanja DATE DEFAULT NULL,
+    instruksi_driver TEXT DEFAULT NULL,
+    metode_bayar_belanja VARCHAR(30) DEFAULT NULL,
+    nominal_dibayar_driver NUMERIC(15, 2) DEFAULT 0.00,
+    nomor_nota_vendor VARCHAR(50) DEFAULT NULL,
+    foto_bukti_kendala TEXT DEFAULT NULL,
+    alasan_kendala TEXT DEFAULT NULL,
+    waktu_diambil TIMESTAMPTZ DEFAULT NULL,
+    waktu_diterima_gudang TIMESTAMPTZ DEFAULT NULL,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -250,7 +306,7 @@ CREATE TABLE IF NOT EXISTS public.rincian_pembelian (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pembelian_id UUID NOT NULL REFERENCES public.pembelian(id) ON DELETE CASCADE,
     item_id UUID NOT NULL REFERENCES public.item(id),
-    kuantitas INT NOT NULL CHECK (kuantitas > 0),
+    kuantitas NUMERIC(15, 2) NOT NULL CHECK (kuantitas > 0),
     satuan VARCHAR(30) NOT NULL,
     harga_satuan NUMERIC(15, 2) NOT NULL,
     subtotal NUMERIC(15, 2) NOT NULL,
@@ -276,15 +332,44 @@ CREATE TABLE IF NOT EXISTS public.riwayat_stok (
     tipe_mutasi VARCHAR(50) NOT NULL CHECK (tipe_mutasi IN (
         'produksi_masuk', 'bahan_terpakai_produksi', 'penjualan_keluar',
         'pembelian_masuk', 'penyesuaian_opname_tambah', 'penyesuaian_opname_kurang',
-        'retur_pelanggan_masuk', 'konsinyasi_keluar', 'konsinyasi_retur_masuk', 'konsinyasi_retur_rusak'
+        'retur_pelanggan_masuk', 'konsinyasi_keluar', 'konsinyasi_retur_masuk',
+        'konsinyasi_retur_rusak', 'item_keluar_waste'
     )),
-    jumlah_perubahan INT NOT NULL,
-    stok_sebelum INT NOT NULL,
-    stok_sesudah INT NOT NULL,
+    jumlah_perubahan NUMERIC(15, 2) NOT NULL,
+    stok_sebelum NUMERIC(15, 2) NOT NULL,
+    stok_sesudah NUMERIC(15, 2) NOT NULL,
     referensi_tabel VARCHAR(50) NOT NULL,
     referensi_id UUID NOT NULL,
     keterangan TEXT,
     dibuat_oleh UUID REFERENCES public.pengguna(id),
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Audit Bulk Opname Fisik Gudang
+CREATE TABLE IF NOT EXISTS public.opname_gudang (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nomor_opname VARCHAR(50) NOT NULL UNIQUE,
+    tanggal_opname DATE NOT NULL DEFAULT CURRENT_DATE,
+    keterangan TEXT,
+    petugas_id UUID REFERENCES public.pengguna(id) ON DELETE SET NULL,
+    status_opname VARCHAR(20) NOT NULL DEFAULT 'selesai' CHECK (status_opname IN ('draf', 'selesai', 'dibatalkan')),
+    total_sku_diperiksa INT NOT NULL DEFAULT 0,
+    total_sku_selisih INT NOT NULL DEFAULT 0,
+    total_nilai_selisih_rp NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.opname_gudang_item (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    opname_gudang_id UUID NOT NULL REFERENCES public.opname_gudang(id) ON DELETE CASCADE,
+    item_id UUID NOT NULL REFERENCES public.item(id) ON DELETE RESTRICT,
+    stok_sistem NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    stok_fisik NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    selisih_stok NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    harga_pokok_saat_opname NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    satuan VARCHAR(20) NOT NULL DEFAULT 'pcs',
+    catatan TEXT,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -296,7 +381,7 @@ CREATE TABLE IF NOT EXISTS public.pesanan (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nomor_nota VARCHAR(100) NOT NULL UNIQUE,
     pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id),
-    sales_driver_id UUID REFERENCES public.karyawan(id), -- Sales-Driver yang bertugas
+    sales_driver_id UUID REFERENCES public.pengguna(id), -- Sales atau Pengemudi yang menangani pesanan / pengiriman
     tanggal_pesanan DATE NOT NULL DEFAULT CURRENT_DATE,
     total_bruto NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     total_diskon NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
@@ -311,8 +396,14 @@ CREATE TABLE IF NOT EXISTS public.pesanan (
     total_dibayar NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     sisa_tagihan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     adalah_tagihan BOOLEAN NOT NULL DEFAULT TRUE,
+    uang_diterima NUMERIC(15, 2) DEFAULT 0.00,
+    kembalian NUMERIC(15, 2) DEFAULT 0.00,
+    waktu_gagal_kirim TIMESTAMPTZ,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_pesanan_total_netto_non_negative CHECK (total_netto >= 0),
+    CONSTRAINT chk_pesanan_total_dibayar_non_negative CHECK (total_dibayar >= 0),
+    CONSTRAINT chk_pesanan_sisa_tagihan_non_negative CHECK (sisa_tagihan >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS public.item_pesanan (
@@ -326,6 +417,7 @@ CREATE TABLE IF NOT EXISTS public.item_pesanan (
     diskon_item_nominal NUMERIC(15, 2) DEFAULT 0.00,
     is_bonus BOOLEAN NOT NULL DEFAULT FALSE,
     subtotal NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    harga_pokok_satuan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -333,15 +425,19 @@ CREATE TABLE IF NOT EXISTS public.surat_jalan (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nomor_surat_jalan VARCHAR(100) NOT NULL UNIQUE,
     pesanan_id UUID NOT NULL REFERENCES public.pesanan(id),
-    sales_driver_id UUID REFERENCES public.karyawan(id),
+    sales_driver_id UUID REFERENCES public.pengguna(id), -- Driver / Kurir Logistik Pengantar (Bisa Driver atau Sales)
     rute_wilayah_id UUID REFERENCES public.wilayah(id),
     url_pdf_dokumen TEXT,
     status_surat_jalan VARCHAR(30) NOT NULL DEFAULT 'draf_n8n' CHECK (status_surat_jalan IN ('draf_n8n', 'disetujui_owner', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'ditolak_owner')),
-    bukti_terima_foto TEXT, -- Foto bukti terima toko yang diupload Sales-Driver via Telegram
+    bukti_terima_foto TEXT, -- Foto bukti terima toko yang diupload Pengemudi/Sales via Telegram
     nama_penerima_toko VARCHAR(100),
     waktu_berangkat TIMESTAMPTZ,
     waktu_sampai TIMESTAMPTZ,
     disetujui_oleh UUID REFERENCES public.pengguna(id),
+    tanggal_surat_jalan DATE DEFAULT CURRENT_DATE,
+    foto_bukti_gagal TEXT,
+    alasan_gagal VARCHAR(50),
+    catatan_gagal TEXT,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -353,25 +449,29 @@ CREATE TABLE IF NOT EXISTS public.surat_jalan (
 -- Saldo Stok Titip Nyata per Toko Konsinyasi
 CREATE TABLE IF NOT EXISTS public.stok_konsinyasi_toko (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id) ON DELETE CASCADE,
+    pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id) ON DELETE RESTRICT,
     item_id UUID NOT NULL REFERENCES public.item(id) ON DELETE RESTRICT,
     stok_titip_saat_ini INT NOT NULL DEFAULT 0 CHECK (stok_titip_saat_ini >= 0),
     terakhir_opname_pada TIMESTAMPTZ,
+    stok_hilang_pending INT NOT NULL DEFAULT 0,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_konsinyasi_toko_item UNIQUE (pelanggan_id, item_id)
 );
 
--- Header Kunjungan & Opname Rak Konsinyasi oleh Sales-Driver
+-- Header Kunjungan & Opname Rak Konsinyasi (Pencatatan Fisik Rak Toko)
 CREATE TABLE IF NOT EXISTS public.kunjungan_konsinyasi (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nomor_kunjungan VARCHAR(100) NOT NULL UNIQUE,
     pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id),
-    sales_driver_id UUID NOT NULL REFERENCES public.karyawan(id),
+    sales_driver_id UUID NOT NULL REFERENCES public.pengguna(id), -- Petugas yang melakukan opname fisik rak (Sales, atau Driver jika diberi tiket izin RBAC oleh Owner)
     tanggal_kunjungan DATE NOT NULL DEFAULT CURRENT_DATE,
-    pesanan_id UUID REFERENCES public.pesanan(id), -- Invoice laku yang otomatis terbit
+    pesanan_id UUID REFERENCES public.pesanan(id) ON DELETE SET NULL, -- Invoice laku yang otomatis terbit (Komisi tetap dialokasikan ke Sales Pembina Toko)
     total_laku_nominal NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     catatan TEXT,
+    dibuat_oleh UUID REFERENCES public.pengguna(id),
+    foto_kunjungan TEXT,
+    catatan_owner TEXT,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -391,6 +491,14 @@ CREATE TABLE IF NOT EXISTS public.rincian_kunjungan_konsinyasi (
     subtotal_laku NUMERIC(15, 2) NOT NULL,
     harga_pokok_satuan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     nilai_kerugian_rusak NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Decoupling Tagihan dari Kunjungan Opname
+CREATE TABLE IF NOT EXISTS public.tagihan_kunjungan (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kunjungan_id UUID NOT NULL REFERENCES public.kunjungan_konsinyasi(id) ON DELETE CASCADE,
+    pesanan_id UUID NOT NULL REFERENCES public.pesanan(id) ON DELETE CASCADE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -547,7 +655,7 @@ CREATE TABLE IF NOT EXISTS public.penarikan_gaji (
 );
 
 -- ==============================================================================
--- MODUL 8: KEUANGAN, ARUS KAS & DRAF PENGELUARAN AI
+-- MODUL 8: KEUANGAN, ARUS KAS, KATEGORI BIAYA & DRAF PENGELUARAN
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS public.akun_kas (
@@ -556,6 +664,19 @@ CREATE TABLE IF NOT EXISTS public.akun_kas (
     nomor_rekening VARCHAR(50),
     atas_nama VARCHAR(100),
     saldo_saat_ini NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
+    tipe_akun VARCHAR(30) DEFAULT 'kas_tunai',
+    is_default_pos BOOLEAN DEFAULT FALSE,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_akun_kas_saldo_positif CHECK (saldo_saat_ini >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS public.kategori_biaya (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kode_kategori VARCHAR(50) NOT NULL UNIQUE,
+    nama_kategori VARCHAR(100) NOT NULL,
+    deskripsi TEXT,
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -593,6 +714,10 @@ CREATE TABLE IF NOT EXISTS public.arus_kas (
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ==============================================================================
+-- MODUL 9: PENGATURAN SISTEM & MASTER AUDIT TRAIL
+-- ==============================================================================
+
 CREATE TABLE IF NOT EXISTS public.pengaturan_sistem (
     kunci VARCHAR(100) PRIMARY KEY,
     nilai TEXT NOT NULL,
@@ -605,7 +730,7 @@ CREATE TABLE IF NOT EXISTS public.log_aktivitas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pengguna_id UUID REFERENCES public.pengguna(id) ON DELETE SET NULL,
     nama_aktor VARCHAR(150) NOT NULL, -- Nama User / 'Sistem Otomasi n8n' / 'Google Gemini AI'
-    peran_aktor VARCHAR(50) NOT NULL, -- 'owner', 'admin', 'mandor', 'sales_driver', 'ai_n8n', 'system'
+    peran_aktor VARCHAR(50) NOT NULL, -- 'owner', 'admin', 'mandor', 'sales', 'driver', 'ai_n8n', 'system'
     sumber_aksi VARCHAR(50) NOT NULL CHECK (sumber_aksi IN ('telegram_bot', 'whatsapp_bot', 'web_app', 'n8n_automation', 'database_trigger', 'system_cron')),
     kategori_aktivitas VARCHAR(50) NOT NULL CHECK (kategori_aktivitas IN (
         'keuangan', 'penjualan', 'logistik', 'gudang_stok',
@@ -624,22 +749,55 @@ CREATE TABLE IF NOT EXISTS public.log_aktivitas (
 );
 
 -- ==============================================================================
--- INDEX PERFORMANCE
+-- INDEX PERFORMANCE & TRANSAKSI CEPAT
 -- ==============================================================================
 CREATE INDEX IF NOT EXISTS idx_item_sku ON public.item(kode_sku);
 CREATE INDEX IF NOT EXISTS idx_item_barcode ON public.item(barcode);
+CREATE INDEX IF NOT EXISTS idx_item_grup_id ON public.item(grup_id);
+CREATE INDEX IF NOT EXISTS idx_item_pemasok_utama ON public.item(pemasok_utama_id);
+CREATE INDEX IF NOT EXISTS idx_item_kelompok_borongan ON public.item(kelompok_borongan_id);
 CREATE INDEX IF NOT EXISTS idx_grup_barcode ON public.grup_produk(barcode_universal);
 CREATE INDEX IF NOT EXISTS idx_pelanggan_kode ON public.pelanggan(kode_pelanggan);
 CREATE INDEX IF NOT EXISTS idx_pelanggan_grup ON public.pelanggan(grup_pelanggan_id);
+CREATE INDEX IF NOT EXISTS idx_pelanggan_sales_driver ON public.pelanggan(sales_driver_id);
+CREATE INDEX IF NOT EXISTS idx_pelanggan_item_pelanggan ON public.pelanggan_item(pelanggan_id);
+CREATE INDEX IF NOT EXISTS idx_pelanggan_item_item ON public.pelanggan_item(item_id);
 CREATE INDEX IF NOT EXISTS idx_pesanan_nota ON public.pesanan(nomor_nota);
+CREATE INDEX IF NOT EXISTS idx_pesanan_pelanggan_id ON public.pesanan(pelanggan_id);
+CREATE INDEX IF NOT EXISTS idx_pesanan_tanggal ON public.pesanan(tanggal_pesanan DESC);
+CREATE INDEX IF NOT EXISTS idx_pesanan_pelanggan_status ON public.pesanan(pelanggan_id, status_pembayaran);
+CREATE INDEX IF NOT EXISTS idx_pesanan_status_proses_tanggal ON public.pesanan(status_pemrosesan, tanggal_pesanan DESC);
+CREATE INDEX IF NOT EXISTS idx_item_pesanan_pesanan_id ON public.item_pesanan(pesanan_id);
+CREATE INDEX IF NOT EXISTS idx_item_pesanan_item_id ON public.item_pesanan(item_id);
+CREATE INDEX IF NOT EXISTS idx_item_pesanan_item_pesanan ON public.item_pesanan(item_id, pesanan_id);
 CREATE INDEX IF NOT EXISTS idx_stok_konsinyasi_toko ON public.stok_konsinyasi_toko(pelanggan_id);
+CREATE INDEX IF NOT EXISTS idx_rkk_kunjungan_id ON public.rincian_kunjungan_konsinyasi(kunjungan_id);
+CREATE INDEX IF NOT EXISTS idx_rkk_item_id ON public.rincian_kunjungan_konsinyasi(item_id);
+CREATE INDEX IF NOT EXISTS idx_tagihan_kunjungan_kunjungan ON public.tagihan_kunjungan(kunjungan_id);
+CREATE INDEX IF NOT EXISTS idx_tagihan_kunjungan_pesanan ON public.tagihan_kunjungan(pesanan_id);
+CREATE INDEX IF NOT EXISTS idx_surat_jalan_tanggal ON public.surat_jalan(tanggal_surat_jalan);
+CREATE INDEX IF NOT EXISTS idx_pembelian_driver_schedule ON public.pembelian(sales_driver_id, tanggal_jadwal_belanja);
+CREATE INDEX IF NOT EXISTS idx_pembelian_jenis_status ON public.pembelian(jenis_dokumen, status_penerimaan);
+CREATE INDEX IF NOT EXISTS idx_rincian_pembelian_pembelian_id ON public.rincian_pembelian(pembelian_id);
+CREATE INDEX IF NOT EXISTS idx_rincian_pembelian_item_id ON public.rincian_pembelian(item_id);
+CREATE INDEX IF NOT EXISTS idx_riwayat_stok_item ON public.riwayat_stok(item_id);
+CREATE INDEX IF NOT EXISTS idx_riwayat_stok_item_waktu ON public.riwayat_stok(item_id, dibuat_pada DESC);
+CREATE INDEX IF NOT EXISTS idx_opname_gudang_tgl ON public.opname_gudang(tanggal_opname);
+CREATE INDEX IF NOT EXISTS idx_opname_gudang_nomor ON public.opname_gudang(nomor_opname);
+CREATE INDEX IF NOT EXISTS idx_opname_gudang_tgl_desc ON public.opname_gudang(tanggal_opname DESC);
+CREATE INDEX IF NOT EXISTS idx_opname_gudang_item_parent ON public.opname_gudang_item(opname_gudang_id);
+CREATE INDEX IF NOT EXISTS idx_opname_gudang_item_item ON public.opname_gudang_item(item_id);
+CREATE INDEX IF NOT EXISTS idx_arus_kas_akun_kas_id ON public.arus_kas(akun_kas_id);
+CREATE INDEX IF NOT EXISTS idx_arus_kas_tanggal ON public.arus_kas(tanggal_transaksi DESC);
+CREATE INDEX IF NOT EXISTS idx_karyawan_pengguna_id ON public.karyawan(pengguna_id);
+CREATE INDEX IF NOT EXISTS idx_pengguna_nama_pengguna ON public.pengguna(nama_pengguna);
 CREATE INDEX IF NOT EXISTS idx_log_aktivitas_waktu ON public.log_aktivitas(waktu_kejadian);
 CREATE INDEX IF NOT EXISTS idx_log_aktivitas_kategori ON public.log_aktivitas(kategori_aktivitas);
 CREATE INDEX IF NOT EXISTS idx_log_aktivitas_aktor ON public.log_aktivitas(pengguna_id);
 CREATE INDEX IF NOT EXISTS idx_log_aktivitas_sumber ON public.log_aktivitas(sumber_aksi);
 
 -- ==============================================================================
--- AKTIFKAN ROW LEVEL SECURITY (RLS) & SERVICE ROLE POLICIES
+-- ROW LEVEL SECURITY (RLS) & SERVICE ROLE POLICIES
 -- ==============================================================================
 ALTER TABLE public.peran ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.izin ENABLE ROW LEVEL SECURITY;
@@ -651,6 +809,7 @@ ALTER TABLE public.karyawan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pemasok ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.grup_pelanggan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pelanggan ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pelanggan_item ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.grup_produk ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.grup_produk_harga_level ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kelompok_upah_borongan ENABLE ROW LEVEL SECURITY;
@@ -660,12 +819,15 @@ ALTER TABLE public.pembelian ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rincian_pembelian ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.penyesuaian_stok ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.riwayat_stok ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.opname_gudang ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.opname_gudang_item ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pesanan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.item_pesanan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.surat_jalan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.stok_konsinyasi_toko ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kunjungan_konsinyasi ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rincian_kunjungan_konsinyasi ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tagihan_kunjungan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.target_produksi ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.produksi_harian ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.absensi ENABLE ROW LEVEL SECURITY;
@@ -677,6 +839,7 @@ ALTER TABLE public.penarikan_gaji ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.penggajian ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rincian_penggajian ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.akun_kas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kategori_biaya ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.draf_pengeluaran ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.arus_kas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pengaturan_sistem ENABLE ROW LEVEL SECURITY;

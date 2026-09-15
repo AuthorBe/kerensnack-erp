@@ -1,6 +1,9 @@
 <?php
 use App\Helpers\Format;
 use App\Core\Router;
+use App\Helpers\CompanySetting;
+
+$comp = CompanySetting::getAll();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -266,10 +269,10 @@ use App\Core\Router;
         <!-- HEADER -->
         <div class="invoice-header">
             <div>
-                <div class="brand-title">KEREN SNACK ERP</div>
-                <div class="brand-subtitle">Distribusi &amp; Titip Jual Rak Mitra Berkualitas</div>
+                <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
+                <div class="brand-subtitle"><?= htmlspecialchars($comp['tagline']) ?></div>
                 <div style="font-size:11px;color:#64748b;margin-top:4px;">
-                    Jl. Industri Snack No. 88, Jawa Barat • Telp/WA: 0812-3456-7890
+                    <?= htmlspecialchars($comp['alamat']) ?> • Telp/WA: <?= htmlspecialchars($comp['telepon']) ?><?= !empty($comp['email']) ? ' • Email: ' . htmlspecialchars($comp['email']) : '' ?><?= !empty($comp['website']) ? ' • Web: ' . htmlspecialchars($comp['website']) : '' ?>
                 </div>
             </div>
             <div style="text-align:right;">
@@ -373,7 +376,7 @@ use App\Core\Router;
 
         <!-- PAYMENT INFO -->
         <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;font-size:12px;color:#475569;margin-bottom:24px;">
-            📌 <strong>Instruksi Pembayaran:</strong> Pembayaran tagihan konsinyasi dapat diserahkan tunai kepada Sales-Driver penanggung jawab atau ditransfer ke Rekening <strong>BCA: 123-456-7890 (a.n. KEREN SNACK ERP)</strong>. Mohon simpan lembar rekap ini sebagai bukti sah serah terima dan transaksi.
+            📌 <strong>Instruksi Pembayaran:</strong> Pembayaran tagihan konsinyasi dapat diserahkan tunai kepada Sales Pembina Toko<?php if (!empty($comp['nomor_rekening'])): ?> atau ditransfer ke Rekening <strong><?= htmlspecialchars($comp['nama_bank']) ?>: <?= htmlspecialchars($comp['nomor_rekening']) ?> (a.n. <?= htmlspecialchars($comp['atas_nama_bank']) ?>)</strong><?php endif; ?>. Mohon simpan lembar rekap ini sebagai bukti sah serah terima dan transaksi.
         </div>
 
         <!-- SIGNATURES -->
@@ -383,7 +386,7 @@ use App\Core\Router;
                 <div class="sig-line">( <?= htmlspecialchars($store['nama_pemilik'] ?? $store['nama_toko'] ?? '.......................') ?> )</div>
             </div>
             <div class="sig-block">
-                <div class="sig-title">Diserahkan Oleh,<br><strong>Sales-Driver / Petugas ERP</strong></div>
+                <div class="sig-title">Diserahkan Oleh,<br><strong>Sales Pembina Toko / Petugas ERP</strong></div>
                 <div class="sig-line">( ............................................ )</div>
             </div>
         </div>

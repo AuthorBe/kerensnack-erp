@@ -34,8 +34,10 @@ $activeTab = $_GET['tab'] ?? 'customers';
             </div>
             <div>
                 <div class="stat-card-label">Total Toko Terdaftar</div>
-                <div class="stat-card-value"><?= count($customers) ?> Toko</div>
-                <div style="font-size:11px;color:var(--color-ink-mute-2);margin-top:2px;">Mitra Ritel &amp; Grosir</div>
+                <div class="stat-card-value"><?= number_format($totalGlobalCustomers ?? count($customers), 0, ',', '.') ?> Toko</div>
+                <div style="font-size:11px;color:var(--color-ink-mute-2);margin-top:2px;">
+                    <?= number_format($totalActiveCustomers ?? count($customers), 0, ',', '.') ?> Toko Aktif Bertransaksi
+                </div>
             </div>
         </div>
 
@@ -44,9 +46,9 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 <i data-lucide="users"></i>
             </div>
             <div>
-                <div class="stat-card-label">Master Tier Pelanggan</div>
-                <div class="stat-card-value" style="color:#6366f1;"><?= count($customerGroups) ?> Tier</div>
-                <div style="font-size:11px;color:var(--color-ink-mute-2);margin-top:2px;">Kategori toko &amp; level harga</div>
+                <div class="stat-card-label">Master Grup Pelanggan</div>
+                <div class="stat-card-value" style="color:#6366f1;"><?= count($customerGroups) ?> Grup</div>
+                <div style="font-size:11px;color:var(--color-ink-mute-2);margin-top:2px;">Kategori toko &amp; grup pelanggan</div>
             </div>
         </div>
 
@@ -68,7 +70,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
             <div>
                 <div class="stat-card-label">Total Piutang Berjalan</div>
                 <div class="stat-card-value" style="color:#f59e0b;font-size:17px;">
-                    <?= Format::rupiah(array_sum(array_column($customers, 'total_piutang_berjalan'))) ?>
+                    <?= Format::rupiah($totalGlobalPiutang ?? 0) ?>
                 </div>
                 <div style="font-size:11px;color:var(--color-ink-mute-2);margin-top:2px;">Tempo &amp; Konsinyasi Rak</div>
             </div>
@@ -78,23 +80,23 @@ $activeTab = $_GET['tab'] ?? 'customers';
     <!-- SUB-TABS NAVIGATION -->
     <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg border border-hairline overflow-x-auto no-scrollbar w-full sm:w-auto">
         <button type="button"
-                @click="activeTab = 'customers'"
+                @click="switchTab('customers')"
                 :class="activeTab === 'customers' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
                 style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
             <i data-lucide="store" style="width:14px;height:14px;"></i>
-            <span>1. Daftar Toko Pelanggan (<?= count($customers) ?>)</span>
+            <span>1. Daftar Toko Pelanggan (<?= number_format($totalGlobalCustomers ?? count($customers), 0, ',', '.') ?>)</span>
         </button>
 
         <button type="button"
-                @click="activeTab = 'customer_groups'"
+                @click="switchTab('customer_groups')"
                 :class="activeTab === 'customer_groups' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
                 style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
             <i data-lucide="users" style="width:14px;height:14px;"></i>
-            <span>2. Master Grup &amp; Tier (<?= count($customerGroups) ?>)</span>
+            <span>2. Master Grup Pelanggan (<?= count($customerGroups) ?>)</span>
         </button>
 
         <button type="button"
-                @click="activeTab = 'territories'"
+                @click="switchTab('territories')"
                 :class="activeTab === 'territories' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
                 style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
             <i data-lucide="map-pin" style="width:14px;height:14px;"></i>
@@ -112,8 +114,18 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 <!-- Search Input -->
                 <div class="form-input-icon flex-1 sm:max-w-xs">
                     <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                    <input type="text" x-model="searchQuery" placeholder="Cari nama toko / pemilik / kode..." class="form-input" style="height:38px;font-size:13px;">
+                    <input type="text" x-model="searchQuery"
+                           @keydown.enter.prevent="window.location.href = '<?= Router::url('/customers') ?>?q=' + encodeURIComponent(searchQuery)"
+                           placeholder="Cari toko/kode... (Tekan Enter)"
+                           class="form-input" style="height:38px;font-size:13px;">
                 </div>
+
+                <?php if (!empty($pagination['q'])): ?>
+                <a href="<?= Router::url('/customers') ?>" class="btn btn-secondary btn-sm" style="height:38px;padding:0 10px;display:flex;align-items:center;gap:4px;" title="Reset Pencarian">
+                    <i data-lucide="x" style="width:14px;height:14px;"></i>
+                    <span style="font-size:12px;">Reset</span>
+                </a>
+                <?php endif; ?>
 
                 <!-- Filter Wilayah -->
                 <select x-model="filterTerritory" class="form-input" style="height:38px;font-size:13px;max-width:180px;">
@@ -145,7 +157,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                     <tr>
                         <th style="width:105px; min-width:90px;" class="cell-nowrap">Kode</th>
                         <th style="min-width:180px;">Nama Toko &amp; Pemilik</th>
-                        <th style="min-width:160px;" class="cell-nowrap">Grup &amp; Tier Harga</th>
+                        <th style="min-width:160px;" class="cell-nowrap">Grup Pelanggan</th>
                         <th style="min-width:140px;">Wilayah / Rute</th>
                         <th class="cell-center cell-nowrap" style="width:120px; min-width:110px;">Tipe Bayar</th>
                         <th class="cell-center cell-nowrap" style="width:150px; min-width:140px;">Item Khusus Toko</th>
@@ -156,19 +168,31 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 </thead>
                 <tbody>
                     <template x-for="c in filteredCustomers" :key="c.id">
-                        <tr :style="!c.status_aktif ? 'opacity:0.5;' : ''">
+                        <tr :style="!c.status_aktif ? 'opacity:0.6;' : ''">
                             <td class="cell-nowrap">
                                 <span class="badge badge-mono" x-text="c.kode_pelanggan"></span>
+                                <template x-if="!c.status_aktif">
+                                    <span class="badge badge-danger" style="font-size:9.5px;padding:1px 5px;margin-top:3px;display:block;">Nonaktif</span>
+                                </template>
                             </td>
                             <td>
                                 <div style="font-weight:700;color:var(--color-ink);" x-text="c.nama_toko"></div>
-                                <div style="font-size:11px;color:var(--color-ink-mute);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:1px;">
+                                <div style="font-size:11px;color:var(--color-ink-mute);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px;">
                                     <span x-text="c.nama_pemilik ? ('Pemilik: ' + c.nama_pemilik) : c.alamat_lengkap"></span>
+                                    <template x-if="c.nomor_whatsapp">
+                                        <a :href="'https://wa.me/' + cleanWa(c.nomor_whatsapp)" target="_blank" rel="noopener noreferrer" class="badge" style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.25);padding:1px 6px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Hubungi Toko via WhatsApp">
+                                            <i data-lucide="phone" style="width:10px;height:10px;"></i>
+                                            <span x-text="c.nomor_whatsapp"></span>
+                                        </a>
+                                    </template>
                                     <template x-if="c.link_google_maps">
                                         <a :href="c.link_google_maps" target="_blank" rel="noopener noreferrer" class="badge" style="background:rgba(37,99,235,0.08);color:#2563eb;border:1px solid rgba(37,99,235,0.2);padding:1px 6px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Buka Titik Presisi Google Maps">
                                             <i data-lucide="map-pin" style="width:10px;height:10px;color:#ef4444;"></i>
                                             <span>Maps</span>
                                         </a>
+                                    </template>
+                                    <template x-if="c.nama_sales">
+                                        <span class="badge badge-mono" style="font-size:10px;background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.25);" x-text="'Sales: ' + c.nama_sales"></span>
                                     </template>
                                 </div>
                                 <template x-if="c.nomor_rekening">
@@ -179,8 +203,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                 </template>
                             </td>
                             <td class="cell-nowrap">
-                                <div style="font-weight:600;" x-text="c.nama_grup || 'Ritel'"></div>
-                                <div style="font-size:11px;font-weight:700;color:var(--color-primary);" x-text="'Level ' + (c.override_level_harga || c.default_level_harga || 1)"></div>
+                                <div style="font-weight:600;color:var(--color-ink);" x-text="c.nama_grup || '-'"></div>
                             </td>
                             <td>
                                 <div style="font-weight:600;" x-text="c.nama_wilayah || '-'"></div>
@@ -188,7 +211,12 @@ $activeTab = $_GET['tab'] ?? 'customers';
                             </td>
                             <td class="cell-center cell-nowrap">
                                 <template x-if="c.is_konsinyasi">
-                                    <span class="badge badge-info">Konsinyasi Rak</span>
+                                    <div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;">
+                                        <span class="badge badge-info">Konsinyasi Rak</span>
+                                        <template x-if="Number(c.stok_titip_aktif || 0) > 0">
+                                            <span class="badge badge-amber" style="font-size:10px;padding:1px 6px;font-weight:700;" :title="'Ada ' + Number(c.stok_titip_aktif).toLocaleString('id-ID') + ' pcs snack titip di rak toko'" x-text="Number(c.stok_titip_aktif).toLocaleString('id-ID') + ' pcs di rak'"></span>
+                                        </template>
+                                    </div>
                                 </template>
                                 <template x-if="!c.is_konsinyasi">
                                     <span class="badge badge-secondary" style="text-transform:capitalize;" x-text="c.tipe_pembayaran_default ? c.tipe_pembayaran_default.replace(/_/g, ' ') : 'Cash'"></span>
@@ -235,10 +263,31 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 </tbody>
             </table>
         </div>
+
+        <!-- PAGINATION BAR -->
+        <?php if (!empty($pagination) && $pagination['totalPages'] > 1): ?>
+        <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div style="font-size:12px;color:var(--color-ink-mute);">
+                Menampilkan Halaman <strong><?= $pagination['page'] ?></strong> dari <strong><?= $pagination['totalPages'] ?></strong> (Total <?= number_format($pagination['total'], 0, ',', '.') ?> toko)
+            </div>
+            <div style="display:flex;gap:6px;">
+                <?php if ($pagination['page'] > 1): ?>
+                <a href="<?= Router::url('/customers?' . http_build_query(array_merge($_GET, ['page' => $pagination['page'] - 1]))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                    &laquo; Sebelumnya
+                </a>
+                <?php endif; ?>
+                <?php if ($pagination['page'] < $pagination['totalPages']): ?>
+                <a href="<?= Router::url('/customers?' . http_build_query(array_merge($_GET, ['page' => $pagination['page'] + 1]))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                    Selanjutnya &raquo;
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- TAB 2: MASTER GRUP PELANGGAN & TIER HARGA                                 -->
+    <!-- TAB 2: MASTER GRUP PELANGGAN                                              -->
     <!-- ========================================================================= -->
     <div x-show="activeTab === 'customer_groups'" class="card" style="padding:0;overflow:hidden;">
         <!-- ACTION & FILTER BAR -->
@@ -404,7 +453,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
     <!-- MODAL 1: TAMBAH / EDIT TOKO PELANGGAN -->
     <template x-teleport="body">
     <div x-show="showModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:560px;padding:24px;">
+        <div class="modal-box" :style="isChangingFromConsignment ? 'max-width:720px;padding:24px;' : 'max-width:560px;padding:24px;'" style="transition:max-width 0.2s ease;">
             <div class="modal-header">
                 <div class="modal-title" x-text="isEdit ? 'Edit Data Toko Pelanggan' : 'Tambah Toko Pelanggan Baru'"></div>
                 <button @click="showModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
@@ -412,8 +461,14 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 </button>
             </div>
 
-            <form :action="isEdit ? '<?= Router::url('/customers/update') ?>' : '<?= Router::url('/customers/store') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <form id="customer-modal-form"
+                  :action="isEdit ? '<?= Router::url('/customers/update') ?>' : '<?= Router::url('/customers/store') ?>'"
+                  method="POST"
+                  @submit="submitCustomerForm($event)"
+                  style="display:flex;flex-direction:column;gap:14px;">
+                <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="id" :value="form.id">
+                <input type="hidden" name="is_konsinyasi" :value="form.tipe_pembayaran_default === 'konsinyasi' ? '1' : '0'">
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -428,10 +483,11 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="form-label">Grup Harga (Tier Level 1–28) *</label>
+                        <label class="form-label">Grup Pelanggan *</label>
                         <select name="grup_pelanggan_id" x-model="form.grup_pelanggan_id" required class="form-input">
+                            <option value="" disabled>-- Pilih Grup Pelanggan --</option>
                             <?php foreach ($groups as $g): ?>
-                            <option value="<?= $g['id'] ?>"><?= htmlspecialchars(trim(preg_replace('/\s*\([^)]*\)/', '', $g['nama_grup']))) ?> — Level <?= $g['default_level_harga'] ?></option>
+                            <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['nama_grup']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -448,9 +504,21 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
+                        <label class="form-label">Sales Pembina / Penanggung Jawab Toko</label>
+                        <select name="sales_driver_id" x-model="form.sales_driver_id" class="form-input">
+                            <option value="">-- Tanpa Sales Pembina (Langsung Toko) --</option>
+                            <?php foreach ($salesEmployees as $s): ?>
+                            <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['nama_karyawan']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
                         <label class="form-label">Nomor WhatsApp / HP</label>
                         <input type="text" name="nomor_whatsapp" x-model="form.nomor_whatsapp" class="form-input font-mono" placeholder="081234567890">
                     </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="form-label">Tipe Pembayaran Default *</label>
                         <select name="tipe_pembayaran_default" x-model="form.tipe_pembayaran_default" class="form-input">
@@ -461,16 +529,348 @@ $activeTab = $_GET['tab'] ?? 'customers';
                             <option value="konsinyasi">Konsinyasi</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="form-label">Plafon Maksimal Piutang (Rp)</label>
+                        <input type="text" name="plafon_piutang" x-model="form.plafon_piutang" class="form-input font-mono input-rupiah" placeholder="5.000.000">
+                    </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Plafon Maksimal Piutang (Rp)</label>
-                    <input type="text" name="plafon_piutang" x-model="form.plafon_piutang" class="form-input font-mono input-rupiah" placeholder="5.000.000">
-                </div>
+                <!-- KOTAK RESOLUSI PERPINDAHAN TIPE KONSINYASI (RADIO BUTTON) -->
+                <template x-if="isChangingFromConsignment">
+                    <div style="background: linear-gradient(180deg, #fffdf7 0%, #fffbe8 100%); border: 1.5px solid #fcd34d; border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 4px 16px rgba(245, 158, 11, 0.07);">
+                        
+                        <!-- BANNER INFO: STOK KONSINYASI AKTIF -->
+                        <div style="display: flex; align-items: flex-start; gap: 12px;">
+                            <div style="width: 38px; height: 38px; border-radius: 10px; background: #fef3c7; border: 1.5px solid #fde68a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 1px 3px rgba(245, 158, 11, 0.1);">
+                                <svg style="width: 20px; height: 20px; color: #d97706;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                    <line x1="12" y1="9" x2="12" y2="13"/>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                            </div>
+                            <div style="flex: 1; line-height: 1.5;">
+                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="font-weight: 800; font-size: 14px; color: #92400e;">
+                                        Toko Masih Memiliki
+                                    </span>
+                                    <span style="background: #fef08a; color: #854d0e; font-family: var(--font-mono); font-size: 13px; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid #fde047;" x-text="totalShelfQty.toLocaleString('id-ID') + ' Pcs'"></span>
+                                    <span style="font-weight: 800; font-size: 14px; color: #92400e;">
+                                        Stok Konsinyasi Aktif di Rak
+                                    </span>
+                                </div>
+                                <div style="font-size: 12px; color: #78350f; margin-top: 4px;">
+                                    Perpindahan ke tipe toko non-konsinyasi mengharuskan saldo rak toko dinolkan. Silakan tentukan salah satu mekanisme penyelesaian di bawah ini:
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OPSI RESOLUSI RADIO BUTTONS -->
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            
+                            <!-- CARD 1: RETUR FISIK KE GUDANG -->
+                            <div :style="form.konversi_konsinyasi_opsi === 'retur' ? 'border-color: var(--color-primary); background: #ffffff; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);' : 'border-color: #e2e8f0; background: #ffffff;'"
+                                 style="border: 1.5px solid; border-radius: 10px; transition: all 0.2s ease; overflow: hidden;">
+                                
+                                <!-- Card Header (Clickable Radio Label) -->
+                                <label style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none;">
+                                    <input type="radio" name="konversi_konsinyasi_opsi" value="retur" x-model="form.konversi_konsinyasi_opsi" style="width: 18px; height: 18px; accent-color: var(--color-primary); margin-top: 2px; cursor: pointer;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                                            <span style="font-size: 13.5px; font-weight: 800; color: var(--color-ink);">Opsi 1 — Tarik / Retur Fisik Seluruh Stok ke Gudang Pusat</span>
+                                            <span class="badge badge-success" style="font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">Rekomendasi</span>
+                                        </div>
+                                        <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 4px; line-height: 1.45;">
+                                            Sisa barang di rak ditarik kembali oleh armada ke gudang pusat. Saldo rak toko dinolkan (<strong style="color: #059669;">0 pcs</strong>) dan stok fisik gudang bertambah otomatis (<span style="font-weight: 700; color: #059669;" x-text="'+' + totalShelfQty + ' pcs'"></span>).
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <!-- Sub-Panel: Rincian Retur Barang -->
+                                <template x-if="form.konversi_konsinyasi_opsi === 'retur'">
+                                    <div style="padding: 14px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px;">
+                                        <div>
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                                <div style="font-size: 11.5px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
+                                                    <svg style="width: 14px; height: 14px; color: #0284c7; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/>
+                                                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                                                        <line x1="12" y1="22.08" x2="12" y2="12"/>
+                                                    </svg>
+                                                    <span>Daftar Barang yang Ditarik ke Gudang:</span>
+                                                </div>
+                                                <span style="font-size: 11px; color: #64748b; font-weight: 600;" x-text="currentShelfItems.length + ' Item Produk'"></span>
+                                            </div>
+
+                                            <div style="max-height: 170px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;" class="custom-scrollbar">
+                                                <table style="width: 100%; font-size: 11.5px; border-collapse: collapse;">
+                                                    <thead style="background: #f1f5f9; position: sticky; top: 0; border-bottom: 1px solid #e2e8f0; z-index: 1;">
+                                                        <tr>
+                                                            <th style="text-align: left; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #475569;">Produk</th>
+                                                            <th style="text-align: left; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; width: 110px;">SKU</th>
+                                                            <th style="text-align: right; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; width: 95px;">Qty Rak</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="item in currentShelfItems" :key="item.item_id">
+                                                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                                <td style="padding: 7px 12px; color: var(--color-ink); font-weight: 600;" x-text="item.nama_item"></td>
+                                                                <td style="padding: 7px 12px;">
+                                                                    <span style="font-family: var(--font-mono); font-size: 10.5px; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;" x-text="item.kode_sku"></span>
+                                                                </td>
+                                                                <td style="text-align: right; padding: 7px 12px;">
+                                                                    <span style="font-family: var(--font-mono); font-weight: 700; color: #059669; background: #ecfdf5; padding: 2px 8px; border-radius: 6px; font-size: 11.5px;" x-text="item.qty + ' pcs'"></span>
+                                                                </td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                    <tfoot style="background: #f8fafc; font-weight: 800; border-top: 1.5px solid #cbd5e1;">
+                                                        <tr>
+                                                            <td colspan="2" style="padding: 8px 12px; text-align: right; color: #334155; font-size: 11.5px;">Total Penarikan Fisik:</td>
+                                                            <td style="padding: 8px 12px; text-align: right; font-family: var(--font-mono); color: #059669; font-size: 12px;" x-text="totalShelfQty.toLocaleString('id-ID') + ' pcs'"></td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <!-- Input BAST / Catatan -->
+                                        <div>
+                                            <label class="form-label" style="font-size: 11.5px; font-weight: 600; color: #334155; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">
+                                                <svg style="width: 13px; height: 13px; color: #64748b; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                    <polyline points="14 2 14 8 20 8"/>
+                                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                                    <polyline points="10 9 9 9 8 9"/>
+                                                </svg>
+                                                <span>Nomor Berita Acara / Catatan Serah Terima (Opsional)</span>
+                                            </label>
+                                            <input type="text" name="catatan_konversi" x-model="form.catatan_konversi" class="form-input" style="height: 36px; font-size: 12px; background: #ffffff; border-radius: 6px;" placeholder="Contoh: BAST-RTN-202609-01 / Diterima utuh oleh driver armada">
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- CARD 2: BELI PUTUS SISA BARANG -->
+                            <div :style="form.konversi_konsinyasi_opsi === 'beli_putus' ? 'border-color: #2563eb; background: #ffffff; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);' : 'border-color: #e2e8f0; background: #ffffff;'"
+                                 style="border: 1.5px solid; border-radius: 10px; transition: all 0.2s ease; overflow: hidden;">
+                                
+                                <!-- Card Header (Clickable Radio Label) -->
+                                <label style="display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; cursor: pointer; user-select: none;">
+                                    <input type="radio" name="konversi_konsinyasi_opsi" value="beli_putus" x-model="form.konversi_konsinyasi_opsi" style="width: 18px; height: 18px; accent-color: #2563eb; margin-top: 2px; cursor: pointer;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                                            <span style="font-size: 13.5px; font-weight: 800; color: var(--color-ink);">Opsi 2 — Beli Putus Sisa Barang di Rak (Terbitkan Faktur Penjualan)</span>
+                                            <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 9999px;">Faktur Resmi</span>
+                                        </div>
+                                        <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 4px; line-height: 1.45;">
+                                            Pemilik toko sepakat membeli sisa barang titipan. Sistem otomatis menerbitkan Faktur Penjualan resmi, saldo rak dinolkan (<strong style="color: #2563eb;">0 pcs</strong>), dan memproses pembayarannya (Lunas Kasir/Bank atau Masuk Piutang Dagang).
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <!-- Sub-Panel: Rincian Beli Putus & Pembayaran -->
+                                <template x-if="form.konversi_konsinyasi_opsi === 'beli_putus'">
+                                    <div style="padding: 14px 16px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 14px;">
+                                        
+                                        <!-- Tabel Kalkulasi Item Beli Putus -->
+                                        <div>
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                                <div style="font-size: 11.5px; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 6px;">
+                                                    <svg style="width: 14px; height: 14px; color: #2563eb; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/>
+                                                        <line x1="8" y1="8" x2="16" y2="8"/>
+                                                        <line x1="8" y1="12" x2="16" y2="12"/>
+                                                        <line x1="8" y1="16" x2="12" y2="16"/>
+                                                    </svg>
+                                                    <span>Kalkulasi Item Faktur Beli Putus (Harga Netto Toko)</span>
+                                                </div>
+                                                <span style="font-size: 11px; color: #64748b; font-weight: 600;" x-text="currentShelfItems.length + ' Item Produk'"></span>
+                                            </div>
+
+                                            <div style="max-height: 170px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff;" class="custom-scrollbar">
+                                                <table style="width: 100%; font-size: 11.5px; border-collapse: collapse;">
+                                                    <thead style="background: #f1f5f9; position: sticky; top: 0; border-bottom: 1px solid #e2e8f0; z-index: 1;">
+                                                        <tr>
+                                                            <th style="text-align: left; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #475569;">Produk</th>
+                                                            <th style="text-align: right; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; width: 75px;">Qty</th>
+                                                            <th style="text-align: right; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; width: 105px;">Harga Netto</th>
+                                                            <th style="text-align: right; padding: 8px 12px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #475569; width: 120px;">Subtotal</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <template x-for="item in currentShelfItems" :key="item.item_id">
+                                                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                                <td style="padding: 7px 12px; color: var(--color-ink); font-weight: 600;" x-text="item.nama_item"></td>
+                                                                <td style="text-align: right; padding: 7px 12px; font-family: var(--font-mono); color: #334155;" x-text="item.qty + ' pcs'"></td>
+                                                                <td style="text-align: right; padding: 7px 12px; font-family: var(--font-mono); color: #64748b;" x-text="formatRupiah(item.harga_pcs)"></td>
+                                                                <td style="text-align: right; padding: 7px 12px; font-family: var(--font-mono); font-weight: 700; color: #0f172a;" x-text="formatRupiah(item.subtotal)"></td>
+                                                            </tr>
+                                                        </template>
+                                                    </tbody>
+                                                    <tfoot style="background: #eff6ff; font-weight: 800; border-top: 1.5px solid #bfdbfe;">
+                                                        <tr>
+                                                            <td style="padding: 8px 12px; color: #1e40af; font-size: 11.5px;">Total Nilai Faktur Beli Putus:</td>
+                                                            <td style="padding: 8px 12px; text-align: right; font-family: var(--font-mono); color: #1e40af; font-size: 11.5px;" x-text="totalShelfQty.toLocaleString('id-ID') + ' pcs'"></td>
+                                                            <td></td>
+                                                            <td style="padding: 8px 12px; text-align: right; font-family: var(--font-mono); color: #1d4ed8; font-size: 13px; font-weight: 800;" x-text="formatRupiah(totalShelfNominal)"></td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        <!-- Sub-Pilihan Metode Pembayaran (Modern Interactive Choice Cards) -->
+                                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+                                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                                <div style="font-size: 12px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 7px;">
+                                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: #e0e7ff; color: #4338ca;">
+                                                        <svg style="width: 14px; height: 14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                            <rect width="20" height="14" x="2" y="5" rx="2"/>
+                                                            <line x1="2" x2="22" y1="10" y2="10"/>
+                                                        </svg>
+                                                    </span>
+                                                    <span>Pilih Metode Pembayaran Faktur:</span>
+                                                </div>
+                                                <span style="font-size: 10.5px; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 9999px; border: 1px solid #e2e8f0;">Wajib Dipilih</span>
+                                            </div>
+                                            
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                                <!-- Option A: Lunas Langsung -->
+                                                <label class="payment-choice-card"
+                                                       :class="form.metode_beli_putus === 'lunas' ? 'is-selected-lunas' : ''">
+                                                    <input type="radio" name="metode_beli_putus" value="lunas" x-model="form.metode_beli_putus" style="position: absolute; opacity: 0; width: 0; height: 0;">
+                                                    
+                                                    <!-- Minimal Icon Wrap -->
+                                                    <div class="choice-icon-box" :style="form.metode_beli_putus === 'lunas' ? 'background: #dcfce7; color: #059669;' : 'background: #f1f5f9; color: #64748b;'">
+                                                        <svg style="width: 17px; height: 17px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                            <rect width="20" height="12" x="2" y="6" rx="2"/>
+                                                            <circle cx="12" cy="12" r="2"/>
+                                                            <path d="M6 12h.01M18 12h.01"/>
+                                                        </svg>
+                                                    </div>
+
+                                                    <!-- Content Info Minimalis -->
+                                                    <div style="flex: 1; min-width: 0;">
+                                                        <div style="font-size: 12.5px; font-weight: 700; line-height: 1.25;" :style="form.metode_beli_putus === 'lunas' ? 'color: #065f46;' : 'color: #1e293b;'">
+                                                            Lunas Langsung
+                                                        </div>
+                                                        <div style="font-size: 11px; margin-top: 2px; line-height: 1.3;" :style="form.metode_beli_putus === 'lunas' ? 'color: #047857;' : 'color: #64748b;'">
+                                                            Kasir / Rekening Bank (Tercatat Lunas)
+                                                        </div>
+                                                    </div>
+                                                </label>
+
+                                                <!-- Option B: Masuk Piutang Dagang -->
+                                                <label class="payment-choice-card"
+                                                       :class="form.metode_beli_putus === 'tempo' ? 'is-selected-tempo' : ''">
+                                                    <input type="radio" name="metode_beli_putus" value="tempo" x-model="form.metode_beli_putus" style="position: absolute; opacity: 0; width: 0; height: 0;">
+                                                    
+                                                    <!-- Minimal Icon Wrap -->
+                                                    <div class="choice-icon-box" :style="form.metode_beli_putus === 'tempo' ? 'background: #fef3c7; color: #d97706;' : 'background: #f1f5f9; color: #64748b;'">
+                                                        <svg style="width: 17px; height: 17px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                            <circle cx="12" cy="12" r="10"/>
+                                                            <polyline points="12 6 12 12 16 14"/>
+                                                        </svg>
+                                                    </div>
+
+                                                    <!-- Content Info Minimalis -->
+                                                    <div style="flex: 1; min-width: 0;">
+                                                        <div style="font-size: 12.5px; font-weight: 700; line-height: 1.25;" :style="form.metode_beli_putus === 'tempo' ? 'color: #92400e;' : 'color: #1e293b;'">
+                                                            Masuk Piutang Dagang
+                                                        </div>
+                                                        <div style="font-size: 11px; margin-top: 2px; line-height: 1.3;" :style="form.metode_beli_putus === 'tempo' ? 'color: #b45309;' : 'color: #64748b;'">
+                                                            Tagihan Tempo (Menambah Saldo Piutang)
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+
+                                            <!-- Detail Lunas: Akun Kas Dropdown -->
+                                            <template x-if="form.metode_beli_putus === 'lunas'">
+                                                <div style="margin-top: 2px; padding: 12px 14px; background: #f0fdf4; border: 1.5px solid #a7f3d0; border-radius: 8px; display: flex; flex-direction: column; gap: 8px;">
+                                                    <label class="form-label" style="font-size: 11.5px; font-weight: 800; color: #166534; margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                                                        <svg style="width: 14px; height: 14px; color: #15803d;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                                                        </svg>
+                                                        <span>Akun Kas / Bank Penerima Pembayaran *</span>
+                                                    </label>
+                                                    <select name="akun_kas_id" x-model="form.akun_kas_id" class="form-input" style="height: 38px; font-size: 12.5px; background: #ffffff; border-color: #86efac; border-radius: 6px;">
+                                                        <option value="" disabled>-- Pilih Akun Kas / Rekening Penerima --</option>
+                                                        <?php foreach ($cashAccounts as $acc): ?>
+                                                        <option value="<?= $acc['id'] ?>"><?= htmlspecialchars($acc['nama_akun']) ?> (Saldo: <?= \App\Helpers\Format::rupiah($acc['saldo_saat_ini']) ?>)</option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                    <div style="font-size: 11px; color: #15803d; display: flex; align-items: center; gap: 6px;">
+                                                        <svg style="width: 13px; height: 13px; flex-shrink: 0; color: #10b981;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <span>Saldo akun terpilih otomatis bertambah <strong x-text="formatRupiah(totalShelfNominal)"></strong> dan dicatat di buku kas.</span>
+                                                    </div>
+                                                </div>
+                                            </template>
+
+                                            <!-- Detail Tempo: Breakdown Piutang -->
+                                            <template x-if="form.metode_beli_putus === 'tempo'">
+                                                <div style="margin-top: 2px; padding: 12px 14px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; font-size: 11.5px; color: #92400e; display: flex; flex-direction: column; gap: 8px;">
+                                                    <div style="font-weight: 800; color: #b45309; display: flex; align-items: center; gap: 6px;">
+                                                        <svg style="width: 14px; height: 14px; color: #d97706;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                            <circle cx="12" cy="12" r="10"/>
+                                                            <polyline points="12 6 12 12 16 14"/>
+                                                        </svg>
+                                                        <span>Kalkulasi Akumulasi Piutang Dagang Toko</span>
+                                                    </div>
+                                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: #fef9c3; padding: 8px 10px; border-radius: 6px; border: 1px solid #fef08a;">
+                                                        <div>Piutang Berjalan Saat Ini: <strong style="display: block; font-size: 12px; color: #1e293b;" x-text="formatRupiah(selectedCustomer?.total_piutang_berjalan || 0)"></strong></div>
+                                                        <div>Tagihan Beli Putus Baru: <strong style="display: block; font-size: 12px; color: #b45309;" x-text="'+ ' + formatRupiah(totalShelfNominal)"></strong></div>
+                                                    </div>
+                                                    <div style="padding-top: 6px; border-top: 1px dashed #fcd34d; display: flex; justify-content: space-between; align-items: center;">
+                                                        <span style="font-weight: 700;">Total Piutang Toko Menjadi:</span>
+                                                        <strong style="color: #b45309; font-size: 13.5px; font-family: var(--font-mono);" x-text="formatRupiah(Number(selectedCustomer?.total_piutang_berjalan || 0) + totalShelfNominal)"></strong>
+                                                    </div>
+                                                    <div style="font-size: 10.5px; color: #a16207; display: flex; align-items: center; gap: 4px;">
+                                                        <span>Jatuh tempo faktur otomatis diset mengikuti tipe bayar:</span>
+                                                        <span style="font-weight: 800; text-transform: uppercase; background: #fef08a; padding: 1px 5px; border-radius: 4px;" x-text="form.tipe_pembayaran_default.replace(/_/g, ' ')"></span>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+
+                                        <!-- Catatan Faktur -->
+                                        <div>
+                                            <label class="form-label" style="font-size: 11.5px; font-weight: 600; color: #334155; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;">
+                                                <svg style="width: 13px; height: 13px; color: #64748b; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M11 5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                                <span>Catatan Faktur Beli Putus (Opsional)</span>
+                                            </label>
+                                            <input type="text" name="catatan_konversi" x-model="form.catatan_konversi" class="form-input" style="height: 36px; font-size: 12px; background: #ffffff; border-radius: 6px;" placeholder="Contoh: Kesepakatan beli putus sisa barang rak saat peralihan tipe toko">
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- TOMBOL BATALKAN PERUBAHAN TIPE (RESET ACTION) -->
+                            <div style="display: flex; justify-content: flex-end; align-items: center; padding-top: 2px;">
+                                <button type="button" @click="cancelConsignmentChange()"
+                                        class="btn btn-ghost btn-sm"
+                                        style="font-size: 12px; font-weight: 600; color: #64748b; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                                    <svg style="width: 14px; height: 14px; color: #64748b; flex-shrink: 0;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="1 4 1 10 7 10"/>
+                                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                    </svg>
+                                    <span>Batalkan Perubahan & Tetap Toko Konsinyasi</span>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </template>
 
                 <div>
                     <label class="form-label">Alamat Lengkap Toko</label>
-                    <textarea name="alamat_lengkap" x-model="form.alamat_lengkap" class="form-input" rows="2" placeholder="Jl. Raya Pasar..."></textarea>
+                    <textarea name="alamat_lengkap" x-model="form.alamat_lengkap" class="form-input" rows="2" style="padding: 8px 12px; line-height: 1.5; min-height: 64px;" placeholder="Jl. Raya Pasar..."></textarea>
                 </div>
 
                 <div>
@@ -486,7 +886,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                             </a>
                         </template>
                     </div>
-                    <input type="url" name="link_google_maps" x-model="form.link_google_maps" class="form-input" placeholder="https://maps.app.goo.gl/... atau https://maps.google.com/?q=-6.2,106.8">
+                    <input type="text" name="link_google_maps" x-model="form.link_google_maps" class="form-input" placeholder="https://maps.app.goo.gl/... atau https://maps.google.com/?q=-6.2,106.8">
                     <div style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;">
                         Salin link dari Google Maps agar armada driver dapat membuka rute navigasi toko secara presisi.
                     </div>
@@ -518,8 +918,9 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
                 <template x-if="isEdit">
                     <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
+                        <input type="hidden" name="status_aktif" value="0">
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
-                            <input type="checkbox" name="status_aktif" x-model="form.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                            <input type="checkbox" name="status_aktif" value="1" x-model="form.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
                             <span>Status Toko Aktif (Dapat Bertransaksi)</span>
                         </label>
                     </div>
@@ -527,7 +928,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
                     <button type="button" @click="showModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="btn-submit-customer">
                         <i data-lucide="save"></i>
                         <span x-text="isEdit ? 'Simpan Perubahan' : 'Tambah Toko'"></span>
                     </button>
@@ -552,6 +953,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
             </div>
 
             <form action="<?= Router::url('/customers/save-items') ?>" method="POST" style="display:flex;flex-direction:column;gap:12px;">
+                <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="pelanggan_id" :value="selectedCustomer?.id">
 
                 <div style="padding:10px 12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);font-size:12px;color:var(--color-ink-mute);">
@@ -625,6 +1027,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
             </div>
 
             <form :action="isEditCustomerGroup ? '<?= Router::url('/customers/update-group') ?>' : '<?= Router::url('/customers/store-group') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+                <?= \App\Helpers\CSRF::field() ?>
                 <template x-if="isEditCustomerGroup">
                     <input type="hidden" name="id" :value="customerGroupForm.id">
                 </template>
@@ -703,6 +1106,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
             </div>
 
             <form :action="isEditTerritory ? '<?= Router::url('/customers/update-territory') ?>' : '<?= Router::url('/customers/store-territory') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+                <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="id" :value="territoryForm.id">
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -765,12 +1169,15 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
     <!-- HIDDEN FORMS FOR DELETING -->
     <form id="delete-customer-form" action="<?= Router::url('/customers/delete') ?>" method="POST" data-action-text="Menghapus toko pelanggan..." style="display:none;">
+        <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-customer-id">
     </form>
     <form id="delete-group-form" action="<?= Router::url('/customers/delete-group') ?>" method="POST" data-action-text="Menghapus grup pelanggan..." style="display:none;">
+        <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-group-id">
     </form>
     <form id="delete-territory-form" action="<?= Router::url('/customers/delete-territory') ?>" method="POST" data-action-text="Menghapus wilayah rute..." style="display:none;">
+        <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-territory-id">
     </form>
 
@@ -786,8 +1193,11 @@ function customerApp(initialTab) {
         territories: <?= json_encode($territories) ?>,
         finishedGoods: <?= json_encode($finishedGoods) ?>,
         customerItemsMap: <?= json_encode($customerItemsMap) ?>,
+        salesEmployees: <?= json_encode($salesEmployees ?? []) ?>,
+        cashAccounts: <?= json_encode($cashAccounts ?? []) ?>,
+        shelfItemsMap: <?= json_encode($shelfItemsMap ?? []) ?>,
 
-        searchQuery: '',
+        searchQuery: <?= json_encode($pagination['q'] ?? '') ?>,
         filterTerritory: 'all',
         filterType: 'all',
         searchCustomerGroup: '',
@@ -812,6 +1222,7 @@ function customerApp(initialTab) {
             nama_pemilik: '',
             grup_pelanggan_id: '',
             wilayah_id: '',
+            sales_driver_id: '',
             alamat_lengkap: '',
             link_google_maps: '',
             nomor_telepon: '',
@@ -822,7 +1233,11 @@ function customerApp(initialTab) {
             nama_bank: '',
             nomor_rekening: '',
             atas_nama_rekening: '',
-            status_aktif: true
+            status_aktif: true,
+            konversi_konsinyasi_opsi: '',
+            metode_beli_putus: 'lunas',
+            akun_kas_id: '',
+            catatan_konversi: ''
         },
 
         customerGroupForm: {
@@ -847,6 +1262,35 @@ function customerApp(initialTab) {
 
         init() {
             this.$nextTick(() => lucide.createIcons());
+            this.$watch('form.tipe_pembayaran_default', () => {
+                this.$nextTick(() => lucide.createIcons());
+            });
+            this.$watch('form.konversi_konsinyasi_opsi', () => {
+                this.$nextTick(() => lucide.createIcons());
+            });
+            this.$watch('showModal', (val) => {
+                if (val) this.$nextTick(() => lucide.createIcons());
+            });
+        },
+
+        switchTab(tab) {
+            this.activeTab = tab;
+            const url = new URL(window.location.href);
+            if (tab === 'customers') {
+                url.searchParams.delete('tab');
+            } else {
+                url.searchParams.set('tab', tab);
+            }
+            window.history.replaceState(null, '', url.toString());
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        cleanWa(num) {
+            let digits = String(num || '').replace(/[^0-9]/g, '');
+            if (digits.startsWith('0')) {
+                digits = '62' + digits.slice(1);
+            }
+            return digits;
         },
 
         get filteredCustomers() {
@@ -904,11 +1348,150 @@ function customerApp(initialTab) {
             return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
         },
 
+        // --- KONVERSI KONSINYASI GETTERS & HELPERS ---
+        get isChangingFromConsignment() {
+            if (!this.isEdit || !this.selectedCustomer) return false;
+            const wasConsignment = this.selectedCustomer.is_konsinyasi === true ||
+                this.selectedCustomer.is_konsinyasi === 'true' ||
+                this.selectedCustomer.is_konsinyasi === 1 ||
+                this.selectedCustomer.is_konsinyasi === '1';
+            const activeStock = Number(this.selectedCustomer.stok_titip_aktif || 0);
+            return wasConsignment && activeStock > 0 && this.form.tipe_pembayaran_default !== 'konsinyasi';
+        },
+
+        get currentShelfItems() {
+            if (!this.selectedCustomer || !this.shelfItemsMap[this.selectedCustomer.id]) {
+                return [];
+            }
+            return this.shelfItemsMap[this.selectedCustomer.id];
+        },
+
+        get totalShelfQty() {
+            return this.currentShelfItems.reduce((acc, item) => acc + Number(item.qty || 0), 0);
+        },
+
+        get totalShelfNominal() {
+            return this.currentShelfItems.reduce((acc, item) => acc + Number(item.subtotal || 0), 0);
+        },
+
+        get canSubmitCustomer() {
+            if (!this.isChangingFromConsignment) return true;
+            if (!this.form.konversi_konsinyasi_opsi) return false;
+            if (this.form.konversi_konsinyasi_opsi === 'retur') return true;
+            if (this.form.konversi_konsinyasi_opsi === 'beli_putus') {
+                if (this.form.metode_beli_putus === 'lunas') {
+                    return Boolean(this.form.akun_kas_id);
+                }
+                return true;
+            }
+            return false;
+        },
+
+        cancelConsignmentChange() {
+            this.form.tipe_pembayaran_default = 'konsinyasi';
+            this.form.konversi_konsinyasi_opsi = '';
+        },
+
+        async submitCustomerForm(event) {
+            const formEl = event.target || document.getElementById('customer-modal-form');
+            if (formEl) {
+                formEl.action = this.isEdit ? '<?= Router::url('/customers/update') ?>' : '<?= Router::url('/customers/store') ?>';
+            }
+
+            // HANYA JIKA SEDANG BERALIH DARI KONSINYASI KE NON-KONSINYASI DENGAN STOK AKTIF:
+            if (this.isChangingFromConsignment) {
+                // 1. Validasi opsi resolusi wajib dipilih
+                if (!this.form.konversi_konsinyasi_opsi) {
+                    event.preventDefault();
+                    if (window.AppAlert) {
+                        window.AppAlert({
+                            title: 'Pilih Mekanisme Penyelesaian',
+                            message: `Toko ini masih memiliki ${this.totalShelfQty.toLocaleString('id-ID')} pcs stok titip konsinyasi aktif di rak. Harap pilih Opsi 1 (Retur ke Gudang) atau Opsi 2 (Beli Putus) sebelum menyimpan.`,
+                            type: 'warning'
+                        });
+                    } else {
+                        alert(`Toko ini masih memiliki ${this.totalShelfQty} pcs stok titip konsinyasi di rak. Harap pilih Opsi 1 atau Opsi 2 terlebih dahulu.`);
+                    }
+                    this.restoreSubmitButton(formEl);
+                    return false;
+                }
+
+                // 2. Validasi akun kas jika beli putus lunas
+                if (this.form.konversi_konsinyasi_opsi === 'beli_putus' && this.form.metode_beli_putus === 'lunas' && !this.form.akun_kas_id) {
+                    event.preventDefault();
+                    if (window.AppAlert) {
+                        window.AppAlert({
+                            title: 'Pilih Akun Kas / Bank',
+                            message: 'Harap pilih akun kas atau rekening bank penerima pembayaran untuk transaksi beli putus lunas.',
+                            type: 'warning'
+                        });
+                    } else {
+                        alert('Harap pilih akun kas atau rekening bank penerima pembayaran.');
+                    }
+                    this.restoreSubmitButton(formEl);
+                    return false;
+                }
+
+                // 3. Konfirmasi aksi interaktif sebelum submit
+                event.preventDefault();
+                let confirmed = false;
+                if (this.form.konversi_konsinyasi_opsi === 'retur') {
+                    confirmed = window.AppConfirm ? await window.AppConfirm({
+                        title: 'Konfirmasi Penarikan Stok Konsinyasi',
+                        message: `Anda akan menarik seluruh ${this.totalShelfQty.toLocaleString('id-ID')} pcs sisa stok konsinyasi ke gudang pusat dan menolkan saldo rak toko "${this.form.nama_toko}". Lanjutkan?`,
+                        type: 'warning',
+                        confirmText: 'Ya, Tarik Stok & Simpan'
+                    }) : confirm(`Tarik seluruh ${this.totalShelfQty} pcs sisa stok konsinyasi ke gudang pusat dan simpan?`);
+                } else if (this.form.konversi_konsinyasi_opsi === 'beli_putus') {
+                    if (this.form.metode_beli_putus === 'lunas') {
+                        const acc = this.cashAccounts.find(a => a.id === this.form.akun_kas_id);
+                        const accName = acc ? acc.nama_akun : 'Kasir/Bank';
+                        confirmed = window.AppConfirm ? await window.AppConfirm({
+                            title: 'Konfirmasi Beli Putus (Lunas)',
+                            message: `Faktur Penjualan senilai ${this.formatRupiah(this.totalShelfNominal)} (${this.totalShelfQty.toLocaleString('id-ID')} pcs) akan diterbitkan secara LUNAS ke akun "${accName}". Saldo rak toko akan dinolkan. Lanjutkan?`,
+                            type: 'warning',
+                            confirmText: 'Ya, Terbitkan Faktur & Simpan'
+                        }) : confirm(`Terbitkan faktur beli putus senilai ${this.formatRupiah(this.totalShelfNominal)} secara LUNAS ke akun ${accName}?`);
+                    } else {
+                        confirmed = window.AppConfirm ? await window.AppConfirm({
+                            title: 'Konfirmasi Beli Putus (Tempo/Piutang)',
+                            message: `Faktur Penjualan senilai ${this.formatRupiah(this.totalShelfNominal)} (${this.totalShelfQty.toLocaleString('id-ID')} pcs) akan dicatat sebagai PIUTANG DAGANG berjalan toko "${this.form.nama_toko}". Saldo rak toko akan dinolkan. Lanjutkan?`,
+                            type: 'warning',
+                            confirmText: 'Ya, Catat Piutang & Simpan'
+                        }) : confirm(`Catat faktur beli putus senilai ${this.formatRupiah(this.totalShelfNominal)} sebagai PIUTANG DAGANG toko?`);
+                    }
+                }
+
+                if (confirmed) {
+                    if (formEl) {
+                        formEl.action = '<?= Router::url('/customers/update') ?>';
+                        HTMLFormElement.prototype.submit.call(formEl);
+                    }
+                } else {
+                    this.restoreSubmitButton(formEl);
+                }
+                return;
+            }
+
+            // KONDISI NORMAL: form submit POST standar browser dieksekusi secara mulus & responsif!
+        },
+
+        restoreSubmitButton(formEl) {
+            const submitBtn = (formEl || document).querySelector('#btn-submit-customer, button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('is-submitting', 'opacity-70', 'pointer-events-none');
+                submitBtn.style.opacity = '';
+                submitBtn.style.cursor = '';
+            }
+        },
+
         // --- TOKO PELANGGAN MODALS ---
         openAddModal() {
             this.showItemsModal = false;
             this.showCustomerGroupModal = false;
             this.showTerritoryModal = false;
+            this.selectedCustomer = null;
             this.isEdit = false;
             this.form = {
                 id: '',
@@ -916,6 +1499,7 @@ function customerApp(initialTab) {
                 nama_pemilik: '',
                 grup_pelanggan_id: this.groups[0]?.id || '',
                 wilayah_id: this.territories[0]?.id || '',
+                sales_driver_id: '',
                 alamat_lengkap: '',
                 link_google_maps: '',
                 nomor_telepon: '',
@@ -926,7 +1510,11 @@ function customerApp(initialTab) {
                 nama_bank: '',
                 nomor_rekening: '',
                 atas_nama_rekening: '',
-                status_aktif: true
+                status_aktif: true,
+                konversi_konsinyasi_opsi: '',
+                metode_beli_putus: 'lunas',
+                akun_kas_id: (this.cashAccounts.find(a => a.is_default_pos) || this.cashAccounts[0])?.id || '',
+                catatan_konversi: ''
             };
             this.showModal = true;
             this.$nextTick(() => lucide.createIcons());
@@ -936,13 +1524,16 @@ function customerApp(initialTab) {
             this.showItemsModal = false;
             this.showCustomerGroupModal = false;
             this.showTerritoryModal = false;
+            this.selectedCustomer = c;
             this.isEdit = true;
+            const defaultAcc = this.cashAccounts.find(a => a.is_default_pos) || this.cashAccounts[0];
             this.form = {
                 id: c.id,
                 nama_toko: c.nama_toko,
                 nama_pemilik: c.nama_pemilik || '',
                 grup_pelanggan_id: c.grup_pelanggan_id || '',
                 wilayah_id: c.wilayah_id || '',
+                sales_driver_id: c.sales_driver_id || '',
                 alamat_lengkap: c.alamat_lengkap || '',
                 link_google_maps: c.link_google_maps || '',
                 nomor_telepon: c.nomor_telepon || '',
@@ -952,7 +1543,11 @@ function customerApp(initialTab) {
                 nama_bank: c.nama_bank || '',
                 nomor_rekening: c.nomor_rekening || '',
                 atas_nama_rekening: c.atas_nama_rekening || '',
-                status_aktif: Boolean(c.status_aktif)
+                status_aktif: Boolean(c.status_aktif),
+                konversi_konsinyasi_opsi: '',
+                metode_beli_putus: 'lunas',
+                akun_kas_id: defaultAcc ? defaultAcc.id : '',
+                catatan_konversi: ''
             };
             this.showModal = true;
             this.$nextTick(() => lucide.createIcons());
@@ -1108,6 +1703,61 @@ function customerApp(initialTab) {
     }
 }
 </script>
+
+<style>
+.payment-choice-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 10px 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.payment-choice-card:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+.payment-choice-card.is-selected-lunas {
+    border-color: #10b981 !important;
+    background: #f0fdf4 !important;
+}
+.payment-choice-card.is-selected-tempo {
+    border-color: #f59e0b !important;
+    background: #fffbeb !important;
+}
+.choice-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+.dark .payment-choice-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+.dark .payment-choice-card:hover {
+    background: #263347;
+    border-color: #475569;
+}
+.dark .payment-choice-card.is-selected-lunas {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border-color: #10b981 !important;
+}
+.dark .payment-choice-card.is-selected-tempo {
+    background: rgba(245, 158, 11, 0.12) !important;
+    border-color: #f59e0b !important;
+}
+</style>
 
 <?php
 $content = ob_get_clean();

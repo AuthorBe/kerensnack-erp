@@ -5,6 +5,7 @@ use App\Core\Router;
 // Cache busting for static assets
 $cssV = file_exists(ROOT_PATH . '/public/assets/css/app.css') ? filemtime(ROOT_PATH . '/public/assets/css/app.css') : '1';
 $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PATH . '/public/assets/js/app.js')  : '1';
+$helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemtime(ROOT_PATH . '/public/assets/js/erp-helpers.js') : '1';
 ?>
 <!DOCTYPE html>
 <html lang="id" class="<?= (($_COOKIE['ksnack_theme'] ?? 'light') === 'dark') ? 'dark' : '' ?>">
@@ -32,10 +33,53 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
     <!-- ⚡ ZERO-FLASH THEME ENGINE & BASE PATH (Inline, before CSS) -->
     <script>
         window.APP_BASE_PATH = '<?= Router::getBasePath() ?>';
+        <?php
+        $authLoginTime = (int)($_SESSION['login_time'] ?? time());
+        $authLifetime  = \App\Core\Auth::MAX_SESSION_LIFETIME;
+        $authExpiresAt = $authLoginTime + $authLifetime;
+        ?>
+        window.KSNACK_SESSION = {
+            loginTime: <?= $authLoginTime ?>,
+            lifetime: <?= $authLifetime ?>,
+            expiresAt: <?= $authExpiresAt ?>,
+            logoutUrl: '<?= Router::url('/logout?reason=timeout') ?>',
+            loginUrl: '<?= Router::url('/login?timeout=1') ?>'
+        };
+        window.KSNACK_AUTH_USER = {
+            id: '<?= addslashes(App\Core\Auth::id() ?? '') ?>',
+            name: '<?= addslashes(App\Core\Auth::name() ?? '') ?>',
+            role: '<?= addslashes(ucfirst(str_replace('_', ' ', App\Core\Auth::role() ?? ''))) ?>'
+        };
+        window.readStorageOrCookie = function(key) {
+            try {
+                var v = localStorage.getItem(key);
+                if (v !== null) return v;
+            } catch (e) {}
+            try {
+                var m = document.cookie.match(new RegExp('(?:^|; )' + key + '=([^;]*)'));
+                if (m) return decodeURIComponent(m[1]);
+            } catch (e) {}
+            return null;
+        };
+
         (function() {
-            var t = localStorage.getItem('ksnack_theme') || 'light';
+            var t = window.readStorageOrCookie('ksnack_theme') || 'light';
             if (t === 'dark') document.documentElement.classList.add('dark');
             else document.documentElement.classList.remove('dark');
+
+            // Zero-flash sidebar collapsed state (apply before CSS paint)
+            // Default on large screens (tablet landscape / laptop / desktop >=1024px) is COLLAPSED,
+            // unless the user explicitly expanded it (ksnack_sidebar_collapsed === '0')
+            try {
+                var savedSidebar = window.readStorageOrCookie('ksnack_sidebar_collapsed');
+                var isDesktop = window.innerWidth >= 1024;
+                var shouldCollapse = isDesktop ? (savedSidebar !== '0') : (savedSidebar === '1');
+                if (shouldCollapse) {
+                    document.documentElement.classList.add('sidebar-is-collapsed');
+                } else {
+                    document.documentElement.classList.remove('sidebar-is-collapsed');
+                }
+            } catch (e) {}
 
             try {
                 if (sessionStorage.getItem('app_action_triggered') === 'true') {
@@ -52,6 +96,9 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
 
     <!-- Lucide Icons (100% Local Vendor Asset) -->
     <script src="<?= Router::asset('/js/lucide.min.js') ?>?v=<?= $jsV ?>"></script>
+
+    <!-- ERP Universal Frontend Helpers (Format Rupiah, Unformat, Safe Lucide Refresh) -->
+    <script src="<?= Router::asset('/js/erp-helpers.js') ?>?v=<?= $helpersV ?>"></script>
 
     <!-- Global App CSS (Supabase Design System + Standalone Utility Engine) -->
     <link rel="stylesheet" href="<?= Router::asset('/css/app.css') ?>?v=<?= $cssV ?>">
@@ -74,7 +121,12 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
 </head>
 <body x-data="{
         sidebarOpen: false,
-        isDark: (localStorage.getItem('ksnack_theme') || 'light') === 'dark',
+        isDark: (window.readStorageOrCookie ? window.readStorageOrCookie('ksnack_theme') : 'light') === 'dark',
+        sidebarCollapsed: (function() {
+            var saved = window.readStorageOrCookie ? window.readStorageOrCookie('ksnack_sidebar_collapsed') : null;
+            var isDesktop = window.innerWidth >= 1024;
+            return isDesktop ? (saved !== '0') : (saved === '1');
+        })(),
         toggleTheme() {
             this.isDark = !this.isDark;
             const theme = this.isDark ? 'dark' : 'light';
@@ -88,6 +140,19 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
                 } else {
                     document.documentElement.classList.remove('dark');
                 }
+            }
+        },
+        toggleSidebarCollapsed() {
+            this.sidebarCollapsed = !this.sidebarCollapsed;
+            const val = this.sidebarCollapsed ? '1' : '0';
+            try {
+                localStorage.setItem('ksnack_sidebar_collapsed', val);
+                document.cookie = 'ksnack_sidebar_collapsed=' + val + '; path=/; max-age=31536000';
+            } catch (e) {}
+            if (this.sidebarCollapsed) {
+                document.documentElement.classList.add('sidebar-is-collapsed');
+            } else {
+                document.documentElement.classList.remove('sidebar-is-collapsed');
             }
         },
         openNav() {
@@ -274,6 +339,19 @@ $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PA
                 window.addEventListener('load', function() { setTimeout(removePageLoader, 60); });
             }
             setTimeout(removePageLoader, 1200);
+
+            // Bersihkan scroll-lock & drawer mobile saat rotasi/resize ke desktop (>=1024px)
+            window.addEventListener('resize', function() {
+                if (window.innerWidth >= 1024 && document.body.classList.contains('sidebar-open')) {
+                    document.body.classList.remove('sidebar-open');
+                    document.documentElement.classList.remove('sidebar-open');
+                    var overlay = document.getElementById('sidebar-overlay');
+                    if (overlay) {
+                        overlay.classList.remove('is-visible');
+                        overlay.style.display = 'none';
+                    }
+                }
+            }, { passive: true });
         })();
     </script>
 

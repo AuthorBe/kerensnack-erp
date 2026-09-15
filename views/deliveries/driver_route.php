@@ -89,6 +89,205 @@ ob_start();
     background: linear-gradient(180deg, rgba(127, 29, 29, 0.14) 0%, var(--color-surface) 100%);
 }
 
+/* Shopping Card Distinct Accents & Modern Border */
+.driver-compact-card.is-shopping {
+    border-left-width: 4px;
+    border-color: var(--color-hairline);
+    background: var(--color-surface);
+}
+.driver-compact-card.is-shopping.is-shopping-pending {
+    border-color: var(--color-hairline);
+    border-left-color: #f59e0b;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, var(--color-surface) 120px);
+}
+.dark .driver-compact-card.is-shopping.is-shopping-pending {
+    border-color: var(--color-hairline);
+    border-left-color: #f59e0b;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, var(--color-surface) 120px);
+}
+.driver-compact-card.is-shopping.is-shopping-picked {
+    border-color: var(--color-hairline);
+    border-left-color: #3b82f6;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, var(--color-surface) 120px);
+}
+.dark .driver-compact-card.is-shopping.is-shopping-picked {
+    border-color: var(--color-hairline);
+    border-left-color: #3b82f6;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.08) 0%, var(--color-surface) 120px);
+}
+.driver-compact-card.is-shopping.is-shopping-received {
+    border-color: var(--color-hairline);
+    border-left-color: #10b981;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, var(--color-surface) 120px);
+}
+.dark .driver-compact-card.is-shopping.is-shopping-received {
+    border-color: var(--color-hairline);
+    border-left-color: #10b981;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, var(--color-surface) 120px);
+}
+.driver-compact-card.is-shopping.is-failed {
+    border-color: var(--color-hairline);
+    border-left-color: #ef4444;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, var(--color-surface) 120px);
+}
+.dark .driver-compact-card.is-shopping.is-failed {
+    border-color: var(--color-hairline);
+    border-left-color: #ef4444;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, var(--color-surface) 120px);
+}
+.driver-compact-card.is-shopping:hover {
+    border-color: #cbd5e1;
+    border-left-color: #d97706;
+    box-shadow: 0 10px 25px -4px rgba(245, 158, 11, 0.10), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+    transform: translateY(-2px);
+}
+.dark .driver-compact-card.is-shopping:hover {
+    border-color: #4b5563;
+    border-left-color: #f59e0b;
+    box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.35);
+}
+
+/* Status Pills for Shopping Tasks */
+.shopping-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    font-weight: 800;
+    border-radius: 9999px;
+    padding: 4px 12px;
+    letter-spacing: -0.01em;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    white-space: nowrap;
+}
+.shopping-status-pill.status-pending {
+    background: #fffbeb;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+.dark .shopping-status-pill.status-pending {
+    background: rgba(180, 83, 9, 0.22);
+    color: #fde68a;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+.shopping-status-pill.status-picked {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+.dark .shopping-status-pill.status-picked {
+    background: rgba(30, 58, 138, 0.22);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.35);
+}
+.shopping-status-pill.status-received {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+.dark .shopping-status-pill.status-received {
+    background: rgba(6, 78, 59, 0.22);
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+.shopping-status-pill.status-failed {
+    background: #fef2f2;
+    color: #9f1239;
+    border: 1px solid #fecaca;
+}
+.dark .shopping-status-pill.status-failed {
+    background: rgba(127, 29, 29, 0.22);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+/* Detail Belanja Action Button */
+.btn-detail-belanja {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 11px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(245, 158, 11, 0.06);
+    white-space: nowrap;
+}
+.btn-detail-belanja:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    color: #78350f;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.16);
+}
+.btn-detail-belanja .btn-chevron {
+    opacity: 0.5;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.btn-detail-belanja:hover .btn-chevron {
+    opacity: 1;
+    transform: translateX(2px);
+}
+.dark .btn-detail-belanja {
+    color: #fde68a;
+    background: rgba(180, 83, 9, 0.2);
+    border-color: rgba(245, 158, 11, 0.35);
+}
+.dark .btn-detail-belanja:hover {
+    background: rgba(180, 83, 9, 0.35);
+    border-color: #f59e0b;
+    color: #fff;
+}
+
+/* Photo Action Button */
+.btn-shopping-photo {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.btn-shopping-photo.is-nota {
+    color: #047857;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+}
+.btn-shopping-photo.is-nota:hover {
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    transform: translateY(-1px);
+}
+.dark .btn-shopping-photo.is-nota {
+    color: #6ee7b7;
+    background: rgba(6, 78, 59, 0.2);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+.btn-shopping-photo.is-kendala {
+    color: #b91c1c;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+.btn-shopping-photo.is-kendala:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    transform: translateY(-1px);
+}
+.dark .btn-shopping-photo.is-kendala {
+    color: #fca5a5;
+    background: rgba(127, 29, 29, 0.2);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
 /* Quick Action Links in Modal */
 .quick-action-pill {
     display: inline-flex;
@@ -346,7 +545,7 @@ ob_start();
 <div x-data="driverDeliveryApp()" x-init="init()" class="space-y-6 sm:space-y-7">
 
     <!-- ========================================================================= -->
-    <!-- 1. PAGE HEADER & FILTER TANGGAL / DRIVER (LOCKED FOR SALES/DRIVER)        -->
+    <!-- 1. PAGE HEADER & FILTER TANGGAL / DRIVER (LOCKED FOR DRIVER / PENGANTAR)  -->
     <!-- ========================================================================= -->
     <div class="page-header">
         <div class="page-header-body">
@@ -496,14 +695,20 @@ ob_start();
     <!-- ========================================================================= -->
     <div class="space-y-3.5 sm:space-y-4">
         <?php if (empty($deliveries)): ?>
-        <div class="card" style="border-radius: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 20px;">
-            <div style="width: 68px; height: 68px; border-radius: 50%; background: var(--color-canvas-soft); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; color: var(--color-ink-mute);">
-                <i data-lucide="truck" style="width: 34px; height: 34px; opacity: 0.6;"></i>
+        <div class="card" style="border-radius: 20px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: <?= !empty($shoppingTasks) ? '40px 20px' : '64px 20px' ?>;">
+            <div style="width: 60px; height: 60px; border-radius: 50%; background: var(--color-canvas-soft); display: flex; align-items: center; justify-content: center; margin-bottom: 12px; color: var(--color-ink-mute);">
+                <i data-lucide="truck" style="width: 30px; height: 30px; opacity: 0.6;"></i>
             </div>
-            <div style="font-weight: 800; font-size: 17px; color: var(--color-ink); text-align: center;">Tidak Ada Tugas Pengiriman</div>
-            <p style="font-size: 13.5px; margin-top: 6px; color: var(--color-ink-mute); text-align: center; max-width: 440px; line-height: 1.5;">
-                Tidak ada rute pengiriman aktif untuk tanggal atau filter armada yang dipilih.
+            <div style="font-weight: 800; font-size: 16px; color: var(--color-ink); text-align: center;">Tidak Ada Antaran Toko Pelanggan</div>
+            <p style="font-size: 13px; margin-top: 4px; color: var(--color-ink-mute); text-align: center; max-width: 440px; line-height: 1.5;">
+                Tidak ada rute antaran pesanan toko untuk tanggal atau filter armada yang dipilih.
             </p>
+            <?php if (!empty($shoppingTasks)): ?>
+            <div style="font-size:12px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;padding:8px 14px;border-radius:10px;margin-top:14px;font-weight:700;display:inline-flex;align-items:center;gap:6px;">
+                <i data-lucide="shopping-cart" style="width:15px;height:15px;"></i>
+                <span>Terdapat <?= count($shoppingTasks) ?> Tugas Belanja Bahan Vendor yang harus dikerjakan di bawah ini:</span>
+            </div>
+            <?php endif; ?>
         </div>
         <?php else: ?>
         <?php foreach ($deliveries as $idx => $deliv): 
@@ -617,6 +822,150 @@ ob_start();
         <?php endforeach; ?>
         <?php endif; ?>
     </div>
+
+    <!-- ========================================================================= -->
+    <!-- 4B. TUGAS BELANJA & PICKUP BAHAN GUDANG (PURCHASE ORDER DRIVER)           -->
+    <!-- ========================================================================= -->
+    <?php if (!empty($shoppingTasks)): ?>
+    <div class="mt-8 space-y-4">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 flex items-center justify-center font-bold border border-amber-500/20 shadow-xs shrink-0">
+                    <i data-lucide="shopping-cart" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div>
+                    <h2 class="text-base sm:text-lg font-extrabold text-ink flex items-center gap-2">
+                        <span>Tugas Belanja &amp; Pickup Bahan Gudang</span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 shadow-xs">
+                            <?= count($shoppingTasks) ?> PO
+                        </span>
+                    </h2>
+                    <p class="text-xs text-ink-mute">Barang yang harus dibelanjakan atau diambil dari vendor pemasok</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-3">
+            <?php foreach ($shoppingTasks as $sIdx => $task): 
+                $statusPenerimaan = $task['status_penerimaan'];
+                $isTaskPicked = ($statusPenerimaan === 'sudah_diambil');
+                $isTaskReceived = ($statusPenerimaan === 'diterima');
+                $isTaskFailed = ($statusPenerimaan === 'kendala_batal');
+                $isTaskPending = ($statusPenerimaan === 'ditugaskan_driver');
+
+                $shopCardClass = $isTaskPending ? 'is-shopping-pending' : ($isTaskPicked ? 'is-shopping-picked' : ($isTaskReceived ? 'is-shopping-received' : ($isTaskFailed ? 'is-failed' : '')));
+            ?>
+            <!-- CARD MODERN 2-BARIS TUGAS BELANJA -->
+            <div class="driver-compact-card is-shopping <?= $shopCardClass ?>" @click="openShoppingDetailModal(<?= htmlspecialchars(json_encode($task)) ?>)">
+                
+                <!-- BARIS 1: NOMOR STOP, NAMA VENDOR, NOMOR PO & STATUS -->
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                        <span class="inline-flex items-center justify-center min-w-[32px] h-7 px-2 rounded-lg bg-amber-500 text-white font-black text-xs tracking-tight shadow-xs shrink-0 select-none font-sans">
+                            B-<?= $sIdx + 1 ?>
+                        </span>
+                        <span class="font-extrabold text-base sm:text-lg text-ink truncate tracking-tight">
+                            <?= htmlspecialchars($task['nama_pemasok']) ?>
+                        </span>
+                        <span class="badge badge-mono text-[11px] px-2.5 py-0.5 shrink-0 hidden sm:inline-flex bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold">
+                            <i data-lucide="receipt" style="width: 11px; height: 11px; margin-right: 4px; opacity: 0.65;"></i>
+                            <?= htmlspecialchars($task['nomor_faktur_pembelian']) ?>
+                        </span>
+                        <?php if (!empty($task['kode_pemasok'])): ?>
+                            <span class="badge text-[11px] px-2 py-0.5 hidden md:inline-flex shrink-0 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border border-slate-200/70 dark:border-slate-700/60 font-medium">
+                                <?= htmlspecialchars($task['kode_pemasok']) ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- BADGE STATUS TAHAP -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        <?php if ($isTaskReceived): ?>
+                            <span class="shopping-status-pill status-received">
+                                <i data-lucide="check-check" style="width: 14px; height: 14px;"></i>
+                                <span>Selesai Diterima</span>
+                            </span>
+                        <?php elseif ($isTaskPicked): ?>
+                            <span class="shopping-status-pill status-picked">
+                                <i data-lucide="truck" style="width: 13px; height: 13px;"></i>
+                                <span>Sudah Diambil</span>
+                            </span>
+                        <?php elseif ($isTaskFailed): ?>
+                            <span class="shopping-status-pill status-failed">
+                                <i data-lucide="alert-octagon" style="width: 13px; height: 13px;"></i>
+                                <span>Kendala Belanja</span>
+                            </span>
+                        <?php else: ?>
+                            <span class="shopping-status-pill status-pending">
+                                <span class="relative flex h-2 w-2">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                                </span>
+                                <span>Menunggu Belanja</span>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- BARIS 2: RINGKASAN MUATAN, METODE BAYAR, ESTIMASI BIAYA & TOMBOL DETAIL -->
+                <div class="flex items-center justify-between gap-3 text-xs text-ink-secondary flex-wrap">
+                    <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                        <div class="inline-flex items-center gap-1.5 font-bold text-xs sm:text-sm text-ink">
+                            <i data-lucide="package" style="width: 14px; height: 14px;" class="text-slate-400 dark:text-slate-500 shrink-0"></i>
+                            <span><?= number_format((float)$task['total_pcs']) ?> Pcs <span class="text-ink-mute font-normal text-xs">(<?= (int)$task['total_sku'] ?> Macam Bahan)</span></span>
+                        </div>
+                        <span class="text-slate-300 dark:text-slate-600 select-none">&bull;</span>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wider <?= $task['metode_bayar_belanja'] === 'tunai_driver' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/90 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/70' : 'bg-slate-100 text-slate-700 border border-slate-200/90 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700' ?>">
+                            <i data-lucide="<?= $task['metode_bayar_belanja'] === 'tunai_driver' ? 'banknote' : 'credit-card' ?>" style="width: 12px; height: 12px;" class="opacity-80"></i>
+                            <span><?= $task['metode_bayar_belanja'] === 'tunai_driver' ? 'Kas Tunai' : 'Transfer / Tempo' ?></span>
+                        </span>
+                        <span class="text-slate-300 dark:text-slate-600 select-none">&bull;</span>
+                        <div class="inline-flex items-baseline gap-1.5">
+                            <span class="text-[11px] font-bold text-ink-mute uppercase tracking-wide">Est:</span>
+                            <span class="font-black text-slate-900 dark:text-white font-sans text-sm sm:text-base tracking-tight">
+                                Rp <?= number_format((float)$task['total_biaya'], 0, ',', '.') ?>
+                            </span>
+                        </div>
+                        <span class="text-slate-300 dark:text-slate-600 select-none hidden xl:inline">&bull;</span>
+                        <span class="text-ink-mute hidden xl:inline-flex items-center gap-1 text-xs truncate max-w-[280px]" title="<?= htmlspecialchars($task['alamat_pemasok'] ?: '') ?>">
+                            <i data-lucide="map-pin" style="width: 12px; height: 12px;" class="text-slate-400 shrink-0"></i>
+                            <span class="truncate"><?= htmlspecialchars($task['alamat_pemasok'] ?: 'Alamat vendor belum diatur') ?></span>
+                        </span>
+                    </div>
+
+                    <!-- Tombol Aksi Cepat & Detail Belanja -->
+                    <div class="flex items-center gap-2">
+                        <?php if (!empty($task['url_foto_nota'])): ?>
+                            <button type="button" 
+                                    class="btn-shopping-photo is-nota" 
+                                    @click.stop="openPhotoViewer('<?= htmlspecialchars($task['url_foto_nota']) ?>', 'Nota Belanja - <?= htmlspecialchars(addslashes($task['nama_pemasok'])) ?>')">
+                                <i data-lucide="image" style="width: 13px; height: 13px;"></i>
+                                <span>Foto Nota</span>
+                            </button>
+                        <?php elseif (!empty($task['foto_bukti_kendala'])): ?>
+                            <button type="button" 
+                                    class="btn-shopping-photo is-kendala" 
+                                    @click.stop="openPhotoViewer('<?= htmlspecialchars($task['foto_bukti_kendala']) ?>', 'Bukti Kendala Belanja - <?= htmlspecialchars(addslashes($task['nama_pemasok'])) ?>')">
+                                <i data-lucide="image" style="width: 13px; height: 13px;"></i>
+                                <span>Foto Kendala</span>
+                            </button>
+                        <?php endif; ?>
+
+                        <button type="button" 
+                                class="btn-detail-belanja" 
+                                @click.stop="openShoppingDetailModal(<?= htmlspecialchars(json_encode($task)) ?>)">
+                            <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                            <span>Detail Belanja</span>
+                            <i data-lucide="chevron-right" style="width: 13px; height: 13px;" class="btn-chevron"></i>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- 5. POP-UP MODAL DETAIL LENGKAP BERTAB (SPACIOUS & BEAUTIFULLY SPACED)      -->
@@ -1071,14 +1420,20 @@ ob_start();
                 <!-- A. FOOTER MODE DETAIL (RINGKASAN & AKSI UTAMA RUTE) -->
                 <template x-if="viewMode === 'detail'">
                     <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
-                        <!-- KIRI: Unduh Surat Jalan PDF -->
-                        <div class="flex items-center">
+                        <!-- KIRI: Unduh Surat Jalan PDF & Cetak Dot Matrix -->
+                        <div class="flex items-center gap-2">
+                            <a :href="'<?= Router::url('/deliveries/print?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
+                               class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
+                               style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#0284c7; border-color:#bae6fd; background:#f0f9ff;">
+                                <i data-lucide="printer" style="width: 15px; height: 15px;"></i>
+                                <span>Cetak Surat Jalan</span>
+                            </a>
                             <a :href="'<?= Router::url('/deliveries/pdf?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
                                target="_blank"
                                class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
                                style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#dc2626; border-color:#fca5a5; background:#fef2f2;">
                                 <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
-                                <span>Unduh Surat Jalan (PDF)</span>
+                                <span>PDF</span>
                             </a>
                         </div>
 
@@ -1308,6 +1663,685 @@ ob_start();
         </div>
     </div>
     </template>
+    <!-- ========================================================================= -->
+    <!-- 6. POP-UP MODAL DETAIL LENGKAP TUGAS BELANJA PO (BERTAB & MULTI-MODE)     -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="showShoppingDetailModal" x-cloak class="modal-backdrop" @click.self="closeShoppingDetailModal()" style="z-index: 9999;">
+        <div class="modal-box modal-box-lg" style="max-width: 760px; padding: 0; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;" @click.stop>
+            
+            <!-- MOBILE PULL HANDLE -->
+            <div class="sm:hidden w-full flex justify-center pt-3 pb-1 flex-shrink-0" style="background:var(--color-canvas);">
+                <div style="width:40px;height:4px;border-radius:2px;background:var(--color-hairline-strong);"></div>
+            </div>
+
+            <!-- 1. MODAL HEADER -->
+            <div style="padding: 22px 28px; border-bottom: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; background: var(--color-canvas); flex-shrink: 0; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1;">
+                    <div style="width: 48px; height: 48px; border-radius: 15px; background: #fef3c7; color: #b45309; border: 1px solid rgba(180,83,9,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="shopping-cart" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h2 style="font-size: 18px; font-weight: 900; color: var(--color-ink); margin: 0; line-height: 1.25;" x-text="activeShoppingTask?.nama_pemasok"></h2>
+                            <span class="badge badge-mono text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800" x-text="activeShoppingTask?.nomor_faktur_pembelian"></span>
+                            
+                            <!-- Status Badge -->
+                            <template x-if="activeShoppingTask?.status_penerimaan === 'diterima'">
+                                <span class="badge" style="background: #d1fae5; color: #065f46; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Selesai Diterima Gudang</span>
+                            </template>
+                            <template x-if="activeShoppingTask?.status_penerimaan === 'sudah_diambil'">
+                                <span class="badge" style="background: #dbeafe; color: #1e40af; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Sudah Diambil Driver</span>
+                            </template>
+                            <template x-if="activeShoppingTask?.status_penerimaan === 'kendala_batal'">
+                                <span class="badge" style="background: #ffe4e6; color: #9f1239; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Kendala Belanja</span>
+                            </template>
+                            <template x-if="activeShoppingTask?.status_penerimaan === 'ditugaskan_driver'">
+                                <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Menunggu Belanja</span>
+                            </template>
+                        </div>
+                        <div style="font-size: 12.5px; color: var(--color-ink-mute); margin-top: 6px; font-family: var(--font-sans), sans-serif;">
+                            <span>PO: <strong class="text-ink-secondary" x-text="activeShoppingTask?.nomor_faktur_pembelian"></strong></span> &bull; 
+                            <span>Jadwal: <strong class="text-ink-secondary" x-text="activeShoppingTask?.tanggal_jadwal_belanja || activeShoppingTask?.tanggal_pembelian"></strong></span>
+                            <template x-if="activeShoppingTask?.kode_pemasok">
+                                <span> &bull; Kode: <span class="badge badge-secondary" style="font-size: 10px; padding: 1px 5px;" x-text="activeShoppingTask.kode_pemasok"></span></span>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 16px; flex-shrink: 0;">
+                    <div class="hidden md:flex flex-col items-end">
+                        <span style="font-size: 10.5px; color: var(--color-ink-mute); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Estimasi Belanja</span>
+                        <span class="font-black text-amber-600 dark:text-amber-400 font-sans" style="font-size: 17px;" x-text="'Rp ' + formatRupiah(activeShoppingTask?.total_biaya)"></span>
+                    </div>
+                    <button type="button" @click="closeShoppingDetailModal()" class="btn btn-ghost btn-sm" style="width: 38px; height: 38px; padding: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--color-ink-mute);" aria-label="Tutup">
+                        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. TAB NAVIGATION BAR (HANYA MUNCUL DI MODE VIEW DETAIL) -->
+            <template x-if="shoppingViewMode === 'detail'">
+                <div class="modal-tab-nav custom-scrollbar" style="padding: 10px 24px;">
+                    <button type="button" @click="shoppingActiveTab = 'info'" class="modal-tab-btn" :class="{ 'is-active': shoppingActiveTab === 'info' }">
+                        <i data-lucide="store" style="width: 14px; height: 14px;"></i>
+                        <span>Info Vendor &amp; Lokasi</span>
+                    </button>
+                    <button type="button" @click="shoppingActiveTab = 'items'" class="modal-tab-btn" :class="{ 'is-active': shoppingActiveTab === 'items' }">
+                        <i data-lucide="package" style="width: 14px; height: 14px;"></i>
+                        <span>Daftar Bahan / Barang</span>
+                        <span class="badge" style="font-size: 10px; padding: 1px 6px; border-radius: 10px;" x-text="activeShoppingTask?.items?.length || '0'"></span>
+                    </button>
+                    <button type="button" @click="shoppingActiveTab = 'payment'" class="modal-tab-btn" :class="{ 'is-active': shoppingActiveTab === 'payment' }">
+                        <i data-lucide="credit-card" style="width: 14px; height: 14px;"></i>
+                        <span>Pembayaran &amp; Nota</span>
+                    </button>
+                </div>
+            </template>
+
+            <!-- 3. MODAL BODY (SCROLLABLE) -->
+            <div class="modal-tab-body custom-scrollbar" style="padding: 26px 28px; overflow-y: auto; flex: 1;">
+
+                <!-- ================================================================= -->
+                <!-- A. MODE 1: VIEW DETAIL BERTAB                                     -->
+                <!-- ================================================================= -->
+                <div x-show="shoppingViewMode === 'detail'" class="space-y-6">
+                    
+                    <!-- TAB 1: INFO VENDOR & LOKASI -->
+                    <div x-show="shoppingActiveTab === 'info'" class="space-y-5">
+                        
+                        <!-- Box Identitas Vendor & Alamat -->
+                        <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 20px; padding: 22px 24px;" class="space-y-5">
+                            
+                            <div class="flex items-start justify-between gap-4 flex-wrap">
+                                <div>
+                                    <div style="font-size: 10.5px; color: var(--color-ink-mute); font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Vendor Pemasok</div>
+                                    <div style="font-size: 17px; font-weight: 800; color: var(--color-ink);" x-text="activeShoppingTask?.nama_pemasok"></div>
+                                    <div style="font-size: 13px; color: var(--color-ink-secondary); margin-top: 4px;">
+                                        Kode: <strong style="color: var(--color-ink);" x-text="activeShoppingTask?.kode_pemasok || '-'"></strong>
+                                        <template x-if="activeShoppingTask?.supplier_telepon">
+                                            <span> &bull; Kontak: <span class="font-mono" x-text="activeShoppingTask.supplier_telepon"></span></span>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Quick WA Button -->
+                                <template x-if="activeShoppingTask?.supplier_telepon">
+                                    <a :href="'https://wa.me/' + cleanWa(activeShoppingTask?.supplier_telepon) + '?text=' + encodeURIComponent('Halo ' + (activeShoppingTask?.nama_pemasok || '') + ', armada KEREN Snack sedang menuju ke lokasi Anda untuk pengambilan belanjaan PO #' + (activeShoppingTask?.nomor_faktur_pembelian || '') + '.')" target="_blank" class="quick-action-pill is-wa">
+                                        <i data-lucide="message-circle" style="width: 15px; height: 15px;"></i>
+                                        <span>WhatsApp ( <span x-text="activeShoppingTask?.supplier_telepon"></span> )</span>
+                                    </a>
+                                </template>
+                            </div>
+
+                            <div style="height: 1px; background: var(--color-hairline);"></div>
+
+                            <!-- Alamat Lengkap & Maps -->
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                    <i data-lucide="map-pin" style="width: 16px; height: 16px; color: #ef4444;"></i>
+                                    <span>Alamat Lengkap Vendor:</span>
+                                </div>
+                                <div class="text-sm font-medium text-ink leading-relaxed" style="padding-left: 24px;" x-text="activeShoppingTask?.alamat_pemasok || 'Alamat vendor belum tercatat di master data'"></div>
+                                
+                                <div style="padding-left: 24px;" class="pt-1.5 flex items-center gap-2">
+                                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((activeShoppingTask?.nama_pemasok || '') + ' ' + (activeShoppingTask?.alamat_pemasok || ''))" target="_blank" rel="noopener noreferrer" class="quick-action-pill is-maps">
+                                        <i data-lucide="navigation" style="width: 15px; height: 15px;"></i>
+                                        <span>Buka Google Maps Navigasi</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Box Info Operasional Penugasan PO -->
+                        <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 20px; padding: 20px 24px;">
+                            <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-ink-mute); letter-spacing: 0.05em; margin-bottom: 14px;">Data Penugasan &amp; PO Belanja</div>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                                <div>
+                                    <span class="text-ink-mute">Nomor PO Pembelian:</span>
+                                    <div class="font-mono font-bold text-ink text-sm mt-1" x-text="activeShoppingTask?.nomor_faktur_pembelian"></div>
+                                </div>
+                                <div>
+                                    <span class="text-ink-mute">Tanggal Jadwal Belanja:</span>
+                                    <div class="font-medium text-ink text-sm mt-1" x-text="activeShoppingTask?.tanggal_jadwal_belanja || activeShoppingTask?.tanggal_pembelian"></div>
+                                </div>
+                                <div>
+                                    <span class="text-ink-mute">Driver Ditugaskan:</span>
+                                    <div class="font-bold text-ink text-sm mt-1" x-text="(activeShoppingTask?.nama_driver || '-') + (activeShoppingTask?.nopol_driver ? ' (' + activeShoppingTask?.nopol_driver + ')' : '')"></div>
+                                </div>
+                                <div>
+                                    <span class="text-ink-mute">Metode Logistik:</span>
+                                    <div class="font-medium text-ink text-sm mt-1">Diambil Driver Operasional</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Box Instruksi Khusus Belanja Driver -->
+                        <template x-if="activeShoppingTask?.instruksi_driver">
+                            <div class="p-4 bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/40 rounded-2xl text-xs sm:text-sm text-amber-900 dark:text-amber-300 flex items-start gap-3">
+                                <i data-lucide="info" style="width: 20px; height: 20px; color: #d97706; flex-shrink: 0; margin-top: 1px;"></i>
+                                <div>
+                                    <strong class="font-bold">Instruksi Khusus Belanja:</strong>
+                                    <div class="mt-1 leading-relaxed" x-text="activeShoppingTask.instruksi_driver"></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Box Info Realisasi (Jika Sudah Diambil atau Selesai Diterima) -->
+                        <template x-if="activeShoppingTask?.status_penerimaan === 'sudah_diambil' || activeShoppingTask?.status_penerimaan === 'diterima'">
+                            <div class="p-4.5 bg-emerald-50 dark:bg-emerald-950/25 rounded-2xl text-xs sm:text-sm text-emerald-900 dark:text-emerald-300 space-y-2 border border-emerald-200/60 dark:border-emerald-800/40">
+                                <div class="flex items-center gap-2 font-bold text-emerald-950 dark:text-emerald-200">
+                                    <i data-lucide="check-circle" style="width: 18px; height: 18px; color: #059669;"></i>
+                                    <span>Realisasi Pengambilan Barang:</span>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs pt-1">
+                                    <div>
+                                        <span class="text-emerald-700 dark:text-emerald-400">Nota Vendor:</span>
+                                        <div class="font-mono font-bold text-emerald-950 dark:text-emerald-100 mt-0.5" x-text="activeShoppingTask?.nomor_nota_vendor || '-'"></div>
+                                    </div>
+                                    <div>
+                                        <span class="text-emerald-700 dark:text-emerald-400">Waktu Diambil:</span>
+                                        <div class="font-medium text-emerald-950 dark:text-emerald-100 mt-0.5" x-text="formatDateTime(activeShoppingTask?.waktu_diambil)"></div>
+                                    </div>
+                                    <div>
+                                        <span class="text-emerald-700 dark:text-emerald-400">Kas Dibayar Driver:</span>
+                                        <div class="font-mono font-bold text-emerald-950 dark:text-emerald-100 mt-0.5" x-text="'Rp ' + formatRupiah(activeShoppingTask?.nominal_dibayar_driver)"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Box Info Kendala (Jika Kendala Batal) -->
+                        <template x-if="activeShoppingTask?.status_penerimaan === 'kendala_batal'">
+                            <div class="p-4.5 bg-rose-50 dark:bg-rose-950/25 rounded-2xl text-xs sm:text-sm text-rose-900 dark:text-rose-300 flex items-start gap-3 border border-rose-200/60 dark:border-rose-800/40">
+                                <i data-lucide="alert-octagon" style="width: 20px; height: 20px; color: #e11d48; flex-shrink: 0; margin-top: 2px;"></i>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-bold text-rose-950 dark:text-rose-200">
+                                        <span>Kendala Belanja Dilaporkan:</span>
+                                    </div>
+                                    <div class="text-rose-800 dark:text-rose-300 mt-1 leading-relaxed" x-text="activeShoppingTask?.alasan_kendala || 'Kendala tidak tercatat'"></div>
+                                </div>
+                            </div>
+                        </template>
+
+                    </div>
+
+                    <!-- TAB 2: RINCIAN BAHAN / BARANG -->
+                    <div x-show="shoppingActiveTab === 'items'" class="space-y-4">
+                        
+                        <!-- Ringkasan Macam Bahan Strip -->
+                        <div class="flex items-center justify-between gap-3 p-4 bg-canvas-soft border border-hairline rounded-2xl text-xs flex-wrap">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="package" style="width: 17px; height: 17px; color: #d97706;"></i>
+                                <span class="font-bold text-ink">Total Estimasi Belanja:</span>
+                                <span class="font-black text-amber-600 dark:text-amber-400 font-sans text-sm" x-text="'Rp ' + formatRupiah(activeShoppingTask?.total_biaya)"></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="badge badge-secondary font-bold text-xs px-3 py-1" x-text="(activeShoppingTask?.items?.length || 0) + ' Macam Bahan'"></span>
+                                <span class="badge badge-mono text-xs px-2.5 py-1" x-text="(activeShoppingTask?.total_pcs || 0) + ' Total Item'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Tabel Bahan Belanjaan -->
+                        <div class="table-scroll" style="max-height: 340px; border: 1px solid var(--color-hairline); border-radius: 18px; overflow: hidden;">
+                            <table class="table" style="margin: 0; width: 100%; font-size: 13px;">
+                                <thead style="background: var(--color-canvas-soft); position: sticky; top: 0; z-index: 2;">
+                                    <tr style="border-bottom: 1px solid var(--color-hairline);">
+                                        <th class="cell-center" style="width: 45px; padding: 12px 16px;">No</th>
+                                        <th style="width: 120px; padding: 12px 16px;">Kode SKU</th>
+                                        <th style="padding: 12px 16px;">Nama Bahan / Item</th>
+                                        <th class="cell-center" style="width: 130px; padding: 12px 16px;">Jumlah Belanja</th>
+                                        <th class="text-right" style="width: 130px; padding: 12px 16px;">Harga Satuan</th>
+                                        <th class="text-right" style="width: 130px; padding: 12px 16px;">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="(item, idx) in activeShoppingTask?.items || []" :key="item.item_id">
+                                        <tr style="border-bottom: 1px solid var(--color-hairline);">
+                                            <td class="cell-center text-ink-mute font-semibold" style="padding: 12px 16px;" x-text="idx + 1"></td>
+                                            <td style="padding: 12px 16px;">
+                                                <span class="badge badge-mono" style="font-size: 11px; padding: 2px 7px;" x-text="item.kode_sku"></span>
+                                            </td>
+                                            <td style="padding: 12px 16px;">
+                                                <div style="font-weight: 700; color: var(--color-ink);" x-text="item.nama_item"></div>
+                                            </td>
+                                            <td class="cell-center font-black text-ink" style="padding: 12px 16px; color: #d97706; font-family: var(--font-sans), sans-serif;" x-text="Number(item.kuantitas) + ' ' + (item.satuan || 'Item')"></td>
+                                            <td class="text-right font-mono" style="padding: 12px 16px;" x-text="'Rp ' + formatRupiah(item.harga_satuan)"></td>
+                                            <td class="text-right font-bold text-ink font-mono" style="padding: 12px 16px;" x-text="'Rp ' + formatRupiah(item.subtotal)"></td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="!activeShoppingTask?.items || activeShoppingTask.items.length === 0">
+                                        <tr>
+                                            <td colspan="6" class="text-center py-6 text-ink-mute text-xs">
+                                                Tidak ada rincian item dalam PO ini.
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+
+                    <!-- TAB 3: METODE BAYAR & NOTA -->
+                    <div x-show="shoppingActiveTab === 'payment'" class="space-y-4">
+                        
+                        <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 20px; padding: 22px 24px;" class="space-y-5">
+                            
+                            <div class="flex items-center justify-between gap-4 flex-wrap">
+                                <div>
+                                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-ink-mute); letter-spacing: 0.05em;">Metode Pembayaran Belanja</span>
+                                    <div class="mt-1.5">
+                                        <template x-if="activeShoppingTask?.metode_bayar_belanja === 'tunai_driver'">
+                                            <span class="badge badge-success font-bold uppercase text-xs px-3 py-1">💵 Kas Tunai Driver / Toko</span>
+                                        </template>
+                                        <template x-if="activeShoppingTask?.metode_bayar_belanja !== 'tunai_driver'">
+                                            <span class="badge badge-info font-bold uppercase text-xs px-3 py-1">💳 Ditransfer Kantor / Tempo</span>
+                                        </template>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-ink-mute); letter-spacing: 0.05em;">Status Pembayaran PO</span>
+                                    <div class="mt-1.5">
+                                        <span class="badge" :class="activeShoppingTask?.status_pembayaran === 'lunas' ? 'badge-success' : 'badge-warning'" style="font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 3px 10px;" x-text="activeShoppingTask?.status_pembayaran === 'lunas' ? 'LUNAS' : 'TEMPO / BELUM LUNAS'"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="height: 1px; background: var(--color-hairline);"></div>
+
+                            <!-- Rekening Vendor Pemasok -->
+                            <div style="background: var(--color-canvas); border: 1px solid var(--color-hairline); border-radius: 14px; padding: 14px 16px;" class="space-y-2">
+                                <div class="text-[11px] font-bold text-ink-mute uppercase tracking-wider">Rekening Bank Vendor Pemasok:</div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                                    <div>
+                                        <span class="text-ink-mute">Bank:</span>
+                                        <div class="font-bold text-ink mt-0.5" x-text="activeShoppingTask?.nama_bank || '-'"></div>
+                                    </div>
+                                    <div>
+                                        <span class="text-ink-mute">No. Rekening:</span>
+                                        <div class="font-mono font-bold text-ink mt-0.5" x-text="activeShoppingTask?.nomor_rekening || '-'"></div>
+                                    </div>
+                                    <div>
+                                        <span class="text-ink-mute">Atas Nama:</span>
+                                        <div class="font-bold text-ink mt-0.5" x-text="activeShoppingTask?.atas_nama_rekening || '-'"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ringkasan Anggaran Biaya -->
+                            <div class="space-y-2.5 text-sm">
+                                <div class="flex items-center justify-between text-ink-secondary">
+                                    <span>Total Estimasi Biaya PO:</span>
+                                    <span class="font-sans font-black text-amber-600 dark:text-amber-400 text-base" x-text="'Rp ' + formatRupiah(activeShoppingTask?.total_biaya)"></span>
+                                </div>
+                                <template x-if="activeShoppingTask?.nominal_dibayar_driver">
+                                    <div class="flex items-center justify-between text-ink-secondary pt-2 border-t border-hairline">
+                                        <span>Realisasi Kas Dibayar Driver:</span>
+                                        <span class="font-mono font-bold text-ink" x-text="'Rp ' + formatRupiah(activeShoppingTask.nominal_dibayar_driver)"></span>
+                                    </div>
+                                </template>
+                                <template x-if="activeShoppingTask?.nomor_nota_vendor">
+                                    <div class="flex items-center justify-between text-ink-secondary">
+                                        <span>Nomor Nota / Bon Vendor:</span>
+                                        <span class="font-mono font-bold text-ink" x-text="activeShoppingTask.nomor_nota_vendor"></span>
+                                    </div>
+                                </template>
+                            </div>
+
+                        </div>
+
+                        <!-- Box Bukti Foto Nota Vendor -->
+                        <template x-if="activeShoppingTask?.url_foto_nota">
+                            <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 20px; padding: 20px 24px;" class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-xs font-bold uppercase tracking-wider text-ink-mute flex items-center gap-2">
+                                        <i data-lucide="file-check" style="width: 15px; height: 15px; color: #059669;"></i>
+                                        <span>Foto Bukti Nota / Bon Fisik Vendor:</span>
+                                    </div>
+                                    <button type="button" @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 10px; border-radius: 8px;">
+                                        <i data-lucide="zoom-in" style="width: 13px; height: 13px;"></i>
+                                        <span>Perbesar</span>
+                                    </button>
+                                </div>
+                                <div style="max-width: 320px; border-radius: 14px; overflow: hidden; border: 1px solid var(--color-hairline); cursor: pointer;" @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))">
+                                    <img :src="'<?= Router::url('/') ?>' + (activeShoppingTask.url_foto_nota || '').replace(/^\//, '')" alt="Nota Vendor" style="width: 100%; height: auto; max-height: 200px; object-fit: cover;">
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Box Bukti Foto Kendala -->
+                        <template x-if="activeShoppingTask?.foto_bukti_kendala">
+                            <div style="background: #fff1f2; border: 1px solid #fecaca; border-radius: 20px; padding: 20px 24px;" class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-xs font-bold uppercase tracking-wider text-rose-800 flex items-center gap-2">
+                                        <i data-lucide="alert-octagon" style="width: 15px; height: 15px; color: #e11d48;"></i>
+                                        <span>Foto Bukti Kendala Belanja:</span>
+                                    </div>
+                                    <button type="button" @click="openPhotoViewer(activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala - ' + (activeShoppingTask?.nama_pemasok || ''))" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 10px; border-radius: 8px; color: #e11d48; border-color: #fecaca;">
+                                        <i data-lucide="zoom-in" style="width: 13px; height: 13px;"></i>
+                                        <span>Perbesar</span>
+                                    </button>
+                                </div>
+                                <div style="max-width: 320px; border-radius: 14px; overflow: hidden; border: 1px solid #fca5a5; cursor: pointer;" @click="openPhotoViewer(activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala - ' + (activeShoppingTask?.nama_pemasok || ''))">
+                                    <img :src="'<?= Router::url('/') ?>' + (activeShoppingTask.foto_bukti_kendala || '').replace(/^\//, '')" alt="Foto Kendala" style="width: 100%; height: auto; max-height: 200px; object-fit: cover;">
+                                </div>
+                            </div>
+                        </template>
+
+                    </div>
+
+                </div>
+
+                <!-- ================================================================= -->
+                <!-- B. MODE 2: FORM SELESAI BELANJA / AMBIL BAHAN (INLINE DI MODAL)   -->
+                <!-- ================================================================= -->
+                <div x-show="shoppingViewMode === 'complete_form'" class="space-y-6">
+                    
+                    <!-- Banner Info Kuning Emas / Amber -->
+                    <div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a; border-radius: 18px; padding: 18px 22px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.06);">
+                        <div style="width: 44px; height: 44px; border-radius: 14px; background: #fde68a; border: 1px solid #f59e0b; color: #b45309; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="shopping-bag" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 16px; font-weight: 900; color: #92400e; line-height: 1.25;">Konfirmasi Selesai Belanja / Ambil Bahan</div>
+                            <div style="font-size: 13px; color: #b45309; margin-top: 3px; font-weight: 500;">Silakan isi nomor nota vendor dan nominal kas yang dibayarkan.</div>
+                        </div>
+                    </div>
+
+                    <form id="completeShoppingForm" action="<?= Router::url('/driver-deliveries/shopping/complete') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left"
+                          data-action-text="Menyimpan hasil belanja...">
+                        <input type="hidden" name="purchase_id" :value="activeShoppingTask?.id">
+
+                        <!-- 1. Nomor Nota Vendor -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                Nomor Nota / Bon Vendor <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" name="nomor_nota_vendor" x-model="shoppingCompleteForm.nomor_nota_vendor" required placeholder="Contoh: INV-2026/09/012 atau nomor bon fisik kasir" class="form-input font-medium" style="height: 46px; border-radius: 14px; font-size: 14px;">
+                        </div>
+
+                        <!-- 2. Nominal Riil Dibayarkan -->
+                        <div style="padding: 18px 20px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 18px;" class="space-y-2">
+                            <div class="flex items-center justify-between flex-wrap gap-2">
+                                <label class="block font-bold text-xs uppercase tracking-wider text-amber-900">
+                                    💵 Nominal Riil yang Dibayarkan (Rp)
+                                </label>
+                                <span class="badge" :class="activeShoppingTask?.metode_bayar_belanja === 'tunai_driver' ? 'badge-success' : 'badge-info'" style="font-size: 10.5px; font-weight: 700;" x-text="activeShoppingTask?.metode_bayar_belanja === 'tunai_driver' ? 'Kas Tunai Toko' : 'Transfer Kantor / Tempo'"></span>
+                            </div>
+                            <input type="text" inputmode="numeric" name="nominal_dibayar_driver" x-model="shoppingCompleteForm.nominal_dibayar_driver" class="form-input font-bold font-mono input-rupiah" style="height: 46px; border-radius: 14px; font-size: 16px; color: #b45309; background: #ffffff;">
+                            <div style="font-size: 12px; color: #92400e;">
+                                Estimasi Total PO: <strong x-text="'Rp ' + formatRupiah(activeShoppingTask?.total_biaya)"></strong> &bull; 
+                                <span x-show="activeShoppingTask?.metode_bayar_belanja === 'tunai_driver'">Isikan jumlah uang tunai yang diserahkan ke pihak toko/vendor.</span>
+                                <span x-show="activeShoppingTask?.metode_bayar_belanja !== 'tunai_driver'">Isi Rp 0 jika pembayaran ditransfer langsung oleh kantor/owner.</span>
+                            </div>
+                        </div>
+
+                        <!-- 3. Foto Bukti Nota -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                Foto Bukti Nota / Bon Fisik Vendor (Kamera / Galeri)
+                            </label>
+                            <input type="file" name="foto_nota" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleShoppingPhotoChange($event)" x-ref="shoppingPhotoInput">
+                            
+                            <!-- Thumbnail preview -->
+                            <template x-if="shoppingCompletePreview">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
+                                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                                        <img :src="shoppingCompletePreview" alt="Preview Foto Nota" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;">
+                                        <div style="min-width:0;">
+                                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Nota Siap Diunggah</div>
+                                            <div style="font-size:11.5px;color:#059669;font-weight:600;display:flex;align-items:center;gap:4px;">
+                                                <i data-lucide="check" style="width:13px;height:13px;"></i>
+                                                <span>Terkompresi Otomatis</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" @click="clearShoppingPhoto()" class="btn btn-ghost btn-sm" style="padding:6px 12px;border-radius:10px;color:#e11d48;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.2);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex-shrink:0;" title="Hapus Foto">
+                                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+                                        <span>Hapus</span>
+                                    </button>
+                                </div>
+                            </template>
+
+                            <div style="font-size: 12px; color: var(--color-ink-mute);">
+                                Foto bon atau nota fisik dari kasir vendor sebagai bukti validasi pencatatan pembukuan.
+                            </div>
+                        </div>
+
+                        <!-- 4. Catatan Driver -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                Catatan Lapangan Driver (Opsional)
+                            </label>
+                            <textarea name="catatan_driver" x-model="shoppingCompleteForm.catatan_driver" rows="3" placeholder="Contoh: Barang lengkap dimasukkan ke dalam armada, siap dibawa ke gudang..." class="form-input font-medium" style="border-radius: 14px; font-size: 13.5px; padding: 12px;"></textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ================================================================= -->
+                <!-- C. MODE 3: FORM LAPOR KENDALA BELANJA (INLINE DI MODAL)           -->
+                <!-- ================================================================= -->
+                <div x-show="shoppingViewMode === 'issue_form'" class="space-y-6">
+                    
+                    <!-- Banner Info Merah -->
+                    <div style="background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border: 1.5px solid #fda4af; border-radius: 18px; padding: 18px 22px; display: flex; align-items: center; gap: 16px; box-shadow: 0 2px 8px rgba(225, 29, 72, 0.06);">
+                        <div style="width: 44px; height: 44px; border-radius: 14px; background: #fecdd3; border: 1px solid #f43f5e; color: #e11d48; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            <i data-lucide="alert-octagon" style="width: 24px; height: 24px;"></i>
+                        </div>
+                        <div>
+                            <div style="font-size: 16px; font-weight: 900; color: #9f1239; line-height: 1.25;">Lapor Kendala Belanja Vendor</div>
+                            <div style="font-size: 13px; color: #be123c; margin-top: 3px; font-weight: 500;">Laporkan jika vendor tutup, stok habis, atau kendala lainnya di lapangan.</div>
+                        </div>
+                    </div>
+
+                    <form id="issueShoppingForm" action="<?= Router::url('/driver-deliveries/shopping/report-issue') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left"
+                          data-action-text="Melaporkan kendala belanja...">
+                        <input type="hidden" name="purchase_id" :value="activeShoppingTask?.id">
+                        <input type="hidden" name="alasan_kendala" :value="combinedShoppingIssueReason">
+
+                        <!-- 1. Kategori Kendala -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                Kategori Kendala <span class="text-danger">*</span>
+                            </label>
+                            <select x-model="shoppingIssueForm.alasan_kategori" required class="form-input font-medium" style="height: 46px; border-radius: 14px; font-size: 14px;">
+                                <option value="Toko / Vendor Tutup">Toko / Vendor Tutup</option>
+                                <option value="Stok Barang Habis di Pemasok">Stok Barang Habis di Pemasok</option>
+                                <option value="Harga Naik Melebihi Anggaran">Harga Naik Melebihi Anggaran</option>
+                                <option value="Antrian Terlalu Panjang">Antrian Terlalu Panjang</option>
+                                <option value="Kendala Akses / Armada">Kendala Akses / Armada</option>
+                                <option value="Kendala Lainnya">Kendala Lainnya</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. Rincian Kendala -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                Penjelasan Rincian Kendala <span class="text-danger">*</span>
+                            </label>
+                            <textarea x-model="shoppingIssueForm.alasan_detail" required rows="3" placeholder="Jelaskan kondisi di lokasi vendor..." class="form-input font-medium" style="border-radius: 14px; font-size: 13.5px; padding: 12px;"></textarea>
+                        </div>
+
+                        <!-- 3. Foto Bukti Kendala -->
+                        <div class="space-y-2">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                Foto Bukti Kendala (Kamera / Galeri HP)
+                            </label>
+                            <input type="file" name="foto_kendala" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleShoppingIssuePhotoChange($event)" x-ref="shoppingIssuePhotoInput">
+                            
+                            <template x-if="shoppingIssuePreview">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
+                                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                                        <img :src="shoppingIssuePreview" alt="Preview Foto Kendala" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;">
+                                        <div style="min-width:0;">
+                                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Kendala Terpilih</div>
+                                            <div style="font-size:11.5px;color:#059669;font-weight:600;display:flex;align-items:center;gap:4px;">
+                                                <i data-lucide="check" style="width:13px;height:13px;"></i>
+                                                <span>Terkompresi Otomatis</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" @click="clearShoppingIssuePhoto()" class="btn btn-ghost btn-sm" style="padding:6px 12px;border-radius:10px;color:#e11d48;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.2);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex-shrink:0;" title="Hapus Foto">
+                                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
+                                        <span>Hapus</span>
+                                    </button>
+                                </div>
+                            </template>
+
+                            <div style="font-size: 12px; color: var(--color-ink-mute);">
+                                Ambil foto kondisi toko (tutup / banner / akses) sebagai bukti kendala.
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- 4. MODAL FOOTER -->
+            <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--color-hairline); background: var(--color-canvas); flex-shrink: 0;">
+                
+                <!-- A. FOOTER MODE DETAIL -->
+                <template x-if="shoppingViewMode === 'detail'">
+                    <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+                        <!-- Kiri: Unduh PDF PO -->
+                        <div class="flex items-center gap-2">
+                            <a :href="'<?= Router::url('/purchases/pdf?id=') ?>' + encodeURIComponent(activeShoppingTask?.id || '')"
+                               target="_blank"
+                               class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
+                               style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#dc2626; border-color:#fca5a5; background:#fef2f2;">
+                                <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                                <span>PDF Dokumen PO</span>
+                            </a>
+                        </div>
+
+                        <!-- Kanan: Tombol Aksi Driver -->
+                        <div class="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+                            <!-- Jika Masih Ditugaskan Driver -->
+                            <template x-if="activeShoppingTask?.status_penerimaan === 'ditugaskan_driver'">
+                                <div class="flex items-center gap-2 w-full sm:w-auto">
+                                    <button type="button" 
+                                            @click="openShoppingIssueInModal()"
+                                            class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                            style="font-weight: 700; font-size: 13px; border-radius: 12px; padding: 9px 16px; color: #e11d48; border-color: #fecaca; background: #fff1f2; display: inline-flex; align-items: center; gap: 6px;">
+                                        <i data-lucide="alert-triangle" style="width: 15px; height: 15px;"></i>
+                                        <span>Lapor Kendala</span>
+                                    </button>
+                                    <button type="button" 
+                                            @click="openShoppingCompleteInModal()"
+                                            class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
+                                            style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; background: #d97706; border-color: #d97706; display: inline-flex; align-items: center; gap: 7px; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);">
+                                        <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                                        <span>Selesai Belanja / Ambil</span>
+                                    </button>
+                                </div>
+                            </template>
+
+                            <!-- Jika Sudah Diambil Driver -->
+                            <template x-if="activeShoppingTask?.status_penerimaan === 'sudah_diambil'">
+                                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                    <template x-if="activeShoppingTask?.url_foto_nota">
+                                        <button type="button" 
+                                                @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
+                                                class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                                style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #059669; border-color: #a7f3d0; background: #ecfdf5; display: inline-flex; align-items: center; gap: 6px;">
+                                            <i data-lucide="image" style="width: 15px; height: 15px;"></i>
+                                            <span>Lihat Foto Nota</span>
+                                        </button>
+                                    </template>
+                                    <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 px-3 py-2 bg-blue-50 dark:bg-blue-950/40 rounded-xl">
+                                        <i data-lucide="truck" style="width: 15px; height: 15px;"></i>
+                                        <span>Barang dibawa menuju gudang</span>
+                                    </span>
+                                </div>
+                            </template>
+
+                            <!-- Jika Selesai Diterima Gudang -->
+                            <template x-if="activeShoppingTask?.status_penerimaan === 'diterima'">
+                                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                    <template x-if="activeShoppingTask?.url_foto_nota">
+                                        <button type="button" 
+                                                @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
+                                                class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                                style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #059669; border-color: #a7f3d0; background: #ecfdf5; display: inline-flex; align-items: center; gap: 6px;">
+                                            <i data-lucide="image" style="width: 15px; height: 15px;"></i>
+                                            <span>Lihat Foto Nota</span>
+                                        </button>
+                                    </template>
+                                    <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl">
+                                        <i data-lucide="check-check" style="width: 15px; height: 15px;"></i>
+                                        <span>Telah Diterima &amp; Dicek Gudang</span>
+                                    </span>
+                                </div>
+                            </template>
+
+                            <!-- Jika Kendala Batal -->
+                            <template x-if="activeShoppingTask?.status_penerimaan === 'kendala_batal'">
+                                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                    <template x-if="activeShoppingTask?.foto_bukti_kendala">
+                                        <button type="button" 
+                                                @click="openPhotoViewer(activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
+                                                class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                                style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #e11d48; border-color: #fecaca; background: #fff1f2; display: inline-flex; align-items: center; gap: 6px;">
+                                            <i data-lucide="image" style="width: 15px; height: 15px;"></i>
+                                            <span>Lihat Foto Kendala</span>
+                                        </button>
+                                    </template>
+                                    <span class="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 px-3 py-2 bg-rose-50 dark:bg-rose-950/40 rounded-xl">
+                                        <i data-lucide="alert-octagon" style="width: 15px; height: 15px;"></i>
+                                        <span>Kendala Belanja Dilaporkan</span>
+                                    </span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- B. FOOTER MODE COMPLETE FORM -->
+                <template x-if="shoppingViewMode === 'complete_form'">
+                    <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+                        <button type="button" @click="shoppingViewMode = 'detail'"
+                                class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 20px; display: inline-flex; align-items: center; gap: 7px;">
+                            <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
+                            <span>Batal &amp; Kembali</span>
+                        </button>
+
+                        <button type="submit" form="completeShoppingForm"
+                                class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
+                                style="font-weight: 800; font-size: 13.5px; border-radius: 12px; padding: 10px 24px; background: #d97706; border-color: #d97706; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.25);">
+                            <i data-lucide="check" style="width: 17px; height: 17px;"></i>
+                            <span>Simpan &amp; Bawa ke Gudang</span>
+                        </button>
+                    </div>
+                </template>
+
+                <!-- C. FOOTER MODE ISSUE FORM -->
+                <template x-if="shoppingViewMode === 'issue_form'">
+                    <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+                        <button type="button" @click="shoppingViewMode = 'detail'"
+                                class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
+                                style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 20px; display: inline-flex; align-items: center; gap: 7px;">
+                            <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
+                            <span>Batal &amp; Kembali</span>
+                        </button>
+
+                        <button type="submit" form="issueShoppingForm"
+                                class="btn btn-driver-fail-confirm btn-sm flex-1 sm:flex-none justify-center">
+                            <i data-lucide="alert-triangle" style="width: 17px; height: 17px;"></i>
+                            <span>Konfirmasi Lapor Kendala</span>
+                        </button>
+                    </div>
+                </template>
+
+            </div>
+
+        </div>
+    </div>
+    </template>
 
 </div>
 
@@ -1343,8 +2377,47 @@ function driverDeliveryApp() {
         failPhotoFile: null,
         failPhotoPreview: null,
 
+        // Shopping tasks modal states
+        showShoppingDetailModal: false,
+        showShoppingCompleteModal: false,
+        showShoppingIssueModal: false,
+        activeShoppingTask: null,
+        shoppingActiveTab: 'info', // 'info', 'items', 'payment'
+        shoppingViewMode: 'detail', // 'detail', 'complete_form', 'issue_form'
+        shoppingCompleteForm: {
+            purchase_id: '',
+            nomor_nota_vendor: '',
+            nominal_dibayar_driver: '',
+            catatan_driver: ''
+        },
+        shoppingCompletePhoto: null,
+        shoppingCompletePreview: null,
+        shoppingIssueForm: {
+            purchase_id: '',
+            alasan_kategori: 'Toko / Vendor Tutup',
+            alasan_detail: ''
+        },
+        shoppingIssuePhoto: null,
+        shoppingIssuePreview: null,
+
+        get combinedShoppingIssueReason() {
+            const cat = this.shoppingIssueForm.alasan_kategori || 'Kendala';
+            const detail = (this.shoppingIssueForm.alasan_detail || '').trim();
+            return cat + (detail ? ': ' + detail : '');
+        },
+
         init() {
             this.$watch('viewMode', () => {
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
+            this.$watch('shoppingViewMode', () => {
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
+            this.$watch('shoppingActiveTab', () => {
                 this.$nextTick(() => {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 });
@@ -1678,6 +2751,116 @@ function driverDeliveryApp() {
                 return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB';
             } catch (e) {
                 return dateStr;
+            }
+        },
+
+        openShoppingDetailModal(task) {
+            this.activeShoppingTask = task;
+            this.shoppingActiveTab = 'info';
+            this.shoppingViewMode = 'detail';
+
+            const isCash = (task.metode_bayar_belanja === 'tunai_driver');
+            const defaultNominal = isCash
+                ? (window.formatRupiahNumber ? window.formatRupiahNumber(task.total_biaya) : String(task.total_biaya || 0))
+                : '0';
+
+            this.shoppingCompleteForm = {
+                purchase_id: task.id,
+                nomor_nota_vendor: task.nomor_nota_vendor || '',
+                nominal_dibayar_driver: defaultNominal,
+                catatan_driver: ''
+            };
+            this.clearShoppingPhoto();
+
+            this.shoppingIssueForm = {
+                purchase_id: task.id,
+                alasan_kategori: 'Toko / Vendor Tutup',
+                alasan_detail: ''
+            };
+            this.clearShoppingIssuePhoto();
+
+            this.showShoppingDetailModal = true;
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        closeShoppingDetailModal() {
+            this.showShoppingDetailModal = false;
+            this.shoppingViewMode = 'detail';
+        },
+
+        openShoppingCompleteInModal() {
+            this.shoppingViewMode = 'complete_form';
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        openShoppingIssueInModal() {
+            this.shoppingViewMode = 'issue_form';
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        openShoppingCompleteModal(task) {
+            this.openShoppingDetailModal(task);
+            this.openShoppingCompleteInModal();
+        },
+
+        openShoppingIssueModal(task) {
+            this.openShoppingDetailModal(task);
+            this.openShoppingIssueInModal();
+        },
+
+        handleShoppingPhotoChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            this.compressImage(file, (compressedFile, previewDataUrl) => {
+                this.shoppingCompletePhoto = compressedFile;
+                this.shoppingCompletePreview = previewDataUrl;
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(compressedFile);
+                    event.target.files = dt.files;
+                } catch (e) {}
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
+        },
+
+        clearShoppingPhoto() {
+            this.shoppingCompletePhoto = null;
+            this.shoppingCompletePreview = null;
+            if (this.$refs.shoppingPhotoInput) {
+                this.$refs.shoppingPhotoInput.value = '';
+            }
+        },
+
+        handleShoppingIssuePhotoChange(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            this.compressImage(file, (compressedFile, previewDataUrl) => {
+                this.shoppingIssuePhoto = compressedFile;
+                this.shoppingIssuePreview = previewDataUrl;
+                try {
+                    const dt = new DataTransfer();
+                    dt.items.add(compressedFile);
+                    event.target.files = dt.files;
+                } catch (e) {}
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
+        },
+
+        clearShoppingIssuePhoto() {
+            this.shoppingIssuePhoto = null;
+            this.shoppingIssuePreview = null;
+            if (this.$refs.shoppingIssuePhotoInput) {
+                this.$refs.shoppingIssuePhotoInput.value = '';
             }
         }
     };

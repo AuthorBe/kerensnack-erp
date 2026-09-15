@@ -1,5 +1,8 @@
 <?php
 use App\Core\Router;
+use App\Helpers\CompanySetting;
+
+$comp = CompanySetting::getAll();
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -158,7 +161,7 @@ use App\Core\Router;
     <table class="header-table">
         <tr>
             <td style="border: none; padding: 0; vertical-align: top;">
-                <div class="brand-title">KEREN SNACK INDONESIA</div>
+                <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
                 <div class="doc-title">DAFTAR ITEM PESANAN (PO)</div>
             </td>
             <td style="border: none; padding: 0; vertical-align: top; text-align: right;">

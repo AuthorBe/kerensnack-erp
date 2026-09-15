@@ -239,6 +239,11 @@ ob_start();
                                     <button @click="openEditModal(e)" class="btn btn-ghost btn-sm" style="padding:6px 8px;" title="Edit Data Karyawan">
                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                                     </button>
+                                    <template x-if="e.status_aktif">
+                                        <button @click="deactivateEmployee(e.id, e.nama_karyawan)" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#ef4444;" title="Nonaktifkan Karyawan">
+                                            <i data-lucide="user-x" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
                                 </div>
                             </td>
 
@@ -547,6 +552,11 @@ ob_start();
     </div>
     </template>
 
+    <!-- HIDDEN FORM FOR DEACTIVATING EMPLOYEE -->
+    <form id="delete-employee-form" action="<?= Router::url('/employees/delete') ?>" method="POST" data-action-text="Menonaktifkan karyawan..." style="display:none;">
+        <input type="hidden" name="id" id="delete-employee-id">
+    </form>
+
 </div>
 
 <script>
@@ -696,6 +706,20 @@ function employeeApp() {
             };
             this.showModal = true;
             this.$nextTick(() => lucide.createIcons());
+        },
+
+        async deactivateEmployee(id, name) {
+            const confirmed = window.AppConfirm ? await window.AppConfirm({
+                title: 'Nonaktifkan Karyawan',
+                message: `Apakah Anda yakin ingin menonaktifkan karyawan "${name}"? Seluruh data historis pesanan, pengiriman, dan penggajian tetap aman tersimpan.`,
+                type: 'danger',
+                confirmText: 'Ya, Nonaktifkan'
+            }) : confirm(`Nonaktifkan karyawan "${name}"?`);
+
+            if (confirmed) {
+                document.getElementById('delete-employee-id').value = id;
+                document.getElementById('delete-employee-form').submit();
+            }
         }
     }
 }

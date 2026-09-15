@@ -13,22 +13,49 @@ use Database;
 
 class Auth
 {
+    public const MAX_SESSION_LIFETIME = 43200; // 12 jam (12 * 3600 detik)
     private const VERSION_FILE = ROOT_PATH . '/cache/permissions_version.txt';
 
     public static function init(): void
     {
         if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+            ini_set('session.gc_maxlifetime', '43200');
             session_start([
                 'cookie_httponly' => true,
-                'cookie_samesite' => 'Lax'
+                'cookie_samesite' => 'Lax',
+                'cookie_lifetime' => 43200,
+                'gc_maxlifetime'  => 43200
             ]);
         }
+    }
+
+    /**
+     * Memeriksa apakah sesi login telah melampaui batas waktu maksimal 12 jam
+     */
+    public static function isSessionExpired(): bool
+    {
+        self::init();
+        if (empty($_SESSION['user']['id'])) {
+            return false;
+        }
+        if (empty($_SESSION['login_time'])) {
+            $_SESSION['login_time'] = time();
+            return false;
+        }
+        return (time() - (int)$_SESSION['login_time']) >= self::MAX_SESSION_LIFETIME;
     }
 
     public static function check(): bool
     {
         self::init();
-        return !empty($_SESSION['user']['id']);
+        if (empty($_SESSION['user']['id'])) {
+            return false;
+        }
+        if (self::isSessionExpired()) {
+            self::logout();
+            return false;
+        }
+        return true;
     }
 
     public static function user(): ?array
@@ -366,15 +393,69 @@ class Auth
     }
 
     /**
-     * Middleware check: Wajib login
+     * Middleware check: Wajib login & validasi durasi sesi 12 jam
      */
     public static function requireLogin(): void
     {
         self::init();
+
+        // 1. Validasi batas waktu maksimal sesi login (12 jam)
+        if (self::isSessionExpired()) {
+            $user = self::user();
+            $userName = $user['nama_lengkap'] ?? self::name() ?? 'Pengguna';
+            $userId   = self::id();
+            self::logout();
+
+            // Catat log keamanan audit otomatis
+            try {
+                \App\Helpers\ActivityLog::log(
+                    'keamanan',
+                    'LOGOUT_TIMEOUT',
+                    "Sesi pengguna {$userName} diakhiri otomatis karena melebihi batas waktu 12 jam",
+                    'pengguna',
+                    $userId
+                );
+            } catch (\Throwable $e) {}
+
+            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                   || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+
+            if ($isAjax) {
+                http_response_code(401);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'timeout' => true,
+                    'error'   => 'Sesi login telah berakhir secara otomatis karena melebihi batas waktu 12 jam.',
+                    'redirect'=> Router::url('/login?timeout=1')
+                ]);
+                exit;
+            }
+
+            header('Location: ' . Router::url('/login?timeout=1'));
+            exit;
+        }
+
+        // 2. Validasi login biasa
         if (!self::check()) {
+            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                   || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+
+            if ($isAjax) {
+                http_response_code(401);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'error'   => 'Silakan login terlebih dahulu.',
+                    'redirect'=> Router::url('/login?illegal=1')
+                ]);
+                exit;
+            }
+
             header('Location: ' . Router::url('/login?illegal=1'));
             exit;
         }
+
         self::syncPermissions();
     }
 

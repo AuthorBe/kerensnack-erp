@@ -126,9 +126,11 @@ class AuthController extends Controller
         }
 
         if (isset($_GET['timeout'])) {
-            $info = 'Sesi Anda telah berakhir secara otomatis demi keamanan.';
+            $info = "<div><strong>Sesi Berakhir Otomatis</strong></div><div class='alert-sub'>Sesi login Anda telah berakhir otomatis karena telah melebihi batas waktu maksimal (12 jam). Silakan masuk kembali untuk melanjutkan.</div>";
         } elseif (isset($_GET['illegal'])) {
             $info = 'Silakan login terlebih dahulu untuk mengakses sistem.';
+        } elseif (isset($_GET['suspended'])) {
+            $error = 'Akun Anda telah dinonaktifkan atau ditangguhkan oleh Administrator.';
         }
 
         $this->view('auth.login', [
@@ -296,11 +298,19 @@ class AuthController extends Controller
 
     public function logout(): void
     {
+        $isTimeout = isset($_GET['timeout']) || ($_GET['reason'] ?? '') === 'timeout';
+
         if (Auth::check()) {
+            $userName  = Auth::user()['nama_lengkap'] ?? Auth::name() ?? 'Pengguna';
+            $logAction = $isTimeout ? 'LOGOUT_TIMEOUT' : 'LOGOUT';
+            $logDesc   = $isTimeout
+                ? "Sesi pengguna {$userName} diakhiri otomatis karena melebihi batas waktu 12 jam"
+                : "Pengguna {$userName} telah keluar dari sistem";
+
             ActivityLog::log(
                 'keamanan',
-                'LOGOUT',
-                "Pengguna " . (Auth::user()['nama_lengkap'] ?? Auth::name() ?? 'Pengguna') . " telah keluar dari sistem",
+                $logAction,
+                $logDesc,
                 'pengguna',
                 Auth::id()
             );

@@ -94,6 +94,9 @@ ob_start();
                             </td>
                             <td>
                                 <div style="font-weight:700;color:var(--color-ink);" x-text="s.nama_pemasok"></div>
+                                <div style="margin-top:3px;">
+                                    <span :class="s.status_aktif ? 'badge badge-success' : 'badge badge-secondary'" style="font-size:10px;padding:1px 6px;" x-text="s.status_aktif ? 'Aktif' : 'Nonaktif'"></span>
+                                </div>
                             </td>
                             <td class="cell-nowrap">
                                 <div style="font-family:var(--font-mono);font-size:12px;font-weight:600;" x-text="s.nomor_telepon || '-'"></div>
@@ -103,20 +106,25 @@ ob_start();
                                 <div style="font-size:11px;color:var(--color-ink-mute);" x-text="s.alamat_lengkap"></div>
                             </td>
                             <td>
-                                <template x-if="(s.detail_bank && s.detail_bank.length > 0) || s.nomor_rekening">
+                                <template x-if="s.nomor_rekening || (s.detail_bank && s.detail_bank.length > 0)">
                                     <div>
-                                        <div style="font-weight:600;font-size:12px;" x-text="((s.detail_bank && s.detail_bank[0] && s.detail_bank[0].bank) || s.nama_bank || 'Bank') + ' - ' + ((s.detail_bank && s.detail_bank[0] && s.detail_bank[0].nomor_rekening) || s.nomor_rekening)"></div>
-                                        <div style="font-size:11px;color:var(--color-ink-mute);" x-text="'a/n ' + ((s.detail_bank && s.detail_bank[0] && s.detail_bank[0].atas_nama) || s.atas_nama_rekening || '-')"></div>
+                                        <div style="font-weight:600;font-size:12px;" x-text="(s.nama_bank || (s.detail_bank && s.detail_bank[0] && s.detail_bank[0].bank) || 'Bank') + ' - ' + (s.nomor_rekening || (s.detail_bank && s.detail_bank[0] && s.detail_bank[0].nomor_rekening))"></div>
+                                        <div style="font-size:11px;color:var(--color-ink-mute);" x-text="'a/n ' + (s.atas_nama_rekening || (s.detail_bank && s.detail_bank[0] && s.detail_bank[0].atas_nama) || '-')"></div>
                                     </div>
                                 </template>
-                                <template x-if="(!s.detail_bank || s.detail_bank.length === 0) && !s.nomor_rekening">
+                                <template x-if="!s.nomor_rekening && (!s.detail_bank || s.detail_bank.length === 0)">
                                     <span style="color:var(--color-ink-mute);">-</span>
                                 </template>
                             </td>
                             <td class="cell-center cell-nowrap">
-                                <button @click="openEditModal(s)" class="btn btn-ghost btn-sm" style="padding:6px 10px;" title="Edit Data Vendor">
-                                    <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
-                                </button>
+                                <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                                    <button @click="openEditModal(s)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Data Vendor">
+                                        <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                                    </button>
+                                    <button @click="deleteSupplier(s.id, s.nama_pemasok)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Data Vendor">
+                                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     </template>
@@ -132,6 +140,27 @@ ob_start();
                 </tbody>
             </table>
         </div>
+
+        <!-- PAGINATION BAR -->
+        <?php if (!empty($pagination) && $pagination['totalPages'] > 1): ?>
+        <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div style="font-size:12px;color:var(--color-ink-mute);">
+                Menampilkan Halaman <strong><?= $pagination['page'] ?></strong> dari <strong><?= $pagination['totalPages'] ?></strong> (Total <?= number_format($pagination['total'], 0, ',', '.') ?> pemasok)
+            </div>
+            <div style="display:flex;gap:6px;">
+                <?php if ($pagination['page'] > 1): ?>
+                <a href="<?= Router::url('/suppliers?' . http_build_query(array_merge($_GET, ['page' => $pagination['page'] - 1]))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                    &laquo; Sebelumnya
+                </a>
+                <?php endif; ?>
+                <?php if ($pagination['page'] < $pagination['totalPages']): ?>
+                <a href="<?= Router::url('/suppliers?' . http_build_query(array_merge($_GET, ['page' => $pagination['page'] + 1]))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                    Selanjutnya &raquo;
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- MODAL TAMBAH / EDIT PEMASOK -->
@@ -219,6 +248,11 @@ ob_start();
     </div>
     </template>
 
+    <!-- FORM DELETE HIDDEN -->
+    <form id="delete-supplier-form" action="<?= Router::url('/suppliers/delete') ?>" method="POST" style="display:none;">
+        <input type="hidden" name="id" id="delete-supplier-id">
+    </form>
+
 </div>
 
 <script>
@@ -253,6 +287,11 @@ function supplierApp() {
                 return !q ||
                     s.nama_pemasok.toLowerCase().includes(q) ||
                     s.kode_pemasok.toLowerCase().includes(q) ||
+                    (s.nomor_telepon && s.nomor_telepon.toLowerCase().includes(q)) ||
+                    (s.nama_bank && s.nama_bank.toLowerCase().includes(q)) ||
+                    (s.nomor_rekening && s.nomor_rekening.toLowerCase().includes(q)) ||
+                    (s.atas_nama_rekening && s.atas_nama_rekening.toLowerCase().includes(q)) ||
+                    (s.nama_wilayah && s.nama_wilayah.toLowerCase().includes(q)) ||
                     (s.alamat_lengkap && s.alamat_lengkap.toLowerCase().includes(q));
             });
         },
@@ -283,13 +322,27 @@ function supplierApp() {
                 nomor_telepon: s.nomor_telepon || '',
                 wilayah_id: s.wilayah_id || '',
                 alamat_lengkap: s.alamat_lengkap || '',
-                bank_nama: bank0.bank || s.nama_bank || '',
-                bank_rekening: bank0.nomor_rekening || s.nomor_rekening || '',
-                bank_atas_nama: bank0.atas_nama || s.atas_nama_rekening || '',
+                bank_nama: s.nama_bank || bank0.bank || '',
+                bank_rekening: s.nomor_rekening || bank0.nomor_rekening || '',
+                bank_atas_nama: s.atas_nama_rekening || bank0.atas_nama || '',
                 status_aktif: Boolean(s.status_aktif)
             };
             this.showModal = true;
             this.$nextTick(() => lucide.createIcons());
+        },
+
+        async deleteSupplier(id, name) {
+            const confirmed = window.AppConfirm ? await window.AppConfirm({
+                title: 'Hapus Vendor Pemasok',
+                message: `Apakah Anda yakin ingin menghapus pemasok "${name}"? Pemasok yang memiliki riwayat transaksi faktur pembelian tidak dapat dihapus.`,
+                type: 'danger',
+                confirmText: 'Ya, Hapus'
+            }) : confirm(`Hapus pemasok "${name}"?`);
+
+            if (confirmed) {
+                document.getElementById('delete-supplier-id').value = id;
+                document.getElementById('delete-supplier-form').submit();
+            }
         }
     }
 }

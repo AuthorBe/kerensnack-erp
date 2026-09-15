@@ -728,7 +728,17 @@ document.addEventListener('alpine:init', () => {
                 .catch(err => {
                     console.error(err);
                     this.isLoading = false;
-                    alert('Gagal mengambil data detail toko.');
+                    if (window.AppAlert) {
+                        window.AppAlert({
+                            title: 'Gagal Memuat Data',
+                            message: 'Gagal mengambil data detail toko. Silakan periksa koneksi atau coba beberapa saat lagi.',
+                            type: 'danger'
+                        });
+                    } else if (window.toast && window.toast.error) {
+                        window.toast.error('Gagal mengambil data detail toko.');
+                    } else {
+                        alert('Gagal mengambil data detail toko.');
+                    }
                 });
         },
 

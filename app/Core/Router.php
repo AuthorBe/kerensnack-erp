@@ -65,7 +65,7 @@ class Router
 
     public static function dispatch(): void
     {
-        $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
 
         // 1. Ambil path URL murni
@@ -93,8 +93,42 @@ class Router
         if ($handler === null) {
             http_response_code(404);
             $faviconUrl = self::asset('/favicon/favicon-96x96.png');
+            $posUrl = self::url('/pos');
             echo "<!DOCTYPE html><html lang='id' class='dark'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>404 - Halaman Tidak Ditemukan</title><link rel='icon' type='image/png' href='{$faviconUrl}'><style>body{margin:0;padding:0;background:#090d16;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;}.card{max-width:420px;padding:32px;background:#0f172a;border:1px solid rgba(255,255,255,0.1);border-radius:24px;text-align:center;box-shadow:0 20px 40px rgba(0,0,0,0.5);}.code{font-size:48px;font-weight:900;color:#fb7185;font-family:monospace;margin-bottom:8px;}.title{font-size:20px;font-weight:700;margin:0 0 8px;}.desc{font-size:13px;color:#94a3b8;margin:0 0 24px;line-height:1.5;}.btn{display:inline-block;padding:10px 20px;border-radius:12px;background:#e11d48;color:#fff;font-size:13px;font-weight:600;text-decoration:none;transition:background 0.15s;}.btn:hover{background:#be123c;}</style></head><body><div class='card'><div class='code'>404</div><h1 class='title'>Halaman Tidak Ditemukan</h1><p class='desc'>Rute <code>" . htmlspecialchars($path) . "</code> tidak terdaftar.</p><a href='{$posUrl}' class='btn'>Buka Layar Kasir POS</a></div></body></html>";
             return;
+        }
+
+        // 5. Proteksi Global CSRF untuk seluruh mutasi HTTP (POST, PUT, PATCH, DELETE)
+        if (in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true)) {
+            if (!\App\Helpers\CSRF::validate()) {
+                $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                    || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+                    || (isset($_SERVER['CONTENT_TYPE']) && str_contains($_SERVER['CONTENT_TYPE'], 'application/json'));
+
+                if ($isAjax) {
+                    http_response_code(419);
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode([
+                        'success' => false,
+                        'message' => 'Sesi keamanan kadaluarsa (CSRF Mismatch). Silakan muat ulang halaman dan coba lagi.'
+                    ]);
+                    exit;
+                }
+
+                if ($path === '/login') {
+                    if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+                        session_start();
+                    }
+                    $_SESSION['auth_error'] = 'Sesi formulir telah berakhir. Silakan coba masuk kembali.';
+                    self::redirect('/login');
+                    return;
+                }
+
+                \App\Helpers\Flash::error('Sesi formulir kadaluarsa (CSRF Mismatch). Silakan ulangi aksi Anda.');
+                $referer = $_SERVER['HTTP_REFERER'] ?? self::url('/');
+                header("Location: {$referer}");
+                exit;
+            }
         }
 
         if (is_callable($handler)) {

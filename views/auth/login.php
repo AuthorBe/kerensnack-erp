@@ -345,7 +345,7 @@ $flash = Flash::get();
         <div class="alert-modern alert-info-modern">
             <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;"></i>
             <div style="flex:1;">
-                <?= htmlspecialchars($info ?? $flash['message'] ?? '') ?>
+                <?= $info ?? htmlspecialchars($flash['message'] ?? '') ?>
             </div>
         </div>
         <?php endif; ?>
@@ -402,7 +402,7 @@ $flash = Flash::get();
 
     <!-- Login Page Footer -->
     <footer class="login-page-footer">
-        &copy; 2026 Built by <a href="https://ajsk.vercel.app/" target="_blank" rel="noopener noreferrer">AJSK.</a>
+        &copy; 2026 Built by <a href="https://ajisakha.site/" target="_blank" rel="noopener noreferrer">AJSK.</a>
     </footer>
 
     <!-- Init Lucide Icons, Countdown & Smart Keyboard UX -->

@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Helpers\CompanySetting;
 use Database;
 use Throwable;
 
@@ -95,7 +96,9 @@ class PosController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            error_log("PosController index error: " . $e->getMessage());
+            $this->flashError("Gagal memuat sistem kasir POS: " . $e->getMessage());
+            $this->redirect('/');
         }
     }
 
@@ -329,9 +332,9 @@ class PosController extends Controller
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
                     pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
-                    harga_satuan_deal, diskon_item_persen, diskon_item_nominal, is_bonus, subtotal
+                    harga_satuan_deal, diskon_item_persen, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan
                 ) VALUES (
-                    :pesanan_id, :item_id, :qty_pcs, :qty_bal, :harga, :disc_persen, :disc_nom, FALSE, :subtotal
+                    :pesanan_id, :item_id, :qty_pcs, :qty_bal, :harga, :disc_persen, :disc_nom, FALSE, :subtotal, :hpp
                 )
             ");
 
@@ -364,7 +367,7 @@ class PosController extends Controller
 
                 // Ambil data item & rasio konversi bal ke pcs
                 $itemData = Database::fetchOne("
-                    SELECT i.id, i.nama_item, i.kode_sku, i.stok_fisik_saat_ini, i.satuan_dasar, 
+                    SELECT i.id, i.nama_item, i.kode_sku, i.stok_fisik_saat_ini, i.satuan_dasar, i.harga_pokok_pembelian,
                            COALESCE(gp.konversi_bal_ke_pcs, 20) as konversi_bal
                     FROM public.item i
                     LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
@@ -374,6 +377,7 @@ class PosController extends Controller
                 $konversi = (int)($itemData['konversi_bal'] ?? 20);
                 $totalPcsKeluar = $qtyPcs + ($qtyBal * $konversi);
                 $stokSebelum = (float)($itemData['stok_fisik_saat_ini'] ?? 0);
+                $hppItem = (float)($itemData['harga_pokok_pembelian'] ?? 0);
 
                 // Pengaman Anti-Minus: Validasi ketersediaan stok fisik
                 if ($stokSebelum < $totalPcsKeluar) {
@@ -392,7 +396,8 @@ class PosController extends Controller
                     'harga' => $hargaDeal,
                     'disc_persen' => $discPersen,
                     'disc_nom' => $discNom,
-                    'subtotal' => $itemSubtotal
+                    'subtotal' => $itemSubtotal,
+                    'hpp' => $hppItem
                 ]);
 
                 // Potong stok fisik produk
@@ -505,9 +510,9 @@ class PosController extends Controller
                     'notes' => $catatanAudit,
                     'items' => $receiptItems,
                     'store' => [
-                        'nama' => $storeSettings['nama_toko'] ?? 'KEREN SNACK',
-                        'alamat' => 'Sentra Distribusi & Manufaktur Snack',
-                        'kontak' => 'WhatsApp: 0812-xxxx-xxxx'
+                        'nama' => CompanySetting::get('nama'),
+                        'alamat' => CompanySetting::get('alamat'),
+                        'kontak' => 'Telp/WA: ' . CompanySetting::get('telepon')
                     ]
                 ]
             ]);

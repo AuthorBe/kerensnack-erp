@@ -18,15 +18,6 @@ $totalStokAwal = (int)array_sum(array_column($details, 'stok_titip_awal'));
 $totalKerugianRusak = (float)array_sum(array_column($details, 'nilai_kerugian_rusak'));
 $skuCount = count($details);
 
-// Hitung kunjungan lain dari toko yang sama yang belum ditagih
-$otherUnbilledList = $otherUnbilledVisits ?? [];
-$otherUnbilledCount = count($otherUnbilledList);
-$otherUnbilledExceptThis = 0;
-foreach ($otherUnbilledList as $ouv) {
-    if ((string)$ouv['id'] !== (string)$visit['id']) {
-        $otherUnbilledExceptThis++;
-    }
-}
 
 // =========================================================================
 // NAVIGASI KEMBALI CERDAS (UX OPTIMIZED)
@@ -106,6 +97,9 @@ $currentHasilUrl = Router::url('/consignment/opname/hasil?kunjungan_id=' . urlen
 
 // Format WhatsApp text
 $waPhone = !empty($visit['nomor_whatsapp']) ? preg_replace('/[^0-9]/', '', (string)$visit['nomor_whatsapp']) : '';
+if (empty($waPhone) && !empty($visit['nomor_telepon'])) {
+    $waPhone = preg_replace('/[^0-9]/', '', (string)$visit['nomor_telepon']);
+}
 if (!empty($waPhone) && str_starts_with($waPhone, '0')) {
     $waPhone = '62' . substr($waPhone, 1);
 }
@@ -866,6 +860,18 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
     color: var(--color-ink);
     margin-top: 1px;
 }
+@media (max-width: 360px) {
+    .oh-flow-pills {
+        gap: 2px;
+        padding: 6px 2px;
+    }
+    .oh-flow-cell span {
+        font-size: 7.5px;
+    }
+    .oh-flow-cell strong {
+        font-size: 11.5px;
+    }
+}
 
 /* 5. WhatsApp Preview Box */
 .oh-wa-box {
@@ -950,14 +956,26 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
         </div>
 
         <div class="page-header-actions flex items-center gap-2 flex-wrap">
-            <a href="<?= Router::url('/consignment/opname/hasil/pdf?kunjungan_id=' . urlencode((string)$visit['id'])) ?>" 
-               target="_blank" 
-               class="btn btn-primary btn-sm flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl shadow-sm" 
-               style="background:#6366f1;border-color:#6366f1;">
-                <i data-lucide="printer" class="w-4 h-4"></i>
-                <span>Cetak Berita Acara PDF</span>
-            </a>
-            <a href="<?= Router::url('/consignment/stok-rak') ?>" class="btn btn-secondary btn-sm flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl">
+            <?php if ($hasInvoice): ?>
+                <a href="<?= Router::url('/consignment/opname/hasil/pdf?pesanan_id=' . urlencode((string)$visit['pesanan_id'])) ?>" 
+                   target="_blank" 
+                   class="btn btn-primary btn-sm flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl shadow-sm text-white" 
+                   style="background:#10b981;border-color:#10b981;"
+                   title="Unduh Faktur Penjualan Resmi (PDF)">
+                    <i data-lucide="receipt" class="w-4 h-4"></i>
+                    <span>Cetak Faktur Penjualan (PDF)</span>
+                </a>
+            <?php else: ?>
+                <a href="<?= Router::url('/consignment/opname/hasil/pdf?kunjungan_id=' . urlencode((string)$visit['id'])) ?>" 
+                   target="_blank" 
+                   class="btn btn-primary btn-sm flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl shadow-sm text-white" 
+                   style="background:#6366f1;border-color:#6366f1;"
+                   title="Unduh Berita Acara Hasil Audit Rak Fisik (PDF)">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span>Cetak Berita Acara PDF</span>
+                </a>
+            <?php endif; ?>
+            <a href="<?= Router::url('/consignment/stok-rak') ?>" class="btn btn-secondary btn-sm flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl">
                 <i data-lucide="boxes" class="w-4 h-4"></i>
                 <span>Opname Toko Lain</span>
             </a>
@@ -1078,7 +1096,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                                             <span>Lunas</span>
                                         </span>
                                     <?php elseif ($stBayar === 'sebagian'): ?>
-                                        <span class="oh-pay-badge oh-pay-cicil" title="Bayar sebagian. Sisa piutang: <?= Format::rupiah((float)($visit['sisa_tagihan'] ?? 0)) ?>">
+                                        <span class="oh-pay-badge oh-pay-cicil" title="Bayar sebagian. Sisa piutang nota: <?= Format::rupiah((float)($visit['sisa_tagihan'] ?? 0)) ?>">
                                             <i data-lucide="pie-chart" style="width:10px;height:10px;"></i>
                                             <span>Cicil</span>
                                         </span>
@@ -1253,7 +1271,8 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                     <input type="text" 
                            x-model="searchQuery" 
                            placeholder="Cari nama produk atau SKU..." 
-                           class="oh-search-input">
+                           class="oh-search-input"
+                           aria-label="Cari nama produk atau kode SKU">
                     <button type="button" 
                             x-show="searchQuery" 
                             @click="searchQuery = ''" 

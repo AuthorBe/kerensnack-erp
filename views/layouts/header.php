@@ -25,6 +25,8 @@ $headerTitle = $pageTitle ?? match(true) {
     str_contains($uri, '/developer/architecture') => 'System Blueprint',
     str_contains($uri, '/users')            => 'Manajemen Pengguna',
     str_contains($uri, '/permissions')      => 'Hak Akses & Izin RBAC',
+    str_contains($uri, '/settings/company')  => 'Informasi Perusahaan',
+    str_contains($uri, '/settings')         => 'Pengaturan Sistem',
     str_contains($uri, '/profile')          => 'Profil Pengguna',
     default                                 => 'Keren Snack ERP',
 };
@@ -37,7 +39,7 @@ $headerSub = $pageSubtitle ?? match(true) {
     str_contains($uri, '/inventory')        => 'Monitoring Stok Gudang Realtime',
     str_contains($uri, '/products')         => 'Barang Jadi, Bahan & BOM',
     str_contains($uri, '/purchases')        => 'Pengadaan Bahan & PO Vendor',
-    str_contains($uri, '/deliveries')       => 'Manifest Rute Sales-Driver',
+    str_contains($uri, '/deliveries')       => 'Manifest Rute Pengiriman & Surat Jalan',
     str_contains($uri, '/consignment/sales')=> 'Kunjungan Toko, Opname Rak & Kiriman Titip',
     str_contains($uri, '/consignment/tagihan')    => 'Buat Tagihan & Kelola Piutang Konsinyasi',
     str_contains($uri, '/consignment')      => 'Titip Jual Rak & Opname',
@@ -51,6 +53,8 @@ $headerSub = $pageSubtitle ?? match(true) {
     str_contains($uri, '/developer/architecture') => 'Peta Arsitektur & AI Prompt Generator',
     str_contains($uri, '/users')            => 'Kelola Akun, Karyawan & Suspend Akses',
     str_contains($uri, '/permissions')      => 'Pusat Konfigurasi Izin & Matriks Role',
+    str_contains($uri, '/settings/company')  => 'Konfigurasi Identitas Resmi Usaha, Kontak & Kop Dokumen Cetak',
+    str_contains($uri, '/settings')         => 'Pusat Manajemen Konfigurasi Aplikasi & Hak Akses',
     str_contains($uri, '/profile')          => 'Pengaturan Akun & Keamanan',
     default                                 => '',
 };

@@ -302,7 +302,8 @@
   window.toast = Toast;
 
   /* =====================================================================
-     6. APP CONFIRMATION DIALOG (Modern Minimalist Modal)
+  /* =====================================================================
+     6. APP CONFIRMATION & ALERT DIALOG (Modern, High-Clarity, Responsive)
      ===================================================================== */
   const AppConfirm = (options) => {
     return new Promise((resolve) => {
@@ -311,10 +312,16 @@
       const {
         title = 'Konfirmasi Tindakan',
         message = 'Apakah Anda yakin ingin melanjutkan tindakan ini?',
+        submessage = '',
+        accountInfo = null,
         confirmText = 'Konfirmasi',
         cancelText = 'Batal',
         type = 'danger',
-        icon = null
+        icon = null,
+        confirmIcon = null,
+        cancelIcon = null,
+        showCloseBtn = true,
+        defaultFocus = 'confirm'
       } = opts;
 
       const existing = document.getElementById('app-confirm-overlay');
@@ -324,74 +331,53 @@
         danger: 'trash-2',
         warning: 'alert-triangle',
         info: 'info',
-        primary: 'help-circle'
+        primary: 'help-circle',
+        success: 'check-circle-2'
       };
 
       const iconName = icon || typeIcons[type] || 'alert-triangle';
-      const typeButtonClass = {
-        danger: 'btn-danger',
-        warning: 'btn-warning',
-        info: 'btn-primary',
-        primary: 'btn-primary'
-      }[type] || 'btn-danger';
-
-      const iconBadgeColors = {
-        danger: 'background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);',
-        warning: 'background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25);',
-        info: 'background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25);',
-        primary: 'background: rgba(62, 207, 142, 0.14); color: #059669; border: 1px solid rgba(62, 207, 142, 0.3);'
-      }[type] || 'background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);';
 
       const overlay = document.createElement('div');
       overlay.id = 'app-confirm-overlay';
       overlay.className = 'confirm-overlay';
-      overlay.style.cssText = `
-        position: fixed; inset: 0; z-index: 99999;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        display: flex; align-items: center; justify-content: center;
-        padding: 16px; opacity: 0; transition: opacity 0.18s ease;
-      `;
 
       overlay.innerHTML = `
-        <div class="confirm-modal" style="
-          background: var(--color-canvas);
-          border: 1px solid var(--color-hairline);
-          border-radius: var(--rounded-xl);
-          box-shadow: var(--shadow-3);
-          width: 100%; max-width: 410px;
-          overflow: hidden;
-          transform: scale(0.96) translateY(6px);
-          transition: transform 0.18s ease;
-        ">
-          <div style="padding: 22px 24px 18px;">
-            <div style="display: flex; align-items: flex-start; gap: 14px;">
-              <div style="width: 40px; height: 40px; border-radius: var(--rounded-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; ${iconBadgeColors}">
-                <i data-lucide="${iconName}" style="width: 20px; height: 20px;"></i>
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+          <div class="confirm-modal-body">
+            <div class="confirm-header-row">
+              <div class="confirm-icon-box confirm-icon-${type}">
+                <i data-lucide="${iconName}"></i>
               </div>
-              <div style="flex: 1; min-width: 0;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--color-ink); margin: 0 0 6px 0; line-height: 1.35;">
-                  ${title}
-                </h3>
-                <p style="font-size: 13px; color: var(--color-ink-mute); margin: 0; line-height: 1.5;">
-                  ${message}
-                </p>
-              </div>
+              ${showCloseBtn ? `
+              <button type="button" id="confirm-btn-close" class="confirm-close-btn" aria-label="Tutup dialog" title="Tutup">
+                <i data-lucide="x"></i>
+              </button>` : ''}
             </div>
+
+            <h3 id="confirm-dialog-title" class="confirm-title">${title}</h3>
+            <p class="confirm-message">${message}</p>
+
+            ${accountInfo ? `
+            <div class="confirm-account-pill">
+              <i data-lucide="user-check"></i>
+              <span>Akun Aktif: <strong>${accountInfo}</strong></span>
+            </div>` : ''}
+
+            ${submessage ? `
+            <div class="confirm-subnotice">
+              <i data-lucide="alert-circle"></i>
+              <span>${submessage}</span>
+            </div>` : ''}
           </div>
 
-          <div style="
-            padding: 13px 20px;
-            background: var(--color-canvas-soft);
-            border-top: 1px solid var(--color-hairline);
-            display: flex; align-items: center; justify-content: flex-end; gap: 10px;
-          ">
-            <button type="button" id="confirm-btn-cancel" class="btn btn-secondary" style="padding: 7px 14px; font-size: 12.5px; font-weight: 600;">
-              ${cancelText}
+          <div class="confirm-modal-footer">
+            <button type="button" id="confirm-btn-cancel" class="confirm-btn-cancel">
+              ${cancelIcon ? `<i data-lucide="${cancelIcon}"></i>` : ''}
+              <span>${cancelText}</span>
             </button>
-            <button type="button" id="confirm-btn-ok" class="btn ${typeButtonClass}" style="padding: 7px 16px; font-size: 12.5px; font-weight: 700;">
-              ${confirmText}
+            <button type="button" id="confirm-btn-ok" class="confirm-btn-action btn-action-${type}">
+              ${confirmIcon ? `<i data-lucide="${confirmIcon}"></i>` : ''}
+              <span>${confirmText}</span>
             </button>
           </div>
         </div>
@@ -403,21 +389,26 @@
       const modalEl = overlay.querySelector('.confirm-modal');
       const btnCancel = overlay.querySelector('#confirm-btn-cancel');
       const btnOk = overlay.querySelector('#confirm-btn-ok');
+      const btnClose = overlay.querySelector('#confirm-btn-close');
 
       requestAnimationFrame(() => {
         overlay.style.opacity = '1';
         modalEl.style.transform = 'scale(1) translateY(0)';
-        btnOk.focus();
+        if (defaultFocus === 'cancel' && btnCancel) {
+          btnCancel.focus();
+        } else if (btnOk) {
+          btnOk.focus();
+        }
       });
 
       const closeDialog = (result) => {
         overlay.style.opacity = '0';
-        modalEl.style.transform = 'scale(0.96) translateY(4px)';
+        modalEl.style.transform = 'scale(0.95) translateY(6px)';
         document.removeEventListener('keydown', handleKey);
         setTimeout(() => {
           overlay.remove();
           resolve(result);
-        }, 160);
+        }, 180);
       };
 
       const handleKey = (e) => {
@@ -433,6 +424,7 @@
       document.addEventListener('keydown', handleKey);
       btnCancel.addEventListener('click', () => closeDialog(false));
       btnOk.addEventListener('click', () => closeDialog(true));
+      if (btnClose) btnClose.addEventListener('click', () => closeDialog(false));
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) closeDialog(false);
       });
@@ -445,9 +437,11 @@
       const {
         title = 'Informasi Sistem',
         message = '',
+        submessage = '',
         buttonText = 'Mengerti',
         type = 'info',
-        icon = null
+        icon = null,
+        buttonIcon = null
       } = opts;
 
       const existing = document.getElementById('app-confirm-overlay');
@@ -462,61 +456,37 @@
       };
 
       const iconName = icon || typeIcons[type] || 'info';
-      const iconBadgeColors = {
-        danger: 'background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25);',
-        warning: 'background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.25);',
-        info: 'background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25);',
-        success: 'background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25);',
-        primary: 'background: rgba(37, 99, 235, 0.12); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25);'
-      }[type] || 'background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25);';
 
       const overlay = document.createElement('div');
       overlay.id = 'app-confirm-overlay';
       overlay.className = 'confirm-overlay';
-      overlay.style.cssText = `
-        position: fixed; inset: 0; z-index: 99999;
-        background: rgba(0, 0, 0, 0.7);
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-        display: flex; align-items: center; justify-content: center;
-        padding: 16px; opacity: 0; transition: opacity 0.18s ease;
-      `;
 
       overlay.innerHTML = `
-        <div class="confirm-modal" style="
-          background: var(--color-canvas);
-          border: 1px solid var(--color-hairline);
-          border-radius: var(--rounded-xl);
-          box-shadow: var(--shadow-3);
-          width: 100%; max-width: 410px;
-          overflow: hidden;
-          transform: scale(0.96) translateY(6px);
-          transition: transform 0.18s ease;
-        ">
-          <div style="padding: 22px 24px 18px;">
-            <div style="display: flex; align-items: flex-start; gap: 14px;">
-              <div style="width: 40px; height: 40px; border-radius: var(--rounded-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0; ${iconBadgeColors}">
-                <i data-lucide="${iconName}" style="width: 20px; height: 20px;"></i>
+        <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="alert-dialog-title">
+          <div class="confirm-modal-body">
+            <div class="confirm-header-row">
+              <div class="confirm-icon-box confirm-icon-${type}">
+                <i data-lucide="${iconName}"></i>
               </div>
-              <div style="flex: 1; min-width: 0;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--color-ink); margin: 0 0 6px 0; line-height: 1.35;">
-                  ${title}
-                </h3>
-                <p style="font-size: 13px; color: var(--color-ink-mute); margin: 0; line-height: 1.5; white-space: pre-line;">
-                  ${message}
-                </p>
-              </div>
+              <button type="button" id="alert-btn-close" class="confirm-close-btn" aria-label="Tutup dialog" title="Tutup">
+                <i data-lucide="x"></i>
+              </button>
             </div>
+
+            <h3 id="alert-dialog-title" class="confirm-title">${title}</h3>
+            <p class="confirm-message">${message}</p>
+
+            ${submessage ? `
+            <div class="confirm-subnotice">
+              <i data-lucide="info"></i>
+              <span>${submessage}</span>
+            </div>` : ''}
           </div>
 
-          <div style="
-            padding: 13px 20px;
-            background: var(--color-canvas-soft);
-            border-top: 1px solid var(--color-hairline);
-            display: flex; align-items: center; justify-content: flex-end;
-          ">
-            <button type="button" id="alert-btn-ok" class="btn btn-primary" style="padding: 7px 18px; font-size: 12.5px; font-weight: 700;">
-              ${buttonText}
+          <div class="confirm-modal-footer">
+            <button type="button" id="alert-btn-ok" class="confirm-btn-action btn-action-${type === 'danger' ? 'danger' : 'primary'}">
+              ${buttonIcon ? `<i data-lucide="${buttonIcon}"></i>` : ''}
+              <span>${buttonText}</span>
             </button>
           </div>
         </div>
@@ -527,6 +497,7 @@
 
       const modalEl = overlay.querySelector('.confirm-modal');
       const btnOk = overlay.querySelector('#alert-btn-ok');
+      const btnClose = overlay.querySelector('#alert-btn-close');
 
       requestAnimationFrame(() => {
         overlay.style.opacity = '1';
@@ -536,12 +507,12 @@
 
       const closeDialog = () => {
         overlay.style.opacity = '0';
-        modalEl.style.transform = 'scale(0.96) translateY(4px)';
+        modalEl.style.transform = 'scale(0.95) translateY(6px)';
         document.removeEventListener('keydown', handleKey);
         setTimeout(() => {
           overlay.remove();
           resolve(true);
-        }, 160);
+        }, 180);
       };
 
       const handleKey = (e) => {
@@ -553,10 +524,23 @@
 
       document.addEventListener('keydown', handleKey);
       btnOk.addEventListener('click', () => closeDialog());
+      if (btnClose) btnClose.addEventListener('click', () => closeDialog());
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) closeDialog();
       });
     });
+  };
+
+  // Expose globally to window
+  window.AppConfirm = window.AppConfirm || AppConfirm;
+  window.AppAlert = window.AppAlert || AppAlert;
+  window.confirmModal = window.AppConfirm;
+  window.alertModal = window.AppAlert;
+  window.showConfirm = window.AppConfirm;
+  window.showAlert = window.AppAlert;
+  window.AppDialog = window.AppDialog || {
+    confirm: window.AppConfirm,
+    alert: window.AppAlert
   };
 
   // Global Declarative data-confirm form submit interceptor
@@ -675,13 +659,104 @@
         const customText = getSmartActionText(form);
         if (typeof AppAction !== 'undefined') AppAction.show(customText);
         try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (err) {}
+        
+        // Defensive: Jika form terlepas dari DOM (misal modal tertutup/terdestroy oleh Alpine),
+        // pasang kembali ke document.body agar browser tidak membatalkan submit
+        if (!form.isConnected) {
+          form.style.display = 'none';
+          document.body.appendChild(form);
+        }
+        
         _nativeFormSubmit.call(form);
       }
     }
   });
 
+  // Global Logout Confirmation Function & Interceptor
+  const confirmLogout = async (customUrl = null) => {
+    const logoutUrl = customUrl || (window.KSNACK_SESSION?.logoutUrl) || ((window.APP_BASE_PATH || '') + '/logout');
+    
+    // Ambil identitas akun yang sedang aktif
+    const userName = window.KSNACK_AUTH_USER?.name || document.querySelector('.sidebar-user-name')?.textContent?.trim() || '';
+    const userRole = window.KSNACK_AUTH_USER?.role || document.querySelector('.sidebar-user-role')?.textContent?.trim() || '';
+    const accountInfo = (userName && userRole) ? `${userName} (${userRole})` : (userName || null);
+
+    const confirmed = await AppConfirm({
+      title: 'Konfirmasi Keluar',
+      message: 'Apakah Anda yakin ingin keluar dari sistem KEREN SNACK ERP?',
+      submessage: 'Seluruh sesi kerja aktif Anda pada perangkat ini akan diakhiri. Pastikan pekerjaan atau transaksi yang sedang berjalan telah selesai.',
+      accountInfo: accountInfo,
+      confirmText: 'Ya, Keluar',
+      cancelText: 'Batal',
+      type: 'danger',
+      icon: 'log-out',
+      confirmIcon: 'log-out',
+      cancelIcon: 'x',
+      defaultFocus: 'cancel'
+    });
+
+    if (confirmed) {
+      if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+      if (typeof AppAction !== 'undefined') AppAction.show('Mengakhiri sesi sistem...');
+      try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (err) {}
+      window.location.href = logoutUrl;
+    }
+    return confirmed;
+  };
+
+  // Intercept any click on logout trigger or link targeting /logout
+  document.addEventListener('click', async (e) => {
+    const logoutTrigger = e.target.closest('a[href$="/logout"], a[href*="/logout?"], [data-action="logout"]');
+    if (!logoutTrigger) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const targetUrl = logoutTrigger.getAttribute('href') || null;
+    await confirmLogout(targetUrl);
+  }, true);
+
+  // Declarative click confirmation for non-form elements (a[data-confirm], button[data-confirm]:not([type="submit"]))
+  document.addEventListener('click', async (e) => {
+    const trigger = e.target.closest('a[data-confirm], button[data-confirm]:not([type="submit"])');
+    if (!trigger) return;
+
+    // Abaikan jika trigger adalah logout yang sudah ditangani di atas
+    if (trigger.matches('a[href$="/logout"], a[href*="/logout?"], [data-action="logout"]')) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const message = trigger.getAttribute('data-confirm');
+    const title = trigger.getAttribute('data-confirm-title') || 'Konfirmasi Tindakan';
+    const type = trigger.getAttribute('data-confirm-type') || 'danger';
+    const icon = trigger.getAttribute('data-confirm-icon') || null;
+    const confirmText = trigger.getAttribute('data-confirm-btn') || 'Konfirmasi';
+    const cancelText = trigger.getAttribute('data-confirm-cancel') || 'Batal';
+
+    const confirmed = await AppConfirm({
+      title,
+      message,
+      type,
+      icon,
+      confirmText,
+      cancelText
+    });
+
+    if (confirmed) {
+      if (trigger.tagName.toLowerCase() === 'a' && trigger.href) {
+        if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+        const actionText = trigger.getAttribute('data-action-text') || 'Memproses...';
+        if (typeof AppAction !== 'undefined') AppAction.show(actionText);
+        try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (err) {}
+        window.location.href = trigger.href;
+      }
+    }
+  }, true);
+
   window.AppConfirm = AppConfirm;
   window.confirmModal = AppConfirm;
+  window.confirmLogout = confirmLogout;
   window.AppAlert = AppAlert;
   window.alertModal = AppAlert;
 
@@ -1462,18 +1537,22 @@
   if (typeof window.fetch === 'function') {
     const originalFetch = window.fetch;
     window.fetch = function (resource, init = {}) {
+      init = init || {};
+      init.headers = init.headers || {};
       const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-      if (token) {
-        init.headers = init.headers || {};
-        if (init.headers instanceof Headers) {
-          if (!init.headers.has('X-CSRF-TOKEN')) init.headers.set('X-CSRF-TOKEN', token);
-        } else if (Array.isArray(init.headers)) {
-          if (!init.headers.some(([k]) => k.toLowerCase() === 'x-csrf-token')) {
-            init.headers.push(['X-CSRF-TOKEN', token]);
-          }
-        } else {
-          if (!init.headers['X-CSRF-TOKEN']) init.headers['X-CSRF-TOKEN'] = token;
+      if (init.headers instanceof Headers) {
+        if (token && !init.headers.has('X-CSRF-TOKEN')) init.headers.set('X-CSRF-TOKEN', token);
+        if (!init.headers.has('X-Requested-With')) init.headers.set('X-Requested-With', 'XMLHttpRequest');
+      } else if (Array.isArray(init.headers)) {
+        if (token && !init.headers.some(([k]) => k.toLowerCase() === 'x-csrf-token')) {
+          init.headers.push(['X-CSRF-TOKEN', token]);
         }
+        if (!init.headers.some(([k]) => k.toLowerCase() === 'x-requested-with')) {
+          init.headers.push(['X-Requested-With', 'XMLHttpRequest']);
+        }
+      } else {
+        if (token && !init.headers['X-CSRF-TOKEN']) init.headers['X-CSRF-TOKEN'] = token;
+        if (!init.headers['X-Requested-With']) init.headers['X-Requested-With'] = 'XMLHttpRequest';
       }
       return originalFetch.call(this, resource, init);
     };
@@ -1527,6 +1606,50 @@
     }
   };
 
+  /* =====================================================================
+     10. SESSION TIMEOUT ENGINE (Auto-Logout 12 Jam & Sinkronisasi Sesi)
+     ===================================================================== */
+  const SessionTimeoutEngine = {
+    _isTriggered: false,
+    _intervalId: null,
+
+    init() {
+      if (!window.KSNACK_SESSION || !window.KSNACK_SESSION.expiresAt) return;
+
+      const checkExpiry = () => {
+        if (this._isTriggered) return;
+        const now = Math.floor(Date.now() / 1000);
+        if (now >= window.KSNACK_SESSION.expiresAt) {
+          this.handleTimeout();
+        }
+      };
+
+      // Periodic check setiap 30 detik
+      this._intervalId = setInterval(checkExpiry, 30000);
+
+      // Cek seketika saat user kembali fokus membuka tab browser
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          checkExpiry();
+        }
+      });
+    },
+
+    handleTimeout() {
+      if (this._isTriggered) return;
+      this._isTriggered = true;
+      if (this._intervalId) clearInterval(this._intervalId);
+
+      if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+      if (typeof AppAction !== 'undefined') AppAction.show('Sesi telah berakhir (12 jam)...');
+
+      const logoutUrl = window.KSNACK_SESSION.logoutUrl || ((window.APP_BASE_PATH || '') + '/logout?reason=timeout');
+      window.location.replace(logoutUrl);
+    }
+  };
+
+  window.SessionTimeoutEngine = SessionTimeoutEngine;
+
   function onReady(fn) {
     if (document.readyState !== 'loading') {
       fn();
@@ -1542,6 +1665,7 @@
     RupiahFormatter.init();
     TableGrabScroll.init();
     PWAEngine.init();
+    SessionTimeoutEngine.init();
   });
 
 })();

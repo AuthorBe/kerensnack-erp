@@ -491,6 +491,50 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
     background: rgba(99, 102, 241, 0.06);
 }
 
+/* Mobile Cards Styling (< 768px) */
+.rk-mobile-card {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    border-radius: 14px;
+    padding: 14px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.rk-mobile-card:hover {
+    border-color: rgba(99, 102, 241, 0.25);
+}
+.rk-mobile-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.rk-mobile-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 10px 12px;
+    background: var(--color-canvas-soft);
+    border: 1px solid var(--color-hairline);
+    border-radius: 10px;
+    margin: 10px 0;
+    text-align: center;
+}
+.rk-mobile-metric-label {
+    font-size: 10px;
+    color: var(--color-ink-mute);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 2px;
+}
+.rk-mobile-metric-val {
+    font-size: 12px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    color: var(--color-ink);
+}
+
 /* Pagination Styling */
 .rk-pagination-bar {
     padding: 14px 18px;
@@ -775,7 +819,8 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
             <input type="text" 
                    x-model="search" 
                    placeholder="Cari toko, no kunjungan, sales, atau nota..." 
-                   class="rk-search-input">
+                   class="rk-search-input"
+                   aria-label="Cari toko, nomor kunjungan, sales, atau nomor nota">
             <button type="button" 
                     x-show="search" 
                     @click="search = ''" 
@@ -810,7 +855,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
         </div>
     <?php else: ?>
         <div class="rk-card overflow-hidden">
-            <div class="table-scroll">
+            <div class="table-scroll hidden md:block">
                 <table class="rk-table">
                     <thead>
                         <tr>
@@ -933,7 +978,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                                             <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
                                         </a>
                                     <?php elseif ($v['status_pembayaran'] === 'sebagian'): ?>
-                                        <span class="rk-status-badge rk-status-cicil" title="Sisa tagihan: <?= Format::rupiah((float)($v['sisa_tagihan'] ?? 0)) ?>">
+                                        <span class="rk-status-badge rk-status-cicil" title="Sisa tagihan nota: <?= Format::rupiah((float)($v['sisa_tagihan'] ?? 0)) ?>">
                                             <i data-lucide="pie-chart" style="width:12px;height:12px;"></i>
                                             <span>Cicil</span>
                                         </span>
@@ -981,6 +1026,131 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                         </tr>
                     </tfoot>
                 </table>
+            </div>
+
+            <!-- MOBILE CARD VIEW (< 768px) -->
+            <div class="block md:hidden rk-mobile-cards-wrap space-y-3 p-3">
+                <?php foreach ($visits as $v): ?>
+                <?php 
+                    $searchKeywords = strtolower(trim(preg_replace('/\s+/', ' ', $v['nama_toko'] . ' ' . ($v['kode_pelanggan'] ?? '') . ' ' . $v['nomor_kunjungan'] . ' ' . $v['nama_sales'] . ' ' . ($v['auditor_name'] ?? '') . ' ' . ($v['nomor_nota'] ?? ''))));
+                ?>
+                <div class="rk-mobile-card"
+                     data-search="<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>"
+                     x-show="!search || ($el.dataset.search && $el.dataset.search.includes(search.toLowerCase()))">
+                    
+                    <!-- Top: Store Info & Status Badge -->
+                    <div class="rk-mobile-card-header">
+                        <div class="min-w-0 flex-1">
+                            <h4 class="font-bold text-sm truncate" style="color:var(--color-ink);" title="<?= htmlspecialchars($v['nama_toko']) ?>">
+                                <?= htmlspecialchars($v['nama_toko']) ?>
+                            </h4>
+                            <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                                <?php if (!empty($v['kode_pelanggan'])): ?>
+                                    <span class="rk-badge-cust">
+                                        <?= htmlspecialchars($v['kode_pelanggan']) ?>
+                                    </span>
+                                <?php endif; ?>
+                                <span class="text-[11px] text-mute flex items-center gap-1">
+                                    <i data-lucide="calendar" style="width:11px;height:11px;"></i>
+                                    <?= date('d/m/Y', strtotime($v['tanggal_kunjungan'])) ?> &bull; <?= date('H:i', strtotime($v['tanggal_kunjungan'])) ?> WIB
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Status Tagihan Badge -->
+                        <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                            <?php if ((float)$v['total_laku_nominal'] == 0.0): ?>
+                                <span class="rk-status-badge rk-status-nihil" title="Tidak ada penjualan rak">
+                                    <i data-lucide="minus-circle" style="width:11px;height:11px;"></i>
+                                    <span>Nihil</span>
+                                </span>
+                            <?php elseif (empty($v['pesanan_id'])): ?>
+                                <span class="rk-status-badge rk-status-menunggu" title="Opname selesai, siap dibuatkan faktur">
+                                    <i data-lucide="clock" style="width:11px;height:11px;"></i>
+                                    <span>Menunggu Tagihan</span>
+                                </span>
+                            <?php elseif ($v['status_pembayaran'] === 'lunas'): ?>
+                                <span class="rk-status-badge rk-status-lunas" title="Tagihan lunas terbayar">
+                                    <i data-lucide="check-circle-2" style="width:11px;height:11px;"></i>
+                                    <span>Lunas</span>
+                                </span>
+                                <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                    <i data-lucide="receipt" style="width:10px;height:10px;"></i>
+                                    <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
+                                </a>
+                            <?php elseif ($v['status_pembayaran'] === 'sebagian'): ?>
+                                <span class="rk-status-badge rk-status-cicil" title="Sisa tagihan nota: <?= Format::rupiah((float)($v['sisa_tagihan'] ?? 0)) ?>">
+                                    <i data-lucide="pie-chart" style="width:11px;height:11px;"></i>
+                                    <span>Cicil</span>
+                                </span>
+                                <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                    <i data-lucide="receipt" style="width:10px;height:10px;"></i>
+                                    <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
+                                </a>
+                            <?php else: ?>
+                                <span class="rk-status-badge rk-status-belum-lunas" title="Belum ada pembayaran tagihan">
+                                    <i data-lucide="alert-circle" style="width:11px;height:11px;"></i>
+                                    <span>Belum Lunas</span>
+                                </span>
+                                <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                    <i data-lucide="receipt" style="width:10px;height:10px;"></i>
+                                    <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Meta: Visit No & Sales Person -->
+                    <div class="flex items-center justify-between text-xs py-1.5 px-2.5 rounded-lg" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
+                        <a href="/consignment/opname/hasil?kunjungan_id=<?= urlencode((string)$v['id']) ?>&ref=riwayat" 
+                           class="font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
+                           title="Buka rincian kunjungan">
+                            <i data-lucide="external-link" style="width:11px;height:11px;"></i>
+                            <span><?= htmlspecialchars($v['nomor_kunjungan']) ?></span>
+                        </a>
+                        <div class="flex items-center gap-1.5 text-[11px] truncate max-w-[160px]" style="color:var(--color-ink-secondary);" title="Sales Lapangan: <?= htmlspecialchars($v['nama_sales']) ?>">
+                            <i data-lucide="user" style="width:11px;height:11px;flex-shrink:0;"></i>
+                            <span class="truncate font-semibold"><?= htmlspecialchars($v['nama_sales']) ?></span>
+                        </div>
+                    </div>
+
+                    <!-- 3-Col Metrics Strip -->
+                    <div class="rk-mobile-metrics">
+                        <div>
+                            <span class="rk-mobile-metric-label">Opname SKU</span>
+                            <span class="rk-mobile-metric-val"><?= (int)$v['total_sku'] ?> SKU</span>
+                            <?php if ((int)$v['total_retur_rusak'] > 0): ?>
+                                <span class="rk-badge-bs mt-1 block text-[9.5px]">
+                                    BS: <?= (int)$v['total_retur_rusak'] ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        <div>
+                            <span class="rk-mobile-metric-label">Fisik Laku</span>
+                            <span class="rk-mobile-metric-val <?= (int)$v['total_laku'] > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400' ?>">
+                                <?= number_format((int)$v['total_laku'], 0, ',', '.') ?> <span class="text-[9.5px] font-normal text-slate-400">pcs</span>
+                            </span>
+                        </div>
+                        <div>
+                            <span class="rk-mobile-metric-label">Nilai Laku</span>
+                            <span class="rk-mobile-metric-val <?= (float)$v['total_laku_nominal'] > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400' ?>">
+                                <?= Format::rupiah((float)$v['total_laku_nominal']) ?>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="pt-1">
+                        <a href="<?= Router::url('/consignment/opname/hasil?kunjungan_id=' . urlencode((string)$v['id']) . '&ref=riwayat') ?>" 
+                           class="btn btn-secondary btn-sm w-full flex items-center justify-center gap-1.5 text-xs font-bold py-2 rounded-xl"
+                           style="border-color:var(--color-hairline);">
+                            <i data-lucide="eye" class="w-3.5 h-3.5 text-sky-500"></i>
+                            <span>Buka Rincian Opname</span>
+                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 ml-auto text-slate-400"></i>
+                        </a>
+                    </div>
+                </div>
+                <?php endforeach; ?>
             </div>
 
             <!-- Pagination Controls Bar -->

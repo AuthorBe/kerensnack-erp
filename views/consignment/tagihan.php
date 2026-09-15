@@ -1527,7 +1527,12 @@ document.addEventListener('alpine:init', () => {
             <form action="<?= Router::url('/consignment/tagihan/bayar') ?>" 
                   method="POST" 
                   class="flex flex-col flex-1 overflow-hidden"
-                  @submit="if(!canSubmitBayar()) { $event.preventDefault(); return; } if(!confirm('Proses pembayaran ini? Saldo kas akan langsung bertambah dan sisa piutang berkurang.')) $event.preventDefault();">
+                  data-confirm="Proses pembayaran ini? Saldo kas akan langsung bertambah dan sisa piutang berkurang."
+                  data-confirm-title="Konfirmasi Pembayaran Tagihan"
+                  data-confirm-type="primary"
+                  data-confirm-btn="Ya, Proses Bayar"
+                  data-action-text="Memproses pembayaran tagihan..."
+                  @submit="if(!canSubmitBayar()) { $event.preventDefault(); return; }">
                 
                 <?= CSRF::field() ?>
                 <input type="hidden" name="pesanan_id" x-model="bayarData.pesanan_id">

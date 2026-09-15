@@ -214,6 +214,27 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 </tbody>
             </table>
         </div>
+
+        <!-- PAGINATION BAR FINISHED GOODS -->
+        <?php if (!empty($paginationFg) && $paginationFg['totalPages'] > 1): ?>
+        <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div style="font-size:12px;color:var(--color-ink-mute);">
+                Menampilkan Halaman <strong><?= $paginationFg['page'] ?></strong> dari <strong><?= $paginationFg['totalPages'] ?></strong> (Total <?= number_format($paginationFg['total'], 0, ',', '.') ?> barang jadi)
+            </div>
+            <div style="display:flex;gap:6px;">
+                <?php if ($paginationFg['page'] > 1): ?>
+                <a href="<?= Router::url('/products?' . http_build_query(array_merge($_GET, ['page_fg' => $paginationFg['page'] - 1, 'tab' => 'finished_goods']))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                    &laquo; Sebelumnya
+                </a>
+                <?php endif; ?>
+                <?php if ($paginationFg['page'] < $paginationFg['totalPages']): ?>
+                <a href="<?= Router::url('/products?' . http_build_query(array_merge($_GET, ['page_fg' => $paginationFg['page'] + 1, 'tab' => 'finished_goods']))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                    Selanjutnya &raquo;
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- ========================================================================= -->

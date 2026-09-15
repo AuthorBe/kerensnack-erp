@@ -6,6 +6,8 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use Database;
+use PDO;
+use App\Helpers\ActivityLog;
 use Throwable;
 
 /**
@@ -36,7 +38,27 @@ class ProductController extends Controller
                 ORDER BY gp.status_aktif DESC, gp.kode_grup ASC
             ");
 
-            // 2. Katalog Barang Jadi (Finished Goods)
+            // 2. Katalog Barang Jadi (Finished Goods dengan Paginasi Server)
+            $qFg = trim((string)$this->input('q_fg', $this->input('q', '')));
+            $pageFg = max(1, (int)$this->input('page_fg', $this->input('page', 1)));
+            $perPageFg = max(10, min(200, (int)$this->input('per_page_fg', 50)));
+            $offsetFg = ($pageFg - 1) * $perPageFg;
+
+            $whereFg = "WHERE i.tipe_item = 'barang_jadi'";
+            $paramsFg = [];
+            if (!empty($qFg)) {
+                $whereFg .= " AND (i.nama_item ILIKE :q OR i.kode_sku ILIKE :q OR i.barcode ILIKE :q OR gp.nama_grup ILIKE :q)";
+                $paramsFg['q'] = "%{$qFg}%";
+            }
+
+            $countFg = (int)(Database::fetchOne("
+                SELECT COUNT(*) as total
+                FROM public.item i
+                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                {$whereFg}
+            ", $paramsFg)['total'] ?? 0);
+            $totalPagesFg = max(1, (int)ceil($countFg / $perPageFg));
+
             $finishedGoods = Database::fetchAll("
                 SELECT i.id, i.grup_id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
                        i.tipe_item, i.satuan_dasar, i.harga_pokok_pembelian,
@@ -48,9 +70,10 @@ class ProductController extends Controller
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
-                WHERE i.tipe_item = 'barang_jadi'
+                {$whereFg}
                 ORDER BY i.status_aktif DESC, gp.kode_grup ASC, i.nama_item ASC
-            ");
+                LIMIT {$perPageFg} OFFSET {$offsetFg}
+            ", $paramsFg);
 
             // 3. Master Bahan Baku Curah & Bahan Kemasan
             $materials = Database::fetchAll("
@@ -107,11 +130,36 @@ class ProductController extends Controller
                 'recipes' => $recipes,
                 'recipesByFinishedGood' => $recipesByFinishedGood,
                 'wageGroups' => $wageGroups,
-                'suppliers' => $suppliers
+                'suppliers' => $suppliers,
+                'paginationFg' => [
+                    'page' => $pageFg,
+                    'perPage' => $perPageFg,
+                    'total' => $countFg,
+                    'totalPages' => $totalPagesFg,
+                    'q' => $qFg
+                ]
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            $this->flashError("Terjadi kesalahan saat memuat data produk: " . $e->getMessage());
+            $this->view('products.index', [
+                'pageTitle' => 'Master Produk, Bahan & Resep',
+                'pageSubtitle' => 'Katalog Barang Jadi, Bahan Baku Curah, Kemasan & Resep BOM',
+                'groups' => [],
+                'finishedGoods' => [],
+                'materials' => [],
+                'recipes' => [],
+                'recipesByFinishedGood' => [],
+                'wageGroups' => [],
+                'suppliers' => [],
+                'paginationFg' => [
+                    'page' => 1,
+                    'perPage' => 50,
+                    'total' => 0,
+                    'totalPages' => 1,
+                    'q' => ''
+                ]
+            ]);
         }
     }
 
@@ -120,6 +168,8 @@ class ProductController extends Controller
     // ==========================================
     public function storeGroup(): void
     {
+        Auth::requirePermission('master.products_manage');
+
         $nama = trim((string)$this->input('nama_grup'));
         $barcode = trim((string)$this->input('barcode_universal'));
 
@@ -173,6 +223,8 @@ class ProductController extends Controller
     // ==========================================
     public function storeItem(): void
     {
+        Auth::requirePermission('master.products_manage');
+
         $grupId = $this->input('grup_id') ?: null;
         $namaItem = trim((string)$this->input('nama_item'));
         $varianRasa = trim((string)$this->input('varian_rasa'));
@@ -192,7 +244,10 @@ class ProductController extends Controller
             $count = Database::fetchOne("SELECT count(*) as total FROM public.item WHERE tipe_item = 'barang_jadi'")['total'] ?? 0;
             $kodeSku = 'SUB-' . str_pad((string)($count + 1), 4, '0', STR_PAD_LEFT);
 
-            Database::execute("
+            $pdo = Database::pdo();
+            $pdo->beginTransaction();
+
+            $stmt = $pdo->prepare("
                 INSERT INTO public.item (
                     grup_id, kode_sku, barcode, nama_item, varian_rasa, tipe_item,
                     satuan_dasar, satuan_distribusi, kelompok_borongan_id, pemasok_utama_id,
@@ -203,8 +258,9 @@ class ProductController extends Controller
                     'pcs', 'bal', :borongan, NULL,
                     :hpp, :stok_min, :stok_awal,
                     TRUE, TRUE
-                )
-            ", [
+                ) RETURNING id
+            ");
+            $stmt->execute([
                 'grup' => $grupId,
                 'sku' => $kodeSku,
                 'barcode' => $barcode ?: null,
@@ -215,11 +271,42 @@ class ProductController extends Controller
                 'stok_min' => $stokMin,
                 'stok_awal' => $stokAwal
             ]);
+            $newItem = $stmt->fetch(PDO::FETCH_ASSOC);
+            $newItemId = $newItem['id'] ?? null;
+
+            if ($newItemId && $stokAwal > 0) {
+                $stmtHistory = $pdo->prepare("
+                    INSERT INTO public.riwayat_stok (
+                        item_id, tipe_mutasi, jumlah_perubahan,
+                        stok_sebelum, stok_sesudah, referensi_tabel, referensi_id,
+                        keterangan, dibuat_oleh, dibuat_pada
+                    ) VALUES (
+                        :item_id, 'penyesuaian_opname_tambah', :jumlah,
+                        0, :stok_sesudah, 'item', :ref_id,
+                        :keterangan, :dibuat_oleh, NOW()
+                    )
+                ");
+                $stmtHistory->execute([
+                    'item_id' => $newItemId,
+                    'jumlah' => $stokAwal,
+                    'stok_sesudah' => $stokAwal,
+                    'ref_id' => $newItemId,
+                    'keterangan' => 'Saldo awal registrasi produk baru ' . $namaItem,
+                    'dibuat_oleh' => Auth::id()
+                ]);
+            }
+
+            $pdo->commit();
+
+            ActivityLog::log('master_data', 'Tambah Produk Baru', "Produk {$namaItem} ({$kodeSku}) berhasil ditambahkan dengan stok awal {$stokAwal}");
 
             $this->flashSuccess("Barang Jadi {$namaItem} berhasil ditambahkan!");
             $this->redirect('/products');
 
         } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $this->flashError('Gagal menambahkan Barang Jadi: ' . $e->getMessage());
             $this->redirect('/products');
         }
@@ -227,6 +314,8 @@ class ProductController extends Controller
 
     public function updateItem(): void
     {
+        Auth::requirePermission('master.products_manage');
+
         $id = $this->input('id');
         $grupId = $this->input('grup_id') ?: null;
         $namaItem = trim((string)$this->input('nama_item'));
@@ -285,6 +374,8 @@ class ProductController extends Controller
     // ==========================================
     public function storeMaterial(): void
     {
+        Auth::requirePermission(['master.materials_manage', 'master.products_manage']);
+
         $namaItem = trim((string)$this->input('nama_item'));
         $tipeItem = in_array($this->input('tipe_item'), ['bahan_mentah', 'bahan_kemas'], true) ? $this->input('tipe_item') : 'bahan_mentah';
         $satuanDasar = trim((string)$this->input('satuan_dasar', 'kg'));
@@ -304,7 +395,10 @@ class ProductController extends Controller
             $count = Database::fetchOne("SELECT count(*) as total FROM public.item WHERE tipe_item = :tipe", ['tipe' => $tipeItem])['total'] ?? 0;
             $kodeSku = $prefix . str_pad((string)($count + 1), 4, '0', STR_PAD_LEFT);
 
-            Database::execute("
+            $pdo = Database::pdo();
+            $pdo->beginTransaction();
+
+            $stmt = $pdo->prepare("
                 INSERT INTO public.item (
                     kode_sku, nama_item, varian_rasa, tipe_item, satuan_dasar,
                     pemasok_utama_id, harga_pokok_pembelian, stok_minimum_peringatan,
@@ -313,8 +407,9 @@ class ProductController extends Controller
                     :sku, :nama, :nama, :tipe, :satuan,
                     :pemasok, :hpp, :stok_min,
                     :stok_awal, FALSE, TRUE
-                )
-            ", [
+                ) RETURNING id
+            ");
+            $stmt->execute([
                 'sku' => $kodeSku,
                 'nama' => $namaItem,
                 'tipe' => $tipeItem,
@@ -324,11 +419,42 @@ class ProductController extends Controller
                 'stok_min' => $stokMin,
                 'stok_awal' => $stokAwal
             ]);
+            $newItem = $stmt->fetch(PDO::FETCH_ASSOC);
+            $newItemId = $newItem['id'] ?? null;
+
+            if ($newItemId && $stokAwal > 0) {
+                $stmtHistory = $pdo->prepare("
+                    INSERT INTO public.riwayat_stok (
+                        item_id, tipe_mutasi, jumlah_perubahan,
+                        stok_sebelum, stok_sesudah, referensi_tabel, referensi_id,
+                        keterangan, dibuat_oleh, dibuat_pada
+                    ) VALUES (
+                        :item_id, 'penyesuaian_opname_tambah', :jumlah,
+                        0, :stok_sesudah, 'item', :ref_id,
+                        :keterangan, :dibuat_oleh, NOW()
+                    )
+                ");
+                $stmtHistory->execute([
+                    'item_id' => $newItemId,
+                    'jumlah' => $stokAwal,
+                    'stok_sesudah' => $stokAwal,
+                    'ref_id' => $newItemId,
+                    'keterangan' => 'Saldo awal registrasi bahan ' . $namaItem,
+                    'dibuat_oleh' => Auth::id()
+                ]);
+            }
+
+            $pdo->commit();
+
+            ActivityLog::log('master_data', 'Tambah Bahan Baru', "Bahan {$namaItem} ({$kodeSku}) berhasil ditambahkan dengan stok awal {$stokAwal}");
 
             $this->flashSuccess("Bahan {$namaItem} ({$kodeSku}) berhasil ditambahkan!");
             $this->redirect('/products?tab=materials');
 
         } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $this->flashError('Gagal menambahkan bahan: ' . $e->getMessage());
             $this->redirect('/products?tab=materials');
         }
@@ -336,6 +462,8 @@ class ProductController extends Controller
 
     public function updateMaterial(): void
     {
+        Auth::requirePermission(['master.materials_manage', 'master.products_manage']);
+
         $id = $this->input('id');
         $namaItem = trim((string)$this->input('nama_item'));
         $tipeItem = in_array($this->input('tipe_item'), ['bahan_mentah', 'bahan_kemas'], true) ? $this->input('tipe_item') : 'bahan_mentah';
@@ -386,6 +514,8 @@ class ProductController extends Controller
 
     public function deleteMaterial(): void
     {
+        Auth::requirePermission(['master.materials_manage', 'master.products_manage']);
+
         $id = $this->input('id');
         if (empty($id)) {
             $this->flashError('ID bahan tidak valid.');
@@ -417,6 +547,8 @@ class ProductController extends Controller
     // ==========================================
     public function storeRecipeItem(): void
     {
+        Auth::requirePermission('master.products_manage');
+
         $itemJadiId = $this->input('item_jadi_id');
         $itemBahanId = $this->input('item_bahan_id');
         $jumlahKebutuhan = (float)$this->input('jumlah_kebutuhan', 0);
@@ -454,6 +586,8 @@ class ProductController extends Controller
 
     public function deleteRecipeItem(): void
     {
+        Auth::requirePermission('master.products_manage');
+
         $id = $this->input('id');
         if (empty($id)) {
             $this->flashError('ID resep tidak valid.');
@@ -477,6 +611,8 @@ class ProductController extends Controller
     // ==========================================
     public function storeBoronganGroup(): void
     {
+        Auth::requirePermission('master.products_manage');
+
         $nama = trim((string)$this->input('nama_kelompok'));
         $upah = (float)preg_replace('/[^0-9]/', '', (string)$this->input('upah_per_bungkus', '0'));
         $keterangan = trim((string)$this->input('keterangan', ''));
@@ -511,6 +647,8 @@ class ProductController extends Controller
 
     public function updateBoronganGroup(): void
     {
+        Auth::requirePermission('master.products_manage');
+
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_kelompok'));
         $upah = (float)preg_replace('/[^0-9]/', '', (string)$this->input('upah_per_bungkus', '0'));
@@ -551,6 +689,8 @@ class ProductController extends Controller
 
     public function deleteBoronganGroup(): void
     {
+        Auth::requirePermission('master.products_manage');
+
         $id = $this->input('id');
         if (empty($id)) {
             $this->flashError('ID kelompok borongan tidak valid.');

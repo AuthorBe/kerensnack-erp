@@ -338,11 +338,16 @@ ob_start();
     <!-- ========================================================================= -->
     <div class="card p-4 sm:p-5 space-y-4" style="border-radius: 16px;">
         
+        <?php
+        $sort = $sort ?? 'terbaru';
+        $sortParam = ($sort === 'terlama') ? '&sort=terlama' : '';
+        ?>
+
         <!-- Baris 1: Segmented Filter Pills -->
         <div class="po-segmented-tabs-wrapper table-scroll" data-table-scroll>
             
             <!-- Tab 1: Menunggu Disiapkan -->
-            <a href="<?= Router::url('/customer-orders/po-list?tab=pending' . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '')) ?>"
+            <a href="<?= Router::url('/customer-orders/po-list?tab=pending' . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '') . $sortParam) ?>"
                class="po-tab-btn <?= ($tab === 'pending') ? 'is-active' : '' ?>">
                 <i data-lucide="clock" style="width: 15px; height: 15px;"></i>
                 <span>Menunggu Disiapkan</span>
@@ -350,7 +355,7 @@ ob_start();
             </a>
 
             <!-- Tab 2: Siap Dikirim -->
-            <a href="<?= Router::url('/customer-orders/po-list?tab=ready' . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '')) ?>"
+            <a href="<?= Router::url('/customer-orders/po-list?tab=ready' . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '') . $sortParam) ?>"
                class="po-tab-btn <?= ($tab === 'ready') ? 'is-active' : '' ?>">
                 <i data-lucide="package-check" style="width: 15px; height: 15px;"></i>
                 <span>Siap Dikirim</span>
@@ -358,7 +363,7 @@ ob_start();
             </a>
 
             <!-- Tab 3: Gagal Kirim (Riwayat List) -->
-            <a href="<?= Router::url('/customer-orders/po-list?tab=failed' . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '')) ?>"
+            <a href="<?= Router::url('/customer-orders/po-list?tab=failed' . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '') . $sortParam) ?>"
                class="po-tab-btn <?= ($tab === 'failed') ? 'is-active' : '' ?>">
                 <i data-lucide="alert-triangle" style="width: 15px; height: 15px;"></i>
                 <span>Gagal Kirim</span>
@@ -366,7 +371,7 @@ ob_start();
             </a>
 
             <!-- Tab 4: Semua Riwayat -->
-            <a href="<?= Router::url('/customer-orders/po-list?tab=all' . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '')) ?>"
+            <a href="<?= Router::url('/customer-orders/po-list?tab=all' . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '') . $sortParam) ?>"
                class="po-tab-btn <?= ($tab === 'all') ? 'is-active' : '' ?>">
                 <i data-lucide="layers" style="width: 15px; height: 15px;"></i>
                 <span>Semua PO</span>
@@ -377,18 +382,18 @@ ob_start();
         <!-- Divider Line -->
         <div style="border-top: 1px solid var(--color-hairline);"></div>
 
-        <!-- Baris 2: Search & Toko Pelanggan Dropdown Filter Form -->
+        <!-- Baris 2: Search, Toko Pelanggan & Dropdown Urutan Filter Form -->
         <form method="GET" action="<?= Router::url('/customer-orders/po-list') ?>" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             <input type="hidden" name="tab" value="<?= htmlspecialchars($tab ?? 'pending') ?>">
 
             <!-- Search Input Box -->
-            <div class="relative md:col-span-6">
+            <div class="relative md:col-span-4">
                 <i data-lucide="search" style="width: 16px; height: 16px; position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--color-ink-mute);"></i>
-                <input type="text" name="q" value="<?= htmlspecialchars($q ?? '') ?>" placeholder="Cari No. PO, Nama Toko, Kode Pelanggan..." class="form-input font-medium" style="height: 40px; font-size: 13px; padding-left: 38px; border-radius: 12px;">
+                <input type="text" name="q" value="<?= htmlspecialchars($q ?? '') ?>" placeholder="Cari No. PO, Nama Toko, Kode..." class="form-input font-medium" style="height: 40px; font-size: 13px; padding-left: 38px; border-radius: 12px;">
             </div>
 
             <!-- Dropdown Filter Toko -->
-            <div class="md:col-span-4">
+            <div class="md:col-span-3">
                 <select name="pelanggan_id" class="form-input font-medium searchable-select" onchange="this.form.submit()" style="height: 40px; font-size: 13px; border-radius: 12px;">
                     <option value="">-- Semua Toko Pelanggan --</option>
                     <?php foreach (($customers ?? []) as $c): ?>
@@ -399,13 +404,21 @@ ob_start();
                 </select>
             </div>
 
+            <!-- Dropdown Urutan / Sort -->
+            <div class="md:col-span-3">
+                <select name="sort" class="form-input font-medium cursor-pointer" onchange="this.form.submit()" style="height: 40px; font-size: 13px; border-radius: 12px;">
+                    <option value="terbaru" <?= ($sort !== 'terlama') ? 'selected' : '' ?>>Urutkan: Terbaru Dulu</option>
+                    <option value="terlama" <?= ($sort === 'terlama') ? 'selected' : '' ?>>Urutkan: Terlama Dulu</option>
+                </select>
+            </div>
+
             <!-- Action Buttons -->
             <div class="md:col-span-2 flex items-center gap-2">
                 <button type="submit" class="btn btn-primary flex-1" style="height: 40px; font-weight: 700; font-size: 12.5px; border-radius: 12px;">
                     <i data-lucide="filter" style="width: 14px; height: 14px;"></i>
                     <span>Filter</span>
                 </button>
-                <?php if (!empty($q) || !empty($pelangganId)): ?>
+                <?php if (!empty($q) || !empty($pelangganId) || $sort === 'terlama'): ?>
                 <a href="<?= Router::url('/customer-orders/po-list?tab=' . urlencode($tab)) ?>" class="btn btn-secondary" style="height: 40px; padding: 0 12px; border-radius: 12px;" title="Reset Filter">
                     <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
                 </a>
@@ -422,7 +435,7 @@ ob_start();
                 <span>Pilih Semua (<?= count($poList) ?> PO)</span>
             </label>
             <div class="flex items-center gap-2">
-                <a href="<?= Router::url('/customer-orders/po-list/batch-pdf?tab=' . urlencode($tab) . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '')) ?>"
+                <a href="<?= Router::url('/customer-orders/po-list/batch-pdf?tab=' . urlencode($tab) . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '') . $sortParam) ?>"
                    target="_blank"
                    class="btn btn-secondary btn-sm"
                    style="font-weight: 700; color: #dc2626; border-color: #fca5a5; background: #fef2f2; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px;"
@@ -469,10 +482,10 @@ ob_start();
                     <div style="width: 46px; height: 46px; border-radius: 14px; background: rgba(37, 99, 235, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
                         <i data-lucide="store" style="width: 22px; height: 22px;"></i>
                     </div>
-                    <div class="min-w-0 flex-1 space-y-1.5">
+                    <div class="min-w-0 flex-1">
                         <!-- 1. NAMA TOKO JELAS & BESAR -->
                         <div class="flex items-center gap-2.5 flex-wrap">
-                            <h2 style="font-size: 16.5px; font-weight: 900; color: var(--color-ink); line-height: 1.25; margin: 0;">
+                            <h2 style="font-size: 16.5px; font-weight: 900; color: var(--color-ink); line-height: 1.3; margin: 0;">
                                 <?= htmlspecialchars($po['nama_toko']) ?>
                             </h2>
                             <span class="badge badge-mono" style="font-size: 11px; padding: 2px 6px; color: var(--color-ink-mute); border-color: var(--color-hairline);">
@@ -486,22 +499,25 @@ ob_start();
                         </div>
 
                         <!-- 2. KODE TRANSAKSI & DETAIL LAIN (MINIMALIS / BERSIH) -->
-                        <div class="flex items-center gap-3 text-xs text-ink-mute flex-wrap" style="font-size: 12px; line-height: 1.4;">
+                        <div class="flex items-center gap-x-3 gap-y-2 text-xs text-ink-mute flex-wrap" style="font-size: 12.5px; line-height: 1.5; margin-top: 8px;">
                             <span class="font-mono text-ink-secondary" style="font-weight: 700;"><?= htmlspecialchars($po['nomor_nota']) ?></span>
-                            <span>&bull;</span>
-                            <span class="flex items-center gap-1.5">
-                                <i data-lucide="calendar" style="width: 13px; height: 13px; color: var(--color-ink-mute);"></i>
-                                <?= date('d/m/Y H:i', strtotime($po['dibuat_pada'])) ?> WIB
+                            <span style="color: var(--color-ink-mute); opacity: 0.4;">&bull;</span>
+                            <span class="flex items-center gap-1.5" style="white-space: nowrap;">
+                                <i data-lucide="calendar" style="width: 13.5px; height: 13.5px; color: var(--color-ink-mute); flex-shrink: 0;"></i>
+                                <span><?= date('d/m/Y H:i', strtotime($po['dibuat_pada'])) ?> WIB</span>
                             </span>
                             <?php if (!empty($po['nama_wilayah'])): ?>
-                            <span>&bull;</span>
-                            <span>Wilayah: <strong class="text-ink"><?= htmlspecialchars($po['nama_wilayah']) ?></strong></span>
+                            <span style="color: var(--color-ink-mute); opacity: 0.4;">&bull;</span>
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="map-pin" style="width: 13px; height: 13px; color: var(--color-ink-mute); flex-shrink: 0;"></i>
+                                <span>Wilayah: <strong class="text-ink"><?= htmlspecialchars($po['nama_wilayah']) ?></strong></span>
+                            </span>
                             <?php endif; ?>
                         </div>
 
                         <!-- 3. CATATAN PO (JIKA ADA) -->
                         <?php if (!empty($po['catatan'])): ?>
-                        <div style="margin-top: 8px;">
+                        <div style="margin-top: 10px;">
                             <div class="po-note-badge">
                                 <strong class="po-note-label">Catatan:</strong>
                                 <span class="po-note-text"><?= nl2br(htmlspecialchars($po['catatan'])) ?></span>
@@ -539,9 +555,15 @@ ob_start();
                                 </span>
                             <?php endif; ?>
                         <?php elseif ($isReady): ?>
-                            <span class="badge" style="background: #d1fae5; color: #065f46; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
-                                📦 Siap Kirim
-                            </span>
+                            <?php if (!empty($po['nomor_surat_jalan'])): ?>
+                                <span class="badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
+                                    📦 Siap Kirim &bull; SJ: <?= htmlspecialchars($po['nomor_surat_jalan']) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="badge" style="background: #d1fae5; color: #065f46; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
+                                    📦 Siap Kirim (Belum SJ)
+                                </span>
+                            <?php endif; ?>
                         <?php elseif ($isDelivering): ?>
                             <span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
                                 🚚 Sedang Kirim
@@ -557,8 +579,28 @@ ob_start();
                         <?php endif; ?>
                     </div>
 
-                    <!-- Tombol Aksi: Cukup Rincian Item (Aksi lainnya di dalam Modal Pop-up agar kartu rapi) -->
-                    <div class="flex items-center">
+                    <!-- Tombol Aksi: Aksi Cepat + Rincian Item -->
+                    <div class="flex items-center gap-2">
+                        <?php if ($isPending && $po['is_stock_sufficient'] && Auth::can('orders.po_process')): ?>
+                        <form action="<?= Router::url('/customer-orders/process-po') ?>" method="POST"
+                              data-confirm="Pastikan seluruh barang fisik untuk <?= htmlspecialchars($po['nama_toko']) ?> telah selesai disiapkan di logistik. Lanjutkan?"
+                              data-confirm-title="Konfirmasi Penyiapan Barang"
+                              data-confirm-type="info"
+                              data-confirm-btn="Ya, Siap Dikirim"
+                              style="display: inline;">
+                            <input type="hidden" name="order_id" value="<?= htmlspecialchars($po['id']) ?>">
+                            <button type="submit" class="btn btn-primary btn-sm" style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 5px;">
+                                <i data-lucide="package-check" style="width: 15px; height: 15px;"></i>
+                                <span>Siap Dikirim</span>
+                            </button>
+                        </form>
+                        <?php elseif ($isReady && empty($po['nomor_surat_jalan'])): ?>
+                        <a href="<?= Router::url('/deliveries?create_for_order=' . urlencode($po['id'])) ?>" class="btn btn-primary btn-sm" style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 5px; background: #059669; border-color: #059669;">
+                            <i data-lucide="truck" style="width: 15px; height: 15px;"></i>
+                            <span>Buat SJ</span>
+                        </a>
+                        <?php endif; ?>
+
                         <button type="button" 
                                 class="btn btn-secondary btn-sm"
                                 style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 16px; display: inline-flex; align-items: center; gap: 6px;"
@@ -580,8 +622,8 @@ ob_start();
     <!-- 5. MODAL DIALOG POP-UP: RINCIAN ITEM PRODUK (MATERIAL DESIGN 3)            -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showItemModal" x-cloak class="modal-backdrop" @keydown.escape.window="showItemModal = false" style="z-index: 9999;">
-        <div class="modal-box" style="max-width: 680px; padding: 24px; border-radius: 20px;" @click.away="showItemModal = false">
+    <div x-show="showItemModal" x-cloak class="modal-backdrop" @click.self="showItemModal = false" @keydown.escape.window="showItemModal = false" style="z-index: 9999;">
+        <div class="modal-box" style="max-width: 680px; padding: 24px; border-radius: 20px;">
             
             <!-- MODAL HEADER -->
             <div class="modal-header" style="margin-bottom: 16px;">
@@ -711,6 +753,16 @@ ob_start();
                     </div>
                 </template>
                 <?php endif; ?>
+
+                <!-- Tombol Terbitkan SJ Langsung Dari Modal jika Sudah Siap Kirim -->
+                <template x-if="activePo && (activePo.status_pemrosesan === 'siap_dikirim' || activePo.status_pemrosesan === 'siap_kirim') && !activePo.surat_jalan_id">
+                    <a :href="'<?= Router::url('/deliveries?create_for_order=') ?>' + (activePo ? activePo.id : '')"
+                       class="btn btn-primary"
+                       style="font-weight: 800; font-size: 13px; border-radius: 10px; padding: 8px 18px; display: inline-flex; align-items: center; gap: 6px; background: #059669; border-color: #059669;">
+                        <i data-lucide="truck" style="width: 15px; height: 15px;"></i>
+                        <span>Buat Surat Jalan</span>
+                    </a>
+                </template>
             </div>
 
         </div>
@@ -738,7 +790,7 @@ ob_start();
                 <button type="button" @click="selectedPoIds = []" class="btn btn-sm" style="background: rgba(255,255,255,0.12); color: #cbd5e1; border: none; font-weight: 600; padding: 7px 14px; border-radius: 10px;">
                     Batal
                 </button>
-                <a :href="'<?= Router::url('/customer-orders/po-list/batch-pdf?ids=') ?>' + selectedPoIds.join(',')" target="_blank"
+                <a :href="'<?= Router::url('/customer-orders/po-list/batch-pdf?ids=') ?>' + selectedPoIds.join(',') + '<?= $sortParam ?>'" target="_blank"
                    class="btn btn-sm" style="background: #dc2626; color: #ffffff; border: none; font-weight: 800; padding: 7px 18px; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
                     <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
                     <span x-text="'Unduh PDF (' + selectedPoIds.length + ' PO)'">Unduh PDF</span>

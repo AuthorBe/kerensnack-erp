@@ -128,7 +128,9 @@ class CashController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            error_log("CashController index error: " . $e->getMessage());
+            $this->flashError("Gagal memuat buku kas: " . $e->getMessage());
+            $this->redirect('/');
         }
     }
 
@@ -216,7 +218,9 @@ class CashController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            error_log("CashController transactions error: " . $e->getMessage());
+            $this->flashError("Gagal memuat transaksi kas: " . $e->getMessage());
+            $this->redirect('/cash');
         }
     }
 
@@ -293,7 +297,9 @@ class CashController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            error_log("CashController reports error: " . $e->getMessage());
+            $this->flashError("Gagal memuat laporan arus kas: " . $e->getMessage());
+            $this->redirect('/cash');
         }
     }
 
@@ -546,9 +552,18 @@ class CashController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            $stmtBal = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id");
+            $stmtBal = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini, tipe_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
             $stmtBal->execute(['id' => $accountId]);
-            $currentBal = (float)($stmtBal->fetchColumn() ?? 0);
+            $acc = $stmtBal->fetch();
+
+            if (!$acc) {
+                throw new \Exception("Akun kas tidak ditemukan.");
+            }
+
+            $currentBal = (float)($acc['saldo_saat_ini'] ?? 0);
+            if ($currentBal < $nominal) {
+                throw new \Exception("Saldo akun kas '{$acc['nama_akun']}' tidak mencukupi untuk pengeluaran ini. Saldo saat ini: " . Format::rupiah($currentBal) . ", Nominal pengeluaran: " . Format::rupiah($nominal));
+            }
 
             // Potong saldo akun
             $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom, diubah_pada = NOW() WHERE id = :id")
@@ -614,17 +629,35 @@ class CashController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            $sourceAcc = Database::fetchOne("SELECT nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $sourceId]);
-            $destAcc = Database::fetchOne("SELECT nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $destId]);
+            // Kunci akun sumber dan tujuan secara deterministik untuk mencegah deadlock
+            $ids = [$sourceId, $destId];
+            sort($ids);
+            $stmtLock = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+            $lockedAccounts = [];
+            foreach ($ids as $lockId) {
+                $stmtLock->execute(['id' => $lockId]);
+                $accRow = $stmtLock->fetch();
+                if ($accRow) {
+                    $lockedAccounts[$accRow['id']] = $accRow;
+                }
+            }
+
+            $sourceAcc = $lockedAccounts[$sourceId] ?? null;
+            $destAcc = $lockedAccounts[$destId] ?? null;
 
             if (!$sourceAcc || !$destAcc) {
                 throw new \Exception("Akun sumber atau tujuan tidak ditemukan.");
             }
 
+            $sourceBal = (float)$sourceAcc['saldo_saat_ini'];
+            if ($sourceBal < $nominal) {
+                throw new \Exception("Saldo akun sumber '{$sourceAcc['nama_akun']}' tidak mencukupi untuk transfer ini. Saldo saat ini: " . Format::rupiah($sourceBal) . ", Nominal transfer: " . Format::rupiah($nominal));
+            }
+
             // 1. Potong Akun Sumber
             $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom, diubah_pada = NOW() WHERE id = :id")
                 ->execute(['nom' => $nominal, 'id' => $sourceId]);
-            $newSourceBal = (float)$sourceAcc['saldo_saat_ini'] - $nominal;
+            $newSourceBal = $sourceBal - $nominal;
 
             $pdo->prepare("
                 INSERT INTO public.arus_kas (

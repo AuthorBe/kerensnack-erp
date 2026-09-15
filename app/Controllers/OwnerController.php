@@ -213,7 +213,9 @@ class OwnerController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            error_log("OwnerController index error: " . $e->getMessage());
+            $this->flashError("Gagal memuat dashboard eksekutif: " . $e->getMessage());
+            $this->redirect('/');
         }
     }
 

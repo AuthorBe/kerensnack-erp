@@ -76,7 +76,9 @@ class ConsignmentController extends Controller
                 'isOwner' => $isOwner,
             ]);
         } catch (Throwable $e) {
-            echo "Error Portal Konsinyasi: " . $e->getMessage();
+            error_log("ConsignmentController portal error: " . $e->getMessage());
+            $this->flashError("Gagal memuat portal konsinyasi: " . $e->getMessage());
+            $this->redirect('/');
         }
     }
 
@@ -137,7 +139,9 @@ class ConsignmentController extends Controller
                 'isAdminOrOwner' => $isAdminOrOwner,
             ]);
         } catch (Throwable $e) {
-            echo "Error Stok Rak: " . $e->getMessage();
+            error_log("ConsignmentController stokRak error: " . $e->getMessage());
+            $this->flashError("Gagal memuat data stok rak: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 
@@ -258,7 +262,9 @@ class ConsignmentController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Opname: " . $e->getMessage();
+            error_log("ConsignmentController opname error: " . $e->getMessage());
+            $this->flashError("Gagal memuat form opname: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 
@@ -443,26 +449,6 @@ class ConsignmentController extends Controller
                 ORDER BY rkk.subtotal_laku DESC, i.nama_item ASC
             ", ['id' => $kunjunganId]);
 
-            // Cek kunjungan lain dari toko ini yang belum ditagih
-            $otherUnbilledVisits = Database::fetchAll("
-                SELECT kk.id, kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal
-                FROM public.kunjungan_konsinyasi kk
-                WHERE kk.pelanggan_id = :pelanggan_id
-                  AND kk.total_laku_nominal > 0
-                  AND NOT EXISTS (
-                      SELECT 1 FROM public.tagihan_kunjungan tk WHERE tk.kunjungan_id = kk.id
-                  )
-                ORDER BY kk.tanggal_kunjungan DESC
-            ", ['pelanggan_id' => $visit['pelanggan_id']]);
-
-            // Akun kas untuk modal bayar (jika sudah ada nota dan belum lunas)
-            $cashAccounts = Database::fetchAll("
-                SELECT id, nama_akun, tipe_akun, saldo_saat_ini 
-                FROM public.akun_kas 
-                WHERE status_aktif = TRUE 
-                ORDER BY is_default_pos DESC, nama_akun ASC
-            ");
-
             $canManageTagihan = Auth::can('consignment.piutang') && (Auth::isAdmin() || Auth::isOwner());
             $canSpotBill = Auth::can(['consignment.opname_all', 'consignment.opname_assigned', 'consignment.piutang']);
 
@@ -471,14 +457,14 @@ class ConsignmentController extends Controller
                 'pageSubtitle' => 'Rincian Stok & Hasil Opname Fisik Rak',
                 'visit' => $visit,
                 'details' => $details,
-                'otherUnbilledVisits' => $otherUnbilledVisits,
-                'cashAccounts' => $cashAccounts,
                 'canManageTagihan' => $canManageTagihan,
                 'canSpotBill' => $canSpotBill,
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Hasil Kunjungan: " . $e->getMessage();
+            error_log("ConsignmentController hasil error: " . $e->getMessage());
+            $this->flashError("Gagal memuat hasil kunjungan: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 
@@ -508,8 +494,9 @@ class ConsignmentController extends Controller
             $tanggalBayar = date('Y-m-d');
         }
 
-        if (empty($kunjunganId) || empty($accountId) || $nominal <= 0) {
-            $this->flashError('Pilih rekening kas penerima dan masukkan nominal pembayaran yang valid (lebih dari Rp 0).');
+        $uuidRegex = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
+        if (empty($kunjunganId) || !preg_match($uuidRegex, $kunjunganId) || empty($accountId) || $nominal <= 0) {
+            $this->flashError('Pilih rekening kas penerima, pastikan ID kunjungan valid, dan masukkan nominal pembayaran lebih dari Rp 0.');
             $this->redirect($redirectUrl);
             return;
         }
@@ -995,7 +982,9 @@ class ConsignmentController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Laporan Penjualan: " . $e->getMessage();
+            error_log("ConsignmentController laporanPenjualan error: " . $e->getMessage());
+            $this->flashError("Gagal memuat laporan penjualan: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 
@@ -1220,7 +1209,9 @@ class ConsignmentController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Tagihan Konsinyasi: " . $e->getMessage();
+            error_log("ConsignmentController tagihan error: " . $e->getMessage());
+            $this->flashError("Gagal memuat tagihan konsinyasi: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 
@@ -1237,18 +1228,26 @@ class ConsignmentController extends Controller
             return;
         }
 
-        $kunjunganIds = (array)$this->input('kunjungan_ids', []);
-        $kunjunganIds = array_values(array_filter(array_unique($kunjunganIds)));
+        $rawIds = (array)$this->input('kunjungan_ids', []);
+        $uuidRegex = '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i';
+        $kunjunganIds = [];
+        foreach ($rawIds as $kid) {
+            $kidStr = trim((string)$kid);
+            if (preg_match($uuidRegex, $kidStr)) {
+                $kunjunganIds[] = $kidStr;
+            }
+        }
+        $kunjunganIds = array_values(array_unique($kunjunganIds));
 
         if (empty($kunjunganIds)) {
-            $this->flashError('Pilih minimal 1 kunjungan untuk dibuatkan tagihan.');
+            $this->flashError('Pilih minimal 1 sesi kunjungan yang valid untuk dibuatkan tagihan.');
             $this->redirect('/consignment/tagihan');
             return;
         }
 
         try {
             // Format array untuk PostgreSQL: {uuid1,uuid2,...}
-            $pgArray = '{' . implode(',', array_map('strval', $kunjunganIds)) . '}';
+            $pgArray = '{' . implode(',', $kunjunganIds) . '}';
 
             $res = Database::fetchOne("
                 SELECT public.fn_buat_tagihan_konsinyasi(:kunjungan_ids::uuid[], :user_id) AS json_res
@@ -1511,7 +1510,9 @@ class ConsignmentController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Assignment Sales: " . $e->getMessage();
+            error_log("ConsignmentController assignment error: " . $e->getMessage());
+            $this->flashError("Gagal memuat assignment sales: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 
@@ -1771,7 +1772,9 @@ class ConsignmentController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Komisi Sales: " . $e->getMessage();
+            error_log("ConsignmentController komisiSales error: " . $e->getMessage());
+            $this->flashError("Gagal memuat komisi sales: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 
@@ -2123,7 +2126,9 @@ class ConsignmentController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Early Warning: " . $e->getMessage();
+            error_log("ConsignmentController earlyWarning error: " . $e->getMessage());
+            $this->flashError("Gagal memuat early warning toko: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 
@@ -2230,24 +2235,34 @@ class ConsignmentController extends Controller
                 'total_retur_bagus'        => (int)($kpiData['total_retur_bagus'] ?? 0),
             ];
 
-            // Query Paginated Visits
+            // Query Paginated Visits dengan 1 Aggregated Join Terindeks (idx_rkk_kunjungan_id)
             $sql = "
                 SELECT kk.id, kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal, kk.catatan,
                        p.nama_toko, p.kode_pelanggan,
                        COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as nama_sales,
                        peng.nama_lengkap as auditor_name,
                        pes.id as pesanan_id, pes.nomor_nota, pes.status_pembayaran, pes.total_netto, pes.total_dibayar, pes.sisa_tagihan,
-                       (SELECT COUNT(*) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_sku,
-                       (SELECT COALESCE(SUM(jumlah_laku_terjual), 0) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_laku,
-                       (SELECT COALESCE(SUM(retur_bagus), 0) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_retur_bagus,
-                       (SELECT COALESCE(SUM(retur_rusak), 0) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_retur_rusak,
-                       (SELECT COALESCE(SUM(nilai_kerugian_rusak), 0) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_loss
+                       COALESCE(rkk_agg.total_sku, 0) as total_sku,
+                       COALESCE(rkk_agg.total_laku, 0) as total_laku,
+                       COALESCE(rkk_agg.total_retur_bagus, 0) as total_retur_bagus,
+                       COALESCE(rkk_agg.total_retur_rusak, 0) as total_retur_rusak,
+                       COALESCE(rkk_agg.total_loss, 0) as total_loss
                 FROM public.kunjungan_konsinyasi kk
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                 LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
                 LEFT JOIN public.v_karyawan_info k ON COALESCE(kk.sales_driver_id, p.sales_driver_id) = k.id
                 LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                 LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
+                LEFT JOIN (
+                    SELECT kunjungan_id,
+                           COUNT(*) as total_sku,
+                           COALESCE(SUM(jumlah_laku_terjual), 0) as total_laku,
+                           COALESCE(SUM(retur_bagus), 0) as total_retur_bagus,
+                           COALESCE(SUM(retur_rusak), 0) as total_retur_rusak,
+                           COALESCE(SUM(nilai_kerugian_rusak), 0) as total_loss
+                    FROM public.rincian_kunjungan_konsinyasi
+                    GROUP BY kunjungan_id
+                ) rkk_agg ON rkk_agg.kunjungan_id = kk.id
                 WHERE {$whereSql}
                 ORDER BY kk.tanggal_kunjungan DESC, kk.dibuat_pada DESC
                 LIMIT {$perPage} OFFSET {$offset}
@@ -2271,7 +2286,9 @@ class ConsignmentController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Error Riwayat Kunjungan: " . $e->getMessage();
+            error_log("ConsignmentController riwayatKunjungan error: " . $e->getMessage());
+            $this->flashError("Gagal memuat riwayat kunjungan: " . $e->getMessage());
+            $this->redirect('/consignment');
         }
     }
 

@@ -531,9 +531,9 @@ ob_start();
             </div>
 
             <div>
-                <label class="form-label" style="font-size:11px;">Sales / Driver</label>
+                <label class="form-label" style="font-size:11px;">Petugas Pengantar</label>
                 <select name="sales_driver_id" class="form-input" style="height:36px;font-size:12px;">
-                    <option value="">-- Semua Sales --</option>
+                    <option value="">-- Semua Petugas (Driver / Sales) --</option>
                     <?php foreach ($drivers as $d): ?>
                     <option value="<?= $d['id'] ?>" <?= $filter['sales_driver_id'] === $d['id'] ? 'selected' : '' ?>>
                         <?= htmlspecialchars($d['nama_karyawan']) ?>
@@ -547,6 +547,7 @@ ob_start();
                 <select name="status_pembayaran" class="form-input" style="height:36px;font-size:12px;">
                     <option value="semua" <?= $filter['status_pembayaran'] === 'semua' ? 'selected' : '' ?>>-- Semua Status --</option>
                     <option value="lunas" <?= $filter['status_pembayaran'] === 'lunas' ? 'selected' : '' ?>>Lunas</option>
+                    <option value="sebagian" <?= $filter['status_pembayaran'] === 'sebagian' ? 'selected' : '' ?>>Sebagian (DP / Cicil)</option>
                     <option value="belum_lunas" <?= $filter['status_pembayaran'] === 'belum_lunas' ? 'selected' : '' ?>>Tempo / Belum Lunas</option>
                 </select>
             </div>
@@ -575,7 +576,7 @@ ob_start();
                         <th class="cell-nowrap">No. Transaksi</th>
                         <th class="cell-nowrap">Tanggal</th>
                         <th>Toko Pelanggan</th>
-                        <th>Sales / Driver</th>
+                        <th>Petugas Pengantar</th>
                         <th class="cell-nowrap">Pembayaran &amp; Tempo</th>
                         <th class="cell-right cell-nowrap">Total Netto</th>
                         <th class="cell-right cell-nowrap">Dibayar / Sisa</th>
@@ -646,7 +647,7 @@ ob_start();
                             </div>
                         </td>
 
-                        <!-- Sales / Driver & Pengiriman -->
+                        <!-- Petugas Pengantar & Pengiriman -->
                         <td class="cell-nowrap">
                             <?php if (!empty($o['nama_sales'])): ?>
                             <div style="font-weight:700;font-size:12.5px;color:var(--color-ink);">
@@ -767,6 +768,10 @@ ob_start();
                             </span>
                             <?php elseif ($isLunas): ?>
                             <span class="badge badge-success" style="font-weight:800;">LUNAS</span>
+                            <?php elseif ($o['status_pembayaran'] === 'sebagian'): ?>
+                            <span class="badge" style="font-weight:800;color:#2563eb;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.2);">
+                                SEBAGIAN (DP)
+                            </span>
                             <?php else: ?>
                             <span class="badge badge-warning" style="font-weight:800;color:#ef4444;background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.2);">
                                 BELUM LUNAS
@@ -774,49 +779,16 @@ ob_start();
                             <?php endif; ?>
                         </td>
 
-                        <!-- Aksi (Detail & Edit) -->
+                        <!-- Aksi (Terpusat di Modal Detail) -->
                         <td class="cell-center cell-nowrap">
-                            <div class="d-inline-flex align-items-center gap-1.5" style="display:inline-flex;align-items:center;gap:6px;">
-                                <button type="button" 
-                                        @click="openOrderDetail(<?= htmlspecialchars(json_encode($o)) ?>)" 
-                                        class="btn btn-secondary btn-sm" 
-                                        style="padding:6px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;border-radius:var(--rounded-md);box-shadow:0 1px 2px rgba(0,0,0,0.05);"
-                                        title="Buka Rincian & Aksi Transaksi">
-                                    <i data-lucide="eye" style="width:14px;height:14px;color:var(--color-primary-deep);"></i>
-                                    <span>Detail</span>
-                                </button>
-                                <?php if (Auth::can(['orders.edit_all', 'orders.edit_assigned'])): ?>
-                                    <?php if (($o['status_pemrosesan'] ?? '') === 'po'): ?>
-                                    <a href="<?= Router::url('/customer-orders/edit?id=' . urlencode($o['id'])) ?>" 
-                                       class="btn btn-secondary btn-sm"
-                                       style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;"
-                                       title="Edit Pesanan (Tahap PO)">
-                                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
-                                        <span>Edit</span>
-                                    </a>
-                                    <?php elseif (!in_array($o['status_pemrosesan'] ?? '', ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'], true)): ?>
-                                    <button type="button" 
-                                            class="btn btn-secondary btn-sm"
-                                            style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#94a3b8;background:#f8fafc;border:1px solid #e2e8f0;cursor:not-allowed;opacity:0.75;"
-                                            title="Terkunci: Status <?= strtoupper(str_replace('_', ' ', $o['status_pemrosesan'] ?? '')) ?>"
-                                            onclick="window.AppAlert ? window.AppAlert({ title: 'Edit Pesanan Terkunci', message: 'Pesanan ini sudah diproses ke tahap <?= strtoupper(str_replace('_', ' ', $o['status_pemrosesan'] ?? '')) ?> (bukan draf PO).\n\nPesanan yang sudah diproses gudang / siap kirim tidak dapat diedit kembali.', type: 'warning', icon: 'lock' }) : alert('Pesanan sudah diproses gudang / siap kirim.')">
-                                        <i data-lucide="lock" style="width:13px;height:13px;color:#94a3b8;"></i>
-                                        <span>Edit</span>
-                                    </button>
-                                    <?php endif; ?>
-                                <?php endif; ?>
-
-                                <?php if (in_array($o['status_pemrosesan'] ?? '', ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'], true) && Auth::can('orders.retry_delivery')): ?>
-                                <button type="button" 
-                                        @click="openRetryModal(<?= htmlspecialchars(json_encode($o)) ?>)"
-                                        class="btn btn-sm" 
-                                        style="padding:6px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-radius:var(--rounded-md);color:#ffffff;background:#e11d48;" 
-                                        title="Jadwalkan Kirim Ulang (Batas 7 Hari)">
-                                    <i data-lucide="rotate-cw" style="width:13px;height:13px;"></i>
-                                    <span>Kirim Ulang</span>
-                                </button>
-                                <?php endif; ?>
-                            </div>
+                            <button type="button" 
+                                    @click="openOrderDetail(<?= htmlspecialchars(json_encode($o)) ?>)" 
+                                    class="btn btn-secondary btn-sm" 
+                                    style="padding:6px 14px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;border-radius:var(--rounded-md);box-shadow:0 1px 2px rgba(0,0,0,0.05);"
+                                    title="Buka Rincian, Cetak Faktur, & Aksi Transaksi">
+                                <i data-lucide="eye" style="width:14px;height:14px;color:var(--color-primary-deep);"></i>
+                                <span>Detail</span>
+                            </button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -854,9 +826,9 @@ ob_start();
                             </template>
                             <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && !orderDetail?.is_konsinyasi && orderDetail?.adalah_tagihan !== false && orderDetail?.adalah_tagihan !== 'false'">
                                 <span class="badge" 
-                                      :class="orderDetail?.status_pembayaran === 'lunas' ? 'badge-success' : 'badge-warning'" 
+                                      :class="orderDetail?.status_pembayaran === 'lunas' ? 'badge-success' : (orderDetail?.status_pembayaran === 'sebagian' ? 'badge-primary' : 'badge-warning')" 
                                       style="font-size:10px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;" 
-                                      x-text="orderDetail?.status_pembayaran === 'lunas' ? 'LUNAS' : 'BELUM LUNAS'"></span>
+                                      x-text="orderDetail?.status_pembayaran === 'lunas' ? 'LUNAS' : (orderDetail?.status_pembayaran === 'sebagian' ? 'SEBAGIAN (DP)' : 'BELUM LUNAS')"></span>
                             </template>
                             <template x-if="orderDetail?.status_surat_jalan">
                                 <span class="badge badge-mono" style="font-size:10px;text-transform:capitalize;padding:2px 7px;" x-text="orderDetail?.status_surat_jalan.replace('_', ' ')"></span>
@@ -1309,8 +1281,7 @@ ob_start();
                                     </template>
                                 </div>
                                 <div style="font-size:12px;display:flex;align-items:center;gap:6px;">
-                                    <span style="color:var(--color-ink-mute);">Status:</span>
-                                    <span class="badge" :class="calcSisaTagihan() <= 0 ? 'badge-success' : 'badge-warning'" x-text="calcSisaTagihan() <= 0 ? 'LUNAS' : 'BELUM LUNAS'"></span>
+                                    <span class="badge" :class="calcSisaTagihan() <= 0 ? 'badge-success' : (orderDetail?.status_pembayaran === 'sebagian' || Number(orderDetail?.total_dibayar || 0) > 0 ? 'badge-info' : 'badge-warning')" x-text="calcSisaTagihan() <= 0 ? 'LUNAS' : (orderDetail?.status_pembayaran === 'sebagian' || Number(orderDetail?.total_dibayar || 0) > 0 ? 'SEBAGIAN' : 'BELUM LUNAS')"></span>
                                 </div>
                             </div>
 
@@ -1487,34 +1458,47 @@ ob_start();
                 <!-- TAB 4: DOKUMEN & AKSI OPERASIONAL -->
                 <div x-show="!loadingDetail && activeTab === 'actions'" style="padding-top:4px;padding-bottom:10px;">
                     
-                    <!-- GRUP 1: CETAK & BERKAS DOKUMEN FAKTUR -->
+                    <!-- GRUP 1: CETAK & SALINAN DOKUMEN FAKTUR -->
                     <div>
-                        <div style="font-size:11px;font-weight:800;color:var(--color-ink-secondary);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;gap:7px;padding:0 2px;margin-bottom:8px;">
+                        <div style="font-size:11px;font-weight:800;color:var(--color-ink-secondary);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;gap:7px;padding:0 2px;margin-bottom:12px;">
                             <i data-lucide="printer" style="width:14px;height:14px;color:var(--color-ink-mute);"></i>
-                            <span>Dokumen &amp; Salinan Faktur</span>
+                            <span>Cetak &amp; Salinan Dokumen Faktur</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2" style="gap:12px;">
-                            <!-- Unduh PDF Faktur -->
-                            <a :href="'<?= Router::url('/customer-orders/invoice/pdf?id=') ?>' + orderDetail?.id" target="_blank"
-                               class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid rgba(220,38,38,0.22);border-radius:14px;background:#fef2f2;">
-                                <div style="width:40px;height:40px;border-radius:12px;background:rgba(220,38,38,0.1);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                    <i data-lucide="file-text" style="width:20px;height:20px;"></i>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3" style="gap:12px;">
+                            <!-- 1. CETAK FAKTUR PENJUALAN (TERPUSAT: A4 / DOT MATRIX) -->
+                            <a :href="'<?= Router::url('/customer-orders/invoice?id=') ?>' + orderDetail?.id"
+                               class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(2,132,199,0.25);border-radius:14px;background:#f0f9ff;">
+                                <div style="width:42px;height:42px;border-radius:12px;background:rgba(2,132,199,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i data-lucide="printer" style="width:22px;height:22px;"></i>
                                 </div>
                                 <div style="min-width:0;flex:1;">
-                                    <div style="font-weight:800;font-size:13.5px;color:#991b1b;">Unduh PDF Faktur</div>
-                                    <div style="font-size:11.5px;color:#dc2626;margin-top:2px;line-height:1.4;">Dokumen PDF resmi siap cetak, arsip, &amp; bagikan</div>
+                                    <div style="font-weight:800;font-size:13.5px;color:#0369a1;">Cetak Faktur</div>
+                                    <div style="font-size:11.5px;color:#0284c7;margin-top:2px;line-height:1.4;">Pratinjau &amp; cetak (Standar A4 / Dot Matrix)</div>
                                 </div>
                             </a>
 
-                            <!-- Unduh Excel Rincian Faktur -->
-                            <a :href="'<?= Router::url('/customer-orders/invoice/excel?id=') ?>' + orderDetail?.id" target="_blank"
-                               class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid rgba(16,185,129,0.22);border-radius:14px;background:#ecfdf5;">
-                                <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.1);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <!-- 2. UNDUH PDF FAKTUR -->
+                            <a :href="'<?= Router::url('/customer-orders/invoice/pdf?id=') ?>' + orderDetail?.id"
+                               class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(220,38,38,0.22);border-radius:14px;background:#fef2f2;">
+                                <div style="width:42px;height:42px;border-radius:12px;background:rgba(220,38,38,0.1);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i data-lucide="file-text" style="width:20px;height:20px;"></i>
+                                </div>
+                                <div style="min-width:0;flex:1;">
+                                    <div style="font-weight:800;font-size:13.5px;color:#991b1b;">Unduh PDF</div>
+                                    <div style="font-size:11.5px;color:#dc2626;margin-top:2px;line-height:1.4;">Salinan berkas dokumen PDF resmi</div>
+                                </div>
+                            </a>
+
+                            <!-- 3. UNDUH EXCEL RINCIAN FAKTUR -->
+                            <a :href="'<?= Router::url('/customer-orders/invoice/excel?id=') ?>' + orderDetail?.id"
+                               class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(16,185,129,0.22);border-radius:14px;background:#ecfdf5;">
+                                <div style="width:42px;height:42px;border-radius:12px;background:rgba(16,185,129,0.1);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                     <i data-lucide="file-spreadsheet" style="width:20px;height:20px;"></i>
                                 </div>
                                 <div style="min-width:0;flex:1;">
-                                    <div style="font-weight:800;font-size:13.5px;color:#065f46;">Unduh Excel Faktur</div>
-                                    <div style="font-size:11.5px;color:#059669;margin-top:2px;line-height:1.4;">Spreadsheet rincian pesanan &amp; item produk</div>
+                                    <div style="font-weight:800;font-size:13.5px;color:#065f46;">Unduh Excel</div>
+                                    <div style="font-size:11.5px;color:#059669;margin-top:2px;line-height:1.4;">Spreadsheet rincian pesanan &amp; produk</div>
                                 </div>
                             </a>
                         </div>

@@ -10,7 +10,7 @@ use Throwable;
 
 /**
  * app/Controllers/EmployeeController.php
- * Pengendali Master Data Karyawan (Admin, Staff Gudang, Pengemasan, Sales-Driver, Mandor).
+ * Pengendali Master Data Karyawan (Admin, Staff Gudang, Pengemasan, Sales, Driver, Mandor).
  */
 class EmployeeController extends Controller
 {
@@ -62,12 +62,26 @@ class EmployeeController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            $this->flashError("Gagal memuat data karyawan: " . $e->getMessage());
+            $this->view('employees.index', [
+                'pageTitle' => 'Master Data Karyawan',
+                'pageSubtitle' => 'Kelola Data Pegawai Admin, Gudang, Pengemasan, Sales & Driver',
+                'employees' => [],
+                'metrics' => [
+                    'total' => 0,
+                    'borongan' => 0,
+                    'sales' => 0,
+                    'driver' => 0,
+                    'admin_gudang' => 0
+                ]
+            ]);
         }
     }
 
     public function store(): void
     {
+        Auth::requirePermission('master.employees_manage');
+
         $nama = trim((string)$this->input('nama_karyawan'));
         $nik = trim((string)$this->input('nik')) ?: null;
         $posisi = $this->input('posisi', 'pengemasan');
@@ -76,6 +90,9 @@ class EmployeeController extends Controller
         $uangHadir = (float)preg_replace('/[^0-9]/', '', (string)$this->input('uang_kehadiran_harian', '0'));
         $tunjangan = (float)preg_replace('/[^0-9]/', '', (string)$this->input('tunjangan_bulanan', '0'));
         $komisi = (float)$this->input('persentase_komisi_sales', 0);
+        if ($posisi !== 'sales') {
+            $komisi = 0.00;
+        }
         $telepon = trim((string)$this->input('nomor_telepon'));
         $alamat = trim((string)$this->input('alamat', '-'));
         $nopol = trim((string)$this->input('nomor_polisi_kendaraan', ''));
@@ -160,6 +177,8 @@ class EmployeeController extends Controller
 
     public function update(): void
     {
+        Auth::requirePermission('master.employees_manage');
+
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_karyawan'));
         $nik = trim((string)$this->input('nik')) ?: null;
@@ -169,6 +188,9 @@ class EmployeeController extends Controller
         $uangHadir = (float)preg_replace('/[^0-9]/', '', (string)$this->input('uang_kehadiran_harian', '0'));
         $tunjangan = (float)preg_replace('/[^0-9]/', '', (string)$this->input('tunjangan_bulanan', '0'));
         $komisi = (float)$this->input('persentase_komisi_sales', 0);
+        if ($posisi !== 'sales') {
+            $komisi = 0.00;
+        }
         $telepon = trim((string)$this->input('nomor_telepon'));
         $alamat = trim((string)$this->input('alamat', '-'));
         $nopol = trim((string)$this->input('nomor_polisi_kendaraan', ''));
@@ -265,6 +287,8 @@ class EmployeeController extends Controller
 
     public function delete(): void
     {
+        Auth::requirePermission('master.employees_manage');
+
         $id = $this->input('id');
         if (empty($id)) {
             $this->flashError('ID karyawan tidak valid.');
@@ -276,39 +300,58 @@ class EmployeeController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            // Cari pengguna yang terhubung dengan karyawan ini
+            // Cari data karyawan & pengguna terhubung
             $karyawan = Database::fetchOne(
-                "SELECT pengguna_id FROM public.karyawan WHERE id = :id",
+                "SELECT k.id, k.pengguna_id, p.nama_lengkap, p.status_aktif 
+                 FROM public.karyawan k 
+                 JOIN public.pengguna p ON k.pengguna_id = p.id 
+                 WHERE k.id = :id",
                 ['id' => $id]
             );
 
-            // Hapus record karyawan
-            $stmtK = $pdo->prepare("DELETE FROM public.karyawan WHERE id = :id");
-            $stmtK->execute(['id' => $id]);
-
-            // Jika pengguna terhubung, cek apakah pengguna ini hanya karyawan (tanpa akun login)
-            if ($karyawan && $karyawan['pengguna_id']) {
-                $penggunaId = $karyawan['pengguna_id'];
-                $penggunaData = Database::fetchOne(
-                    "SELECT nama_pengguna, peran_id FROM public.pengguna WHERE id = :id",
-                    ['id' => $penggunaId]
-                );
-
-                // Jika pengguna tidak punya nama_pengguna (akun login), hapus sekalian dari pengguna
-                // Jika punya akun login, biarkan pengguna tetap ada (hanya hilangkan data karyawan)
-                if ($penggunaData && empty($penggunaData['nama_pengguna'])) {
-                    $stmtP = $pdo->prepare("DELETE FROM public.pengguna WHERE id = :id");
-                    $stmtP->execute(['id' => $penggunaId]);
-                }
+            if (!$karyawan) {
+                $pdo->rollBack();
+                $this->flashError('Data karyawan tidak ditemukan.');
+                $this->redirect('/employees');
+                return;
             }
 
+            $namaKaryawan = $karyawan['nama_lengkap'] ?? 'Karyawan';
+
+            // SOFT-DELETE: Set status_aktif = FALSE pada pengguna & karyawan
+            if (!empty($karyawan['pengguna_id'])) {
+                $stmtP = $pdo->prepare("
+                    UPDATE public.pengguna 
+                    SET status_aktif = FALSE, diubah_pada = NOW() 
+                    WHERE id = :pengguna_id
+                ");
+                $stmtP->execute(['pengguna_id' => $karyawan['pengguna_id']]);
+            }
+
+            $stmtK = $pdo->prepare("
+                UPDATE public.karyawan 
+                SET diubah_pada = NOW() 
+                WHERE id = :id
+            ");
+            $stmtK->execute(['id' => $id]);
+
             $pdo->commit();
-            $this->flashSuccess('Karyawan berhasil dihapus.');
+
+            // Catat log aktivitas
+            \App\Helpers\ActivityLog::log(
+                'hr_payroll',
+                'NONAKTIFKAN_KARYAWAN',
+                "Menonaktifkan karyawan {$namaKaryawan} (Soft-delete)",
+                'karyawan',
+                $id
+            );
+
+            $this->flashSuccess("Karyawan {$namaKaryawan} berhasil dinonaktifkan. Seluruh histori transaksi dan penggajian tetap aman tersimpan.");
             $this->redirect('/employees');
 
         } catch (Throwable $e) {
             if (isset($pdo)) $pdo->rollBack();
-            $this->flashError('Gagal menghapus karyawan: ' . $e->getMessage());
+            $this->flashError('Gagal menonaktifkan karyawan: ' . $e->getMessage());
             $this->redirect('/employees');
         }
     }

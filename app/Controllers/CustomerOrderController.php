@@ -9,6 +9,9 @@ use App\Helpers\Format;
 use App\Helpers\ActivityLog;
 use App\Helpers\PdfExport;
 use App\Helpers\ExcelExport;
+use App\Helpers\StockHelper;
+use App\Helpers\PaymentHelper;
+use App\Helpers\DocumentNumber;
 use App\Core\Router;
 use Database;
 use Throwable;
@@ -229,7 +232,8 @@ class CustomerOrderController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            $this->flashError("Gagal memuat daftar pesanan: " . $e->getMessage());
+            $this->redirect('/dashboard');
         }
     }
 
@@ -253,6 +257,7 @@ class CustomerOrderController extends Controller
                        p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
                        p.waktu_gagal_kirim, p.diubah_pada,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
+                       pel.sales_driver_id as pelanggan_sales_id,
                        p.sales_driver_id,
                        CASE 
                            WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan)
@@ -286,6 +291,15 @@ class CustomerOrderController extends Controller
             if (!$order) {
                 echo json_encode(['success' => false, 'message' => 'Pesanan tidak ditemukan.']);
                 exit;
+            }
+
+            // Scope Check: Jika user hanya punya hak akses assigned, larang IDOR melihat pesanan orang lain
+            if (!Auth::can('orders.view_all') && !Auth::can('orders.po_view_all')) {
+                $myEmpId = Auth::employeeId();
+                if ($order['sales_driver_id'] !== $myEmpId && ($order['pelanggan_sales_id'] ?? null) !== $myEmpId) {
+                    echo json_encode(['success' => false, 'message' => 'Akses ditolak: Anda hanya dapat melihat detail pesanan toko binaan Anda.']);
+                    exit;
+                }
             }
 
             // Perkaya data detail dengan waktu tahapan logistik
@@ -411,7 +425,7 @@ class CustomerOrderController extends Controller
             $custSql = "
                 SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, 
                        p.alamat_lengkap, p.tipe_pembayaran_default, p.is_konsinyasi, p.sales_driver_id,
-                       COALESCE(p.override_level_harga, gp.default_level_harga, 1) as level_harga,
+                       COALESCE(gp.default_level_harga, 1) as level_harga,
                        gp.nama_grup as nama_grup_harga
                 FROM public.pelanggan p
                 JOIN public.grup_pelanggan gp ON p.grup_pelanggan_id = gp.id
@@ -433,7 +447,7 @@ class CustomerOrderController extends Controller
             $custSql .= " ORDER BY p.nama_toko ASC";
             $customers = Database::fetchAll($custSql, $custParams);
 
-            // 2. Ambil Master Sales-Driver Lengkap dengan Plat Nomor
+            // 2. Ambil Master Petugas Pengantar (Driver & Sales) Lengkap dengan Plat Nomor
             $drivers = Database::fetchAll("
                 SELECT id, nik, nama_karyawan, nomor_telepon, nomor_polisi_kendaraan
                 FROM public.v_karyawan_info
@@ -481,21 +495,7 @@ class CustomerOrderController extends Controller
             }
 
             // 7. Auto Generate Nomor Faktur Format: KRS-YYMM-XXXX
-            $yearMonth = date('ym');
-            $latestNota = Database::fetchOne("
-                SELECT nomor_nota FROM public.pesanan 
-                WHERE nomor_nota LIKE 'KRS-{$yearMonth}-%'
-                ORDER BY nomor_nota DESC LIMIT 1
-            ");
-
-            $nextSeq = 1;
-            if ($latestNota && !empty($latestNota['nomor_nota'])) {
-                $parts = explode('-', $latestNota['nomor_nota']);
-                if (isset($parts[2])) {
-                    $nextSeq = ((int)$parts[2]) + 1;
-                }
-            }
-            $autoNota = sprintf("KRS-%s-%04d", $yearMonth, $nextSeq);
+            $autoNota = DocumentNumber::suggestOrderNumber();
 
             $this->view('customer_orders.create', [
                 'pageTitle' => 'Input Pesanan Pelanggan Baru',
@@ -510,7 +510,8 @@ class CustomerOrderController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            $this->flashError("Gagal memuat formulir pesanan baru: " . $e->getMessage());
+            $this->redirect('/customer-orders');
         }
     }
 
@@ -571,7 +572,7 @@ class CustomerOrderController extends Controller
             if ($pelangganInfo) {
                 $isKonsinyasi = (bool)$pelangganInfo['is_konsinyasi'];
                 $driverInput = $this->input('sales_driver_id') ?: null;
-                $salesDriverId = $driverInput ?: null; // PO baru belum memiliki driver (penugasan dilakukan saat pembuatan Surat Jalan / Siap Kirim)
+                $salesDriverId = $driverInput ?: ($pelangganInfo['sales_driver_id'] ?? null);
                 $ruteWilayahId = $pelangganInfo['wilayah_id'];
             }
             
@@ -587,22 +588,13 @@ class CustomerOrderController extends Controller
 
             $pdo->beginTransaction();
 
-            // Anti-Collision: Cek dan generate sequence unik nomor faktur di dalam transaksi
+            // Anti-Collision: Advisory lock & sequential numbering
             $checkNota = $pdo->prepare("SELECT count(*) FROM public.pesanan WHERE nomor_nota = :nota");
             $checkNota->execute(['nota' => $nomorNota]);
-            if ((int)$checkNota->fetchColumn() > 0) {
-                $yearMonth = date('ym');
-                $stmtLatestNota = $pdo->prepare("SELECT nomor_nota FROM public.pesanan WHERE nomor_nota LIKE :pattern ORDER BY nomor_nota DESC LIMIT 1");
-                $stmtLatestNota->execute(['pattern' => "KRS-{$yearMonth}-%"]);
-                $latestNota = $stmtLatestNota->fetchColumn();
-                $seq = 1;
-                if ($latestNota) {
-                    $parts = explode('-', (string)$latestNota);
-                    if (isset($parts[2])) {
-                        $seq = ((int)$parts[2]) + 1;
-                    }
-                }
-                $nomorNota = sprintf("KRS-%s-%04d", $yearMonth, $seq);
+            if ((int)$checkNota->fetchColumn() > 0 || empty($nomorNota)) {
+                $nomorNota = DocumentNumber::nextOrderNumber($pdo);
+            } else {
+                $pdo->query("SELECT pg_advisory_xact_lock(hashtext('pesanan_nomor_nota'))");
             }
 
             // 1. Hitung total bruto & netto (Untuk Konsinyasi, pakai HPP)
@@ -613,16 +605,36 @@ class CustomerOrderController extends Controller
                 $qty = (int)($it['qty'] ?? 1);
                 $diskon = (float)($it['diskon'] ?? 0);
                 
+                // Ambil data HPP untuk snapshot historis margin
+                $hppData = Database::fetchOne("SELECT harga_pokok_pembelian FROM public.item WHERE id = :id", ['id' => $it['item_id']]);
+                $hppSatuan = (float)($hppData['harga_pokok_pembelian'] ?? 0);
+                $it['hpp'] = $hppSatuan;
+
                 if ($isKonsinyasi) {
-                    // Pakai HPP untuk valuasi internal
-                    $hppData = Database::fetchOne("SELECT harga_pokok_pembelian FROM public.item WHERE id = :id", ['id' => $it['item_id']]);
-                    $harga = (float)($hppData['harga_pokok_pembelian'] ?? 0);
+                    // Pakai HPP untuk valuasi internal konsinyasi
+                    $harga = $hppSatuan;
                     $it['harga'] = $harga;
                 } else {
-                    $harga = (float)($it['harga'] ?? 0);
+                    // Validasi Server-Side Anti-Tampering: Hitung harga jual resmi dari Stored Procedure
+                    $pricingRow = Database::fetchOne(
+                        "SELECT public.fn_hitung_harga_jual_item(:item_id, :pelanggan_id) AS pricing",
+                        ['item_id' => $it['item_id'], 'pelanggan_id' => $pelangganId]
+                    );
+                    $pricingData = json_decode($pricingRow['pricing'] ?? '{}', true);
+                    $hargaResmi = (float)($pricingData['harga_pcs_bruto'] ?? $pricingData['harga_pcs_netto'] ?? 0);
+
+                    $hargaInput = (float)($it['harga'] ?? 0);
+
+                    // Anti-Tampering: jika hargaInput <= 0 atau sengaja diturunkan di bawah harga resmi, paksa pakai hargaResmi
+                    if ($hargaResmi > 0 && ($hargaInput < $hargaResmi || $hargaInput <= 0)) {
+                        $harga = $hargaResmi;
+                    } else {
+                        $harga = ($hargaInput > 0) ? $hargaInput : $hargaResmi;
+                    }
+                    $it['harga'] = $harga;
                 }
                 
-                $subtotal = ($qty * $harga) - $diskon;
+                $subtotal = max(0, ($qty * $harga) - $diskon);
                 $it['subtotal'] = $subtotal;
                 $totalBruto += ($qty * $harga);
                 $totalDiskonItem += $diskon;
@@ -635,14 +647,15 @@ class CustomerOrderController extends Controller
 
             // 2. Skema Pembayaran
             if ($isKonsinyasi) {
-                $totalDibayar = 0;
+                $totalDibayar = 0.0;
                 $sisaTagihan = $totalNetto; // Nilai HPP internal
                 $statusBayar = 'belum_lunas';
-            } else if ($tipePembayaran === 'cash' || $tipePembayaran === 'qris' || $tipePembayaran === 'transfer') {
+            } elseif ($tipePembayaran === 'cash' || $tipePembayaran === 'qris' || $tipePembayaran === 'transfer') {
                 $totalDibayar = $totalNetto;
-                $sisaTagihan = 0;
-                $statusBayar = 'lunas';
-            } else if ($tipePembayaran === 'sebagian') {
+                $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayar);
+                $sisaTagihan = $settlement['sisa_tagihan'];
+                $statusBayar = $settlement['status_pembayaran'];
+            } elseif ($tipePembayaran === 'sebagian') {
                 // Pengaman Finansial Kuat: Validasi Ketat Nominal Uang Muka (DP)
                 if ($nominalDibayarInput <= 0) {
                     $pdo->rollBack();
@@ -661,12 +674,14 @@ class CustomerOrderController extends Controller
                     return;
                 }
                 $totalDibayar = $nominalDibayarInput;
-                $sisaTagihan = max(0, $totalNetto - $totalDibayar);
-                $statusBayar = ($sisaTagihan <= 0) ? 'lunas' : 'belum_lunas';
+                $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayar);
+                $sisaTagihan = $settlement['sisa_tagihan'];
+                $statusBayar = $settlement['status_pembayaran'];
             } else {
-                $totalDibayar = 0;
-                $sisaTagihan = $totalNetto;
-                $statusBayar = 'belum_lunas';
+                $totalDibayar = 0.0;
+                $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayar);
+                $sisaTagihan = $settlement['sisa_tagihan'];
+                $statusBayar = $settlement['status_pembayaran'];
             }
 
             // 3. Insert Header Pesanan (Tahap 1: Status PO)
@@ -709,10 +724,10 @@ class CustomerOrderController extends Controller
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
                     pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
-                    harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, dibuat_pada
+                    harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan, dibuat_pada
                 ) VALUES (
                     :pesanan_id, :item_id, :qty_dasar, :qty_dist,
-                    :harga, :diskon, :bonus, :subtotal, NOW()
+                    :harga, :diskon, :bonus, :subtotal, :hpp, NOW()
                 )
             ");
 
@@ -723,6 +738,7 @@ class CustomerOrderController extends Controller
                 $diskon = (float)($it['diskon'] ?? 0);
                 $subtotal = $it['subtotal'];
                 $isBonus = !empty($it['is_bonus']);
+                $hpp = (float)($it['hpp'] ?? 0);
 
                 $stmtItem->execute([
                     'pesanan_id' => $orderId,
@@ -733,6 +749,7 @@ class CustomerOrderController extends Controller
                     'diskon' => $diskon,
                     'bonus' => $isBonus ? 'true' : 'false',
                     'subtotal' => $subtotal,
+                    'hpp' => $hpp,
                 ]);
             }
 
@@ -766,7 +783,7 @@ class CustomerOrderController extends Controller
             $order = Database::fetchOne("
                 SELECT p.*, pel.nama_toko, pel.kode_pelanggan, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap,
                        pel.sales_driver_id as pel_sales_id,
-                       COALESCE(pel.override_level_harga, gp.default_level_harga, 1) as level_harga,
+                       COALESCE(gp.default_level_harga, 1) as level_harga,
                        gp.nama_grup as nama_grup_harga
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
@@ -826,7 +843,7 @@ class CustomerOrderController extends Controller
                 ORDER BY i.nama_item ASC
             ", ['id' => $id]);
 
-            // Ambil Master Sales-Driver
+            // Ambil Master Petugas Pengantar (Driver & Sales)
             $drivers = Database::fetchAll("
                 SELECT id, nik, nama_karyawan, nomor_telepon, nomor_polisi_kendaraan
                 FROM public.v_karyawan_info
@@ -1000,12 +1017,32 @@ class CustomerOrderController extends Controller
                 $qty = (int)($it['qty'] ?? 1);
                 $diskon = (float)($it['diskon'] ?? 0);
 
+                // Ambil data HPP untuk snapshot historis margin
+                $hppData = Database::fetchOne("SELECT harga_pokok_pembelian FROM public.item WHERE id = :id", ['id' => $it['item_id']]);
+                $hppSatuan = (float)($hppData['harga_pokok_pembelian'] ?? 0);
+                $it['hpp'] = $hppSatuan;
+
                 if ($isKonsinyasi) {
-                    $hppData = Database::fetchOne("SELECT harga_pokok_pembelian FROM public.item WHERE id = :id", ['id' => $it['item_id']]);
-                    $harga = (float)($hppData['harga_pokok_pembelian'] ?? 0);
+                    $harga = $hppSatuan;
                     $it['harga'] = $harga;
                 } else {
-                    $harga = (float)($it['harga'] ?? 0);
+                    // Validasi Server-Side Anti-Tampering: Hitung harga jual resmi dari Stored Procedure
+                    $pricingRow = Database::fetchOne(
+                        "SELECT public.fn_hitung_harga_jual_item(:item_id, :pelanggan_id) AS pricing",
+                        ['item_id' => $it['item_id'], 'pelanggan_id' => $order['pelanggan_id']]
+                    );
+                    $pricingData = json_decode($pricingRow['pricing'] ?? '{}', true);
+                    $hargaResmi = (float)($pricingData['harga_pcs_bruto'] ?? $pricingData['harga_pcs_netto'] ?? 0);
+
+                    $hargaInput = (float)($it['harga'] ?? 0);
+
+                    // Anti-Tampering: jika hargaInput <= 0 atau sengaja diturunkan di bawah harga resmi, paksa pakai hargaResmi
+                    if ($hargaResmi > 0 && ($hargaInput < $hargaResmi || $hargaInput <= 0)) {
+                        $harga = $hargaResmi;
+                    } else {
+                        $harga = ($hargaInput > 0) ? $hargaInput : $hargaResmi;
+                    }
+                    $it['harga'] = $harga;
                 }
 
                 $subtotal = max(0, ($qty * $harga) - $diskon);
@@ -1019,11 +1056,11 @@ class CustomerOrderController extends Controller
             $totalDiskon = $totalDiskonItem + $diskonFaktur;
             $totalNetto = max(0, $totalBruto - $totalDiskon);
 
-            // Hitung status dan nominal pembayaran
+            // Hitung status dan nominal pembayaran via PaymentHelper
             if ($isKonsinyasi) {
-                $totalDibayar = 0;
-                $sisaTagihan = 0;
-                $statusBayar = 'lunas';
+                $totalDibayar = 0.0;
+                $sisaTagihan = $totalNetto;
+                $statusBayar = 'belum_lunas';
             } elseif ($isRetryFromFailed) {
                 // Skema pesanan kirim ulang yang diedit
                 if ($totalNetto < $totalDibayarLama) {
@@ -1064,17 +1101,20 @@ class CustomerOrderController extends Controller
                         $nominalRefundDilakukan = $selisihRefund;
                     }
                     $totalDibayar = $totalNetto;
-                    $sisaTagihan = 0;
-                    $statusBayar = 'lunas';
+                    $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayar);
+                    $sisaTagihan = $settlement['sisa_tagihan'];
+                    $statusBayar = $settlement['status_pembayaran'];
                 } else {
                     $totalDibayar = $totalDibayarLama;
-                    $sisaTagihan = max(0, $totalNetto - $totalDibayar);
-                    $statusBayar = ($sisaTagihan <= 0) ? 'lunas' : (($totalDibayar > 0) ? 'sebagian' : 'belum_lunas');
+                    $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayar);
+                    $sisaTagihan = $settlement['sisa_tagihan'];
+                    $statusBayar = $settlement['status_pembayaran'];
                 }
             } elseif ($tipePembayaran === 'cash' || $tipePembayaran === 'qris' || $tipePembayaran === 'transfer') {
                 $totalDibayar = $totalNetto;
-                $sisaTagihan = 0;
-                $statusBayar = 'lunas';
+                $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayar);
+                $sisaTagihan = $settlement['sisa_tagihan'];
+                $statusBayar = $settlement['status_pembayaran'];
             } elseif ($tipePembayaran === 'sebagian') {
                 $nominalDibayar = (float)preg_replace('/[^0-9]/', '', (string)$this->input('nominal_dibayar', '0'));
                 if ($nominalDibayar <= 0) {
@@ -1094,12 +1134,14 @@ class CustomerOrderController extends Controller
                     return;
                 }
                 $totalDibayar = $nominalDibayar;
-                $sisaTagihan = max(0, $totalNetto - $totalDibayar);
-                $statusBayar = ($sisaTagihan == 0) ? 'lunas' : (($totalDibayar > 0) ? 'sebagian' : 'belum_lunas');
+                $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayar);
+                $sisaTagihan = $settlement['sisa_tagihan'];
+                $statusBayar = $settlement['status_pembayaran'];
             } else {
-                $totalDibayar = 0;
-                $sisaTagihan = $totalNetto;
-                $statusBayar = 'belum_lunas';
+                $totalDibayar = 0.0;
+                $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayar);
+                $sisaTagihan = $settlement['sisa_tagihan'];
+                $statusBayar = $settlement['status_pembayaran'];
             }
 
             // Driver tetap dari pesanan / profil toko (tidak diubah di form PO edit)
@@ -1151,10 +1193,10 @@ class CustomerOrderController extends Controller
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
                     pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
-                    harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, dibuat_pada
+                    harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan, dibuat_pada
                 ) VALUES (
                     :pesanan_id, :item_id, :qty_dasar, :qty_dist,
-                    :harga, :diskon, :bonus, :subtotal, NOW()
+                    :harga, :diskon, :bonus, :subtotal, :hpp, NOW()
                 )
             ");
 
@@ -1165,6 +1207,7 @@ class CustomerOrderController extends Controller
                 $diskon = (float)($it['diskon'] ?? 0);
                 $subtotal = $it['subtotal'];
                 $isBonus = !empty($it['is_bonus']);
+                $hpp = (float)($it['hpp'] ?? 0);
 
                 $stmtItem->execute([
                     'pesanan_id' => $id,
@@ -1175,6 +1218,7 @@ class CustomerOrderController extends Controller
                     'diskon' => $diskon,
                     'bonus' => $isBonus ? 'true' : 'false',
                     'subtotal' => $subtotal,
+                    'hpp' => $hpp,
                 ]);
             }
 
@@ -1221,6 +1265,7 @@ class CustomerOrderController extends Controller
         try {
             $order = Database::fetchOne("
                 SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
+                       pel.sales_driver_id as pelanggan_sales_id,
                        k.nama_karyawan as nama_sales,
                        ak.nama_akun as nama_akun_kas
                 FROM public.pesanan p
@@ -1234,6 +1279,15 @@ class CustomerOrderController extends Controller
                 $this->flashError('Faktur pesanan tidak ditemukan.');
                 $this->redirect('/customer-orders');
                 return;
+            }
+
+            if (!Auth::can('orders.view_all')) {
+                $myEmpId = Auth::employeeId();
+                if ($order['sales_driver_id'] !== $myEmpId && ($order['pelanggan_sales_id'] ?? null) !== $myEmpId) {
+                    $this->flashError('Akses Ditolak: Anda hanya dapat melihat faktur untuk toko binaan Anda.');
+                    $this->redirect('/customer-orders');
+                    return;
+                }
             }
 
             $items = Database::fetchAll("
@@ -1334,10 +1388,11 @@ class CustomerOrderController extends Controller
             $saldoKasBaru = $saldoKasAwal + $nominalBayar;
             $namaAkunKas = $akunKas['nama_akun'];
 
-            // 4. Hitung Nilai Baru Pesanan
+            // 4. Hitung Nilai Baru Pesanan via PaymentHelper
             $totalDibayarBaru = $totalDibayarLama + $nominalBayar;
-            $sisaTagihanBaru = max(0, $totalNetto - $totalDibayarBaru);
-            $statusBaru = ($sisaTagihanBaru <= 0) ? 'lunas' : 'belum_lunas';
+            $settlement = PaymentHelper::calculateSettlement($totalNetto, $totalDibayarBaru);
+            $sisaTagihanBaru = $settlement['sisa_tagihan'];
+            $statusBaru = $settlement['status_pembayaran'];
 
             // Update Pesanan
             $stmt = $pdo->prepare("
@@ -1356,6 +1411,20 @@ class CustomerOrderController extends Controller
                 'akun_kas' => $akunKasId,
                 'id' => $id,
             ]);
+
+            // Kurangi Saldo Piutang Berjalan Pelanggan (Jika pesanan sudah pernah diakui sebagai piutang setelah barang diserahkan)
+            if (in_array($order['status_pemrosesan'] ?? '', ['selesai_dikirim', 'selesai', 'selesai_diterima'], true) && !empty($order['pelanggan_id'])) {
+                $stmtDecPiutang = $pdo->prepare("
+                    UPDATE public.pelanggan
+                    SET total_piutang_berjalan = GREATEST(0, COALESCE(total_piutang_berjalan, 0) - :nominal_bayar),
+                        diubah_pada = NOW()
+                    WHERE id = :pelanggan_id
+                ");
+                $stmtDecPiutang->execute([
+                    'nominal_bayar' => $nominalBayar,
+                    'pelanggan_id' => $order['pelanggan_id'],
+                ]);
+            }
 
             // Update Saldo Kas Penerima
             $stmtKasAkun = $pdo->prepare("
@@ -1462,55 +1531,15 @@ class CustomerOrderController extends Controller
             }
 
             // 1. Kembalikan stok fisik ke gudang HANYA JIKA pesanan sudah pernah diproses potong stok dan belum dikembalikan (status gagal_dikirim sudah dikembalikan saat delivery gagal)
-            $isPhysicalStockCut = in_array($order['status_pemrosesan'] ?? '', ['siap_dikirim', 'siap_kirim', 'sedang_dikirim'], true);
+            $isPhysicalStockCut = StockHelper::isPhysicalStockCut($order['status_pemrosesan'] ?? '');
 
             if ($isPhysicalStockCut) {
-                $items = Database::fetchAll("SELECT * FROM public.item_pesanan WHERE pesanan_id = :id", ['id' => $id]);
-
-                $stmtStok = $pdo->prepare("
-                    UPDATE public.item 
-                    SET stok_fisik_saat_ini = stok_fisik_saat_ini + :qty,
-                        diubah_pada = NOW()
-                    WHERE id = :item_id
-                ");
-
-                $stmtRiwayat = $pdo->prepare("
-                    INSERT INTO public.riwayat_stok (
-                        item_id, tipe_mutasi, jumlah_perubahan,
-                        stok_sebelum, stok_sesudah, referensi_tabel, referensi_id,
-                        keterangan, dibuat_oleh, dibuat_pada
-                    ) VALUES (
-                        :item_id, 'penyesuaian_opname_tambah', :qty,
-                        :stok_sebelum, :stok_sesudah, 'pesanan', :ref_id,
-                        :ket, :user_id, NOW()
-                    )
-                ");
-
-                $userId = Auth::id() ?: null;
-
-                foreach ($items as $it) {
-                    $qtyPcs = (int)$it['kuantitas_satuan_dasar'];
-                    $itemId = $it['item_id'];
-
-                    $itemData = Database::fetchOne("SELECT stok_fisik_saat_ini FROM public.item WHERE id = :id FOR UPDATE", ['id' => $itemId]);
-                    $stokSebelum = $itemData ? (int)$itemData['stok_fisik_saat_ini'] : 0;
-                    $stokSesudah = $stokSebelum + $qtyPcs;
-
-                    $stmtStok->execute([
-                        'qty' => $qtyPcs,
-                        'item_id' => $itemId,
-                    ]);
-
-                    $stmtRiwayat->execute([
-                        'item_id' => $itemId,
-                        'qty' => $qtyPcs,
-                        'stok_sebelum' => $stokSebelum,
-                        'stok_sesudah' => $stokSesudah,
-                        'ref_id' => $id,
-                        'ket' => "Pembatalan Pesanan #{$order['nomor_nota']} ({$order['status_pemrosesan']})",
-                        'user_id' => $userId,
-                    ]);
-                }
+                StockHelper::revertOrderStockToWarehouse(
+                    $pdo,
+                    $id,
+                    "Pembatalan Pesanan #{$order['nomor_nota']} ({$order['status_pemrosesan']})",
+                    Auth::id() ?: null
+                );
             }
 
             // 2. Jika kas pernah masuk, kurangi kembali saldo kas
@@ -1618,8 +1647,7 @@ class CustomerOrderController extends Controller
                     WHERE p.id = :id
                 ", ['id' => $orderId]);
 
-                $count = Database::fetchOne("SELECT count(*) as total FROM public.surat_jalan")['total'] ?? 0;
-                $nomorSj = 'SJ-' . date('Ymd') . '-' . str_pad((string)($count + 1), 3, '0', STR_PAD_LEFT);
+                $nomorSj = DocumentNumber::nextDeliveryNumber($pdo);
                 $dId = !empty($driverId) ? $driverId : ($pesanan['sales_driver_id'] ?: null);
 
                 $stmtNew = $pdo->prepare("
@@ -1659,37 +1687,62 @@ class CustomerOrderController extends Controller
                     ->execute(['driver_id' => $driverId, 'id' => $orderId]);
             }
 
-            // Sync stok rak konsinyasi jika pesanan ini adalah titip konsinyasi dan status selesai_diterima
+            // Sync status pesanan dan piutang/rak konsinyasi jika status selesai_diterima
             if ($statusBaru === 'selesai_diterima') {
-                $orderData = Database::fetchOne("
-                    SELECT p.pelanggan_id, pel.is_konsinyasi, p.tipe_pembayaran 
+                $stmtOrder = $pdo->prepare("
+                    SELECT p.*, pel.is_konsinyasi, pel.nama_toko 
                     FROM public.pesanan p 
                     JOIN public.pelanggan pel ON p.pelanggan_id = pel.id 
                     WHERE p.id = :id
-                ", ['id' => $orderId]);
+                    FOR UPDATE
+                ");
+                $stmtOrder->execute(['id' => $orderId]);
+                $orderData = $stmtOrder->fetch(\PDO::FETCH_ASSOC);
 
-                if ($orderData && ($orderData['is_konsinyasi'] || $orderData['tipe_pembayaran'] === 'konsinyasi')) {
-                    $orderedItems = Database::fetchAll("
-                        SELECT item_id, kuantitas_satuan_dasar 
-                        FROM public.item_pesanan 
-                        WHERE pesanan_id = :id
-                    ", ['id' => $orderId]);
+                if ($orderData) {
+                    $alreadyDelivered = in_array($orderData['status_pemrosesan'] ?? '', ['selesai_dikirim', 'selesai', 'selesai_diterima'], true);
+                    $pdo->prepare("UPDATE public.pesanan SET status_pemrosesan = 'selesai_dikirim', diubah_pada = NOW() WHERE id = :id")->execute(['id' => $orderId]);
 
-                    foreach ($orderedItems as $oit) {
-                        $pdo->prepare("
-                            INSERT INTO public.stok_konsinyasi_toko (
-                                pelanggan_id, item_id, stok_titip_saat_ini, terakhir_opname_pada, dibuat_pada, diubah_pada
-                            ) VALUES (
-                                :pelanggan_id, :item_id, :qty, NOW(), NOW(), NOW()
-                            )
-                            ON CONFLICT (pelanggan_id, item_id) DO UPDATE SET
-                                stok_titip_saat_ini = public.stok_konsinyasi_toko.stok_titip_saat_ini + EXCLUDED.stok_titip_saat_ini,
-                                diubah_pada = NOW()
-                        ")->execute([
-                            'pelanggan_id' => $orderData['pelanggan_id'],
-                            'item_id' => $oit['item_id'],
-                            'qty' => (int)$oit['kuantitas_satuan_dasar']
-                        ]);
+                    $isKonsinyasi = (bool)$orderData['is_konsinyasi'] || ($orderData['tipe_pembayaran'] === 'konsinyasi');
+                    if ($isKonsinyasi) {
+                        $orderedItems = Database::fetchAll("
+                            SELECT item_id, kuantitas_satuan_dasar 
+                            FROM public.item_pesanan 
+                            WHERE pesanan_id = :id
+                        ", ['id' => $orderId]);
+
+                        foreach ($orderedItems as $oit) {
+                            $pdo->prepare("
+                                INSERT INTO public.stok_konsinyasi_toko (
+                                    pelanggan_id, item_id, stok_titip_saat_ini, terakhir_opname_pada, dibuat_pada, diubah_pada
+                                ) VALUES (
+                                    :pelanggan_id, :item_id, :qty, NOW(), NOW(), NOW()
+                                )
+                                ON CONFLICT (pelanggan_id, item_id) DO UPDATE SET
+                                    stok_titip_saat_ini = public.stok_konsinyasi_toko.stok_titip_saat_ini + EXCLUDED.stok_titip_saat_ini,
+                                    diubah_pada = NOW()
+                            ")->execute([
+                                'pelanggan_id' => $orderData['pelanggan_id'],
+                                'item_id' => $oit['item_id'],
+                                'qty' => (int)$oit['kuantitas_satuan_dasar']
+                            ]);
+                        }
+                    } else {
+                        // Regular Order: Akumulasi piutang pelanggan jika belum pernah selesai dikirim sebelumnya
+                        if (!$alreadyDelivered) {
+                            $sisaTagihan = (float)$orderData['sisa_tagihan'];
+                            if ($sisaTagihan > 0) {
+                                $pdo->prepare("
+                                    UPDATE public.pelanggan
+                                    SET total_piutang_berjalan = COALESCE(total_piutang_berjalan, 0) + :sisa,
+                                        diubah_pada = NOW()
+                                    WHERE id = :pelanggan_id
+                                ")->execute([
+                                    'sisa' => $sisaTagihan,
+                                    'pelanggan_id' => $orderData['pelanggan_id']
+                                ]);
+                            }
+                        }
                     }
                 }
             }
@@ -1718,6 +1771,10 @@ class CustomerOrderController extends Controller
             $tab = $this->input('tab', 'pending'); // 'pending' (Menunggu Packing), 'ready' (Siap Dikirim), 'all' (Semua)
             $q = trim((string)$this->input('q', ''));
             $pelangganId = $this->input('pelanggan_id', '');
+            $sort = strtolower(trim((string)$this->input('sort', 'terbaru')));
+            if ($sort !== 'terlama') {
+                $sort = 'terbaru';
+            }
 
             $sql = "
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
@@ -1741,7 +1798,13 @@ class CustomerOrderController extends Controller
                        (SELECT COALESCE(SUM(kuantitas_satuan_dasar), 0) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_pcs
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
+                LEFT JOIN LATERAL (
+                    SELECT id, nomor_surat_jalan, status_surat_jalan, sales_driver_id, rute_wilayah_id
+                    FROM public.surat_jalan
+                    WHERE pesanan_id = p.id
+                    ORDER BY dibuat_pada DESC
+                    LIMIT 1
+                ) sj ON true
                 LEFT JOIN public.v_karyawan_info k_p ON p.sales_driver_id = k_p.id
                 LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
@@ -1779,7 +1842,11 @@ class CustomerOrderController extends Controller
                 $params['q'] = "%{$q}%";
             }
 
-            $sql .= " ORDER BY p.dibuat_pada DESC";
+            if ($sort === 'terlama') {
+                $sql .= " ORDER BY p.tanggal_pesanan ASC, p.dibuat_pada ASC, p.id ASC";
+            } else {
+                $sql .= " ORDER BY p.tanggal_pesanan DESC, p.dibuat_pada DESC, p.id DESC";
+            }
             $poList = Database::fetchAll($sql, $params);
 
             // Fetch items for each PO to evaluate physical warehouse stock readiness
@@ -1877,6 +1944,7 @@ class CustomerOrderController extends Controller
                 'tab' => $tab,
                 'q' => $q,
                 'pelangganId' => $pelangganId,
+                'sort' => $sort,
                 'countPending' => $countPending,
                 'countReady' => $countReady,
                 'countReadyNoSj' => $countReadyNoSj,
@@ -1887,7 +1955,8 @@ class CustomerOrderController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo "Database Error: " . $e->getMessage();
+            $this->flashError("Gagal memuat daftar PO gudang: " . $e->getMessage());
+            $this->redirect('/customer-orders');
         }
     }
 
@@ -2018,57 +2087,11 @@ class CustomerOrderController extends Controller
 
     /**
      * Cetak Lembar Ambil Barang (Picking / Packing List) untuk Staf Gudang
+     * Didelegasikan ke OrderDocumentController (TASK-015 / Fase 4).
      */
     public function printPickingList(): void
     {
-        Auth::requirePermission(['orders.po_print', 'orders.po_view_all', 'orders.po_view_assigned']);
-
-        $id = $this->input('id');
-        if (empty($id)) {
-            $this->flashError('ID Pesanan tidak valid.');
-            $this->redirect('/customer-orders/po-list');
-            return;
-        }
-
-        try {
-            $order = Database::fetchOne("
-                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
-                       COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan) as nama_driver,
-                       COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan) as nopol_driver,
-                       w.nama_wilayah, w.kode_rute,
-                       sj.nomor_surat_jalan
-                FROM public.pesanan p
-                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
-                LEFT JOIN public.v_karyawan_info k_p ON p.sales_driver_id = k_p.id
-                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
-                LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
-                WHERE p.id = :id
-            ", ['id' => $id]);
-
-            if (!$order) {
-                $this->flashError('Pesanan tidak ditemukan.');
-                $this->redirect('/customer-orders/po-list');
-                return;
-            }
-
-            $items = Database::fetchAll("
-                SELECT ip.*, it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar
-                FROM public.item_pesanan ip
-                JOIN public.item it ON ip.item_id = it.id
-                WHERE ip.pesanan_id = :id
-                ORDER BY it.nama_item ASC
-            ", ['id' => $id]);
-
-            $this->view('customer_orders.picking_list', [
-                'pageTitle' => 'Picking List #' . $order['nomor_nota'],
-                'order' => $order,
-                'items' => $items
-            ]);
-
-        } catch (Throwable $e) {
-            echo "Error: " . $e->getMessage();
-        }
+        (new OrderDocumentController())->printPickingList();
     }
 
     /**
@@ -2206,379 +2229,47 @@ class CustomerOrderController extends Controller
 
     /**
      * Unduh Faktur Pesanan dalam Format PDF (Dompdf Library)
+     * Didelegasikan ke OrderDocumentController (TASK-015 / Fase 4).
      */
     public function invoicePdf(): void
     {
-        Auth::requirePermission(['orders.view_all', 'orders.view_assigned']);
-        $id = $this->input('id');
-        if (empty($id)) {
-            $this->flashError('ID Pesanan tidak valid.');
-            $this->redirect('/customer-orders');
-            return;
-        }
-
-        try {
-            $order = Database::fetchOne("
-                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
-                       k.nama_karyawan as nama_sales,
-                       ak.nama_akun as nama_akun_kas
-                FROM public.pesanan p
-                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
-                LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
-                WHERE p.id = :id
-            ", ['id' => $id]);
-
-            if (!$order) {
-                $this->flashError('Faktur pesanan tidak ditemukan.');
-                $this->redirect('/customer-orders');
-                return;
-            }
-
-            $items = Database::fetchAll("
-                SELECT ip.*, i.nama_item, i.kode_sku, i.satuan_dasar, gp.nama_grup
-                FROM public.item_pesanan ip
-                JOIN public.item i ON ip.item_id = i.id
-                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
-                WHERE ip.pesanan_id = :id
-                ORDER BY ip.dibuat_pada ASC
-            ", ['id' => $id]);
-
-            ob_start();
-            extract(['order' => $order, 'items' => $items, 'isPdf' => true]);
-            require ROOT_PATH . '/views/customer_orders/invoice.php';
-            $html = ob_get_clean();
-
-            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
-            PdfExport::download($html, "Faktur-{$cleanNota}.pdf", 'A4', 'portrait');
-        } catch (Throwable $e) {
-            $this->flashError('Gagal membuat PDF: ' . $e->getMessage());
-            $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));
-        }
+        (new OrderDocumentController())->invoicePdf();
     }
 
     /**
      * Unduh Faktur Rincian Item dalam Format Excel (PhpSpreadsheet Library)
+     * Didelegasikan ke OrderDocumentController (TASK-015 / Fase 4).
      */
     public function invoiceExcel(): void
     {
-        Auth::requirePermission(['orders.view_all', 'orders.view_assigned']);
-        $id = $this->input('id');
-        if (empty($id)) {
-            $this->flashError('ID Pesanan tidak valid.');
-            $this->redirect('/customer-orders');
-            return;
-        }
-
-        try {
-            $order = Database::fetchOne("
-                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
-                       k.nama_karyawan as nama_sales
-                FROM public.pesanan p
-                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
-                WHERE p.id = :id
-            ", ['id' => $id]);
-
-            if (!$order) {
-                $this->flashError('Faktur pesanan tidak ditemukan.');
-                $this->redirect('/customer-orders');
-                return;
-            }
-
-            $items = Database::fetchAll("
-                SELECT ip.*, i.nama_item, i.kode_sku, i.satuan_dasar, gp.nama_grup
-                FROM public.item_pesanan ip
-                JOIN public.item i ON ip.item_id = i.id
-                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
-                WHERE ip.pesanan_id = :id
-                ORDER BY ip.dibuat_pada ASC
-            ", ['id' => $id]);
-
-            $headers = ['No', 'Kode SKU', 'Nama Produk Snack', 'Kategori Kemasan', 'Harga Satuan (Rp)', 'Qty (Pcs)', 'Diskon (Rp)', 'Subtotal (Rp)'];
-            $rows = [];
-            $no = 1;
-            foreach ($items as $it) {
-                $rows[] = [
-                    $no++,
-                    $it['kode_sku'] ?? '-',
-                    $it['nama_item'] ?? '-',
-                    $it['nama_grup'] ?? '-',
-                    (float)($it['harga_satuan'] ?? 0),
-                    (int)($it['kuantitas_satuan_dasar'] ?? 0),
-                    (float)($it['diskon_nominal'] ?? 0),
-                    (float)($it['subtotal'] ?? 0)
-                ];
-            }
-
-            // Tambahkan baris total
-            $rows[] = ['', '', '', '', '', '', 'Total Bruto (Rp):', (float)($order['total_bruto'] ?? 0)];
-            $rows[] = ['', '', '', '', '', '', 'Total Diskon (Rp):', (float)($order['total_diskon'] ?? 0)];
-            $rows[] = ['', '', '', '', '', '', 'TOTAL NETTO (Rp):', (float)($order['total_netto'] ?? 0)];
-            $rows[] = ['', '', '', '', '', '', 'Telah Dibayar (Rp):', (float)($order['total_dibayar'] ?? 0)];
-            $rows[] = ['', '', '', '', '', '', 'Sisa Tagihan (Rp):', (float)($order['sisa_tagihan'] ?? 0)];
-
-            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
-            ExcelExport::download("Faktur-{$cleanNota}.xlsx", $headers, $rows, "Faktur {$cleanNota}");
-        } catch (Throwable $e) {
-            $this->flashError('Gagal export Excel: ' . $e->getMessage());
-            $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));
-        }
+        (new OrderDocumentController())->invoiceExcel();
     }
 
     /**
      * Export Seluruh Daftar Pesanan ke File Excel (PhpSpreadsheet)
+     * Didelegasikan ke OrderDocumentController (TASK-015 / Fase 4).
      */
     public function exportExcel(): void
     {
-        Auth::requirePermission(['orders.view_all', 'orders.view_assigned']);
-
-        try {
-            $startDate = $this->input('start_date', date('Y-m-01'));
-            $endDate = $this->input('end_date', date('Y-m-d'));
-            $pelangganId = $this->input('pelanggan_id');
-            $statusBayar = $this->input('status_pembayaran');
-            $q = trim((string)$this->input('q', ''));
-
-            $sql = "
-                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.is_konsinyasi,
-                       k.nama_karyawan as nama_sales
-                FROM public.pesanan p
-                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
-                WHERE p.tanggal_pesanan >= :start AND p.tanggal_pesanan <= :end
-            ";
-            $params = ['start' => $startDate, 'end' => $endDate];
-
-            if (!empty($pelangganId)) {
-                $sql .= " AND p.pelanggan_id = :pelanggan_id";
-                $params['pelanggan_id'] = $pelangganId;
-            }
-            if (!empty($statusBayar)) {
-                $sql .= " AND p.status_pembayaran = :status_bayar";
-                $params['status_bayar'] = $statusBayar;
-            }
-            if (!empty($q)) {
-                $sql .= " AND (p.nomor_nota ILIKE :q OR pel.nama_toko ILIKE :q OR pel.kode_pelanggan ILIKE :q)";
-                $params['q'] = "%{$q}%";
-            }
-
-            $sql .= " ORDER BY p.tanggal_pesanan DESC, p.dibuat_pada DESC";
-            $orders = Database::fetchAll($sql, $params);
-
-            $headers = ['No', 'Nomor Nota', 'Tanggal', 'Kode Toko', 'Nama Toko Pelanggan', 'Sales / PIC', 'Tipe Pembayaran', 'Total Bruto (Rp)', 'Total Diskon (Rp)', 'Total Netto (Rp)', 'Dibayar (Rp)', 'Sisa Tagihan (Rp)', 'Status Bayar', 'Status Proses'];
-            $rows = [];
-            $no = 1;
-            foreach ($orders as $o) {
-                $rows[] = [
-                    $no++,
-                    $o['nomor_nota'],
-                    date('d/m/Y', strtotime($o['tanggal_pesanan'])),
-                    $o['kode_pelanggan'] ?? '-',
-                    $o['nama_toko'],
-                    $o['nama_sales'] ?? 'Armada / Toko',
-                    ucfirst(str_replace('_', ' ', (string)$o['tipe_pembayaran'])),
-                    (float)$o['total_bruto'],
-                    (float)$o['total_diskon'],
-                    (float)$o['total_netto'],
-                    (float)$o['total_dibayar'],
-                    (float)$o['sisa_tagihan'],
-                    strtoupper(str_replace('_', ' ', (string)$o['status_pembayaran'])),
-                    strtoupper(str_replace('_', ' ', (string)$o['status_pemrosesan']))
-                ];
-            }
-
-            ExcelExport::download("Daftar-Pesanan-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Daftar Pesanan");
-        } catch (Throwable $e) {
-            $this->flashError('Gagal export data pesanan: ' . $e->getMessage());
-            $this->redirect('/customer-orders');
-        }
+        (new OrderDocumentController())->exportExcel();
     }
 
     /**
      * Unduh Lembar Ambil Barang (Picking List) dalam Format PDF (Dompdf Library)
+     * Didelegasikan ke OrderDocumentController (TASK-015 / Fase 4).
      */
     public function pickingListPdf(): void
     {
-        Auth::requirePermission(['orders.po_print', 'orders.po_view_all', 'orders.po_view_assigned']);
-
-        $id = $this->input('id');
-        if (empty($id)) {
-            $this->flashError('ID Pesanan tidak valid.');
-            $this->redirect('/customer-orders/po-list');
-            return;
-        }
-
-        try {
-            $order = Database::fetchOne("
-                SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
-                       COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan) as nama_driver,
-                       COALESCE(k_sj.nomor_polisi_kendaraan, k_p.nomor_polisi_kendaraan) as nopol_driver,
-                       w.nama_wilayah, w.kode_rute,
-                       sj.nomor_surat_jalan
-                FROM public.pesanan p
-                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = p.id
-                LEFT JOIN public.v_karyawan_info k_p ON p.sales_driver_id = k_p.id
-                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
-                LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
-                WHERE p.id = :id
-            ", ['id' => $id]);
-
-            if (!$order) {
-                $this->flashError('Pesanan tidak ditemukan.');
-                $this->redirect('/customer-orders/po-list');
-                return;
-            }
-
-            $items = Database::fetchAll("
-                SELECT ip.*, it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar
-                FROM public.item_pesanan ip
-                JOIN public.item it ON ip.item_id = it.id
-                WHERE ip.pesanan_id = :id
-                ORDER BY it.nama_item ASC
-            ", ['id' => $id]);
-
-            ob_start();
-            extract(['pageTitle' => 'Picking List #' . $order['nomor_nota'], 'order' => $order, 'items' => $items, 'isPdf' => true]);
-            require ROOT_PATH . '/views/customer_orders/picking_list.php';
-            $html = ob_get_clean();
-
-            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
-            PdfExport::download($html, "PickingList-{$cleanNota}.pdf", 'A4', 'portrait');
-        } catch (Throwable $e) {
-            $this->flashError('Gagal membuat PDF Picking List: ' . $e->getMessage());
-            $this->redirect('/customer-orders/picking-list?id=' . urlencode((string)$id));
-        }
+        (new OrderDocumentController())->pickingListPdf();
     }
 
     /**
      * Batch export multiple PO item lists into a single consolidated PDF document.
+     * Didelegasikan ke OrderDocumentController (TASK-015 / Fase 4).
      */
     public function batchPickingListPdf(): void
     {
-        Auth::requirePermission(['orders.po_print', 'orders.po_view_all', 'orders.po_view_assigned']);
-
-        try {
-            $idsParam = $this->input('ids');
-            $orderIdsInput = $this->input('order_ids');
-            $tab = $this->input('tab', 'pending');
-            $q = trim((string)$this->input('q', ''));
-            $pelangganId = $this->input('pelanggan_id', '');
-
-            $targetIds = [];
-            if (!empty($idsParam)) {
-                $targetIds = array_filter(array_map('trim', explode(',', (string)$idsParam)));
-            } elseif (!empty($orderIdsInput) && is_array($orderIdsInput)) {
-                $targetIds = array_filter(array_map('trim', $orderIdsInput));
-            }
-
-            $sql = "
-                SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
-                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.dibuat_pada,
-                       pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
-                       (SELECT COUNT(*) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_sku,
-                       (SELECT COALESCE(SUM(kuantitas_satuan_dasar), 0) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_pcs
-                FROM public.pesanan p
-                JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-                WHERE p.status_pembayaran != 'dibatalkan'
-            ";
-
-            $params = [];
-
-            // Permission scoping for sales/driver
-            if (!Auth::can('orders.po_view_all')) {
-                $myEmpId = Auth::employeeId();
-                if ($myEmpId) {
-                    $sql .= " AND (p.sales_driver_id = :my_emp_id OR pel.sales_driver_id = :my_emp_id)";
-                    $params['my_emp_id'] = $myEmpId;
-                } else {
-                    $sql .= " AND 1=0";
-                }
-            }
-
-            if (!empty($targetIds)) {
-                $placeholders = [];
-                foreach ($targetIds as $idx => $tId) {
-                    $key = 'target_id_' . $idx;
-                    $placeholders[] = ':' . $key;
-                    $params[$key] = $tId;
-                }
-                $sql .= " AND p.id IN (" . implode(',', $placeholders) . ")";
-            } else {
-                // Filter by tab and criteria
-                if ($tab === 'pending') {
-                    $sql .= " AND p.status_pemrosesan = 'po'";
-                } elseif ($tab === 'ready') {
-                    $sql .= " AND p.status_pemrosesan IN ('siap_dikirim', 'siap_kirim')";
-                } elseif ($tab === 'failed') {
-                    $sql .= " AND p.status_pemrosesan = 'gagal_dikirim'";
-                }
-
-                if (!empty($pelangganId)) {
-                    $sql .= " AND p.pelanggan_id = :pelanggan_id";
-                    $params['pelanggan_id'] = $pelangganId;
-                }
-
-                if (!empty($q)) {
-                    $sql .= " AND (p.nomor_nota ILIKE :q OR pel.nama_toko ILIKE :q OR pel.kode_pelanggan ILIKE :q OR p.catatan ILIKE :q)";
-                    $params['q'] = "%{$q}%";
-                }
-            }
-
-            $sql .= " ORDER BY p.dibuat_pada ASC";
-            $orders = Database::fetchAll($sql, $params);
-
-            if (empty($orders)) {
-                $this->flashError('Tidak ada data PO yang sesuai untuk diunduh sebagai PDF.');
-                $this->redirect('/customer-orders/po-list');
-                return;
-            }
-
-            // Batch fetch items for all selected orders
-            $orderIds = array_column($orders, 'id');
-            $itemParams = [];
-            $itemPlaceholders = [];
-            foreach ($orderIds as $idx => $oId) {
-                $key = 'ord_id_' . $idx;
-                $itemPlaceholders[] = ':' . $key;
-                $itemParams[$key] = $oId;
-            }
-
-            $rawItems = Database::fetchAll("
-                SELECT ip.*, it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar, it.barcode
-                FROM public.item_pesanan ip
-                JOIN public.item it ON ip.item_id = it.id
-                WHERE ip.pesanan_id IN (" . implode(',', $itemPlaceholders) . ")
-                ORDER BY it.nama_item ASC
-            ", $itemParams);
-
-            $itemsByOrder = [];
-            foreach ($rawItems as $ri) {
-                $itemsByOrder[$ri['pesanan_id']][] = $ri;
-            }
-
-            foreach ($orders as &$ord) {
-                $ord['items'] = $itemsByOrder[$ord['id']] ?? [];
-            }
-            unset($ord);
-
-            ob_start();
-            extract([
-                'pageTitle' => 'Batch Item Pesanan PO (' . count($orders) . ' Nota)',
-                'orders' => $orders,
-                'isPdf' => true
-            ]);
-            require ROOT_PATH . '/views/customer_orders/batch_picking_list.php';
-            $html = ob_get_clean();
-
-            $dateSuffix = date('Ymd_Hi');
-            $countSuffix = count($orders);
-            PdfExport::download($html, "Batch_PO_{$countSuffix}Nota_{$dateSuffix}.pdf", 'A4', 'portrait');
-        } catch (Throwable $e) {
-            $this->flashError('Gagal membuat PDF Batch PO: ' . $e->getMessage());
-            $this->redirect('/customer-orders/po-list');
-        }
+        (new OrderDocumentController())->batchPickingListPdf();
     }
 }
 

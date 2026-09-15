@@ -21,6 +21,20 @@ class Format
     }
 
     /**
+     * Format kuantitas / stok (menampilkan desimal hanya jika bukan bilangan bulat)
+     * Contoh: 10 -> "10", 12.5 -> "12,5", 15.75 -> "15,75"
+     */
+    public static function qty(float|int|string|null $angka, int $maxDecimals = 2): string
+    {
+        $val = (float)($angka ?? 0);
+        if (fmod($val, 1) === 0.0) {
+            return number_format($val, 0, ',', '.');
+        }
+        $formatted = number_format($val, $maxDecimals, ',', '.');
+        return rtrim(rtrim($formatted, '0'), ',');
+    }
+
+    /**
      * Format tanggal ke format lokal Indonesia (26 Agustus 2026 atau 26 Agu 2026)
      */
     public static function tanggal(string|null $datetime, bool $withTime = false, bool $shortMonth = true): string
@@ -58,6 +72,14 @@ class Format
         }
 
         return $hasil;
+    }
+
+    /**
+     * Alias method untuk tanggal() agar kompatibel dengan pemanggilan Format::date()
+     */
+    public static function date(string|null $datetime, bool $withTime = false, bool $shortMonth = true): string
+    {
+        return self::tanggal($datetime, $withTime, $shortMonth);
     }
 
     /**

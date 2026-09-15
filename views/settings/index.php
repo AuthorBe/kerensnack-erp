@@ -54,6 +54,10 @@ ob_start();
     }
 
     /* M3 Color Roles & Top Accent Lines */
+    .card-company::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .card-company:hover { border-color: #3b82f6; }
+    .card-company .icon-box { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
+
     .card-izin::before { background: linear-gradient(90deg, #f97316, #fdba74); }
     .card-izin:hover { border-color: #f97316; }
     .card-izin .icon-box { background: rgba(249, 115, 22, 0.1); color: #ea580c; }
@@ -209,7 +213,29 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- GRID CARD NAVIGASI PENGATURAN (RESPONSIF MOBILE & MINIMALIS)              -->
     <!-- ========================================================================= -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 <?= Auth::can('system.blueprint') ? 'lg:grid-cols-3' : 'lg:grid-cols-2' ?> gap-3.5 sm:gap-5 settings-grid">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5 settings-grid">
+
+        <!-- KARTU 0: Profil & Informasi Perusahaan (Kop Dokumen) -->
+        <?php if (Auth::can('settings.company_manage') || in_array(strtolower((string)Auth::role()), ['developer', 'owner', 'admin'], true)): ?>
+        <div>
+            <a href="<?= Router::url('/settings/company') ?>" class="settings-card card-company group">
+                <div class="flex items-center justify-between">
+                    <div class="icon-box">
+                        <i data-lucide="building-2" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        Kop &amp; Dokumen
+                    </span>
+                </div>
+                <h5 class="card-title text-slate-900 dark:text-white">Profil &amp; Info Perusahaan</h5>
+                <p class="card-desc text-slate-500 dark:text-slate-400">Atur nama brand resmi (<strong><?= htmlspecialchars($company['nama'] ?? 'KEREN SNACK') ?></strong>), slogan, alamat, kontak WhatsApp, email, dan rekening bank untuk faktur serta surat jalan.</p>
+                <div class="settings-link text-blue-600 dark:text-blue-400">
+                    <span>Kelola Profil Usaha</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+                </div>
+            </a>
+        </div>
+        <?php endif; ?>
 
         <!-- KARTU 1: Manajemen Hak Akses & Izin (Pusat RBAC) -->
         <?php if (Auth::can('rbac.permissions_manage')): ?>

@@ -861,7 +861,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                     <div>
                         <strong class="font-bold block text-[12.5px]" style="color:var(--color-ink);">Pemulihan Otomatis (Auto-Reconcile)</strong>
                         <span class="text-xs block mt-0.5" style="color:var(--color-ink-secondary);">
-                            Saldo hilang gantung akan <strong>otomatis pulih/berkurang</strong> jika pada kunjungan opname rak berikutnya barang tersebut ditemukan kembali oleh sales/driver.
+                            Saldo hilang gantung akan <strong>otomatis pulih/berkurang</strong> jika pada kunjungan opname rak berikutnya barang tersebut ditemukan kembali oleh petugas saat opname rak.
                         </span>
                     </div>
                 </div>

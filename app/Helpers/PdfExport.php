@@ -21,6 +21,7 @@ class PdfExport
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
         $options->set('defaultFont', 'Helvetica');
+        $options->set('isPhpEnabled', true);
         
         return new Dompdf($options);
     }
@@ -47,6 +48,9 @@ class PdfExport
         $dompdf->loadHtml($html);
         $dompdf->setPaper($paper, $orientation);
         $dompdf->render();
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         $dompdf->stream($filename, ['Attachment' => false]);
         exit;
     }
@@ -60,6 +64,9 @@ class PdfExport
         $dompdf->loadHtml($html);
         $dompdf->setPaper($paper, $orientation);
         $dompdf->render();
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         $dompdf->stream($filename, ['Attachment' => true]);
         exit;
     }

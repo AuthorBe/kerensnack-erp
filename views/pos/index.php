@@ -107,7 +107,7 @@ function posApp() {
         },
 
         formatRupiah(num) {
-            return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+            return window.formatRupiah ? window.formatRupiah(num) : ('Rp ' + Number(num || 0).toLocaleString('id-ID'));
         },
 
         handleHotkeys(e) {
@@ -308,11 +308,6 @@ function posApp() {
                 this.cart = [];
                 this.showMobileCartDrawer = false;
             }
-        },
-
-        recalculateItemSubtotal(index) {
-            const item = this.cart[index];
-            item.subtotal = item.qty_pcs * item.price;
         },
 
         async recalculateCartPrices() {

@@ -283,7 +283,7 @@ $login_redirect = Router::url('/login') . ($is_auto_logout ? '?timeout=1' : '');
 
     <!-- Footer Watermark -->
     <div class="footer-watermark">
-        &copy; 2026 Built by <a href="https://ajsk.vercel.app/" target="_blank" rel="noopener noreferrer">AJSK.</a>
+        &copy; 2026 Built by <a href="https://ajisakha.site/" target="_blank" rel="noopener noreferrer">AJSK.</a>
     </div>
 </div>
 

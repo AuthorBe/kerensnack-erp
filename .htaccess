@@ -2,9 +2,12 @@
     RewriteEngine On
 
     # Protect sensitive files & folders
-    RewriteRule ^(\.env|\.git|config|app|views|database|docs|test_db\.php) - [F,L,NC]
+    RewriteRule ^(\.env|\.git|config|app|views|database|docs|tests) - [F,L,NC]
 
-    # Forward all traffic to the /public directory
+    # Allow test_db.php to be accessed directly with internal security
+    RewriteRule ^test_db\.php$ - [L,NC]
+
+    # Forward all other traffic to the /public directory
     RewriteRule ^$ public/ [L]
     RewriteRule ^((?!public/).*)$ public/$1 [L]
 </IfModule>

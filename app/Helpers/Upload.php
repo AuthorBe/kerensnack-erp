@@ -16,6 +16,7 @@ class Upload
     public const SUBDIRS = [
         'purchases',
         'delivery_proofs',
+        'company',
     ];
 
     /**

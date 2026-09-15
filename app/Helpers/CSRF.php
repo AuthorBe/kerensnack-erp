@@ -35,7 +35,7 @@ class CSRF
     }
 
     /**
-     * Validasi token CSRF dari POST request atau header X-CSRF-TOKEN
+     * Validasi token CSRF dari POST request, JSON body, atau header HTTP (X-CSRF-TOKEN / X-XSRF-TOKEN)
      */
     public static function validate(?string $token = null): bool
     {
@@ -48,7 +48,32 @@ class CSRF
             return false;
         }
 
-        $inputToken = $token ?? $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-        return hash_equals($sessionToken, (string)$inputToken);
+        $inputToken = $token 
+            ?? $_POST['csrf_token'] 
+            ?? $_POST['_csrf_token'] 
+            ?? $_SERVER['HTTP_X_CSRF_TOKEN'] 
+            ?? $_SERVER['HTTP_X_XSRF_TOKEN'] 
+            ?? null;
+
+        // Jika request berupa payload JSON dan token belum ditemukan di $_POST/Header
+        if (empty($inputToken) && isset($_SERVER['CONTENT_TYPE']) && str_contains(strtolower($_SERVER['CONTENT_TYPE']), 'application/json')) {
+            $raw = file_get_contents('php://input');
+            if (!empty($raw)) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $inputToken = $decoded['csrf_token'] ?? $decoded['_csrf_token'] ?? null;
+                }
+            }
+        }
+
+        return !empty($inputToken) && hash_equals($sessionToken, (string)$inputToken);
+    }
+
+    /**
+     * Alias untuk validasi token CSRF
+     */
+    public static function validateToken(?string $token = null): bool
+    {
+        return self::validate($token);
     }
 }
