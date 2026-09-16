@@ -78,7 +78,7 @@ kerensnack-erp/
     ├── layouts/                  # Layout Induk (Header, Sidebar, Shell, Flash Toast)
     ├── owner/                    # Layar Owner Command Center (C1-C6)
     ├── pos/                      # Layar Kasir POS Retail Cepat
-    ├── pricing/                  # Layar Matriks 28 Level Harga Produk
+    ├── pricing/                  # Layar Matriks 30 Level Harga Produk
     ├── products/                 # Layar Master Produk, Bahan Baku & Resep BOM
     ├── profile/                  # Layar Pengaturan Akun & Profil Pengguna
     ├── purchases/                # Layar Pembelian Bahan ke Pemasok (PO Vendor)

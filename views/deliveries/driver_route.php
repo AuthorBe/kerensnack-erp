@@ -135,16 +135,64 @@ ob_start();
     border-left-color: #ef4444;
     background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, var(--color-surface) 120px);
 }
+.driver-compact-card.is-shopping.is-shopping-overdue {
+    border-color: #fca5a5;
+    border-left-color: #ef4444;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.07) 0%, var(--color-surface) 120px);
+}
+.dark .driver-compact-card.is-shopping.is-shopping-overdue {
+    border-color: rgba(239, 68, 68, 0.35);
+    border-left-color: #ef4444;
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.12) 0%, var(--color-surface) 120px);
+}
 .driver-compact-card.is-shopping:hover {
     border-color: #cbd5e1;
     border-left-color: #d97706;
     box-shadow: 0 10px 25px -4px rgba(245, 158, 11, 0.10), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
     transform: translateY(-2px);
 }
+.driver-compact-card.is-shopping.is-shopping-overdue:hover {
+    border-color: #f87171;
+    border-left-color: #dc2626;
+    box-shadow: 0 10px 25px -4px rgba(239, 68, 68, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+}
 .dark .driver-compact-card.is-shopping:hover {
     border-color: #4b5563;
     border-left-color: #f59e0b;
     box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.35);
+}
+
+/* Shopping Stop Number Badge (B-1, B-2, dst) */
+.shopping-badge-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 9px;
+    background: #f59e0b;
+    color: #ffffff !important;
+    font-weight: 900;
+    font-size: 12px;
+    font-family: var(--font-sans), sans-serif;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(245, 158, 11, 0.35);
+}
+.shopping-badge-number.is-overdue {
+    background: #e11d48;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(225, 29, 72, 0.35);
+}
+.dark .shopping-badge-number {
+    background: #d97706;
+    color: #ffffff !important;
+}
+.dark .shopping-badge-number.is-overdue {
+    background: #e11d48;
+    color: #ffffff !important;
 }
 
 /* Status Pills for Shopping Tasks */
@@ -370,6 +418,59 @@ ob_start();
     color: #60a5fa !important;
 }
 
+/* Header Date Filter Segmented Radio Controls */
+.date-segmented-group {
+    display: inline-flex;
+    align-items: center;
+    background: var(--color-canvas-soft);
+    border: 1px solid var(--color-hairline);
+    border-radius: 12px;
+    padding: 3px;
+    height: 42px;
+    box-sizing: border-box;
+    gap: 3px;
+}
+.date-segmented-btn {
+    border: none !important;
+    outline: none !important;
+    background: transparent;
+    color: var(--color-ink-mute);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 0 16px;
+    height: 100%;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    user-select: none;
+    -webkit-appearance: none;
+    appearance: none;
+    box-shadow: none;
+}
+.date-segmented-btn:hover:not(.is-active) {
+    color: var(--color-ink);
+    background: rgba(0, 0, 0, 0.04);
+}
+.dark .date-segmented-btn:hover:not(.is-active) {
+    background: rgba(255, 255, 255, 0.06);
+}
+.date-segmented-btn.is-active {
+    background: var(--color-surface) !important;
+    color: #2563eb !important;
+    font-weight: 800;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+.dark .date-segmented-btn.is-active {
+    background: var(--color-surface) !important;
+    color: #60a5fa !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35) !important;
+}
+
 /* Konfirmasi Gagal Kirim Action Button */
 .btn-driver-fail-confirm {
     background: #e11d48 !important;
@@ -563,16 +664,43 @@ ob_start();
         </div>
 
         <!-- Filter Tanggal & Driver Selector -->
-        <form method="GET" action="<?= Router::url('/driver-deliveries') ?>" class="flex items-center gap-3 flex-wrap">
+        <form id="headerFilterForm" method="GET" action="<?= Router::url('/driver-deliveries') ?>" class="flex items-center gap-2.5 sm:gap-3 flex-wrap">
             <input type="hidden" name="status" value="<?= htmlspecialchars($statusFilter ?? 'semua') ?>">
             
-            <input type="date" name="date" value="<?= htmlspecialchars($selectedDate ?? date('Y-m-d')) ?>" 
-                   class="form-input font-medium" style="height: 42px; font-size: 13px; border-radius: 12px; width: 150px;"
-                   onchange="this.form.submit()">
+            <?php 
+            $todayDate = date('Y-m-d');
+            $tomorrowDate = date('Y-m-d', strtotime('+1 day'));
+            $isToday = ($selectedDate === $todayDate);
+            $isTomorrow = ($selectedDate === $tomorrowDate);
+            ?>
+
+            <!-- Segmented Radio Button Control (Hari Ini / Besok) -->
+            <div class="date-segmented-group" role="radiogroup" aria-label="Pilihan Jadwal Rute Driver">
+                <button type="button" 
+                        role="radio"
+                        aria-checked="<?= $isToday ? 'true' : 'false' ?>"
+                        onclick="document.getElementById('headerDateInput').value='<?= $todayDate ?>'; document.getElementById('headerFilterForm').submit();" 
+                        class="date-segmented-btn <?= $isToday ? 'is-active' : '' ?>">
+                    <span>Hari Ini</span>
+                </button>
+                <button type="button" 
+                        role="radio"
+                        aria-checked="<?= $isTomorrow ? 'true' : 'false' ?>"
+                        onclick="document.getElementById('headerDateInput').value='<?= $tomorrowDate ?>'; document.getElementById('headerFilterForm').submit();" 
+                        class="date-segmented-btn <?= $isTomorrow ? 'is-active' : '' ?>">
+                    <span>Besok</span>
+                </button>
+            </div>
+
+            <!-- Kalender Datepicker Standar (Tinggi 42px & Radius 12px Selaras Dropdown) -->
+            <input type="date" id="headerDateInput" name="date" value="<?= htmlspecialchars($selectedDate ?? date('Y-m-d')) ?>" 
+                   class="form-input font-bold" style="height: 42px; font-size: 13px; border-radius: 12px; width: 152px;"
+                   onchange="this.form.submit()"
+                   title="Pilih Tanggal Pengiriman Kalender">
 
             <?php if (!empty($isRestricted)): ?>
                 <!-- TERKUNCI UNTUK ROLE SALES & DRIVER -->
-                <div class="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-canvas-soft border border-hairline text-xs font-semibold text-ink-secondary shadow-xs" title="Armada terkunci pada akun Anda">
+                <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-canvas-soft border border-hairline text-xs font-semibold text-ink-secondary shadow-xs" style="height: 42px;" title="Armada terkunci pada akun Anda">
                     <i data-lucide="lock" style="width: 14px; height: 14px; color: var(--color-ink-mute);"></i>
                     <span>Armada: <strong class="text-ink"><?= htmlspecialchars($myDriverName ?? 'Driver Saya') ?></strong></span>
                 </div>
@@ -740,6 +868,20 @@ ob_start();
                             <?= htmlspecialchars($deliv['nama_wilayah']) ?>
                         </span>
                     <?php endif; ?>
+
+                    <?php 
+                    $tglKirimDeliv = $deliv['tanggal_surat_jalan'] ?: $deliv['waktu_terbit_sj'];
+                    if (!empty($tglKirimDeliv)):
+                        $isTomorrowDeliv = (date('Y-m-d', strtotime($tglKirimDeliv)) === date('Y-m-d', strtotime('+1 day')));
+                        $isTodayDeliv = (date('Y-m-d', strtotime($tglKirimDeliv)) === date('Y-m-d'));
+                    ?>
+                        <span class="badge text-[11px] inline-flex items-center gap-1 shrink-0 font-bold" 
+                              style="<?= $isTomorrowDeliv ? 'background:rgba(245,158,11,0.1);color:#d97706;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(37,99,235,0.08);color:#2563eb;border:1px solid rgba(37,99,235,0.2);' ?>" 
+                              title="Tanggal Rencana Pengiriman: <?= date('d/m/Y', strtotime($tglKirimDeliv)) ?>">
+                            <i data-lucide="calendar" style="width: 11px; height: 11px;"></i>
+                            <span><?= $isTodayDeliv ? 'Hari Ini (' . date('d/m', strtotime($tglKirimDeliv)) . ')' : ($isTomorrowDeliv ? 'Besok (' . date('d/m', strtotime($tglKirimDeliv)) . ')' : date('d/m/Y', strtotime($tglKirimDeliv))) ?></span>
+                        </span>
+                    <?php endif; ?>
                 </div>
 
                 <!-- BADGE STATUS TAHAP -->
@@ -826,21 +968,38 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- 4B. TUGAS BELANJA & PICKUP BAHAN GUDANG (PURCHASE ORDER DRIVER)           -->
     <!-- ========================================================================= -->
-    <?php if (!empty($shoppingTasks)): ?>
+    <?php if (!empty($shoppingTasks)): 
+        $overdueCount = 0;
+        $todayStr = date('Y-m-d');
+        foreach ($shoppingTasks as $stk) {
+            $tDate = $stk['tanggal_jadwal_belanja'] ?: $stk['tanggal_pembelian'];
+            if ($stk['status_penerimaan'] === 'ditugaskan_driver' && !empty($tDate) && $tDate < $todayStr) {
+                $overdueCount++;
+            }
+        }
+    ?>
     <div class="mt-8 space-y-4">
         <div class="flex items-center justify-between gap-3 flex-wrap">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400 flex items-center justify-center font-bold border border-amber-500/20 shadow-xs shrink-0">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center font-bold shadow-xs shrink-0" style="background: rgba(245,158,11,0.12); color: #d97706; border: 1px solid rgba(245,158,11,0.25);">
                     <i data-lucide="shopping-cart" style="width: 18px; height: 18px;"></i>
                 </div>
                 <div>
-                    <h2 class="text-base sm:text-lg font-extrabold text-ink flex items-center gap-2">
+                    <h2 class="text-base sm:text-lg font-extrabold text-ink flex items-center gap-2 flex-wrap">
                         <span>Tugas Belanja &amp; Pickup Bahan Gudang</span>
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300/80 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 shadow-xs">
                             <?= count($shoppingTasks) ?> PO
                         </span>
+                        <?php if ($overdueCount > 0): ?>
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800 shadow-xs animate-pulse" title="<?= $overdueCount ?> tugas belanja tertunda dari hari sebelumnya">
+                                <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i>
+                                <span><?= $overdueCount ?> Nunggak</span>
+                            </span>
+                        <?php endif; ?>
                     </h2>
-                    <p class="text-xs text-ink-mute">Barang yang harus dibelanjakan atau diambil dari vendor pemasok</p>
+                    <p class="text-xs text-ink-mute">
+                        Barang yang harus dibelanjakan atau diambil dari vendor pemasok<?= $overdueCount > 0 ? " <span class=\"text-rose-600 dark:text-rose-400 font-semibold\">(termasuk {$overdueCount} tugas tertunda dari hari sebelumnya)</span>" : "" ?>
+                    </p>
                 </div>
             </div>
         </div>
@@ -853,15 +1012,33 @@ ob_start();
                 $isTaskFailed = ($statusPenerimaan === 'kendala_batal');
                 $isTaskPending = ($statusPenerimaan === 'ditugaskan_driver');
 
+                $taskDate = $task['tanggal_jadwal_belanja'] ?: $task['tanggal_pembelian'];
+                $diffDays = 0;
+                $isOverdue = false;
+                $isToday = false;
+                $isTomorrow = false;
+
+                if (!empty($taskDate)) {
+                    $taskTs = strtotime($taskDate);
+                    $todayTs = strtotime($todayStr);
+                    $diffDays = (int)(($todayTs - $taskTs) / 86400);
+                    $isOverdue = ($isTaskPending && $diffDays > 0);
+                    $isToday = ($diffDays === 0);
+                    $isTomorrow = ($diffDays === -1);
+                }
+
                 $shopCardClass = $isTaskPending ? 'is-shopping-pending' : ($isTaskPicked ? 'is-shopping-picked' : ($isTaskReceived ? 'is-shopping-received' : ($isTaskFailed ? 'is-failed' : '')));
+                if ($isOverdue) {
+                    $shopCardClass .= ' is-shopping-overdue';
+                }
             ?>
             <!-- CARD MODERN 2-BARIS TUGAS BELANJA -->
             <div class="driver-compact-card is-shopping <?= $shopCardClass ?>" @click="openShoppingDetailModal(<?= htmlspecialchars(json_encode($task)) ?>)">
                 
                 <!-- BARIS 1: NOMOR STOP, NAMA VENDOR, NOMOR PO & STATUS -->
                 <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span class="inline-flex items-center justify-center min-w-[32px] h-7 px-2 rounded-lg bg-amber-500 text-white font-black text-xs tracking-tight shadow-xs shrink-0 select-none font-sans">
+                    <div class="flex items-center gap-2.5 min-w-0 flex-1 flex-wrap sm:flex-nowrap">
+                        <span class="shopping-badge-number <?= $isOverdue ? 'is-overdue' : '' ?>" style="background: <?= $isOverdue ? '#e11d48' : '#f59e0b' ?>; color: #ffffff !important;">
                             B-<?= $sIdx + 1 ?>
                         </span>
                         <span class="font-extrabold text-base sm:text-lg text-ink truncate tracking-tight">
@@ -874,6 +1051,32 @@ ob_start();
                         <?php if (!empty($task['kode_pemasok'])): ?>
                             <span class="badge text-[11px] px-2 py-0.5 hidden md:inline-flex shrink-0 bg-slate-50 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border border-slate-200/70 dark:border-slate-700/60 font-medium">
                                 <?= htmlspecialchars($task['kode_pemasok']) ?>
+                            </span>
+                        <?php endif; ?>
+
+                        <!-- BADGE INDIKATOR TANGGAL / TUNGGAKAN JADWAL BELANJA -->
+                        <?php if ($isOverdue): ?>
+                            <span class="badge text-[11px] font-extrabold px-2.5 py-0.5 shrink-0 inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800 shadow-2xs"
+                                  title="Tugas belanja tertunda dari tanggal <?= date('d/m/Y', strtotime($taskDate)) ?> (terlewat <?= $diffDays ?> hari)">
+                                <i data-lucide="alert-triangle" style="width: 12px; height: 12px;" class="text-rose-600 dark:text-rose-400 animate-pulse"></i>
+                                <span>Nunggak H-<?= $diffDays ?> (<?= date('d/m', strtotime($taskDate)) ?>)</span>
+                            </span>
+                        <?php elseif ($isToday): ?>
+                            <span class="badge text-[11px] font-bold px-2 py-0.5 shrink-0 inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200/90 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/70"
+                                  title="Jadwal belanja hari ini">
+                                <i data-lucide="calendar" style="width: 11px; height: 11px;"></i>
+                                <span>Hari Ini (<?= date('d/m', strtotime($taskDate)) ?>)</span>
+                            </span>
+                        <?php elseif ($isTomorrow): ?>
+                            <span class="badge text-[11px] font-bold px-2 py-0.5 shrink-0 inline-flex items-center gap-1 bg-blue-50 text-blue-800 border border-blue-200/90 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800/70"
+                                  title="Jadwal belanja besok">
+                                <i data-lucide="calendar" style="width: 11px; height: 11px;"></i>
+                                <span>Besok (<?= date('d/m', strtotime($taskDate)) ?>)</span>
+                            </span>
+                        <?php elseif (!empty($taskDate)): ?>
+                            <span class="badge text-[11px] font-medium px-2 py-0.5 shrink-0 inline-flex items-center gap-1 bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400">
+                                <i data-lucide="calendar" style="width: 11px; height: 11px;"></i>
+                                <span><?= date('d/m/Y', strtotime($taskDate)) ?></span>
                             </span>
                         <?php endif; ?>
                     </div>
@@ -898,8 +1101,8 @@ ob_start();
                         <?php else: ?>
                             <span class="shopping-status-pill status-pending">
                                 <span class="relative flex h-2 w-2">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style="background: #fbbf24;"></span>
+                                    <span class="relative inline-flex rounded-full h-2 w-2" style="background: #f59e0b;"></span>
                                 </span>
                                 <span>Menunggu Belanja</span>
                             </span>
@@ -928,8 +1131,14 @@ ob_start();
                         </div>
                         <span class="text-slate-300 dark:text-slate-600 select-none hidden xl:inline">&bull;</span>
                         <span class="text-ink-mute hidden xl:inline-flex items-center gap-1 text-xs truncate max-w-[280px]" title="<?= htmlspecialchars($task['alamat_pemasok'] ?: '') ?>">
-                            <i data-lucide="map-pin" style="width: 12px; height: 12px;" class="text-slate-400 shrink-0"></i>
+                            <i data-lucide="map-pin" style="width: 12px; height: 12px;" class="<?= !empty($task['link_google_maps']) ? 'text-rose-500' : 'text-slate-400' ?> shrink-0"></i>
                             <span class="truncate"><?= htmlspecialchars($task['alamat_pemasok'] ?: 'Alamat vendor belum diatur') ?></span>
+                            <?php if (!empty($task['link_google_maps'])): ?>
+                                <a href="<?= htmlspecialchars($task['link_google_maps']) ?>" target="_blank" @click.stop class="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded shrink-0" title="Buka Titik Presisi Google Maps">
+                                    <span>Maps</span>
+                                    <i data-lucide="external-link" style="width: 9px; height: 9px;"></i>
+                                </a>
+                            <?php endif; ?>
                         </span>
                     </div>
 
@@ -1004,9 +1213,13 @@ ob_start();
                                 <span class="badge" style="background: #f1f5f9; color: #475569; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Siap Berangkat</span>
                             </template>
                         </div>
-                        <div style="font-size: 12.5px; color: var(--color-ink-mute); margin-top: 6px; font-family: var(--font-sans), sans-serif;">
-                            <span>SJ: <strong class="text-ink-secondary" x-text="activeDelivery?.nomor_surat_jalan"></strong></span> &bull; 
-                            <span>Nota: <strong class="text-ink-secondary" x-text="'#' + activeDelivery?.nomor_nota"></strong></span>
+                        <div style="font-size: 12.5px; color: var(--color-ink-mute); margin-top: 6px; font-family: var(--font-sans), sans-serif; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span>SJ: <strong class="text-ink-secondary font-mono" x-text="activeDelivery?.nomor_surat_jalan"></strong></span> &bull; 
+                            <span>Nota: <strong class="text-ink-secondary font-mono" x-text="'#' + activeDelivery?.nomor_nota"></strong></span> &bull; 
+                            <span class="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 font-bold">
+                                <i data-lucide="calendar" style="width: 13px; height: 13px;"></i>
+                                <span>Jadwal Kirim: <strong x-text="formatDateIndo(activeDelivery?.tanggal_surat_jalan || activeDelivery?.waktu_terbit_sj)"></strong></span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -1102,7 +1315,12 @@ ob_start();
 
                         <!-- Box Info Operasional Surat Jalan -->
                         <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 20px; padding: 20px 24px;">
-                            <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-ink-mute); letter-spacing: 0.05em; margin-bottom: 14px;">Data Penugasan &amp; Armada</div>
+                            <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-ink-mute); letter-spacing: 0.05em; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;">
+                                <span>Data Penugasan &amp; Jadwal Pengiriman</span>
+                                <template x-if="activeDelivery?.kode_rute">
+                                    <span class="badge badge-mono text-[11px]" x-text="activeDelivery?.kode_rute"></span>
+                                </template>
+                            </div>
                             
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                                 <div>
@@ -1114,12 +1332,32 @@ ob_start();
                                     <div class="font-mono font-bold text-ink text-sm mt-1" x-text="'#' + activeDelivery?.nomor_nota"></div>
                                 </div>
                                 <div>
-                                    <span class="text-ink-mute">Tanggal Pesanan:</span>
-                                    <div class="font-medium text-ink text-sm mt-1" x-text="activeDelivery?.tanggal_pesanan"></div>
+                                    <span class="text-ink-mute">Tanggal Rencana Pengiriman:</span>
+                                    <div class="font-bold text-blue-600 dark:text-blue-400 text-sm mt-1 flex items-center gap-1.5">
+                                        <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                                        <span x-text="formatDateIndo(activeDelivery?.tanggal_surat_jalan || activeDelivery?.waktu_terbit_sj)"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="text-ink-mute">Tanggal Pesanan / Nota:</span>
+                                    <div class="font-medium text-ink text-sm mt-1 flex items-center gap-1.5">
+                                        <i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--color-ink-mute);"></i>
+                                        <span x-text="formatDateIndo(activeDelivery?.tanggal_pesanan)"></span>
+                                    </div>
                                 </div>
                                 <div>
                                     <span class="text-ink-mute">Armada Driver Ditugaskan:</span>
-                                    <div class="font-bold text-ink text-sm mt-1" x-text="(activeDelivery?.nama_driver || '-') + (activeDelivery?.nopol_driver ? ' (' + activeDelivery?.nopol_driver + ')' : '')"></div>
+                                    <div class="font-bold text-ink text-sm mt-1 flex items-center gap-1.5">
+                                        <i data-lucide="truck" style="width: 14px; height: 14px; color: #2563eb;"></i>
+                                        <span x-text="(activeDelivery?.nama_driver || '-') + (activeDelivery?.nopol_driver ? ' (' + activeDelivery?.nopol_driver + ')' : '')"></span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="text-ink-mute">Wilayah &amp; Rute Distribusi:</span>
+                                    <div class="font-bold text-ink text-sm mt-1 flex items-center gap-1.5">
+                                        <i data-lucide="map" style="width: 14px; height: 14px; color: #10b981;"></i>
+                                        <span x-text="(activeDelivery?.nama_wilayah || '-') + (activeDelivery?.kode_rute ? ' (' + activeDelivery?.kode_rute + ')' : '')"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1268,6 +1506,9 @@ ob_start();
                     <form id="completeDeliveryForm" action="<?= Router::url('/driver-deliveries/complete') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left"
                           data-action-text="Menyimpan serah terima...">
                         <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
+                        <input type="hidden" name="filter_date" value="<?= htmlspecialchars($selectedDate ?? '') ?>">
+                        <input type="hidden" name="filter_driver_id" value="<?= htmlspecialchars($filterDriver ?? '') ?>">
+                        <input type="hidden" name="filter_status" value="<?= htmlspecialchars($statusFilter ?? '') ?>">
 
                         <!-- 1. Nama Penerima Toko (Wajib) -->
                         <div class="space-y-2">
@@ -1354,6 +1595,9 @@ ob_start();
                     <form id="failDeliveryForm" action="<?= Router::url('/driver-deliveries/fail') ?>" method="POST" enctype="multipart/form-data" class="space-y-5 text-left"
                           data-action-text="Melaporkan gagal kirim...">
                         <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
+                        <input type="hidden" name="filter_date" value="<?= htmlspecialchars($selectedDate ?? '') ?>">
+                        <input type="hidden" name="filter_driver_id" value="<?= htmlspecialchars($filterDriver ?? '') ?>">
+                        <input type="hidden" name="filter_status" value="<?= htmlspecialchars($statusFilter ?? '') ?>">
 
                         <!-- Dropdown Alasan Gagal -->
                         <div class="space-y-2">
@@ -1470,6 +1714,9 @@ ob_start();
                                   data-confirm-btn="Ya, Mulai Berangkat"
                                   data-action-text="Memulai pengiriman...">
                                 <input type="hidden" name="surat_jalan_id" :value="activeDelivery?.surat_jalan_id">
+                                <input type="hidden" name="filter_date" value="<?= htmlspecialchars($selectedDate ?? '') ?>">
+                                <input type="hidden" name="filter_driver_id" value="<?= htmlspecialchars($filterDriver ?? '') ?>">
+                                <input type="hidden" name="filter_status" value="<?= htmlspecialchars($statusFilter ?? '') ?>">
                                 <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'].includes(activeDelivery?.status_surat_jalan)">
                                     <button type="submit" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
                                             style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; display: inline-flex; align-items: center; gap: 7px; background: #2563eb; border-color: #2563eb; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
@@ -1699,10 +1946,21 @@ ob_start();
                             <template x-if="activeShoppingTask?.status_penerimaan === 'ditugaskan_driver'">
                                 <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Menunggu Belanja</span>
                             </template>
+
+                            <!-- Overdue / Tunggakan Badge di Modal Header -->
+                            <template x-if="getShoppingDateInfo(activeShoppingTask).isOverdue">
+                                <span class="badge" style="background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i>
+                                    <span x-text="'Tunggakan H-' + getShoppingDateInfo(activeShoppingTask).diffDays"></span>
+                                </span>
+                            </template>
                         </div>
                         <div style="font-size: 12.5px; color: var(--color-ink-mute); margin-top: 6px; font-family: var(--font-sans), sans-serif;">
                             <span>PO: <strong class="text-ink-secondary" x-text="activeShoppingTask?.nomor_faktur_pembelian"></strong></span> &bull; 
-                            <span>Jadwal: <strong class="text-ink-secondary" x-text="activeShoppingTask?.tanggal_jadwal_belanja || activeShoppingTask?.tanggal_pembelian"></strong></span>
+                            <span>Jadwal: <strong :class="getShoppingDateInfo(activeShoppingTask).isOverdue ? 'text-rose-600 dark:text-rose-400 font-extrabold' : 'text-ink-secondary'" x-text="activeShoppingTask?.tanggal_jadwal_belanja || activeShoppingTask?.tanggal_pembelian"></strong></span>
+                            <template x-if="getShoppingDateInfo(activeShoppingTask).isOverdue">
+                                <span class="text-rose-600 dark:text-rose-400 font-bold" x-text="' (Terlewat ' + getShoppingDateInfo(activeShoppingTask).diffDays + ' hari)'"></span>
+                            </template>
                             <template x-if="activeShoppingTask?.kode_pemasok">
                                 <span> &bull; Kode: <span class="badge badge-secondary" style="font-size: 10px; padding: 1px 5px;" x-text="activeShoppingTask.kode_pemasok"></span></span>
                             </template>
@@ -1760,17 +2018,20 @@ ob_start();
                                     <div style="font-size: 17px; font-weight: 800; color: var(--color-ink);" x-text="activeShoppingTask?.nama_pemasok"></div>
                                     <div style="font-size: 13px; color: var(--color-ink-secondary); margin-top: 4px;">
                                         Kode: <strong style="color: var(--color-ink);" x-text="activeShoppingTask?.kode_pemasok || '-'"></strong>
-                                        <template x-if="activeShoppingTask?.supplier_telepon">
-                                            <span> &bull; Kontak: <span class="font-mono" x-text="activeShoppingTask.supplier_telepon"></span></span>
+                                        <template x-if="activeShoppingTask?.supplier_kontak">
+                                            <span> &bull; PIC: <strong style="color: var(--color-ink);" x-text="activeShoppingTask.supplier_kontak"></strong></span>
+                                        </template>
+                                        <template x-if="activeShoppingTask?.supplier_telepon || activeShoppingTask?.supplier_wa">
+                                            <span> &bull; Kontak: <span class="font-mono" x-text="activeShoppingTask.supplier_wa || activeShoppingTask.supplier_telepon"></span></span>
                                         </template>
                                     </div>
                                 </div>
 
                                 <!-- Quick WA Button -->
-                                <template x-if="activeShoppingTask?.supplier_telepon">
-                                    <a :href="'https://wa.me/' + cleanWa(activeShoppingTask?.supplier_telepon) + '?text=' + encodeURIComponent('Halo ' + (activeShoppingTask?.nama_pemasok || '') + ', armada KEREN Snack sedang menuju ke lokasi Anda untuk pengambilan belanjaan PO #' + (activeShoppingTask?.nomor_faktur_pembelian || '') + '.')" target="_blank" class="quick-action-pill is-wa">
+                                <template x-if="activeShoppingTask?.supplier_wa || activeShoppingTask?.supplier_telepon">
+                                    <a :href="'https://wa.me/' + cleanWa(activeShoppingTask?.supplier_wa || activeShoppingTask?.supplier_telepon) + '?text=' + encodeURIComponent('Halo ' + (activeShoppingTask?.supplier_kontak ? (activeShoppingTask.supplier_kontak + ' (' + activeShoppingTask.nama_pemasok + ')') : (activeShoppingTask?.nama_pemasok || '')) + ', armada KEREN Snack sedang menuju ke lokasi Anda untuk pengambilan belanjaan PO #' + (activeShoppingTask?.nomor_faktur_pembelian || '') + '.')" target="_blank" class="quick-action-pill is-wa">
                                         <i data-lucide="message-circle" style="width: 15px; height: 15px;"></i>
-                                        <span>WhatsApp ( <span x-text="activeShoppingTask?.supplier_telepon"></span> )</span>
+                                        <span>WhatsApp ( <span x-text="activeShoppingTask?.supplier_wa || activeShoppingTask?.supplier_telepon"></span> )</span>
                                     </a>
                                 </template>
                             </div>
@@ -1779,21 +2040,59 @@ ob_start();
 
                             <!-- Alamat Lengkap & Maps -->
                             <div class="space-y-3">
-                                <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink-mute">
-                                    <i data-lucide="map-pin" style="width: 16px; height: 16px; color: #ef4444;"></i>
-                                    <span>Alamat Lengkap Vendor:</span>
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                        <i data-lucide="map-pin" style="width: 16px; height: 16px; color: #ef4444;"></i>
+                                        <span>Alamat Lengkap Vendor:</span>
+                                    </div>
+                                    <template x-if="activeShoppingTask?.link_google_maps">
+                                        <span class="badge" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.25);font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;display:inline-flex;align-items:center;gap:3px;">
+                                            <i data-lucide="map-pin" style="width:10px;height:10px;"></i>
+                                            <span>Titik Presisi Tersedia</span>
+                                        </span>
+                                    </template>
                                 </div>
                                 <div class="text-sm font-medium text-ink leading-relaxed" style="padding-left: 24px;" x-text="activeShoppingTask?.alamat_pemasok || 'Alamat vendor belum tercatat di master data'"></div>
                                 
                                 <div style="padding-left: 24px;" class="pt-1.5 flex items-center gap-2">
-                                    <a :href="'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((activeShoppingTask?.nama_pemasok || '') + ' ' + (activeShoppingTask?.alamat_pemasok || ''))" target="_blank" rel="noopener noreferrer" class="quick-action-pill is-maps">
-                                        <i data-lucide="navigation" style="width: 15px; height: 15px;"></i>
-                                        <span>Buka Google Maps Navigasi</span>
+                                    <a :href="activeShoppingTask?.link_google_maps || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((activeShoppingTask?.nama_pemasok || '') + ' ' + (activeShoppingTask?.alamat_pemasok || '')))" target="_blank" rel="noopener noreferrer" class="quick-action-pill is-maps" :style="activeShoppingTask?.link_google_maps ? 'background:rgba(239,68,68,0.08);color:#ef4444;border-color:rgba(239,68,68,0.3);' : ''">
+                                        <i data-lucide="map-pin" style="width: 15px; height: 15px; color:#ef4444;" x-show="activeShoppingTask?.link_google_maps"></i>
+                                        <i data-lucide="navigation" style="width: 15px; height: 15px;" x-show="!activeShoppingTask?.link_google_maps"></i>
+                                        <span x-text="activeShoppingTask?.link_google_maps ? 'Buka Titik Presisi Google Maps' : 'Buka Google Maps Navigasi'"></span>
                                     </a>
                                 </div>
                             </div>
 
+                            <!-- Catatan Khusus Vendor -->
+                            <template x-if="activeShoppingTask?.supplier_catatan">
+                                <div style="padding:12px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;font-size:12px;color:#92400e;display:flex;align-items:flex-start;gap:8px;">
+                                    <i data-lucide="info" style="width:16px;height:16px;color:#d97706;flex-shrink:0;margin-top:1px;"></i>
+                                    <div>
+                                        <strong>Catatan Khusus Vendor:</strong>
+                                        <div style="margin-top:2px;color:var(--color-ink);" x-text="activeShoppingTask.supplier_catatan"></div>
+                                    </div>
+                                </div>
+                            </template>
+
                         </div>
+
+                        <!-- Alert Banner Carry-Over / Tunggakan Jika Terlambat -->
+                        <template x-if="getShoppingDateInfo(activeShoppingTask).isOverdue">
+                            <div class="p-4 bg-rose-50/90 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 rounded-2xl text-xs sm:text-sm text-rose-900 dark:text-rose-200 flex items-start gap-3">
+                                <div class="w-8 h-8 rounded-xl bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-300 flex items-center justify-center shrink-0 mt-0.5">
+                                    <i data-lucide="alert-triangle" style="width: 18px; height: 18px;"></i>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-extrabold text-rose-950 dark:text-rose-100 flex items-center gap-2 flex-wrap">
+                                        <span>Tugas Belanja Tertunda / Carry-Over Hari Sebelumnya</span>
+                                        <span class="badge text-[10.5px] font-black bg-rose-200/80 text-rose-900 border border-rose-300 dark:bg-rose-900 dark:text-rose-200" x-text="'Terlewat ' + getShoppingDateInfo(activeShoppingTask).diffDays + ' Hari'"></span>
+                                    </div>
+                                    <p class="text-xs text-rose-800 dark:text-rose-300 mt-1 leading-relaxed">
+                                        PO ini awalnya dijadwalkan pada tanggal <strong class="font-bold underline" x-text="activeShoppingTask?.tanggal_jadwal_belanja || activeShoppingTask?.tanggal_pembelian"></strong>. Tugas ini otomatis dibawa ke rute hari ini sebagai antrean belanja tertunda agar bahan belanjaan tidak terlewatkan dan segera dibelanjakan driver.
+                                    </p>
+                                </div>
+                            </div>
+                        </template>
 
                         <!-- Box Info Operasional Penugasan PO -->
                         <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 20px; padding: 20px 24px;">
@@ -1806,7 +2105,15 @@ ob_start();
                                 </div>
                                 <div>
                                     <span class="text-ink-mute">Tanggal Jadwal Belanja:</span>
-                                    <div class="font-medium text-ink text-sm mt-1" x-text="activeShoppingTask?.tanggal_jadwal_belanja || activeShoppingTask?.tanggal_pembelian"></div>
+                                    <div class="font-medium text-ink text-sm mt-1 flex items-center gap-1.5 flex-wrap">
+                                        <span :class="getShoppingDateInfo(activeShoppingTask).isOverdue ? 'text-rose-600 dark:text-rose-400 font-extrabold' : ''" x-text="activeShoppingTask?.tanggal_jadwal_belanja || activeShoppingTask?.tanggal_pembelian"></span>
+                                        <template x-if="getShoppingDateInfo(activeShoppingTask).isOverdue">
+                                            <span class="badge text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800" x-text="'Nunggak H-' + getShoppingDateInfo(activeShoppingTask).diffDays"></span>
+                                        </template>
+                                        <template x-if="getShoppingDateInfo(activeShoppingTask).isToday">
+                                            <span class="badge text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">Hari Ini</span>
+                                        </template>
+                                    </div>
                                 </div>
                                 <div>
                                     <span class="text-ink-mute">Driver Ditugaskan:</span>
@@ -1942,6 +2249,11 @@ ob_start();
                                             <span class="badge badge-info font-bold uppercase text-xs px-3 py-1">💳 Ditransfer Kantor / Tempo</span>
                                         </template>
                                     </div>
+                                    <template x-if="activeShoppingTask?.supplier_termin_bayar">
+                                        <div class="mt-1" style="font-size:11px;color:var(--color-ink-mute);">
+                                            Termin Master: <strong style="color:var(--color-ink);" x-text="activeShoppingTask.supplier_termin_bayar === 'cash' ? 'Tunai / COD' : (activeShoppingTask.supplier_termin_bayar === 'transfer' ? 'Transfer Bank (CBD)' : (activeShoppingTask.supplier_termin_bayar.replace(/_/g, ' ').toUpperCase()))"></strong>
+                                        </div>
+                                    </template>
                                 </div>
                                 <div class="text-right">
                                     <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-ink-mute); letter-spacing: 0.05em;">Status Pembayaran PO</span>
@@ -2406,6 +2718,36 @@ function driverDeliveryApp() {
             return cat + (detail ? ': ' + detail : '');
         },
 
+        todayDate: '<?= date('Y-m-d') ?>',
+
+        getShoppingDateInfo(task) {
+            if (!task) return { isOverdue: false, isToday: false, isTomorrow: false, diffDays: 0, formattedDate: '' };
+            const taskDateStr = task.tanggal_jadwal_belanja || task.tanggal_pembelian;
+            if (!taskDateStr) return { isOverdue: false, isToday: false, isTomorrow: false, diffDays: 0, formattedDate: '' };
+
+            const taskDate = new Date(taskDateStr + 'T00:00:00');
+            const today = new Date(this.todayDate + 'T00:00:00');
+            const diffTime = today - taskDate;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            const isPending = (task.status_penerimaan === 'ditugaskan_driver');
+            const isOverdue = isPending && (diffDays > 0);
+            const isToday = (diffDays === 0);
+            const isTomorrow = (diffDays === -1);
+
+            const parts = taskDateStr.split('-');
+            const formattedDate = (parts.length === 3) ? `${parts[2]}/${parts[1]}/${parts[0]}` : taskDateStr;
+
+            return {
+                isOverdue,
+                isToday,
+                isTomorrow,
+                diffDays,
+                formattedDate,
+                dateStr: taskDateStr
+            };
+        },
+
         init() {
             this.$watch('viewMode', () => {
                 this.$nextTick(() => {
@@ -2749,6 +3091,22 @@ function driverDeliveryApp() {
             try {
                 const d = new Date(dateStr);
                 return d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' WIB';
+            } catch (e) {
+                return dateStr;
+            }
+        },
+
+        formatDateIndo(dateStr) {
+            if (!dateStr) return '-';
+            try {
+                const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
+                const parts = cleanDate.split('-');
+                if (parts.length === 3) {
+                    const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                    return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+                }
+                const d = new Date(dateStr);
+                return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
             } catch (e) {
                 return dateStr;
             }

@@ -502,20 +502,30 @@ ob_start();
     <!-- FILTER BAR (IPOS STYLE)                                                   -->
     <!-- ========================================================================= -->
     <div class="card p-4">
-        <form action="<?= Router::url('/customer-orders') ?>" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3 items-end">
+        <form action="<?= Router::url('/customer-orders') ?>" method="GET" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 items-end">
             <div>
                 <label class="form-label" style="font-size:11px;">Cari No. Nota / Toko</label>
-                <input type="text" name="q" value="<?= htmlspecialchars($filter['q'] ?? '') ?>" placeholder="Ketik nota / toko..." class="form-input" style="height:36px;font-size:12.5px;">
+                <input type="text" name="q" value="<?= htmlspecialchars($filter['q'] ?? '') ?>" placeholder="Ketik nota / toko / catatan..." class="form-input" style="height:36px;font-size:12px;">
+            </div>
+
+            <div>
+                <label class="form-label" style="font-size:11px;">Tipe Penjualan</label>
+                <select name="tipe_transaksi" class="form-input" style="height:36px;font-size:12px;">
+                    <option value="semua" <?= ($filter['tipe_transaksi'] ?? 'semua') === 'semua' ? 'selected' : '' ?>>-- Semua Tipe --</option>
+                    <option value="reguler" <?= ($filter['tipe_transaksi'] ?? '') === 'reguler' ? 'selected' : '' ?>>📦 Penjualan Reguler</option>
+                    <option value="beli_putus" <?= ($filter['tipe_transaksi'] ?? '') === 'beli_putus' ? 'selected' : '' ?>>🏷️ Beli Putus Rak</option>
+                    <option value="konsinyasi" <?= ($filter['tipe_transaksi'] ?? '') === 'konsinyasi' ? 'selected' : '' ?>>🏪 Titip Konsinyasi</option>
+                </select>
             </div>
 
             <div>
                 <label class="form-label" style="font-size:11px;">Dari Tanggal</label>
-                <input type="date" name="start_date" value="<?= htmlspecialchars($filter['start_date']) ?>" class="form-input font-mono" style="height:36px;font-size:12.5px;">
+                <input type="date" name="start_date" value="<?= htmlspecialchars($filter['start_date']) ?>" class="form-input font-mono" style="height:36px;font-size:12px;">
             </div>
 
             <div>
                 <label class="form-label" style="font-size:11px;">Sampai Tanggal</label>
-                <input type="date" name="end_date" value="<?= htmlspecialchars($filter['end_date']) ?>" class="form-input font-mono" style="height:36px;font-size:12.5px;">
+                <input type="date" name="end_date" value="<?= htmlspecialchars($filter['end_date']) ?>" class="form-input font-mono" style="height:36px;font-size:12px;">
             </div>
 
             <div>
@@ -603,7 +613,8 @@ ob_start();
                     </tr>
                     <?php else: ?>
                     <?php foreach ($orders as $idx => $o): 
-                        $isKonsinyasiOrder = ($o['tipe_pembayaran'] === 'konsinyasi') || !empty($o['is_konsinyasi']) || (isset($o['adalah_tagihan']) && ($o['adalah_tagihan'] === false || $o['adalah_tagihan'] === 'f' || $o['adalah_tagihan'] === 0 || $o['adalah_tagihan'] === 'false'));
+                        $isBeliPutus = !empty($o['is_beli_putus']) || (stripos($o['catatan'] ?? '', 'beli putus') !== false);
+                        $isKonsinyasiOrder = !$isBeliPutus && (($o['tipe_pembayaran'] === 'konsinyasi') || !empty($o['is_konsinyasi']) || (isset($o['adalah_tagihan']) && ($o['adalah_tagihan'] === false || $o['adalah_tagihan'] === 'f' || $o['adalah_tagihan'] === 0 || $o['adalah_tagihan'] === 'false')));
                         $isLunas = ($o['status_pembayaran'] === 'lunas');
                         $sisa = $isKonsinyasiOrder ? 0 : max(0, (float)$o['total_netto'] - (float)$o['total_dibayar']);
                     ?>
@@ -622,6 +633,13 @@ ob_start();
                             <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">
                                 <?= $o['total_sku_items'] ?> SKU (<?= number_format($o['total_pcs_items'], 0, ',', '.') ?> bungkus)
                             </div>
+                            <?php if ($isBeliPutus): ?>
+                            <div style="margin-top:4px;">
+                                <span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;display:inline-flex;align-items:center;gap:3px;" title="Faktur beli putus sisa barang rak konsinyasi">
+                                    <i data-lucide="sparkles" style="width:10px;height:10px;color:#d97706;"></i> Beli Putus Rak
+                                </span>
+                            </div>
+                            <?php endif; ?>
                         </td>
 
                         <!-- Tanggal -->
@@ -656,6 +674,11 @@ ob_start();
                             <div class="font-mono" style="font-size:11px;color:var(--color-ink-mute);">
                                 <?= htmlspecialchars($o['nopol_driver'] ?: 'Armada Toko') ?>
                             </div>
+                            <?php elseif ($isBeliPutus): ?>
+                            <div style="font-weight:700;font-size:12px;color:#0284c7;display:inline-flex;align-items:center;gap:4px;">
+                                <i data-lucide="store" style="width:13px;height:13px;"></i> Sisa Rak Toko
+                            </div>
+                            <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:1px;">(Konversi Tanpa Kirim)</div>
                             <?php else: ?>
                             <div style="font-size:11.5px;color:var(--color-ink-mute);">Belum ada driver</div>
                             <?php endif; ?>
@@ -819,12 +842,17 @@ ob_start();
                     <div style="min-width:0;flex:1;">
                         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                             <span class="font-mono font-black" style="font-size:16px;color:var(--color-ink);letter-spacing:-0.02em;" x-text="orderDetail?.nomor_nota"></span>
-                            <template x-if="orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.adalah_tagihan === false || orderDetail?.adalah_tagihan === 'false'">
+                            <template x-if="orderDetail?.is_beli_putus || (orderDetail?.catatan && orderDetail?.catatan.toLowerCase().includes('beli putus'))">
+                                <span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-weight:800;font-size:10px;padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:3px;">
+                                    <i data-lucide="sparkles" style="width:10px;height:10px;color:#d97706;"></i> BELI PUTUS
+                                </span>
+                            </template>
+                            <template x-if="!(orderDetail?.is_beli_putus || (orderDetail?.catatan && orderDetail?.catatan.toLowerCase().includes('beli putus'))) && (orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.adalah_tagihan === false || orderDetail?.adalah_tagihan === 'false')">
                                 <span class="badge" style="background:rgba(225,29,72,0.1);color:#e11d48;border:1px solid rgba(225,29,72,0.22);font-weight:800;font-size:10px;padding:2px 8px;border-radius:6px;text-transform:uppercase;">
                                     Titip Jual (Konsinyasi)
                                 </span>
                             </template>
-                            <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && !orderDetail?.is_konsinyasi && orderDetail?.adalah_tagihan !== false && orderDetail?.adalah_tagihan !== 'false'">
+                            <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && (!orderDetail?.is_konsinyasi || orderDetail?.is_beli_putus) && orderDetail?.adalah_tagihan !== false && orderDetail?.adalah_tagihan !== 'false'">
                                 <span class="badge" 
                                       :class="orderDetail?.status_pembayaran === 'lunas' ? 'badge-success' : (orderDetail?.status_pembayaran === 'sebagian' ? 'badge-primary' : 'badge-warning')" 
                                       style="font-size:10px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;" 
@@ -900,6 +928,19 @@ ob_start();
                 <!-- TAB 1: PRODUK & NOTA (UNIFIED CONTINUOUS CANVAS) -->
                 <div x-show="!loadingDetail && activeTab === 'items'" style="display:flex;flex-direction:column;">
                     
+                    <!-- Banner Info Konversi Beli Putus -->
+                    <template x-if="orderDetail?.is_beli_putus || (orderDetail?.catatan && orderDetail?.catatan.toLowerCase().includes('beli putus'))">
+                        <div style="margin-bottom:14px;padding:12px 16px;background:#fffbeb;border:1.5px solid #fde68a;border-radius:12px;display:flex;align-items:flex-start;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                            <div style="width:32px;height:32px;border-radius:8px;background:#fef3c7;color:#b45309;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                                <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
+                            </div>
+                            <div style="flex:1;font-size:12px;color:#92400e;line-height:1.45;">
+                                <div style="font-weight:800;font-size:13px;color:#b45309;">Faktur Beli Putus Sisa Konsinyasi</div>
+                                <div style="margin-top:2px;">Faktur penjualan ini diterbitkan otomatis saat status toko beralih dari konsinyasi ke non-konsinyasi. Seluruh sisa stok snack di rak toko telah dibeli putus dan stok konsinyasi toko dinolkan. Pengiriman armada tidak diperlukan karena barang fisik sudah berada di toko pelanggan.</div>
+                            </div>
+                        </div>
+                    </template>
+
                     <!-- SINGLE UNIFIED INVOICE CARD -->
                     <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
                         
@@ -970,12 +1011,7 @@ ob_start();
                                                 </div>
                                             </td>
                                             <td class="cell-center cell-nowrap font-mono" style="font-size:12.5px;font-weight:700;padding:14px 16px;">
-                                                <template x-if="Number(it.jumlah_bal) > 0">
-                                                    <span class="badge" style="background:#eff6ff;color:#1e3a8a;font-weight:700;font-size:11px;padding:3px 8px;border-radius:6px;" x-text="it.jumlah_bal + ' Bal' + (Number(it.jumlah_pcs_lepas) > 0 ? ' + ' + it.jumlah_pcs_lepas + ' Pcs' : '') + ' (' + it.kuantitas_satuan_dasar + ' ' + it.satuan_dasar + ')'"></span>
-                                                </template>
-                                                <template x-if="Number(it.jumlah_bal || 0) <= 0">
-                                                    <span class="badge badge-mono" style="font-size:11.5px;padding:3px 8px;" x-text="it.kuantitas_satuan_dasar + ' ' + it.satuan_dasar"></span>
-                                                </template>
+                                                <span class="badge badge-mono" style="font-size:11.5px;padding:3px 8px;" x-text="it.kuantitas_satuan_dasar + ' ' + (it.satuan_dasar || 'pcs')"></span>
                                             </td>
                                             <td class="cell-right cell-nowrap font-mono" style="font-size:12.5px;color:var(--color-ink-secondary);padding:14px 16px;" x-text="formatRupiah(it.harga_satuan_dasar)"></td>
                                             <td class="cell-right cell-nowrap font-mono" style="font-size:12px;color:#059669;padding:14px 16px;">
@@ -1019,14 +1055,7 @@ ob_start();
                                     </div>
                                     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;">
                                         <div style="display:inline-flex;align-items:center;gap:4px;background:var(--color-canvas-soft);padding:3px 8px;border-radius:6px;border:1px solid var(--color-hairline);">
-                                            <span class="font-mono font-bold" style="color:var(--color-ink);">
-                                                <template x-if="Number(it.jumlah_bal) > 0">
-                                                    <span x-text="it.jumlah_bal + ' Bal' + (Number(it.jumlah_pcs_lepas) > 0 ? ' + ' + it.jumlah_pcs_lepas : '') + ' (' + it.kuantitas_satuan_dasar + ' pcs)'"></span>
-                                                </template>
-                                                <template x-if="Number(it.jumlah_bal || 0) <= 0">
-                                                    <span x-text="it.kuantitas_satuan_dasar + ' ' + it.satuan_dasar"></span>
-                                                </template>
-                                            </span>
+                                            <span class="font-mono font-bold" style="color:var(--color-ink);" x-text="it.kuantitas_satuan_dasar + ' ' + (it.satuan_dasar || 'pcs')"></span>
                                         </div>
 
                                         <div class="font-mono text-right" style="color:var(--color-ink-secondary);font-size:11px;">
@@ -1085,85 +1114,197 @@ ob_start();
                 <!-- TAB 2: DRIVER & PENGIRIMAN -->
                 <div x-show="!loadingDetail && activeTab === 'shipping'" style="display:flex;flex-direction:column;gap:20px;">
                     
-                    <div style="padding:16px 18px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:5px;margin-bottom:4px;">
-                        <div style="font-size:10px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Tujuan Pengiriman:</div>
-                        <div style="font-size:14.5px;font-weight:800;color:var(--color-ink);" x-text="orderDetail?.nama_toko"></div>
-                        <div style="font-size:12px;color:var(--color-ink-secondary);line-height:1.45;" x-text="orderDetail?.alamat_lengkap || 'Alamat toko belum diatur lengkap di master pelanggan.'"></div>
-                    </div>
-
-                    <!-- Dua Kolom Informasi Driver & Armada -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" style="gap:16px;row-gap:16px;column-gap:16px;margin-bottom:4px;">
-                        <!-- Kolom Driver -->
-                        <div style="padding:16px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-strong);border-radius:12px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-                            <div style="width:38px;height:38px;border-radius:10px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                <i data-lucide="user-check" style="width:18px;height:18px;"></i>
-                            </div>
-                            <div style="min-width:0;flex:1;">
-                                <div style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
-                                    Driver / Armada Pengantar
-                                </div>
-                                <div style="font-size:13.5px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" 
-                                     :style="orderDetail?.nama_sales ? 'color:var(--color-ink);' : 'color:var(--color-ink-mute);font-style:italic;font-weight:600;'"
-                                     x-text="orderDetail?.nama_sales || 'Belum ditugaskan (Tahap PO)'"></div>
-                            </div>
-                        </div>
-
-                        <!-- Kolom Plat Kendaraan -->
-                        <div style="padding:16px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-strong);border-radius:12px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-                            <div style="width:38px;height:38px;border-radius:10px;background:rgba(99,102,241,0.1);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                <i data-lucide="truck" style="width:18px;height:18px;"></i>
-                            </div>
-                            <div style="min-width:0;flex:1;">
-                                <div style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
-                                    Nomor Polisi Kendaraan
-                                </div>
-                                <div class="font-mono" style="font-size:13.5px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" 
-                                     :style="orderDetail?.nopol_driver ? 'color:var(--color-ink);' : 'color:var(--color-ink-mute);'"
-                                     x-text="orderDetail?.nopol_driver || '-'"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Status Pengiriman Box -->
-                    <div style="padding:18px 20px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:14px;">
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                            <div>
-                                <div style="font-size:10.5px;font-weight:700;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">
-                                    Status Pengiriman Saat Ini
-                                </div>
-                                <div style="display:flex;align-items:center;gap:8px;">
-                                    <span style="display:inline-flex;align-items:center;">
-                                        <i data-lucide="clock" style="width:18px;height:18px;color:#d97706;" x-show="!orderDetail?.status_surat_jalan && (orderDetail?.status_pemrosesan === 'po' || !orderDetail?.status_pemrosesan)"></i>
-                                        <i data-lucide="truck" style="width:18px;height:18px;color:#4f46e5;" x-show="orderDetail?.status_surat_jalan === 'dalam_perjalanan' || orderDetail?.status_pemrosesan === 'sedang_dikirim'"></i>
-                                        <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#059669;" x-show="orderDetail?.status_surat_jalan === 'selesai_diterima' || orderDetail?.status_pemrosesan === 'selesai'"></i>
-                                        <i data-lucide="package" style="width:18px;height:18px;color:#2563eb;" x-show="orderDetail?.status_surat_jalan && orderDetail?.status_surat_jalan !== 'selesai_diterima' && orderDetail?.status_surat_jalan !== 'dalam_perjalanan'"></i>
+                    <!-- KONDISI 1: TRANSAKSI BELI PUTUS KONSINYASI (NON-PENGIRIMAN) -->
+                    <template x-if="orderDetail?.is_beli_putus || (orderDetail?.catatan && orderDetail?.catatan.toLowerCase().includes('beli putus'))">
+                        <div style="display:flex;flex-direction:column;gap:16px;">
+                            
+                            <!-- Box Lokasi Fisik Barang -->
+                            <div style="padding:16px 18px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:5px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                    <div style="font-size:10px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Lokasi Fisik Barang:</div>
+                                    <span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:6px;">
+                                        ✅ Sudah di Rak Toko
                                     </span>
-                                    <span style="font-size:14.5px;font-weight:800;color:var(--color-ink);"
-                                          x-text="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
-                                            ? 'Draf PO (Menunggu Proses Gudang)'
-                                            : (orderDetail?.status_surat_jalan ? orderDetail.status_surat_jalan.replace(/_/g, ' ').toUpperCase() : 'Menunggu Proses Gudang')"></span>
+                                </div>
+                                <div style="font-size:15px;font-weight:800;color:var(--color-ink);" x-text="orderDetail?.nama_toko"></div>
+                                <div style="font-size:12px;color:var(--color-ink-secondary);line-height:1.45;" x-text="orderDetail?.alamat_lengkap || 'Alamat toko mitra'"></div>
+                            </div>
+
+                            <!-- Dua Kolom: Sales Binaan Toko & Skema Pemenuhan -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <!-- Kolom Sales PIC Toko -->
+                                <div style="padding:16px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-strong);border-radius:12px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="user-check" style="width:20px;height:20px;"></i>
+                                    </div>
+                                    <div style="min-width:0;flex:1;">
+                                        <div style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
+                                            Sales Pembina Toko (PIC)
+                                        </div>
+                                        <div style="font-size:14px;font-weight:800;color:var(--color-ink);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                                             x-text="orderDetail?.nama_sales || 'Sales Area Toko'"></div>
+                                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:1px;">Pendamping Operasional Toko</div>
+                                    </div>
+                                </div>
+
+                                <!-- Kolom Skema Distribusi -->
+                                <div style="padding:16px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-strong);border-radius:12px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(217,119,6,0.1);color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="store" style="width:20px;height:20px;"></i>
+                                    </div>
+                                    <div style="min-width:0;flex:1;">
+                                        <div style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
+                                            Metode Pemenuhan Fisik
+                                        </div>
+                                        <div style="font-size:13.5px;font-weight:800;color:var(--color-ink);margin-top:2px;">
+                                            Beli Putus Sisa Rak Toko
+                                        </div>
+                                        <div style="font-size:11px;color:#059669;font-weight:700;margin-top:1px;">Tanpa Kirim Armada / Gudang</div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div>
-                                <span class="badge" style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;"
-                                      :style="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
-                                        ? 'background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.25);'
-                                        : (orderDetail?.status_surat_jalan === 'selesai_diterima'
-                                            ? 'background:rgba(16,185,129,0.12);color:#047857;border:1px solid rgba(16,185,129,0.25);'
-                                            : (orderDetail?.status_surat_jalan === 'dalam_perjalanan' || orderDetail?.status_pemrosesan === 'sedang_dikirim'
-                                                ? 'background:rgba(99,102,241,0.12);color:#4338ca;border:1px solid rgba(99,102,241,0.25);'
-                                                : 'background:rgba(37,99,235,0.12);color:#1d4ed8;border:1px solid rgba(37,99,235,0.25);'))">
-                                    <span x-text="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan ? 'Tahap 1: PO' : (orderDetail?.nomor_surat_jalan ? ('SJ: ' + orderDetail.nomor_surat_jalan) : 'Siap Kirim')"></span>
-                                </span>
+                            <!-- Box Status Pengiriman: SELESAI DI RAK TOKO -->
+                            <div style="padding:18px 20px;background:#f0fdf4;border:1.5px solid #a7f3d0;border-radius:14px;display:flex;flex-direction:column;gap:14px;">
+                                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                                    <div>
+                                        <div style="font-size:10.5px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">
+                                            Status Pemenuhan Logistik
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:8px;">
+                                            <span style="display:inline-flex;align-items:center;color:#059669;">
+                                                <i data-lucide="check-circle-2" style="width:20px;height:20px;"></i>
+                                            </span>
+                                            <span style="font-size:15px;font-weight:900;color:#065f46;">
+                                                Barang Sudah Berada di Rak Toko (Tuntas)
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <span class="badge" style="background:#dcfce7;color:#047857;border:1px solid #86efac;font-size:11.5px;font-weight:800;padding:5px 12px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;">
+                                            <i data-lucide="sparkles" style="width:12px;height:12px;"></i>
+                                            <span>Selesai di Rak Toko</span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div style="font-size:12px;color:#166534;line-height:1.5;padding-top:10px;border-top:1px dashed #86efac;display:flex;align-items:flex-start;gap:8px;">
+                                    <i data-lucide="info" style="width:15px;height:15px;color:#10b981;flex-shrink:0;margin-top:2px;"></i>
+                                    <div>
+                                        <strong>Tidak Memerlukan Pengiriman:</strong> Seluruh item produk telah berada di rak toko mitra sejak masa konsinyasi. Saat metode toko beralih ke Cash/Tempo dengan opsi Beli Putus, tidak ada barang yang perlu disiapkan atau dipacking oleh gudang dan tidak membutuhkan surat jalan kurir armada. Transaksi ini murni penyelesaian pembayaran atas barang yang telah ada di toko.
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </template>
+
+                    <!-- KONDISI 2: TRANSAKSI REGULER / PENGIRIMAN GUDANG & DRIVER UMUM -->
+                    <template x-if="!(orderDetail?.is_beli_putus || (orderDetail?.catatan && orderDetail?.catatan.toLowerCase().includes('beli putus')))">
+                        <div style="display:flex;flex-direction:column;gap:16px;">
+                            
+                            <div style="padding:16px 18px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:5px;">
+                                <div style="font-size:10px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Tujuan Pengiriman:</div>
+                                <div style="font-size:14.5px;font-weight:800;color:var(--color-ink);" x-text="orderDetail?.nama_toko"></div>
+                                <div style="font-size:12px;color:var(--color-ink-secondary);line-height:1.45;" x-text="orderDetail?.alamat_lengkap || 'Alamat toko belum diatur lengkap di master pelanggan.'"></div>
+                            </div>
+
+                            <!-- Dua Kolom Informasi Driver & Armada -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <!-- Kolom Driver -->
+                                <div style="padding:16px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-strong);border-radius:12px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="user-check" style="width:18px;height:18px;"></i>
+                                    </div>
+                                    <div style="min-width:0;flex:1;">
+                                        <div style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
+                                            Driver / Armada Pengantar
+                                        </div>
+                                        <div style="font-size:13.5px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" 
+                                             :style="orderDetail?.nama_sales ? 'color:var(--color-ink);' : 'color:var(--color-ink-mute);font-style:italic;font-weight:600;'"
+                                             x-text="orderDetail?.nama_sales || 'Belum ditugaskan (Tahap PO)'"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Kolom Plat Kendaraan -->
+                                <div style="padding:16px 18px;background:var(--color-canvas);border:1px solid var(--color-hairline-strong);border-radius:12px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(99,102,241,0.1);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="truck" style="width:18px;height:18px;"></i>
+                                    </div>
+                                    <div style="min-width:0;flex:1;">
+                                        <div style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
+                                            Nomor Polisi Kendaraan
+                                        </div>
+                                        <div class="font-mono" style="font-size:13.5px;font-weight:700;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" 
+                                             :style="orderDetail?.nopol_driver ? 'color:var(--color-ink);' : 'color:var(--color-ink-mute);'"
+                                             x-text="orderDetail?.nopol_driver || '-'"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Status Pengiriman Box -->
+                            <div style="padding:18px 20px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;display:flex;flex-direction:column;gap:14px;">
+                                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                                    <div>
+                                        <div style="font-size:10.5px;font-weight:700;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;">
+                                            Status Pengiriman Saat Ini
+                                        </div>
+                                        <div style="display:flex;align-items:center;gap:8px;">
+                                            <span style="display:inline-flex;align-items:center;">
+                                                <i data-lucide="clock" style="width:18px;height:18px;color:#d97706;" x-show="!orderDetail?.status_surat_jalan && (orderDetail?.status_pemrosesan === 'po' || !orderDetail?.status_pemrosesan)"></i>
+                                                <i data-lucide="truck" style="width:18px;height:18px;color:#4f46e5;" x-show="orderDetail?.status_surat_jalan === 'dalam_perjalanan' || orderDetail?.status_pemrosesan === 'sedang_dikirim'"></i>
+                                                <i data-lucide="check-circle-2" style="width:18px;height:18px;color:#059669;" x-show="orderDetail?.status_surat_jalan === 'selesai_diterima' || ['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail?.status_pemrosesan)"></i>
+                                                <i data-lucide="package" style="width:18px;height:18px;color:#2563eb;" x-show="orderDetail?.status_surat_jalan && orderDetail?.status_surat_jalan !== 'selesai_diterima' && orderDetail?.status_surat_jalan !== 'dalam_perjalanan'"></i>
+                                            </span>
+                                            <span style="font-size:14.5px;font-weight:800;color:var(--color-ink);"
+                                                  x-text="['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail?.status_pemrosesan)
+                                                    ? 'Pesanan Selesai & Diterima Toko'
+                                                    : (orderDetail?.status_pemrosesan === 'sedang_dikirim' || orderDetail?.status_surat_jalan === 'dalam_perjalanan'
+                                                        ? 'Sedang Dikirim (Dalam Perjalanan)'
+                                                        : (orderDetail?.status_pemrosesan === 'siap_dikirim' || orderDetail?.status_pemrosesan === 'siap_kirim'
+                                                            ? 'Siap Dikirim'
+                                                            : (orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
+                                                                ? 'Draf PO (Menunggu Proses Gudang)'
+                                                                : (orderDetail?.status_surat_jalan ? orderDetail.status_surat_jalan.replace(/_/g, ' ').toUpperCase() : 'Menunggu Proses Gudang'))))"></span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <span class="badge" style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;"
+                                              :style="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan
+                                                ? 'background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.25);'
+                                                : (['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail?.status_pemrosesan) || orderDetail?.status_surat_jalan === 'selesai_diterima'
+                                                    ? 'background:rgba(16,185,129,0.12);color:#047857;border:1px solid rgba(16,185,129,0.25);'
+                                                    : (orderDetail?.status_surat_jalan === 'dalam_perjalanan' || orderDetail?.status_pemrosesan === 'sedang_dikirim'
+                                                        ? 'background:rgba(99,102,241,0.12);color:#4338ca;border:1px solid rgba(99,102,241,0.25);'
+                                                        : 'background:rgba(37,99,235,0.12);color:#1d4ed8;border:1px solid rgba(37,99,235,0.25);'))">
+                                            <span x-text="orderDetail?.status_pemrosesan === 'po' && !orderDetail?.status_surat_jalan 
+                                                ? 'Tahap 1: PO' 
+                                                : (['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail?.status_pemrosesan) && !orderDetail?.nomor_surat_jalan 
+                                                    ? 'Selesai Diterima' 
+                                                    : (orderDetail?.nomor_surat_jalan ? ('SJ: ' + orderDetail.nomor_surat_jalan) : 'Siap Kirim'))"></span>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div style="font-size:11.5px;color:var(--color-ink-secondary);line-height:1.45;padding-top:10px;border-top:1px dashed var(--color-hairline);display:flex;align-items:center;gap:7px;">
+                                    <template x-if="['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail?.status_pemrosesan)">
+                                        <div style="display:flex;align-items:center;gap:7px;">
+                                            <i data-lucide="check-circle" style="width:14px;height:14px;color:#10b981;flex-shrink:0;"></i>
+                                            <span>Pesanan ini telah selesai diproses dan sukses diterima oleh toko mitra.</span>
+                                        </div>
+                                    </template>
+                                    <template x-if="!['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail?.status_pemrosesan)">
+                                        <div style="display:flex;align-items:center;gap:7px;">
+                                            <i data-lucide="info" style="width:14px;height:14px;color:var(--color-ink-mute);flex-shrink:0;"></i>
+                                            <span>Wewenang penugasan driver &amp; surat jalan diproses pada menu <strong style="color:var(--color-ink);">Surat Jalan</strong> saat pesanan siap dikirim.</span>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </div>
-
-                        <div style="font-size:11.5px;color:var(--color-ink-secondary);line-height:1.45;padding-top:10px;border-top:1px dashed var(--color-hairline);display:flex;align-items:center;gap:7px;">
-                            <i data-lucide="info" style="width:14px;height:14px;color:var(--color-ink-mute);flex-shrink:0;"></i>
-                            <span>Wewenang penugasan driver &amp; surat jalan diproses pada menu <strong style="color:var(--color-ink);">Surat Jalan</strong> saat pesanan siap dikirim.</span>
-                        </div>
-                    </div>
+                    </template>
                 </div>
 
                 <!-- TAB 3: PEMBAYARAN & PELUNASAN -->

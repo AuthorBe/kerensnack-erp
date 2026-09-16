@@ -91,7 +91,7 @@ function posApp() {
                 const matchQuery = !query ||
                     item.nama_item.toLowerCase().includes(query) ||
                     item.kode_sku.toLowerCase().includes(query) ||
-                    (item.barcode && item.barcode.includes(query));
+                    (item.barcode_universal && item.barcode_universal.includes(query));
                 return matchGroup && matchQuery;
             });
         },
@@ -247,7 +247,6 @@ function posApp() {
                 satuan: rawItem.satuan_dasar || 'pcs',
                 price: calculatedPrice,
                 qty_pcs: 1,
-                qty_bal: 0,
                 discount_percent: discountPercent,
                 discount_nominal: discountNominal,
                 subtotal: calculatedPrice
@@ -1065,7 +1064,7 @@ document.addEventListener('alpine:init', () => {
                         <div>
                             <div style="font-weight:700;font-size:10.5px;" x-text="it.nama_item"></div>
                             <div style="display:flex;justify-content:space-between;font-size:10px;color:#374151;">
-                                <span x-text="(it.qty_bal > 0 ? (it.qty_bal + ' bal ') : '') + (it.qty_pcs > 0 ? (it.qty_pcs + ' pcs') : '') + ' @ ' + formatRupiah(it.harga)"></span>
+                                <span x-text="it.qty_pcs + ' pcs @ ' + formatRupiah(it.harga)"></span>
                                 <span style="font-weight:700;" x-text="formatRupiah(it.subtotal)"></span>
                             </div>
                         </div>

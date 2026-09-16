@@ -30,6 +30,7 @@ class PurchaseController extends Controller
                        pb.instruksi_driver, pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
                        pb.waktu_diambil, pb.waktu_diterima_gudang,
                        sup.id as pemasok_id, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon,
+                       sup.nomor_whatsapp as supplier_wa, sup.link_google_maps as supplier_maps, sup.nama_kontak as supplier_kontak, sup.termin_bayar as supplier_termin_bayar,
                        p.nama_lengkap as pembuat,
                        drv.nama_karyawan as nama_driver, drv.nomor_polisi_kendaraan as nopol_driver,
                        (SELECT COUNT(*) FROM public.rincian_pembelian WHERE pembelian_id = pb.id) as total_items
@@ -41,7 +42,7 @@ class PurchaseController extends Controller
             ");
 
             $suppliers = Database::fetchAll("
-                SELECT id, kode_pemasok, nama_pemasok, nomor_telepon, alamat_lengkap, nama_bank, nomor_rekening, atas_nama_rekening 
+                SELECT id, kode_pemasok, nama_pemasok, nama_kontak, nomor_telepon, nomor_whatsapp, email, termin_bayar, link_google_maps, alamat_lengkap, catatan, nama_bank, nomor_rekening, atas_nama_rekening 
                 FROM public.pemasok 
                 WHERE status_aktif = TRUE 
                 ORDER BY nama_pemasok ASC
@@ -106,6 +107,8 @@ class PurchaseController extends Controller
                        pb.instruksi_driver, pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
                        pb.foto_bukti_kendala, pb.alasan_kendala, pb.waktu_diambil, pb.waktu_diterima_gudang,
                        sup.id as pemasok_id, sup.kode_pemasok, sup.nama_pemasok, sup.nomor_telepon, sup.alamat_lengkap,
+                       sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa, sup.email as supplier_email,
+                       sup.link_google_maps as supplier_maps, sup.termin_bayar as supplier_termin_bayar, sup.catatan as supplier_catatan,
                        sup.nama_bank, sup.nomor_rekening, sup.atas_nama_rekening,
                        p.nama_lengkap as pembuat,
                        drv.nama_karyawan as nama_driver, drv.nomor_telepon as telp_driver, drv.nomor_polisi_kendaraan as nopol_driver,
@@ -964,6 +967,8 @@ class PurchaseController extends Controller
         try {
             $purchase = Database::fetchOne("
                 SELECT pb.*, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon, sup.alamat_lengkap,
+                       sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa, sup.email as supplier_email,
+                       sup.termin_bayar as supplier_termin_bayar, sup.link_google_maps as supplier_maps,
                        p.nama_lengkap as pembuat,
                        drv.nama_karyawan as nama_driver, drv.nomor_telepon as telp_driver, drv.nomor_polisi_kendaraan as nopol_driver
                 FROM public.pembelian pb

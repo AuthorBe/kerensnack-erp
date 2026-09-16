@@ -181,10 +181,19 @@ $nomorDokumen = $purchase['nomor_faktur_pembelian'] ?? '-';
             <td class="info-card">
                 <div class="info-card-title">Ditujukan Kepada (Vendor Pemasok)</div>
                 <div style="font-weight:bold; font-size:10pt; color:#111827;"><?= htmlspecialchars($purchase['nama_pemasok'] ?? 'Vendor') ?></div>
-                <div style="font-size:8pt; color:#4b5563; margin-top:2px;">
-                    Kode Vendor: <?= htmlspecialchars($purchase['kode_pemasok'] ?? '-') ?><br>
-                    Telepon: <?= htmlspecialchars($purchase['supplier_telepon'] ?? '-') ?><br>
+                <div style="font-size:8pt; color:#4b5563; margin-top:2px; line-height:1.4;">
+                    Kode: <strong><?= htmlspecialchars($purchase['kode_pemasok'] ?? '-') ?></strong>
+                    <?php if (!empty($purchase['supplier_kontak'])): ?>
+                        &bull; PIC: <strong><?= htmlspecialchars($purchase['supplier_kontak']) ?></strong>
+                    <?php endif; ?><br>
+                    Kontak: <?= htmlspecialchars($purchase['supplier_wa'] ?: ($purchase['supplier_telepon'] ?: '-')) ?>
+                    <?php if (!empty($purchase['supplier_email'])): ?>
+                        &bull; Email: <?= htmlspecialchars($purchase['supplier_email']) ?>
+                    <?php endif; ?><br>
                     Alamat: <?= htmlspecialchars($purchase['alamat_lengkap'] ?? 'Alamat tidak diatur') ?>
+                    <?php if (!empty($purchase['supplier_termin_bayar'])): ?>
+                        <br>Termin Standar: <strong><?= strtoupper(str_replace('_', ' ', $purchase['supplier_termin_bayar'])) ?></strong>
+                    <?php endif; ?>
                 </div>
             </td>
             <td style="width:4%;"></td>

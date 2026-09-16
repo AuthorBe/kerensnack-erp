@@ -22,6 +22,10 @@ $testSuites = [
     'DataHygieneAndSettingsTest.php'      => 'Company Settings & Supplier Hygiene',
     'SecurityAndReconciliationTest.php'   => 'CSRF Security & Account Reconciliation',
     'InventoryAndLedgerPrecisionTest.php' => 'Inventory & Numerical Ledger Precision',
+    'PricingSystemReconciliationTest.php' => 'Pricing System & Master Price Levels',
+    'SupplierMasterUpgradeTest.php'       => 'Supplier Master Upgrade & Bank Ledger',
+    'ProductMasterModuleTest.php'         => 'Product Master, BOM & Single Level 1 Default',
+    'TieredCommissionTest.php'            => 'Tiered Sales Commission & Thresholds',
 ];
 
 echo "====================================================================\n";

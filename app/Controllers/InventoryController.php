@@ -28,7 +28,7 @@ class InventoryController extends Controller
     {
         try {
             $items = Database::fetchAll("
-                SELECT i.id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
+                SELECT i.id, i.kode_sku, i.nama_item,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar, i.satuan_distribusi,
                        i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
@@ -276,9 +276,9 @@ class InventoryController extends Controller
 
         try {
             $items = Database::fetchAll("
-                SELECT i.id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
+                SELECT i.id, i.kode_sku, i.nama_item,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar, i.satuan_distribusi,
-                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup
+                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 WHERE i.status_aktif = TRUE
@@ -301,9 +301,9 @@ class InventoryController extends Controller
                 $rows[] = [
                     $no++,
                     $it['kode_sku'],
-                    $it['barcode'] ?? '-',
+                    $it['barcode_universal'] ?? '-',
                     $it['nama_item'],
-                    $it['varian_rasa'] ?? '-',
+                    '-',
                     $it['nama_grup'] ?? '-',
                     $stok,
                     (float)($it['stok_minimum_peringatan'] ?? 0),
@@ -331,7 +331,7 @@ class InventoryController extends Controller
 
         try {
             $items = Database::fetchAll("
-                SELECT i.id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
+                SELECT i.id, i.kode_sku, i.nama_item,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar,
                        i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
@@ -638,9 +638,10 @@ class InventoryController extends Controller
             }
 
             $item = Database::fetchOne("
-                SELECT id, kode_sku, barcode, nama_item, varian_rasa, stok_fisik_saat_ini, satuan_dasar, harga_pokok_pembelian
-                FROM public.item
-                WHERE id = :id
+                SELECT i.id, i.kode_sku, gp.barcode_universal, i.nama_item, i.stok_fisik_saat_ini, i.satuan_dasar, i.harga_pokok_pembelian
+                FROM public.item i
+                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                WHERE i.id = :id
             ", ['id' => $itemId]);
 
             if (!$item) {
@@ -700,7 +701,7 @@ class InventoryController extends Controller
             }
 
             $items = Database::fetchAll("
-                SELECT ogi.*, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa, i.satuan_dasar,
+                SELECT ogi.*, i.kode_sku, gp.barcode_universal, i.nama_item, i.satuan_dasar,
                        i.harga_pokok_pembelian,
                        COALESCE(NULLIF(ogi.harga_pokok_saat_opname, 0), i.harga_pokok_pembelian, 0) as hpp_efektif,
                        COALESCE(NULLIF(ogi.subtotal_nilai_selisih, 0), (ogi.selisih * COALESCE(NULLIF(ogi.harga_pokok_saat_opname, 0), i.harga_pokok_pembelian, 0))) as subtotal_rp,
@@ -798,7 +799,7 @@ class InventoryController extends Controller
             }
 
             $items = Database::fetchAll("
-                SELECT ogi.*, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa, i.satuan_dasar,
+                SELECT ogi.*, i.kode_sku, gp.barcode_universal, i.nama_item, i.satuan_dasar,
                        i.harga_pokok_pembelian,
                        COALESCE(NULLIF(ogi.harga_pokok_saat_opname, 0), i.harga_pokok_pembelian, 0) as hpp_efektif,
                        COALESCE(NULLIF(ogi.subtotal_nilai_selisih, 0), (ogi.selisih * COALESCE(NULLIF(ogi.harga_pokok_saat_opname, 0), i.harga_pokok_pembelian, 0))) as subtotal_rp,
@@ -853,7 +854,7 @@ class InventoryController extends Controller
             }
 
             $items = Database::fetchAll("
-                SELECT ogi.*, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa, i.satuan_dasar,
+                SELECT ogi.*, i.kode_sku, gp.barcode_universal, i.nama_item, i.satuan_dasar,
                        i.harga_pokok_pembelian,
                        COALESCE(NULLIF(ogi.harga_pokok_saat_opname, 0), i.harga_pokok_pembelian, 0) as hpp_efektif,
                        COALESCE(NULLIF(ogi.subtotal_nilai_selisih, 0), (ogi.selisih * COALESCE(NULLIF(ogi.harga_pokok_saat_opname, 0), i.harga_pokok_pembelian, 0))) as subtotal_rp,

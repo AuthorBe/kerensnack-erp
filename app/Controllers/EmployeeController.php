@@ -48,10 +48,17 @@ class EmployeeController extends Controller
             $totalDriver = count(array_filter($employees, fn($e) => $e['posisi'] === 'driver'));
             $totalAdminGudang = count(array_filter($employees, fn($e) => in_array($e['posisi'], ['admin', 'gudang', 'mandor'], true)));
 
+            $commissionTiers = Database::fetchAll("
+                SELECT id, urutan, nama_tier, omzet_min, omzet_maks, persentase, status_aktif
+                FROM public.skema_komisi_sales
+                ORDER BY urutan ASC, omzet_min ASC
+            ");
+
             $this->view('employees.index', [
                 'pageTitle' => 'Master Data Karyawan',
                 'pageSubtitle' => 'Kelola Data Pegawai Admin, Gudang, Pengemasan, Sales & Driver',
                 'employees' => $employees,
+                'commissionTiers' => $commissionTiers,
                 'metrics' => [
                     'total' => $totalEmployees,
                     'borongan' => $totalBorongan,
@@ -67,6 +74,7 @@ class EmployeeController extends Controller
                 'pageTitle' => 'Master Data Karyawan',
                 'pageSubtitle' => 'Kelola Data Pegawai Admin, Gudang, Pengemasan, Sales & Driver',
                 'employees' => [],
+                'commissionTiers' => [],
                 'metrics' => [
                     'total' => 0,
                     'borongan' => 0,
@@ -352,6 +360,132 @@ class EmployeeController extends Controller
         } catch (Throwable $e) {
             if (isset($pdo)) $pdo->rollBack();
             $this->flashError('Gagal menonaktifkan karyawan: ' . $e->getMessage());
+            $this->redirect('/employees');
+        }
+    }
+
+    /**
+     * Batch save skema komisi sales bertingkat
+     * POST /employees/commission-tiers/batch-save
+     */
+    public function saveCommissionTiersBatch(): void
+    {
+        Auth::requirePermission('master.employees_manage');
+
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') 
+                  || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+
+        try {
+            $rawJson = file_get_contents('php://input');
+            $jsonData = json_decode($rawJson, true);
+            $tiers = $jsonData['tiers'] ?? $this->input('tiers', []);
+
+            if (is_string($tiers)) {
+                $tiers = json_decode($tiers, true) ?? [];
+            }
+
+            if (!is_array($tiers) || empty($tiers)) {
+                throw new \InvalidArgumentException("Daftar tier komisi tidak boleh kosong.");
+            }
+
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
+
+            $cleanedTiers = [];
+            foreach ($tiers as $index => $t) {
+                $urutan = (int)($t['urutan'] ?? ($index + 1));
+                $namaTier = trim((string)($t['nama_tier'] ?? "Tier " . ($index + 1)));
+                if (empty($namaTier)) {
+                    throw new \InvalidArgumentException("Nama Tier pada urutan #{$urutan} tidak boleh kosong.");
+                }
+
+                $minRaw = str_replace(['Rp', '.', ' ', ','], ['', '', '', '.'], (string)($t['omzet_min'] ?? '0'));
+                $omzetMin = (float)$minRaw;
+                if ($omzetMin < 0) {
+                    throw new \InvalidArgumentException("Omzet minimum pada {$namaTier} tidak boleh negatif.");
+                }
+
+                $omzetMaks = null;
+                $tanpaBatas = !empty($t['tanpa_batas']) || !isset($t['omzet_maks']) || $t['omzet_maks'] === '' || $t['omzet_maks'] === null;
+                if (!$tanpaBatas) {
+                    $maksRaw = str_replace(['Rp', '.', ' ', ','], ['', '', '', '.'], (string)$t['omzet_maks']);
+                    $omzetMaks = (float)$maksRaw;
+                    if ($omzetMaks <= $omzetMin) {
+                        throw new \InvalidArgumentException("Omzet maksimum pada {$namaTier} harus lebih besar dari omzet minimum.");
+                    }
+                }
+
+                $persenRaw = str_replace(['%', ' ', ','], ['', '', '.'], (string)($t['persentase'] ?? '0'));
+                $persentase = (float)$persenRaw;
+                if ($persentase < 0 || $persentase > 100) {
+                    throw new \InvalidArgumentException("Persentase komisi pada {$namaTier} harus berada di antara 0% dan 100%.");
+                }
+
+                $statusAktif = isset($t['status_aktif']) ? (bool)$t['status_aktif'] : true;
+
+                $cleanedTiers[] = [
+                    'id' => (!empty($t['id']) && preg_match('/^[0-9a-fA-F-]{36}$/', $t['id'])) ? $t['id'] : null,
+                    'urutan' => $urutan,
+                    'nama_tier' => $namaTier,
+                    'omzet_min' => $omzetMin,
+                    'omzet_maks' => $omzetMaks,
+                    'persentase' => $persentase,
+                    'status_aktif' => $statusAktif,
+                ];
+            }
+
+            // Hapus seluruh konfigurasi lama dan masukkan konfigurasi baru dalam satu transaksi
+            $pdo->exec("DELETE FROM public.skema_komisi_sales");
+
+            $stmt = $pdo->prepare("
+                INSERT INTO public.skema_komisi_sales 
+                    (id, urutan, nama_tier, omzet_min, omzet_maks, persentase, status_aktif, dibuat_pada, diubah_pada)
+                VALUES 
+                    (COALESCE(:id, gen_random_uuid()), :urutan, :nama_tier, :omzet_min, :omzet_maks, :persentase, :status_aktif, NOW(), NOW())
+            ");
+
+            foreach ($cleanedTiers as $tier) {
+                $stmt->execute([
+                    'id' => $tier['id'],
+                    'urutan' => $tier['urutan'],
+                    'nama_tier' => $tier['nama_tier'],
+                    'omzet_min' => $tier['omzet_min'],
+                    'omzet_maks' => $tier['omzet_maks'],
+                    'persentase' => $tier['persentase'],
+                    'status_aktif' => $tier['status_aktif'] ? 'true' : 'false'
+                ]);
+            }
+
+            $pdo->commit();
+
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Skema komisi sales bertingkat berhasil diperbarui.'
+                ]);
+                exit;
+            }
+
+            $this->flashSuccess('Skema komisi sales bertingkat berhasil disimpan.');
+            $this->redirect('/employees');
+
+        } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ]);
+                exit;
+            }
+
+            $this->flashError("Gagal menyimpan skema komisi: " . $e->getMessage());
             $this->redirect('/employees');
         }
     }

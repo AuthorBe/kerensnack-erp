@@ -42,7 +42,8 @@ class DeliveryController extends Controller
                        COALESCE(driver_sj.nama_karyawan, driver_p.nama_karyawan) as nama_driver,
                        COALESCE(driver_sj.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
                        COALESCE(driver_sj.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
-                       w.nama_wilayah, w.kode_rute
+                       COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
+                       COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan cust ON p.pelanggan_id = cust.id
@@ -142,12 +143,31 @@ class DeliveryController extends Controller
             $nomorSj = DocumentNumber::nextDeliveryNumber($pdo);
             $userId = Auth::id() ?: null;
 
+            // Tarik snapshot wilayah & rute agar arsip historis surat jalan terkunci permanen
+            $wilayahInfo = null;
+            if (!empty($wilayahId)) {
+                $wilayahInfo = Database::fetchOne("SELECT nama_wilayah, kode_rute FROM public.wilayah WHERE id = :id", ['id' => $wilayahId]);
+            } elseif (!empty($pesananId)) {
+                $wilayahInfo = Database::fetchOne("
+                    SELECT w.id, w.nama_wilayah, w.kode_rute 
+                    FROM public.pesanan p 
+                    JOIN public.pelanggan pel ON p.pelanggan_id = pel.id 
+                    JOIN public.wilayah w ON pel.wilayah_id = w.id 
+                    WHERE p.id = :pid
+                ", ['pid' => $pesananId]);
+                if ($wilayahInfo) {
+                    $wilayahId = $wilayahInfo['id'];
+                }
+            }
+
             $stmtSj = $pdo->prepare("
                 INSERT INTO public.surat_jalan (
                     nomor_surat_jalan, pesanan_id, sales_driver_id, rute_wilayah_id,
+                    nama_wilayah_snapshot, kode_rute_snapshot,
                     status_surat_jalan, tanggal_surat_jalan, disetujui_oleh, dibuat_pada
                 ) VALUES (
                     :no_sj, :pesanan, :driver, :wilayah,
+                    :wilayah_snap, :rute_snap,
                     :status, :tanggal_sj, :user_id, NOW()
                 )
             ");
@@ -156,6 +176,8 @@ class DeliveryController extends Controller
                 'pesanan' => $pesananId,
                 'driver' => $driverId,
                 'wilayah' => $wilayahId,
+                'wilayah_snap' => $wilayahInfo['nama_wilayah'] ?? null,
+                'rute_snap' => $wilayahInfo['kode_rute'] ?? null,
                 'status' => $status,
                 'tanggal_sj' => $tanggalSj,
                 'user_id' => $userId
@@ -578,12 +600,18 @@ class DeliveryController extends Controller
                         $pdo->beginTransaction();
                         try {
                             $nomorSj = DocumentNumber::nextDeliveryNumber($pdo);
+                            $wilayahInfo = null;
+                            if (!empty($pesanan['wilayah_id'])) {
+                                $wilayahInfo = Database::fetchOne("SELECT nama_wilayah, kode_rute FROM public.wilayah WHERE id = :id", ['id' => $pesanan['wilayah_id']]);
+                            }
                             $stmtInsert = $pdo->prepare("
                                 INSERT INTO public.surat_jalan (
                                     nomor_surat_jalan, pesanan_id, sales_driver_id, rute_wilayah_id,
+                                    nama_wilayah_snapshot, kode_rute_snapshot,
                                     status_surat_jalan, disetujui_oleh, dibuat_pada
                                 ) VALUES (
                                     :no_sj, :pesanan_id, :driver_id, :wilayah_id,
+                                    :wilayah_snap, :rute_snap,
                                     'sedang_dikirim', :user_id, NOW()
                                 )
                             ");
@@ -592,6 +620,8 @@ class DeliveryController extends Controller
                                 'pesanan_id' => $orderId,
                                 'driver_id' => $pesanan['sales_driver_id'] ?: null,
                                 'wilayah_id' => $pesanan['wilayah_id'] ?? null,
+                                'wilayah_snap' => $wilayahInfo['nama_wilayah'] ?? null,
+                                'rute_snap' => $wilayahInfo['kode_rute'] ?? null,
                                 'user_id' => Auth::id() ?: null,
                             ]);
                             $pdo->commit();
@@ -620,7 +650,8 @@ class DeliveryController extends Controller
                        COALESCE(driver_sj.nama_karyawan, driver_p.nama_karyawan) as nama_driver,
                        COALESCE(driver_sj.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
                        COALESCE(driver_sj.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
-                       w.nama_wilayah, w.kode_rute
+                       COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
+                       COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan cust ON p.pelanggan_id = cust.id
@@ -637,7 +668,7 @@ class DeliveryController extends Controller
             }
 
             $items = Database::fetchAll("
-                SELECT ip.*, i.nama_item, i.kode_sku, i.varian_rasa, i.satuan_dasar
+                SELECT ip.*, i.nama_item, i.kode_sku, i.satuan_dasar
                 FROM public.item_pesanan ip
                 JOIN public.item i ON ip.item_id = i.id
                 WHERE ip.pesanan_id = :pesanan_id
@@ -684,6 +715,7 @@ class DeliveryController extends Controller
             // Query Surat Jalan & Pesanan Aktif untuk Rute Pengiriman
             $sql = "
                 SELECT sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
+                       sj.tanggal_surat_jalan,
                        sj.waktu_berangkat, sj.waktu_sampai, sj.nama_penerima_toko, sj.bukti_terima_foto,
                        sj.foto_bukti_gagal, sj.alasan_gagal, sj.catatan_gagal,
                        sj.dibuat_pada as waktu_terbit_sj,
@@ -692,7 +724,8 @@ class DeliveryController extends Controller
                        p.catatan as catatan_pesanan, p.waktu_gagal_kirim,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik,
                        pel.nomor_whatsapp, pel.alamat_lengkap, pel.link_google_maps, pel.is_konsinyasi,
-                       w.nama_wilayah, w.kode_rute,
+                       COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
+                       COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute,
                        k.id as driver_id, k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan as nopol_driver,
                        k.nomor_telepon as telp_driver,
                        (SELECT COUNT(*) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_sku,
@@ -707,15 +740,21 @@ class DeliveryController extends Controller
 
             $params = [];
 
-            // Filter Tanggal Surat Jalan / Tanggal Pesanan jika dipilih (tetap sertakan pengiriman aktif in-transit)
+            // Filter Tanggal Surat Jalan (Rencana Pengiriman yang diset di public/deliveries)
             if (!empty($selectedDate)) {
-                $sql .= " AND (DATE(sj.dibuat_pada) = :sel_date OR p.tanggal_pesanan = :sel_date OR sj.status_surat_jalan IN ('sedang_dikirim', 'dalam_perjalanan'))";
+                if ($selectedDate === date('Y-m-d')) {
+                    // Untuk hari ini: sertakan jadwal hari ini ATAU pengiriman aktif yang sedang berjalan (in-transit)
+                    $sql .= " AND (COALESCE(sj.tanggal_surat_jalan, DATE(sj.dibuat_pada)) = :sel_date OR sj.status_surat_jalan IN ('sedang_dikirim', 'dalam_perjalanan'))";
+                } else {
+                    // Untuk tanggal spesifik lain (misal besok atau riwayat): tampilkan murni yang dijadwalkan pada tanggal tersebut
+                    $sql .= " AND COALESCE(sj.tanggal_surat_jalan, DATE(sj.dibuat_pada)) = :sel_date";
+                }
                 $params['sel_date'] = $selectedDate;
             }
 
-            // Scope Filter Driver
+            // Scope Filter Driver: Prioritaskan driver yang ditugaskan di Surat Jalan
             if (!empty($driverId)) {
-                $sql .= " AND (sj.sales_driver_id = :driver_id OR p.sales_driver_id = :driver_id)";
+                $sql .= " AND COALESCE(sj.sales_driver_id, p.sales_driver_id) = :driver_id";
                 $params['driver_id'] = $driverId;
             }
 
@@ -785,7 +824,7 @@ class DeliveryController extends Controller
                     }
                     $rawItems = Database::fetchAll("
                         SELECT ip.pesanan_id, ip.item_id, ip.kuantitas_satuan_dasar, ip.harga_satuan_deal, ip.subtotal,
-                               it.nama_item, it.kode_sku, it.varian_rasa, it.satuan_dasar
+                               it.nama_item, it.kode_sku, it.satuan_dasar
                         FROM public.item_pesanan ip
                         JOIN public.item it ON ip.item_id = it.id
                         WHERE ip.pesanan_id IN (" . implode(', ', $itemPlaceholders) . ")
@@ -842,7 +881,9 @@ class DeliveryController extends Controller
                        pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
                        pb.url_foto_nota, pb.foto_bukti_kendala, pb.alasan_kendala, pb.waktu_diambil,
                        sup.id as pemasok_id, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon,
-                       sup.alamat_lengkap as alamat_pemasok, sup.nama_bank, sup.nomor_rekening, sup.atas_nama_rekening,
+                       sup.alamat_lengkap as alamat_pemasok, sup.link_google_maps, sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa,
+                       sup.email as supplier_email, sup.termin_bayar as supplier_termin_bayar, sup.catatan as supplier_catatan,
+                       sup.nama_bank, sup.nomor_rekening, sup.atas_nama_rekening,
                        drv.nama_karyawan as nama_driver, drv.nomor_polisi_kendaraan as nopol_driver,
                        (SELECT COUNT(*) FROM public.rincian_pembelian rp WHERE rp.pembelian_id = pb.id) as total_sku,
                        (SELECT COALESCE(SUM(kuantitas), 0) FROM public.rincian_pembelian rp WHERE rp.pembelian_id = pb.id) as total_pcs
@@ -932,6 +973,33 @@ class DeliveryController extends Controller
     }
 
     /**
+     * Helper redirect kembali ke portal driver dengan mempertahankan filter tanggal, driver, dan status
+     */
+    private function redirectDriverDeliveries(): void
+    {
+        $redirectUrl = '/driver-deliveries';
+        $params = [];
+        $fDate = $this->input('filter_date') ?: $this->input('date');
+        $fDriver = $this->input('filter_driver_id') ?: $this->input('driver_id');
+        $fStatus = $this->input('filter_status') ?: $this->input('status');
+
+        if (!empty($fDate)) {
+            $params['date'] = $fDate;
+        }
+        if (!empty($fDriver)) {
+            $params['driver_id'] = $fDriver;
+        }
+        if (!empty($fStatus) && $fStatus !== 'semua') {
+            $params['status'] = $fStatus;
+        }
+
+        if (!empty($params)) {
+            $redirectUrl .= '?' . http_build_query($params);
+        }
+        $this->redirect($redirectUrl);
+    }
+
+    /**
      * Driver Memulai Pengiriman (Berangkat / In Transit)
      */
     public function startTrip(): void
@@ -941,7 +1009,7 @@ class DeliveryController extends Controller
         $sjId = $this->input('surat_jalan_id');
         if (empty($sjId)) {
             $this->flashError('Parameter surat jalan tidak valid.');
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
             return;
         }
 
@@ -949,14 +1017,14 @@ class DeliveryController extends Controller
             $sj = Database::fetchOne("SELECT * FROM public.surat_jalan WHERE id = :id", ['id' => $sjId]);
             if (!$sj) {
                 $this->flashError('Surat jalan tidak ditemukan.');
-                $this->redirect('/driver-deliveries');
+                $this->redirectDriverDeliveries();
                 return;
             }
 
             // Scope check jika bukan admin/manajer
             if (!Auth::can('deliveries.update_all') && !Auth::isAssignedDelivery((string)$sjId)) {
                 $this->flashError('Akses Ditolak: Surat jalan ini tidak ditugaskan ke Anda.');
-                $this->redirect('/driver-deliveries');
+                $this->redirectDriverDeliveries();
                 return;
             }
 
@@ -991,14 +1059,14 @@ class DeliveryController extends Controller
             );
 
             $this->flashSuccess("Pengiriman Surat Jalan #{$sj['nomor_surat_jalan']} dimulai! Hati-hati di jalan.");
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
 
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             $this->flashError('Gagal memulai pengiriman: ' . $e->getMessage());
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
         }
     }
 
@@ -1017,7 +1085,7 @@ class DeliveryController extends Controller
 
         if (empty($sjId) || empty($penerima)) {
             $this->flashError('Nama penerima toko wajib diisi.');
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
             return;
         }
 
@@ -1033,19 +1101,19 @@ class DeliveryController extends Controller
 
             if (!$sj) {
                 $this->flashError('Surat jalan tidak ditemukan.');
-                $this->redirect('/driver-deliveries');
+                $this->redirectDriverDeliveries();
                 return;
             }
 
             if ($sj['status_surat_jalan'] === 'selesai_diterima') {
                 $this->flashError('Surat jalan ini sudah berstatus selesai diterima sebelumnya.');
-                $this->redirect('/driver-deliveries');
+                $this->redirectDriverDeliveries();
                 return;
             }
 
             if (!Auth::can('deliveries.update_all') && !Auth::isAssignedDelivery((string)$sjId)) {
                 $this->flashError('Akses Ditolak: Surat jalan ini tidak ditugaskan ke Anda.');
-                $this->redirect('/driver-deliveries');
+                $this->redirectDriverDeliveries();
                 return;
             }
 
@@ -1055,7 +1123,7 @@ class DeliveryController extends Controller
                 $uploadRes = \App\Helpers\Upload::storeImage($_FILES['bukti_foto'], 'delivery_proofs', 'PROOF');
                 if (!$uploadRes['success']) {
                     $this->flashError($uploadRes['error']);
-                    $this->redirect('/driver-deliveries');
+                    $this->redirectDriverDeliveries();
                     return;
                 }
                 $fotoPath = $uploadRes['path'];
@@ -1205,14 +1273,14 @@ class DeliveryController extends Controller
             );
 
             $this->flashSuccess("Pengiriman ke {$sj['nama_toko']} berhasil diselesaikan (Penerima: {$penerima})!");
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
 
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             $this->flashError('Gagal konfirmasi selesai pengiriman: ' . $e->getMessage());
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
         }
     }
 
@@ -1229,7 +1297,7 @@ class DeliveryController extends Controller
 
         if (empty($sjId)) {
             $this->flashError('Parameter surat jalan tidak valid.');
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
             return;
         }
 
@@ -1244,13 +1312,13 @@ class DeliveryController extends Controller
 
             if (!$sj) {
                 $this->flashError('Surat jalan tidak ditemukan.');
-                $this->redirect('/driver-deliveries');
+                $this->redirectDriverDeliveries();
                 return;
             }
 
             if (!Auth::can('deliveries.update_all') && !Auth::isAssignedDelivery((string)$sjId)) {
                 $this->flashError('Akses Ditolak: Surat jalan ini tidak ditugaskan ke Anda.');
-                $this->redirect('/driver-deliveries');
+                $this->redirectDriverDeliveries();
                 return;
             }
 
@@ -1261,7 +1329,7 @@ class DeliveryController extends Controller
                 $uploadRes = \App\Helpers\Upload::storeImage($fileInput, 'delivery_proofs', 'FAIL');
                 if (!$uploadRes['success']) {
                     $this->flashError($uploadRes['error']);
-                    $this->redirect('/driver-deliveries');
+                    $this->redirectDriverDeliveries();
                     return;
                 }
                 $fotoGagalPath = $uploadRes['path'];
@@ -1335,14 +1403,14 @@ class DeliveryController extends Controller
             );
 
             $this->flashWarning("Pengiriman ke {$sj['nama_toko']} ditandai Gagal Kirim ({$alasan}). Stok fisik telah dikembalikan ke rak gudang.");
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
 
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             $this->flashError('Gagal melaporkan pengiriman: ' . $e->getMessage());
-            $this->redirect('/driver-deliveries');
+            $this->redirectDriverDeliveries();
         }
     }
 
@@ -1376,7 +1444,8 @@ class DeliveryController extends Controller
                        COALESCE(k.nama_karyawan, driver_p.nama_karyawan) as nama_driver,
                        COALESCE(k.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
                        COALESCE(k.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
-                       w.nama_wilayah, w.kode_rute
+                       COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
+                       COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
@@ -1393,7 +1462,7 @@ class DeliveryController extends Controller
             }
 
             $items = Database::fetchAll("
-                SELECT ip.*, i.nama_item, i.kode_sku, i.varian_rasa, i.satuan_dasar
+                SELECT ip.*, i.nama_item, i.kode_sku, i.satuan_dasar
                 FROM public.item_pesanan ip
                 JOIN public.item i ON ip.item_id = i.id
                 WHERE ip.pesanan_id = :pesanan_id
@@ -1434,7 +1503,7 @@ class DeliveryController extends Controller
                 SELECT sj.*, p.nomor_nota, p.tanggal_pesanan,
                        pel.nama_toko, pel.kode_pelanggan,
                        k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan,
-                       w.nama_wilayah
+                       COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah
                 FROM public.surat_jalan sj
                 JOIN public.pesanan p ON sj.pesanan_id = p.id
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id

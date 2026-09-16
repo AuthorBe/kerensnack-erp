@@ -181,7 +181,7 @@ ob_start();
                         <option value="pos_cashier">🛒 POS Kasir &amp; Retail Penjualan</option>
                         <option value="finance_cash">💰 Keuangan, Kas &amp; Valuasi</option>
                         <option value="master_employees">👥 Karyawan (Sales vs Driver)</option>
-                        <option value="pricing_engine">🏷️ Matriks 28 Level Harga &amp; Tier</option>
+                        <option value="pricing_engine">🏷️ Matriks 30 Level Harga &amp; Tier</option>
                         <option value="inventory_bom">📦 Gudang, Stok &amp; Resep BOM</option>
                     </select>
                 </div>
@@ -535,7 +535,7 @@ ob_start();
                     </div>
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚡ Matriks 28 Level Harga</div>
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚡ Matriks 30 Level Harga</div>
                         <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Katalog harga khusus otomatis per kategori toko mitra.</div>
                     </div>
                 </div>
@@ -708,7 +708,7 @@ function devArchitectureApp() {
                     { name: 'SalesOrderController.php', desc: 'Alias controller kompatibilitas pesanan penjualan B2B dan grosir.' },
                     { name: 'CashController.php', desc: 'Menangani pencatatan mutasi buku kas, transaksi masuk/keluar, rekonsiliasi kas toko, dan laporan cash flow.' },
                     { name: 'ProductController.php', desc: 'Menangani master item produk jadi, bahan baku mentah, kategori, dan resep Bill of Materials (BOM).' },
-                    { name: 'PricingController.php', desc: 'Menangani matriks 28 level harga khusus per kategori toko dan tier pelanggan.' },
+                    { name: 'PricingController.php', desc: 'Menangani matriks 30 level harga khusus per kategori toko dan tier pelanggan.' },
                     { name: 'CustomerController.php', desc: 'Menangani master data toko mitra pelanggan, grup tier harga, dan wilayah/rute pengiriman.' },
                     { name: 'EmployeeController.php', desc: 'Menangani master karyawan dengan pemisahan peran tegas antara Sales (punya % komisi) vs Driver (punya plat nopol armada).' },
                     { name: 'InventoryController.php', desc: 'Menangani manajemen stok fisik gudang, mutasi antar lokasi, opname stok internal, dan log kartu stok.' },
@@ -1002,7 +1002,7 @@ function devArchitectureApp() {
                     ]
                 },
                 pricing_engine: {
-                    title: '🏷️ Matriks 28 Level Harga & Tier Pelanggan',
+                    title: '🏷️ Matriks 30 Level Harga & Tier Pelanggan',
                     controller: 'app/Controllers/PricingController.php (index, update)',
                     views: 'views/pricing/index.php',
                     tables: 'harga_khusus_pelanggan, level_harga, item, pelanggan',

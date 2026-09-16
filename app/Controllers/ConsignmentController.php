@@ -191,7 +191,7 @@ class ConsignmentController extends Controller
                        i.nama_item, i.kode_sku, i.satuan_dasar, COALESCE(gphl.harga_jual_pcs, 15000) as harga_jual_satuan
                 FROM public.stok_konsinyasi_toko skt
                 JOIN public.item i ON skt.item_id = i.id
-                LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 1
+                LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 5
                 WHERE skt.pelanggan_id = :pelanggan_id
                 ORDER BY (skt.stok_titip_saat_ini > 0) DESC, i.nama_item ASC
             ", ['pelanggan_id' => $storeId]);
@@ -1685,70 +1685,208 @@ class ConsignmentController extends Controller
                 }
             }
 
-            // 3. Query Rekapitulasi Komisi Utama (LEFT JOIN pelanggan, Default Rate 2.50%)
-            $sql = "
-                SELECT k.id as sales_id, k.nama_karyawan, k.nomor_telepon, k.posisi,
-                       COALESCE(NULLIF(k.persentase_komisi_sales, 0), 2.50) as persentase_komisi,
-                       COUNT(DISTINCT p.id) as total_toko_assigned,
-                       COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet,
-                       (COALESCE(SUM(kk.total_laku_nominal), 0) * COALESCE(NULLIF(k.persentase_komisi_sales, 0), 2.50) / 100.0) as nominal_komisi
+            // 3. Query Master Skema Tier Komisi
+            $allTiers = Database::fetchAll("
+                SELECT id, urutan, nama_tier, omzet_min, omzet_maks, persentase, status_aktif
+                FROM public.skema_komisi_sales
+                WHERE status_aktif = TRUE
+                ORDER BY urutan ASC, omzet_min ASC
+            ");
+
+            // 4. Query Personel Sales Lapangan
+            $salesQuery = "
+                SELECT k.id as sales_id, k.nama_karyawan, k.nomor_telepon, k.posisi
                 FROM public.v_karyawan_info k
-                LEFT JOIN public.pelanggan p ON p.sales_driver_id = k.id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
-                LEFT JOIN public.kunjungan_konsinyasi kk ON kk.pelanggan_id = p.id 
-                     AND kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
                 WHERE k.posisi = 'sales' AND k.status_aktif = TRUE
             ";
-
-            $params = [
-                'start_date' => $startDate,
-                'end_date' => $endDate
-            ];
-
+            $salesParams = [];
             if (!empty($selectedSalesId)) {
-                $sql .= " AND k.id = :selected_sales_id";
-                $params['selected_sales_id'] = $selectedSalesId;
+                $salesQuery .= " AND k.id = :sales_id";
+                $salesParams['sales_id'] = $selectedSalesId;
             } elseif ($isSalesLocked && $unlinkedAccount) {
-                $sql .= " AND 1=0";
+                $salesQuery .= " AND 1=0";
             }
+            $salesQuery .= " ORDER BY k.nama_karyawan ASC";
+            $salesRows = Database::fetchAll($salesQuery, $salesParams);
 
-            $sql .= " GROUP BY k.id, k.nama_karyawan, k.nomor_telepon, k.posisi, k.persentase_komisi_sales ORDER BY total_omzet DESC, k.nama_karyawan ASC";
-            $commissions = Database::fetchAll($sql, $params);
-
-            // 4. Query Breakdown Rincian Toko Binaan per Sales untuk Modal Detail
-            $breakdownSql = "
-                SELECT p.sales_driver_id as sales_id, p.id as store_id, p.kode_pelanggan, p.nama_toko, p.alamat_lengkap,
-                       COALESCE(w.nama_wilayah, 'Tanpa Wilayah') as nama_wilayah,
-                       COUNT(kk.id) as total_kunjungan,
-                       MAX(kk.tanggal_kunjungan) as terakhir_kunjungan,
-                       COALESCE(SUM(kk.total_laku_nominal), 0) as omzet_toko
-                FROM public.pelanggan p
-                JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id AND k.status_aktif = TRUE
-                LEFT JOIN public.wilayah w ON p.wilayah_id = w.id
-                LEFT JOIN public.kunjungan_konsinyasi kk ON kk.pelanggan_id = p.id 
-                     AND kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
-                WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
-            ";
-            $bParams = [
-                'start_date' => $startDate,
-                'end_date' => $endDate
-            ];
-            if (!empty($selectedSalesId)) {
-                $breakdownSql .= " AND p.sales_driver_id = :b_sales_id";
-                $bParams['b_sales_id'] = $selectedSalesId;
-            } elseif ($isSalesLocked && $unlinkedAccount) {
-                $breakdownSql .= " AND 1=0";
-            }
-            $breakdownSql .= " GROUP BY p.sales_driver_id, p.id, p.kode_pelanggan, p.nama_toko, p.alamat_lengkap, w.nama_wilayah ORDER BY omzet_toko DESC, p.nama_toko ASC";
-            $breakdownRaw = Database::fetchAll($breakdownSql, $bParams);
-
-            // Kelompokkan breakdown per sales_id
+            $commissions = [];
             $storeBreakdown = [];
-            foreach ($breakdownRaw as $b) {
-                $storeBreakdown[$b['sales_id']][] = $b;
+            $breakdownKonsin = [];
+            $breakdownB2b = [];
+            $breakdownUnbilled = [];
+
+            foreach ($salesRows as $sales) {
+                $sid = $sales['sales_id'];
+
+                // A. Toko Binaan Konsinyasi Tetap
+                $tokoRow = Database::fetchOne("
+                    SELECT COUNT(id) as total_toko
+                    FROM public.pelanggan
+                    WHERE sales_driver_id = :sales_id AND is_konsinyasi = TRUE AND status_aktif = TRUE
+                ", ['sales_id' => $sid]);
+                $totalTokoAssigned = (int)($tokoRow['total_toko'] ?? 0);
+
+                // B. Omzet Konsinyasi: HANYA Tagihan yang SUDAH DIBAYAR (pesanan.total_dibayar)
+                // Sisa hutang / piutang (pesanan.sisa_tagihan) TIDAK MASUK OMZET
+                $konsinRow = Database::fetchOne("
+                    SELECT 
+                        COALESCE(SUM(pes.total_dibayar), 0) as omzet_terbayar,
+                        COALESCE(SUM(pes.sisa_tagihan), 0) as sisa_hutang,
+                        COALESCE(SUM(pes.total_netto), 0) as total_faktur,
+                        COUNT(pes.id) as jumlah_faktur
+                    FROM public.pesanan pes
+                    JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                    WHERE p.sales_driver_id = :sales_id
+                      AND pes.adalah_tagihan = TRUE
+                      AND pes.tipe_pembayaran = 'konsinyasi'
+                      AND pes.status_pemrosesan != 'dibatalkan'
+                      AND pes.tanggal_pesanan >= :start_date AND pes.tanggal_pesanan <= :end_date
+                ", [
+                    'sales_id' => $sid,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate
+                ]);
+
+                // C. Omzet Pesanan Grosir / Reguler B2B: HANYA yang SUDAH DIBAYAR (pesanan.total_dibayar)
+                $b2bRow = Database::fetchOne("
+                    SELECT 
+                        COALESCE(SUM(pes.total_dibayar), 0) as omzet_terbayar,
+                        COALESCE(SUM(pes.sisa_tagihan), 0) as sisa_hutang,
+                        COALESCE(SUM(pes.total_netto), 0) as total_faktur,
+                        COUNT(pes.id) as jumlah_faktur
+                    FROM public.pesanan pes
+                    LEFT JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                    WHERE (pes.sales_driver_id = :sales_id OR (pes.sales_driver_id IS NULL AND p.sales_driver_id = :sales_id))
+                      AND pes.adalah_tagihan = TRUE
+                      AND pes.tipe_pembayaran != 'konsinyasi'
+                      AND pes.status_pemrosesan != 'dibatalkan'
+                      AND pes.tanggal_pesanan >= :start_date AND pes.tanggal_pesanan <= :end_date
+                ", [
+                    'sales_id' => $sid,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate
+                ]);
+
+                $omzetKonsin = (float)($konsinRow['omzet_terbayar'] ?? 0);
+                $omzetB2b    = (float)($b2bRow['omzet_terbayar'] ?? 0);
+                $totalOmzet  = $omzetKonsin + $omzetB2b;
+
+                $sisaKonsin  = (float)($konsinRow['sisa_hutang'] ?? 0);
+                $sisaB2b     = (float)($b2bRow['sisa_hutang'] ?? 0);
+                $totalPiutangPending = $sisaKonsin + $sisaB2b;
+
+                // D. Hitung Tier Komisi Otomatis via DB RPC fn_hitung_tier_komisi_sales
+                $tierRpcRaw = Database::fetchOne("
+                    SELECT public.fn_hitung_tier_komisi_sales(:omzet) as r
+                ", ['omzet' => $totalOmzet])['r'] ?? '{}';
+                $tierData = json_decode($tierRpcRaw, true) ?? [];
+
+                $persenKomisi = (float)($tierData['persentase'] ?? 0);
+                $nominalKomisi = (float)($tierData['nominal_komisi'] ?? 0);
+
+                $commissions[] = [
+                    'sales_id' => $sid,
+                    'nama_karyawan' => $sales['nama_karyawan'],
+                    'nomor_telepon' => $sales['nomor_telepon'],
+                    'posisi' => $sales['posisi'],
+                    'total_toko_assigned' => $totalTokoAssigned,
+                    'omzet_konsinyasi_terbayar' => $omzetKonsin,
+                    'omzet_b2b_terbayar' => $omzetB2b,
+                    'total_omzet' => $totalOmzet,
+                    'total_piutang_pending' => $totalPiutangPending,
+                    'persentase_komisi' => $persenKomisi,
+                    'nominal_komisi' => $nominalKomisi,
+                    'tier_info' => $tierData,
+                    'jumlah_faktur_konsin' => (int)($konsinRow['jumlah_faktur'] ?? 0),
+                    'jumlah_faktur_b2b' => (int)($b2bRow['jumlah_faktur'] ?? 0),
+                ];
+
+                // E. Breakdown Toko Binaan Konsinyasi
+                $storeBreakdown[$sid] = Database::fetchAll("
+                    SELECT p.sales_driver_id as sales_id, p.id as store_id, p.kode_pelanggan, p.nama_toko, p.alamat_lengkap,
+                           COALESCE(w.nama_wilayah, 'Tanpa Wilayah') as nama_wilayah,
+                           COALESCE(v_vis.total_kunjungan, 0) as total_kunjungan,
+                           v_vis.terakhir_kunjungan,
+                           COALESCE(v_inv.omzet_terbayar, 0) as omzet_terbayar,
+                           COALESCE(v_inv.sisa_hutang, 0) as sisa_hutang,
+                           COALESCE(v_inv.total_faktur, 0) as total_faktur
+                    FROM public.pelanggan p
+                    LEFT JOIN public.wilayah w ON p.wilayah_id = w.id
+                    LEFT JOIN (
+                        SELECT pelanggan_id, COUNT(id) as total_kunjungan, MAX(tanggal_kunjungan) as terakhir_kunjungan
+                        FROM public.kunjungan_konsinyasi
+                        WHERE tanggal_kunjungan >= :start_date AND tanggal_kunjungan <= :end_date
+                        GROUP BY pelanggan_id
+                    ) v_vis ON v_vis.pelanggan_id = p.id
+                    LEFT JOIN (
+                        SELECT pelanggan_id, 
+                               SUM(total_dibayar) as omzet_terbayar, 
+                               SUM(sisa_tagihan) as sisa_hutang,
+                               SUM(total_netto) as total_faktur
+                        FROM public.pesanan
+                        WHERE adalah_tagihan = TRUE 
+                          AND tipe_pembayaran = 'konsinyasi'
+                          AND status_pemrosesan != 'dibatalkan'
+                          AND tanggal_pesanan >= :start_date AND tanggal_pesanan <= :end_date
+                        GROUP BY pelanggan_id
+                    ) v_inv ON v_inv.pelanggan_id = p.id
+                    WHERE p.sales_driver_id = :sales_id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
+                    ORDER BY omzet_terbayar DESC, p.nama_toko ASC
+                ", ['sales_id' => $sid, 'start_date' => $startDate, 'end_date' => $endDate]);
+
+                // F. Breakdown Tagihan Konsinyasi Faktur
+                $breakdownKonsin[$sid] = Database::fetchAll("
+                    SELECT pes.id, pes.nomor_nota, pes.tanggal_pesanan, pes.total_netto,
+                           pes.total_dibayar, pes.sisa_tagihan, pes.status_pembayaran,
+                           p.nama_toko, p.kode_pelanggan
+                    FROM public.pesanan pes
+                    JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                    WHERE p.sales_driver_id = :sales_id
+                      AND pes.adalah_tagihan = TRUE
+                      AND pes.tipe_pembayaran = 'konsinyasi'
+                      AND pes.status_pemrosesan != 'dibatalkan'
+                      AND pes.tanggal_pesanan >= :start_date AND pes.tanggal_pesanan <= :end_date
+                    ORDER BY pes.tanggal_pesanan DESC, pes.nomor_nota DESC
+                ", ['sales_id' => $sid, 'start_date' => $startDate, 'end_date' => $endDate]);
+
+                // G. Breakdown Pesanan B2B Faktur
+                $breakdownB2b[$sid] = Database::fetchAll("
+                    SELECT pes.id, pes.nomor_nota, pes.tanggal_pesanan, pes.total_netto,
+                           pes.total_dibayar, pes.sisa_tagihan, pes.status_pembayaran,
+                           COALESCE(p.nama_toko, 'Toko Umum') as nama_toko, p.kode_pelanggan
+                    FROM public.pesanan pes
+                    LEFT JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                    WHERE (pes.sales_driver_id = :sales_id OR (pes.sales_driver_id IS NULL AND p.sales_driver_id = :sales_id))
+                      AND pes.adalah_tagihan = TRUE
+                      AND pes.tipe_pembayaran != 'konsinyasi'
+                      AND pes.status_pemrosesan != 'dibatalkan'
+                      AND pes.tanggal_pesanan >= :start_date AND pes.tanggal_pesanan <= :end_date
+                    ORDER BY pes.tanggal_pesanan DESC, pes.nomor_nota DESC
+                ", ['sales_id' => $sid, 'start_date' => $startDate, 'end_date' => $endDate]);
+
+                // H. Breakdown Kunjungan Belum Ditagih (Pending Omzet)
+                $breakdownUnbilled[$sid] = Database::fetchAll("
+                    SELECT kk.id, kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal,
+                           p.nama_toko, p.kode_pelanggan
+                    FROM public.kunjungan_konsinyasi kk
+                    JOIN public.pelanggan p ON kk.pelanggan_id = p.id
+                    WHERE p.sales_driver_id = :sales_id
+                      AND kk.tanggal_kunjungan >= :start_date AND kk.tanggal_kunjungan <= :end_date
+                      AND NOT EXISTS (
+                          SELECT 1 FROM public.tagihan_kunjungan tk WHERE tk.kunjungan_id = kk.id
+                      )
+                    ORDER BY kk.tanggal_kunjungan DESC
+                ", ['sales_id' => $sid, 'start_date' => $startDate, 'end_date' => $endDate]);
             }
 
-            // 5. Kalkulasi Ringkasan KPI
+            // Urutkan rekap komisi: total omzet terbesar di atas
+            usort($commissions, fn($a, $b) => $b['total_omzet'] <=> $a['total_omzet']);
+
+            // 5. Kalkulasi Ringkasan KPI Global
             $grandOmzet = array_sum(array_column($commissions, 'total_omzet'));
+            $grandKonsinTerbayar = array_sum(array_column($commissions, 'omzet_konsinyasi_terbayar'));
+            $grandB2bTerbayar = array_sum(array_column($commissions, 'omzet_b2b_terbayar'));
+            $grandPiutangPending = array_sum(array_column($commissions, 'total_piutang_pending'));
             $grandKomisi = array_sum(array_column($commissions, 'nominal_komisi'));
             $totalStoresInvolved = array_sum(array_column($commissions, 'total_toko_assigned'));
 
@@ -1757,10 +1895,17 @@ class ConsignmentController extends Controller
                 'pageSubtitle' => $isSalesLocked ? 'Perhitungan komisi bulanan toko binaan tetap Anda' : 'Insentif omzet bulanan toko konsinyasi binaan per sales',
                 'commissions' => $commissions,
                 'storeBreakdown' => $storeBreakdown,
+                'breakdownKonsin' => $breakdownKonsin,
+                'breakdownB2b' => $breakdownB2b,
+                'breakdownUnbilled' => $breakdownUnbilled,
+                'allTiers' => $allTiers,
                 'month' => $month,
                 'startDate' => $startDate,
                 'endDate' => $endDate,
                 'grandOmzet' => $grandOmzet,
+                'grandKonsinTerbayar' => $grandKonsinTerbayar,
+                'grandB2bTerbayar' => $grandB2bTerbayar,
+                'grandPiutangPending' => $grandPiutangPending,
                 'grandKomisi' => $grandKomisi,
                 'totalStoresInvolved' => $totalStoresInvolved,
                 'canViewAll' => $canViewAll,

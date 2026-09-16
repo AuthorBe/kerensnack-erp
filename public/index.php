@@ -166,13 +166,10 @@ Router::post('/sales-orders/pay', [CustomerOrderController::class, 'pay']);
 Router::post('/sales-orders/cancel', [CustomerOrderController::class, 'cancel']);
 Router::post('/sales-orders/update-delivery-status', [CustomerOrderController::class, 'updateDeliveryStatus']);
 
-// --- TRANSAKSI 2: MATRIKS HARGA 28 LEVEL & TIER PELANGGAN ---
+// --- TRANSAKSI 2: MATRIKS HARGA 30 LEVEL & TIER PELANGGAN ---
 Router::get('/pricing', [PricingController::class, 'index']);
 Router::post('/pricing/update-level', [PricingController::class, 'updateLevelPrice']);
 Router::post('/pricing/delete-level', [PricingController::class, 'deleteLevelPrice']);
-Router::post('/pricing/store-group', [CustomerController::class, 'storeGroup']);
-Router::post('/pricing/update-group', [CustomerController::class, 'updateGroup']);
-Router::post('/pricing/delete-group', [CustomerController::class, 'deleteGroup']);
 
 // --- GUDANG 1: KATALOG & OPNAME STOK FISIK ---
 Router::get('/inventory', [InventoryController::class, 'index']);
@@ -291,17 +288,22 @@ Router::get('/employees', [EmployeeController::class, 'index']);
 Router::post('/employees/store', [EmployeeController::class, 'store']);
 Router::post('/employees/update', [EmployeeController::class, 'update']);
 Router::post('/employees/delete', [EmployeeController::class, 'delete']);
+Router::post('/employees/commission-tiers/batch-save', [EmployeeController::class, 'saveCommissionTiersBatch']);
 
 // --- MASTER DATA 4: PRODUK, BAHAN BAKU, RESEP BOM & UPAH BORONGAN ---
 Router::get('/products', [ProductController::class, 'index']);
 Router::post('/products/store-group', [ProductController::class, 'storeGroup']);
+Router::post('/products/update-group', [ProductController::class, 'updateGroup']);
+Router::post('/products/delete-group', [ProductController::class, 'deleteGroup']);
 Router::post('/products/store-item', [ProductController::class, 'storeItem']);
 Router::post('/products/update-item', [ProductController::class, 'updateItem']);
+Router::post('/products/delete-item', [ProductController::class, 'deleteItem']);
 Router::post('/products/store-material', [ProductController::class, 'storeMaterial']);
 Router::post('/products/update-material', [ProductController::class, 'updateMaterial']);
 Router::post('/products/delete-material', [ProductController::class, 'deleteMaterial']);
 Router::post('/products/store-recipe-item', [ProductController::class, 'storeRecipeItem']);
 Router::post('/products/delete-recipe-item', [ProductController::class, 'deleteRecipeItem']);
+Router::post('/products/copy-recipe', [ProductController::class, 'copyRecipe']);
 Router::post('/products/store-borongan-group', [ProductController::class, 'storeBoronganGroup']);
 Router::post('/products/update-borongan-group', [ProductController::class, 'updateBoronganGroup']);
 Router::post('/products/delete-borongan-group', [ProductController::class, 'deleteBoronganGroup']);

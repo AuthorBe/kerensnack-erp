@@ -10,9 +10,8 @@ use Throwable;
 
 /**
  * app/Controllers/PricingController.php
- * Pengendali Matriks 28+ Tingkat Harga Jual & Diskon Grup Pelanggan.
+ * Pengendali Matriks 30 Tingkat Level Harga Jual Per Bungkus / Pcs.
  */
-
 class PricingController extends Controller
 {
     public function __construct()
@@ -23,7 +22,14 @@ class PricingController extends Controller
     public function index(): void
     {
         try {
-            // 1. Ambil seluruh grup produk beserta daftar level harga aktifnya
+            // 1. Ambil master level harga (Level 1 s/d 30)
+            $masterLevels = Database::fetchAll("
+                SELECT level_nomor, nama_level, deskripsi, status_aktif
+                FROM public.master_level_harga
+                ORDER BY level_nomor ASC
+            ");
+
+            // 2. Ambil seluruh grup produk aktif
             $groups = Database::fetchAll("
                 SELECT id, kode_grup, nama_grup, barcode_universal, konversi_bal_ke_pcs
                 FROM public.grup_produk
@@ -31,10 +37,13 @@ class PricingController extends Controller
                 ORDER BY kode_grup ASC
             ");
 
+            // 3. Ambil seluruh level harga aktif (murni harga_jual_pcs)
             $priceLevels = Database::fetchAll("
-                SELECT phl.id, phl.grup_produk_id, phl.level_harga, phl.nama_level,
-                       phl.harga_jual_pcs, phl.harga_jual_bal
+                SELECT phl.id, phl.grup_produk_id, phl.level_harga,
+                       COALESCE(mlh.nama_level, 'Level ' || phl.level_harga) as nama_level,
+                       phl.harga_jual_pcs
                 FROM public.grup_produk_harga_level phl
+                LEFT JOIN public.master_level_harga mlh ON phl.level_harga = mlh.level_nomor
                 ORDER BY phl.level_harga ASC
             ");
 
@@ -44,75 +53,125 @@ class PricingController extends Controller
                 $groupedPrices[$pl['grup_produk_id']][] = $pl;
             }
 
-            // 2. Ambil grup pelanggan
+            // 4. Ambil grup pelanggan
             $customerGroups = Database::fetchAll("
-                SELECT id, kode_grup, nama_grup, default_level_harga, diskon_persen_default, diskon_nominal_default, status_aktif
-                FROM public.grup_pelanggan
-                ORDER BY default_level_harga ASC
+                SELECT gp.id, gp.kode_grup, gp.nama_grup, gp.default_level_harga,
+                       gp.diskon_persen_default, gp.diskon_nominal_default, gp.status_aktif,
+                       mlh.nama_level as master_nama_level
+                FROM public.grup_pelanggan gp
+                LEFT JOIN public.master_level_harga mlh ON gp.default_level_harga = mlh.level_nomor
+                ORDER BY gp.default_level_harga ASC
             ");
 
             $this->view('pricing.index', [
                 'pageTitle' => 'Matriks Level Harga Produk',
-                'pageSubtitle' => 'Pengaturan 28 Tingkat Level Harga Jual Per Bungkus / Pcs',
+                'pageSubtitle' => 'Pengaturan 30 Tingkat Level Harga Jual Per Bungkus / Pcs',
                 'groups' => $groups,
                 'groupedPrices' => $groupedPrices,
-                'customerGroups' => $customerGroups
+                'customerGroups' => $customerGroups,
+                'masterLevels' => $masterLevels
             ]);
 
         } catch (Throwable $e) {
             $this->flashError("Gagal memuat matriks harga: " . $e->getMessage());
             $this->view('pricing.index', [
                 'pageTitle' => 'Matriks Level Harga Produk',
-                'pageSubtitle' => 'Pengaturan 28 Tingkat Level Harga Jual Per Bungkus / Pcs',
+                'pageSubtitle' => 'Pengaturan 30 Tingkat Level Harga Jual Per Bungkus / Pcs',
                 'groups' => [],
                 'groupedPrices' => [],
-                'customerGroups' => []
+                'customerGroups' => [],
+                'masterLevels' => []
             ]);
         }
     }
 
-    public function updateLevelPrice(): void
+    /**
+     * Tambah atau Ubah Harga Level Suatu Grup Produk
+     */
+    public function storeLevel(): void
     {
-        Auth::requirePermission('master.pricing_manage');
+        Auth::requirePermission('pricing.manage');
 
-        $groupId = $this->input('grup_produk_id');
+        $id = trim((string)$this->input('id', ''));
+        $groupId = trim((string)$this->input('grup_produk_id', ''));
         $level = (int)$this->input('level_harga', 1);
-        $namaLevel = trim((string)$this->input('nama_level', "Level {$level}"));
         $hargaPcs = (float)preg_replace('/[^0-9]/', '', (string)$this->input('harga_jual_pcs', '0'));
-        $hargaBal = (float)preg_replace('/[^0-9]/', '', (string)$this->input('harga_jual_bal', '0'));
 
-        if (empty($groupId) || $level < 1 || $level > 28) {
-            $this->flashError('Grup produk dan level harga (1-28) tidak valid.');
+        if (empty($groupId)) {
+            $this->flashError('Grup produk tidak valid.');
             $this->redirect('/pricing');
             return;
         }
 
         try {
+            // Mode UBAH (Edit baris yang sudah ada)
+            if (!empty($id)) {
+                $existing = Database::fetchOne("
+                    SELECT id, grup_produk_id, level_harga 
+                    FROM public.grup_produk_harga_level 
+                    WHERE id = :id AND grup_produk_id = :gid
+                ", ['id' => $id, 'gid' => $groupId]);
+
+                if (!$existing) {
+                    $this->flashError('Data level harga yang ingin diubah tidak ditemukan.');
+                    $this->redirect('/pricing');
+                    return;
+                }
+
+                $targetLevel = (int)$existing['level_harga'];
+
+                Database::execute("
+                    UPDATE public.grup_produk_harga_level
+                    SET harga_jual_pcs = :pcs,
+                        diubah_pada = NOW()
+                    WHERE id = :id
+                ", [
+                    'id' => $id,
+                    'pcs' => $hargaPcs
+                ]);
+
+                $this->flashSuccess("Harga Level {$targetLevel} berhasil diperbarui!");
+                $this->redirect('/pricing');
+                return;
+            }
+
+            // Mode TAMBAH (Level baru)
+            if ($level < 1 || $level > 30) {
+                $this->flashError('Tingkat level harga harus antara 1 sampai 30.');
+                $this->redirect('/pricing');
+                return;
+            }
+
+            // Cek proteksi anti-duplikasi: Pastikan level belum ada di grup ini
+            $dup = Database::fetchOne("
+                SELECT id 
+                FROM public.grup_produk_harga_level 
+                WHERE grup_produk_id = :gid AND level_harga = :lvl
+            ", ['gid' => $groupId, 'lvl' => $level]);
+
+            if ($dup) {
+                $this->flashError("Level {$level} sudah terdaftar pada grup produk ini. Klik tombol Ubah pada kartu level jika ingin memperbarui harga.");
+                $this->redirect('/pricing');
+                return;
+            }
+
             Database::execute("
                 INSERT INTO public.grup_produk_harga_level (
-                    grup_produk_id, level_harga, nama_level, harga_jual_pcs, harga_jual_bal, diubah_pada
+                    grup_produk_id, level_harga, harga_jual_pcs, dibuat_pada, diubah_pada
                 ) VALUES (
-                    :group_id, :level, :nama, :pcs, :bal, NOW()
+                    :group_id, :level, :pcs, NOW(), NOW()
                 )
-                ON CONFLICT (grup_produk_id, level_harga) 
-                DO UPDATE SET 
-                    nama_level = EXCLUDED.nama_level,
-                    harga_jual_pcs = EXCLUDED.harga_jual_pcs,
-                    harga_jual_bal = EXCLUDED.harga_jual_bal,
-                    diubah_pada = NOW()
             ", [
                 'group_id' => $groupId,
                 'level' => $level,
-                'nama' => $namaLevel,
-                'pcs' => $hargaPcs,
-                'bal' => $hargaBal
+                'pcs' => $hargaPcs
             ]);
 
-            $this->flashSuccess("Level harga {$level} berhasil disimpan!");
+            $this->flashSuccess("Level harga {$level} berhasil ditambahkan!");
             $this->redirect('/pricing');
 
         } catch (Throwable $e) {
-            $this->flashError('Gagal update level harga: ' . $e->getMessage());
+            $this->flashError('Gagal menyimpan level harga: ' . $e->getMessage());
             $this->redirect('/pricing');
         }
     }
@@ -129,13 +188,49 @@ class PricingController extends Controller
         }
 
         try {
+            $row = Database::fetchOne("
+                SELECT phl.id, phl.level_harga, phl.grup_produk_id, gp.nama_grup 
+                FROM public.grup_produk_harga_level phl 
+                JOIN public.grup_produk gp ON phl.grup_produk_id = gp.id 
+                WHERE phl.id = :id
+            ", ['id' => $id]);
+
+            if (!$row) {
+                $this->flashError('Data level harga tidak ditemukan.');
+                $this->redirect('/pricing');
+                return;
+            }
+
+            $levelHarga = (int)$row['level_harga'];
+
+            // Proteksi 1: Level 1 adalah baseline ritel acuan sistem, tidak boleh dihapus
+            if ($levelHarga === 1) {
+                $this->flashError('Level 1 (Ritel Standar) adalah harga dasar acuan utama sistem dan tidak boleh dihapus.');
+                $this->redirect('/pricing');
+                return;
+            }
+
+            // Proteksi 2: Level yang sedang aktif digunakan oleh grup pelanggan dilarang dihapus
+            $usedGroups = Database::fetchAll("
+                SELECT kode_grup, nama_grup 
+                FROM public.grup_pelanggan 
+                WHERE default_level_harga = :lvl
+            ", ['lvl' => $levelHarga]);
+
+            if (!empty($usedGroups)) {
+                $groupNames = implode(', ', array_map(fn($g) => $g['nama_grup'] . ' (' . $g['kode_grup'] . ')', $usedGroups));
+                $this->flashError("Level {$levelHarga} tidak dapat dihapus karena sedang aktif digunakan oleh grup pelanggan: {$groupNames}. Pindahkan tier grup pelanggan tersebut terlebih dahulu.");
+                $this->redirect('/pricing');
+                return;
+            }
+
             Database::execute("DELETE FROM public.grup_produk_harga_level WHERE id = :id", ['id' => $id]);
-            $this->flashSuccess('Level harga berhasil dihapus.');
+            $this->flashSuccess("Level harga {$levelHarga} berhasil dihapus dari grup {$row['nama_grup']}.");
             $this->redirect('/pricing');
+
         } catch (Throwable $e) {
             $this->flashError('Gagal menghapus level harga: ' . $e->getMessage());
             $this->redirect('/pricing');
         }
     }
 }
-

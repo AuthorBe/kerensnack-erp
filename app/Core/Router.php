@@ -29,9 +29,8 @@ class Router
             return '';
         }
 
-        // Jika diakses lewat Root Bridge (.htaccess) tanpa kata 'public' di URL
-        $requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?? '';
-        if (str_ends_with($scriptDir, '/public') && !str_contains($requestUri, '/public')) {
+        // Selalu buang suffix '/public' agar base path aplikasi dijamin 100% bersih di semua environment
+        if (str_ends_with($scriptDir, '/public')) {
             $scriptDir = substr($scriptDir, 0, -strlen('/public'));
         }
 
@@ -56,10 +55,10 @@ class Router
         return $base . '/assets' . $cleanPath;
     }
 
-    public static function redirect(string $path): void
+    public static function redirect(string $path, int $statusCode = 302): void
     {
         $target = self::url($path);
-        header("Location: {$target}");
+        header("Location: {$target}", true, $statusCode);
         exit;
     }
 
@@ -77,9 +76,18 @@ class Router
             $parsedUri = substr($parsedUri, strlen($basePath));
         }
 
-        // 3. Tangani jika ada /public di URL
+        // 3. Tangani jika ada /public di URL (Auto-Redirect 301 ke Canonical Clean URL)
         if (str_starts_with($parsedUri, '/public')) {
-            $parsedUri = substr($parsedUri, strlen('/public'));
+            $cleanUri = substr($parsedUri, strlen('/public'));
+            if ($cleanUri === '' || $cleanUri === '/') {
+                $cleanUri = '/';
+            }
+            if ($method === 'GET') {
+                $queryString = !empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '';
+                self::redirect($cleanUri . $queryString, 301);
+                return;
+            }
+            $parsedUri = $cleanUri;
         }
 
         $path = '/' . trim($parsedUri, '/');

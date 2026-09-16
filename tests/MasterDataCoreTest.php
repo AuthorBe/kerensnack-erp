@@ -47,9 +47,9 @@ runTest("1.1.1 - Database: Tidak ada barcode notasi ilmiah di public.grup_produk
     return $count === 0;
 });
 
-runTest("1.1.2 - Database: Tidak ada barcode notasi ilmiah di public.item", function() use ($pdo) {
-    $count = (int)$pdo->query("SELECT COUNT(*) FROM public.item WHERE barcode ~* 'e' OR barcode ~* '\\.0'")->fetchColumn();
-    return $count === 0;
+runTest("1.1.2 - Database: Kolom barcode pada public.item telah dibersihkan/dihapus tuntas", function() use ($pdo) {
+    $hasCol = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'item' AND column_name = 'barcode'")->fetchColumn();
+    return $hasCol === 0;
 });
 
 runTest("1.1.3 - Stored Procedure fn_cari_item_by_barcode mengenali barcode hasil normalisasi (88026176)", function() use ($pdo) {
@@ -176,9 +176,9 @@ runTest("1.2.4 - Transaksi: Insert arus_kas dengan kategori dinamis (modal_awal,
 });
 
 // ------------------------------------------------------------------
-// 3. STORED PROCEDURE fn_hitung_harga_jual_item BAL FALLBACK TEST
+// 3. STORED PROCEDURE fn_hitung_harga_jual_item PILIHAN B STRICT REJECTION
 // ------------------------------------------------------------------
-runTest("1.3.1 - Stored Procedure: Fallback harga bal mengalikan HPP dengan konversi bal grup produk (20x, bukan 1x)", function() use ($pdo) {
+runTest("1.3.1 - Stored Procedure: Pilihan B menolak transaksi jika harga level belum diset di /pricing", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
         // Buat dummy grup produk tanpa level harga dan dummy item
@@ -191,8 +191,8 @@ runTest("1.3.1 - Stored Procedure: Fallback harga bal mengalikan HPP dengan konv
         $gpId = $gpStmt->fetchColumn();
 
         $itemStmt = $pdo->prepare("
-            INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, konversi_distribusi_ke_dasar)
-            VALUES (:gp_id, 'SKU-TEST-P0', 'Item Test Fallback P0', 'barang_jadi', 'pcs', 12500.00, 1)
+            INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian)
+            VALUES (:gp_id, 'SKU-TEST-P0', 'Item Test Fallback P0', 'barang_jadi', 'pcs', 12500.00)
             RETURNING id
         ");
         $itemStmt->execute(['gp_id' => $gpId]);
@@ -208,17 +208,14 @@ runTest("1.3.1 - Stored Procedure: Fallback harga bal mengalikan HPP dengan konv
 
         $pdo->rollBack();
 
-        // Assert: harga bal dasar harus 12,500 * 20 = 250,000, BUKAN 12,500 * 1 = 12,500!
-        $pcsBruto = (float)($pricing['harga_pcs_bruto'] ?? 0);
-        $balBruto = (float)($pricing['harga_bal_bruto'] ?? 0);
-
-        if ($pcsBruto != 12500.00) {
-            echo "[Pcs Bruto Expected 12500, Got {$pcsBruto}] ";
+        // Assert: Pilihan B mengembalikan error = true dan kode PRICE_LEVEL_NOT_CONFIGURED
+        if (empty($pricing['error']) || $pricing['error'] !== true) {
+            echo "[Expected error=true, Got " . json_encode($pricing) . "] ";
             return false;
         }
 
-        if ($balBruto != 250000.00) {
-            echo "[Bal Bruto Expected 250000, Got {$balBruto}] ";
+        if (($pricing['code'] ?? '') !== 'PRICE_LEVEL_NOT_CONFIGURED') {
+            echo "[Expected PRICE_LEVEL_NOT_CONFIGURED, Got " . ($pricing['code'] ?? '') . "] ";
             return false;
         }
 

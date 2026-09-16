@@ -64,15 +64,17 @@ $activeTab = $_GET['tab'] ?? 'customers';
         </div>
 
         <div class="stat-card" style="display:flex;align-items:center;gap:14px;">
-            <div class="stat-card-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">
-                <i data-lucide="clock"></i>
+            <div class="stat-card-icon" style="background:rgba(14,165,233,0.1);color:#0284c7;">
+                <i data-lucide="boxes"></i>
             </div>
             <div>
-                <div class="stat-card-label">Total Piutang Berjalan</div>
-                <div class="stat-card-value" style="color:#f59e0b;font-size:17px;">
-                    <?= Format::rupiah($totalGlobalPiutang ?? 0) ?>
+                <div class="stat-card-label">Model Kerjasama Toko</div>
+                <div class="stat-card-value" style="color:#0284c7;font-size:16px;">
+                    <?= number_format($totalKonsinyasiCustomers ?? 0, 0, ',', '.') ?> Konsinyasi
                 </div>
-                <div style="font-size:11px;color:var(--color-ink-mute-2);margin-top:2px;">Tempo &amp; Konsinyasi Rak</div>
+                <div style="font-size:11px;color:var(--color-ink-mute-2);margin-top:2px;">
+                    <?= number_format($totalRegulerCustomers ?? 0, 0, ',', '.') ?> Toko Putus / Tempo
+                </div>
             </div>
         </div>
     </div>
@@ -152,17 +154,15 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
         <!-- TABLE LIST -->
         <div class="overflow-x-auto custom-scrollbar">
-            <table class="data-table" style="min-width: 1080px;">
+            <table class="data-table" style="min-width: 920px;">
                 <thead>
                     <tr>
                         <th style="width:105px; min-width:90px;" class="cell-nowrap">Kode</th>
-                        <th style="min-width:180px;">Nama Toko &amp; Pemilik</th>
-                        <th style="min-width:160px;" class="cell-nowrap">Grup Pelanggan</th>
+                        <th style="min-width:200px;">Nama Toko &amp; Pemilik</th>
+                        <th style="min-width:150px;" class="cell-nowrap">Grup Pelanggan</th>
                         <th style="min-width:140px;">Wilayah / Rute</th>
-                        <th class="cell-center cell-nowrap" style="width:120px; min-width:110px;">Tipe Bayar</th>
-                        <th class="cell-center cell-nowrap" style="width:150px; min-width:140px;">Item Khusus Toko</th>
-                        <th class="cell-right cell-nowrap" style="width:130px; min-width:120px;">Plafon Kredit</th>
-                        <th class="cell-right cell-nowrap" style="width:130px; min-width:120px;">Piutang Berjalan</th>
+                        <th class="cell-center cell-nowrap" style="width:130px; min-width:120px;">Tipe Bayar</th>
+                        <th class="cell-center cell-nowrap" style="width:160px; min-width:140px;">Item Khusus Toko</th>
                         <th class="cell-center cell-nowrap" style="width:110px; min-width:100px;">Aksi</th>
                     </tr>
                 </thead>
@@ -204,10 +204,18 @@ $activeTab = $_GET['tab'] ?? 'customers';
                             </td>
                             <td class="cell-nowrap">
                                 <div style="font-weight:600;color:var(--color-ink);" x-text="c.nama_grup || '-'"></div>
+                                <template x-if="c.grup_status_aktif === false">
+                                    <span class="badge badge-warning" style="font-size:9.5px;padding:0.5px 5px;margin-top:2px;display:inline-block;" title="Grup pelanggan ini telah dinonaktifkan di master grup">Grup Nonaktif</span>
+                                </template>
                             </td>
                             <td>
                                 <div style="font-weight:600;" x-text="c.nama_wilayah || '-'"></div>
-                                <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="c.kode_rute || ''"></div>
+                                <div style="font-size:10.5px;color:var(--color-ink-mute);display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:1px;">
+                                    <span x-text="c.kode_rute || ''"></span>
+                                    <template x-if="c.wilayah_status_aktif === false">
+                                        <span class="badge badge-warning" style="font-size:9px;padding:0px 4px;" title="Rute wilayah ini telah dinonaktifkan di master rute">Rute Nonaktif</span>
+                                    </template>
+                                </div>
                             </td>
                             <td class="cell-center cell-nowrap">
                                 <template x-if="c.is_konsinyasi">
@@ -224,20 +232,23 @@ $activeTab = $_GET['tab'] ?? 'customers';
                             </td>
                             <td class="cell-center cell-nowrap">
                                 <template x-if="c.total_item_khusus > 0">
-                                    <button @click="openCustomerItemsModal(c)" class="badge badge-success" style="cursor:pointer;" title="Klik untuk ubah daftar item khusus">
+                                    <button type="button" @click="openCustomerItemsModal(c)" class="badge badge-success" title="Klik untuk atur daftar item khusus toko ini">
+                                        <span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;opacity:0.85;"></span>
                                         <span x-text="c.total_item_khusus + ' Item Khusus'"></span>
                                     </button>
                                 </template>
                                 <template x-if="!c.total_item_khusus || c.total_item_khusus == 0">
-                                    <button @click="openCustomerItemsModal(c)" class="badge badge-secondary" style="cursor:pointer;opacity:0.75;" title="Klik untuk atur item khusus toko ini">
+                                    <button type="button" @click="openCustomerItemsModal(c)" class="badge badge-secondary" title="Klik untuk atur item khusus toko ini">
+                                        <span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;opacity:0.5;"></span>
                                         <span>Semua Produk (Default)</span>
                                     </button>
                                 </template>
                             </td>
-                            <td class="cell-currency cell-right cell-nowrap" x-text="formatRupiah(c.plafon_piutang)"></td>
-                            <td class="cell-currency cell-right cell-nowrap" :style="Number(c.total_piutang_berjalan) > 0 ? 'color:var(--color-warning);font-weight:700;' : 'color:var(--color-ink-mute);'" x-text="formatRupiah(c.total_piutang_berjalan)"></td>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                                    <a :href="'/customer-orders?pelanggan_id=' + c.id" class="btn btn-ghost btn-sm" style="padding:6px;color:#2563eb;" title="Lihat Faktur & Riwayat Pesanan Toko">
+                                        <i data-lucide="receipt" style="width:14px;height:14px;"></i>
+                                    </a>
                                     <button @click="openCustomerItemsModal(c)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Atur Item Khusus Toko">
                                         <i data-lucide="list-checks" style="width:15px;height:15px;color:var(--color-ink-secondary);"></i>
                                     </button>
@@ -254,7 +265,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
                     <template x-if="filteredCustomers.length === 0">
                         <tr>
-                            <td colspan="9" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="7" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="search-x" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Tidak ada data toko pelanggan yang sesuai filter</div>
                             </td>
@@ -344,9 +355,16 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                     <button @click="openEditCustomerGroupModal(cg)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Grup">
                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                                     </button>
-                                    <button @click="deleteCustomerGroup(cg.id, cg.nama_grup)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Grup">
-                                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                    </button>
+                                    <template x-if="(Number(cg.total_pelanggan) || 0) > 0 || customerGroups.length <= 1">
+                                        <button type="button" disabled class="btn btn-ghost btn-sm" style="padding:6px;opacity:0.35;cursor:not-allowed;color:var(--color-ink-mute);" :title="Number(cg.total_pelanggan) > 0 ? ('Grup terhubung dengan ' + cg.total_pelanggan + ' toko pelanggan (tidak dapat dihapus)') : 'Sistem wajib memiliki minimal 1 grup pelanggan'">
+                                            <i data-lucide="lock" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
+                                    <template x-if="(!cg.total_pelanggan || Number(cg.total_pelanggan) === 0) && customerGroups.length > 1">
+                                        <button @click="deleteCustomerGroup(cg.id, cg.nama_grup)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Grup">
+                                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
                                 </div>
                             </td>
                         </tr>
@@ -425,9 +443,16 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                     <button @click="openEditTerritoryModal(t)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Wilayah">
                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                                     </button>
-                                    <button @click="deleteTerritory(t.id, t.nama_wilayah)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Wilayah">
-                                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                    </button>
+                                    <template x-if="(Number(t.total_pelanggan) || 0) > 0 || (Number(t.total_pemasok) || 0) > 0">
+                                        <button type="button" disabled class="btn btn-ghost btn-sm" style="padding:6px;opacity:0.35;cursor:not-allowed;color:var(--color-ink-mute);" :title="'Wilayah digunakan oleh ' + (Number(t.total_pelanggan) > 0 ? (t.total_pelanggan + ' toko') : '') + (Number(t.total_pelanggan) > 0 && Number(t.total_pemasok) > 0 ? ' & ' : '') + (Number(t.total_pemasok) > 0 ? (t.total_pemasok + ' vendor') : '') + ' (tidak dapat dihapus)'">
+                                            <i data-lucide="lock" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
+                                    <template x-if="(!t.total_pelanggan || Number(t.total_pelanggan) === 0) && (!t.total_pemasok || Number(t.total_pemasok) === 0)">
+                                        <button @click="deleteTerritory(t.id, t.nama_wilayah)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Wilayah">
+                                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
                                 </div>
                             </td>
                         </tr>
@@ -462,6 +487,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
             </div>
 
             <form id="customer-modal-form"
+                  action="<?= Router::url('/customers/update') ?>"
                   :action="isEdit ? '<?= Router::url('/customers/update') ?>' : '<?= Router::url('/customers/store') ?>'"
                   method="POST"
                   @submit="submitCustomerForm($event)"
@@ -487,7 +513,11 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <select name="grup_pelanggan_id" x-model="form.grup_pelanggan_id" required class="form-input">
                             <option value="" disabled>-- Pilih Grup Pelanggan --</option>
                             <?php foreach ($groups as $g): ?>
-                            <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['nama_grup']) ?></option>
+                            <option value="<?= $g['id'] ?>"
+                                    <?= !$g['status_aktif'] ? 'style="color:#94a3b8;"' : '' ?>
+                                    :disabled="!<?= $g['status_aktif'] ? 'true' : 'false' ?> && form.grup_pelanggan_id !== '<?= $g['id'] ?>'">
+                                <?= htmlspecialchars($g['nama_grup']) ?><?= !$g['status_aktif'] ? ' (Nonaktif)' : '' ?>
+                            </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -496,7 +526,11 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <select name="wilayah_id" x-model="form.wilayah_id" class="form-input">
                             <option value="">-- Tanpa Rute Tertentu --</option>
                             <?php foreach ($territories as $t): ?>
-                            <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nama_wilayah']) ?> — <?= $t['kode_rute'] ?></option>
+                            <option value="<?= $t['id'] ?>"
+                                    <?= !$t['status_aktif'] ? 'style="color:#94a3b8;"' : '' ?>
+                                    :disabled="!<?= $t['status_aktif'] ? 'true' : 'false' ?> && form.wilayah_id !== '<?= $t['id'] ?>'">
+                                <?= htmlspecialchars($t['nama_wilayah']) ?> — <?= $t['kode_rute'] ?><?= !$t['status_aktif'] ? ' (Nonaktif)' : '' ?>
+                            </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -532,6 +566,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                     <div>
                         <label class="form-label">Plafon Maksimal Piutang (Rp)</label>
                         <input type="text" name="plafon_piutang" x-model="form.plafon_piutang" class="form-input font-mono input-rupiah" placeholder="5.000.000">
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Batas kredit maksimal (berlaku untuk transaksi Tempo)</div>
                     </div>
                 </div>
 
@@ -666,6 +701,14 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                         </div>
                                         <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 4px; line-height: 1.45;">
                                             Pemilik toko sepakat membeli sisa barang titipan. Sistem otomatis menerbitkan Faktur Penjualan resmi, saldo rak dinolkan (<strong style="color: #2563eb;">0 pcs</strong>), dan memproses pembayarannya (Lunas Kasir/Bank atau Masuk Piutang Dagang).
+                                        </div>
+                                        <div style="margin-top: 8px; padding: 8px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 11.5px; color: #1e40af; display: flex; align-items: flex-start; gap: 8px;">
+                                            <svg style="width: 15px; height: 15px; color: #2563eb; flex-shrink: 0; margin-top: 1px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                                                <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+                                            </svg>
+                                            <div style="line-height: 1.4;">
+                                                <strong>Lokasi Faktur:</strong> Faktur penjualan resmi akan otomatis masuk ke menu <strong>Pesanan Pelanggan (/customer-orders)</strong> dengan status <em>Selesai</em>. Anda dapat melihat, memfilter tipe <em>Beli Putus Rak</em>, mencetak, atau mengunduh invoice di menu tersebut kapan saja.
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
@@ -1026,7 +1069,11 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 </button>
             </div>
 
-            <form :action="isEditCustomerGroup ? '<?= Router::url('/customers/update-group') ?>' : '<?= Router::url('/customers/store-group') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <form id="customer-group-modal-form"
+                  action="<?= Router::url('/customers/store-group') ?>"
+                  :action="isEditCustomerGroup ? '<?= Router::url('/customers/update-group') ?>' : '<?= Router::url('/customers/store-group') ?>'"
+                  method="POST"
+                  style="display:flex;flex-direction:column;gap:14px;">
                 <?= \App\Helpers\CSRF::field() ?>
                 <template x-if="isEditCustomerGroup">
                     <input type="hidden" name="id" :value="customerGroupForm.id">
@@ -1053,11 +1100,17 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:3px;">Prefix <code>GRP-</code> otomatis. Maks. 10 huruf/angka.</div>
                     </div>
                     <div>
-                        <label class="form-label">Default Level Harga (1–28) *</label>
+                        <label class="form-label">Default Level Harga (1–30) *</label>
                         <select name="default_level_harga" x-model.number="customerGroupForm.default_level_harga" class="form-input">
-                            <?php for ($i = 1; $i <= 28; $i++): ?>
-                            <option value="<?= $i ?>">Level <?= $i ?></option>
-                            <?php endfor; ?>
+                            <?php if (!empty($masterLevels)): ?>
+                                <?php foreach ($masterLevels as $ml): ?>
+                                <option value="<?= $ml['level_nomor'] ?>"><?= htmlspecialchars($ml['nama_level']) ?></option>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <?php for ($i = 1; $i <= 30; $i++): ?>
+                                <option value="<?= $i ?>">Level <?= $i ?></option>
+                                <?php endfor; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
                 </div>
@@ -1105,7 +1158,11 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 </button>
             </div>
 
-            <form :action="isEditTerritory ? '<?= Router::url('/customers/update-territory') ?>' : '<?= Router::url('/customers/store-territory') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <form id="territory-modal-form"
+                  action="<?= Router::url('/customers/store-territory') ?>"
+                  :action="isEditTerritory ? '<?= Router::url('/customers/update-territory') ?>' : '<?= Router::url('/customers/store-territory') ?>'"
+                  method="POST"
+                  style="display:flex;flex-direction:column;gap:14px;">
                 <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="id" :value="territoryForm.id">
 
@@ -1394,86 +1451,91 @@ function customerApp(initialTab) {
 
         async submitCustomerForm(event) {
             const formEl = event.target || document.getElementById('customer-modal-form');
-            if (formEl) {
-                formEl.action = this.isEdit ? '<?= Router::url('/customers/update') ?>' : '<?= Router::url('/customers/store') ?>';
-            }
+            try {
+                if (formEl) {
+                    formEl.action = this.isEdit ? '<?= Router::url('/customers/update') ?>' : '<?= Router::url('/customers/store') ?>';
+                }
 
-            // HANYA JIKA SEDANG BERALIH DARI KONSINYASI KE NON-KONSINYASI DENGAN STOK AKTIF:
-            if (this.isChangingFromConsignment) {
-                // 1. Validasi opsi resolusi wajib dipilih
-                if (!this.form.konversi_konsinyasi_opsi) {
+                // HANYA JIKA SEDANG BERALIH DARI KONSINYASI KE NON-KONSINYASI DENGAN STOK AKTIF:
+                if (this.isChangingFromConsignment) {
+                    // 1. Validasi opsi resolusi wajib dipilih
+                    if (!this.form.konversi_konsinyasi_opsi) {
+                        event.preventDefault();
+                        if (window.AppAlert) {
+                            window.AppAlert({
+                                title: 'Pilih Mekanisme Penyelesaian',
+                                message: `Toko ini masih memiliki ${this.totalShelfQty.toLocaleString('id-ID')} pcs stok titip konsinyasi aktif di rak. Harap pilih Opsi 1 (Retur ke Gudang) atau Opsi 2 (Beli Putus) sebelum menyimpan.`,
+                                type: 'warning'
+                            });
+                        } else {
+                            alert(`Toko ini masih memiliki ${this.totalShelfQty} pcs stok titip konsinyasi di rak. Harap pilih Opsi 1 atau Opsi 2 terlebih dahulu.`);
+                        }
+                        this.restoreSubmitButton(formEl);
+                        return false;
+                    }
+
+                    // 2. Validasi akun kas jika beli putus lunas
+                    if (this.form.konversi_konsinyasi_opsi === 'beli_putus' && this.form.metode_beli_putus === 'lunas' && !this.form.akun_kas_id) {
+                        event.preventDefault();
+                        if (window.AppAlert) {
+                            window.AppAlert({
+                                title: 'Pilih Akun Kas / Bank',
+                                message: 'Harap pilih akun kas atau rekening bank penerima pembayaran untuk transaksi beli putus lunas.',
+                                type: 'warning'
+                            });
+                        } else {
+                            alert('Harap pilih akun kas atau rekening bank penerima pembayaran.');
+                        }
+                        this.restoreSubmitButton(formEl);
+                        return false;
+                    }
+
+                    // 3. Konfirmasi aksi interaktif sebelum submit
                     event.preventDefault();
-                    if (window.AppAlert) {
-                        window.AppAlert({
-                            title: 'Pilih Mekanisme Penyelesaian',
-                            message: `Toko ini masih memiliki ${this.totalShelfQty.toLocaleString('id-ID')} pcs stok titip konsinyasi aktif di rak. Harap pilih Opsi 1 (Retur ke Gudang) atau Opsi 2 (Beli Putus) sebelum menyimpan.`,
-                            type: 'warning'
-                        });
-                    } else {
-                        alert(`Toko ini masih memiliki ${this.totalShelfQty} pcs stok titip konsinyasi di rak. Harap pilih Opsi 1 atau Opsi 2 terlebih dahulu.`);
-                    }
-                    this.restoreSubmitButton(formEl);
-                    return false;
-                }
-
-                // 2. Validasi akun kas jika beli putus lunas
-                if (this.form.konversi_konsinyasi_opsi === 'beli_putus' && this.form.metode_beli_putus === 'lunas' && !this.form.akun_kas_id) {
-                    event.preventDefault();
-                    if (window.AppAlert) {
-                        window.AppAlert({
-                            title: 'Pilih Akun Kas / Bank',
-                            message: 'Harap pilih akun kas atau rekening bank penerima pembayaran untuk transaksi beli putus lunas.',
-                            type: 'warning'
-                        });
-                    } else {
-                        alert('Harap pilih akun kas atau rekening bank penerima pembayaran.');
-                    }
-                    this.restoreSubmitButton(formEl);
-                    return false;
-                }
-
-                // 3. Konfirmasi aksi interaktif sebelum submit
-                event.preventDefault();
-                let confirmed = false;
-                if (this.form.konversi_konsinyasi_opsi === 'retur') {
-                    confirmed = window.AppConfirm ? await window.AppConfirm({
-                        title: 'Konfirmasi Penarikan Stok Konsinyasi',
-                        message: `Anda akan menarik seluruh ${this.totalShelfQty.toLocaleString('id-ID')} pcs sisa stok konsinyasi ke gudang pusat dan menolkan saldo rak toko "${this.form.nama_toko}". Lanjutkan?`,
-                        type: 'warning',
-                        confirmText: 'Ya, Tarik Stok & Simpan'
-                    }) : confirm(`Tarik seluruh ${this.totalShelfQty} pcs sisa stok konsinyasi ke gudang pusat dan simpan?`);
-                } else if (this.form.konversi_konsinyasi_opsi === 'beli_putus') {
-                    if (this.form.metode_beli_putus === 'lunas') {
-                        const acc = this.cashAccounts.find(a => a.id === this.form.akun_kas_id);
-                        const accName = acc ? acc.nama_akun : 'Kasir/Bank';
+                    let confirmed = false;
+                    if (this.form.konversi_konsinyasi_opsi === 'retur') {
                         confirmed = window.AppConfirm ? await window.AppConfirm({
-                            title: 'Konfirmasi Beli Putus (Lunas)',
-                            message: `Faktur Penjualan senilai ${this.formatRupiah(this.totalShelfNominal)} (${this.totalShelfQty.toLocaleString('id-ID')} pcs) akan diterbitkan secara LUNAS ke akun "${accName}". Saldo rak toko akan dinolkan. Lanjutkan?`,
+                            title: 'Konfirmasi Penarikan Stok Konsinyasi',
+                            message: `Anda akan menarik seluruh ${this.totalShelfQty.toLocaleString('id-ID')} pcs sisa stok konsinyasi ke gudang pusat dan menolkan saldo rak toko "${this.form.nama_toko}". Lanjutkan?`,
                             type: 'warning',
-                            confirmText: 'Ya, Terbitkan Faktur & Simpan'
-                        }) : confirm(`Terbitkan faktur beli putus senilai ${this.formatRupiah(this.totalShelfNominal)} secara LUNAS ke akun ${accName}?`);
-                    } else {
-                        confirmed = window.AppConfirm ? await window.AppConfirm({
-                            title: 'Konfirmasi Beli Putus (Tempo/Piutang)',
-                            message: `Faktur Penjualan senilai ${this.formatRupiah(this.totalShelfNominal)} (${this.totalShelfQty.toLocaleString('id-ID')} pcs) akan dicatat sebagai PIUTANG DAGANG berjalan toko "${this.form.nama_toko}". Saldo rak toko akan dinolkan. Lanjutkan?`,
-                            type: 'warning',
-                            confirmText: 'Ya, Catat Piutang & Simpan'
-                        }) : confirm(`Catat faktur beli putus senilai ${this.formatRupiah(this.totalShelfNominal)} sebagai PIUTANG DAGANG toko?`);
+                            confirmText: 'Ya, Tarik Stok & Simpan'
+                        }) : confirm(`Tarik seluruh ${this.totalShelfQty} pcs sisa stok konsinyasi ke gudang pusat dan simpan?`);
+                    } else if (this.form.konversi_konsinyasi_opsi === 'beli_putus') {
+                        if (this.form.metode_beli_putus === 'lunas') {
+                            const acc = this.cashAccounts.find(a => a.id === this.form.akun_kas_id);
+                            const accName = acc ? acc.nama_akun : 'Kasir/Bank';
+                            confirmed = window.AppConfirm ? await window.AppConfirm({
+                                title: 'Konfirmasi Beli Putus (Lunas)',
+                                message: `Faktur Penjualan senilai ${this.formatRupiah(this.totalShelfNominal)} (${this.totalShelfQty.toLocaleString('id-ID')} pcs) akan diterbitkan secara LUNAS ke akun "${accName}". Saldo rak toko akan dinolkan. Lanjutkan?`,
+                                type: 'warning',
+                                confirmText: 'Ya, Terbitkan Faktur & Simpan'
+                            }) : confirm(`Terbitkan faktur beli putus senilai ${this.formatRupiah(this.totalShelfNominal)} secara LUNAS ke akun ${accName}?`);
+                        } else {
+                            confirmed = window.AppConfirm ? await window.AppConfirm({
+                                title: 'Konfirmasi Beli Putus (Tempo/Piutang)',
+                                message: `Faktur Penjualan senilai ${this.formatRupiah(this.totalShelfNominal)} (${this.totalShelfQty.toLocaleString('id-ID')} pcs) akan dicatat sebagai PIUTANG DAGANG berjalan toko "${this.form.nama_toko}". Saldo rak toko akan dinolkan. Lanjutkan?`,
+                                type: 'warning',
+                                confirmText: 'Ya, Catat Piutang & Simpan'
+                            }) : confirm(`Catat faktur beli putus senilai ${this.formatRupiah(this.totalShelfNominal)} sebagai PIUTANG DAGANG toko?`);
+                        }
                     }
+
+                    if (confirmed) {
+                        if (formEl) {
+                            formEl.action = '<?= Router::url('/customers/update') ?>';
+                            HTMLFormElement.prototype.submit.call(formEl);
+                        }
+                    } else {
+                        this.restoreSubmitButton(formEl);
+                    }
+                    return;
                 }
 
-                if (confirmed) {
-                    if (formEl) {
-                        formEl.action = '<?= Router::url('/customers/update') ?>';
-                        HTMLFormElement.prototype.submit.call(formEl);
-                    }
-                } else {
-                    this.restoreSubmitButton(formEl);
-                }
-                return;
+                // KONDISI NORMAL: form submit POST standar browser dieksekusi secara mulus & responsif!
+            } catch (err) {
+                console.error('[customerApp] Error in submitCustomerForm:', err);
+                this.restoreSubmitButton(formEl);
             }
-
-            // KONDISI NORMAL: form submit POST standar browser dieksekusi secara mulus & responsif!
         },
 
         restoreSubmitButton(formEl) {
@@ -1637,9 +1699,38 @@ function customerApp(initialTab) {
         },
 
         async deleteCustomerGroup(id, name) {
+            const group = this.customerGroups.find(g => g.id === id);
+            const totalStores = group ? (Number(group.total_pelanggan) || 0) : 0;
+
+            if (totalStores > 0) {
+                if (window.AppAlert) {
+                    window.AppAlert({
+                        title: 'Proteksi Integritas Grup',
+                        message: `Grup "${name}" saat ini masih digunakan oleh ${totalStores} toko pelanggan dan tidak dapat dihapus. Silakan alihkan toko ke grup lain terlebih dahulu jika ingin menghapus grup ini.`,
+                        type: 'warning'
+                    });
+                } else {
+                    alert(`Grup "${name}" masih digunakan oleh ${totalStores} toko pelanggan.`);
+                }
+                return;
+            }
+
+            if (this.customerGroups.length <= 1) {
+                if (window.AppAlert) {
+                    window.AppAlert({
+                        title: 'Grup Wajib Ada',
+                        message: 'Sistem wajib memiliki minimal 1 grup pelanggan aktif sebagai acuan harga.',
+                        type: 'warning'
+                    });
+                } else {
+                    alert('Sistem wajib memiliki minimal 1 grup pelanggan.');
+                }
+                return;
+            }
+
             const confirmed = window.AppConfirm ? await window.AppConfirm({
                 title: 'Hapus Grup Pelanggan',
-                message: `Apakah Anda yakin ingin menghapus "${name}"? Pastikan tidak ada toko pelanggan yang masih memakai grup ini.`,
+                message: `Apakah Anda yakin ingin menghapus "${name}"? Tindakan ini permanen dan tidak dapat dibatalkan.`,
                 type: 'danger',
                 confirmText: 'Ya, Hapus'
             }) : confirm(`Hapus grup pelanggan ${name}?`);
@@ -1688,9 +1779,31 @@ function customerApp(initialTab) {
         },
 
         async deleteTerritory(id, name) {
+            const t = this.territories.find(item => item.id === id);
+            const totalStores = t ? (Number(t.total_pelanggan) || 0) : 0;
+            const totalVendors = t ? (Number(t.total_pemasok) || 0) : 0;
+
+            if (totalStores > 0 || totalVendors > 0) {
+                const parts = [];
+                if (totalStores > 0) parts.push(`${totalStores} toko pelanggan`);
+                if (totalVendors > 0) parts.push(`${totalVendors} vendor pemasok`);
+                const detail = parts.join(' dan ');
+
+                if (window.AppAlert) {
+                    window.AppAlert({
+                        title: 'Proteksi Integritas Wilayah',
+                        message: `Wilayah "${name}" saat ini masih digunakan oleh ${detail} dan tidak dapat dihapus. Silakan alihkan data tersebut atau ubah status wilayah menjadi nonaktif.`,
+                        type: 'warning'
+                    });
+                } else {
+                    alert(`Wilayah "${name}" masih digunakan oleh ${detail}.`);
+                }
+                return;
+            }
+
             const confirmed = window.AppConfirm ? await window.AppConfirm({
                 title: 'Hapus Wilayah / Rute',
-                message: `Apakah Anda yakin ingin menghapus wilayah "${name}"?`,
+                message: `Apakah Anda yakin ingin menghapus wilayah "${name}"? Tindakan ini permanen dan tidak dapat dibatalkan.`,
                 type: 'danger',
                 confirmText: 'Ya, Hapus'
             }) : confirm(`Hapus wilayah "${name}"?`);

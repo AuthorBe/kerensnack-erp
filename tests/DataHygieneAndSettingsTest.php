@@ -179,7 +179,7 @@ runTest("4.2.1 SupplierController: store() & update() Menyimpan Kolom Relasional
     }
 
     $saved = Database::fetchOne("
-        SELECT id, nama_pemasok, nama_bank, nomor_rekening, atas_nama_rekening, detail_bank
+        SELECT id, nama_pemasok, nama_bank, nomor_rekening, atas_nama_rekening
         FROM public.pemasok WHERE nama_pemasok = :nama
     ", ['nama' => $dummyName]);
 
@@ -199,10 +199,11 @@ runTest("4.2.1 SupplierController: store() & update() Menyimpan Kolom Relasional
         return "Kolom relasional atas_nama_rekening tidak tersimpan (got: {$saved['atas_nama_rekening']})";
     }
 
-    $jsonb = is_string($saved['detail_bank']) ? json_decode($saved['detail_bank'], true) : $saved['detail_bank'];
-    if (empty($jsonb) || ($jsonb[0]['nomor_rekening'] ?? '') !== '1370-001-992288') {
+    // Pastikan kolom dead detail_bank sudah terhapus tuntas dari database
+    $hasDetailBankCol = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'pemasok' AND column_name = 'detail_bank'")->fetchColumn();
+    if ($hasDetailBankCol > 0) {
         $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $saved['id']]);
-        return "Sinkronisasi detail_bank JSONB gagal!";
+        return "Kolom redundan detail_bank masih ada di tabel pemasok!";
     }
 
     // 2. Uji update
@@ -226,7 +227,7 @@ runTest("4.2.1 SupplierController: store() & update() Menyimpan Kolom Relasional
     }
 
     $updated = Database::fetchOne("
-        SELECT nama_bank, nomor_rekening, atas_nama_rekening, detail_bank
+        SELECT nama_bank, nomor_rekening, atas_nama_rekening
         FROM public.pemasok WHERE id = :id
     ", ['id' => $saved['id']]);
 
@@ -235,11 +236,6 @@ runTest("4.2.1 SupplierController: store() & update() Menyimpan Kolom Relasional
 
     if ($updated['nama_bank'] !== 'Bank BCA' || $updated['nomor_rekening'] !== '8820-9988-77') {
         return "Update kolom relasional bank gagal!";
-    }
-
-    $jsonbUpdated = is_string($updated['detail_bank']) ? json_decode($updated['detail_bank'], true) : $updated['detail_bank'];
-    if (empty($jsonbUpdated) || ($jsonbUpdated[0]['nomor_rekening'] ?? '') !== '8820-9988-77') {
-        return "Sinkronisasi detail_bank JSONB pasca update gagal!";
     }
 
     return true;
@@ -314,8 +310,8 @@ runTest("4.3.2 SupplierController: delete() Memblokir Hapus Vendor yang Menjadi 
 
     // Insert dummy item bahan dengan pemasok_utama_id
     $pdo->prepare("
-        INSERT INTO public.item (id, kode_sku, nama_item, varian_rasa, tipe_item, satuan_dasar, pemasok_utama_id, harga_pokok_pembelian, status_aktif)
-        VALUES (:iid, 'BAHAN-TEST-DEL', 'Plastik HD Test', 'Plastik HD Test', 'bahan_kemas', 'lembar', :sid, 150.00, TRUE)
+        INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, satuan_dasar, pemasok_utama_id, harga_pokok_pembelian, status_aktif)
+        VALUES (:iid, 'BAHAN-TEST-DEL', 'Plastik HD Test', 'bahan_kemas', 'lembar', :sid, 150.00, TRUE)
     ")->execute(['iid' => $itemDummyId, 'sid' => $supDummyId]);
 
     $ctrl = new class extends SupplierController {

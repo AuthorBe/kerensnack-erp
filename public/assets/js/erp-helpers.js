@@ -154,6 +154,7 @@
             var type = opts.type || 'danger';
             var iconName = opts.icon || null;
             var showCloseBtn = opts.showCloseBtn !== false;
+            var showCancelBtn = opts.showCancelBtn !== false;
             var defaultFocus = opts.defaultFocus || 'confirm';
 
             var existing = document.getElementById('app-confirm-overlay');
@@ -164,7 +165,7 @@
             overlay.className = 'confirm-overlay';
 
             overlay.innerHTML =
-                '<div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">' +
+                '<div class="confirm-modal" style="max-height: 90vh; overflow-y: auto;" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">' +
                     '<div class="confirm-modal-body">' +
                         '<div class="confirm-header-row">' +
                             '<div class="confirm-icon-box confirm-icon-' + type + '">' +
@@ -192,9 +193,11 @@
                         ) : '') +
                     '</div>' +
                     '<div class="confirm-modal-footer">' +
-                        '<button type="button" id="confirm-btn-cancel" class="confirm-btn-cancel">' +
-                            '<span>' + cancelText + '</span>' +
-                        '</button>' +
+                        (showCancelBtn ? (
+                            '<button type="button" id="confirm-btn-cancel" class="confirm-btn-cancel">' +
+                                '<span>' + cancelText + '</span>' +
+                            '</button>'
+                        ) : '') +
                         '<button type="button" id="confirm-btn-ok" class="confirm-btn-action btn-action-' + type + '">' +
                             '<span>' + confirmText + '</span>' +
                         '</button>' +
@@ -265,6 +268,7 @@
             var buttonText = escapeHtml(opts.buttonText || 'Mengerti');
             var type = opts.type || 'info';
             var iconName = opts.icon || null;
+            var showCloseBtn = opts.showCloseBtn !== false;
 
             var existing = document.getElementById('app-confirm-overlay');
             if (existing) existing.remove();
@@ -274,15 +278,17 @@
             overlay.className = 'confirm-overlay';
 
             overlay.innerHTML =
-                '<div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="alert-dialog-title">' +
+                '<div class="confirm-modal" style="max-height: 90vh; overflow-y: auto;" role="dialog" aria-modal="true" aria-labelledby="alert-dialog-title">' +
                     '<div class="confirm-modal-body">' +
                         '<div class="confirm-header-row">' +
                             '<div class="confirm-icon-box confirm-icon-' + type + '">' +
                                 getDialogIconSvg(iconName, type) +
                             '</div>' +
-                            '<button type="button" id="alert-btn-close" class="confirm-close-btn" aria-label="Tutup dialog" title="Tutup">' +
-                                dialogSvgs['x'] +
-                            '</button>' +
+                            (showCloseBtn ? (
+                                '<button type="button" id="alert-btn-close" class="confirm-close-btn" aria-label="Tutup dialog" title="Tutup">' +
+                                    dialogSvgs['x'] +
+                                '</button>'
+                            ) : '') +
                         '</div>' +
                         '<h3 id="alert-dialog-title" class="confirm-title">' + title + '</h3>' +
                         '<p class="confirm-message">' + message + '</p>' +

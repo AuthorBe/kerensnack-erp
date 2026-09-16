@@ -105,20 +105,50 @@ class OwnerController extends Controller
             }
             unset($shipment);
 
-            // C3: Rekap Komisi Karyawan Sales (Bulan Ini)
-            $salesCommissions = Database::fetchAll("
-                SELECT k.id as sales_id, k.nama_karyawan, k.nomor_telepon,
-                       COALESCE(NULLIF(k.persentase_komisi_sales, 0), 2.50) as persentase_komisi,
-                       COUNT(DISTINCT p.id) as total_toko_binaan,
-                       COALESCE(SUM(kk.total_laku_nominal), 0) as total_omzet_laku,
-                       (COALESCE(SUM(kk.total_laku_nominal), 0) * COALESCE(NULLIF(k.persentase_komisi_sales, 0), 2.50) / 100.0) as estimasi_komisi_rp
+            // C3: Rekap Komisi Karyawan Sales (Bulan Ini) - Tiered & Billed-Paid Only
+            $startOfMonth = date('Y-m-01');
+            $endOfMonth = date('Y-m-t');
+            $salesListRaw = Database::fetchAll("
+                SELECT k.id as sales_id, k.nama_karyawan, k.nomor_telepon
                 FROM public.v_karyawan_info k
-                LEFT JOIN public.pelanggan p ON p.sales_driver_id = k.id AND p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
-                LEFT JOIN public.kunjungan_konsinyasi kk ON kk.pelanggan_id = p.id AND kk.tanggal_kunjungan >= DATE_TRUNC('month', CURRENT_DATE)
                 WHERE k.posisi = 'sales' AND k.status_aktif = TRUE
-                GROUP BY k.id, k.nama_karyawan, k.nomor_telepon, k.persentase_komisi_sales
-                ORDER BY total_omzet_laku DESC
+                ORDER BY k.nama_karyawan ASC
             ");
+            $salesCommissions = [];
+            foreach ($salesListRaw as $s) {
+                $tokoCount = (int)(Database::fetchOne("
+                    SELECT COUNT(id) as c FROM public.pelanggan 
+                    WHERE sales_driver_id = :sid AND is_konsinyasi = TRUE AND status_aktif = TRUE
+                ", ['sid' => $s['sales_id']])['c'] ?? 0);
+
+                $omzetRow = Database::fetchOne("
+                    SELECT COALESCE(SUM(pes.total_dibayar), 0) as paid_omzet
+                    FROM public.pesanan pes
+                    LEFT JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                    WHERE (p.sales_driver_id = :sid OR pes.sales_driver_id = :sid)
+                      AND pes.adalah_tagihan = TRUE
+                      AND pes.status_pemrosesan != 'dibatalkan'
+                      AND pes.tanggal_pesanan >= :start AND pes.tanggal_pesanan <= :end
+                ", ['sid' => $s['sales_id'], 'start' => $startOfMonth, 'end' => $endOfMonth]);
+
+                $totalPaid = (float)($omzetRow['paid_omzet'] ?? 0);
+                $tierRpc = Database::fetchOne("
+                    SELECT public.fn_hitung_tier_komisi_sales(:omzet) as r
+                ", ['omzet' => $totalPaid])['r'] ?? '{}';
+                $tierInfo = json_decode($tierRpc, true) ?? [];
+
+                $salesCommissions[] = [
+                    'sales_id' => $s['sales_id'],
+                    'nama_karyawan' => $s['nama_karyawan'],
+                    'nomor_telepon' => $s['nomor_telepon'],
+                    'total_toko_binaan' => $tokoCount,
+                    'total_omzet_laku' => $totalPaid,
+                    'persentase_komisi' => (float)($tierInfo['persentase'] ?? 0),
+                    'estimasi_komisi_rp' => (float)($tierInfo['nominal_komisi'] ?? 0),
+                    'nama_tier' => $tierInfo['nama_tier'] ?? 'Tier 1'
+                ];
+            }
+            usort($salesCommissions, fn($a, $b) => $b['total_omzet_laku'] <=> $a['total_omzet_laku']);
 
             // C4: Outstanding Piutang Konsinyasi & Aging
             $agingSummary = Database::fetchOne("

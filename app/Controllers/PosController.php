@@ -56,9 +56,9 @@ class PosController extends Controller
             ");
 
             $items = Database::fetchAll("
-                SELECT i.id, i.grup_id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
+                SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
                        i.satuan_dasar, i.satuan_distribusi, i.stok_fisik_saat_ini, i.harga_pokok_pembelian,
-                       gp.nama_grup, gp.kode_grup,
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal,
                        COALESCE(gphl.harga_jual_pcs, 15000) AS harga_jual_satuan
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
@@ -175,14 +175,13 @@ class PosController extends Controller
 
         foreach ($rawCart as $c) {
             $itemId = $c['item_id'] ?? null;
-            $qtyPcs = (int)($c['qty_pcs'] ?? 0);
-            $qtyBal = (int)($c['qty_bal'] ?? 0);
+            $qtyPcs = (int)($c['qty_pcs'] ?? $c['qty'] ?? 0);
             $subtotal = (float)($c['subtotal'] ?? 0);
 
-            if (!empty($itemId) && ($qtyPcs > 0 || $qtyBal > 0)) {
+            if (!empty($itemId) && $qtyPcs > 0) {
                 $validCart[] = $c;
                 $totalNetto += $subtotal;
-                $totalQty += ($qtyPcs + $qtyBal);
+                $totalQty += $qtyPcs;
             }
         }
 
@@ -358,24 +357,20 @@ class PosController extends Controller
 
             foreach ($cart as $c) {
                 $itemId = $c['item_id'];
-                $qtyPcs = (int)($c['qty_pcs'] ?? 0);
-                $qtyBal = (int)($c['qty_bal'] ?? 0);
+                $qtyPcs = (int)($c['qty_pcs'] ?? $c['qty'] ?? 0);
                 $hargaDeal = (float)($c['price'] ?? 0);
                 $discPersen = (float)($c['discount_percent'] ?? 0);
                 $discNom = (float)($c['discount_nominal'] ?? 0);
                 $itemSubtotal = (float)($c['subtotal'] ?? 0);
 
-                // Ambil data item & rasio konversi bal ke pcs
+                // Ambil data item
                 $itemData = Database::fetchOne("
-                    SELECT i.id, i.nama_item, i.kode_sku, i.stok_fisik_saat_ini, i.satuan_dasar, i.harga_pokok_pembelian,
-                           COALESCE(gp.konversi_bal_ke_pcs, 20) as konversi_bal
+                    SELECT i.id, i.nama_item, i.kode_sku, i.stok_fisik_saat_ini, i.satuan_dasar, i.harga_pokok_pembelian
                     FROM public.item i
-                    LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                     WHERE i.id = :id FOR UPDATE OF i
                 ", ['id' => $itemId]);
 
-                $konversi = (int)($itemData['konversi_bal'] ?? 20);
-                $totalPcsKeluar = $qtyPcs + ($qtyBal * $konversi);
+                $totalPcsKeluar = $qtyPcs;
                 $stokSebelum = (float)($itemData['stok_fisik_saat_ini'] ?? 0);
                 $hppItem = (float)($itemData['harga_pokok_pembelian'] ?? 0);
 
@@ -387,12 +382,12 @@ class PosController extends Controller
 
                 $stokSesudah = $stokSebelum - $totalPcsKeluar;
 
-                // Simpan item pesanan
+                // Simpan item pesanan (kuantitas murni satuan dasar pcs)
                 $stmtItem->execute([
                     'pesanan_id' => $pesananId,
                     'item_id' => $itemId,
                     'qty_pcs' => $qtyPcs,
-                    'qty_bal' => $qtyBal,
+                    'qty_bal' => 0,
                     'harga' => $hargaDeal,
                     'disc_persen' => $discPersen,
                     'disc_nom' => $discNom,
@@ -422,7 +417,6 @@ class PosController extends Controller
                     'nama_item' => $c['nama_item'] ?? ($itemData['nama_item'] ?? 'Item'),
                     'kode_sku' => $c['kode_sku'] ?? ($itemData['kode_sku'] ?? ''),
                     'qty_pcs' => $qtyPcs,
-                    'qty_bal' => $qtyBal,
                     'harga' => $hargaDeal,
                     'subtotal' => $itemSubtotal
                 ];

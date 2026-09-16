@@ -94,7 +94,8 @@ function createMockCustomerController(array $postData): App\Controllers\Customer
 
 $db = Database::getConnection();
 
-$grupId = $db->query("SELECT id FROM public.grup_pelanggan LIMIT 1")->fetchColumn();
+$grupId = $db->query("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1")->fetchColumn()
+    ?: $db->query("SELECT id FROM public.grup_pelanggan LIMIT 1")->fetchColumn();
 $wilId = $db->query("SELECT id FROM public.wilayah LIMIT 1")->fetchColumn();
 $item = $db->query("SELECT id, nama_item, kode_sku, stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 $akunKas = $db->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);

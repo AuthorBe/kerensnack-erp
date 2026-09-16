@@ -549,35 +549,51 @@
      ===================================================================== */
   function getSmartActionText(form) {
     if (!form) return 'Menyimpan data...';
-    let customText = form.getAttribute('data-action-text');
-    if (customText) return customText;
+    try {
+      let customText = (typeof form.getAttribute === 'function') ? form.getAttribute('data-action-text') : null;
+      if (customText) return customText;
 
-    const formAction = (form.getAttribute('action') || '').toLowerCase();
-    const formId = (form.id || '').toLowerCase();
-    
-    if (formAction.includes('/login') || formId.includes('login')) {
-      return 'Memverifikasi akun...';
-    } else if (formAction.includes('/logout') || formId.includes('logout')) {
-      return 'Keluar sistem...';
-    } else if (formAction.includes('toggle-status')) {
-      return 'Mengubah status akun pengguna...';
-    } else if (formAction.includes('delete') || formAction.includes('hapus') || formId.includes('delete') || formId.includes('hapus')) {
-      return 'Menghapus data...';
-    } else if (formAction.includes('update') || formAction.includes('edit')) {
-      return 'Memperbarui data...';
-    } else if (formAction.includes('approve') || formAction.includes('setujui')) {
-      return 'Menyetujui data...';
-    } else if (formAction.includes('reject') || formAction.includes('tolak')) {
-      return 'Menolak data...';
-    } else if (formAction.includes('pay') || formAction.includes('bayar')) {
-      return 'Memproses pembayaran...';
-    } else if (formAction.includes('adjust') || formAction.includes('penyesuaian')) {
-      return 'Menyesuaikan stok...';
-    } else if (formAction.includes('waste') || formAction.includes('rusak')) {
-      return 'Mencatat barang rusak...';
-    } else if (formAction.includes('transfer')) {
-      return 'Mentransfer dana kas...';
-    } else {
+      let formAction = '';
+      if (typeof form.getAttribute === 'function') {
+        formAction = (form.getAttribute('action') || '').toLowerCase();
+      } else if (typeof form.action === 'string') {
+        formAction = form.action.toLowerCase();
+      }
+
+      let formId = '';
+      if (typeof form.getAttribute === 'function') {
+        formId = (form.getAttribute('id') || '').toLowerCase();
+      } else if (typeof form.id === 'string') {
+        formId = form.id.toLowerCase();
+      }
+      
+      if (formAction.includes('/login') || formId.includes('login')) {
+        return 'Memverifikasi akun...';
+      } else if (formAction.includes('/logout') || formId.includes('logout')) {
+        return 'Keluar sistem...';
+      } else if (formAction.includes('toggle-status')) {
+        return 'Mengubah status akun pengguna...';
+      } else if (formAction.includes('delete') || formAction.includes('hapus') || formId.includes('delete') || formId.includes('hapus')) {
+        return 'Menghapus data...';
+      } else if (formAction.includes('update') || formAction.includes('edit')) {
+        return 'Memperbarui data...';
+      } else if (formAction.includes('approve') || formAction.includes('setujui')) {
+        return 'Menyetujui data...';
+      } else if (formAction.includes('reject') || formAction.includes('tolak')) {
+        return 'Menolak data...';
+      } else if (formAction.includes('pay') || formAction.includes('bayar')) {
+        return 'Memproses pembayaran...';
+      } else if (formAction.includes('adjust') || formAction.includes('penyesuaian')) {
+        return 'Menyesuaikan stok...';
+      } else if (formAction.includes('waste') || formAction.includes('rusak')) {
+        return 'Mencatat barang rusak...';
+      } else if (formAction.includes('transfer')) {
+        return 'Mentransfer dana kas...';
+      } else {
+        return 'Menyimpan data...';
+      }
+    } catch (e) {
+      console.warn('[app.js] Error resolving smart action text:', e);
       return 'Menyimpan data...';
     }
   }
@@ -585,37 +601,11 @@
   // Global Native form.submit() & requestSubmit() Monkey-Patch (Intersepsi seluruh submit form via script / Alpine / modal)
   const _nativeFormSubmit = HTMLFormElement.prototype.submit;
   HTMLFormElement.prototype.submit = function() {
-    if (!this.classList.contains('no-loader') && this.getAttribute('target') !== '_blank') {
-      const method = (this.getAttribute('method') || 'GET').toUpperCase();
-      const wantsAction = this.hasAttribute('data-action-text') || this.getAttribute('data-loader') === 'action';
-      if (wantsAction) {
-        if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
-        const text = getSmartActionText(this);
-        if (typeof AppAction !== 'undefined') AppAction.show(text);
-        try {
-          sessionStorage.setItem('app_action_triggered', 'true');
-          if (method === 'GET') sessionStorage.setItem('app_action_dismiss_on_load', 'true');
-        } catch (e) {}
-      } else if (method === 'GET') {
-        if (typeof AppAction !== 'undefined') AppAction.hide();
-        if (typeof AppSkeleton !== 'undefined') AppSkeleton.show('Memuat data...');
-      } else {
-        if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
-        const text = getSmartActionText(this);
-        if (typeof AppAction !== 'undefined') AppAction.show(text);
-        try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (e) {}
-      }
-    }
-    return _nativeFormSubmit.apply(this, arguments);
-  };
-
-  if (typeof HTMLFormElement.prototype.requestSubmit === 'function') {
-    const _nativeRequestSubmit = HTMLFormElement.prototype.requestSubmit;
-    HTMLFormElement.prototype.requestSubmit = function(submitter) {
+    try {
       if (!this.classList.contains('no-loader') && this.getAttribute('target') !== '_blank') {
         const method = (this.getAttribute('method') || 'GET').toUpperCase();
         const wantsAction = this.hasAttribute('data-action-text') || this.getAttribute('data-loader') === 'action';
-        if (wantsAction || method !== 'GET') {
+        if (wantsAction) {
           if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
           const text = getSmartActionText(this);
           if (typeof AppAction !== 'undefined') AppAction.show(text);
@@ -626,7 +616,41 @@
         } else if (method === 'GET') {
           if (typeof AppAction !== 'undefined') AppAction.hide();
           if (typeof AppSkeleton !== 'undefined') AppSkeleton.show('Memuat data...');
+        } else {
+          if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+          const text = getSmartActionText(this);
+          if (typeof AppAction !== 'undefined') AppAction.show(text);
+          try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (e) {}
         }
+      }
+    } catch (e) {
+      console.warn('[app.js] Error in form.submit interceptor:', e);
+    }
+    return _nativeFormSubmit.apply(this, arguments);
+  };
+
+  if (typeof HTMLFormElement.prototype.requestSubmit === 'function') {
+    const _nativeRequestSubmit = HTMLFormElement.prototype.requestSubmit;
+    HTMLFormElement.prototype.requestSubmit = function(submitter) {
+      try {
+        if (!this.classList.contains('no-loader') && this.getAttribute('target') !== '_blank') {
+          const method = (this.getAttribute('method') || 'GET').toUpperCase();
+          const wantsAction = this.hasAttribute('data-action-text') || this.getAttribute('data-loader') === 'action';
+          if (wantsAction || method !== 'GET') {
+            if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+            const text = getSmartActionText(this);
+            if (typeof AppAction !== 'undefined') AppAction.show(text);
+            try {
+              sessionStorage.setItem('app_action_triggered', 'true');
+              if (method === 'GET') sessionStorage.setItem('app_action_dismiss_on_load', 'true');
+            } catch (e) {}
+          } else if (method === 'GET') {
+            if (typeof AppAction !== 'undefined') AppAction.hide();
+            if (typeof AppSkeleton !== 'undefined') AppSkeleton.show('Memuat data...');
+          }
+        }
+      } catch (e) {
+        console.warn('[app.js] Error in form.requestSubmit interceptor:', e);
       }
       return _nativeRequestSubmit.apply(this, arguments);
     };
@@ -994,7 +1018,41 @@
       let title = 'Berhasil Diproses! ✨';
       let subtext = '';
 
-      if (lower.includes('surat jalan') || lower.includes('surat_jalan')) {
+      if (lower.includes('toko') || lower.includes('pelanggan')) {
+        if (lower.includes('beli putus') || (lower.includes('faktur') && lower.includes('konsinyasi'))) {
+          title = 'Faktur Beli Putus Diterbitkan! 🧾';
+          const notaMatch = msg.match(/(?:Faktur Beli Putus|Nota|Faktur)\s*#?([A-Z0-9\-_]+)/i);
+          subtext = notaMatch ? `${notaMatch[0]} berhasil diterbitkan. Lihat di Pesanan Pelanggan (/customer-orders).` : 'Faktur beli putus sisa konsinyasi berhasil diterbitkan di Pesanan Pelanggan.';
+        } else if (lower.includes('retur') || lower.includes('gudang pusat') || (lower.includes('stok') && lower.includes('konsinyasi'))) {
+          title = 'Stok Konsinyasi Diretur! 📦';
+          const qtyMatch = msg.match(/(\d+(?:\.\d+)?)\s*pcs/i);
+          subtext = qtyMatch ? `${qtyMatch[0]} stok konsinyasi ditarik kembali ke gudang pusat.` : 'Stok konsinyasi telah diretur ke gudang pusat.';
+        } else if (lower.includes('dihapus') || lower.includes('delete') || lower.includes('hapus')) {
+          title = 'Toko Pelanggan Dihapus! 🗑️';
+        } else if (lower.includes('ditambahkan') || lower.includes('tambah') || lower.includes('baru')) {
+          title = 'Toko Pelanggan Ditambahkan! ✨';
+        } else if (lower.includes('diperbarui') || lower.includes('diubah') || lower.includes('update') || lower.includes('simpan')) {
+          title = 'Data Toko Diperbarui! ✨';
+        } else {
+          title = 'Data Toko Disimpan! ✨';
+        }
+      } else if (lower.includes('wilayah') || lower.includes('rute')) {
+        if (lower.includes('dihapus') || lower.includes('delete') || lower.includes('hapus')) {
+          title = 'Wilayah Berhasil Dihapus! 🗑️';
+        } else if (lower.includes('ditambahkan') || lower.includes('baru')) {
+          title = 'Wilayah Berhasil Ditambahkan! ✨';
+        } else {
+          title = 'Data Wilayah Diperbarui! ✨';
+        }
+      } else if (lower.includes('grup pelanggan')) {
+        if (lower.includes('dihapus') || lower.includes('delete') || lower.includes('hapus')) {
+          title = 'Grup Pelanggan Dihapus! 🗑️';
+        } else if (lower.includes('ditambahkan') || lower.includes('baru')) {
+          title = 'Grup Pelanggan Ditambahkan! ✨';
+        } else {
+          title = 'Grup Pelanggan Diperbarui! ✨';
+        }
+      } else if (lower.includes('surat jalan') || lower.includes('surat_jalan')) {
         if (lower.includes('disetujui') || lower.includes('approved') || lower.includes('diberangkatkan')) {
           title = 'Surat Jalan Disetujui! ✨';
           subtext = 'Armada / driver dapat memulai pengiriman.';
@@ -1012,10 +1070,10 @@
           const sjMatch = msg.match(/SJ-[A-Z0-9\-]+/i);
           subtext = sjMatch ? `Nomor ${sjMatch[0]} siap untuk proses pengiriman.` : 'Dokumen surat jalan telah berhasil dibuat.';
         }
-      } else if (lower.includes('disiapkan') || lower.includes('siap dikirim') || lower.includes('siap kirim')) {
+      } else if ((lower.includes('po') || lower.includes('pesanan') || lower.includes('order')) && (lower.includes('disiapkan') || lower.includes('siap dikirim') || lower.includes('siap kirim'))) {
         title = 'PO Berhasil Disiapkan! ✨';
         subtext = 'Stok fisik gudang telah terpotong.';
-      } else if (lower.includes('terbit') || lower.includes('diterbitkan') || lower.includes('masuk ke antrean')) {
+      } else if ((lower.includes('po') || lower.includes('pesanan') || lower.includes('purchase order') || lower.includes('antrean')) && (lower.includes('terbit') || lower.includes('diterbitkan') || lower.includes('masuk ke antrean'))) {
         title = 'PO Berhasil Diterbitkan! ✨';
         subtext = 'Pesanan masuk ke antrean daftar PO gudang.';
       } else if (lower.includes('checkout') || lower.includes('transaksi')) {
@@ -1031,13 +1089,13 @@
       }
 
       // Ambil nomor nota atau referensi jika ada
-      const poMatch = msg.match(/(?:PO|Nota)\s*#?([A-Z0-9\-_]+)/i);
+      const poMatch = msg.match(/(?:PO|Nota|Faktur)\s*#?([A-Z0-9\-_]+)/i);
       if (poMatch && poMatch[0] && !subtext) {
         subtext = `${poMatch[0]} siap diproses.`;
       }
 
       if (!subtext && msg) {
-        const cleanTitle = title.toLowerCase().replace(/[!✨🎉🚚]/g, '').trim();
+        const cleanTitle = title.toLowerCase().replace(/[!✨🎉🚚📦🧾🗑️]/g, '').trim();
         if (lower !== cleanTitle && lower !== cleanTitle.replace(/^data\s+/, '')) {
           subtext = msg;
         }
@@ -1211,53 +1269,57 @@
 
   // Intercept standard form submissions -> Trigger Action Blur Processing Loader (POST) or Skeleton (GET)
   document.addEventListener('submit', (e) => {
-    const form = e.target;
-    if (!form || !form.tagName || form.tagName.toLowerCase() !== 'form') return;
-    if (e.defaultPrevented || form.classList.contains('no-loader') || form.getAttribute('target') === '_blank') {
-      return;
-    }
+    try {
+      const form = e.target;
+      if (!form || !form.tagName || form.tagName.toLowerCase() !== 'form') return;
+      if (e.defaultPrevented || form.classList.contains('no-loader') || form.getAttribute('target') === '_blank') {
+        return;
+      }
 
-    // Form dengan data-confirm ditangani secara terpisah oleh listener data-confirm
-    if (form.hasAttribute('data-confirm')) {
-      return;
-    }
+      // Form dengan data-confirm ditangani secara terpisah oleh listener data-confirm
+      if (form.hasAttribute('data-confirm')) {
+        return;
+      }
 
-    // Validasi form HTML5 bawaan: jika belum valid, jangan jalankan loader
-    if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
-      return;
-    }
+      // Validasi form HTML5 bawaan: jika belum valid, jangan jalankan loader
+      if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+        return;
+      }
 
-    const method = (form.getAttribute('method') || 'GET').toUpperCase();
-    const wantsAction = form.hasAttribute('data-action-text') || form.getAttribute('data-loader') === 'action';
-    
-    // 1. Form dengan deklarasi eksplisit Action Loader (data-action-text atau data-loader="action")
-    if (wantsAction) {
-      AppSkeleton.hide();
+      const method = (form.getAttribute('method') || 'GET').toUpperCase();
+      const wantsAction = form.hasAttribute('data-action-text') || form.getAttribute('data-loader') === 'action';
+      
+      // 1. Form dengan deklarasi eksplisit Action Loader (data-action-text atau data-loader="action")
+      if (wantsAction) {
+        if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+        const customText = getSmartActionText(form);
+        if (typeof AppAction !== 'undefined') AppAction.show(customText);
+        try {
+          sessionStorage.setItem('app_action_triggered', 'true');
+          if (method === 'GET') {
+            sessionStorage.setItem('app_action_dismiss_on_load', 'true');
+          }
+        } catch (err) {}
+        return;
+      }
+
+      // 2. Form GET standar (Filter, Pencarian, Parameter Laporan) -> Trigger Page Transition Skeleton
+      if (method === 'GET') {
+        if (typeof AppAction !== 'undefined') AppAction.hide();
+        if (typeof AppSkeleton !== 'undefined') AppSkeleton.show('Memuat data...');
+        return;
+      }
+
+      // 3. Form POST / PUT / DELETE (Operasi CRUD) -> Trigger AppAction Processing Loader
+      if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
       const customText = getSmartActionText(form);
-      AppAction.show(customText);
+      if (typeof AppAction !== 'undefined') AppAction.show(customText);
       try {
         sessionStorage.setItem('app_action_triggered', 'true');
-        if (method === 'GET') {
-          sessionStorage.setItem('app_action_dismiss_on_load', 'true');
-        }
       } catch (err) {}
-      return;
+    } catch (err) {
+      console.warn('[app.js] Error in submit event listener:', err);
     }
-
-    // 2. Form GET standar (Filter, Pencarian, Parameter Laporan) -> Trigger Page Transition Skeleton
-    if (method === 'GET') {
-      AppAction.hide();
-      AppSkeleton.show('Memuat data...');
-      return;
-    }
-
-    // 3. Form POST / PUT / DELETE (Operasi CRUD) -> Trigger AppAction Processing Loader
-    AppSkeleton.hide();
-    const customText = getSmartActionText(form);
-    AppAction.show(customText);
-    try {
-      sessionStorage.setItem('app_action_triggered', 'true');
-    } catch (err) {}
   });
 
   // Escape key cancels loaders in emergency

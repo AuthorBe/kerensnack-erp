@@ -515,7 +515,8 @@ runTest("3.4.1 CustomerController: store() & update() Menyimpan sales_driver_id 
 });
 
 runTest("3.4.2 CustomerOrderController: Order Mewarisi sales_driver_id dari Pelanggan Secara Default", function() use ($pdo) {
-    $grupRow = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
+    $grupRow = Database::fetchOne("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1") 
+            ?: Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
     $salesRow = Database::fetchOne("SELECT id FROM public.v_karyawan_info WHERE status_aktif = TRUE LIMIT 1");
     $itemRow = Database::fetchOne("SELECT id FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 1");
 

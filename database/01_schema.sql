@@ -136,24 +136,80 @@ CREATE TABLE IF NOT EXISTS public.pemasok (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kode_pemasok VARCHAR(50) NOT NULL UNIQUE,
     nama_pemasok VARCHAR(150) NOT NULL,
+    nama_kontak VARCHAR(100) DEFAULT NULL,
     wilayah_id UUID REFERENCES public.wilayah(id),
     alamat_lengkap TEXT,
+    link_google_maps TEXT DEFAULT NULL,
     nomor_telepon VARCHAR(25),
+    nomor_whatsapp VARCHAR(25) DEFAULT NULL,
+    email VARCHAR(150) DEFAULT NULL,
+    termin_bayar VARCHAR(30) DEFAULT 'cash',
     detail_bank JSONB NOT NULL DEFAULT '[]'::jsonb,
     nama_bank VARCHAR(50) DEFAULT NULL,
     nomor_rekening VARCHAR(50) DEFAULT NULL,
     atas_nama_rekening VARCHAR(100) DEFAULT NULL,
+    catatan TEXT DEFAULT NULL,
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Master Grup Pelanggan (Pemegang Aturan Level Harga 1 s/d 28 & Diskon Otomatis)
+-- ==============================================================================
+-- MASTER LEVEL HARGA (TINGKAT 1 S/D 30 TERPUSAT)
+-- ==============================================================================
+CREATE TABLE IF NOT EXISTS public.master_level_harga (
+    level_nomor INT PRIMARY KEY CHECK (level_nomor BETWEEN 1 AND 30),
+    nama_level VARCHAR(100) NOT NULL,
+    deskripsi TEXT,
+    status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Seed 30 Tingkat Level Harga Resmi Standar
+INSERT INTO public.master_level_harga (level_nomor, nama_level, deskripsi)
+VALUES
+(1,  'Level 1 - Ritel Standar (Konsumen Umum / POS)', 'Harga jual eceran standar untuk konsumen langsung / walk-in kasir'),
+(2,  'Level 2 - Ritel Khusus / Member', 'Harga ritel pelanggan langganan atau member khusus'),
+(3,  'Level 3 - Swalayan Lokal', 'Harga jaringan minimarket lokal'),
+(4,  'Level 4 - Supermarket Regional', 'Harga jaringan supermarket wilayah'),
+(5,  'Level 5 - Konsinyasi Rak (Toko Titip Jual)', 'Harga titip jual display rak di toko/warung mitra'),
+(6,  'Level 6 - Konsinyasi Premium', 'Harga titip jual rak premium di lokasi strategis'),
+(7,  'Level 7 - Sub-Agen Warung', 'Harga warung kelontong pemesan berkala'),
+(8,  'Level 8 - Grosir Mitra (Mitra Warung A)', 'Harga kemitraan warung grosir reguler tier A'),
+(9,  'Level 9 - Grosir Semi-Besar', 'Harga grosir skala menengah'),
+(10, 'Level 10 - Grosir Inti Kota', 'Harga grosir pusat kota volume menengah'),
+(11, 'Level 11 - Grosir Pasar Tradisional', 'Harga grosir pedagang pasar tradisional'),
+(12, 'Level 12 - Grosir Pasar (Grosir Pasar B)', 'Harga distributor grosir pasar besar tier B'),
+(13, 'Level 13 - Agen Wilayah Sub-Distrik', 'Harga agen pemegang wilayah kecamatan'),
+(14, 'Level 14 - Agen Kabupaten', 'Harga agen distributor tingkat kabupaten'),
+(15, 'Level 15 - Distributor Utama', 'Harga distributor rekanan utama'),
+(16, 'Level 16 - Distributor Provinsi', 'Harga distributor besar tingkat provinsi'),
+(17, 'Level 17 - Key Account Modern Trade', 'Harga jaringan toko modern berbadan hukum'),
+(18, 'Level 18 - Hypermarket Nasional', 'Harga kontrak jaringan ritel modern skala nasional'),
+(19, 'Level 19 - Horeka / Hotel Restoran Kafe', 'Harga suplai sektor kuliner & perhotelan'),
+(20, 'Level 20 - Mitra Katering & Event', 'Harga pesanan volume katering dan acara'),
+(21, 'Level 21 - Kemitraan Komunitas', 'Harga khusus koperasi dan organisasi komunitas'),
+(22, 'Level 22 - Reseller Online Gold', 'Harga kemitraan reseller daring tier gold'),
+(23, 'Level 23 - Reseller Online Platinum', 'Harga kemitraan reseller daring tier platinum'),
+(24, 'Level 24 - B2B Marketplace Partner', 'Harga kanal penjualan digital b2b'),
+(25, 'Level 25 - Corporate Order Khusus', 'Harga pemesanan korporat / instansi volume besar'),
+(26, 'Level 26 - Ekspor Regional', 'Harga kemitraan ekspor regional asia tenggara'),
+(27, 'Level 27 - Ekspor Internasional', 'Harga kemitraan ekspor global kontainer'),
+(28, 'Level 28 - Tier Khusus Pabrik', 'Harga khusus order langsung pabrik volume tertinggi'),
+(29, 'Level 29 - Tier Kontrak Khusus', 'Harga perjanjian kontrak kuantitas khusus tahunan'),
+(30, 'Level 30 - Tier Spesial Direksi', 'Harga kebijakan diskresi khusus manajemen direksi')
+ON CONFLICT (level_nomor) DO UPDATE SET
+    nama_level = EXCLUDED.nama_level,
+    deskripsi = EXCLUDED.deskripsi,
+    diubah_pada = NOW();
+
+-- Master Grup Pelanggan (Pemegang Aturan Level Harga 1 s/d 30 & Diskon Otomatis)
 CREATE TABLE IF NOT EXISTS public.grup_pelanggan (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kode_grup VARCHAR(50) NOT NULL UNIQUE, -- 'GRP-A', 'GRP-GROSIR-TNG', 'GRP-KONSINYASI'
     nama_grup VARCHAR(100) NOT NULL,
-    default_level_harga INT NOT NULL DEFAULT 1 CHECK (default_level_harga >= 1), -- Bebas, tanpa batas maksimal
+    default_level_harga INT NOT NULL DEFAULT 1 REFERENCES public.master_level_harga(level_nomor) ON UPDATE CASCADE ON DELETE RESTRICT,
     diskon_persen_default NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
     diskon_nominal_default NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
@@ -205,14 +261,13 @@ CREATE TABLE IF NOT EXISTS public.grup_produk (
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Tabel Matriks Harga Jual per Grup Produk (Bebas / Unlimited Level Harga)
+-- Tabel Matriks Harga Jual per Grup Produk (Level Harga 1 s/d 30 Terpusat & Murni Pcs)
 CREATE TABLE IF NOT EXISTS public.grup_produk_harga_level (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     grup_produk_id UUID NOT NULL REFERENCES public.grup_produk(id) ON DELETE CASCADE,
-    level_harga INT NOT NULL CHECK (level_harga >= 1), -- Bebas bertambah (Level 1 s/d 100+)
-    nama_level VARCHAR(50) NOT NULL, -- 'Level 1 - Ritel', 'Level 8 - Grosir Mitra', dll.
-    harga_jual_pcs NUMERIC(15, 2) NOT NULL, -- Harga per bungkus
-    harga_jual_bal NUMERIC(15, 2) NOT NULL, -- Harga per bal
+    level_harga INT NOT NULL REFERENCES public.master_level_harga(level_nomor) ON UPDATE CASCADE ON DELETE RESTRICT,
+    nama_level VARCHAR(100) NOT NULL, -- 'Level 1 - Ritel Standar (Konsumen Umum / POS)', dll.
+    harga_jual_pcs NUMERIC(15, 2) NOT NULL, -- Harga jual murni per bungkus (pcs)
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_grup_harga_level UNIQUE (grup_produk_id, level_harga)
@@ -243,6 +298,7 @@ CREATE TABLE IF NOT EXISTS public.item (
     satuan_distribusi VARCHAR(30) NOT NULL DEFAULT 'bal',
     konversi_distribusi_ke_dasar INT NOT NULL DEFAULT 1,
     kelompok_borongan_id UUID REFERENCES public.kelompok_upah_borongan(id),
+    upah_per_bungkus NUMERIC(15, 2) DEFAULT NULL, -- Upah borongan per pack langsung pada SKU barang jadi (jika tidak menggunakan kelompok)
     pemasok_utama_id UUID REFERENCES public.pemasok(id),
     harga_pokok_pembelian NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     stok_minimum_peringatan NUMERIC(15, 2) NOT NULL DEFAULT 10.00,
@@ -267,7 +323,7 @@ CREATE TABLE IF NOT EXISTS public.komposisi_item (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_jadi_id UUID NOT NULL REFERENCES public.item(id) ON DELETE CASCADE,
     item_bahan_id UUID NOT NULL REFERENCES public.item(id) ON DELETE RESTRICT,
-    jumlah_kebutuhan NUMERIC(12, 4) NOT NULL, -- Contoh: 0.1350 kg singkong curah + 1 lembar plastik
+    jumlah_kebutuhan NUMERIC(15, 4) NOT NULL CHECK (jumlah_kebutuhan > 0), -- Contoh: 0.1350 kg singkong curah + 1 lembar plastik
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_komposisi_item UNIQUE (item_jadi_id, item_bahan_id)
 );
@@ -807,6 +863,7 @@ ALTER TABLE public.izin_pengguna ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wilayah ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.karyawan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pemasok ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.master_level_harga ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.grup_pelanggan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pelanggan ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pelanggan_item ENABLE ROW LEVEL SECURITY;
@@ -847,6 +904,7 @@ ALTER TABLE public.log_aktivitas ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY service_role_all ON public.peran FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_pel ON public.pelanggan FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_role_all_mst_lvl_harga ON public.master_level_harga FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_grp_pel ON public.grup_pelanggan FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_grp_prod ON public.grup_produk FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_grp_prod_hj ON public.grup_produk_harga_level FOR ALL TO service_role USING (true) WITH CHECK (true);

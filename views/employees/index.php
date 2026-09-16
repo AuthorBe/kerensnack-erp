@@ -23,7 +23,14 @@ ob_start();
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Kelola Data Pegawai Admin, Gudang, Pengemasan, Sales &amp; Driver' ?></p>
             </div>
         </div>
-        <div class="page-header-actions">
+        <div class="page-header-actions" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <?php if (\App\Core\Auth::can('master.employees_manage')): ?>
+            <button @click="openTierModal()" class="btn btn-secondary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;">
+                <i data-lucide="award" class="w-4 h-4 text-amber-500"></i>
+                <span>Atur Skema Komisi Bertingkat</span>
+                <span class="badge badge-warning text-[10px] py-0.5 px-1.5" x-text="editableTiers.length + ' Tier'"></span>
+            </button>
+            <?php endif; ?>
             <button @click="openAddModal()" class="btn btn-primary" style="font-weight:700;">
                 <i data-lucide="user-plus"></i>
                 <span>Tambah Karyawan</span>
@@ -552,6 +559,193 @@ ob_start();
     </div>
     </template>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL PENGATURAN SKEMA KOMISI BERTINGKAT                                  -->
+    <!-- ========================================================================= -->
+    <template x-if="showTierModal">
+    <div class="modal-backdrop" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px;" @click.self="showTierModal = false">
+        <div class="card w-full max-w-4xl max-h-[92vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl" style="background:var(--color-canvas);border:1px solid var(--color-hairline);" @click.stop>
+            
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b flex items-center justify-between" style="border-color:var(--color-hairline);background:var(--color-canvas-soft);">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.15);color:#f59e0b;">
+                        <i data-lucide="award" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-black" style="color:var(--color-ink);">Pengaturan Skema Komisi Sales Bertingkat</h3>
+                        <p class="text-xs" style="color:var(--color-ink-mute);">Konfigurasi ambang batas omzet bulanan terpusat &amp; simulasi komisi otomatis</p>
+                    </div>
+                </div>
+                <button type="button" @click="showTierModal = false" class="btn btn-icon btn-secondary" title="Tutup">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body (Scrollable) -->
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+
+                <!-- Alert Penjelasan Sistem -->
+                <div class="p-3.5 rounded-xl flex items-start gap-3" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);">
+                    <i data-lucide="info" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"></i>
+                    <div class="space-y-1">
+                        <div class="font-bold text-amber-600 dark:text-amber-400">Aturan Perhitungan Flat Retroaktif &amp; Kas Terbayar:</div>
+                        <p class="text-slate-600 dark:text-slate-300 leading-relaxed text-[11.5px]">
+                            • Omzet dihitung dari akumulasi <strong>faktur konsinyasi &amp; B2B yang sudah dibayar (uang masuk)</strong> dalam 1 bulan kalender.<br>
+                            • Saat akumulasi omzet mencapai batas tier (misal Tier 3: 4%), seluruh omzet terbayar tersebut langsung dikalikan 4%.<br>
+                            • Sisa hutang toko dan kunjungan tanpa faktur otomatis dikecualikan dari omzet sampai toko melunasi.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Tabel Konfigurasi Tier -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-xs uppercase tracking-wider" style="color:var(--color-ink-secondary);">
+                            DAFTAR TINGKATAN TIER (URUTAN RENDAH KE TINGGI)
+                        </span>
+                        <button type="button" @click="addTierRow()" class="btn btn-secondary btn-sm" style="font-weight:700;font-size:11px;">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Tambah Baris Tier</span>
+                        </button>
+                    </div>
+
+                    <div class="table-responsive rounded-xl border overflow-hidden" style="border-color:var(--color-hairline);">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;text-align:center;">#</th>
+                                    <th style="min-width:140px;">Nama Tingkatan (Tier)</th>
+                                    <th style="min-width:140px;">Omzet Min (Rp)</th>
+                                    <th style="min-width:160px;">Omzet Maks (Rp)</th>
+                                    <th style="width:110px;text-align:center;">Komisi (%)</th>
+                                    <th style="width:60px;text-align:center;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(tier, idx) in editableTiers" :key="idx">
+                                    <tr>
+                                        <!-- Urutan -->
+                                        <td class="text-center font-bold" style="color:var(--color-ink-mute);" x-text="idx + 1"></td>
+
+                                        <!-- Nama Tier -->
+                                        <td>
+                                            <input type="text" x-model="tier.nama_tier" class="form-input text-xs font-bold" placeholder="Misal: Tier 1 (Dasar)" required>
+                                        </td>
+
+                                        <!-- Omzet Min -->
+                                        <td>
+                                            <input type="text" 
+                                                   :value="formatInputRupiah(tier.omzet_min)"
+                                                   @input="tier.omzet_min = parseInputRupiah($event.target.value); $event.target.value = formatInputRupiah(tier.omzet_min); runSimulation();"
+                                                   class="form-input text-xs font-mono" placeholder="0">
+                                        </td>
+
+                                        <!-- Omzet Maks & Checkbox Tanpa Batas -->
+                                        <td>
+                                            <div class="space-y-1.5">
+                                                <input type="text" 
+                                                       :disabled="tier.tanpa_batas"
+                                                       :value="tier.tanpa_batas ? 'Tanpa Batas Atas (∞)' : formatInputRupiah(tier.omzet_maks)"
+                                                       @input="tier.omzet_maks = parseInputRupiah($event.target.value); $event.target.value = formatInputRupiah(tier.omzet_maks); runSimulation();"
+                                                       :class="tier.tanpa_batas ? 'form-input text-xs bg-slate-500/10 italic text-slate-400' : 'form-input text-xs font-mono'" 
+                                                       placeholder="Batas atas">
+                                                <label class="flex items-center gap-1.5 cursor-pointer text-[11px]" style="color:var(--color-ink-mute);">
+                                                    <input type="checkbox" x-model="tier.tanpa_batas" @change="if(tier.tanpa_batas) tier.omzet_maks = null; runSimulation();" class="w-3.5 h-3.5 rounded">
+                                                    <span>Tanpa Batas Atas</span>
+                                                </label>
+                                            </div>
+                                        </td>
+
+                                        <!-- Persentase Komisi -->
+                                        <td class="text-center">
+                                            <div class="flex items-center gap-1 justify-center">
+                                                <input type="number" step="0.1" min="0" max="100" x-model.number="tier.persentase" @input="runSimulation()" class="form-input text-xs font-bold text-center w-16" placeholder="0">
+                                                <span class="font-bold" style="color:var(--color-ink-mute);">%</span>
+                                            </div>
+                                        </td>
+
+                                        <!-- Tombol Hapus -->
+                                        <td class="text-center">
+                                            <button type="button" @click="removeTierRow(idx)" class="btn btn-icon btn-ghost btn-sm text-rose-500 hover:bg-rose-500/10" :disabled="editableTiers.length <= 1" title="Hapus Baris">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- LIVE SIMULATOR / KALKULATOR CEPAT -->
+                <div class="p-4 rounded-xl space-y-3" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="calculator" class="w-4 h-4 text-emerald-500"></i>
+                            <span class="font-bold text-xs" style="color:var(--color-ink);">KALKULATOR SIMULATOR OMZET CEPAT</span>
+                        </div>
+                        <span class="text-[11px]" style="color:var(--color-ink-mute);">Uji coba angka omzet dengan skema di atas</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                        <div>
+                            <label class="form-label text-[11px]">Input Omzet Terbayar:</label>
+                            <input type="text" 
+                                   :value="formatInputRupiah(simulasiOmzet)" 
+                                   @input="simulasiOmzet = parseInputRupiah($event.target.value); $event.target.value = formatInputRupiah(simulasiOmzet); runSimulation();"
+                                   class="form-input font-mono font-bold text-xs" style="height:36px;">
+                        </div>
+
+                        <!-- Hasil Simulasi: Tier & Rate -->
+                        <div class="p-2.5 rounded-lg border flex flex-col justify-center" style="background:var(--color-canvas);border-color:var(--color-hairline);min-height:54px;">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase">Tier &amp; Persentase Diraih:</div>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <span class="font-black text-xs text-amber-500" x-text="simResult.nama_tier"></span>
+                                <span class="badge badge-success text-[10px] py-0.5 px-1.5 font-bold" x-text="simResult.persentase + '%'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Hasil Simulasi: Nominal Komisi -->
+                        <div class="p-2.5 rounded-lg border flex flex-col justify-center" style="background:var(--color-canvas);border-color:var(--color-hairline);min-height:54px;">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase">Estimasi Nominal Komisi:</div>
+                            <div class="font-black text-sm text-emerald-600 dark:text-emerald-400 mt-0.5" x-text="formatRupiah(simResult.nominal_komisi)"></div>
+                        </div>
+                    </div>
+
+                    <!-- Progress / Gap ke Tier Berikutnya -->
+                    <template x-if="simResult.has_next">
+                        <div class="p-2.5 rounded-lg border text-[11px] flex items-center justify-between" style="background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.25);color:var(--color-ink);">
+                            <div class="flex items-center gap-1.5">
+                                <i data-lucide="target" class="w-3.5 h-3.5 text-blue-500"></i>
+                                <span>Kurang <strong class="text-blue-600 dark:text-blue-400 font-mono" x-text="formatRupiah(simResult.gap_omzet)"></strong> untuk naik ke <strong x-text="simResult.next_tier_nama"></strong> (<span x-text="simResult.next_tier_persen + '%'"></span>)</span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t flex items-center justify-between" style="border-color:var(--color-hairline);background:var(--color-canvas-soft);">
+                <div class="text-[11px]" style="color:var(--color-ink-mute);">
+                    Perubahan langsung berlaku pada perhitungan di menu Rekap Komisi Sales.
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="showTierModal = false" class="btn btn-secondary text-xs" :disabled="isSavingTiers">
+                        Batal
+                    </button>
+                    <button type="button" @click="saveTierConfig()" class="btn btn-primary text-xs font-bold" :disabled="isSavingTiers" style="background:#f59e0b;border-color:#f59e0b;color:#090d16;">
+                        <i data-lucide="check" class="w-4 h-4"></i>
+                        <span x-text="isSavingTiers ? 'Menyimpan...' : 'Simpan Skema Komisi'"></span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    </template>
+
     <!-- HIDDEN FORM FOR DEACTIVATING EMPLOYEE -->
     <form id="delete-employee-form" action="<?= Router::url('/employees/delete') ?>" method="POST" data-action-text="Menonaktifkan karyawan..." style="display:none;">
         <input type="hidden" name="id" id="delete-employee-id">
@@ -567,6 +761,30 @@ function employeeApp() {
         filterPosition: 'all',
         showModal: false,
         isEdit: false,
+
+        // Skema Komisi Bertingkat State
+        showTierModal: false,
+        isSavingTiers: false,
+        simulasiOmzet: 35000000,
+        simResult: {
+            nama_tier: 'Tier 2 (Reguler)',
+            persentase: 2.5,
+            nominal_komisi: 875000,
+            has_next: true,
+            gap_omzet: 1,
+            next_tier_nama: 'Tier 3 (Gold)',
+            next_tier_persen: 4.0
+        },
+        editableTiers: (<?= json_encode($commissionTiers ?? []) ?>).map(t => ({
+            id: t.id,
+            urutan: Number(t.urutan),
+            nama_tier: t.nama_tier,
+            omzet_min: Number(t.omzet_min),
+            omzet_maks: t.omzet_maks !== null ? Number(t.omzet_maks) : null,
+            tanpa_batas: t.omzet_maks === null,
+            persentase: Number(t.persentase),
+            status_aktif: Boolean(t.status_aktif)
+        })),
 
         form: {
             id: '',
@@ -587,6 +805,7 @@ function employeeApp() {
         },
 
         init() {
+            this.runSimulation();
             this.$nextTick(() => lucide.createIcons());
         },
 
@@ -605,6 +824,145 @@ function employeeApp() {
 
         formatRupiah(num) {
             return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+        },
+
+        formatInputRupiah(val) {
+            if (val === null || val === undefined || val === '') return '';
+            return Number(val).toLocaleString('id-ID');
+        },
+
+        parseInputRupiah(str) {
+            if (!str) return 0;
+            const cleaned = String(str).replace(/[^0-9]/g, '');
+            return cleaned ? parseFloat(cleaned) : 0;
+        },
+
+        openTierModal() {
+            this.showTierModal = true;
+            this.runSimulation();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        addTierRow() {
+            const lastTier = this.editableTiers[this.editableTiers.length - 1];
+            let nextMin = 0;
+            if (lastTier) {
+                if (lastTier.tanpa_batas) {
+                    lastTier.tanpa_batas = false;
+                    lastTier.omzet_maks = lastTier.omzet_min + 20000000;
+                }
+                nextMin = (lastTier.omzet_maks || lastTier.omzet_min) + 1;
+            }
+            const nextUrutan = this.editableTiers.length + 1;
+            this.editableTiers.push({
+                id: null,
+                urutan: nextUrutan,
+                nama_tier: 'Tier ' + nextUrutan,
+                omzet_min: nextMin,
+                omzet_maks: null,
+                tanpa_batas: true,
+                persentase: lastTier ? Math.min(100, lastTier.persentase + 1) : 1,
+                status_aktif: true
+            });
+            this.runSimulation();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        removeTierRow(idx) {
+            if (this.editableTiers.length <= 1) {
+                alert('Minimal harus ada 1 tier komisi.');
+                return;
+            }
+            this.editableTiers.splice(idx, 1);
+            this.runSimulation();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        runSimulation() {
+            const omzet = Number(this.simulasiOmzet || 0);
+            const tiers = this.editableTiers.slice().sort((a, b) => a.urutan - b.urutan);
+            let matched = null;
+            for (let i = tiers.length - 1; i >= 0; i--) {
+                const t = tiers[i];
+                if (omzet >= t.omzet_min && (t.tanpa_batas || t.omzet_maks === null || omzet <= t.omzet_maks)) {
+                    matched = t;
+                    break;
+                }
+            }
+
+            if (!matched && tiers.length > 0) {
+                matched = {
+                    nama_tier: 'Di Bawah Minimum',
+                    persentase: 0,
+                    urutan: 0
+                };
+            }
+
+            const persen = matched ? matched.persentase : 0;
+            const nominal = Math.round(omzet * (persen / 100));
+
+            // Next tier
+            let nextTier = null;
+            if (matched) {
+                nextTier = tiers.find(t => t.urutan > matched.urutan);
+            } else if (tiers.length > 0) {
+                nextTier = tiers[0];
+            }
+
+            let gap = 0;
+            if (nextTier) {
+                gap = Math.max(0, nextTier.omzet_min - omzet);
+            }
+
+            this.simResult = {
+                nama_tier: matched ? matched.nama_tier : 'Tanpa Tier',
+                persentase: persen,
+                nominal_komisi: nominal,
+                has_next: Boolean(nextTier),
+                gap_omzet: gap,
+                next_tier_nama: nextTier ? nextTier.nama_tier : '',
+                next_tier_persen: nextTier ? nextTier.persentase : 0
+            };
+        },
+
+        async saveTierConfig() {
+            this.isSavingTiers = true;
+            try {
+                const payload = {
+                    tiers: this.editableTiers.map((t, i) => ({
+                        id: t.id,
+                        urutan: i + 1,
+                        nama_tier: t.nama_tier,
+                        omzet_min: t.omzet_min,
+                        omzet_maks: t.tanpa_batas ? null : t.omzet_maks,
+                        tanpa_batas: t.tanpa_batas,
+                        persentase: t.persentase,
+                        status_aktif: true
+                    }))
+                };
+
+                const res = await fetch('<?= Router::url('/employees/commission-tiers/batch-save') ?>', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Gagal menyimpan skema komisi');
+                }
+
+                alert(data.message || 'Skema komisi berhasil diperbarui!');
+                window.location.reload();
+
+            } catch (err) {
+                alert(err.message || 'Terjadi kesalahan sistem saat menyimpan skema.');
+            } finally {
+                this.isSavingTiers = false;
+            }
         },
 
         onPosisiChange() {

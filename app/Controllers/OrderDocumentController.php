@@ -248,6 +248,7 @@ class OrderDocumentController extends Controller
             $endDate = $this->input('end_date', date('Y-m-d'));
             $pelangganId = $this->input('pelanggan_id');
             $statusBayar = $this->input('status_pembayaran');
+            $tipeTransaksi = $this->input('tipe_transaksi');
             $q = trim((string)$this->input('q', ''));
 
             $sql = "
@@ -275,12 +276,21 @@ class OrderDocumentController extends Controller
                 $sql .= " AND p.pelanggan_id = :pelanggan_id";
                 $params['pelanggan_id'] = $pelangganId;
             }
-            if (!empty($statusBayar)) {
+            if (!empty($statusBayar) && $statusBayar !== 'semua') {
                 $sql .= " AND p.status_pembayaran = :status_bayar";
                 $params['status_bayar'] = $statusBayar;
             }
+            if (!empty($tipeTransaksi) && $tipeTransaksi !== 'semua') {
+                if ($tipeTransaksi === 'beli_putus') {
+                    $sql .= " AND p.catatan ILIKE '%Beli putus%'";
+                } elseif ($tipeTransaksi === 'reguler') {
+                    $sql .= " AND (p.catatan NOT ILIKE '%Beli putus%' OR p.catatan IS NULL) AND p.tipe_pembayaran != 'konsinyasi' AND (p.adalah_tagihan = TRUE OR p.adalah_tagihan IS NULL)";
+                } elseif ($tipeTransaksi === 'konsinyasi') {
+                    $sql .= " AND (p.tipe_pembayaran = 'konsinyasi' OR p.adalah_tagihan = FALSE)";
+                }
+            }
             if (!empty($q)) {
-                $sql .= " AND (p.nomor_nota ILIKE :q OR pel.nama_toko ILIKE :q OR pel.kode_pelanggan ILIKE :q)";
+                $sql .= " AND (p.nomor_nota ILIKE :q OR pel.nama_toko ILIKE :q OR pel.kode_pelanggan ILIKE :q OR p.catatan ILIKE :q)";
                 $params['q'] = "%{$q}%";
             }
 

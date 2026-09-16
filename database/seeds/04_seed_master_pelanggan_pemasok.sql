@@ -9,7 +9,7 @@ INSERT INTO public.wilayah (kode_rute, nama_wilayah, provinsi, kota_kabupaten) V
 ('RUTE-JAKBAR', 'Jakarta Barat & Sekitarnya', 'DKI Jakarta', 'Jakarta Barat')
 ON CONFLICT (kode_rute) DO NOTHING;
 
--- 2. Master Grup Pelanggan (Pemegang Default Level Harga 1-28 & Diskon)
+-- 2. Master Grup Pelanggan (Pemegang Default Level Harga 1-30 & Diskon)
 INSERT INTO public.grup_pelanggan (id, kode_grup, nama_grup, default_level_harga, diskon_persen_default, diskon_nominal_default) VALUES
 ('44444444-4444-4444-4444-444444444401', 'GRP-UMUM-RITEL', 'Grup Ritel Standar', 1, 0.00, 0.00),
 ('44444444-4444-4444-4444-444444444402', 'GRP-MITRA-A', 'Grup Mitra Warung A', 8, 5.00, 0.00),

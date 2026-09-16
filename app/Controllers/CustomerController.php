@@ -15,7 +15,7 @@ use Throwable;
  * app/Controllers/CustomerController.php
  * Pengendali Master Toko Pelanggan Terpadu:
  * 1. Data Toko & Plafon Kredit
- * 2. Grup Pelanggan (Level 1–28)
+ * 2. Grup Pelanggan (Level 1–30)
  * 3. Master Rute / Wilayah (CRUD Terpadu untuk Pelanggan & Vendor Supplier)
  * 4. Tipe Bayar (Cash / Tempo / Konsinyasi)
  * 5. Daftar Item Khusus Toko (Whitelist Katalog Item per Toko)
@@ -91,6 +91,8 @@ class CustomerController extends Controller
             // Statistik global (seluruh database, tidak terpotong paginasi)
             $totalGlobalCustomers = (int)(Database::fetchOne("SELECT COUNT(*) as total FROM public.pelanggan")['total'] ?? 0);
             $totalActiveCustomers = (int)(Database::fetchOne("SELECT COUNT(*) as total FROM public.pelanggan WHERE status_aktif = TRUE")['total'] ?? 0);
+            $totalKonsinyasiCustomers = (int)(Database::fetchOne("SELECT COUNT(*) as total FROM public.pelanggan WHERE is_konsinyasi = TRUE AND status_aktif = TRUE")['total'] ?? 0);
+            $totalRegulerCustomers = (int)(Database::fetchOne("SELECT COUNT(*) as total FROM public.pelanggan WHERE (is_konsinyasi = FALSE OR is_konsinyasi IS NULL) AND status_aktif = TRUE")['total'] ?? 0);
             $totalGlobalPiutang = (float)(Database::fetchOne("SELECT COALESCE(SUM(total_piutang_berjalan), 0) as total FROM public.pelanggan WHERE status_aktif = TRUE")['total'] ?? 0);
 
             // 1. Ambil data toko pelanggan beserta relasi & jumlah item khusus (dengan limit & offset)
@@ -100,8 +102,8 @@ class CustomerController extends Controller
                        p.nama_bank, p.nomor_rekening, p.atas_nama_rekening,
                        p.plafon_piutang, p.total_piutang_berjalan, p.status_aktif,
                        p.grup_pelanggan_id, p.wilayah_id, p.sales_driver_id,
-                       gp.nama_grup, gp.default_level_harga,
-                       w.nama_wilayah, w.kode_rute,
+                       gp.nama_grup, gp.default_level_harga, gp.status_aktif as grup_status_aktif,
+                       w.nama_wilayah, w.kode_rute, w.status_aktif as wilayah_status_aktif,
                        k.nama_karyawan as nama_sales,
                        (SELECT COUNT(*) FROM public.pelanggan_item pi WHERE pi.pelanggan_id = p.id) as total_item_khusus,
                        (SELECT COALESCE(SUM(sk.stok_titip_saat_ini), 0) FROM public.stok_konsinyasi_toko sk WHERE sk.pelanggan_id = p.id) as stok_titip_aktif
@@ -118,9 +120,17 @@ class CustomerController extends Controller
             $customerGroups = Database::fetchAll("
                 SELECT gp.id, gp.kode_grup, gp.nama_grup, gp.default_level_harga,
                        gp.diskon_persen_default, gp.diskon_nominal_default, gp.status_aktif,
+                       mlh.nama_level as master_nama_level,
                        (SELECT COUNT(*) FROM public.pelanggan p WHERE p.grup_pelanggan_id = gp.id) as total_pelanggan
                 FROM public.grup_pelanggan gp
+                LEFT JOIN public.master_level_harga mlh ON gp.default_level_harga = mlh.level_nomor
                 ORDER BY gp.nama_grup ASC
+            ");
+
+            $masterLevels = Database::fetchAll("
+                SELECT level_nomor, nama_level 
+                FROM public.master_level_harga 
+                ORDER BY level_nomor ASC
             ");
 
             // 3. Ambil master wilayah / rute logistik
@@ -134,8 +144,8 @@ class CustomerController extends Controller
 
             // 4. Ambil seluruh Barang Jadi (Finished Goods) untuk modal item whitelist
             $finishedGoods = Database::fetchAll("
-                SELECT i.id, i.grup_id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
-                       gp.nama_grup, gp.kode_grup
+                SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 WHERE i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
@@ -198,6 +208,7 @@ class CustomerController extends Controller
                 'customers' => $customers,
                 'groups' => $customerGroups,
                 'customerGroups' => $customerGroups,
+                'masterLevels' => $masterLevels,
                 'territories' => $territories,
                 'finishedGoods' => $finishedGoods,
                 'customerItemsMap' => $customerItemsMap,
@@ -206,6 +217,8 @@ class CustomerController extends Controller
                 'shelfItemsMap' => $shelfItemsMap,
                 'totalGlobalCustomers' => $totalGlobalCustomers,
                 'totalActiveCustomers' => $totalActiveCustomers,
+                'totalKonsinyasiCustomers' => $totalKonsinyasiCustomers,
+                'totalRegulerCustomers' => $totalRegulerCustomers,
                 'totalGlobalPiutang' => $totalGlobalPiutang,
                 'pagination' => [
                     'page' => $page,
@@ -427,13 +440,6 @@ class CustomerController extends Controller
             return;
         }
 
-        if (!empty($salesDriverId)) {
-            $checkEmp = Database::fetchOne("SELECT id FROM public.karyawan WHERE id = :id", ['id' => $salesDriverId]);
-            if (!$checkEmp) {
-                $salesDriverId = null;
-            }
-        }
-
         $pdo = Database::getConnection();
         $pdo->beginTransaction();
 
@@ -449,16 +455,17 @@ class CustomerController extends Controller
                     foreach ($shelfItems as $si) {
                         $itemId = $si['item_id'];
                         $qty = (int)$si['stok_titip_saat_ini'];
-                        $stokSebelum = (float)$si['stok_fisik_saat_ini'];
-                        $stokSesudah = $stokSebelum + $qty;
 
-                        // 1. Tambah stok fisik gudang pusat
+                        // 1. Tambah stok fisik gudang pusat (atomik dengan RETURNING)
                         $stmtItem = $pdo->prepare("
                             UPDATE public.item 
                             SET stok_fisik_saat_ini = stok_fisik_saat_ini + :qty, diubah_pada = NOW() 
                             WHERE id = :item_id
+                            RETURNING stok_fisik_saat_ini
                         ");
                         $stmtItem->execute(['qty' => $qty, 'item_id' => $itemId]);
+                        $stokSesudah = (float)$stmtItem->fetchColumn();
+                        $stokSebelum = $stokSesudah - $qty;
 
                         // 2. Nolkan saldo rak toko
                         $stmtRak = $pdo->prepare("
@@ -674,41 +681,45 @@ class CustomerController extends Controller
 
                     // Finansial: Kas atau Piutang
                     if ($metodeBeliPutus === 'lunas') {
-                        $saldoLama = (float)$akunKas['saldo_saat_ini'];
-                        $saldoBaru = $saldoLama + $totalNetto;
+                        if ($totalNetto > 0 && !empty($akunKasId)) {
+                            $saldoLama = (float)$akunKas['saldo_saat_ini'];
+                            $saldoBaru = $saldoLama + $totalNetto;
 
-                        $stmtUpdateKas = $pdo->prepare("
-                            UPDATE public.akun_kas 
-                            SET saldo_saat_ini = :saldo_baru, diubah_pada = NOW() 
-                            WHERE id = :akun_id
-                        ");
-                        $stmtUpdateKas->execute(['saldo_baru' => $saldoBaru, 'akun_id' => $akunKasId]);
+                            $stmtUpdateKas = $pdo->prepare("
+                                UPDATE public.akun_kas 
+                                SET saldo_saat_ini = :saldo_baru, diubah_pada = NOW() 
+                                WHERE id = :akun_id
+                            ");
+                            $stmtUpdateKas->execute(['saldo_baru' => $saldoBaru, 'akun_id' => $akunKasId]);
 
-                        $stmtArusKas = $pdo->prepare("
-                            INSERT INTO public.arus_kas (
-                                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
-                                keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh
-                            ) VALUES (
-                                :akun_id, CURRENT_DATE, 'masuk', 'penjualan', :nominal,
-                                :keterangan, 'pesanan', :pesanan_id, :saldo_berjalan, :user_id
-                            )
-                        ");
-                        $stmtArusKas->execute([
-                            'akun_id' => $akunKasId,
-                            'nominal' => $totalNetto,
-                            'keterangan' => "Penerimaan beli putus sisa barang konsinyasi - {$namaToko} (Nota: {$nomorNota})",
-                            'pesanan_id' => $pesananId,
-                            'saldo_berjalan' => $saldoBaru,
-                            'user_id' => $userId,
-                        ]);
+                            $stmtArusKas = $pdo->prepare("
+                                INSERT INTO public.arus_kas (
+                                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                                    keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh
+                                ) VALUES (
+                                    :akun_id, CURRENT_DATE, 'masuk', 'penjualan', :nominal,
+                                    :keterangan, 'pesanan', :pesanan_id, :saldo_berjalan, :user_id
+                                )
+                            ");
+                            $stmtArusKas->execute([
+                                'akun_id' => $akunKasId,
+                                'nominal' => $totalNetto,
+                                'keterangan' => "Penerimaan beli putus sisa barang konsinyasi - {$namaToko} (Nota: {$nomorNota})",
+                                'pesanan_id' => $pesananId,
+                                'saldo_berjalan' => $saldoBaru,
+                                'user_id' => $userId,
+                            ]);
+                        }
                     } else {
                         // Tambah piutang berjalan toko
-                        $stmtPiutang = $pdo->prepare("
-                            UPDATE public.pelanggan 
-                            SET total_piutang_berjalan = total_piutang_berjalan + :nominal 
-                            WHERE id = :cust_id
-                        ");
-                        $stmtPiutang->execute(['nominal' => $totalNetto, 'cust_id' => $id]);
+                        if ($totalNetto > 0) {
+                            $stmtPiutang = $pdo->prepare("
+                                UPDATE public.pelanggan 
+                                SET total_piutang_berjalan = total_piutang_berjalan + :nominal 
+                                WHERE id = :cust_id
+                            ");
+                            $stmtPiutang->execute(['nominal' => $totalNetto, 'cust_id' => $id]);
+                        }
                     }
                 }
             }
@@ -779,7 +790,7 @@ class CustomerController extends Controller
                     $this->flashSuccess("Data toko {$namaToko} berhasil diperbarui menjadi non-konsinyasi. Sebanyak {$totalTitip} pcs stok konsinyasi telah diretur kembali ke gudang pusat.");
                 } elseif ($konversiOpsi === 'beli_putus') {
                     $statusBayarLabel = ($metodeBeliPutus === 'lunas') ? 'LUNAS (Kas/Bank)' : 'TEMPO (Piutang Dagang)';
-                    $this->flashSuccess("Data toko {$namaToko} berhasil diperbarui menjadi non-konsinyasi. Faktur Beli Putus {$nomorNotaBeliPutus} senilai Rp " . number_format($totalNominalBeliPutus, 0, ',', '.') . " berhasil diterbitkan ({$statusBayarLabel}).");
+                    $this->flashSuccess("Data toko {$namaToko} berhasil diperbarui menjadi non-konsinyasi. Faktur Beli Putus {$nomorNotaBeliPutus} senilai Rp " . number_format($totalNominalBeliPutus, 0, ',', '.') . " berhasil diterbitkan ({$statusBayarLabel}). Faktur dapat dilihat & dicetak di menu Pesanan Pelanggan (/customer-orders).");
                 }
             } else {
                 $this->flashSuccess("Data toko {$namaToko} berhasil diperbarui!");
@@ -1169,7 +1180,7 @@ class CustomerController extends Controller
 
         $nama = trim((string)$this->input('nama_grup'));
         $kode = trim((string)$this->input('kode_grup'));
-        $level = max(1, min(28, (int)$this->input('default_level_harga', 1)));
+        $level = max(1, min(30, (int)$this->input('default_level_harga', 1)));
         $discPersen = max(0.0, (float)$this->input('diskon_persen_default', 0));
         $discNominal = max(0.0, (float)preg_replace('/[^0-9]/', '', (string)$this->input('diskon_nominal_default', '0')));
 
@@ -1243,7 +1254,7 @@ class CustomerController extends Controller
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_grup'));
         $kode = trim((string)$this->input('kode_grup'));
-        $level = max(1, min(28, (int)$this->input('default_level_harga', 1)));
+        $level = max(1, min(30, (int)$this->input('default_level_harga', 1)));
         $discPersen = max(0.0, (float)$this->input('diskon_persen_default', 0));
         $discNominal = max(0.0, (float)preg_replace('/[^0-9]/', '', (string)$this->input('diskon_nominal_default', '0')));
         $statusAktif = (bool)$this->input('status_aktif', true);

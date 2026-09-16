@@ -190,7 +190,7 @@ runTest('UI/UX Logic & Elements in views/customers/index.php', function () {
     // 5. Global metrics cards
     if (!str_contains($viewContent, '$totalGlobalCustomers') ||
         !str_contains($viewContent, '$totalActiveCustomers') ||
-        !str_contains($viewContent, '$totalGlobalPiutang')) {
+        !str_contains($viewContent, '$totalKonsinyasiCustomers')) {
         return 'Global metrics variables are missing in view stat cards';
     }
 

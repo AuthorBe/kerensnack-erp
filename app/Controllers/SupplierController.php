@@ -30,7 +30,7 @@ class SupplierController extends Controller
             $where = "WHERE 1=1";
             $params = [];
             if (!empty($q)) {
-                $where .= " AND (s.nama_pemasok ILIKE :q OR s.kode_pemasok ILIKE :q OR s.nomor_telepon ILIKE :q OR s.nomor_rekening ILIKE :q OR w.nama_wilayah ILIKE :q)";
+                $where .= " AND (s.nama_pemasok ILIKE :q OR s.kode_pemasok ILIKE :q OR s.nama_kontak ILIKE :q OR s.nomor_telepon ILIKE :q OR s.nomor_whatsapp ILIKE :q OR s.email ILIKE :q OR s.nomor_rekening ILIKE :q OR s.alamat_lengkap ILIKE :q OR w.nama_wilayah ILIKE :q)";
                 $params['q'] = "%{$q}%";
             }
 
@@ -43,7 +43,8 @@ class SupplierController extends Controller
             $totalPages = max(1, (int)ceil($totalSuppliers / $perPage));
 
             $suppliers = Database::fetchAll("
-                SELECT s.id, s.kode_pemasok, s.nama_pemasok, s.alamat_lengkap, s.nomor_telepon,
+                SELECT s.id, s.kode_pemasok, s.nama_pemasok, s.nama_kontak, s.alamat_lengkap, s.link_google_maps,
+                       s.nomor_telepon, s.nomor_whatsapp, s.email, s.termin_bayar, s.catatan,
                        s.detail_bank, s.nama_bank, s.nomor_rekening, s.atas_nama_rekening,
                        s.status_aktif, s.wilayah_id, w.nama_wilayah
                 FROM public.pemasok s
@@ -92,8 +93,17 @@ class SupplierController extends Controller
         Auth::requirePermission('master.suppliers_manage');
 
         $nama = trim((string)$this->input('nama_pemasok'));
-        $telepon = trim((string)$this->input('nomor_telepon'));
+        $kontak = trim((string)$this->input('nama_kontak')) ?: null;
+        $telepon = trim((string)$this->input('nomor_telepon')) ?: null;
+        $whatsapp = trim((string)$this->input('nomor_whatsapp')) ?: null;
+        $email = trim((string)$this->input('email')) ?: null;
         $alamat = trim((string)$this->input('alamat_lengkap', '-'));
+        $linkMaps = trim((string)$this->input('link_google_maps')) ?: null;
+        $terminBayar = trim((string)$this->input('termin_bayar', 'cash'));
+        if (!in_array($terminBayar, ['cash', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari'], true)) {
+            $terminBayar = 'cash';
+        }
+        $catatan = trim((string)$this->input('catatan')) ?: null;
         $wilayahId = $this->input('wilayah_id') ?: null;
         $bankNama = trim((string)$this->input('bank_nama'));
         $bankRekening = trim((string)$this->input('bank_rekening'));
@@ -112,36 +122,43 @@ class SupplierController extends Controller
         }
 
         try {
-            $count = Database::fetchOne("SELECT count(*) as total FROM public.pemasok")['total'] ?? 0;
-            $kode = 'SUP-' . str_pad((string)($count + 1), 3, '0', STR_PAD_LEFT);
-
-            $detailBank = [];
-            if (!empty($bankRekening)) {
-                $detailBank[] = [
-                    'bank' => $bankNama,
-                    'nomor_rekening' => $bankRekening,
-                    'atas_nama' => $bankAtasNama
-                ];
-            }
+            $maxNum = (int)(Database::fetchOne("
+                SELECT COALESCE(MAX(NULLIF(regexp_replace(kode_pemasok, '^SUP-', ''), '')::integer), 0) as max_num
+                FROM public.pemasok
+                WHERE kode_pemasok ~ '^SUP-[0-9]+$'
+            ")['max_num'] ?? 0);
+            $nextNum = $maxNum + 1;
+            do {
+                $kode = 'SUP-' . str_pad((string)$nextNum, 3, '0', STR_PAD_LEFT);
+                $exists = (int)(Database::fetchOne("SELECT count(*) as total FROM public.pemasok WHERE kode_pemasok = :k", ['k' => $kode])['total'] ?? 0);
+                if ($exists > 0) $nextNum++;
+            } while ($exists > 0);
 
             Database::execute("
                 INSERT INTO public.pemasok (
-                    kode_pemasok, nama_pemasok, wilayah_id, alamat_lengkap, nomor_telepon,
-                    nama_bank, nomor_rekening, atas_nama_rekening, detail_bank, status_aktif
+                    kode_pemasok, nama_pemasok, nama_kontak, wilayah_id, alamat_lengkap,
+                    link_google_maps, nomor_telepon, nomor_whatsapp, email, termin_bayar, catatan,
+                    nama_bank, nomor_rekening, atas_nama_rekening, status_aktif
                 ) VALUES (
-                    :kode, :nama, :wilayah, :alamat, :telp,
-                    :nama_bank, :nomor_rek, :atas_nama, :bank, TRUE
+                    :kode, :nama, :kontak, :wilayah, :alamat,
+                    :maps, :telp, :wa, :email, :termin, :catatan,
+                    :nama_bank, :nomor_rek, :atas_nama, TRUE
                 )
             ", [
                 'kode' => $kode,
                 'nama' => $nama,
+                'kontak' => $kontak,
                 'wilayah' => $wilayahId,
                 'alamat' => $alamat,
+                'maps' => $linkMaps,
                 'telp' => $telepon,
+                'wa' => $whatsapp,
+                'email' => $email,
+                'termin' => $terminBayar,
+                'catatan' => $catatan,
                 'nama_bank' => $bankNama ?: null,
                 'nomor_rek' => $bankRekening ?: null,
-                'atas_nama' => $bankAtasNama ?: null,
-                'bank' => json_encode($detailBank)
+                'atas_nama' => $bankAtasNama ?: null
             ]);
 
             \App\Helpers\ActivityLog::log(
@@ -167,8 +184,17 @@ class SupplierController extends Controller
 
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_pemasok'));
-        $telepon = trim((string)$this->input('nomor_telepon'));
+        $kontak = trim((string)$this->input('nama_kontak')) ?: null;
+        $telepon = trim((string)$this->input('nomor_telepon')) ?: null;
+        $whatsapp = trim((string)$this->input('nomor_whatsapp')) ?: null;
+        $email = trim((string)$this->input('email')) ?: null;
         $alamat = trim((string)$this->input('alamat_lengkap', '-'));
+        $linkMaps = trim((string)$this->input('link_google_maps')) ?: null;
+        $terminBayar = trim((string)$this->input('termin_bayar', 'cash'));
+        if (!in_array($terminBayar, ['cash', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari'], true)) {
+            $terminBayar = 'cash';
+        }
+        $catatan = trim((string)$this->input('catatan')) ?: null;
         $wilayahId = $this->input('wilayah_id') ?: null;
         $bankNama = trim((string)$this->input('bank_nama'));
         $bankRekening = trim((string)$this->input('bank_rekening'));
@@ -188,38 +214,39 @@ class SupplierController extends Controller
         }
 
         try {
-            $detailBank = [];
-            if (!empty($bankRekening)) {
-                $detailBank[] = [
-                    'bank' => $bankNama,
-                    'nomor_rekening' => $bankRekening,
-                    'atas_nama' => $bankAtasNama
-                ];
-            }
-
             Database::execute("
                 UPDATE public.pemasok SET
                     nama_pemasok = :nama,
+                    nama_kontak = :kontak,
                     wilayah_id = :wilayah,
                     alamat_lengkap = :alamat,
+                    link_google_maps = :maps,
                     nomor_telepon = :telp,
+                    nomor_whatsapp = :wa,
+                    email = :email,
+                    termin_bayar = :termin,
+                    catatan = :catatan,
                     nama_bank = :nama_bank,
                     nomor_rekening = :nomor_rek,
                     atas_nama_rekening = :atas_nama,
-                    detail_bank = :bank,
                     status_aktif = :aktif,
                     diubah_pada = NOW()
                 WHERE id = :id
             ", [
                 'id' => $id,
                 'nama' => $nama,
+                'kontak' => $kontak,
                 'wilayah' => $wilayahId,
                 'alamat' => $alamat,
+                'maps' => $linkMaps,
                 'telp' => $telepon,
+                'wa' => $whatsapp,
+                'email' => $email,
+                'termin' => $terminBayar,
+                'catatan' => $catatan,
                 'nama_bank' => $bankNama ?: null,
                 'nomor_rek' => $bankRekening ?: null,
                 'atas_nama' => $bankAtasNama ?: null,
-                'bank' => json_encode($detailBank),
                 'aktif' => $statusAktif ? 'true' : 'false'
             ]);
 

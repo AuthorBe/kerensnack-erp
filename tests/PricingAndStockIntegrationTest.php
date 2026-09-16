@@ -281,24 +281,27 @@ runTest("2.4.1 Registrasi Produk dengan Saldo Awal > 0 Mencatat Riwayat Stok", f
 
     $pdo = Database::pdo();
     $pdo->beginTransaction();
-
     try {
-        $stmt = $pdo->prepare("
-            INSERT INTO public.item (
-                kode_sku, nama_item, varian_rasa, tipe_item, satuan_dasar, satuan_distribusi,
-                harga_pokok_pembelian, stok_minimum_peringatan, stok_fisik_saat_ini, status_jual, status_aktif
-            ) VALUES (
-                :sku, :nama, 'Original', 'barang_jadi', 'pcs', 'bal',
-                12500, 10, :stok, TRUE, TRUE
-            ) RETURNING id
-        ");
-        $stmt->execute([
-            'sku' => $testSku,
-            'nama' => $testName,
-            'stok' => $stokAwal
-        ]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        $testItemId = $row['id'];
+        $grupRow = Database::fetchOne("SELECT id FROM public.grup_produk LIMIT 1");
+    $testGrupId = $grupRow['id'] ?? null;
+
+    $stmt = $pdo->prepare("
+        INSERT INTO public.item (
+            grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, satuan_distribusi,
+            harga_pokok_pembelian, stok_minimum_peringatan, stok_fisik_saat_ini, status_jual, status_aktif
+        ) VALUES (
+            :gid, :sku, :nama, 'barang_jadi', 'pcs', 'bal',
+            12500, 10, :stok, TRUE, TRUE
+        ) RETURNING id
+    ");
+    $stmt->execute([
+        'gid' => $testGrupId,
+        'sku' => $testSku,
+        'nama' => $testName,
+        'stok' => $stokAwal
+    ]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $testItemId = $row['id'];
 
         if ($stokAwal > 0) {
             $stmtHist = $pdo->prepare("
@@ -387,8 +390,14 @@ runTest("2.1.1 Anti-Tampering: RPC fn_hitung_harga_jual_item Berjalan Konsisten"
         return "Tidak ada item barang_jadi aktif untuk pengujian.";
     }
 
-    // Ambil 1 pelanggan
-    $pelanggan = Database::fetchOne("SELECT id, nama_toko FROM public.pelanggan LIMIT 1");
+    // Ambil 1 pelanggan dengan level harga terkonfigurasi (Level 1 / Ritel Standar)
+    $pelanggan = Database::fetchOne("
+        SELECT p.id, p.nama_toko 
+        FROM public.pelanggan p 
+        JOIN public.grup_pelanggan gp ON p.grup_pelanggan_id = gp.id 
+        WHERE gp.default_level_harga = 1 
+        LIMIT 1
+    ") ?: Database::fetchOne("SELECT id, nama_toko FROM public.pelanggan LIMIT 1");
     if (!$pelanggan) {
         return "Tidak ada pelanggan untuk pengujian.";
     }
@@ -406,13 +415,12 @@ runTest("2.1.1 Anti-Tampering: RPC fn_hitung_harga_jual_item Berjalan Konsisten"
 
     $pricing = is_string($rpc['pricing']) ? json_decode($rpc['pricing'], true) : $rpc['pricing'];
     $hargaPcs = (float)($pricing['harga_pcs_netto'] ?? $pricing['harga_pcs_dasar'] ?? 0);
-    $hargaBal = (float)($pricing['harga_bal_netto'] ?? $pricing['harga_bal_dasar'] ?? 0);
 
-    if ($hargaPcs <= 0 && $hargaBal <= 0) {
+    if ($hargaPcs <= 0) {
         return "RPC mengembalikan harga 0: " . json_encode($pricing);
     }
 
-    echo "    (Item: {$item['nama_item']}, Harga Resmi Pcs: Rp " . number_format($hargaPcs, 0, ',', '.') . ", Bal: Rp " . number_format($hargaBal, 0, ',', '.') . ")\n";
+    echo "    (Item: {$item['nama_item']}, Harga Resmi Pcs: Rp " . number_format($hargaPcs, 0, ',', '.') . " / pcs)\n";
     return true;
 });
 

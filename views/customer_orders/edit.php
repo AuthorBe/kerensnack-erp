@@ -445,6 +445,37 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
                                              x-text="row.item_id ? formatRupiah(row.harga) : '-'"
                                              title="Harga satuan deal otomatis berdasarkan level harga toko">
                                         </div>
+                                        <template x-if="isPriceFallback(row.item_id)">
+                                            <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+                                                <div class="cursor-pointer" 
+                                                     @click="
+                                                         if (window.AppAlert) {
+                                                             window.AppAlert({
+                                                                 title: 'Info Penetapan Harga',
+                                                                 message: 'Grup produk ini belum memiliki pengaturan tarif khusus untuk level harga toko ini. Sebagai pengaman, sistem otomatis menggunakan Harga Default (Level 1).',
+                                                                 type: 'warning',
+                                                                 buttonText: 'Tutup & Mengerti',
+                                                                 showCloseBtn: false
+                                                             }).then(() => {
+                                                                const tr = document.querySelector('.row-uid-' + row.uid);
+                                                                if (tr) {
+                                                                    const qtyIn = tr.querySelector('input[data-nav=\'qty\']');
+                                                                    if (qtyIn) qtyIn.focus();
+                                                                }
+                                                             });
+                                                         } else {
+                                                             alert('Sistem memakai Harga Default (Lvl 1) karena belum ada tarif khusus untuk level toko ini.');
+                                                         }
+                                                     "
+                                                     style="display:inline-flex; align-items:center; gap:4px; background:#fff8f1; color:#ea580c; border:1px solid #fed7aa; font-size:9.5px; padding:3px 8px; border-radius:12px; font-weight:700; letter-spacing:0.3px; transition:all 0.2s; box-shadow:0 1px 2px rgba(234, 88, 12, 0.05);"
+                                                     onmouseover="this.style.background='#ffedd5'; this.style.borderColor='#fdba74'; this.style.color='#c2410c';"
+                                                     onmouseout="this.style.background='#fff8f1'; this.style.borderColor='#fed7aa'; this.style.color='#ea580c';"
+                                                     title="Klik untuk melihat info harga">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                                    INFO: HARGA LVL 1
+                                                </div>
+                                            </div>
+                                        </template>
                                     </td>
 
                                     <!-- Diskon Item -->
@@ -530,10 +561,10 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
                              ]"
                              style="padding:8px 12px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--color-hairline-soft);">
                             <div style="min-width:0;flex:1;">
-                                <div style="font-weight:700;color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" x-text="p.nama_item"></div>
-                                <div style="font-size:11px;color:var(--color-ink-mute);" x-text="(p.kode_sku || '') + (p.varian_rasa ? ' • ' + p.varian_rasa : '')"></div>
+                                <div style="font-weight:700;color:var(--color-ink);line-height:1.3;" x-text="p.nama_item"></div>
+                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;" x-text="(p.kode_sku || '') + (p.nama_grup ? ' • ' + p.nama_grup : '')"></div>
                             </div>
-                            <span class="badge badge-mono" :class="Number(p.stok_fisik_saat_ini || 0) > 0 ? 'badge-mono' : 'badge-warning'" style="font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;" x-text="'Stok: ' + (p.stok_fisik_saat_ini || 0)"></span>
+                            <span class="badge badge-mono" :class="Number(p.stok_fisik_saat_ini || 0) > 0 ? 'badge-mono' : 'badge-warning'" style="font-size:10px;font-weight:700;white-space:nowrap;flex-shrink:0;" x-text="'Stok: ' + formatNumber(p.stok_fisik_saat_ini)"></span>
                         </div>
                     </template>
                     <template x-if="filteredProductList.length === 0">
@@ -800,7 +831,7 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
             <div @click.outside="showGuideModal = false" 
                  x-data="{ activeGuideTab: (isKonsinyasi ? 'konsinyasi' : 'reguler') }"
                  class="card shadow-2xl bg-card border border-hairline animate-scale-in"
-                 style="width:100%;max-width:620px;border-radius:24px;padding:28px 30px;box-sizing:border-box;">
+                 style="width:100%;max-width:620px;max-height:calc(100vh - 48px);overflow-y:auto;border-radius:24px;padding:28px 30px;box-sizing:border-box;">
                 
                 <!-- Modal Header -->
                 <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid var(--color-hairline);margin-bottom:20px;">
@@ -813,84 +844,102 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
                             <div class="text-xs text-ink-mute" style="margin-top:3px;">Alur transaksi penerbitan PO hingga barang diterima di toko</div>
                         </div>
                     </div>
-                    <button type="button" @click="showGuideModal = false" class="btn btn-ghost btn-sm text-ink-mute hover:text-ink" style="width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0;">
-                        <i data-lucide="x" style="width:18px;height:18px;"></i>
-                    </button>
                 </div>
 
                 <!-- Modern Segmented Pill Switcher -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-bottom:22px;">
-                    <button type="button" @click="activeGuideTab = 'reguler'"
-                            class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-                            :style="activeGuideTab === 'reguler' ? 'background:var(--color-canvas);color:#2563eb;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid rgba(37,99,235,0.25);' : 'color:var(--color-ink-mute);background:transparent;border:1px solid transparent;'">
-                        <i data-lucide="shopping-bag" style="width:15px;height:15px;flex-shrink:0;"></i>
-                        <span>Penjualan Reguler</span>
-                    </button>
-                    <button type="button" @click="activeGuideTab = 'konsinyasi'"
-                            class="py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2"
-                            :style="activeGuideTab === 'konsinyasi' ? 'background:var(--color-canvas);color:#e11d48;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid rgba(225,29,72,0.25);' : 'color:var(--color-ink-mute);background:transparent;border:1px solid transparent;'">
-                        <i data-lucide="store" style="width:15px;height:15px;flex-shrink:0;"></i>
-                        <span>Titip Jual (Konsinyasi)</span>
-                    </button>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:6px;margin-bottom:28px;">
+                    <div @click="activeGuideTab = 'reguler'"
+                         :style="`cursor:pointer;flex:1;min-width:130px;padding:12px 10px;border-radius:10px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;text-align:center;` + (activeGuideTab === 'reguler' ? 'background:var(--color-canvas);color:#2563eb;box-shadow:0 2px 6px rgba(0,0,0,0.08);border:1px solid rgba(37,99,235,0.25);' : 'color:var(--color-ink-mute);background:transparent;border:1px solid transparent;')">
+                        <i data-lucide="shopping-bag" style="width:16px;height:16px;flex-shrink:0;"></i>
+                        <span style="line-height:1.2;">Penjualan Reguler</span>
+                    </div>
+                    <div @click="activeGuideTab = 'konsinyasi'"
+                         :style="`cursor:pointer;flex:1;min-width:130px;padding:12px 10px;border-radius:10px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;text-align:center;` + (activeGuideTab === 'konsinyasi' ? 'background:var(--color-canvas);color:#e11d48;box-shadow:0 2px 6px rgba(0,0,0,0.08);border:1px solid rgba(225,29,72,0.25);' : 'color:var(--color-ink-mute);background:transparent;border:1px solid transparent;')">
+                        <i data-lucide="store" style="width:16px;height:16px;flex-shrink:0;"></i>
+                        <span style="line-height:1.2;">Titip Jual (Konsinyasi)</span>
+                    </div>
                 </div>
 
                 <!-- Tab 1: Penjualan Reguler -->
-                <div x-show="activeGuideTab === 'reguler'" style="display:flex;flex-direction:column;gap:12px;">
+                <div x-show="activeGuideTab === 'reguler'" style="position:relative;padding-left:24px;margin-left:4px;">
+                    <!-- Timeline Vertical Line -->
+                    <div style="position:absolute;left:4px;top:20px;bottom:20px;width:2px;background:var(--color-hairline);border-radius:2px;"></div>
+                    
                     <!-- Step 1 -->
-                    <div style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px 18px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);">Tahap 1: Penerbitan Purchase Order (PO)</span>
-                            <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);">Draf Antrean</span>
+                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;margin-bottom:22px;">
+                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#f59e0b;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">1. Penerbitan Purchase Order (PO)</span>
+                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">DRAF ANTREAN</span>
                         </div>
                         <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Pesanan baru masuk antrean sistem dengan status <strong>PO</strong>. Pada tahap ini, <strong>stok fisik di gudang belum terpotong</strong> sehingga pesanan masih dapat diedit atau dibatalkan.
+                            Pesanan pelanggan disimpan dengan status awal PO. Pada fase ini, <strong style="color:var(--color-ink);">stok fisik gudang belum terpotong</strong>, sehingga rincian pesanan masih bebas untuk diedit atau dibatalkan.
                         </p>
                     </div>
 
                     <!-- Step 2 -->
-                    <div style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px 18px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);">Tahap 2: Proses Gudang &amp; Surat Jalan</span>
-                            <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(37,99,235,0.1);color:#2563eb;border:1px solid rgba(37,99,235,0.25);">Stok Gudang Terpotong</span>
+                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;margin-bottom:22px;">
+                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#3b82f6;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">2. Proses Gudang &amp; Surat Jalan</span>
+                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(59,130,246,0.12);color:#2563eb;border:1px solid rgba(59,130,246,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">STOK TERPOTONG</span>
                         </div>
                         <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Tim gudang menyiapkan stok fisik lalu menekan tombol <strong>"Siap Kirim"</strong>. Sistem otomatis <strong>memotong stok fisik gudang</strong> dan menerbitkan lembar Surat Jalan resmi untuk pengiriman.
+                            Tim logistik menyiapkan barang dan menekan tombol <strong style="color:var(--color-ink);">Siap Kirim</strong>. Sistem akan otomatis <strong style="color:var(--color-ink);">memotong stok gudang</strong> dan mencetak lembar Surat Jalan resmi untuk dibawa supir.
                         </p>
                     </div>
 
                     <!-- Step 3 (Final) -->
-                    <div style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px 18px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);">Tahap 3: Pengiriman &amp; Pencatatan Finansial</span>
-                            <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.25);">Selesai Diterima</span>
+                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;">
+                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#10b981;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">3. Pengiriman &amp; Pencatatan Finansial</span>
+                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">SELESAI TRANSAKSI</span>
                         </div>
                         <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Driver menyerahkan barang ke toko mitra. Saat status pesanan diubah ke <strong>"Selesai Diterima"</strong>, pembayaran tunai/DP otomatis masuk ke <strong>Buku Kas</strong> &amp; sisa tagihan dicatat ke <strong>Piutang Toko</strong>.
+                            Barang diserahkan ke pelanggan. Setelah status diubah menjadi <strong style="color:var(--color-ink);">Selesai</strong>, sistem otomatis membukukan pembayaran ke <strong style="color:var(--color-ink);">Buku Kas</strong> dan merekap sisa piutang (jika ada).
                         </p>
                     </div>
                 </div>
 
                 <!-- Tab 2: Titip Jual Konsinyasi -->
-                <div x-show="activeGuideTab === 'konsinyasi'" style="display:flex;flex-direction:column;gap:12px;">
+                <div x-show="activeGuideTab === 'konsinyasi'" style="position:relative;padding-left:24px;margin-left:4px;" x-cloak>
+                    <!-- Timeline Vertical Line -->
+                    <div style="position:absolute;left:4px;top:20px;bottom:20px;width:2px;background:var(--color-hairline);border-radius:2px;"></div>
+
                     <!-- Step 1 -->
-                    <div style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px 18px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);">Tahap 1: Surat Jalan Titipan Barang (Rp 0)</span>
-                            <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(225,29,72,0.12);color:#e11d48;border:1px solid rgba(225,29,72,0.25);">Non-Tagihan Awal</span>
+                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;margin-bottom:22px;">
+                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#e11d48;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">1. Distribusi Barang Titipan (Rp 0)</span>
+                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(225,29,72,0.12);color:#e11d48;border:1px solid rgba(225,29,72,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">NON-TAGIHAN</span>
                         </div>
                         <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Pesanan dicatat sebagai distribusi barang titipan rak toko mitra tanpa ada kewajiban pembayaran tunai di muka.
+                            Barang dikirim ke rak toko mitra murni sebagai barang titipan. <strong style="color:var(--color-ink);">Tidak ada kewajiban pembayaran tunai</strong> maupun pencatatan piutang di awal transaksi pengiriman.
+                        </p>
+                    </div>
+                    
+                    <!-- Step 2 -->
+                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;margin-bottom:22px;">
+                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#0ea5e9;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">2. Mutasi ke Stok Rak Toko</span>
+                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(14,165,233,0.12);color:#0369a1;border:1px solid rgba(14,165,233,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">STOK BERPINDAH</span>
+                        </div>
+                        <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
+                            Setelah barang dikonfirmasi sampai, kuantiti fisik barang akan otomatis dipindahkan dari Gudang Utama menuju saldo <strong style="color:var(--color-ink);">Stok Rak Toko Mitra</strong> secara sistem.
                         </p>
                     </div>
 
-                    <!-- Step 2 (Final) -->
-                    <div style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px 18px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);">Tahap 2: Stok Rak Toko &amp; Penagihan Opname</span>
-                            <span style="font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.25);">Opname Fisik Rutin</span>
+                    <!-- Step 3 (Final) -->
+                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;">
+                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#8b5cf6;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
+                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">3. Penagihan Opname (Kunjungan Rutin)</span>
+                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(139,92,246,0.12);color:#6d28d9;border:1px solid rgba(139,92,246,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">OPNAME FISIK</span>
                         </div>
                         <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Kuantiti fisik otomatis masuk ke <strong>Stok Rak Toko Mitra</strong>. Tagihan penjualan hanya dihitung dari selisih barang yang laku terjual saat kunjungan opname berkala berikutnya.
+                            Saat sales kembali berkunjung untuk opname/restock, sistem akan otomatis menghitung barang laku dan menerbitkan <strong style="color:var(--color-ink);">Faktur Tagihan Finansial</strong> hanya dari selisih barang yang terjual.
                         </p>
                     </div>
                 </div>
@@ -1329,28 +1378,36 @@ function editSalesOrderApp() {
             const groupPrices = this.priceMatrix[product.grup_id];
             if (!groupPrices) return 0;
 
-            // 1. Level harga spesifik toko
-            if (groupPrices[level] && Number(groupPrices[level].pcs) > 0) {
-                return Number(groupPrices[level].pcs);
-            }
-
-            // 2. Smart Fallback ke level terdekat yang tersedia
-            const availableLevels = Object.keys(groupPrices).map(Number).sort((a, b) => a - b);
-            if (availableLevels.length > 0) {
-                const lowerLevels = availableLevels.filter(lvl => lvl <= level);
-                if (lowerLevels.length > 0) {
-                    const fallbackLvl = lowerLevels[lowerLevels.length - 1];
-                    if (groupPrices[fallbackLvl] && Number(groupPrices[fallbackLvl].pcs) > 0) {
-                        return Number(groupPrices[fallbackLvl].pcs);
-                    }
-                }
-                if (groupPrices[1] && Number(groupPrices[1].pcs) > 0) {
-                    return Number(groupPrices[1].pcs);
-                }
-                return Number(groupPrices[availableLevels[0]].pcs || 0);
+            // Jika level belum diset atau nol, Coba Fallback ke Level 1
+            if (groupPrices[1] && Number(groupPrices[1].pcs) > 0) {
+                return Number(groupPrices[1].pcs);
             }
 
             return 0;
+        },
+
+        isPriceFallback(itemId) {
+            if (!itemId || !this.order) return false;
+            const product = this.products.find(p => p.id === itemId);
+            if (!product) return false;
+            
+            const level = Number(this.order.level_harga) || 1;
+            if (level === 1) return false; // Sudah level 1, bukan fallback
+            
+            const groupPrices = this.priceMatrix[product.grup_id];
+            if (!groupPrices) return false;
+            
+            // Jika harga level utamanya ada, berarti tidak fallback
+            if (groupPrices[level] && Number(groupPrices[level].pcs) > 0) {
+                return false;
+            }
+            
+            // Jika jatuh ke level 1, berarti fallback
+            if (groupPrices[1] && Number(groupPrices[1].pcs) > 0) {
+                return true;
+            }
+            
+            return false;
         },
 
         get allowedPaymentOptions() {

@@ -37,17 +37,9 @@ INSERT INTO public.grup_produk (kode_grup, nama_grup, barcode_universal, satuan_
 ('GRP-030', 'ANEKA SNACK C', '', 'pcs', 'bal', 20)
 ON CONFLICT (kode_grup) DO UPDATE SET nama_grup = EXCLUDED.nama_grup, barcode_universal = EXCLUDED.barcode_universal;
 
--- 2. Default Price Levels per Grup Produk (Level 1 Ritel, Level 5 Konsinyasi, Level 8 Grosir, Level 12 Agen)
-INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, nama_level, harga_jual_pcs, harga_jual_bal)
-SELECT gp.id, 1, 'Level 1 - Ritel Standar', 15000.00, 300000.00 FROM public.grup_produk gp
-ON CONFLICT (grup_produk_id, level_harga) DO NOTHING;
-
-INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, nama_level, harga_jual_pcs, harga_jual_bal)
-SELECT gp.id, 5, 'Level 5 - Konsinyasi Rak', 13500.00, 270000.00 FROM public.grup_produk gp
-ON CONFLICT (grup_produk_id, level_harga) DO NOTHING;
-
-INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, nama_level, harga_jual_pcs, harga_jual_bal)
-SELECT gp.id, 8, 'Level 8 - Grosir Mitra Warung', 12500.00, 250000.00 FROM public.grup_produk gp
+-- 2. Default Price Levels per Grup Produk (Hanya Level 1 - Ritel Standar murni per pcs)
+INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, nama_level, harga_jual_pcs)
+SELECT gp.id, 1, 'Level 1 - Ritel Standar (Konsumen Umum / POS)', 15000.00 FROM public.grup_produk gp
 ON CONFLICT (grup_produk_id, level_harga) DO NOTHING;
 
 -- 3. Master SKU Varian Rasa (Item)

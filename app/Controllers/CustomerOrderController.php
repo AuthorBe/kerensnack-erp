@@ -43,7 +43,7 @@ class CustomerOrderController extends Controller
             }
 
             // Cek apakah ada filter eksplisit di URL
-            $hasExplicitFilter = isset($_GET['start_date']) || isset($_GET['end_date']) || isset($_GET['pelanggan_id']) || isset($_GET['sales_driver_id']) || isset($_GET['status_pembayaran']) || isset($_GET['q']);
+            $hasExplicitFilter = isset($_GET['start_date']) || isset($_GET['end_date']) || isset($_GET['pelanggan_id']) || isset($_GET['sales_driver_id']) || isset($_GET['status_pembayaran']) || isset($_GET['tipe_transaksi']) || isset($_GET['q']);
 
             if ($hasExplicitFilter) {
                 $startDate = $this->input('start_date', date('Y-m-01'));
@@ -51,6 +51,7 @@ class CustomerOrderController extends Controller
                 $pelangganId = $this->input('pelanggan_id', '');
                 $salesDriverId = $this->input('sales_driver_id', '');
                 $statusBayar = $this->input('status_pembayaran', 'semua');
+                $tipeTransaksi = $this->input('tipe_transaksi', 'semua');
                 $q = trim((string)$this->input('q', ''));
 
                 // Simpan ke sesi
@@ -60,6 +61,7 @@ class CustomerOrderController extends Controller
                     'pelanggan_id' => $pelangganId,
                     'sales_driver_id' => $salesDriverId,
                     'status_pembayaran' => $statusBayar,
+                    'tipe_transaksi' => $tipeTransaksi,
                     'q' => $q,
                 ];
             } elseif (!empty($_SESSION['orders_filter'])) {
@@ -70,6 +72,7 @@ class CustomerOrderController extends Controller
                 $pelangganId = $saved['pelanggan_id'] ?? '';
                 $salesDriverId = $saved['sales_driver_id'] ?? '';
                 $statusBayar = $saved['status_pembayaran'] ?? 'semua';
+                $tipeTransaksi = $saved['tipe_transaksi'] ?? 'semua';
                 $q = $saved['q'] ?? '';
             } else {
                 $startDate = date('Y-m-01');
@@ -77,6 +80,7 @@ class CustomerOrderController extends Controller
                 $pelangganId = '';
                 $salesDriverId = '';
                 $statusBayar = 'semua';
+                $tipeTransaksi = 'semua';
                 $q = '';
             }
 
@@ -86,6 +90,7 @@ class CustomerOrderController extends Controller
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
                        p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
                        p.waktu_gagal_kirim, p.diubah_pada,
+                       CASE WHEN p.catatan ILIKE '%Beli putus%' THEN TRUE ELSE FALSE END as is_beli_putus,
                        pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.is_konsinyasi,
                        CASE 
                            WHEN sj.id IS NOT NULL THEN COALESCE(k_sj.nama_karyawan, k_p.nama_karyawan)
@@ -148,6 +153,16 @@ class CustomerOrderController extends Controller
             if (!empty($statusBayar) && $statusBayar !== 'semua') {
                 $sql .= " AND p.status_pembayaran = :status_pembayaran";
                 $params['status_pembayaran'] = $statusBayar;
+            }
+
+            if (!empty($tipeTransaksi) && $tipeTransaksi !== 'semua') {
+                if ($tipeTransaksi === 'beli_putus') {
+                    $sql .= " AND p.catatan ILIKE '%Beli putus%'";
+                } elseif ($tipeTransaksi === 'reguler') {
+                    $sql .= " AND (p.catatan NOT ILIKE '%Beli putus%' OR p.catatan IS NULL) AND p.tipe_pembayaran != 'konsinyasi' AND (p.adalah_tagihan = TRUE OR p.adalah_tagihan IS NULL)";
+                } elseif ($tipeTransaksi === 'konsinyasi') {
+                    $sql .= " AND (p.tipe_pembayaran = 'konsinyasi' OR p.adalah_tagihan = FALSE)";
+                }
             }
 
             if (!empty($q)) {
@@ -227,6 +242,7 @@ class CustomerOrderController extends Controller
                     'pelanggan_id' => $pelangganId,
                     'sales_driver_id' => $salesDriverId,
                     'status_pembayaran' => $statusBayar,
+                    'tipe_transaksi' => $tipeTransaksi,
                     'q' => $q,
                 ]
             ]);
@@ -256,6 +272,7 @@ class CustomerOrderController extends Controller
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
                        p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
                        p.waktu_gagal_kirim, p.diubah_pada,
+                       CASE WHEN p.catatan ILIKE '%Beli putus%' THEN TRUE ELSE FALSE END as is_beli_putus,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
                        pel.sales_driver_id as pelanggan_sales_id,
                        p.sales_driver_id,
@@ -331,7 +348,7 @@ class CustomerOrderController extends Controller
                        ip.diskon_item_persen as diskon_persen, 
                        ip.diskon_item_nominal as diskon_nominal, 
                        ip.is_bonus, ip.subtotal,
-                       i.kode_sku, i.nama_item, i.varian_rasa, i.satuan_dasar, i.satuan_distribusi,
+                       i.kode_sku, i.nama_item, i.satuan_dasar, i.satuan_distribusi,
                        gp.nama_grup as nama_grup_produk
                 FROM public.item_pesanan ip
                 JOIN public.item i ON ip.item_id = i.id
@@ -426,7 +443,9 @@ class CustomerOrderController extends Controller
                 SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, 
                        p.alamat_lengkap, p.tipe_pembayaran_default, p.is_konsinyasi, p.sales_driver_id,
                        COALESCE(gp.default_level_harga, 1) as level_harga,
-                       gp.nama_grup as nama_grup_harga
+                       gp.nama_grup as nama_grup_harga,
+                       COALESCE(gp.diskon_persen_default, 0) as grup_diskon_persen,
+                       COALESCE(gp.diskon_nominal_default, 0) as grup_diskon_nominal
                 FROM public.pelanggan p
                 JOIN public.grup_pelanggan gp ON p.grup_pelanggan_id = gp.id
                 WHERE p.status_aktif = TRUE 
@@ -465,25 +484,24 @@ class CustomerOrderController extends Controller
 
             // 4. Ambil Katalog Barang Jadi (137 SKU)
             $products = Database::fetchAll("
-                SELECT i.id, i.grup_id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
+                SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
                        i.satuan_dasar, i.satuan_distribusi, i.stok_fisik_saat_ini,
-                       gp.nama_grup, gp.kode_grup
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 WHERE i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
 
-            // 5. Ambil Matriks Harga Level Grup Produk
+            // 5. Ambil Matriks Harga Level Grup Produk (Murni per pcs)
             $rawLevelPrices = Database::fetchAll("
-                SELECT grup_produk_id, level_harga, harga_jual_pcs, harga_jual_bal
+                SELECT grup_produk_id, level_harga, harga_jual_pcs
                 FROM public.grup_produk_harga_level
             ");
             $priceMatrix = [];
             foreach ($rawLevelPrices as $lp) {
                 $priceMatrix[$lp['grup_produk_id']][$lp['level_harga']] = [
-                    'pcs' => (float)$lp['harga_jual_pcs'],
-                    'bal' => (float)$lp['harga_jual_bal']
+                    'pcs' => (float)$lp['harga_jual_pcs']
                 ];
             }
 
@@ -621,6 +639,16 @@ class CustomerOrderController extends Controller
                         ['item_id' => $it['item_id'], 'pelanggan_id' => $pelangganId]
                     );
                     $pricingData = json_decode($pricingRow['pricing'] ?? '{}', true);
+
+                    // PILIHAN B (Strict Rejection): Tolak jika harga level belum diset di /pricing
+                    if (!empty($pricingData['error'])) {
+                        $pdo->rollBack();
+                        $errMsg = $pricingData['message'] ?? 'Harga level untuk produk ini belum dikonfigurasi di /pricing.';
+                        $this->flashError("Gagal memproses pesanan: {$errMsg}");
+                        $this->redirect('/customer-orders/create');
+                        return;
+                    }
+
                     $hargaResmi = (float)($pricingData['harga_pcs_bruto'] ?? $pricingData['harga_pcs_netto'] ?? 0);
 
                     $hargaInput = (float)($it['harga'] ?? 0);
@@ -784,7 +812,9 @@ class CustomerOrderController extends Controller
                 SELECT p.*, pel.nama_toko, pel.kode_pelanggan, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap,
                        pel.sales_driver_id as pel_sales_id,
                        COALESCE(gp.default_level_harga, 1) as level_harga,
-                       gp.nama_grup as nama_grup_harga
+                       gp.nama_grup as nama_grup_harga,
+                       COALESCE(gp.diskon_persen_default, 0) as grup_diskon_persen,
+                       COALESCE(gp.diskon_nominal_default, 0) as grup_diskon_nominal
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
                 JOIN public.grup_pelanggan gp ON pel.grup_pelanggan_id = gp.id
@@ -834,8 +864,8 @@ class CustomerOrderController extends Controller
             $existingItems = Database::fetchAll("
                 SELECT ip.id, ip.item_id, ip.kuantitas_satuan_dasar as qty, ip.harga_satuan_deal as harga,
                        ip.diskon_item_nominal as diskon, ip.subtotal, ip.is_bonus,
-                       i.nama_item, i.kode_sku, i.barcode, i.varian_rasa, i.stok_fisik_saat_ini,
-                       gp.nama_grup, gp.kode_grup
+                       i.nama_item, i.kode_sku, i.stok_fisik_saat_ini,
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item_pesanan ip
                 JOIN public.item i ON ip.item_id = i.id
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
@@ -861,25 +891,24 @@ class CustomerOrderController extends Controller
 
             // Ambil Katalog Barang Jadi
             $products = Database::fetchAll("
-                SELECT i.id, i.grup_id, i.kode_sku, i.barcode, i.nama_item, i.varian_rasa,
+                SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
                        i.satuan_dasar, i.satuan_distribusi, i.stok_fisik_saat_ini,
-                       gp.nama_grup, gp.kode_grup
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 WHERE i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
 
-            // Ambil Matriks Harga Level Grup Produk
+            // Ambil Matriks Harga Level Grup Produk (Murni per pcs)
             $rawLevelPrices = Database::fetchAll("
-                SELECT grup_produk_id, level_harga, harga_jual_pcs, harga_jual_bal
+                SELECT grup_produk_id, level_harga, harga_jual_pcs
                 FROM public.grup_produk_harga_level
             ");
             $priceMatrix = [];
             foreach ($rawLevelPrices as $lp) {
                 $priceMatrix[$lp['grup_produk_id']][$lp['level_harga']] = [
-                    'pcs' => (float)$lp['harga_jual_pcs'],
-                    'bal' => (float)$lp['harga_jual_bal']
+                    'pcs' => (float)$lp['harga_jual_pcs']
                 ];
             }
 
@@ -1032,6 +1061,16 @@ class CustomerOrderController extends Controller
                         ['item_id' => $it['item_id'], 'pelanggan_id' => $order['pelanggan_id']]
                     );
                     $pricingData = json_decode($pricingRow['pricing'] ?? '{}', true);
+
+                    // PILIHAN B (Strict Rejection): Tolak jika harga level belum diset di /pricing
+                    if (!empty($pricingData['error'])) {
+                        $pdo->rollBack();
+                        $errMsg = $pricingData['message'] ?? 'Harga level untuk produk ini belum dikonfigurasi di /pricing.';
+                        $this->flashError("Gagal memperbarui pesanan: {$errMsg}");
+                        $this->redirect('/customer-orders/edit?id=' . urlencode((string)$orderId));
+                        return;
+                    }
+
                     $hargaResmi = (float)($pricingData['harga_pcs_bruto'] ?? $pricingData['harga_pcs_netto'] ?? 0);
 
                     $hargaInput = (float)($it['harga'] ?? 0);
@@ -1650,12 +1689,19 @@ class CustomerOrderController extends Controller
                 $nomorSj = DocumentNumber::nextDeliveryNumber($pdo);
                 $dId = !empty($driverId) ? $driverId : ($pesanan['sales_driver_id'] ?: null);
 
+                $wilayahInfo = null;
+                if (!empty($pesanan['wilayah_id'])) {
+                    $wilayahInfo = Database::fetchOne("SELECT nama_wilayah, kode_rute FROM public.wilayah WHERE id = :id", ['id' => $pesanan['wilayah_id']]);
+                }
+
                 $stmtNew = $pdo->prepare("
                     INSERT INTO public.surat_jalan (
                         nomor_surat_jalan, pesanan_id, sales_driver_id, rute_wilayah_id,
+                        nama_wilayah_snapshot, kode_rute_snapshot,
                         status_surat_jalan, disetujui_oleh, dibuat_pada
                     ) VALUES (
                         :no_sj, :pesanan_id, :driver_id, :wilayah_id,
+                        :wilayah_snap, :rute_snap,
                         :status, :user_id, NOW()
                     )
                 ");
@@ -1664,6 +1710,8 @@ class CustomerOrderController extends Controller
                     'pesanan_id' => $orderId,
                     'driver_id' => $dId,
                     'wilayah_id' => $pesanan['wilayah_id'] ?? null,
+                    'wilayah_snap' => $wilayahInfo['nama_wilayah'] ?? null,
+                    'rute_snap' => $wilayahInfo['kode_rute'] ?? null,
                     'status' => $statusBaru,
                     'user_id' => Auth::id() ?: null,
                 ]);

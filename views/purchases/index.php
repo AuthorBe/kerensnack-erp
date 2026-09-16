@@ -166,12 +166,26 @@ ob_start();
                                     </div>
                                 </template>
                             </td>
-                            <td>
                                 <div style="font-weight:700;color:var(--color-ink);" x-text="pb.nama_pemasok || '-'"></div>
-                                <div style="font-size:11px;color:var(--color-ink-mute);display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                                <div style="font-size:11px;color:var(--color-ink-mute);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px;">
                                     <span x-text="pb.kode_pemasok || ''"></span>
-                                    <template x-if="pb.supplier_telepon">
+                                    <template x-if="pb.supplier_kontak">
+                                        <span style="font-weight:600;color:var(--color-ink);" x-text="'\u2022 PIC: ' + pb.supplier_kontak"></span>
+                                    </template>
+                                    <template x-if="pb.supplier_wa">
+                                        <a :href="'https://wa.me/' + cleanWa(pb.supplier_wa)" target="_blank" @click.stop class="badge" style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.25);padding:1px 5px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Hubungi Vendor via WhatsApp">
+                                            <i data-lucide="message-circle" style="width:10px;height:10px;"></i>
+                                            <span x-text="pb.supplier_wa"></span>
+                                        </a>
+                                    </template>
+                                    <template x-if="!pb.supplier_wa && pb.supplier_telepon">
                                         <span x-text="'\u2022 ' + pb.supplier_telepon"></span>
+                                    </template>
+                                    <template x-if="pb.supplier_maps">
+                                        <a :href="pb.supplier_maps" target="_blank" @click.stop class="badge" style="background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.25);padding:1px 5px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Buka Titik Presisi Google Maps">
+                                            <i data-lucide="map-pin" style="width:10px;height:10px;"></i>
+                                            <span>Maps</span>
+                                        </a>
                                     </template>
                                 </div>
                                 <template x-if="pb.nama_driver">
@@ -303,45 +317,98 @@ ob_start();
 
                     <!-- KARTU DETAIL VENDOR TERPILIH -->
                     <template x-if="selectedSupplier">
-                        <div style="margin-top:10px;padding:10px 12px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:8px;font-size:11.5px;display:flex;flex-direction:column;gap:8px;color:var(--color-ink-secondary);">
-                            <!-- Baris 1: Kontak & Rekening Bank -->
-                            <div style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;">
-                                <div style="display:flex;align-items:center;gap:4px;">
-                                    <i data-lucide="phone" style="width:13px;height:13px;color:var(--color-primary);flex-shrink:0;"></i>
-                                    <span x-text="selectedSupplier.nomor_telepon || 'Tanpa No. Telp'"></span>
-                                </div>
-                                <template x-if="selectedSupplier.nama_bank && selectedSupplier.nomor_rekening">
-                                    <div style="display:flex;align-items:center;gap:4px;">
-                                        <i data-lucide="credit-card" style="width:13px;height:13px;color:#3b82f6;flex-shrink:0;"></i>
-                                        <span x-text="selectedSupplier.nama_bank + ': ' + selectedSupplier.nomor_rekening + ' (a.n ' + (selectedSupplier.atas_nama_rekening || '-') + ')'"></span>
+                        <div style="margin-top:10px;padding:12px 14px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;font-size:11.5px;display:flex;flex-direction:column;gap:9px;color:var(--color-ink-secondary);">
+                            <!-- Baris 1: PIC, Kontak & Komunikasi -->
+                            <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;">
+                                <template x-if="selectedSupplier.nama_kontak">
+                                    <div style="display:flex;align-items:center;gap:4px;font-weight:700;color:var(--color-ink);">
+                                        <i data-lucide="user" style="width:13px;height:13px;color:var(--color-primary);flex-shrink:0;"></i>
+                                        <span x-text="'PIC: ' + selectedSupplier.nama_kontak"></span>
                                     </div>
                                 </template>
-                                <template x-if="selectedSupplier.alamat_lengkap && selectedSupplier.alamat_lengkap !== '-'">
+                                <template x-if="selectedSupplier.nomor_whatsapp">
+                                    <a :href="'https://wa.me/' + cleanWa(selectedSupplier.nomor_whatsapp)" target="_blank" class="badge" style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.25);padding:1.5px 7px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:4px;text-decoration:none;" title="Chat WhatsApp PIC Vendor">
+                                        <i data-lucide="message-circle" style="width:11px;height:11px;"></i>
+                                        <span x-text="selectedSupplier.nomor_whatsapp"></span>
+                                    </a>
+                                </template>
+                                <template x-if="selectedSupplier.nomor_telepon && selectedSupplier.nomor_telepon !== selectedSupplier.nomor_whatsapp">
                                     <div style="display:flex;align-items:center;gap:4px;">
-                                        <i data-lucide="map-pin" style="width:13px;height:13px;color:#f59e0b;flex-shrink:0;"></i>
-                                        <span class="truncate" style="max-width:260px;" x-text="selectedSupplier.alamat_lengkap"></span>
+                                        <i data-lucide="phone" style="width:12px;height:12px;color:var(--color-ink-mute);flex-shrink:0;"></i>
+                                        <span class="font-mono" x-text="selectedSupplier.nomor_telepon"></span>
+                                    </div>
+                                </template>
+                                <template x-if="selectedSupplier.email">
+                                    <div style="display:flex;align-items:center;gap:4px;">
+                                        <i data-lucide="mail" style="width:12px;height:12px;color:var(--color-ink-mute);flex-shrink:0;"></i>
+                                        <span x-text="selectedSupplier.email"></span>
                                     </div>
                                 </template>
                             </div>
 
-                            <!-- Baris 2: Ringkasan Jumlah Item yang Dijual Pemasok -->
-                            <div style="padding-top:6px;border-top:1px dashed var(--color-hairline);display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11px;">
+                            <!-- Baris 2: Alamat Lengkap & Titik Google Maps Presisi -->
+                            <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding-top:4px;border-top:1px dashed var(--color-hairline);">
+                                <template x-if="selectedSupplier.alamat_lengkap && selectedSupplier.alamat_lengkap !== '-'">
+                                    <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:200px;">
+                                        <i data-lucide="map-pin" style="width:13px;height:13px;color:#f59e0b;flex-shrink:0;"></i>
+                                        <span class="truncate" style="max-width:320px;" x-text="selectedSupplier.alamat_lengkap"></span>
+                                    </div>
+                                </template>
+                                <template x-if="selectedSupplier.link_google_maps">
+                                    <a :href="selectedSupplier.link_google_maps" target="_blank" class="badge" style="background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.25);padding:2px 8px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:4px;text-decoration:none;" title="Buka Titik Presisi Google Maps di Tab Baru">
+                                        <i data-lucide="map-pin" style="width:11px;height:11px;"></i>
+                                        <span>Titik Lokasi Maps</span>
+                                        <i data-lucide="external-link" style="width:10px;height:10px;"></i>
+                                    </a>
+                                </template>
+                            </div>
+
+                            <!-- Baris 3: Syarat Pembayaran & Rekening Bank -->
+                            <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding-top:4px;border-top:1px dashed var(--color-hairline);">
+                                <template x-if="selectedSupplier.termin_bayar">
+                                    <div style="display:flex;align-items:center;gap:4px;">
+                                        <span style="color:var(--color-ink-mute);">Termin Standar:</span>
+                                        <span class="badge font-bold" :class="{
+                                            'badge-success': selectedSupplier.termin_bayar === 'cash',
+                                            'badge-info': selectedSupplier.termin_bayar === 'transfer',
+                                            'badge-warning': selectedSupplier.termin_bayar && selectedSupplier.termin_bayar.startsWith('tempo_')
+                                        }" style="font-size:10px;padding:1px 6px;" x-text="formatTermin(selectedSupplier.termin_bayar)"></span>
+                                    </div>
+                                </template>
+                                <template x-if="selectedSupplier.nama_bank && selectedSupplier.nomor_rekening">
+                                    <div style="display:flex;align-items:center;gap:4px;">
+                                        <i data-lucide="credit-card" style="width:12px;height:12px;color:#3b82f6;flex-shrink:0;"></i>
+                                        <span x-text="selectedSupplier.nama_bank + ': ' + selectedSupplier.nomor_rekening + ' (a.n ' + (selectedSupplier.atas_nama_rekening || '-') + ')'"></span>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- Baris 4: Catatan Khusus Vendor (Jika Ada) -->
+                            <template x-if="selectedSupplier.catatan">
+                                <div style="font-size:11px;color:#92400e;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);padding:5px 8px;border-radius:6px;display:flex;align-items:center;gap:5px;">
+                                    <i data-lucide="info" style="width:12px;height:12px;flex-shrink:0;color:#d97706;"></i>
+                                    <div><strong>Catatan Vendor:</strong> <span x-text="selectedSupplier.catatan"></span></div>
+                                </div>
+                            </template>
+
+                            <!-- Baris 5: Ringkasan Jumlah Item yang Dijual Pemasok -->
+                            <div style="padding-top:4px;border-top:1px dashed var(--color-hairline);display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11px;">
                                 <div style="display:flex;align-items:center;gap:4px;font-weight:600;color:var(--color-ink);">
                                     <i data-lucide="package" style="width:13px;height:13px;color:var(--color-primary);flex-shrink:0;"></i>
-                                    <span>Jumlah Item Dijual:</span>
+                                    <span>Katalog Item Terdaftar:</span>
                                 </div>
                                 
                                 <template x-if="supplierItems.length > 0">
                                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                                         <span class="badge badge-primary" style="font-size:10.5px;font-weight:600;" x-text="supplierItems.length + ' Item'"></span>
-                                        <span style="color:var(--color-ink-mute);font-size:10.5px;">(bahan baku / kemasan terdaftar)</span>
+                                        <span style="color:var(--color-ink-mute);font-size:10.5px;">(bahan baku / kemasan)</span>
                                     </div>
                                 </template>
 
                                 <template x-if="supplierItems.length === 0">
                                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                                         <span class="badge badge-warning" style="font-size:10px;">0 Item</span>
-                                        <span style="color:var(--color-ink-mute);font-size:10.5px;">(Gunakan centang <em>"Semua Bahan"</em> di langkah 2 jika diperlukan)</span>
+                                        <span style="color:var(--color-ink-mute);font-size:10.5px;">(Gunakan centang <em>"Semua Bahan"</em> di bawah jika diperlukan)</span>
                                     </div>
                                 </template>
                             </div>
@@ -1114,6 +1181,59 @@ ob_start();
                                     </div>
                                 </div>
 
+                                <!-- Box Lokasi & Kontak Vendor Pemasok -->
+                                <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--color-hairline);padding-bottom:8px;">
+                                        <div style="display:flex;align-items:center;gap:6px;">
+                                            <i data-lucide="building-2" style="width:15px;height:15px;color:var(--color-primary);"></i>
+                                            <span style="font-size:11px;color:var(--color-ink-mute);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;">Lokasi &amp; Kontak Vendor Pemasok</span>
+                                        </div>
+                                        <template x-if="activeDetail?.purchase?.supplier_maps">
+                                            <a :href="activeDetail.purchase.supplier_maps" target="_blank" class="badge" style="background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.25);padding:3px 10px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;text-decoration:none;" title="Buka Titik Presisi Google Maps">
+                                                <i data-lucide="map-pin" style="width:12px;height:12px;"></i>
+                                                <span>Buka Titik Presisi Maps</span>
+                                                <i data-lucide="external-link" style="width:10px;height:10px;"></i>
+                                            </a>
+                                        </template>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        <div>
+                                            <span class="text-ink-mute">Nama Vendor:</span>
+                                            <div class="font-bold text-ink mt-0.5" style="font-size:13px;" x-text="activeDetail?.purchase?.nama_pemasok || '-'"></div>
+                                            <template x-if="activeDetail?.purchase?.supplier_kontak">
+                                                <div class="text-ink-secondary mt-1">PIC: <strong class="text-ink" x-text="activeDetail.purchase.supplier_kontak"></strong></div>
+                                            </template>
+                                        </div>
+                                        <div>
+                                            <span class="text-ink-mute">Kontak &amp; Komunikasi:</span>
+                                            <div class="mt-1 flex items-center gap-2 flex-wrap">
+                                                <template x-if="activeDetail?.purchase?.supplier_wa">
+                                                    <a :href="'https://wa.me/' + cleanWa(activeDetail.purchase.supplier_wa)" target="_blank" class="badge" style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.25);padding:2px 8px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+                                                        <i data-lucide="message-circle" style="width:12px;height:12px;"></i>
+                                                        <span x-text="activeDetail.purchase.supplier_wa"></span>
+                                                    </a>
+                                                </template>
+                                                <template x-if="activeDetail?.purchase?.supplier_telepon && activeDetail?.purchase?.supplier_telepon !== activeDetail?.purchase?.supplier_wa">
+                                                    <span class="font-mono text-ink-secondary" x-text="activeDetail.purchase.supplier_telepon"></span>
+                                                </template>
+                                                <template x-if="activeDetail?.purchase?.supplier_email">
+                                                    <span class="text-ink-mute" x-text="'&bull; ' + activeDetail.purchase.supplier_email"></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span class="text-ink-mute text-xs">Alamat Gudang / Lokasi:</span>
+                                        <div class="text-ink font-medium text-xs mt-0.5 leading-relaxed" x-text="activeDetail?.purchase?.alamat_lengkap || 'Alamat belum diatur'"></div>
+                                    </div>
+                                    <template x-if="activeDetail?.purchase?.supplier_catatan">
+                                        <div style="font-size:11px;color:#92400e;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);padding:6px 10px;border-radius:8px;display:flex;align-items:center;gap:6px;">
+                                            <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;color:#d97706;"></i>
+                                            <div><strong>Catatan Vendor:</strong> <span x-text="activeDetail.purchase.supplier_catatan"></span></div>
+                                        </div>
+                                    </template>
+                                </div>
+
                                 <!-- Alert jika ada kendala / batal -->
                                 <template x-if="activeDetail.purchase.status_penerimaan === 'kendala_batal'">
                                     <div style="padding:14px 16px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;font-size:12px;color:var(--color-danger);">
@@ -1516,6 +1636,30 @@ ob_start();
                             <input type="date" x-model="editPoForm.tanggal_pembelian" class="form-input font-mono">
                         </div>
                     </div>
+
+                    <!-- Ringkasan Profil Vendor saat Edit PO -->
+                    <template x-if="selectedEditPoSupplier">
+                        <div style="padding:8px 12px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:8px;font-size:11px;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;color:var(--color-ink-secondary);">
+                            <template x-if="selectedEditPoSupplier.nama_kontak">
+                                <div><i data-lucide="user" style="width:11px;height:11px;display:inline-block;vertical-align:middle;margin-right:2px;color:var(--color-primary);"></i> PIC: <strong style="color:var(--color-ink);" x-text="selectedEditPoSupplier.nama_kontak"></strong></div>
+                            </template>
+                            <template x-if="selectedEditPoSupplier.nomor_whatsapp">
+                                <a :href="'https://wa.me/' + cleanWa(selectedEditPoSupplier.nomor_whatsapp)" target="_blank" class="badge" style="background:rgba(16,185,129,0.1);color:#059669;padding:1px 5px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;">
+                                    <i data-lucide="message-circle" style="width:10px;height:10px;"></i>
+                                    <span x-text="selectedEditPoSupplier.nomor_whatsapp"></span>
+                                </a>
+                            </template>
+                            <template x-if="selectedEditPoSupplier.link_google_maps">
+                                <a :href="selectedEditPoSupplier.link_google_maps" target="_blank" class="badge" style="background:rgba(239,68,68,0.08);color:#ef4444;padding:1px 6px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Buka Titik Presisi Maps">
+                                    <i data-lucide="map-pin" style="width:10px;height:10px;"></i>
+                                    <span>Titik Maps</span>
+                                </a>
+                            </template>
+                            <template x-if="selectedEditPoSupplier.alamat_lengkap">
+                                <span class="truncate" style="max-width:240px;" x-text="selectedEditPoSupplier.alamat_lengkap"></span>
+                            </template>
+                        </div>
+                    </template>
 
                     <!-- Pilihan Logistik -->
                     <div>
@@ -2750,9 +2894,34 @@ function purchaseApp() {
             });
         },
 
+        cleanWa(num) {
+            if (!num) return '';
+            let clean = num.replace(/[^0-9]/g, '');
+            if (clean.startsWith('0')) {
+                clean = '62' + clean.substring(1);
+            }
+            return clean;
+        },
+
+        formatTermin(t) {
+            const map = {
+                'cash': 'Tunai / COD',
+                'transfer': 'Transfer Bank (CBD)',
+                'tempo_7_hari': 'Tempo 7 Hari',
+                'tempo_14_hari': 'Tempo 14 Hari',
+                'tempo_30_hari': 'Tempo 30 Hari'
+            };
+            return map[t] || (t ? t.replace(/_/g, ' ').toUpperCase() : 'Tunai / COD');
+        },
+
         get selectedSupplier() {
             if (!this.form.pemasok_id) return null;
             return this.suppliers.find(s => String(s.id) === String(this.form.pemasok_id)) || null;
+        },
+
+        get selectedEditPoSupplier() {
+            if (!this.editPoForm.pemasok_id) return null;
+            return this.suppliers.find(s => String(s.id) === String(this.editPoForm.pemasok_id)) || null;
         },
 
         get supplierItems() {
