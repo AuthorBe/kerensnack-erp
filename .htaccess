@@ -1,9 +1,6 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Allow test_db.php to be accessed directly with internal security gate
-    RewriteRule ^test_db\.php$ - [L,NC]
-
     # Protect sensitive files & folders
     RewriteRule ^(\.env|\.git|config|app|views|database|docs|tests) - [F,L,NC]
 

@@ -228,11 +228,11 @@ if (!function_exists('isActiveSection')) {
         <?php endif; ?>
 
         <!-- SISTEM & PENGATURAN -->
-        <?php if (Auth::can(['rbac.users_view', 'rbac.users_manage', 'rbac.permissions_manage', 'rbac.roles_manage', 'system.activity_log', 'system.blueprint', 'settings.company_manage'])): ?>
+        <?php if (Auth::can(['rbac.users_view', 'rbac.users_manage', 'rbac.permissions_manage', 'rbac.roles_manage', 'system.activity_log', 'system.blueprint', 'settings.company_manage']) || Auth::isDeveloper()): ?>
         <div class="sidebar-section-label">Sistem</div>
 
         <a href="<?= Router::url('/settings') ?>"
-           class="sidebar-link <?= (isActive('/settings', $currentPath, $base) || isActive('/pengaturan', $currentPath, $base) || isActiveSection('/users', $currentPath, $base) || isActiveSection('/permissions', $currentPath, $base) || isActiveSection('/settings/activity-logs', $currentPath, $base) || isActiveSection('/settings/company', $currentPath, $base) || isActiveSection('/pengaturan/perusahaan', $currentPath, $base)) ? 'is-active' : '' ?>"
+           class="sidebar-link <?= (isActive('/settings', $currentPath, $base) || isActive('/pengaturan', $currentPath, $base) || isActiveSection('/developer', $currentPath, $base) || isActiveSection('/users', $currentPath, $base) || isActiveSection('/permissions', $currentPath, $base) || isActiveSection('/settings/activity-logs', $currentPath, $base) || isActiveSection('/settings/company', $currentPath, $base) || isActiveSection('/pengaturan/perusahaan', $currentPath, $base)) ? 'is-active' : '' ?>"
            data-tooltip="Pengaturan">
             <i data-lucide="sliders-horizontal"></i>
             <span>Pengaturan</span>

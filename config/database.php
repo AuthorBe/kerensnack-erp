@@ -19,12 +19,12 @@ class Database
     public static function getConnection(): PDO
     {
         if (self::$instance === null) {
-            $host     = getenv('DB_HOST')     ?: '127.0.0.1';
-            $port     = getenv('DB_PORT')     ?: '5432';
-            $dbname   = getenv('DB_DATABASE') ?: 'postgres';
-            $user     = getenv('DB_USERNAME') ?: 'postgres';
-            $password = getenv('DB_PASSWORD') ?: '';
-            $sslmode  = getenv('DB_SSLMODE')  ?: 'prefer';
+            $host     = $_ENV['DB_HOST']     ?? getenv('DB_HOST')     ?: '127.0.0.1';
+            $port     = $_ENV['DB_PORT']     ?? getenv('DB_PORT')     ?: '5432';
+            $dbname   = $_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: 'postgres';
+            $user     = $_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: 'postgres';
+            $password = $_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: '';
+            $sslmode  = $_ENV['DB_SSLMODE']  ?? getenv('DB_SSLMODE')  ?: 'prefer';
 
             $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}";
 

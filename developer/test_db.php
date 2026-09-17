@@ -86,7 +86,8 @@ if (!$isCli) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pin_input'])) {
             if ($_POST['pin_input'] === $defaultPin) {
                 $_SESSION['healthcheck_authenticated'] = true;
-                header("Location: test_db.php");
+                $redirectUrl = class_exists(\App\Core\Router::class) ? \App\Core\Router::url('/developer/test-db') : ($_SERVER['REQUEST_URI'] ?? 'test-db');
+                header("Location: " . $redirectUrl);
                 exit;
             } else {
                 $pinError = "ERR: Invalid credentials key. Access denied.";
@@ -203,7 +204,7 @@ if (!$isCli) {
 // ==============================================================================
 // 2. DIAGNOSTIC RUNNER (DEV TELEMETRY & INTEGRITY SUITE)
 // ==============================================================================
-require_once __DIR__ . '/config/database.php';
+require_once dirname(__DIR__) . '/config/database.php';
 
 $startTime = microtime(true);
 $checks = [];
@@ -898,12 +899,12 @@ if ($isCli) {
                 </div>
             </div>
             <div class="btn-group">
-                <a href="test_db.php" id="btn-rerun" class="btn btn-primary" onclick="executeRerun(event)">
+                <a href="<?= class_exists(\App\Core\Router::class) ? \App\Core\Router::url('/developer/test-db') : 'test-db' ?>" id="btn-rerun" class="btn btn-primary" onclick="executeRerun(event)">
                     <span class="icon-spin">&#x21bb;</span>
                     <span id="btn-rerun-text">Re-run</span>
                 </a>
-                <a href="test_db.php?format=json" class="btn" target="_blank">{ } JSON</a>
-                <a href="public/" class="btn">&rarr; Open App</a>
+                <a href="<?= class_exists(\App\Core\Router::class) ? \App\Core\Router::url('/developer/test-db?format=json') : 'test-db?format=json' ?>" class="btn" target="_blank">{ } JSON</a>
+                <a href="<?= class_exists(\App\Core\Router::class) ? \App\Core\Router::url('/developer') : '/developer' ?>" class="btn">&rarr; Portal Developer</a>
             </div>
         </div>
 
@@ -1066,9 +1067,12 @@ if ($isCli) {
             const sub = document.getElementById('status-sub');
             if (sub) sub.innerText = 'Pinging PostgreSQL SSL Pooler & running integrity tests...';
 
-            // 5. Navigate with cache-busting timestamp
+            // 5. Navigate with cache-busting timestamp on current path
             setTimeout(() => {
-                window.location.href = 'test_db.php?t=' + Date.now();
+                const url = new URL(window.location.href);
+                url.searchParams.set('t', Date.now().toString());
+                url.searchParams.delete('format');
+                window.location.href = url.toString();
             }, 60);
         }
 
@@ -1078,7 +1082,9 @@ if ($isCli) {
             if (e.key === 'r' || e.key === 'R') {
                 executeRerun();
             } else if (e.key === 'j' || e.key === 'J') {
-                window.location.href = 'test_db.php?format=json';
+                const url = new URL(window.location.href);
+                url.searchParams.set('format', 'json');
+                window.location.href = url.toString();
             }
         });
     </script>

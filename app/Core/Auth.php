@@ -271,6 +271,12 @@ class Auth
                 );
                 $_SESSION['permissions_version'] = $currentVersion;
             }
+            // 3. Session ID Regeneration — Anti Session Fixation (rotasi setiap 30 menit)
+            $lastRegen = (int)($_SESSION['last_regen'] ?? 0);
+            if ((time() - $lastRegen) >= 1800 && session_status() === PHP_SESSION_ACTIVE && !headers_sent()) {
+                session_regenerate_id(true);
+                $_SESSION['last_regen'] = time();
+            }
         } catch (\Throwable $e) {
             error_log("Error pada syncPermissions: " . $e->getMessage());
         }
@@ -543,6 +549,76 @@ class Auth
         }
         if (!in_array(self::role(), $allowedRoles, true)) {
             self::requirePermission('non_existent_role_permission');
+        }
+    }
+
+    /**
+     * Guard Khusus Developer Portal (Murni Berbasis Peran, Tanpa Sistem Tiket Izin)
+     */
+    public static function requireDeveloper(): void
+    {
+        self::requireLogin();
+
+        if (!headers_sent()) {
+            header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+            header("Cache-Control: post-check=0, pre-check=0", false);
+            header("Pragma: no-cache");
+            header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
+        }
+
+        if (!self::isDeveloper()) {
+            http_response_code(403);
+
+            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                   || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'error'   => 'Akses ditolak (403 Forbidden). Portal ini dikhususkan hanya untuk pengguna dengan peran Developer.'
+                ]);
+                exit;
+            }
+
+            $userRole = ucfirst(self::role());
+            $homeUrl = Router::url('/');
+
+            echo "<!DOCTYPE html>
+            <html lang='id' class='dark'>
+            <head>
+                <meta charset='UTF-8'>
+                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                <title>403 - Akses Ditolak | Khusus Developer</title>
+                <style>
+                    body { margin: 0; padding: 0; background: #090d16; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+                    .card { max-width: 480px; width: 90%; padding: 36px 28px; background: #0f172a; border: 1.5px solid rgba(239,68,68,0.4); border-radius: 24px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); }
+                    .icon { font-size: 52px; margin-bottom: 14px; }
+                    .title { font-size: 22px; font-weight: 800; color: #ef4444; margin: 0 0 10px; letter-spacing: -0.3px; }
+                    .desc { font-size: 13.5px; color: #94a3b8; margin: 0 0 20px; line-height: 1.6; }
+                    .badge-role { display: inline-block; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 24px; }
+                    .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+                    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 22px; border-radius: 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+                    .btn-primary { background: #3b82f6; color: #fff; }
+                    .btn-primary:hover { background: #2563eb; }
+                    .btn-secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
+                    .btn-secondary:hover { background: #334155; }
+                </style>
+            </head>
+            <body>
+                <div class='card'>
+                    <div class='icon'>🔒</div>
+                    <h1 class='title'>Akses Ditolak (403 Forbidden)</h1>
+                    <p class='desc'>Portal kendali Developer bersifat tertutup dan hanya dapat diakses oleh akun dengan peran <strong>Developer</strong>.</p>
+                    <div class='badge-role'>Peran Anda Saat Ini: {$userRole}</div>
+                    <div class='btn-group'>
+                        <a href='javascript:history.back()' class='btn btn-secondary'>Kembali</a>
+                        <a href='{$homeUrl}' class='btn btn-primary'>Kembali ke Beranda</a>
+                    </div>
+                </div>
+            </body>
+            </html>";
+            exit;
         }
     }
 }

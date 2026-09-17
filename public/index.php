@@ -39,7 +39,9 @@ if (!ob_get_level() && extension_loaded('zlib') && !ini_get('zlib.output_compres
 // Security & Performance Headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
-header('X-XSS-Protection: 1; mode=block');
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'self';");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+header("Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()");
 
 // 1. Session Initialization (Maksimal 12 jam / 43.200 detik)
 ini_set('session.gc_maxlifetime', '43200');
@@ -353,8 +355,21 @@ Router::get('/settings/logs', [ActivityLogController::class, 'index']);
 Router::get('/settings/activity-logs/export', [ActivityLogController::class, 'exportExcel']);
 Router::post('/settings/activity-logs/prune', [ActivityLogController::class, 'prune']);
 
-// --- DEVELOPER EXCLUSIVE: VISUAL ARCHITECTURE & AI BLUEPRINT ---
+// --- DEVELOPER EXCLUSIVE: PORTAL HUB, ARCHITECTURE, TEST DB & TEST SOURCE ---
+Router::get('/developer', [DeveloperController::class, 'index']);
+Router::get('/developer/index', [DeveloperController::class, 'index']);
+Router::get('/developer/portal', [DeveloperController::class, 'index']);
 Router::get('/developer/architecture', [DeveloperController::class, 'architecture']);
+Router::get('/developer/test-db', [DeveloperController::class, 'testDb']);
+Router::get('/developer/test_db.php', [DeveloperController::class, 'testDb']);
+Router::get('/test_db.php', [DeveloperController::class, 'testDb']);
+Router::post('/developer/test-db', [DeveloperController::class, 'testDb']);
+Router::post('/developer/test_db.php', [DeveloperController::class, 'testDb']);
+Router::post('/test_db.php', [DeveloperController::class, 'testDb']);
+Router::get('/developer/tests', [DeveloperController::class, 'tests']);
+Router::get('/developer/run-all', [DeveloperController::class, 'tests']);
+Router::post('/developer/tests/run-single', [DeveloperController::class, 'runSingleTest']);
+Router::post('/developer/tests/clear-locks', [DeveloperController::class, 'clearTestLocks']);
 
 // Dispatch the incoming HTTP request
 Router::dispatch();

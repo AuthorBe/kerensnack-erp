@@ -127,7 +127,7 @@ Pilih salah satu cara menjalankan server lokal:
 Jalankan diagnostik dan tes otomatis melalui terminal:
 ```bash
 # Uji koneksi database & integritas RPC
-php test_db.php
+php developer/test_db.php
 
 # Jalankan seluruh rangkaian tes otomatis
 php tests/run_all.php

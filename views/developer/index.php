@@ -1,0 +1,287 @@
+<?php
+use App\Core\Router;
+use App\Core\Auth;
+ob_start();
+?>
+
+<div class="space-y-6 pb-16">
+
+    <!-- ========================================================================= -->
+    <!-- 1. DEVELOPER HERO & TELEMETRY BANNER                                      -->
+    <!-- ========================================================================= -->
+    <div class="card p-6" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);box-shadow:var(--shadow-1);">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <div class="flex items-start sm:items-center gap-4">
+                <div style="width:52px;height:52px;border-radius:14px;background:rgba(59,130,246,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(59,130,246,0.25);">
+                    <i data-lucide="terminal" style="width:28px;height:28px;"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                        <span class="badge badge-primary" style="font-size:10px;font-weight:800;letter-spacing:0.04em;padding:2px 8px;">DEVELOPER PORTAL HUB</span>
+                        <span style="font-size:11px;font-weight:700;color:var(--color-success);display:inline-flex;align-items:center;gap:4px;">
+                            <span style="width:6px;height:6px;border-radius:9999px;background:var(--color-success);display:inline-block;"></span>
+                            Core Environment Online
+                        </span>
+                        <span class="badge badge-mono" style="font-size:10px;">PHP <?= htmlspecialchars($telemetry['php_version'] ?? PHP_VERSION) ?></span>
+                        <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_tables'] ?? 45 ?> Tables</span>
+                        <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_suites'] ?? 23 ?> Test Suites</span>
+                    </div>
+                    <h1 style="font-size:20px;font-weight:900;color:var(--color-ink);line-height:1.2;">
+                        Pusat Kendali Pengembang &amp; Pengujian Sistem
+                    </h1>
+                    <p style="font-size:12.5px;color:var(--color-ink-mute);margin-top:3px;">
+                        Portal eksklusif untuk peran Developer: Visual Blueprint Arsitektur, Diagnostik Koneksi Database, dan Test Source Runner otomatis.
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div class="text-right hidden sm:block">
+                    <div style="font-size:11px;color:var(--color-ink-mute);font-weight:600;">PENGGUNA AKTIF</div>
+                    <div style="font-size:13px;font-weight:800;color:var(--color-ink);"><?= htmlspecialchars($telemetry['active_user'] ?? 'Developer') ?></div>
+                    <span class="badge badge-mono" style="font-size:10px;color:var(--color-primary);">Role: <?= htmlspecialchars($telemetry['active_role'] ?? 'developer') ?></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 2. TIGA KARTU PORTAL UTAMA (ARSITEKTUR, TEST DB, TEST SOURCE)             -->
+    <!-- ========================================================================= -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- KARTU 1: ARSITEKTUR SISTEM & BLUEPRINT AI -->
+        <div class="card flex flex-col justify-between p-6 transition-all duration-200 hover:shadow-lg" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div style="width:44px;height:44px;border-radius:12px;background:rgba(59,130,246,0.1);color:#3b82f6;display:flex;align-items:center;justify-content:center;border:1px solid rgba(59,130,246,0.2);">
+                        <i data-lucide="network" style="width:22px;height:22px;"></i>
+                    </div>
+                    <span class="badge badge-primary" style="font-size:10px;font-weight:700;">MENU 1</span>
+                </div>
+                <h3 style="font-size:17px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
+                    1. Arsitektur Sistem &amp; AI Studio
+                </h3>
+                <p style="font-size:12.5px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:16px;">
+                    Peta relasi 45 tabel database PostgreSQL Supabase, kamus skema data, daftar stored procedures/triggers, dan generator prompt terpadu untuk AI coding assistant.
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 mb-6">
+                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_tables'] ?? 45 ?> Tabel Publik</span>
+                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_procedures'] ?? 30 ?> Prosedur RPC</span>
+                    <span class="badge badge-mono" style="font-size:10px;">AI Prompt Studio</span>
+                </div>
+            </div>
+
+            <a href="<?= Router::url('/developer/architecture') ?>" class="btn btn-primary w-full justify-center" style="font-size:13px;font-weight:700;padding:10px;border-radius:10px;">
+                <span>Buka Arsitektur Sistem</span>
+                <i data-lucide="arrow-right" style="width:16px;height:16px;margin-left:6px;"></i>
+            </a>
+        </div>
+
+        <!-- KARTU 2: DIAGNOSTIK DATABASE (TEST DB) -->
+        <div class="card flex flex-col justify-between p-6 transition-all duration-200 hover:shadow-lg" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg, #10b981, #34d399);"></div>
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div style="width:44px;height:44px;border-radius:12px;background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;border:1px solid rgba(16,185,129,0.2);">
+                        <i data-lucide="database" style="width:22px;height:22px;"></i>
+                    </div>
+                    <span class="badge badge-success" style="font-size:10px;font-weight:700;">MENU 2</span>
+                </div>
+                <h3 style="font-size:17px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
+                    2. Diagnostik Database (Test DB)
+                </h3>
+                <p style="font-size:12.5px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:16px;">
+                    Konsol healthcheck koneksi SSL pooler Supabase, pengukuran roundtrip latency ping, validasi RPC barcode universal, perhitungan harga bertingkat, dan status seeding master.
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 mb-6">
+                    <span class="badge badge-mono" style="font-size:10px;">PostgreSQL 17</span>
+                    <span class="badge badge-mono" style="font-size:10px;">SSL Handshake</span>
+                    <span class="badge badge-mono" style="font-size:10px;">Ping &bull; JSON API</span>
+                    <span class="badge badge-mono" style="font-size:10px;">CLI Support</span>
+                </div>
+            </div>
+
+            <a href="<?= Router::url('/developer/test-db') ?>" class="btn w-full justify-center" style="font-size:13px;font-weight:700;padding:10px;border-radius:10px;background:#10b981;color:#fff;border:none;">
+                <span>Buka Konsol Test DB</span>
+                <i data-lucide="activity" style="width:16px;height:16px;margin-left:6px;"></i>
+            </a>
+        </div>
+
+        <!-- KARTU 3: TEST SOURCE / RUN-ALL CONSOLE -->
+        <div class="card flex flex-col justify-between p-6 transition-all duration-200 hover:shadow-lg" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg, #8b5cf6, #a78bfa);"></div>
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div style="width:44px;height:44px;border-radius:12px;background:rgba(139,92,246,0.1);color:#8b5cf6;display:flex;align-items:center;justify-content:center;border:1px solid rgba(139,92,246,0.2);">
+                        <i data-lucide="check-circle-2" style="width:22px;height:22px;"></i>
+                    </div>
+                    <span class="badge badge-purple" style="font-size:10px;font-weight:700;">MENU 3</span>
+                </div>
+                <h3 style="font-size:17px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
+                    3. Test Source / Run-All Console
+                </h3>
+                <p style="font-size:12.5px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:16px;">
+                    Pengujian otomatis seluruh 23 test suites lifecycle ERP (POS Kasir, Order B2B, Hutang Supplier, Surat Jalan POD, Buku Kas, Komisi &amp; RBAC). Menjamin 100% Zero Data Pollution.
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 mb-6">
+                    <span class="badge badge-mono" style="font-size:10px;">23 Test Suites</span>
+                    <span class="badge badge-mono" style="font-size:10px;">Real-time AJAX</span>
+                    <span class="badge badge-mono" style="font-size:10px;">Auto Rollback</span>
+                    <span class="badge badge-mono" style="font-size:10px;">Anti-Timeout</span>
+                </div>
+            </div>
+
+            <a href="<?= Router::url('/developer/tests') ?>" class="btn w-full justify-center" style="font-size:13px;font-weight:700;padding:10px;border-radius:10px;background:#8b5cf6;color:#fff;border:none;">
+                <span>Buka Test Runner Console</span>
+                <i data-lucide="play" style="width:16px;height:16px;margin-left:6px;"></i>
+            </a>
+        </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 3. TERMINAL CLI INTEGRATION & QUICK CHEATSHEET                             -->
+    <!-- ========================================================================= -->
+    <div class="card p-5 sm:p-6" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:#070a12;color:#f8fafc;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);">
+        <!-- Window Controls & Header Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3.5" style="border-bottom:1px solid #1e293b;">
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-1.5">
+                    <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></div>
+                    <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></div>
+                    <div style="width:10px;height:10px;border-radius:50%;background:#10b981;"></div>
+                </div>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span style="font-family:'JetBrains Mono', monospace;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;">TERMINAL CLI SHORTCUTS</span>
+                    <span style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono', monospace;">ZERO DUPLICATION ARCHITECTURE</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs" style="color:#64748b;font-family:'JetBrains Mono', monospace;">
+                <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;"></span>
+                <span>PowerShell / Bash Ready</span>
+            </div>
+        </div>
+
+        <!-- 2 Symmetrical CLI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Card 1: Test DB -->
+            <div class="p-4 flex flex-col justify-between" style="background:#0d121f;border:1px solid #1e293b;border-radius:12px;min-height:140px;">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <div style="width:26px;height:26px;border-radius:6px;background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.25);display:flex;align-items:center;justify-content:center;color:#38bdf8;flex-shrink:0;">
+                            <i data-lucide="terminal" style="width:14px;height:14px;"></i>
+                        </div>
+                        <span style="font-size:13px;font-weight:800;color:#f8fafc;letter-spacing:0.01em;">1. Jalankan Test DB via Terminal CLI</span>
+                    </div>
+                    <p style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">
+                        Mengecek konektivitas database Supabase, SSL pooler, 45 tabel relasi, dan integritas RPC secara instan:
+                    </p>
+                </div>
+                <div class="flex items-center justify-between gap-3 p-2.5 mt-auto" style="background:#040711;border:1px solid #1e293b;border-radius:8px;">
+                    <div class="flex items-center gap-2 overflow-x-auto py-0.5">
+                        <span style="color:#64748b;font-family:monospace;font-weight:700;user-select:none;">$</span>
+                        <code style="font-family:'JetBrains Mono', monospace;font-size:12px;color:#38bdf8;font-weight:600;white-space:nowrap;">php developer/test_db.php</code>
+                    </div>
+                    <button type="button" onclick="copyCliCommand('php developer/test_db.php', this)" title="Salin perintah ke clipboard" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 9px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono', monospace;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
+                        <i data-lucide="copy" style="width:12px;height:12px;"></i>
+                        <span>Copy</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card 2: Run All Tests -->
+            <div class="p-4 flex flex-col justify-between" style="background:#0d121f;border:1px solid #1e293b;border-radius:12px;min-height:140px;">
+                <div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <div style="width:26px;height:26px;border-radius:6px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);display:flex;align-items:center;justify-content:center;color:#a78bfa;flex-shrink:0;">
+                            <i data-lucide="play" style="width:14px;height:14px;"></i>
+                        </div>
+                        <span style="font-size:13px;font-weight:800;color:#f8fafc;letter-spacing:0.01em;">2. Jalankan Seluruh 23 Test Suites via CLI</span>
+                    </div>
+                    <p style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">
+                        Mengeksekusi 23 test suites terpadu secara batch lengkap dengan tabel kalkulasi waktu dan status:
+                    </p>
+                </div>
+                <div class="flex items-center justify-between gap-3 p-2.5 mt-auto" style="background:#040711;border:1px solid #1e293b;border-radius:8px;">
+                    <div class="flex items-center gap-2 overflow-x-auto py-0.5">
+                        <span style="color:#64748b;font-family:monospace;font-weight:700;user-select:none;">$</span>
+                        <code style="font-family:'JetBrains Mono', monospace;font-size:12px;color:#a78bfa;font-weight:600;white-space:nowrap;">php tests/run_all.php</code>
+                    </div>
+                    <button type="button" onclick="copyCliCommand('php tests/run_all.php', this)" title="Salin perintah ke clipboard" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 9px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono', monospace;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
+                        <i data-lucide="copy" style="width:12px;height:12px;"></i>
+                        <span>Copy</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Terminal Footer Notes -->
+        <div class="mt-5 pt-3.5 flex flex-col sm:flex-row items-center justify-between gap-3" style="border-top:1px solid #1e293b;font-size:11.5px;color:#94a3b8;">
+            <div class="flex items-center gap-2">
+                <i data-lucide="shield-check" style="width:16px;height:16px;color:#10b981;flex-shrink:0;"></i>
+                <span><strong style="color:#f1f5f9;">Keamanan Terjamin:</strong> Seluruh fungsi pengujian menggunakan transaksi rollback otomatis &mdash; database operasional 100% steril dan aman.</span>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0" style="font-family:'JetBrains Mono', monospace;font-size:11px;">
+                <span style="color:#64748b;">Runtime:</span>
+                <span style="background:#1e293b;color:#e2e8f0;padding:2px 8px;border-radius:5px;border:1px solid #334155;">PHP <?= htmlspecialchars(PHP_VERSION) ?></span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function copyCliCommand(cmd, btn) {
+    var showSuccess = function() {
+        var originalHtml = btn.innerHTML;
+        var originalBorder = btn.style.borderColor;
+        var originalBg = btn.style.background;
+        var originalColor = btn.style.color;
+        btn.innerHTML = '<span style="color:#10b981;font-weight:700;display:inline-flex;align-items:center;gap:4px;">✓ Copied!</span>';
+        btn.style.borderColor = '#10b981';
+        btn.style.background = 'rgba(16,185,129,0.12)';
+        btn.style.color = '#10b981';
+        setTimeout(function() {
+            btn.innerHTML = originalHtml;
+            btn.style.borderColor = originalBorder || '#334155';
+            btn.style.background = originalBg || '#1e293b';
+            btn.style.color = originalColor || '#94a3b8';
+            if (window.lucide) window.lucide.createIcons();
+        }, 1800);
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(cmd).then(showSuccess).catch(function() {
+            fallbackCopy(cmd, showSuccess);
+        });
+    } else {
+        fallbackCopy(cmd, showSuccess);
+    }
+}
+
+function fallbackCopy(text, callback) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+        var ok = document.execCommand('copy');
+        if (ok && callback) callback();
+    } catch(e) {}
+    document.body.removeChild(ta);
+}
+</script>
+
+<?php
+$content = ob_get_clean();
+require ROOT_PATH . '/views/layouts/master.php';
+?>

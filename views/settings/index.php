@@ -271,17 +271,22 @@ ob_start();
         </div>
         <?php endif; ?>
 
-        <!-- KARTU 3: System Blueprint & AI Studio (Developer / Superuser) -->
-        <?php if (Auth::can('system.blueprint')): ?>
+        <!-- KARTU 3: Portal Developer (Khusus Role Developer) -->
+        <?php if (Auth::isDeveloper()): ?>
         <div>
-            <a href="<?= Router::url('/developer/architecture') ?>" class="settings-card card-ai group">
-                <div class="icon-box">
-                    <i data-lucide="cpu" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+            <a href="<?= Router::url('/developer') ?>" class="settings-card card-ai group">
+                <div class="flex items-center justify-between">
+                    <div class="icon-box">
+                        <i data-lucide="terminal" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                    </div>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                        Khusus Developer
+                    </span>
                 </div>
-                <h5 class="card-title text-slate-900 dark:text-white">System Blueprint &amp; AI</h5>
-                <p class="card-desc text-slate-500 dark:text-slate-400">Visualisasi arsitektur relasional database Postgres, kamus data terpadu, dan modul AI Prompt Studio.</p>
+                <h5 class="card-title text-slate-900 dark:text-white">Portal Developer</h5>
+                <p class="card-desc text-slate-500 dark:text-slate-400">Pusat kendali pengembang: Arsitektur Sistem (Blueprint &amp; AI Studio), Diagnostik Database (Test DB), dan Test Source Runner otomatis (23 suites).</p>
                 <div class="settings-link text-purple-600 dark:text-purple-400">
-                    <span>Buka Blueprint</span>
+                    <span>Buka Portal Developer</span>
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                 </div>
             </a>
