@@ -8,6 +8,7 @@ use App\Core\Auth;
 use App\Helpers\Format;
 use App\Helpers\ActivityLog;
 use App\Helpers\PdfExport;
+use App\Helpers\PrintDocumentHelper;
 use App\Helpers\ExcelExport;
 use App\Core\Router;
 use Database;
@@ -596,7 +597,134 @@ class ConsignmentController extends Controller
     }
 
     /**
-     * 5c. Unduh Berita Acara Opname / Faktur Tagihan Resmi Konsinyasi dalam format PDF
+     * 5c. Cetak Lembar Berita Acara Opname / Faktur Tagihan Konsinyasi (HTML Preview & Switcher)
+     * (GET /consignment/nota-print?kunjungan_id=... atau ?pesanan_id=...)
+     */
+    public function printNota(): void
+    {
+        Auth::requirePermission(['consignment.opname_all', 'consignment.opname_assigned', 'consignment.view_all', 'consignment.view_assigned']);
+
+        $kunjunganId = (string)$this->input('kunjungan_id');
+        $pesananId = (string)$this->input('pesanan_id');
+
+        if (empty($kunjunganId) && empty($pesananId)) {
+            $this->flashError('Parameter ID kunjungan atau nota tidak ditemukan.');
+            $this->redirect('/consignment/opname');
+            return;
+        }
+
+        try {
+            $visit = null;
+            $details = [];
+            $isInvoiced = false;
+
+            // Kasus 1: Diberikan pesanan_id (Faktur Konsolidasi dari Menu Tagihan)
+            if (!empty($pesananId)) {
+                $visit = Database::fetchOne("
+                    SELECT pes.id as pesanan_id, pes.nomor_nota, pes.total_netto, pes.total_dibayar, 
+                           pes.status_pembayaran, pes.sisa_tagihan, pes.tanggal_pesanan,
+                           pes.catatan,
+                           p.id as pelanggan_id, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, 
+                           p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
+                           COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as sales_name,
+                           COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
+                           peng.nama_lengkap as auditor_name,
+                           COALESCE(peng.posisi, 'Auditor') as auditor_role,
+                           (SELECT kk.nomor_kunjungan FROM public.tagihan_kunjungan tk JOIN public.kunjungan_konsinyasi kk ON tk.kunjungan_id = kk.id WHERE tk.pesanan_id = pes.id ORDER BY kk.tanggal_kunjungan DESC LIMIT 1) as nomor_kunjungan,
+                           pes.tanggal_pesanan as tanggal_kunjungan
+                    FROM public.pesanan pes
+                    JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                    LEFT JOIN public.v_karyawan_info k ON COALESCE(pes.sales_driver_id, p.sales_driver_id) = k.id
+                    LEFT JOIN public.pengguna peng ON pes.dibuat_oleh = peng.id
+                    WHERE pes.id = :id
+                ", ['id' => $pesananId]);
+
+                if (!$visit) {
+                    throw new \Exception('Data faktur tagihan tidak ditemukan.');
+                }
+
+                $isInvoiced = true;
+
+                $details = Database::fetchAll("
+                    SELECT ip.id, ip.item_id, ip.kuantitas_satuan_dasar as jumlah_laku_terjual,
+                           ip.harga_satuan_deal, ip.subtotal as subtotal_laku,
+                           i.nama_item, i.kode_sku, i.satuan_dasar,
+                           0 as retur_rusak, 0 as retur_bagus, 0 as sisa_fisik_di_rak, 0 as stok_titip_awal, 0 as selisih_qty
+                    FROM public.item_pesanan ip
+                    JOIN public.item i ON ip.item_id = i.id
+                    WHERE ip.pesanan_id = :id
+                    ORDER BY ip.subtotal DESC, i.nama_item ASC
+                ", ['id' => $pesananId]);
+
+            } else {
+                // Kasus 2: Diberikan kunjungan_id (Dari Halaman Hasil Opname)
+                $sql = "
+                    SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
+                           COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
+                           COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
+                           peng.nama_lengkap as auditor_name,
+                           COALESCE(peng.posisi, 'Auditor') as auditor_role,
+                           COALESCE(pes.id, tk.pesanan_id) as pesanan_id,
+                           pes.nomor_nota, pes.total_netto, pes.total_dibayar, pes.status_pembayaran, pes.sisa_tagihan, pes.tanggal_pesanan
+                    FROM public.kunjungan_konsinyasi kk
+                    JOIN public.pelanggan p ON kk.pelanggan_id = p.id
+                    LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
+                    LEFT JOIN public.v_karyawan_info k ON COALESCE(kk.sales_driver_id, p.sales_driver_id) = k.id
+                    LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
+                    LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
+                    WHERE kk.id = :id
+                ";
+                $visit = Database::fetchOne($sql, ['id' => $kunjunganId]);
+
+                if (!$visit) {
+                    throw new \Exception('Data kunjungan konsinyasi tidak ditemukan.');
+                }
+
+                $isInvoiced = !empty($visit['pesanan_id']) && !empty($visit['nomor_nota']);
+
+                $details = Database::fetchAll("
+                    SELECT rkk.*, i.nama_item, i.kode_sku, i.satuan_dasar
+                    FROM public.rincian_kunjungan_konsinyasi rkk
+                    JOIN public.item i ON rkk.item_id = i.id
+                    WHERE rkk.kunjungan_id = :id
+                    ORDER BY rkk.subtotal_laku DESC, i.nama_item ASC
+                ", ['id' => $visit['id']]);
+            }
+
+            if (!Auth::can(['consignment.opname_all', 'consignment.view_all', 'consignment.piutang']) && !Auth::isAssignedStore($visit['pelanggan_id'])) {
+                $this->flashError('Akses Ditolak: Dokumen ini bukan dari toko binaan Anda.');
+                $this->redirect('/consignment/riwayat-kunjungan');
+                return;
+            }
+
+            $bankAccount = Database::fetchOne("
+                SELECT nama_akun, nomor_rekening, atas_nama
+                FROM public.akun_kas
+                WHERE status_aktif = TRUE 
+                  AND tipe_akun = 'bank'
+                  AND nomor_rekening IS NOT NULL 
+                  AND nomor_rekening != '' 
+                  AND nomor_rekening != '-'
+                ORDER BY (nama_akun ILIKE '%BCA%') DESC, id ASC
+                LIMIT 1
+            ");
+
+            $this->view('consignment.nota_pdf', [
+                'visit' => $visit,
+                'details' => $details,
+                'bankAccount' => $bankAccount,
+                'isInvoiced' => $isInvoiced,
+                'isPdf' => false
+            ]);
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal membuka dokumen cetak: ' . $e->getMessage());
+            $this->redirect('/consignment/opname/hasil?kunjungan_id=' . urlencode((string)($kunjunganId ?: '')));
+        }
+    }
+
+    /**
+     * 5d. Unduh Berita Acara Opname / Faktur Tagihan Resmi Konsinyasi dalam format PDF
      * (GET /consignment/opname/hasil/pdf?kunjungan_id=... atau ?pesanan_id=...)
      */
     public function notaPdf(): void
@@ -605,6 +733,7 @@ class ConsignmentController extends Controller
 
         $kunjunganId = (string)$this->input('kunjungan_id');
         $pesananId = (string)$this->input('pesanan_id');
+        $format = PrintDocumentHelper::resolveFormat($this->input('format', 'standard'));
 
         if (empty($kunjunganId) && empty($pesananId)) {
             $this->flashError('Parameter ID kunjungan atau nota tidak ditemukan.');
@@ -717,7 +846,8 @@ class ConsignmentController extends Controller
                 'details' => $details,
                 'bankAccount' => $bankAccount,
                 'isInvoiced' => $isInvoiced,
-                'isPdf' => true
+                'isPdf' => true,
+                'formatMode' => $format
             ]);
             require ROOT_PATH . '/views/consignment/nota_pdf.php';
             $html = ob_get_clean();
@@ -726,19 +856,19 @@ class ConsignmentController extends Controller
                 $cleanNota = !empty($visit['nomor_nota']) 
                     ? preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$visit['nomor_nota']) 
                     : 'FAKTUR_' . date('Ymd_His');
-                $filename = "Faktur-Konsinyasi-{$cleanNota}.pdf";
+                $filename = "Faktur-Konsinyasi-{$cleanNota}";
             } else {
                 $cleanKunj = !empty($visit['nomor_kunjungan'])
                     ? preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$visit['nomor_kunjungan'])
                     : 'OPNAME_' . date('Ymd_His');
-                $filename = "Berita-Acara-Opname-{$cleanKunj}.pdf";
+                $filename = "Berita-Acara-Opname-{$cleanKunj}";
             }
 
-            PdfExport::download($html, $filename, 'A4', 'portrait');
+            PrintDocumentHelper::downloadPdf($html, $filename, $format);
 
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat dokumen PDF: ' . $e->getMessage());
-            $this->redirect('/consignment/opname/hasil?kunjungan_id=' . urlencode((string)($kunjunganId ?: '')));
+            $this->redirect('/consignment/nota-print?' . (!empty($pesananId) ? 'pesanan_id=' . urlencode((string)$pesananId) : 'kunjungan_id=' . urlencode((string)$kunjunganId)));
         }
     }
 

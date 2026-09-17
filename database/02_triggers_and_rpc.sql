@@ -1201,49 +1201,108 @@ BEFORE INSERT OR UPDATE OF sales_driver_id ON public.pelanggan
 FOR EACH ROW
 EXECUTE FUNCTION public.fn_guard_pelanggan_sales_driver();
 
--- 2. Driver DILARANG memiliki persentase komisi sales (harus 0.00%)
-CREATE OR REPLACE FUNCTION public.fn_guard_karyawan_driver_no_commission()
-RETURNS TRIGGER AS $$
+-- 2. Fungsi Helper PostgreSQL untuk Perhitungan Tier Komisi Sales Bertingkat
+CREATE OR REPLACE FUNCTION public.fn_hitung_tier_komisi_sales(p_omzet NUMERIC)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+AS $$
 DECLARE
-    v_posisi VARCHAR(50);
-    v_nama   VARCHAR(150);
+    v_tier RECORD;
+    v_next_tier RECORD;
+    v_nominal_komisi NUMERIC(15, 2) := 0.00;
+    v_gap_omzet NUMERIC(15, 2) := 0.00;
+    v_omzet_bersih NUMERIC(15, 2) := GREATEST(0.00, COALESCE(p_omzet, 0.00));
 BEGIN
-    IF NEW.persentase_komisi_sales > 0 THEN
-        SELECT posisi, nama_lengkap INTO v_posisi, v_nama
-        FROM public.pengguna
-        WHERE id = NEW.pengguna_id;
+    -- Cari tier yang sesuai dengan rentang omzet
+    SELECT * INTO v_tier
+    FROM public.skema_komisi_sales
+    WHERE status_aktif = TRUE
+      AND v_omzet_bersih >= omzet_min
+      AND (omzet_maks IS NULL OR v_omzet_bersih <= omzet_maks)
+    ORDER BY urutan DESC
+    LIMIT 1;
 
-        IF LOWER(COALESCE(v_posisi, '')) = 'driver' THEN
-            RAISE EXCEPTION 'Driver (%) tidak berhak mendapatkan komisi penjualan! Nilai persentase komisi driver harus 0.00%%.', v_nama;
+    -- Jika omzet di bawah tier 1 minimum, gunakan tier dengan urutan pertama tetapi komisi 0 jika di bawah min
+    IF NOT FOUND OR v_tier.id IS NULL THEN
+        SELECT * INTO v_tier
+        FROM public.skema_komisi_sales
+        WHERE status_aktif = TRUE
+        ORDER BY urutan ASC
+        LIMIT 1;
+        
+        IF FOUND AND v_tier.id IS NOT NULL AND v_omzet_bersih < v_tier.omzet_min THEN
+            -- Omzet belum memenuhi tier dasar
+            v_nominal_komisi := 0.00;
+            v_gap_omzet := v_tier.omzet_min - v_omzet_bersih;
+            RETURN jsonb_build_object(
+                'matched', false,
+                'tier_id', NULL,
+                'nama_tier', 'Di Bawah Tier Minimum',
+                'urutan', 0,
+                'omzet_min', 0.00,
+                'omzet_maks', v_tier.omzet_min,
+                'persentase', 0.00,
+                'total_omzet', v_omzet_bersih,
+                'nominal_komisi', 0.00,
+                'has_next_tier', true,
+                'next_tier_nama', v_tier.nama_tier,
+                'next_tier_persentase', v_tier.persentase,
+                'gap_omzet_ke_next_tier', v_gap_omzet
+            );
         END IF;
     END IF;
 
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trg_guard_karyawan_driver_no_commission ON public.karyawan;
-CREATE TRIGGER trg_guard_karyawan_driver_no_commission
-BEFORE INSERT OR UPDATE OF persentase_komisi_sales, pengguna_id ON public.karyawan
-FOR EACH ROW
-EXECUTE FUNCTION public.fn_guard_karyawan_driver_no_commission();
-
--- 3. Reset Komisi Otomatis Saat Posisi Karyawan Diubah Menjadi 'driver'
-CREATE OR REPLACE FUNCTION public.fn_guard_pengguna_driver_reset_commission()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF LOWER(COALESCE(NEW.posisi, '')) = 'driver' THEN
-        UPDATE public.karyawan
-        SET persentase_komisi_sales = 0.00
-        WHERE pengguna_id = NEW.id AND persentase_komisi_sales > 0;
+    -- Jika tidak ada data tier sama sekali di tabel
+    IF v_tier.id IS NULL THEN
+        RETURN jsonb_build_object(
+            'matched', false,
+            'tier_id', NULL,
+            'nama_tier', 'Skema Belum Dikonfigurasi',
+            'urutan', 0,
+            'omzet_min', 0.00,
+            'omzet_maks', NULL,
+            'persentase', 0.00,
+            'total_omzet', v_omzet_bersih,
+            'nominal_komisi', 0.00,
+            'has_next_tier', false,
+            'next_tier_nama', NULL,
+            'next_tier_persentase', 0.00,
+            'gap_omzet_ke_next_tier', 0.00
+        );
     END IF;
 
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+    -- Hitung komisi flat retroaktif terhadap total omzet
+    v_nominal_komisi := ROUND((v_omzet_bersih * v_tier.persentase / 100.0), 2);
 
-DROP TRIGGER IF EXISTS trg_guard_pengguna_driver_reset_commission ON public.pengguna;
-CREATE TRIGGER trg_guard_pengguna_driver_reset_commission
-AFTER INSERT OR UPDATE OF posisi ON public.pengguna
-FOR EACH ROW
-EXECUTE FUNCTION public.fn_guard_pengguna_driver_reset_commission();
+    -- Cari tier berikutnya untuk motivasi sales
+    SELECT * INTO v_next_tier
+    FROM public.skema_komisi_sales
+    WHERE status_aktif = TRUE
+      AND urutan > v_tier.urutan
+    ORDER BY urutan ASC
+    LIMIT 1;
+
+    IF FOUND AND v_next_tier.id IS NOT NULL THEN
+        v_gap_omzet := GREATEST(0.00, v_next_tier.omzet_min - v_omzet_bersih);
+    ELSE
+        v_gap_omzet := 0.00;
+    END IF;
+
+    RETURN jsonb_build_object(
+        'matched', true,
+        'tier_id', v_tier.id,
+        'nama_tier', v_tier.nama_tier,
+        'urutan', v_tier.urutan,
+        'omzet_min', v_tier.omzet_min,
+        'omzet_maks', v_tier.omzet_maks,
+        'persentase', v_tier.persentase,
+        'total_omzet', v_omzet_bersih,
+        'nominal_komisi', v_nominal_komisi,
+        'has_next_tier', (FOUND AND v_next_tier.id IS NOT NULL),
+        'next_tier_nama', CASE WHEN FOUND AND v_next_tier.id IS NOT NULL THEN v_next_tier.nama_tier ELSE NULL END,
+        'next_tier_persentase', CASE WHEN FOUND AND v_next_tier.id IS NOT NULL THEN v_next_tier.persentase ELSE 0.00 END,
+        'gap_omzet_ke_next_tier', v_gap_omzet
+    );
+END;
+$$;

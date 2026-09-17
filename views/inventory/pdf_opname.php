@@ -1,6 +1,7 @@
 <?php
 use App\Helpers\Format;
 use App\Helpers\CompanySetting;
+use App\Helpers\PrintDocumentHelper;
 
 $comp = $company ?? CompanySetting::getAll();
 
@@ -270,11 +271,11 @@ $totalNilaiRp = (float)($opname['total_nilai_selisih_rp'] ?? 0);
     <table class="kop-table">
         <tr>
             <td style="width: 58%; vertical-align: top;">
-                <div class="company-name"><?= htmlspecialchars($comp['nama'] ?? 'KEREN SNACK INDONESIA') ?></div>
-                <div class="company-tagline"><?= htmlspecialchars($comp['tagline'] ?? 'Produsen & Distributor Aneka Makanan Ringan Berkualitas') ?></div>
+                <div class="company-name"><?= htmlspecialchars($comp['nama']) ?></div>
+                <div class="company-tagline"><?= htmlspecialchars($comp['tagline']) ?></div>
                 <div class="company-contact">
-                    <?= htmlspecialchars($comp['alamat'] ?? 'Jl. Industri Snack No. 88, Jawa Barat') ?><br>
-                    Telp/WA: <?= htmlspecialchars($comp['telepon'] ?? '0812-3456-7890') ?> | Email: <?= htmlspecialchars($comp['email'] ?? 'admin@kerensnack.com') ?>
+                    <?= htmlspecialchars($comp['alamat']) ?><br>
+                    <?= PrintDocumentHelper::formatContactLine($comp, ' | ') ?>
                 </div>
             </td>
             <td style="width: 42%; vertical-align: top; text-align: right;">

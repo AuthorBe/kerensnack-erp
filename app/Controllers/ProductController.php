@@ -550,7 +550,6 @@ class ProductController extends Controller
             $usedProduction = (int)(Database::fetchOne("SELECT count(*) as total FROM public.produksi_harian WHERE item_id = :id", ['id' => $id])['total'] ?? 0);
             $usedAdjustment = (int)(Database::fetchOne("SELECT count(*) as total FROM public.penyesuaian_stok WHERE item_id = :id", ['id' => $id])['total'] ?? 0);
             $usedOpname = (int)(Database::fetchOne("SELECT count(*) as total FROM public.opname_gudang_item WHERE item_id = :id", ['id' => $id])['total'] ?? 0);
-            $usedTarget = (int)(Database::fetchOne("SELECT count(*) as total FROM public.target_produksi WHERE item_id = :id", ['id' => $id])['total'] ?? 0);
 
             // Cek mutasi stok selain saldo awal registrasi
             $otherStockMutations = (int)(Database::fetchOne("
@@ -559,7 +558,7 @@ class ProductController extends Controller
                 WHERE item_id = :id AND NOT (referensi_tabel = 'item' AND referensi_id = :id)
             ", ['id' => $id])['total'] ?? 0);
 
-            $hasHistory = ($usedOrders + $usedPurchases + $usedConsignment + $usedConsignmentVisit + $usedProduction + $usedAdjustment + $usedOpname + $usedTarget + $otherStockMutations) > 0;
+            $hasHistory = ($usedOrders + $usedPurchases + $usedConsignment + $usedConsignmentVisit + $usedProduction + $usedAdjustment + $usedOpname + $otherStockMutations) > 0;
 
             if ($hasHistory) {
                 $this->flashError("Barang jadi '{$item['nama_item']}' sudah memiliki riwayat transaksi/stok operasional dan tidak dapat dihapus demi keutuhan data. Silakan edit dan ubah status menjadi Nonaktif.");

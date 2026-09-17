@@ -161,13 +161,7 @@ ob_start();
                                 </template>
                             </td>
                             <?php endif; ?>
-                            <td class="cell-center cell-nowrap">
-                                <template x-if="d.status_surat_jalan === 'menunggu_persetujuan' || d.status_surat_jalan === 'draf_n8n'">
-                                    <span class="badge" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-weight:700;font-size:11px;">
-                                        ⏳ Menunggu Approval
-                                    </span>
-                                </template>
-                                <template x-if="d.status_surat_jalan === 'disetujui_owner' || d.status_surat_jalan === 'siap_kirim'">
+                                <template x-if="d.status_surat_jalan === 'siap_kirim'">
                                     <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700;font-size:11px;">
                                         📦 Siap Berangkat
                                     </span>
@@ -190,22 +184,6 @@ ob_start();
                             </td>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
-                                    <?php if (Auth::can('owner.approval_delivery')): ?>
-                                    <template x-if="d.status_surat_jalan === 'menunggu_persetujuan'">
-                                        <form action="<?= Router::url('/deliveries/approve') ?>" method="POST" style="display:inline;"
-                                              data-confirm="Setujui pengiriman Surat Jalan ini untuk diberangkatkan oleh armada logistik?"
-                                              data-confirm-title="Persetujuan Surat Jalan"
-                                              data-confirm-type="primary"
-                                              data-confirm-icon="check-circle"
-                                              data-confirm-btn="Ya, Setujui">
-                                            <input type="hidden" name="id" :value="d.id">
-                                            <button type="submit" class="btn btn-sm" style="background:#10b981;color:#ffffff;padding:5px 9px;font-size:11px;font-weight:700;border-radius:6px;display:inline-flex;align-items:center;gap:4px;" title="Setujui Surat Jalan Ini">
-                                                <i data-lucide="check-circle" style="width:13px;height:13px;"></i>
-                                                <span>Approve</span>
-                                            </button>
-                                        </form>
-                                    </template>
-                                    <?php endif; ?>
 
                                     <?php if (Auth::can(['deliveries.create', 'deliveries.update_all'])): ?>
                                     <template x-if="!['selesai_diterima', 'gagal_kirim', 'gagal_kembali', 'dibatalkan'].includes(d.status_surat_jalan)">

@@ -702,7 +702,7 @@ function devArchitectureApp() {
                 files: [
                     { name: 'ConsignmentController.php', desc: 'Menangani opname rak fisik sales (A1-A4), pengajuan barang titip, rekonsiliasi, dan pencatatan pembayaran faktur (B1-B5).' },
                     { name: 'DeliveryController.php', desc: 'Menangani alur pengiriman logistik driver (antrian tugas, status berangkat, dan konfirmasi barang sampai di toko).' },
-                    { name: 'OwnerController.php', desc: 'Menangani Owner Command Center (C1-C6): Gatekeeper persetujuan kiriman, komparasi omzet, leaderboard komisi sales, dan approval beban biaya.' },
+                    { name: 'OwnerController.php', desc: 'Menangani Owner Executive Dashboard: Matriks profitabilitas (omzet, HPP, laba bersih), neraca modal kerja, efisiensi produksi pabrik, multi-channel, dan performa sales.' },
                     { name: 'PosController.php', desc: 'Menangani transaksi kasir retail cepat, scan barcode snack, hitung diskon otomatis, dan potong stok langsung.' },
                     { name: 'CustomerOrderController.php', desc: 'Menangani pesanan penjualan grosir/B2B, surat jalan langsung, dan penerbitan faktur tagihan pelanggan.' },
                     { name: 'SalesOrderController.php', desc: 'Alias controller kompatibilitas pesanan penjualan B2B dan grosir.' },
@@ -825,7 +825,7 @@ function devArchitectureApp() {
             { url: '/consignment/sales/summary', method: 'GET', action: 'ConsignmentController::salesSummary()', view: 'views/consignment/sales/summary.php', role: 'Sales, Admin, Owner' },
             { url: '/consignment/sales/request-delivery', method: 'GET / POST', action: 'ConsignmentController::salesRequestDelivery()', view: 'views/consignment/sales/delivery.php', role: 'Sales, Admin, Owner' },
             { url: '/deliveries', method: 'GET / POST', action: 'DeliveryController::index()', view: 'views/deliveries/index.php', role: 'Driver, Sales, Admin, Owner' },
-            { url: '/owner', method: 'GET / POST', action: 'OwnerController::index()', view: 'views/owner/index.php', role: 'Owner' },
+            { url: '/owner', method: 'GET', action: 'OwnerController::index()', view: 'views/owner/index.php', role: 'Owner' },
             { url: '/cash', method: 'GET', action: 'CashController::index()', view: 'views/cash/index.php', role: 'Owner, Admin' },
             { url: '/cash/transactions', method: 'GET / POST', action: 'CashController::transactions()', view: 'views/cash/transactions.php', role: 'Owner, Admin' },
             { url: '/cash/reports', method: 'GET', action: 'CashController::reports()', view: 'views/cash/reports.php', role: 'Owner, Admin' },
@@ -933,22 +933,21 @@ function devArchitectureApp() {
                     rules: [
                         'Driver TIDAK boleh melihat harga rupiah, HPP, atau komisi.',
                         'Driver hanya melihat daftar toko tujuan, kontak WA, dan total pcs snack.',
-                        'Alur status pengiriman: disetujui_owner -> sedang_dikirim -> selesai_diterima.'
+                        'Alur status pengiriman: siap_kirim -> sedang_dikirim -> selesai_diterima.'
                     ]
                 },
                 owner_dashboard: {
-                    title: '👑 Owner Command Center & Gatekeeper Approval',
-                    controller: 'app/Controllers/OwnerController.php (index, approveConsignmentDelivery, rejectConsignmentDelivery, approveDraft, rejectDraft)',
+                    title: '👑 Owner Executive Dashboard & Business Performance',
+                    controller: 'app/Controllers/OwnerController.php (index)',
                     views: 'views/owner/index.php',
-                    tables: 'surat_jalan, pesanan, kunjungan_konsinyasi, rincian_kunjungan_konsinyasi, karyawan, akun_kas',
-                    rpc: 'fn_proses_kunjungan_konsinyasi, fn_catat_pembayaran_konsinyasi',
+                    tables: 'pesanan, item_pesanan, akun_kas, arus_kas, pelanggan, item, pembelian, produksi_harian, stok_konsinyasi_toko',
+                    rpc: 'fn_hitung_tier_komisi_sales',
                     rules: [
-                        'C2 Gatekeeper: Barang titip konsinyasi baru WAJIB disetujui Owner sebelum keluar gudang.',
-                        'C1 Komparasi omzet konsinyasi vs direct order retail.',
-                        'C3 Leaderboard & estimasi komisi sales berkala.',
-                        'C4 Aging piutang (<14 hari aman, 14-30 hari perhatian, >30 hari kritis/macet).',
-                        'C5 Kerugian beban barang rusak HPP.',
-                        'C6 Warning toko overdue belum dikunjungi >14 hari.'
+                        'Matriks Profitabilitas: Omzet bersih riil, HPP terjual (COGS), laba kotor & margin %, beban kas operasional, dan estimasi laba bersih.',
+                        'Neraca Modal Kerja Bersih (Net Working Capital): Kas & bank + piutang usaha + total valuasi persediaan (gudang bahan, kemas, barang jadi, rak konsinyasi) - hutang vendor.',
+                        'Distribusi Omzet Multi-Channel: POS Kasir vs Grosir Direct vs Rak Toko Konsinyasi.',
+                        'Kinerja Pabrik & Produksi Snack: Output pcs/bal, pekerja borongan aktif & produktivitas, serta efisiensi biaya upah per pcs.',
+                        'Mitra Konsinyasi & Sales: Leaderboard sales, monitoring toko overdue >14 hari belum di-opname, dan evaluasi kerugian retur rusak.'
                     ]
                 },
                 consignment_admin: {

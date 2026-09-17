@@ -5,6 +5,8 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Auth;
+use App\Helpers\ActivityLog;
+use App\Helpers\Format;
 use Database;
 use Throwable;
 
@@ -104,10 +106,13 @@ class PricingController extends Controller
         }
 
         try {
+            $group = Database::fetchOne("SELECT nama_grup FROM public.grup_produk WHERE id = :gid", ['gid' => $groupId]);
+            $groupName = $group['nama_grup'] ?? 'Grup Produk';
+
             // Mode UBAH (Edit baris yang sudah ada)
             if (!empty($id)) {
                 $existing = Database::fetchOne("
-                    SELECT id, grup_produk_id, level_harga 
+                    SELECT id, grup_produk_id, level_harga, harga_jual_pcs 
                     FROM public.grup_produk_harga_level 
                     WHERE id = :id AND grup_produk_id = :gid
                 ", ['id' => $id, 'gid' => $groupId]);
@@ -119,6 +124,7 @@ class PricingController extends Controller
                 }
 
                 $targetLevel = (int)$existing['level_harga'];
+                $oldPrice = (float)$existing['harga_jual_pcs'];
 
                 Database::execute("
                     UPDATE public.grup_produk_harga_level
@@ -129,6 +135,16 @@ class PricingController extends Controller
                     'id' => $id,
                     'pcs' => $hargaPcs
                 ]);
+
+                ActivityLog::log(
+                    'master_data',
+                    'PRICE_CHANGE',
+                    "Pembaruan harga Level {$targetLevel} pada grup '{$groupName}' dari Rp " . number_format($oldPrice, 0, ',', '.') . " menjadi Rp " . number_format($hargaPcs, 0, ',', '.'),
+                    'grup_produk_harga_level',
+                    $id,
+                    ['harga_jual_pcs' => $oldPrice, 'level_harga' => $targetLevel],
+                    ['harga_jual_pcs' => $hargaPcs, 'level_harga' => $targetLevel]
+                );
 
                 $this->flashSuccess("Harga Level {$targetLevel} berhasil diperbarui!");
                 $this->redirect('/pricing');
@@ -155,17 +171,29 @@ class PricingController extends Controller
                 return;
             }
 
-            Database::execute("
+            $stmtInsert = Database::getConnection()->prepare("
                 INSERT INTO public.grup_produk_harga_level (
                     grup_produk_id, level_harga, harga_jual_pcs, dibuat_pada, diubah_pada
                 ) VALUES (
                     :group_id, :level, :pcs, NOW(), NOW()
-                )
-            ", [
+                ) RETURNING id
+            ");
+            $stmtInsert->execute([
                 'group_id' => $groupId,
                 'level' => $level,
                 'pcs' => $hargaPcs
             ]);
+            $newLevelId = $stmtInsert->fetchColumn() ?: null;
+
+            ActivityLog::log(
+                'master_data',
+                'CREATE',
+                "Menambahkan harga jual Level {$level} pada grup '{$groupName}' sebesar Rp " . number_format($hargaPcs, 0, ',', '.'),
+                'grup_produk_harga_level',
+                $newLevelId ? (string)$newLevelId : null,
+                null,
+                ['grup_produk_id' => $groupId, 'level_harga' => $level, 'harga_jual_pcs' => $hargaPcs]
+            );
 
             $this->flashSuccess("Level harga {$level} berhasil ditambahkan!");
             $this->redirect('/pricing');
@@ -189,7 +217,7 @@ class PricingController extends Controller
 
         try {
             $row = Database::fetchOne("
-                SELECT phl.id, phl.level_harga, phl.grup_produk_id, gp.nama_grup 
+                SELECT phl.id, phl.level_harga, phl.harga_jual_pcs, phl.grup_produk_id, gp.nama_grup 
                 FROM public.grup_produk_harga_level phl 
                 JOIN public.grup_produk gp ON phl.grup_produk_id = gp.id 
                 WHERE phl.id = :id
@@ -225,6 +253,17 @@ class PricingController extends Controller
             }
 
             Database::execute("DELETE FROM public.grup_produk_harga_level WHERE id = :id", ['id' => $id]);
+
+            ActivityLog::log(
+                'master_data',
+                'DELETE',
+                "Menghapus harga jual Level {$levelHarga} pada grup '{$row['nama_grup']}'",
+                'grup_produk_harga_level',
+                (string)$id,
+                ['grup_produk_id' => $row['grup_produk_id'], 'level_harga' => $levelHarga, 'harga_jual_pcs' => (float)$row['harga_jual_pcs']],
+                null
+            );
+
             $this->flashSuccess("Level harga {$levelHarga} berhasil dihapus dari grup {$row['nama_grup']}.");
             $this->redirect('/pricing');
 

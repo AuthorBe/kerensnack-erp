@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\PdfExport;
+use App\Helpers\PrintDocumentHelper;
 use App\Helpers\ExcelExport;
 use Database;
 use Throwable;
@@ -146,11 +147,7 @@ class OrderDocumentController extends Controller
             $html = ob_get_clean();
 
             $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
-            if ($format === 'dotmatrix') {
-                PdfExport::download($html, "Faktur-DotMatrix-{$cleanNota}.pdf", 'Letter', 'portrait');
-            } else {
-                PdfExport::download($html, "Faktur-{$cleanNota}.pdf", 'A4', 'portrait');
-            }
+            PrintDocumentHelper::downloadPdf($html, "Faktur-{$cleanNota}", $format);
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF: ' . $e->getMessage());
             $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));

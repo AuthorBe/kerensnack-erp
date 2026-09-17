@@ -22,7 +22,7 @@ class CompanySetting
         'alamat'          => 'Jl. Industri Snack No. 88, Jawa Barat',
         'telepon'         => '0812-3456-7890',
         'email'           => 'admin@kerensnack.com',
-        'website'         => 'www.kerensnack.com',
+        'website'         => 'www.kerensnack.id',
         'catatan_faktur'  => 'Barang yang sudah dibeli tidak dapat ditukar/dikembalikan tanpa persetujuan tertulis.',
         'nama_bank'       => 'BCA',
         'nomor_rekening'  => '8820-123-4567',

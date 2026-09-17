@@ -33,8 +33,19 @@ ob_start();
 }
 
 /* ========================================================= */
-/* TANGGA TIER KOMISI MODAL STYLES                            */
+/* TANGGA TIER KOMISI MODAL & RESPONSIVE STYLES               */
 /* ========================================================= */
+.modal-header-sales {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-canvas);
+    flex-shrink: 0;
+    gap: 12px;
+}
+
 .tier-ladder-wrapper {
     display: flex;
     flex-direction: column;
@@ -65,12 +76,56 @@ ob_start();
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    margin-top: 1px;
+}
+.tier-banner-icon svg {
+    width: 16px !important;
+    height: 16px !important;
+    max-width: 16px !important;
+    max-height: 16px !important;
+    display: block;
+}
+.tier-banner-content {
+    min-width: 0;
+    flex: 1;
+}
+.tier-banner-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-bottom: 4px;
+}
+.tier-banner-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--color-ink);
+    line-height: 1.35;
+}
+.tier-banner-pill {
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 2.5px 8px;
+    border-radius: 99px;
+    background: rgba(245, 158, 11, 0.25);
+    color: #b45309;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.tier-banner-desc {
+    font-size: 11.5px;
+    color: var(--color-ink-secondary);
+    line-height: 1.55;
+    margin: 0;
 }
 
 /* Tab 1, 2, 3 Info Banners with Bordered Icon Badges */
 .modal-info-banner {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     padding: 12px 16px;
     border-radius: 12px;
@@ -85,6 +140,7 @@ ob_start();
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    margin-top: 1px;
 }
 .modal-info-banner-icon svg {
     width: 15px !important;
@@ -129,38 +185,6 @@ ob_start();
     box-shadow: 0 1px 2px rgba(239, 68, 68, 0.12);
     color: #dc2626;
 }
-.tier-banner-icon svg {
-    width: 16px !important;
-    height: 16px !important;
-    max-width: 16px !important;
-    max-height: 16px !important;
-    display: block;
-}
-.tier-banner-title {
-    font-size: 13px;
-    font-weight: 800;
-    color: var(--color-ink);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 2px;
-}
-.tier-banner-pill {
-    font-size: 9px;
-    font-weight: 800;
-    padding: 2px 7px;
-    border-radius: 99px;
-    background: rgba(245, 158, 11, 0.25);
-    color: #b45309;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.tier-banner-desc {
-    font-size: 11.5px;
-    color: var(--color-ink-secondary);
-    line-height: 1.5;
-    margin: 0;
-}
 
 /* 2. Hero Progress Motivation Card */
 .tier-hero-card {
@@ -184,12 +208,13 @@ ob_start();
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
 }
 .tier-hero-target-icon {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
     border-radius: 10px;
     background: #2563eb;
     border: 1.5px solid rgba(255, 255, 255, 0.4);
@@ -223,6 +248,7 @@ ob_start();
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
 }
 .tier-hero-rate-tag {
     font-size: 11px;
@@ -231,6 +257,7 @@ ob_start();
     border-radius: 6px;
     background: rgba(37, 99, 235, 0.12);
     color: #1d4ed8;
+    white-space: nowrap;
 }
 
 .tier-hero-gap-badge {
@@ -244,6 +271,7 @@ ob_start();
     border: 1px solid rgba(245, 158, 11, 0.3);
     font-size: 12px;
     font-weight: 700;
+    white-space: nowrap;
 }
 .tier-hero-gap-badge svg {
     width: 14px !important;
@@ -252,12 +280,18 @@ ob_start();
     max-height: 14px !important;
     color: #d97706;
     display: block;
+    flex-shrink: 0;
 }
 
 /* Progress Track & Bar */
+.tier-progress-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
 .tier-progress-track {
     width: 100%;
-    height: 14px;
+    height: 12px;
     border-radius: 99px;
     background: rgba(148, 163, 184, 0.22);
     overflow: hidden;
@@ -271,31 +305,87 @@ ob_start();
     transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
 }
+
 .tier-milestone-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 11.5px;
+    gap: 6px;
+}
+.tier-milestone-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.tier-milestone-col.is-left {
+    align-items: flex-start;
+    text-align: left;
+}
+.tier-milestone-col.is-right {
+    align-items: flex-end;
+    text-align: right;
+}
+.tier-milestone-lbl {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--color-ink-mute);
-    margin-top: 5px;
+    line-height: 1.2;
+    margin-bottom: 2px;
+    white-space: nowrap;
+}
+.tier-dot-current {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    display: inline-block;
+    flex-shrink: 0;
+}
+.tier-dot-target {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    display: inline-block;
+    flex-shrink: 0;
+}
+.tier-milestone-num {
+    font-size: 13px;
+    font-weight: 800;
+    font-family: var(--font-mono);
+    color: var(--color-ink);
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.tier-milestone-center {
+    flex-shrink: 0;
 }
 .tier-pct-badge {
-    padding: 2px 8px;
+    padding: 3px 8px;
     border-radius: 6px;
     background: rgba(37, 99, 235, 0.12);
     color: #2563eb;
     font-weight: 800;
     font-size: 11px;
+    white-space: nowrap;
+    display: inline-block;
 }
 
 .tier-hero-note {
     padding-top: 10px;
     border-top: 1px solid rgba(59, 130, 246, 0.15);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
     font-size: 11.5px;
-    line-height: 1.5;
+    line-height: 1.55;
     color: var(--color-ink-secondary);
 }
 .tier-hero-note-icon {
@@ -312,6 +402,7 @@ ob_start();
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    margin-top: 2px;
 }
 .tier-hero-note-icon svg {
     width: 12px !important;
@@ -324,28 +415,29 @@ ob_start();
 
 /* Tier Max Celebration Card */
 .tier-max-card {
-    padding: 16px 20px;
+    padding: 14px 16px;
     border-radius: 16px;
     background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(234, 179, 8, 0.04));
     border: 1px solid rgba(245, 158, 11, 0.35);
     display: flex;
-    align-items: center;
-    gap: 14px;
+    align-items: flex-start;
+    gap: 12px;
 }
 .tier-max-trophy {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
-    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border-radius: 10px;
     background: linear-gradient(135deg, #f59e0b, #eab308);
     color: #ffffff;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
+    font-size: 20px;
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
     flex-shrink: 0;
+    margin-top: 2px;
 }
 
 /* 3. Tier Grid (2 columns on tablet/desktop, 1 column on mobile) */
@@ -354,16 +446,11 @@ ob_start();
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
 }
-@media (max-width: 640px) {
-    .tier-cards-grid {
-        grid-template-columns: 1fr;
-    }
-}
 
 /* Tier Card Block */
 .tier-card-block {
     border-radius: 16px;
-    padding: 15px 18px;
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -372,6 +459,7 @@ ob_start();
     background: var(--color-canvas);
     position: relative;
     overflow: hidden;
+    gap: 10px;
 }
 .tier-card-block.is-active-tier {
     background: rgba(245, 158, 11, 0.08);
@@ -398,12 +486,13 @@ ob_start();
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 .tier-card-title-wrap {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
 }
 .tier-card-medal {
     font-size: 18px;
@@ -428,7 +517,7 @@ ob_start();
     flex-shrink: 0;
 }
 .tier-card-rate-num {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 900;
     font-family: var(--font-mono);
     line-height: 1;
@@ -450,7 +539,7 @@ ob_start();
 }
 
 .tier-card-pill-row {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 .tier-card-status-pill {
     display: inline-flex;
@@ -462,6 +551,7 @@ ob_start();
     border-radius: 99px;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 .tier-card-status-pill.is-active {
     background: #f59e0b;
@@ -487,6 +577,7 @@ ob_start();
     max-width: 11px !important;
     max-height: 11px !important;
     display: block;
+    flex-shrink: 0;
 }
 
 .tier-card-range-badge {
@@ -502,6 +593,9 @@ ob_start();
     font-weight: 600;
     color: var(--color-ink-secondary);
     align-self: flex-start;
+    max-width: 100%;
+    box-sizing: border-box;
+    flex-wrap: wrap;
 }
 .tier-card-range-badge svg {
     width: 13px !important;
@@ -521,12 +615,14 @@ ob_start();
 }
 
 .tier-card-bottom-row {
-    margin-top: 12px;
+    margin-top: 10px;
     padding-top: 9px;
     border-top: 1px solid var(--color-hairline);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px;
     font-size: 11px;
     color: var(--color-ink-mute);
 }
@@ -534,6 +630,70 @@ ob_start();
     font-family: var(--font-mono);
     font-weight: 800;
     font-size: 12px;
+}
+
+/* ========================================================= */
+/* MOBILE RESPONSIVE OVERRIDES (HP VIEW)                      */
+/* ========================================================= */
+@media (max-width: 640px) {
+    .modal-header-sales {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+    .modal-tab-nav {
+        padding: 6px 10px;
+        gap: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .modal-tab-btn {
+        padding: 6px 10px;
+        font-size: 11px;
+        gap: 5px;
+        flex-shrink: 0;
+    }
+    .modal-tab-btn i,
+    .modal-tab-btn svg {
+        width: 13px !important;
+        height: 13px !important;
+    }
+    .modal-tab-body {
+        padding: 12px 12px 24px 12px;
+    }
+    .tier-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .tier-banner-box {
+        padding: 11px 13px;
+        gap: 10px;
+    }
+    .tier-hero-card {
+        padding: 13px 13px;
+        gap: 11px;
+    }
+    .tier-hero-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .tier-hero-gap-badge {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+        padding: 7px 12px;
+        border-radius: 10px;
+        box-sizing: border-box;
+    }
+    .tier-milestone-num {
+        font-size: 12px;
+    }
+    .tier-pct-badge {
+        font-size: 10.5px;
+        padding: 2px 7px;
+    }
+    .tier-card-block {
+        padding: 12px 14px;
+    }
 }
 </style>
 
@@ -947,7 +1107,9 @@ ob_start();
                             }
                             ?>
                             <td class="cell-center" style="padding: 10px 12px; vertical-align: middle;">
-                                <div class="flex flex-col mx-auto text-left" 
+                                <div class="flex flex-col mx-auto text-left cursor-pointer transition hover:opacity-90 active:scale-[0.98]" 
+                                     @click="openBreakdownModal(<?= htmlspecialchars(json_encode($c)) ?>, 'ladder')"
+                                     title="Klik untuk melihat tangga tier komisi"
                                      style="max-width: 230px; border-radius: 10px; overflow: hidden; border: 1px solid <?= $tierBadgeBorder ?>; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
                                     
                                     <!-- Bagian Atas: Nama Tier + Rate -->
@@ -1076,27 +1238,27 @@ ob_start();
                 <!-- ============================================================ -->
                 <!-- 1. MODAL HEADER                                               -->
                 <!-- ============================================================ -->
-                <div style="padding:16px 20px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between;background:var(--color-canvas);flex-shrink:0;gap:12px;">
+                <div class="modal-header-sales">
                     <!-- Kiri: Icon + Judul + Meta -->
-                    <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
-                        <div style="width:42px;height:42px;border-radius:12px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="award" style="width:20px;height:20px;"></i>
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                        <div style="width:38px;height:38px;border-radius:11px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="award" style="width:19px;height:19px;"></i>
                         </div>
                         <div style="min-width:0;flex:1;">
-                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                                <span class="font-black" style="font-size:15px;color:var(--color-ink);letter-spacing:-0.01em;" x-text="activeSales.nama_karyawan"></span>
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <span class="font-black" style="font-size:14.5px;color:var(--color-ink);letter-spacing:-0.01em;" x-text="activeSales.nama_karyawan"></span>
                                 <!-- Tier badge -->
-                                <span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-weight:800;font-size:10px;padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
+                                <span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-weight:800;font-size:10px;padding:2px 7px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
                                     <i data-lucide="award" style="width:10px;height:10px;color:#d97706;"></i>
                                     <span x-text="activeSales.tier_info?.nama_tier || 'Tier 1'"></span>
                                 </span>
                                 <!-- Rate badge -->
-                                <span class="badge" style="background:#f59e0b;color:#0f172a;font-weight:900;font-size:10px;padding:2px 8px;border-radius:6px;">
+                                <span class="badge" style="background:#f59e0b;color:#0f172a;font-weight:900;font-size:10px;padding:2px 7px;border-radius:6px;white-space:nowrap;">
                                     <span x-text="Number(activeSales.persentase_komisi || 0).toFixed(2) + '%'"></span>
                                 </span>
                             </div>
-                            <div style="font-size:12px;color:var(--color-ink-mute);margin-top:3px;display:flex;align-items:center;gap:4px;">
-                                <i data-lucide="calendar" style="width:12px;height:12px;flex-shrink:0;"></i>
+                            <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;display:flex;align-items:center;gap:4px;">
+                                <i data-lucide="calendar" style="width:11px;height:11px;flex-shrink:0;"></i>
                                 <span x-text="formatDateIndo(filterStartDate) + ' s/d ' + formatDateIndo(filterEndDate)"></span>
                             </div>
                         </div>
@@ -1134,25 +1296,25 @@ ob_start();
                 <!-- ============================================================ -->
                 <!-- 2. TAB NAVIGATION (pakai sistem yg sama dg customer-orders)  -->
                 <!-- ============================================================ -->
-                <div class="modal-tab-nav custom-scrollbar">
-                    <button type="button" @click="activeTab = 'konsin'; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'konsin' }">
+                <div class="modal-tab-nav custom-scrollbar" x-ref="tabNav">
+                    <button type="button" @click="selectTab('konsin', $event)" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'konsin' }">
                         <i data-lucide="store" style="width:14px;height:14px;"></i>
-                        <span>Tagihan Konsinyasi</span>
+                        <span><span class="hidden sm:inline">Tagihan </span>Konsinyasi</span>
                         <span class="badge" style="font-size:10px;padding:1px 6px;border-radius:10px;" x-text="(currentKonsinInvoices || []).length"></span>
                     </button>
-                    <button type="button" @click="activeTab = 'b2b'; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'b2b' }">
+                    <button type="button" @click="selectTab('b2b', $event)" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'b2b' }">
                         <i data-lucide="shopping-bag" style="width:14px;height:14px;"></i>
                         <span>Pesanan B2B</span>
                         <span class="badge" style="font-size:10px;padding:1px 6px;border-radius:10px;" x-text="(currentB2bOrders || []).length"></span>
                     </button>
-                    <button type="button" @click="activeTab = 'unbilled'; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'unbilled' }">
+                    <button type="button" @click="selectTab('unbilled', $event)" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'unbilled' }">
                         <i data-lucide="clock" style="width:14px;height:14px;"></i>
                         <span>Belum Ditagih</span>
                         <span class="badge" style="font-size:10px;padding:1px 6px;border-radius:10px;" x-text="(currentUnbilled || []).length"></span>
                     </button>
-                    <button type="button" @click="activeTab = 'ladder'; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'ladder' }">
+                    <button type="button" @click="selectTab('ladder', $event)" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'ladder' }">
                         <i data-lucide="trending-up" style="width:14px;height:14px;"></i>
-                        <span>Tangga Tier Komisi</span>
+                        <span>Tangga Tier<span class="hidden sm:inline"> Komisi</span></span>
                     </button>
                 </div>
 
@@ -1176,8 +1338,8 @@ ob_start();
                             </div>
 
                             <!-- Tabel -->
-                            <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;overflow:hidden;">
-                                <table class="data-table" style="margin:0;">
+                            <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                                <table class="data-table" style="margin:0;min-width:540px;">
                                     <thead>
                                         <tr>
                                             <th>Nota &amp; Tanggal</th>
@@ -1240,8 +1402,8 @@ ob_start();
                             </div>
 
                             <!-- Tabel -->
-                            <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;overflow:hidden;">
-                                <table class="data-table" style="margin:0;">
+                            <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                                <table class="data-table" style="margin:0;min-width:540px;">
                                     <thead>
                                         <tr>
                                             <th>Nota &amp; Tanggal</th>
@@ -1304,8 +1466,8 @@ ob_start();
                             </div>
 
                             <!-- Tabel -->
-                            <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;overflow:hidden;">
-                                <table class="data-table" style="margin:0;">
+                            <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;">
+                                <table class="data-table" style="margin:0;min-width:500px;">
                                     <thead>
                                         <tr>
                                             <th>Nomor Kunjungan</th>
@@ -1351,16 +1513,18 @@ ob_start();
                             <!-- 1. Info Banner Edukasi Flat Retroaktif -->
                             <div class="tier-banner-box">
                                 <div class="tier-banner-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;max-width:16px;max-height:16px;flex-shrink:0;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                                     </svg>
                                 </div>
                                 <div class="tier-banner-content">
-                                    <div class="tier-banner-title">
-                                        <span>Skema Komisi: Model Flat Retroaktif</span>
+                                    <div class="tier-banner-head">
+                                        <div class="tier-banner-title">Skema Komisi: Model Flat Retroaktif</div>
                                         <span class="tier-banner-pill">Otomatis Naik Kelas</span>
                                     </div>
-                                    Tier tertinggi yang diraih sales otomatis berlaku untuk <strong>seluruh total omzet terbayar</strong> di bulan berjalan (bukan sistem berjenjang selisih). Begitu target tier berikutnya tembus, 100% total omzet dari awal langsung dikalikan rate komisi yang lebih besar!
+                                    <p class="tier-banner-desc">
+                                        Tier tertinggi yang diraih sales otomatis berlaku untuk <strong>seluruh total omzet terbayar</strong> di bulan berjalan (bukan sistem berjenjang selisih). Begitu target tier berikutnya tembus, 100% total omzet dari awal langsung dikalikan rate komisi yang lebih besar!
+                                    </p>
                                 </div>
                             </div>
 
@@ -1371,7 +1535,7 @@ ob_start();
                                     <div class="tier-hero-head">
                                         <div class="tier-hero-target-group">
                                             <div class="tier-hero-target-icon">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;max-width:18px;max-height:18px;flex-shrink:0;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                     <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
                                                 </svg>
                                             </div>
@@ -1386,7 +1550,7 @@ ob_start();
 
                                         <!-- Gap Badge Motivasi -->
                                         <div class="tier-hero-gap-badge">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;max-width:14px;max-height:14px;flex-shrink:0;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                                 <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
                                             </svg>
                                             <span>Kurang <strong class="font-mono font-black" x-text="formatRupiahClean(activeSales.tier_info.gap_omzet_ke_next_tier)"></strong> lagi</span>
@@ -1394,23 +1558,34 @@ ob_start();
                                     </div>
 
                                     <!-- Progress Bar Track & Fill -->
-                                    <div>
+                                    <div class="tier-progress-wrap">
                                         <div class="tier-progress-track">
                                             <div class="tier-progress-bar" :style="{ width: calcTierProgress() + '%' }"></div>
                                         </div>
 
                                         <!-- Milestone Labels -->
                                         <div class="tier-milestone-row">
-                                            <div style="display:flex;align-items:center;gap:6px;">
-                                                <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;flex-shrink:0;"></span>
-                                                <span>Omzet Saat Ini: <strong style="color:var(--color-ink);" class="font-mono" x-text="formatRupiahClean(activeSales.total_omzet)"></strong></span>
+                                            <!-- Kiri: Omzet Saat Ini -->
+                                            <div class="tier-milestone-col is-left">
+                                                <div class="tier-milestone-lbl">
+                                                    <span class="tier-dot-current"></span>
+                                                    <span>Omzet Saat Ini</span>
+                                                </div>
+                                                <div class="tier-milestone-num" x-text="formatRupiahClean(activeSales.total_omzet)"></div>
                                             </div>
-                                            <div>
+
+                                            <!-- Tengah: Persen Tercapai -->
+                                            <div class="tier-milestone-center">
                                                 <span class="tier-pct-badge" x-text="calcTierProgress() + '% Tercapai'"></span>
                                             </div>
-                                            <div style="display:flex;align-items:center;gap:6px;">
-                                                <span>Target: <strong style="color:var(--color-ink);" class="font-mono" x-text="formatRupiahClean(Number(activeSales.total_omzet) + Number(activeSales.tier_info.gap_omzet_ke_next_tier))"></strong></span>
-                                                <span style="width:8px;height:8px;border-radius:50%;background:#2563eb;display:inline-block;flex-shrink:0;"></span>
+
+                                            <!-- Kanan: Target -->
+                                            <div class="tier-milestone-col is-right">
+                                                <div class="tier-milestone-lbl justify-end">
+                                                    <span>Target</span>
+                                                    <span class="tier-dot-target"></span>
+                                                </div>
+                                                <div class="tier-milestone-num" x-text="formatRupiahClean(Number(activeSales.total_omzet) + Number(activeSales.tier_info.gap_omzet_ke_next_tier))"></div>
                                             </div>
                                         </div>
                                     </div>
@@ -1418,12 +1593,12 @@ ob_start();
                                     <!-- Footnote -->
                                     <div class="tier-hero-note">
                                         <div class="tier-hero-note-icon">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;max-width:12px;max-height:12px;flex-shrink:0;">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
                                             </svg>
                                         </div>
-                                        <p style="margin:0;line-height:1.5;">
-                                            <strong>Lonjakan Hasil:</strong> Capai omzet <span class="font-bold font-mono" style="color:var(--color-ink);" x-text="formatRupiahClean(Number(activeSales.total_omzet) + Number(activeSales.tier_info.gap_omzet_ke_next_tier))"></span> untuk melipatgandakan komisi ke <span class="font-bold" style="color:#2563eb;" x-text="Number(activeSales.tier_info.next_tier_persentase) + '%'"></span> dengan potensi komisi minimal <strong class="font-mono font-black" style="color:#059669;" x-text="formatRupiahClean((Number(activeSales.total_omzet) + Number(activeSales.tier_info.gap_omzet_ke_next_tier)) * Number(activeSales.tier_info.next_tier_persentase) / 100)"></strong>!
+                                        <p style="margin:0;line-height:1.55;">
+                                            <strong>Lonjakan Hasil:</strong> Capai omzet <span class="font-bold font-mono whitespace-nowrap" style="color:var(--color-ink);" x-text="formatRupiahClean(Number(activeSales.total_omzet) + Number(activeSales.tier_info.gap_omzet_ke_next_tier))"></span> untuk melipatgandakan komisi ke <span class="font-bold whitespace-nowrap" style="color:#2563eb;" x-text="Number(activeSales.tier_info.next_tier_persentase) + '%'"></span> dengan potensi komisi minimal <strong class="font-mono font-black whitespace-nowrap" style="color:#059669;" x-text="formatRupiahClean((Number(activeSales.total_omzet) + Number(activeSales.tier_info.gap_omzet_ke_next_tier)) * Number(activeSales.tier_info.next_tier_persentase) / 100)"></strong>!
                                         </p>
                                     </div>
                                 </div>
@@ -1435,13 +1610,13 @@ ob_start();
                                     <div class="tier-max-trophy">
                                         🏆
                                     </div>
-                                    <div>
-                                        <div style="display:flex;align-items:center;gap:8px;">
-                                            <h4 style="font-size:15px;font-weight:900;margin:0;color:#92400e;">Tier Puncak Tercapai — Komisi Maksimal!</h4>
-                                            <span style="background:#f59e0b;color:#fff;font-size:10px;font-weight:900;padding:2px 8px;border-radius:99px;">MAKSIMAL</span>
+                                    <div style="min-width:0;flex:1;">
+                                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                            <h4 style="font-size:14px;font-weight:900;margin:0;color:#92400e;">Tier Puncak Tercapai — Komisi Maksimal!</h4>
+                                            <span style="background:#f59e0b;color:#fff;font-size:10px;font-weight:900;padding:2px 8px;border-radius:99px;white-space:nowrap;">MAKSIMAL</span>
                                         </div>
-                                        <p style="font-size:12px;color:#b45309;margin:3px 0 0;line-height:1.5;">
-                                            Luar biasa! Sales ini telah menembus tingkatan tier tertinggi bulan ini. Seluruh total omzet terbayar berhak atas persentase komisi maksimal <strong x-text="Number(activeSales.tier_info.persentase) + '%'"></strong>.
+                                        <p style="font-size:11.5px;color:#b45309;margin:4px 0 0;line-height:1.55;">
+                                            Luar biasa! Sales ini telah menembus tingkatan tier tertinggi bulan ini. Seluruh total omzet terbayar berhak atas persentase komisi maksimal <strong class="whitespace-nowrap" x-text="Number(activeSales.tier_info.persentase) + '%'"></strong>.
                                         </p>
                                     </div>
                                 </div>
@@ -1511,10 +1686,10 @@ ob_start();
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;max-width:13px;max-height:13px;flex-shrink:0;">
                                                     <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
                                                 </svg>
-                                                <span>
-                                                    <span x-text="formatRupiahClean(t.omzet_min)"></span>
-                                                    <span style="opacity:0.4;margin:0 4px;">—</span>
-                                                    <span x-text="t.omzet_maks ? formatRupiahClean(t.omzet_maks) : '∞ (Tanpa Batas)'"></span>
+                                                <span class="flex items-center gap-1 flex-wrap">
+                                                    <span class="whitespace-nowrap" x-text="formatRupiahClean(t.omzet_min)"></span>
+                                                    <span style="opacity:0.4;">—</span>
+                                                    <span class="whitespace-nowrap" x-text="t.omzet_maks ? formatRupiahClean(t.omzet_maks) : '∞ (Tanpa Batas)'"></span>
                                                 </span>
                                             </div>
                                         </div>
@@ -1529,10 +1704,10 @@ ob_start();
                                             </template>
 
                                             <template x-if="isCurrentTier(t)">
-                                                <span class="tier-card-bottom-val" style="color:#d97706;" x-text="formatRupiahClean(activeSales.nominal_komisi)"></span>
+                                                <span class="tier-card-bottom-val whitespace-nowrap" style="color:#d97706;" x-text="formatRupiahClean(activeSales.nominal_komisi)"></span>
                                             </template>
                                             <template x-if="!isCurrentTier(t)">
-                                                <span class="tier-card-bottom-val" :style="isNextTier(t) ? 'color:#2563eb;' : 'color:var(--color-ink-secondary);'" x-text="formatRupiahClean(calcMinPotentialCommission(t))"></span>
+                                                <span class="tier-card-bottom-val whitespace-nowrap" :style="isNextTier(t) ? 'color:#2563eb;' : 'color:var(--color-ink-secondary);'" x-text="formatRupiahClean(calcMinPotentialCommission(t))"></span>
                                             </template>
                                         </div>
                                     </div>
@@ -1646,10 +1821,24 @@ function komisiApp() {
             return false;
         },
 
-        openBreakdownModal(sales) {
+        openBreakdownModal(sales, tab = 'konsin') {
             this.activeSales = sales;
-            this.activeTab = 'konsin';
+            this.activeTab = tab;
             this.showBreakdownModal = true;
+            this.$nextTick(() => {
+                if (window.lucide) window.lucide.createIcons();
+                const activeBtn = this.$refs.tabNav?.querySelector('.modal-tab-btn.is-active');
+                if (activeBtn) {
+                    activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                }
+            });
+        },
+
+        selectTab(tab, e) {
+            this.activeTab = tab;
+            if (e && e.currentTarget) {
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
             this.$nextTick(() => {
                 if (window.lucide) window.lucide.createIcons();
             });

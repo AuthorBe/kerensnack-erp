@@ -7,15 +7,16 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\ActivityLog;
 use App\Helpers\Format;
-use App\Helpers\PdfExport;
 use App\Helpers\ExcelExport;
+use App\Helpers\CashVoucher;
 use Database;
 use Throwable;
+use PDO;
 
 /**
  * app/Controllers/CashController.php
- * Pengendali Keuangan, Buku Kas & Bank, Kas Masuk/Keluar, Transfer Dana,
- * dan Live Valuasi Kas Persediaan Gudang (HPP).
+ * Pengendali Keuangan, Manajemen Akun Kas & Bank, Transaksi Kas & Transfer Dana,
+ * serta Laporan Arus Kas (Cash Flow) & Valuasi Kekayaan Usaha (HPP Persediaan & Piutang).
  */
 class CashController extends Controller
 {
@@ -24,122 +25,92 @@ class CashController extends Controller
         Auth::requireLogin();
     }
 
+    // =========================================================================
+    // 1. HALAMAN /cash — FOKUS: MANAJEMEN AKUN KAS & REKENING BANK
+    // =========================================================================
+
     /**
-     * Dashboard Buku Kas & Live Valuasi Persediaan
+     * Dashboard Manajemen Master Akun Kas & Rekening Bank
      */
     public function index(): void
     {
-        Auth::requirePermission('cash.view_all');
+        Auth::requirePermission(['cash.view_all', 'cash.manage_accounts']);
         try {
-            // 1. Ambil daftar Akun Kas & Bank
+            $pdo = Database::getConnection();
+
+            // 1. Ambil seluruh Akun Kas & Bank beserta total transaksinya
             $accounts = Database::fetchAll("
                 SELECT ak.*,
-                       (SELECT COUNT(*) FROM public.arus_kas ark WHERE ark.akun_kas_id = ak.id) as total_transaksi
+                       COALESCE((SELECT COUNT(*) FROM public.arus_kas ark WHERE ark.akun_kas_id = ak.id), 0) as total_transaksi,
+                       COALESCE((
+                           SELECT SUM(CASE WHEN ark.jenis_kas IN ('masuk', 'transfer_masuk') THEN ark.nominal ELSE -ark.nominal END)
+                           FROM public.arus_kas ark
+                           WHERE ark.akun_kas_id = ak.id
+                       ), 0) as kalkulasi_saldo_buku_besar
                 FROM public.akun_kas ak
-                WHERE ak.status_aktif = TRUE
-                ORDER BY ak.is_default_pos DESC, ak.nama_akun ASC
+                ORDER BY ak.status_aktif DESC, ak.is_default_pos DESC, ak.nama_akun ASC
             ");
 
-            // 2. Hitung Total Kas & Bank Cair
-            $liquidCashTotal = array_sum(array_column($accounts, 'saldo_saat_ini'));
+            // 2. Evaluasi status rekonsiliasi per akun kas
+            $allReconciled = true;
+            $liquidCashTotal = 0;
+            $cashTunaiTotal = 0;
+            $bankTotal = 0;
+            $qrisDigitalTotal = 0;
 
-            // 3. Hitung Live Valuasi Kas Persediaan (Berdasarkan HPP Murni)
-            // A. Bahan Mentah Curah (Bal / Kg)
-            $rawItems = Database::fetchAll("
-                SELECT id, kode_sku, nama_item, satuan_dasar, stok_fisik_saat_ini, harga_pokok_pembelian,
-                       (stok_fisik_saat_ini * harga_pokok_pembelian) as subtotal
-                FROM public.item
-                WHERE tipe_item = 'bahan_mentah' AND status_aktif = TRUE
-            ");
-            $rawTotalValuation = array_sum(array_column($rawItems, 'subtotal'));
-            $rawTotalQty = array_sum(array_column($rawItems, 'stok_fisik_saat_ini'));
+            foreach ($accounts as &$acc) {
+                $actualBal = (float)$acc['saldo_saat_ini'];
+                $ledgerBal = (float)$acc['kalkulasi_saldo_buku_besar'];
+                $diff = round($actualBal - $ledgerBal, 2);
+                $acc['selisih_rekonsiliasi'] = $diff;
+                $acc['is_reconciled'] = ($diff == 0.0);
 
-            // B. Bahan Kemasan (Plastik, Label, Cup)
-            $packItems = Database::fetchAll("
-                SELECT id, kode_sku, nama_item, satuan_dasar, stok_fisik_saat_ini, harga_pokok_pembelian,
-                       (stok_fisik_saat_ini * harga_pokok_pembelian) as subtotal
-                FROM public.item
-                WHERE tipe_item = 'bahan_kemas' AND status_aktif = TRUE
-            ");
-            $packTotalValuation = array_sum(array_column($packItems, 'subtotal'));
-            $packTotalQty = array_sum(array_column($packItems, 'stok_fisik_saat_ini'));
+                if (!$acc['is_reconciled']) {
+                    $allReconciled = false;
+                }
 
-            // C. Barang Jadi Siap Jual (Bungkus)
-            $fgItems = Database::fetchAll("
-                SELECT id, kode_sku, nama_item, satuan_dasar, stok_fisik_saat_ini, harga_pokok_pembelian,
-                       (stok_fisik_saat_ini * harga_pokok_pembelian) as subtotal
-                FROM public.item
-                WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE
-            ");
-            $fgTotalValuation = array_sum(array_column($fgItems, 'subtotal'));
-            $fgTotalQty = array_sum(array_column($fgItems, 'stok_fisik_saat_ini'));
-
-            // Grand Total Kas Persediaan
-            $totalInventoryValuation = $rawTotalValuation + $packTotalValuation + $fgTotalValuation;
-
-            // 4. Hitung Total Piutang Toko Berjalan
-            $receivablesTotal = (float)(Database::fetchOne("
-                SELECT SUM(total_piutang_berjalan) as total FROM public.pelanggan WHERE status_aktif = TRUE
-            ")['total'] ?? 0);
-
-            // 5. Total Kekayaan Usaha (Kas Cair + Persediaan + Piutang)
-            $totalBusinessWealth = $liquidCashTotal + $totalInventoryValuation + $receivablesTotal;
-
-            // 6. Mutasi Terakhir (10 Transaksi)
-            $recentMovements = Database::fetchAll("
-                SELECT ark.*, ak.nama_akun
-                FROM public.arus_kas ark
-                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
-                ORDER BY ark.tanggal_transaksi DESC, ark.dibuat_pada DESC
-                LIMIT 10
-            ");
-
-            // 7. Master Kategori Biaya
-            $categories = Database::fetchAll("SELECT * FROM public.kategori_biaya WHERE status_aktif = TRUE ORDER BY nama_kategori ASC");
+                // Hitung total saldo jika akun aktif
+                if ($acc['status_aktif']) {
+                    $liquidCashTotal += $actualBal;
+                    if ($acc['tipe_akun'] === 'kas_tunai') {
+                        $cashTunaiTotal += $actualBal;
+                    } elseif ($acc['tipe_akun'] === 'bank') {
+                        $bankTotal += $actualBal;
+                    } elseif (in_array($acc['tipe_akun'], ['qris', 'kas_operasional', 'kas_kecil'])) {
+                        $qrisDigitalTotal += $actualBal;
+                    }
+                }
+            }
+            unset($acc);
 
             $this->view('cash.index', [
-                'pageTitle' => 'Buku Kas & Valuasi Persediaan',
-                'pageSubtitle' => 'Kelola Saldo Kas, Rekening Bank, Transfer & Nilai Aset Stok',
+                'pageTitle' => 'Manajemen Akun Kas & Rekening Bank',
+                'pageSubtitle' => 'Kelola Master Rekening Bank, Laci Kasir, QRIS & Verifikasi Saldo Buku Kas',
                 'accounts' => $accounts,
                 'liquidCashTotal' => $liquidCashTotal,
-                'totalInventoryValuation' => $totalInventoryValuation,
-                'receivablesTotal' => $receivablesTotal,
-                'totalBusinessWealth' => $totalBusinessWealth,
-                'rawValuation' => [
-                    'count' => count($rawItems),
-                    'total_qty' => $rawTotalQty,
-                    'subtotal' => $rawTotalValuation,
-                    'items' => $rawItems
-                ],
-                'packValuation' => [
-                    'count' => count($packItems),
-                    'total_qty' => $packTotalQty,
-                    'subtotal' => $packTotalValuation,
-                    'items' => $packItems
-                ],
-                'fgValuation' => [
-                    'count' => count($fgItems),
-                    'total_qty' => $fgTotalQty,
-                    'subtotal' => $fgTotalValuation,
-                    'items' => $fgItems
-                ],
-                'recentMovements' => $recentMovements,
-                'categories' => $categories
+                'cashTunaiTotal' => $cashTunaiTotal,
+                'bankTotal' => $bankTotal,
+                'qrisDigitalTotal' => $qrisDigitalTotal,
+                'allReconciled' => $allReconciled
             ]);
 
         } catch (Throwable $e) {
             error_log("CashController index error: " . $e->getMessage());
-            $this->flashError("Gagal memuat buku kas: " . $e->getMessage());
+            $this->flashError("Gagal memuat akun kas: " . $e->getMessage());
             $this->redirect('/');
         }
     }
 
+    // =========================================================================
+    // 2. HALAMAN /cash/transactions — FOKUS: TRANSAKSI KAS & TRANSFER DANA
+    // =========================================================================
+
     /**
-     * Halaman Transaksi Kas Masuk & Kas Keluar (Beban)
+     * Halaman Seluruh Transaksi Kas Masuk, Kas Keluar & Transfer Dana
      */
     public function transactions(): void
     {
-        Auth::requirePermission(['cash.view_all', 'cash.inflow', 'cash.outflow']);
+        Auth::requirePermission(['cash.view_all', 'cash.inflow', 'cash.outflow', 'cash.transfer']);
 
         try {
             $startDate = $this->input('start_date', date('Y-m-01'));
@@ -147,6 +118,9 @@ class CashController extends Controller
             $accountId = $this->input('account_id', 'all');
             $type = $this->input('type', 'all');
             $category = $this->input('category', 'all');
+            $keyword = trim((string)$this->input('keyword', ''));
+            $page = max(1, (int)$this->input('page', 1));
+            $perPage = 25;
 
             $params = [
                 'start' => $startDate,
@@ -162,11 +136,11 @@ class CashController extends Controller
 
             if ($type !== 'all' && !empty($type)) {
                 if ($type === 'masuk') {
-                    $whereSql .= " AND ark.jenis_kas IN ('masuk', 'transfer_masuk')";
+                    $whereSql .= " AND ark.jenis_kas = 'masuk'";
                 } elseif ($type === 'keluar') {
-                    $whereSql .= " AND ark.jenis_kas IN ('keluar', 'transfer_keluar')";
+                    $whereSql .= " AND ark.jenis_kas = 'keluar'";
                 } elseif ($type === 'transfer') {
-                    $whereSql .= " AND ark.jenis_kas LIKE 'transfer_%'";
+                    $whereSql .= " AND ark.jenis_kas IN ('transfer_masuk', 'transfer_keluar')";
                 }
             }
 
@@ -175,31 +149,53 @@ class CashController extends Controller
                 $params['cat'] = $category;
             }
 
-            $transactions = Database::fetchAll("
-                SELECT ark.*, ak.nama_akun, ak.tipe_akun
+            if (!empty($keyword)) {
+                $whereSql .= " AND (ark.nomor_transaksi ILIKE :kw OR ark.keterangan ILIKE :kw)";
+                $params['kw'] = "%{$keyword}%";
+            }
+
+            // 1. Rekap Ringkasan Periode (Inflow, Outflow, Transfer)
+            $summaryData = Database::fetchOne("
+                SELECT 
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'masuk' THEN ark.nominal ELSE 0 END), 0) as total_inflow,
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'keluar' THEN ark.nominal ELSE 0 END), 0) as total_outflow,
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'transfer_keluar' THEN ark.nominal ELSE 0 END), 0) as total_transfer
                 FROM public.arus_kas ark
-                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
                 {$whereSql}
-                ORDER BY ark.tanggal_transaksi DESC, ark.dibuat_pada DESC
             ", $params);
 
+            $totalInflow = (float)($summaryData['total_inflow'] ?? 0);
+            $totalOutflow = (float)($summaryData['total_outflow'] ?? 0);
+            $totalTransfer = (float)($summaryData['total_transfer'] ?? 0);
+
+            // 2. Hitung total baris untuk pagination
+            $totalRows = (int)(Database::fetchOne("
+                SELECT COUNT(*) as total
+                FROM public.arus_kas ark
+                {$whereSql}
+            ", $params)['total'] ?? 0);
+
+            $totalPages = max(1, (int)ceil($totalRows / $perPage));
+            $offset = ($page - 1) * $perPage;
+
+            // 3. Query baris data transaksi
+            $transactions = Database::fetchAll("
+                SELECT ark.*, ak.nama_akun, ak.tipe_akun, u.nama_lengkap as nama_user
+                FROM public.arus_kas ark
+                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+                LEFT JOIN public.pengguna u ON ark.dicatat_oleh = u.id
+                {$whereSql}
+                ORDER BY ark.tanggal_transaksi DESC, ark.dibuat_pada DESC
+                LIMIT {$perPage} OFFSET {$offset}
+            ", $params);
+
+            // 4. Daftar Akun Kas Aktif & Master Kategori
             $accounts = Database::fetchAll("SELECT id, nama_akun, tipe_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY nama_akun ASC");
             $categories = Database::fetchAll("SELECT * FROM public.kategori_biaya WHERE status_aktif = TRUE ORDER BY nama_kategori ASC");
 
-            // Rekap periode
-            $totalInflow = 0;
-            $totalOutflow = 0;
-            foreach ($transactions as $t) {
-                if ($t['jenis_kas'] === 'masuk' || $t['jenis_kas'] === 'transfer_masuk') {
-                    $totalInflow += (float)$t['nominal'];
-                } else {
-                    $totalOutflow += (float)$t['nominal'];
-                }
-            }
-
             $this->view('cash.transactions', [
-                'pageTitle' => 'Kas Masuk & Kas Keluar',
-                'pageSubtitle' => 'Catat Pengeluaran Beban Operasional & Pendapatan Kas Lain',
+                'pageTitle' => 'Transaksi Kas & Transfer Dana',
+                'pageSubtitle' => 'Catat Pemasukan Kas, Beban Operasional & Mutasi Dana Antar Rekening',
                 'transactions' => $transactions,
                 'accounts' => $accounts,
                 'categories' => $categories,
@@ -208,11 +204,19 @@ class CashController extends Controller
                     'end_date' => $endDate,
                     'account_id' => $accountId,
                     'type' => $type,
-                    'category' => $category
+                    'category' => $category,
+                    'keyword' => $keyword
+                ],
+                'pagination' => [
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'total_rows' => $totalRows,
+                    'total_pages' => $totalPages
                 ],
                 'summary' => [
                     'total_inflow' => $totalInflow,
                     'total_outflow' => $totalOutflow,
+                    'total_transfer' => $totalTransfer,
                     'net' => $totalInflow - $totalOutflow
                 ]
             ]);
@@ -224,8 +228,12 @@ class CashController extends Controller
         }
     }
 
+    // =========================================================================
+    // 3. HALAMAN /cash/reports — FOKUS: 100% LAPORAN ARUS KAS & VALUASI ASET
+    // =========================================================================
+
     /**
-     * Laporan Arus Kas (Cash Flow) & Analisis Beban
+     * Laporan Arus Kas Formal (Cash Flow Statement), Breakdown Beban & Valuasi Aset Bisnis
      */
     public function reports(): void
     {
@@ -234,66 +242,194 @@ class CashController extends Controller
         try {
             $startDate = $this->input('start_date', date('Y-m-01'));
             $endDate = $this->input('end_date', date('Y-m-d'));
+            $accountId = $this->input('account_id', 'all');
 
             $params = [
                 'start' => $startDate,
                 'end' => $endDate
             ];
 
-            // 1. Seluruh transaksi arus kas pada periode
+            $accFilterSql = "";
+            $accFilterParams = [];
+            if ($accountId !== 'all' && !empty($accountId)) {
+                $accFilterSql = " AND ark.akun_kas_id = :acc";
+                $params['acc'] = $accountId;
+                $accFilterParams['acc'] = $accountId;
+            }
+
+            // 1. SALDO AWAL PERIODE (Beginning Balance sebelum start_date)
+            $startParams = array_merge(['start' => $startDate], $accFilterParams);
+            $beginningRow = Database::fetchOne("
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN ark.jenis_kas IN ('masuk', 'transfer_masuk') THEN ark.nominal 
+                        ELSE -ark.nominal 
+                    END
+                ), 0) as saldo_awal
+                FROM public.arus_kas ark
+                WHERE ark.tanggal_transaksi < :start {$accFilterSql}
+            ", $startParams);
+            $beginningBalance = (float)($beginningRow['saldo_awal'] ?? 0);
+
+            // 2. Transaksi Arus Kas Periode (Untuk Agregasi Rekap Harian)
             $transactions = Database::fetchAll("
                 SELECT ark.*, ak.nama_akun
                 FROM public.arus_kas ark
                 JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
-                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end
+                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end {$accFilterSql}
                 ORDER BY ark.tanggal_transaksi ASC, ark.dibuat_pada ASC
             ", $params);
 
-            // 2. Breakdown per Kategori Pengeluaran Beban
+            // 3. Breakdown per Kategori Pengeluaran Beban (Outflow)
             $expenseBreakdown = Database::fetchAll("
                 SELECT ark.kategori, SUM(ark.nominal) as total_nominal, COUNT(*) as total_transaksi
                 FROM public.arus_kas ark
-                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end
+                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end {$accFilterSql}
                   AND ark.jenis_kas = 'keluar'
                 GROUP BY ark.kategori
                 ORDER BY total_nominal DESC
             ", $params);
 
-            // 3. Rekap Inflow vs Outflow
+            // 4. Breakdown per Kategori Penerimaan Kas (Inflow)
+            $incomeBreakdown = Database::fetchAll("
+                SELECT ark.kategori, SUM(ark.nominal) as total_nominal, COUNT(*) as total_transaksi
+                FROM public.arus_kas ark
+                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end {$accFilterSql}
+                  AND ark.jenis_kas = 'masuk'
+                GROUP BY ark.kategori
+                ORDER BY total_nominal DESC
+            ", $params);
+
+            // 5. Rekap Inflow vs Outflow vs Transfer
             $totalIn = 0;
             $totalOut = 0;
+            $netTransfer = 0;
             foreach ($transactions as $t) {
                 if ($t['jenis_kas'] === 'masuk') {
                     $totalIn += (float)$t['nominal'];
                 } elseif ($t['jenis_kas'] === 'keluar') {
                     $totalOut += (float)$t['nominal'];
+                } elseif ($t['jenis_kas'] === 'transfer_masuk') {
+                    $netTransfer += (float)$t['nominal'];
+                } elseif ($t['jenis_kas'] === 'transfer_keluar') {
+                    $netTransfer -= (float)$t['nominal'];
                 }
             }
 
-            // 4. Saldo Kas & Persediaan Saat Ini
-            $liquidCashTotal = (float)(Database::fetchOne("SELECT SUM(saldo_saat_ini) as total FROM public.akun_kas WHERE status_aktif = TRUE")['total'] ?? 0);
-            
-            $rawTotal = (float)(Database::fetchOne("SELECT SUM(stok_fisik_saat_ini * harga_pokok_pembelian) as total FROM public.item WHERE tipe_item = 'bahan_mentah' AND status_aktif = TRUE")['total'] ?? 0);
-            $packTotal = (float)(Database::fetchOne("SELECT SUM(stok_fisik_saat_ini * harga_pokok_pembelian) as total FROM public.item WHERE tipe_item = 'bahan_kemas' AND status_aktif = TRUE")['total'] ?? 0);
-            $fgTotal = (float)(Database::fetchOne("SELECT SUM(stok_fisik_saat_ini * harga_pokok_pembelian) as total FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE")['total'] ?? 0);
-            $inventoryTotal = $rawTotal + $packTotal + $fgTotal;
+            $netCashFlow = $totalIn - $totalOut;
+            $endingBalance = $beginningBalance + $netCashFlow + ($accountId !== 'all' ? $netTransfer : 0);
 
+            // 6. REKAPITULASI ARUS KAS HARIAN (DAILY CASH FLOW SUMMARY) — ZERO DUPLICATION
+            $dailySummaryRaw = Database::fetchAll("
+                SELECT 
+                    ark.tanggal_transaksi,
+                    COUNT(*) as total_transaksi,
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'masuk' THEN ark.nominal ELSE 0 END), 0) as kas_masuk,
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'keluar' THEN ark.nominal ELSE 0 END), 0) as kas_keluar,
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'transfer_masuk' THEN ark.nominal WHEN ark.jenis_kas = 'transfer_keluar' THEN -ark.nominal ELSE 0 END), 0) as net_transfer
+                FROM public.arus_kas ark
+                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end {$accFilterSql}
+                GROUP BY ark.tanggal_transaksi
+                ORDER BY ark.tanggal_transaksi ASC
+            ", $params);
+
+            $runningDaily = $beginningBalance;
+            $dailySummary = [];
+            foreach ($dailySummaryRaw as $d) {
+                $dIn = (float)$d['kas_masuk'];
+                $dOut = (float)$d['kas_keluar'];
+                $dTrf = ($accountId !== 'all') ? (float)$d['net_transfer'] : 0;
+                $dNet = $dIn - $dOut + $dTrf;
+                $runningDaily += $dNet;
+
+                $dailySummary[] = [
+                    'tanggal' => $d['tanggal_transaksi'],
+                    'total_transaksi' => (int)$d['total_transaksi'],
+                    'kas_masuk' => $dIn,
+                    'kas_keluar' => $dOut,
+                    'net_harian' => $dIn - $dOut,
+                    'saldo_akhir_hari' => $runningDaily
+                ];
+            }
+
+            // 7. NERACA LIKUIDITAS & LIVE VALUASI KEKAYAAN USAHA
+            // A. Kas Cair
+            $liquidCashTotal = (float)(Database::fetchOne("SELECT SUM(saldo_saat_ini) as total FROM public.akun_kas WHERE status_aktif = TRUE")['total'] ?? 0);
+
+            // B. Live Valuasi Persediaan (Bahan Mentah, Kemasan, Barang Jadi)
+            $rawItems = Database::fetchAll("
+                SELECT id, kode_sku, nama_item, satuan_dasar, stok_fisik_saat_ini, harga_pokok_pembelian,
+                       (stok_fisik_saat_ini * harga_pokok_pembelian) as subtotal
+                FROM public.item
+                WHERE tipe_item = 'bahan_mentah' AND status_aktif = TRUE
+            ");
+            $rawTotalValuation = array_sum(array_column($rawItems, 'subtotal'));
+            $rawTotalQty = array_sum(array_column($rawItems, 'stok_fisik_saat_ini'));
+
+            $packItems = Database::fetchAll("
+                SELECT id, kode_sku, nama_item, satuan_dasar, stok_fisik_saat_ini, harga_pokok_pembelian,
+                       (stok_fisik_saat_ini * harga_pokok_pembelian) as subtotal
+                FROM public.item
+                WHERE tipe_item = 'bahan_kemas' AND status_aktif = TRUE
+            ");
+            $packTotalValuation = array_sum(array_column($packItems, 'subtotal'));
+            $packTotalQty = array_sum(array_column($packItems, 'stok_fisik_saat_ini'));
+
+            $fgItems = Database::fetchAll("
+                SELECT id, kode_sku, nama_item, satuan_dasar, stok_fisik_saat_ini, harga_pokok_pembelian,
+                       (stok_fisik_saat_ini * harga_pokok_pembelian) as subtotal
+                FROM public.item
+                WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE
+            ");
+            $fgTotalValuation = array_sum(array_column($fgItems, 'subtotal'));
+            $fgTotalQty = array_sum(array_column($fgItems, 'stok_fisik_saat_ini'));
+
+            $inventoryTotal = $rawTotalValuation + $packTotalValuation + $fgTotalValuation;
+
+            // C. Total Piutang Toko Berjalan
             $receivablesTotal = (float)(Database::fetchOne("SELECT SUM(total_piutang_berjalan) as total FROM public.pelanggan WHERE status_aktif = TRUE")['total'] ?? 0);
 
+            // D. Total Kekayaan Usaha (Kas + Persediaan + Piutang)
+            $totalWealth = $liquidCashTotal + $inventoryTotal + $receivablesTotal;
+
+            // Daftar akun untuk filter
+            $accounts = Database::fetchAll("SELECT id, nama_akun FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY nama_akun ASC");
+
             $this->view('cash.reports', [
-                'pageTitle' => 'Laporan Arus Kas & Analisis Beban',
-                'pageSubtitle' => 'Laporan Pemasukan, Pengeluaran & Arus Keuangan Usaha',
+                'pageTitle' => 'Laporan Arus Kas & Valuasi Aset',
+                'pageSubtitle' => 'Analisis Cash Flow Masuk-Keluar, Saldo Awal/Akhir, Serta Valuasi Persediaan HPP & Piutang',
                 'startDate' => $startDate,
                 'endDate' => $endDate,
-                'transactions' => $transactions,
-                'expenseBreakdown' => $expenseBreakdown,
+                'accountId' => $accountId,
+                'accounts' => $accounts,
+                'beginningBalance' => $beginningBalance,
                 'totalIn' => $totalIn,
                 'totalOut' => $totalOut,
-                'netCashFlow' => $totalIn - $totalOut,
+                'netCashFlow' => $netCashFlow,
+                'netTransfer' => $netTransfer,
+                'endingBalance' => $endingBalance,
+                'dailySummary' => $dailySummary,
+                'expenseBreakdown' => $expenseBreakdown,
+                'incomeBreakdown' => $incomeBreakdown,
                 'liquidCashTotal' => $liquidCashTotal,
                 'inventoryTotal' => $inventoryTotal,
                 'receivablesTotal' => $receivablesTotal,
-                'totalWealth' => $liquidCashTotal + $inventoryTotal + $receivablesTotal
+                'totalWealth' => $totalWealth,
+                'rawValuation' => [
+                    'count' => count($rawItems),
+                    'total_qty' => $rawTotalQty,
+                    'subtotal' => $rawTotalValuation
+                ],
+                'packValuation' => [
+                    'count' => count($packItems),
+                    'total_qty' => $packTotalQty,
+                    'subtotal' => $packTotalValuation
+                ],
+                'fgValuation' => [
+                    'count' => count($fgItems),
+                    'total_qty' => $fgTotalQty,
+                    'subtotal' => $fgTotalValuation
+                ]
             ]);
 
         } catch (Throwable $e) {
@@ -304,7 +440,7 @@ class CashController extends Controller
     }
 
     // =========================================================================
-    // POST ACTIONS: AKUN KAS, KAS MASUK, KAS KELUAR, TRANSFER DANA
+    // POST ACTIONS: AKUN KAS, KAS MASUK, KAS KELUAR, TRANSFER DANA, DELETE AKUN
     // =========================================================================
 
     public function setDefaultPos(): void
@@ -351,11 +487,9 @@ class CashController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            // Jika akun baru diset default POS, nonaktifkan default di semua akun lain
             if ($isDefaultPos) {
                 $pdo->exec("UPDATE public.akun_kas SET is_default_pos = FALSE");
             } else {
-                // Pastikan jika ini adalah akun pertama, otomatis jadikan default POS
                 $existingCount = (int)($pdo->query("SELECT count(*) FROM public.akun_kas WHERE is_default_pos = TRUE")->fetchColumn() ?? 0);
                 if ($existingCount === 0) {
                     $isDefaultPos = true;
@@ -379,17 +513,19 @@ class CashController extends Controller
             ]);
             $newAccountId = $stmt->fetchColumn();
 
-            // Jika ada saldo awal, catat di arus kas
+            // Jika ada saldo awal, catat resmi di arus kas dengan nomor bukti kas
             if ($saldoAwal > 0) {
+                $voucherNo = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
                 $pdo->prepare("
                     INSERT INTO public.arus_kas (
-                        akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                        nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                         keterangan, saldo_berjalan, dicatat_oleh, dibuat_pada
                     ) VALUES (
-                        :acc_id, CURRENT_DATE, 'masuk', 'modal_awal', :nom,
+                        :nomor_tx, :acc_id, CURRENT_DATE, 'masuk', 'modal_awal', :nom,
                         'Saldo Awal Pembukaan Akun', :saldo, :user_id, NOW()
                     )
                 ")->execute([
+                    'nomor_tx' => $voucherNo,
                     'acc_id' => $newAccountId,
                     'nom' => $saldoAwal,
                     'saldo' => $saldoAwal,
@@ -466,6 +602,67 @@ class CashController extends Controller
         }
     }
 
+    public function deleteAccount(): void
+    {
+        Auth::requirePermission('cash.manage_accounts');
+
+        $id = $this->input('id');
+        if (empty($id)) {
+            $this->flashError('ID akun kas tidak valid.');
+            $this->redirect('/cash');
+            return;
+        }
+
+        try {
+            $pdo = Database::getConnection();
+
+            // Cek apakah akun memiliki transaksi di arus_kas
+            $stmtTx = $pdo->prepare("SELECT COUNT(*) FROM public.arus_kas WHERE akun_kas_id = :id");
+            $stmtTx->execute(['id' => $id]);
+            $txCount = (int)$stmtTx->fetchColumn();
+
+            if ($txCount > 0) {
+                $this->flashError("Akun kas tidak dapat dihapus karena memiliki {$txCount} riwayat transaksi mutasi buku besar. Silakan ubah status akun menjadi Nonaktif melalui tombol Edit.");
+                $this->redirect('/cash');
+                return;
+            }
+
+            // Cek apakah akun merupakan default POS
+            $stmtPos = $pdo->prepare("SELECT is_default_pos, nama_akun FROM public.akun_kas WHERE id = :id");
+            $stmtPos->execute(['id' => $id]);
+            $accRow = $stmtPos->fetch();
+
+            if (!$accRow) {
+                $this->flashError('Akun kas tidak ditemukan.');
+                $this->redirect('/cash');
+                return;
+            }
+
+            if ($accRow['is_default_pos']) {
+                $this->flashError("Akun '{$accRow['nama_akun']}' adalah Default Kasir POS. Pindahkan status default POS ke akun lain terlebih dahulu.");
+                $this->redirect('/cash');
+                return;
+            }
+
+            $pdo->prepare("DELETE FROM public.akun_kas WHERE id = :id")->execute(['id' => $id]);
+
+            ActivityLog::log(
+                'keuangan',
+                'DELETE',
+                "Penghapusan Akun Kas kosong '{$accRow['nama_akun']}' (ID: {$id})",
+                'akun_kas',
+                $id
+            );
+
+            $this->flashSuccess("Akun kas '{$accRow['nama_akun']}' berhasil dihapus secara permanen.");
+            $this->redirect('/cash');
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal menghapus akun kas: ' . $e->getMessage());
+            $this->redirect('/cash');
+        }
+    }
+
     public function storeInflow(): void
     {
         Auth::requirePermission('cash.inflow');
@@ -494,16 +691,20 @@ class CashController extends Controller
             $stmtBal->execute(['id' => $accountId]);
             $newBalance = (float)($stmtBal->fetchColumn() ?? 0);
 
+            // Generate nomor voucher kas
+            $voucherNo = CashVoucher::generate('masuk', $tanggal, $pdo);
+
             // Catat arus kas
             $pdo->prepare("
                 INSERT INTO public.arus_kas (
-                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                     keterangan, saldo_berjalan, dicatat_oleh, dibuat_pada
                 ) VALUES (
-                    :acc_id, :tgl, 'masuk', :kat, :nom,
+                    :nomor_tx, :acc_id, :tgl, 'masuk', :kat, :nom,
                     :ket, :saldo, :user_id, NOW()
                 )
             ")->execute([
+                'nomor_tx' => $voucherNo,
                 'acc_id' => $accountId,
                 'tgl' => $tanggal,
                 'kat' => $kategori,
@@ -516,13 +717,13 @@ class CashController extends Controller
             ActivityLog::log(
                 'keuangan',
                 'INSERT',
-                "Pencatatan Kas Masuk ({$kategori}) sebesar " . Format::rupiah($nominal) . ": {$keterangan}",
+                "Pencatatan Kas Masuk [{$voucherNo}] ({$kategori}) sebesar " . Format::rupiah($nominal) . ": {$keterangan}",
                 'arus_kas',
                 $accountId
             );
 
             $pdo->commit();
-            $this->flashSuccess("Kas masuk sebesar Rp " . number_format($nominal, 0, ',', '.') . " berhasil dicatat!");
+            $this->flashSuccess("Kas masuk [{$voucherNo}] sebesar Rp " . number_format($nominal, 0, ',', '.') . " berhasil dicatat!");
             $this->redirect('/cash/transactions');
 
         } catch (Throwable $e) {
@@ -571,16 +772,20 @@ class CashController extends Controller
 
             $newBalance = $currentBal - $nominal;
 
+            // Generate nomor voucher kas
+            $voucherNo = CashVoucher::generate('keluar', $tanggal, $pdo);
+
             // Catat arus kas
             $pdo->prepare("
                 INSERT INTO public.arus_kas (
-                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                     keterangan, saldo_berjalan, dicatat_oleh, dibuat_pada
                 ) VALUES (
-                    :acc_id, :tgl, 'keluar', :kat, :nom,
+                    :nomor_tx, :acc_id, :tgl, 'keluar', :kat, :nom,
                     :ket, :saldo, :user_id, NOW()
                 )
             ")->execute([
+                'nomor_tx' => $voucherNo,
                 'acc_id' => $accountId,
                 'tgl' => $tanggal,
                 'kat' => $kategori,
@@ -593,13 +798,13 @@ class CashController extends Controller
             ActivityLog::log(
                 'keuangan',
                 'INSERT',
-                "Pencatatan Kas Keluar ({$kategori}) sebesar " . Format::rupiah($nominal) . ": {$keterangan}",
+                "Pencatatan Kas Keluar [{$voucherNo}] ({$kategori}) sebesar " . Format::rupiah($nominal) . ": {$keterangan}",
                 'arus_kas',
                 $accountId
             );
 
             $pdo->commit();
-            $this->flashSuccess("Kas keluar / beban sebesar Rp " . number_format($nominal, 0, ',', '.') . " berhasil dicatat!");
+            $this->flashSuccess("Kas keluar / beban [{$voucherNo}] sebesar Rp " . number_format($nominal, 0, ',', '.') . " berhasil dicatat!");
             $this->redirect('/cash/transactions');
 
         } catch (Throwable $e) {
@@ -619,9 +824,21 @@ class CashController extends Controller
         $nominal = (float)preg_replace('/[^0-9]/', '', (string)$this->input('nominal', '0'));
         $keterangan = trim((string)$this->input('keterangan', 'Transfer Antar Kas'));
 
-        if (empty($sourceId) || empty($destId) || $sourceId === $destId || $nominal <= 0) {
-            $this->flashError('Pilih akun sumber dan akun tujuan yang berbeda dengan nominal valid.');
-            $this->redirect('/cash');
+        if (empty($sourceId) || empty($destId)) {
+            $this->flashError('Akun kas sumber dan akun kas tujuan wajib dipilih.');
+            $this->redirect('/cash/transactions');
+            return;
+        }
+
+        if ($sourceId === $destId) {
+            $this->flashError('Transfer ditolak: Akun kas sumber dan akun kas tujuan tidak boleh sama!');
+            $this->redirect('/cash/transactions');
+            return;
+        }
+
+        if ($nominal <= 0) {
+            $this->flashError('Nominal transfer harus lebih besar dari Rp 0.');
+            $this->redirect('/cash/transactions');
             return;
         }
 
@@ -629,7 +846,7 @@ class CashController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            // Kunci akun sumber dan tujuan secara deterministik untuk mencegah deadlock
+            // Kunci akun sumber dan tujuan secara deterministik
             $ids = [$sourceId, $destId];
             sort($ids);
             $stmtLock = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
@@ -654,6 +871,11 @@ class CashController extends Controller
                 throw new \Exception("Saldo akun sumber '{$sourceAcc['nama_akun']}' tidak mencukupi untuk transfer ini. Saldo saat ini: " . Format::rupiah($sourceBal) . ", Nominal transfer: " . Format::rupiah($nominal));
             }
 
+            // Generate nomor voucher transfer kembar (K untuk keluar sumber, M untuk masuk tujuan)
+            $voucherBase = CashVoucher::generate('transfer', $tanggal, $pdo);
+            $voucherOut = "{$voucherBase}-K";
+            $voucherIn = "{$voucherBase}-M";
+
             // 1. Potong Akun Sumber
             $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom, diubah_pada = NOW() WHERE id = :id")
                 ->execute(['nom' => $nominal, 'id' => $sourceId]);
@@ -661,13 +883,14 @@ class CashController extends Controller
 
             $pdo->prepare("
                 INSERT INTO public.arus_kas (
-                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                     keterangan, saldo_berjalan, dicatat_oleh, dibuat_pada
                 ) VALUES (
-                    :acc_id, :tgl, 'transfer_keluar', 'Transfer Antar Kas', :nom,
+                    :nomor_tx, :acc_id, :tgl, 'transfer_keluar', 'Transfer Antar Kas', :nom,
                     :ket, :saldo, :user_id, NOW()
                 )
             ")->execute([
+                'nomor_tx' => $voucherOut,
                 'acc_id' => $sourceId,
                 'tgl' => $tanggal,
                 'nom' => $nominal,
@@ -683,13 +906,14 @@ class CashController extends Controller
 
             $pdo->prepare("
                 INSERT INTO public.arus_kas (
-                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                     keterangan, saldo_berjalan, dicatat_oleh, dibuat_pada
                 ) VALUES (
-                    :acc_id, :tgl, 'transfer_masuk', 'Transfer Antar Kas', :nom,
+                    :nomor_tx, :acc_id, :tgl, 'transfer_masuk', 'Transfer Antar Kas', :nom,
                     :ket, :saldo, :user_id, NOW()
                 )
             ")->execute([
+                'nomor_tx' => $voucherIn,
                 'acc_id' => $destId,
                 'tgl' => $tanggal,
                 'nom' => $nominal,
@@ -701,28 +925,28 @@ class CashController extends Controller
             ActivityLog::log(
                 'keuangan',
                 'EXECUTE',
-                "Transfer Kas sebesar " . Format::rupiah($nominal) . " dari '{$sourceAcc['nama_akun']}' ke '{$destAcc['nama_akun']}'",
+                "Transfer Kas [{$voucherBase}] sebesar " . Format::rupiah($nominal) . " dari '{$sourceAcc['nama_akun']}' ke '{$destAcc['nama_akun']}'",
                 'arus_kas',
                 $destId
             );
 
             $pdo->commit();
-            $this->flashSuccess("Transfer Rp " . number_format($nominal, 0, ',', '.') . " dari '{$sourceAcc['nama_akun']}' ke '{$destAcc['nama_akun']}' berhasil!");
-            $this->redirect('/cash');
+            $this->flashSuccess("Transfer [{$voucherBase}] sebesar Rp " . number_format($nominal, 0, ',', '.') . " dari '{$sourceAcc['nama_akun']}' ke '{$destAcc['nama_akun']}' berhasil!");
+            $this->redirect('/cash/transactions');
 
         } catch (Throwable $e) {
             if (isset($pdo)) $pdo->rollBack();
             $this->flashError('Gagal melakukan transfer kas: ' . $e->getMessage());
-            $this->redirect('/cash');
+            $this->redirect('/cash/transactions');
         }
     }
 
     /**
-     * Export Riwayat Transaksi Kas Masuk & Keluar ke Excel (PhpSpreadsheet)
+     * Export Riwayat Transaksi Kas Masuk & Keluar ke Excel
      */
     public function exportTransactionsExcel(): void
     {
-        Auth::requirePermission('cash.view');
+        Auth::requirePermission('cash.view_all');
 
         try {
             $startDate = $this->input('start_date', date('Y-m-01'));
@@ -730,60 +954,79 @@ class CashController extends Controller
             $accountId = $this->input('account_id');
             $type = $this->input('type');
             $category = $this->input('category');
+            $keyword = trim((string)$this->input('keyword', ''));
 
             $sql = "
                 SELECT ark.*, ak.nama_akun, u.nama_lengkap as nama_user
                 FROM public.arus_kas ark
                 JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
-                LEFT JOIN public.pengguna u ON ark.dibuat_oleh = u.id
+                LEFT JOIN public.pengguna u ON ark.dicatat_oleh = u.id
                 WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end
             ";
             $params = ['start' => $startDate, 'end' => $endDate];
 
-            if (!empty($accountId)) {
+            if (!empty($accountId) && $accountId !== 'all') {
                 $sql .= " AND ark.akun_kas_id = :account_id";
                 $params['account_id'] = $accountId;
             }
-            if (!empty($type)) {
-                $sql .= " AND ark.jenis_kas = :type";
-                $params['type'] = $type;
+            if (!empty($type) && $type !== 'all') {
+                if ($type === 'masuk') {
+                    $sql .= " AND ark.jenis_kas = 'masuk'";
+                } elseif ($type === 'keluar') {
+                    $sql .= " AND ark.jenis_kas = 'keluar'";
+                } elseif ($type === 'transfer') {
+                    $sql .= " AND ark.jenis_kas IN ('transfer_masuk', 'transfer_keluar')";
+                }
             }
-            if (!empty($category)) {
+            if (!empty($category) && $category !== 'all') {
                 $sql .= " AND ark.kategori = :category";
                 $params['category'] = $category;
+            }
+            if (!empty($keyword)) {
+                $sql .= " AND (ark.nomor_transaksi ILIKE :kw OR ark.keterangan ILIKE :kw)";
+                $params['kw'] = "%{$keyword}%";
             }
 
             $sql .= " ORDER BY ark.tanggal_transaksi DESC, ark.dibuat_pada DESC";
             $transactions = Database::fetchAll($sql, $params);
 
-            $headers = ['No', 'Tanggal Transaksi', 'Nomor Bukti', 'Akun Kas / Bank', 'Jenis Kas', 'Kategori', 'Keterangan', 'Nominal (Rp)', 'Dibuat Oleh'];
+            $headers = ['No', 'Tanggal', 'No Bukti Transaksi', 'Akun Kas / Bank', 'Jenis Kas', 'Kategori', 'Keterangan', 'Nominal (Rp)', 'Saldo Berjalan (Rp)', 'Dicatat Oleh'];
             $rows = [];
             $no = 1;
             $totalIn = 0;
             $totalOut = 0;
 
             foreach ($transactions as $t) {
-                $isMasuk = ($t['jenis_kas'] === 'masuk');
+                $isMasuk = in_array($t['jenis_kas'], ['masuk', 'transfer_masuk']);
                 $nom = (float)$t['nominal'];
                 if ($isMasuk) $totalIn += $nom;
                 else $totalOut += $nom;
 
+                $jenisLabel = match($t['jenis_kas']) {
+                    'masuk' => 'KAS MASUK',
+                    'keluar' => 'KAS KELUAR',
+                    'transfer_masuk' => 'TRANSFER MASUK',
+                    'transfer_keluar' => 'TRANSFER KELUAR',
+                    default => strtoupper($t['jenis_kas'])
+                };
+
                 $rows[] = [
                     $no++,
                     date('d/m/Y', strtotime($t['tanggal_transaksi'])),
-                    $t['nomor_transaksi'] ?? '-',
+                    $t['nomor_transaksi'] ?: '-',
                     $t['nama_akun'],
-                    $isMasuk ? 'KAS MASUK' : 'KAS KELUAR',
+                    $jenisLabel,
                     ucfirst(str_replace('_', ' ', (string)$t['kategori'])),
                     $t['keterangan'] ?? '-',
                     $nom,
+                    (float)$t['saldo_berjalan'],
                     $t['nama_user'] ?? 'Sistem'
                 ];
             }
 
-            $rows[] = ['', '', '', '', '', '', 'TOTAL KAS MASUK (Rp):', $totalIn, ''];
-            $rows[] = ['', '', '', '', '', '', 'TOTAL KAS KELUAR (Rp):', $totalOut, ''];
-            $rows[] = ['', '', '', '', '', '', 'ARUS KAS BERSIH (NET) (Rp):', ($totalIn - $totalOut), ''];
+            $rows[] = ['', '', '', '', '', '', 'TOTAL KAS MASUK (Rp):', $totalIn, '', ''];
+            $rows[] = ['', '', '', '', '', '', 'TOTAL KAS KELUAR (Rp):', $totalOut, '', ''];
+            $rows[] = ['', '', '', '', '', '', 'ARUS KAS BERSIH (NET) (Rp):', ($totalIn - $totalOut), '', ''];
 
             ExcelExport::download("Mutasi-Kas-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Mutasi Kas");
         } catch (Throwable $e) {
@@ -793,7 +1036,7 @@ class CashController extends Controller
     }
 
     /**
-     * Export Laporan Arus Kas Periode ke Excel (PhpSpreadsheet)
+     * Export Laporan Arus Kas Periode ke Excel
      */
     public function exportReportsExcel(): void
     {
@@ -802,46 +1045,88 @@ class CashController extends Controller
         try {
             $startDate = $this->input('start_date', date('Y-m-01'));
             $endDate = $this->input('end_date', date('Y-m-d'));
+            $accountId = $this->input('account_id', 'all');
 
             $params = ['start' => $startDate, 'end' => $endDate];
+            $accFilterSql = "";
+            $accFilterParams = [];
+            if ($accountId !== 'all' && !empty($accountId)) {
+                $accFilterSql = " AND ark.akun_kas_id = :acc";
+                $params['acc'] = $accountId;
+                $accFilterParams['acc'] = $accountId;
+            }
 
-            $transactions = Database::fetchAll("
-                SELECT ark.*, ak.nama_akun
+            // 1. Saldo Awal Periode
+            $startParams = array_merge(['start' => $startDate], $accFilterParams);
+            $beginningRow = Database::fetchOne("
+                SELECT COALESCE(SUM(
+                    CASE 
+                        WHEN ark.jenis_kas IN ('masuk', 'transfer_masuk') THEN ark.nominal 
+                        ELSE -ark.nominal 
+                    END
+                ), 0) as saldo_awal
                 FROM public.arus_kas ark
-                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
-                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end
-                ORDER BY ark.tanggal_transaksi ASC, ark.dibuat_pada ASC
+                WHERE ark.tanggal_transaksi < :start {$accFilterSql}
+            ", $startParams);
+            $beginningBalance = (float)($beginningRow['saldo_awal'] ?? 0);
+
+            // 2. Rekapitulasi Arus Kas Harian
+            $dailySummaryRaw = Database::fetchAll("
+                SELECT 
+                    ark.tanggal_transaksi,
+                    COUNT(*) as total_transaksi,
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'masuk' THEN ark.nominal ELSE 0 END), 0) as kas_masuk,
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'keluar' THEN ark.nominal ELSE 0 END), 0) as kas_keluar,
+                    COALESCE(SUM(CASE WHEN ark.jenis_kas = 'transfer_masuk' THEN ark.nominal WHEN ark.jenis_kas = 'transfer_keluar' THEN -ark.nominal ELSE 0 END), 0) as net_transfer
+                FROM public.arus_kas ark
+                WHERE ark.tanggal_transaksi >= :start AND ark.tanggal_transaksi <= :end {$accFilterSql}
+                GROUP BY ark.tanggal_transaksi
+                ORDER BY ark.tanggal_transaksi ASC
             ", $params);
 
-            $headers = ['No', 'Tanggal', 'Nomor Transaksi', 'Akun Kas', 'Jenis', 'Kategori', 'Keterangan', 'Kas Masuk (Rp)', 'Kas Keluar (Rp)'];
+            $headers = ['No', 'Tanggal', 'Frekuensi Transaksi', 'Total Kas Masuk (Rp)', 'Total Kas Keluar (Rp)', 'Net Harian (Rp)', 'Saldo Akhir Hari (Rp)'];
             $rows = [];
             $no = 1;
             $totalIn = 0;
             $totalOut = 0;
+            $runningDaily = $beginningBalance;
 
-            foreach ($transactions as $t) {
-                $isMasuk = ($t['jenis_kas'] === 'masuk');
-                $nom = (float)$t['nominal'];
-                $masuk = $isMasuk ? $nom : 0;
-                $keluar = !$isMasuk ? $nom : 0;
-                $totalIn += $masuk;
-                $totalOut += $keluar;
+            // Baris Pembuka: Saldo Awal Periode
+            $rows[] = [
+                '-',
+                date('d/m/Y', strtotime($startDate)),
+                '-',
+                0,
+                0,
+                0,
+                $beginningBalance
+            ];
+
+            foreach ($dailySummaryRaw as $d) {
+                $dIn = (float)$d['kas_masuk'];
+                $dOut = (float)$d['kas_keluar'];
+                $dTrf = ($accountId !== 'all') ? (float)$d['net_transfer'] : 0;
+                $dNet = $dIn - $dOut + $dTrf;
+                $runningDaily += $dNet;
+
+                $totalIn += $dIn;
+                $totalOut += $dOut;
 
                 $rows[] = [
                     $no++,
-                    date('d/m/Y', strtotime($t['tanggal_transaksi'])),
-                    $t['nomor_transaksi'] ?? '-',
-                    $t['nama_akun'],
-                    $isMasuk ? 'MASUK' : 'KELUAR',
-                    ucfirst(str_replace('_', ' ', (string)$t['kategori'])),
-                    $t['keterangan'] ?? '-',
-                    $masuk,
-                    $keluar
+                    date('d/m/Y', strtotime($d['tanggal_transaksi'])),
+                    (int)$d['total_transaksi'] . ' Transaksi',
+                    $dIn,
+                    $dOut,
+                    $dIn - $dOut,
+                    $runningDaily
                 ];
             }
 
-            $rows[] = ['', '', '', '', '', '', 'TOTAL ARUS KAS (Rp):', $totalIn, $totalOut];
-            $rows[] = ['', '', '', '', '', '', 'SURPLUS / DEFISIT BERSIH (Rp):', ($totalIn - $totalOut), ''];
+            $endingBalance = $runningDaily;
+
+            $rows[] = ['', '', 'TOTAL MUTASI PERIODE (Rp):', $totalIn, $totalOut, ($totalIn - $totalOut), ''];
+            $rows[] = ['', '', 'SALDO KAS AKHIR PERIODE (Rp):', '', '', '', $endingBalance];
 
             ExcelExport::download("Laporan-Arus-Kas-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Laporan Arus Kas");
         } catch (Throwable $e) {

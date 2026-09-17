@@ -1009,7 +1009,7 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
 }
 @media (min-width: 1024px) {
     .opname-dock {
-        left: var(--sidebar-width, 260px);
+        left: var(--sidebar-width, 224px);
     }
 }
 .opname-dock-inner {

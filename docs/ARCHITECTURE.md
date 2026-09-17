@@ -102,7 +102,7 @@ Tabel berikut adalah panduan pemetaan modul satu pintu: **URL Route $\leftrighta
 | **Nota Kunjungan (A3)** | `GET /consignment/sales/summary` | `ConsignmentController::salesSummary()` | `views/consignment/sales/summary.php` | `kunjungan_konsinyasi`, `rincian_kunjungan_konsinyasi`, `pesanan` | Sales, Admin, Owner |
 | **Pengajuan Titip (A4)** | `GET /consignment/sales/request-delivery`<br>`POST /consignment/sales/submit-delivery` | `ConsignmentController::salesRequestDelivery()`<br>`ConsignmentController::submitSalesDelivery()` | `views/consignment/sales/delivery.php` | `pesanan`, `surat_jalan`, `item_pesanan`, `item` | Sales, Admin, Owner |
 | **Logistik & Driver Mobile** | `GET /deliveries`<br>`POST /deliveries/update-status` | `DeliveryController::index()`<br>`DeliveryController::updateStatus()` | `views/deliveries/index.php` | `surat_jalan`, `pesanan`, `pelanggan`, `karyawan` | Driver, Sales, Admin, Owner |
-| **Owner Dashboard (C1-C6)** | `GET /owner`<br>`POST /owner/consignment/approve-delivery`<br>`POST /owner/consignment/reject-delivery` | `OwnerController::index()`<br>`OwnerController::approveConsignmentDelivery()`<br>`OwnerController::rejectConsignmentDelivery()` | `views/owner/index.php` | `pesanan`, `surat_jalan`, `kunjungan_konsinyasi`, `rincian_kunjungan_konsinyasi`, `karyawan` | Owner |
+| **Owner Dashboard** | `GET /owner` | `OwnerController::index()` | `views/owner/index.php` | `pesanan`, `item_pesanan`, `akun_kas`, `arus_kas`, `pelanggan`, `item`, `pembelian`, `produksi_harian` | Owner |
 | **Keuangan & Buku Kas** | `GET /cash`<br>`GET /cash/transactions`<br>`GET /cash/reports` | `CashController::index()`<br>`CashController::transactions()`<br>`CashController::reports()` | `views/cash/index.php`<br>`views/cash/transactions.php`<br>`views/cash/reports.php` | `akun_kas`, `arus_kas`, `kategori_arus_kas` | Owner, Admin |
 | **Stok Fisik & Gudang** | `GET /inventory` | `InventoryController::index()` | `views/inventory/index.php` | `item`, `riwayat_stok`, `kategori_item` | Owner, Admin, Mandor |
 | **Master Produk & BOM** | `GET /products`<br>`POST /products/store` | `ProductController::index()`<br>`ProductController::store()` | `views/products/index.php` | `item`, `resep_bom`, `satuan_barang` | Owner, Admin |
@@ -123,7 +123,7 @@ Tabel berikut adalah panduan pemetaan modul satu pintu: **URL Route $\leftrighta
 2. `public.stok_konsinyasi_toko` — Menyimpan saldo kuantitas snack yang saat ini sedang dititipkan di rak masing-masing toko mitra per varian SKU.
 3. `public.kunjungan_konsinyasi` & `public.rincian_kunjungan_konsinyasi` — Rekam audit kunjungan fisik sales, kuantitas sisa rak, barang laku, retur bagus, retur rusak, serta valuasi kerugian HPP rusak.
 4. `public.surat_jalan` & `public.pesanan` — Berkas legal pengiriman dan faktur piutang. Tagihan riil ditandai dengan `adalah_tagihan = TRUE`.
-5. `public.karyawan` — Master data personil dengan klasifikasi posisi (`sales`, `driver`, `pengemasan`, `mandor`, `admin`) dan konfigurasi komisi (`persentase_komisi_sales`).
+5. `public.karyawan` & `public.skema_komisi_sales` — Master data personil dengan klasifikasi posisi (`sales`, `driver`, `pengemasan`, `mandor`, `admin`) dan konfigurasi komisi sales terpusat berbasis tier omzet bertingkat (`public.skema_komisi_sales`).
 6. `public.akun_kas` & `public.arus_kas` — Pencatatan saldo uang kasir/bank dan jurnal arus kas masuk/keluar otomatis.
 
 ### B. Otomasi Stored Procedures (RPC Engine):
@@ -140,8 +140,7 @@ Tabel berikut adalah panduan pemetaan modul satu pintu: **URL Route $\leftrighta
 
 | Hak Akses / Kemampuan | 👑 Owner | 👩‍💼 Admin | 💼 Sales | 🚚 Driver | 👷 Mandor |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Akses Executive Dashboard (C1-C6)** | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Gatekeeper Approval Pengiriman (C2)** | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Akses Executive Dashboard** | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Kelola Master Data & Level Harga** | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Kasir POS & Pesanan B2B** | ✅ | ✅ | ❌ | ❌ | ❌ |
 | **Portal Konsinyasi Rak Admin (B1-B5)** | ✅ | ✅ | ❌ | ❌ | ❌ |

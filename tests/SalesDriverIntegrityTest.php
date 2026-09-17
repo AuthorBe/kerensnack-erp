@@ -171,82 +171,46 @@ runTest("2. DB Trigger trg_guard_pelanggan_sales_driver: Mengizinkan Sales sebag
 });
 
 // -------------------------------------------------------------
-// TEST 3: DB Trigger memblokir komisi > 0 pada posisi Driver
+// TEST 3: Database Schema Integrity: Kolom legacy persentase_komisi_sales telah dihapus permanen
 // -------------------------------------------------------------
-runTest("3. DB Trigger trg_guard_karyawan_driver_no_commission: Menolak persentase komisi > 0 pada Driver", function() use ($pdo, $driverEmp) {
-    if (!$driverEmp) return "Data driver tidak ditemukan untuk pengujian.";
-
-    $caught = false;
-    try {
-        $stmt = $pdo->prepare("
-            UPDATE public.karyawan 
-            SET persentase_komisi_sales = 5.00 
-            WHERE id = :id
-        ");
-        $stmt->execute(['id' => $driverEmp['karyawan_id']]);
-    } catch (PDOException $e) {
-        if (str_contains($e->getMessage(), 'tidak berhak mendapatkan komisi penjualan')) {
-            $caught = true;
-        } else {
-            return "Trigger melempar error tak terduga: " . $e->getMessage();
-        }
-    }
-
-    if (!$caught) {
-        return "Gagal: Database membiarkan Driver memiliki persentase komisi > 0!";
+runTest("3. Database Schema Integrity: Kolom legacy persentase_komisi_sales telah dihapus permanen dari public.karyawan", function() {
+    $col = Database::fetchOne("
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'karyawan' 
+          AND column_name = 'persentase_komisi_sales'
+    ");
+    if ($col) {
+        return "Gagal: Kolom legacy persentase_komisi_sales masih ada di public.karyawan!";
     }
     return true;
 });
 
 // -------------------------------------------------------------
-// TEST 4: DB Trigger mereset komisi otomatis saat posisi berubah ke Driver
+// TEST 4: Database Cleanliness: View v_karyawan_info & trigger legacy komisi flat telah dibersihkan
 // -------------------------------------------------------------
-runTest("4. DB Trigger trg_guard_pengguna_driver_reset_commission: Otomatis mereset komisi ke 0.00% saat posisi berubah ke Driver", function() use ($pdo) {
-    // Buat user & karyawan sementara dengan posisi 'sales' dan komisi 3.50%
-    $dummyUserId = null;
-    $dummyKaryawanId = null;
-
-    try {
-        $stmt = $pdo->prepare("
-            INSERT INTO public.pengguna (nama_lengkap, posisi, status_aktif)
-            VALUES ('Dummy User Test Reset', 'sales', TRUE)
-            RETURNING id
-        ");
-        $stmt->execute();
-        $dummyUserId = $stmt->fetchColumn();
-
-        $stmt = $pdo->prepare("
-            INSERT INTO public.karyawan (pengguna_id, persentase_komisi_sales, tipe_penggajian)
-            VALUES (:pid, 3.50, 'bulanan')
-            RETURNING id
-        ");
-        $stmt->execute(['pid' => $dummyUserId]);
-        $dummyKaryawanId = $stmt->fetchColumn();
-
-        // Verifikasi awal komisi 3.50%
-        $initKomisi = Database::fetchOne("SELECT persentase_komisi_sales FROM public.karyawan WHERE id = :id", ['id' => $dummyKaryawanId])['persentase_komisi_sales'];
-        if ((float)$initKomisi !== 3.50) {
-            return "Komisi awal gagal diset 3.50%";
-        }
-
-        // Ubah posisi pengguna menjadi 'driver'
-        $pdo->prepare("UPDATE public.pengguna SET posisi = 'driver' WHERE id = :id")->execute(['id' => $dummyUserId]);
-
-        // Cek apakah komisi di tabel karyawan otomatis direset ke 0.00%
-        $afterKomisi = Database::fetchOne("SELECT persentase_komisi_sales FROM public.karyawan WHERE id = :id", ['id' => $dummyKaryawanId])['persentase_komisi_sales'];
-        if ((float)$afterKomisi !== 0.00) {
-            return "Komisi tidak otomatis direset ke 0.00%, nilai saat ini: " . $afterKomisi;
-        }
-
-    } finally {
-        if ($dummyKaryawanId) {
-            $pdo->prepare("DELETE FROM public.karyawan WHERE id = :id")->execute(['id' => $dummyKaryawanId]);
-        }
-        if ($dummyUserId) {
-            $pdo->prepare("DELETE FROM public.pengguna WHERE id = :id")->execute(['id' => $dummyUserId]);
-        }
+runTest("4. Database Cleanliness: View v_karyawan_info & trigger legacy komisi flat telah dibersihkan", function() {
+    $col = Database::fetchOne("
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'v_karyawan_info' 
+          AND column_name = 'persentase_komisi_sales'
+    ");
+    if ($col) {
+        return "Gagal: Kolom legacy persentase_komisi_sales masih ada di view public.v_karyawan_info!";
     }
 
+    $trigger = Database::fetchOne("
+        SELECT trigger_name 
+        FROM information_schema.triggers 
+        WHERE trigger_schema = 'public' 
+          AND trigger_name IN ('trg_guard_karyawan_driver_no_commission', 'trg_guard_pengguna_driver_reset_commission')
+    ");
+    if ($trigger) {
+        return "Gagal: Trigger legacy komisi " . $trigger['trigger_name'] . " masih aktif di database!";
+    }
     return true;
 });
 
@@ -276,7 +240,7 @@ runTest("5. Logistik Pengiriman: Driver sah ditugaskan pada surat_jalan", functi
             INSERT INTO public.surat_jalan (
                 nomor_surat_jalan, pesanan_id, sales_driver_id, status_surat_jalan
             ) VALUES (
-                :sj, :oid, :driver, 'draf_n8n'
+                :sj, :oid, :driver, 'siap_kirim'
             ) RETURNING id
         ");
         $stmtSj->execute(['sj' => $dummySj, 'oid' => $orderId, 'driver' => $driverEmp['karyawan_id']]);
@@ -316,7 +280,7 @@ runTest("6. Logistik Pengiriman: Sales juga sah ditugaskan pada surat_jalan", fu
             INSERT INTO public.surat_jalan (
                 nomor_surat_jalan, pesanan_id, sales_driver_id, status_surat_jalan
             ) VALUES (
-                :sj, :oid, :sales, 'draf_n8n'
+                :sj, :oid, :sales, 'siap_kirim'
             ) RETURNING id
         ");
         $stmtSj->execute(['sj' => $dummySj, 'oid' => $orderId, 'sales' => $salesEmp['karyawan_id']]);
@@ -447,17 +411,19 @@ runTest("10. EmployeeController: Validasi backend store() mengunci komisi Driver
     $ctrl->mockInput = [
         'nama_karyawan' => $dummyNama,
         'posisi' => 'driver',
-        'persentase_komisi_sales' => '5.00', // Coba sisipkan 5%
         'tipe_penggajian' => 'bulanan',
         'gaji_pokok_bulanan' => '2000000',
+        'uang_kehadiran_harian' => '20000',
+        'tunjangan_bulanan' => '50000',
+        'nomor_polisi_kendaraan' => 'B 8888 TST',
         'alamat' => 'Alamat Mock'
     ];
 
     $ctrl->store();
 
-    // Cek di database apakah komisi tersimpan sebagai 0.00
+    // Cek di database apakah karyawan berhasil tersimpan tanpa kolom legacy komisi
     $karyawan = Database::fetchOne("
-        SELECT k.persentase_komisi_sales, p.id as pengguna_id, k.id as karyawan_id
+        SELECT p.posisi, p.id as pengguna_id, k.id as karyawan_id
         FROM public.karyawan k
         JOIN public.pengguna p ON k.pengguna_id = p.id
         WHERE p.nama_lengkap = :nama
@@ -468,8 +434,8 @@ runTest("10. EmployeeController: Validasi backend store() mengunci komisi Driver
     }
 
     try {
-        if ((float)$karyawan['persentase_komisi_sales'] !== 0.00) {
-            return "EmployeeController tidak mereset komisi driver ke 0! Tersimpan: " . $karyawan['persentase_komisi_sales'];
+        if ($karyawan['posisi'] !== 'driver') {
+            return "EmployeeController tidak menyimpan posisi driver dengan benar! Tersimpan: " . $karyawan['posisi'];
         }
     } finally {
         $pdo->prepare("DELETE FROM public.tabungan WHERE karyawan_id = :id")->execute(['id' => $karyawan['karyawan_id']]);

@@ -502,7 +502,6 @@ function supplierApp() {
 
         openEditModal(s) {
             this.isEdit = true;
-            const bank0 = (s.detail_bank && s.detail_bank.length > 0) ? s.detail_bank[0] : {};
             this.form = {
                 id: s.id,
                 nama_pemasok: s.nama_pemasok || '',
@@ -515,9 +514,9 @@ function supplierApp() {
                 link_google_maps: s.link_google_maps || '',
                 termin_bayar: s.termin_bayar || 'cash',
                 catatan: s.catatan || '',
-                bank_nama: s.nama_bank || bank0.bank || '',
-                bank_rekening: s.nomor_rekening || bank0.nomor_rekening || '',
-                bank_atas_nama: s.atas_nama_rekening || bank0.atas_nama || '',
+                bank_nama: s.nama_bank || '',
+                bank_rekening: s.nomor_rekening || '',
+                bank_atas_nama: s.atas_nama_rekening || '',
                 status_aktif: Boolean(s.status_aktif)
             };
             this.showModal = true;

@@ -41,41 +41,40 @@ ON CONFLICT (karyawan_legacy_id) DO UPDATE SET
     status_aktif = EXCLUDED.status_aktif;
 
 -- 3. Master Relasi Penggajian & Kontrak Kerja Karyawan pada public.karyawan
-INSERT INTO public.karyawan (pengguna_id, tipe_penggajian, uang_kehadiran_harian, tunjangan_bulanan, gaji_pokok_bulanan, persentase_komisi_sales)
-SELECT p.id, d.tipe_penggajian, d.uang_kehadiran, d.tunjangan, d.gaji_pokok, d.komisi
+INSERT INTO public.karyawan (pengguna_id, tipe_penggajian, uang_kehadiran_harian, tunjangan_bulanan, gaji_pokok_bulanan)
+SELECT p.id, d.tipe_penggajian, d.uang_kehadiran, d.tunjangan, d.gaji_pokok
 FROM (
     VALUES
-    (17, 'borongan', 15000.00, 200000.00, 0.00, 0.00),
-    (18, 'borongan', 12000.00, 100000.00, 0.00, 0.00),
-    (19, 'borongan', 15000.00, 150000.00, 0.00, 0.00),
-    (20, 'borongan', 15000.00, 250000.00, 0.00, 0.00),
-    (21, 'borongan', 10000.00, 50000.00, 0.00, 0.00),
-    (22, 'borongan', 10000.00, 50000.00, 0.00, 0.00),
-    (23, 'borongan', 10000.00, 50000.00, 0.00, 0.00),
-    (24, 'borongan', 10000.00, 50000.00, 0.00, 0.00),
-    (25, 'borongan', 10000.00, 50000.00, 0.00, 0.00),
-    (26, 'borongan', 10000.00, 50000.00, 0.00, 0.00),
-    (27, 'borongan', 10000.00, 50000.00, 0.00, 0.00),
-    (28, 'bulanan', 50000.00, 100000.00, 0.00, 0.00),
-    (29, 'bulanan', 50000.00, 100000.00, 0.00, 0.00),
-    (30, 'bulanan', 50000.00, 600000.00, 0.00, 0.00),
-    (31, 'bulanan', 50000.00, 200000.00, 0.00, 0.00),
-    (32, 'bulanan', 0.00, 0.00, 1700000.00, 2.50),
-    (33, 'bulanan', 0.00, 0.00, 1500000.00, 2.50),
-    (34, 'bulanan', 0.00, 0.00, 700000.00, 2.50),
-    (39, 'bulanan', 0.00, 0.00, 5200000.00, 0.00)
-) AS d(legacy_id, tipe_penggajian, uang_kehadiran, tunjangan, gaji_pokok, komisi)
+    (17, 'borongan', 15000.00, 200000.00, 0.00),
+    (18, 'borongan', 12000.00, 100000.00, 0.00),
+    (19, 'borongan', 15000.00, 150000.00, 0.00),
+    (20, 'borongan', 15000.00, 250000.00, 0.00),
+    (21, 'borongan', 10000.00, 50000.00, 0.00),
+    (22, 'borongan', 10000.00, 50000.00, 0.00),
+    (23, 'borongan', 10000.00, 50000.00, 0.00),
+    (24, 'borongan', 10000.00, 50000.00, 0.00),
+    (25, 'borongan', 10000.00, 50000.00, 0.00),
+    (26, 'borongan', 10000.00, 50000.00, 0.00),
+    (27, 'borongan', 10000.00, 50000.00, 0.00),
+    (28, 'bulanan', 50000.00, 100000.00, 0.00),
+    (29, 'bulanan', 50000.00, 100000.00, 0.00),
+    (30, 'bulanan', 50000.00, 600000.00, 0.00),
+    (31, 'bulanan', 50000.00, 200000.00, 0.00),
+    (32, 'bulanan', 0.00, 0.00, 1700000.00),
+    (33, 'bulanan', 0.00, 0.00, 1500000.00),
+    (34, 'bulanan', 0.00, 0.00, 700000.00),
+    (39, 'bulanan', 0.00, 0.00, 5200000.00)
+) AS d(legacy_id, tipe_penggajian, uang_kehadiran, tunjangan, gaji_pokok)
 JOIN public.pengguna p ON p.karyawan_legacy_id = d.legacy_id
 ON CONFLICT (pengguna_id) DO UPDATE SET
     tipe_penggajian = EXCLUDED.tipe_penggajian,
     uang_kehadiran_harian = EXCLUDED.uang_kehadiran_harian,
     tunjangan_bulanan = EXCLUDED.tunjangan_bulanan,
-    gaji_pokok_bulanan = EXCLUDED.gaji_pokok_bulanan,
-    persentase_komisi_sales = EXCLUDED.persentase_komisi_sales;
+    gaji_pokok_bulanan = EXCLUDED.gaji_pokok_bulanan;
 
 -- 4. Penggajian Driver Khusus (Pak Joko)
-INSERT INTO public.karyawan (pengguna_id, tipe_penggajian, uang_kehadiran_harian, tunjangan_bulanan, gaji_pokok_bulanan, persentase_komisi_sales)
-SELECT p.id, 'bulanan', 25000.00, 50000.00, 2000000.00, 0.00
+INSERT INTO public.karyawan (pengguna_id, tipe_penggajian, uang_kehadiran_harian, tunjangan_bulanan, gaji_pokok_bulanan)
+SELECT p.id, 'bulanan', 25000.00, 50000.00, 2000000.00
 FROM public.pengguna p
 WHERE p.nama_lengkap = 'Pak Joko (Driver)'
 ON CONFLICT (pengguna_id) DO NOTHING;

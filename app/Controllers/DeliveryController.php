@@ -7,10 +7,12 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\ActivityLog;
 use App\Helpers\PdfExport;
+use App\Helpers\PrintDocumentHelper;
 use App\Helpers\ExcelExport;
 use App\Helpers\StockHelper;
 use App\Helpers\PaymentHelper;
 use App\Helpers\DocumentNumber;
+use App\Helpers\CashVoucher;
 use Database;
 use Throwable;
 
@@ -115,7 +117,7 @@ class DeliveryController extends Controller
         $pesananId = $this->input('pesanan_id');
         $driverId = $this->input('sales_driver_id') ?: null;
         $wilayahId = $this->input('rute_wilayah_id') ?: null;
-        $status = $this->input('status_surat_jalan', 'disetujui_owner');
+        $status = $this->input('status_surat_jalan', 'siap_kirim');
 
         $nowHour = (int)date('H');
         $defaultDate = ($nowHour >= 12) ? date('Y-m-d', strtotime('+1 day')) : date('Y-m-d');
@@ -304,63 +306,6 @@ class DeliveryController extends Controller
         }
     }
 
-    /**
-     * Otorisasi Persetujuan Pengiriman oleh Owner / Pimpinan
-     */
-    public function approve(): void
-    {
-        Auth::requirePermission('owner.approval_delivery');
-
-        $id = (string)$this->input('id');
-        if (empty($id)) {
-            $this->flashError('ID Surat Jalan tidak valid.');
-            $this->redirect('/deliveries');
-            return;
-        }
-
-        try {
-            $sj = Database::fetchOne("
-                SELECT sj.id, sj.nomor_surat_jalan, sj.status_surat_jalan, cust.nama_toko
-                FROM public.surat_jalan sj
-                JOIN public.pesanan p ON sj.pesanan_id = p.id
-                JOIN public.pelanggan cust ON p.pelanggan_id = cust.id
-                WHERE sj.id = :id
-            ", ['id' => $id]);
-
-            if (!$sj) {
-                $this->flashError('Surat Jalan tidak ditemukan.');
-                $this->redirect('/deliveries');
-                return;
-            }
-
-            Database::execute("
-                UPDATE public.surat_jalan 
-                SET status_surat_jalan = 'disetujui_owner', 
-                    disetujui_oleh = :uid, 
-                    diubah_pada = NOW() 
-                WHERE id = :id
-            ", [
-                'uid' => Auth::id() ?: null,
-                'id' => $id,
-            ]);
-
-            ActivityLog::log(
-                'Logistik',
-                'APPROVE',
-                "Menyetujui Surat Jalan #{$sj['nomor_surat_jalan']} tujuan toko {$sj['nama_toko']}",
-                'surat_jalan',
-                $id
-            );
-
-            $this->flashSuccess("Surat Jalan #{$sj['nomor_surat_jalan']} berhasil disetujui (Approved)! Armada/Driver dapat memulai pengiriman.");
-            $this->redirect('/deliveries');
-
-        } catch (Throwable $e) {
-            $this->flashError('Gagal menyetujui surat jalan: ' . $e->getMessage());
-            $this->redirect('/deliveries');
-        }
-    }
-
     public function updateStatus(): void
     {
         Auth::requirePermission(['deliveries.update_all', 'deliveries.update_assigned']);
@@ -382,7 +327,7 @@ class DeliveryController extends Controller
             return;
         }
 
-        // Cek status persetujuan saat ini
+        // Cek status pengiriman saat ini
         $currentSj = Database::fetchOne("SELECT status_surat_jalan, nomor_surat_jalan FROM public.surat_jalan WHERE id = :id", ['id' => $id]);
         if (!$currentSj) {
             $this->flashError('Surat Jalan tidak ditemukan.');
@@ -392,12 +337,6 @@ class DeliveryController extends Controller
 
         if ($currentSj['status_surat_jalan'] === 'selesai_diterima') {
             $this->flashError("Surat Jalan #{$currentSj['nomor_surat_jalan']} sudah selesai diterima oleh toko mitra dan tidak dapat diubah lagi.");
-            $this->redirect('/deliveries');
-            return;
-        }
-
-        if ($currentSj['status_surat_jalan'] === 'menunggu_persetujuan' && !Auth::can('owner.approval_delivery')) {
-            $this->flashError("Surat Jalan #{$currentSj['nomor_surat_jalan']} belum disetujui oleh Owner/Pimpinan. Armada belum dapat diberangkatkan.");
             $this->redirect('/deliveries');
             return;
         }
@@ -511,44 +450,54 @@ class DeliveryController extends Controller
                                     ]);
                                 }
 
-                                if ($totalDibayar > 0 && !empty($akunKasId)) {
+                                // Anti-Duplikasi: Cek apakah pembayaran pesanan ini sudah pernah dicatat di arus kas (misal saat input PO)
+                                $stmtCheckKas = $pdo->prepare("SELECT COUNT(*) FROM public.arus_kas WHERE referensi_tabel = 'pesanan' AND referensi_id = :id AND jenis_kas = 'masuk'");
+                                $stmtCheckKas->execute(['id' => $orderId]);
+                                $alreadyInCash = (int)$stmtCheckKas->fetchColumn() > 0;
+
+                                if (!$alreadyInCash && $totalDibayar > 0 && !empty($akunKasId)) {
                                     $stmtKas = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
                                     $stmtKas->execute(['id' => $akunKasId]);
                                     $akunKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
-                                    $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
-                                    $saldoBaru = $saldoLama + $totalDibayar;
+                                    if ($akunKas) {
+                                        $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
+                                        $saldoBaru = $saldoLama + $totalDibayar;
 
-                                $pdo->prepare("
-                                    UPDATE public.akun_kas
-                                    SET saldo_saat_ini = :saldo,
-                                        diubah_pada = NOW()
-                                    WHERE id = :akun_kas
-                                ")->execute([
-                                    'saldo' => $saldoBaru,
-                                    'akun_kas' => $akunKasId,
-                                ]);
+                                        $pdo->prepare("
+                                            UPDATE public.akun_kas
+                                            SET saldo_saat_ini = :saldo,
+                                                diubah_pada = NOW()
+                                            WHERE id = :akun_kas
+                                        ")->execute([
+                                            'saldo' => $saldoBaru,
+                                            'akun_kas' => $akunKasId,
+                                        ]);
 
-                                $keteranganKas = ($orderData['status_pembayaran'] === 'lunas')
-                                    ? "Penerimaan Tunai Lunas Pesanan Toko #{$orderData['nomor_nota']} ({$orderData['nama_toko']})"
-                                    : "Penerimaan DP/Sebagian Pesanan Toko #{$orderData['nomor_nota']} ({$orderData['nama_toko']})";
+                                        $keteranganKas = ($orderData['status_pembayaran'] === 'lunas')
+                                            ? "Penerimaan Tunai Lunas Pesanan Toko #{$orderData['nomor_nota']} ({$orderData['nama_toko']})"
+                                            : "Penerimaan DP/Sebagian Pesanan Toko #{$orderData['nomor_nota']} ({$orderData['nama_toko']})";
 
-                                $pdo->prepare("
-                                    INSERT INTO public.arus_kas (
-                                        akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
-                                        keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
-                                    ) VALUES (
-                                        :akun_kas, CURRENT_DATE, 'masuk', 'penjualan', :nominal,
-                                        :ket, 'pesanan', :ref_id, :saldo_berjalan, :user_id, NOW()
-                                    )
-                                ")->execute([
-                                    'akun_kas' => $akunKasId,
-                                    'nominal' => $totalDibayar,
-                                    'ket' => $keteranganKas,
-                                    'ref_id' => $orderId,
-                                    'saldo_berjalan' => $saldoBaru,
-                                    'user_id' => $userId,
-                                ]);
-                            }
+                                        $voucherNo = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
+
+                                        $pdo->prepare("
+                                            INSERT INTO public.arus_kas (
+                                                nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                                                keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                                            ) VALUES (
+                                                :nomor_tx, :akun_kas, CURRENT_DATE, 'masuk', 'penjualan', :nominal,
+                                                :ket, 'pesanan', :ref_id, :saldo_berjalan, :user_id, NOW()
+                                            )
+                                        ")->execute([
+                                            'nomor_tx' => $voucherNo,
+                                            'akun_kas' => $akunKasId,
+                                            'nominal' => $totalDibayar,
+                                            'ket' => $keteranganKas,
+                                            'ref_id' => $orderId,
+                                            'saldo_berjalan' => $saldoBaru,
+                                            'user_id' => $userId,
+                                        ]);
+                                    }
+                                }
                         }
                     }
                 }
@@ -1192,15 +1141,17 @@ class DeliveryController extends Controller
                     $currentSaldo = (float)Database::fetchOne("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasId])['saldo_saat_ini'];
 
                     // Insert Arus Kas
+                    $voucherNo = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
                     $pdo->prepare("
                         INSERT INTO public.arus_kas (
-                            akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                            nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                             keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
                         ) VALUES (
-                            :kas_id, CURRENT_DATE, 'masuk', 'penjualan', :nominal,
+                            :nomor_tx, :kas_id, CURRENT_DATE, 'masuk', 'penjualan', :nominal,
                             :ket, 'pesanan', :order_id, :saldo_berjalan, :user_id, NOW()
                         )
                     ")->execute([
+                        'nomor_tx' => $voucherNo,
                         'kas_id' => $kasId,
                         'nominal' => $nominalTunai,
                         'ket' => "Penerimaan Tunai Driver #{$sj['nomor_surat_jalan']} ({$sj['nama_toko']}) - Nota #{$sj['nomor_nota']}",
@@ -1475,11 +1426,7 @@ class DeliveryController extends Controller
             $html = ob_get_clean();
 
             $cleanSj = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$delivery['nomor_surat_jalan']);
-            if ($format === 'dotmatrix') {
-                PdfExport::download($html, "SuratJalan-DotMatrix-{$cleanSj}.pdf", 'Letter', 'portrait');
-            } else {
-                PdfExport::download($html, "SuratJalan-{$cleanSj}.pdf", 'A4', 'portrait');
-            }
+            PrintDocumentHelper::downloadPdf($html, "SuratJalan-{$cleanSj}", $format);
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF Surat Jalan: ' . $e->getMessage());
             $this->redirect('/deliveries/print?id=' . urlencode((string)$id));

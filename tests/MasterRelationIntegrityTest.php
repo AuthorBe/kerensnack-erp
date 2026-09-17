@@ -345,7 +345,7 @@ runTest("3.3.1 CustomerController: Blokir Hapus Wilayah yang Dipakai Surat Jalan
     // Insert surat jalan yang merujuk wilayah ini
     $pdo->prepare("
         INSERT INTO public.surat_jalan (id, nomor_surat_jalan, pesanan_id, rute_wilayah_id, status_surat_jalan)
-        VALUES (:sjid, 'SJ-TEST-WILAYAH-99', :poid, :wid, 'draf_n8n')
+        VALUES (:sjid, 'SJ-TEST-WILAYAH-99', :poid, :wid, 'siap_kirim')
     ")->execute(['sjid' => $sjDummyId, 'poid' => $orderRow['id'], 'wid' => $wilayahDummyId]);
 
     $ctrl = new class extends CustomerController {

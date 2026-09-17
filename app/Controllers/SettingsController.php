@@ -168,11 +168,11 @@ class SettingsController extends Controller
 
         if ($success) {
             \App\Helpers\ActivityLog::log(
-                'Pengaturan',
+                'master_data',
                 'UPDATE',
                 "Memperbarui profil & informasi perusahaan: '{$nama}'",
                 'pengaturan_sistem',
-                'perusahaan',
+                null,
                 $oldData,
                 $newData
             );

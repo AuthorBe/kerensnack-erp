@@ -973,7 +973,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                                             <i data-lucide="check-circle-2" style="width:12px;height:12px;"></i>
                                             <span>Lunas</span>
                                         </span>
-                                        <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                        <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $v['pesanan_id']) ?>" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
                                             <i data-lucide="receipt" style="width:10px;height:10px;"></i>
                                             <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
                                         </a>
@@ -982,7 +982,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                                             <i data-lucide="pie-chart" style="width:12px;height:12px;"></i>
                                             <span>Cicil</span>
                                         </span>
-                                        <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                        <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $v['pesanan_id']) ?>" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
                                             <i data-lucide="receipt" style="width:10px;height:10px;"></i>
                                             <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
                                         </a>
@@ -991,7 +991,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                                             <i data-lucide="alert-circle" style="width:12px;height:12px;"></i>
                                             <span>Belum Lunas</span>
                                         </span>
-                                        <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                        <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $v['pesanan_id']) ?>" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
                                             <i data-lucide="receipt" style="width:10px;height:10px;"></i>
                                             <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
                                         </a>
@@ -1074,7 +1074,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                                     <i data-lucide="check-circle-2" style="width:11px;height:11px;"></i>
                                     <span>Lunas</span>
                                 </span>
-                                <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $v['pesanan_id']) ?>" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
                                     <i data-lucide="receipt" style="width:10px;height:10px;"></i>
                                     <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
                                 </a>
@@ -1083,7 +1083,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                                     <i data-lucide="pie-chart" style="width:11px;height:11px;"></i>
                                     <span>Cicil</span>
                                 </span>
-                                <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $v['pesanan_id']) ?>" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
                                     <i data-lucide="receipt" style="width:10px;height:10px;"></i>
                                     <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
                                 </a>
@@ -1092,7 +1092,7 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                                     <i data-lucide="alert-circle" style="width:11px;height:11px;"></i>
                                     <span>Belum Lunas</span>
                                 </span>
-                                <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $v['pesanan_id']) ?>" target="_blank" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
+                                <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $v['pesanan_id']) ?>" class="rk-nota-badge" title="Buka Faktur <?= htmlspecialchars($v['nomor_nota'] ?? '') ?>">
                                     <i data-lucide="receipt" style="width:10px;height:10px;"></i>
                                     <span><?= htmlspecialchars($v['nomor_nota'] ?? '-') ?></span>
                                 </a>

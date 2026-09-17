@@ -12,6 +12,7 @@ use App\Helpers\ExcelExport;
 use App\Helpers\StockHelper;
 use App\Helpers\PaymentHelper;
 use App\Helpers\DocumentNumber;
+use App\Helpers\CashVoucher;
 use App\Core\Router;
 use Database;
 use Throwable;
@@ -579,7 +580,7 @@ class CustomerOrderController extends Controller
             $pdo = Database::getConnection();
             
             // Cek apakah pelanggan ini adalah konsinyasi
-            $stmtPelanggan = $pdo->prepare("SELECT is_konsinyasi, sales_driver_id, wilayah_id FROM public.pelanggan WHERE id = :id");
+            $stmtPelanggan = $pdo->prepare("SELECT nama_toko, is_konsinyasi, sales_driver_id, wilayah_id FROM public.pelanggan WHERE id = :id");
             $stmtPelanggan->execute(['id' => $pelangganId]);
             $pelangganInfo = $stmtPelanggan->fetch(\PDO::FETCH_ASSOC);
             
@@ -601,7 +602,7 @@ class CustomerOrderController extends Controller
             if ($isKonsinyasi) {
                 $tipePembayaran = 'konsinyasi';
                 $adalahTagihan = false; // PRD: Kiriman konsinyasi bukan tagihan riil
-                $statusSuratJalanAwal = 'draf_n8n'; // PRD: Butuh approval owner
+                $statusSuratJalanAwal = 'siap_kirim'; // Tanpa approval: langsung siap kirim
             }
 
             $pdo->beginTransaction();
@@ -779,6 +780,54 @@ class CustomerOrderController extends Controller
                     'subtotal' => $subtotal,
                     'hpp' => $hpp,
                 ]);
+            }
+
+            // 5. Catat Penerimaan Kas Masuk (Uang Muka / Pelunasan Langsung) ke Buku Kas Arus Kas
+            if ($totalDibayar > 0 && !empty($akunKasId)) {
+                $stmtKas = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtKas->execute(['id' => $akunKasId]);
+                $akunKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
+
+                if ($akunKas) {
+                    $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
+                    $saldoBaru = $saldoLama + $totalDibayar;
+
+                    $pdo->prepare("
+                        UPDATE public.akun_kas
+                        SET saldo_saat_ini = :saldo,
+                            diubah_pada = NOW()
+                        WHERE id = :akun_kas
+                    ")->execute([
+                        'saldo' => $saldoBaru,
+                        'akun_kas' => $akunKasId,
+                    ]);
+
+                    $tokoName = $pelangganInfo['nama_toko'] ?? '';
+                    $keteranganKas = ($statusBayar === 'lunas')
+                        ? "Penerimaan Pembayaran Lunas Pesanan Toko #{$nomorNota}" . ($tokoName ? " ({$tokoName})" : "")
+                        : "Penerimaan Uang Muka (DP) Pesanan Toko #{$nomorNota}" . ($tokoName ? " ({$tokoName})" : "");
+
+                    $voucherNo = CashVoucher::generate('masuk', $tanggalPesanan, $pdo);
+
+                    $pdo->prepare("
+                        INSERT INTO public.arus_kas (
+                            nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                            keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                        ) VALUES (
+                            :nomor_tx, :akun_kas, :tgl, 'masuk', 'penjualan', :nominal,
+                            :ket, 'pesanan', :ref_id, :saldo_berjalan, :user_id, NOW()
+                        )
+                    ")->execute([
+                        'nomor_tx' => $voucherNo,
+                        'akun_kas' => $akunKasId,
+                        'tgl' => $tanggalPesanan,
+                        'nominal' => $totalDibayar,
+                        'ket' => $keteranganKas,
+                        'ref_id' => $orderId,
+                        'saldo_berjalan' => $saldoBaru,
+                        'user_id' => Auth::id() ?: null,
+                    ]);
+                }
             }
 
             $pdo->commit();
@@ -1478,17 +1527,19 @@ class CustomerOrderController extends Controller
             ]);
 
             // Catat Arus Kas Masuk
+            $voucherNo = CashVoucher::generate('masuk', $tanggalBayar, $pdo);
             $stmtKas = $pdo->prepare("
                 INSERT INTO public.arus_kas (
-                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                     keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
                 ) VALUES (
-                    :akun_kas, :tgl, 'masuk', 'penjualan', :nominal,
+                    :nomor_tx, :akun_kas, :tgl, 'masuk', 'penjualan', :nominal,
                     :ket, 'pesanan', :ref_id, :saldo_berjalan, :user_id, NOW()
                 )
             ");
             $userId = Auth::id() ?: null;
             $stmtKas->execute([
+                'nomor_tx' => $voucherNo,
                 'akun_kas' => $akunKasId,
                 'tgl' => $tanggalBayar,
                 'nominal' => $nominalBayar,
@@ -1789,6 +1840,59 @@ class CustomerOrderController extends Controller
                                     'sisa' => $sisaTagihan,
                                     'pelanggan_id' => $orderData['pelanggan_id']
                                 ]);
+                            }
+
+                            // Anti-Duplikasi: Cek apakah pembayaran pesanan ini sudah pernah dicatat di arus kas (misal saat input PO)
+                            $stmtCheckKas = $pdo->prepare("SELECT COUNT(*) FROM public.arus_kas WHERE referensi_tabel = 'pesanan' AND referensi_id = :id AND jenis_kas = 'masuk'");
+                            $stmtCheckKas->execute(['id' => $orderId]);
+                            $alreadyInCash = (int)$stmtCheckKas->fetchColumn() > 0;
+
+                            $totalDibayar = (float)$orderData['total_dibayar'];
+                            $akunKasId = $orderData['akun_kas_id'] ?? null;
+
+                            if (!$alreadyInCash && $totalDibayar > 0 && !empty($akunKasId)) {
+                                $stmtKas = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                                $stmtKas->execute(['id' => $akunKasId]);
+                                $akunKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
+
+                                if ($akunKas) {
+                                    $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
+                                    $saldoBaru = $saldoLama + $totalDibayar;
+
+                                    $pdo->prepare("
+                                        UPDATE public.akun_kas
+                                        SET saldo_saat_ini = :saldo,
+                                            diubah_pada = NOW()
+                                        WHERE id = :akun_kas
+                                    ")->execute([
+                                        'saldo' => $saldoBaru,
+                                        'akun_kas' => $akunKasId,
+                                    ]);
+
+                                    $keteranganKas = ($orderData['status_pembayaran'] === 'lunas')
+                                        ? "Penerimaan Pembayaran Lunas Pesanan Toko #{$orderData['nomor_nota']} ({$orderData['nama_toko']})"
+                                        : "Penerimaan DP/Sebagian Pesanan Toko #{$orderData['nomor_nota']} ({$orderData['nama_toko']})";
+
+                                    $voucherNo = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
+
+                                    $pdo->prepare("
+                                        INSERT INTO public.arus_kas (
+                                            nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                                            keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                                        ) VALUES (
+                                            :nomor_tx, :akun_kas, CURRENT_DATE, 'masuk', 'penjualan', :nominal,
+                                            :ket, 'pesanan', :ref_id, :saldo_berjalan, :user_id, NOW()
+                                        )
+                                    ")->execute([
+                                        'nomor_tx' => $voucherNo,
+                                        'akun_kas' => $akunKasId,
+                                        'nominal' => $totalDibayar,
+                                        'ket' => $keteranganKas,
+                                        'ref_id' => $orderId,
+                                        'saldo_berjalan' => $saldoBaru,
+                                        'user_id' => Auth::id() ?: null,
+                                    ]);
+                                }
                             }
                         }
                     }

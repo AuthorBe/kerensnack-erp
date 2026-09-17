@@ -100,10 +100,28 @@ CREATE TABLE IF NOT EXISTS public.karyawan (
     gaji_pokok_bulanan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     uang_kehadiran_harian NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     tunjangan_bulanan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
-    persentase_komisi_sales NUMERIC(5, 2) NOT NULL DEFAULT 0.00, -- Contoh: 2.50%
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Master Skema Komisi Sales Bertingkat (Tiered Commission System Terpusat)
+CREATE TABLE IF NOT EXISTS public.skema_komisi_sales (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    urutan INT NOT NULL,
+    nama_tier VARCHAR(100) NOT NULL,
+    omzet_min NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    omzet_maks NUMERIC(15, 2) DEFAULT NULL, -- NULL berarti tanpa batas atas (tak terhingga)
+    persentase NUMERIC(5, 2) NOT NULL DEFAULT 0.00,
+    status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_skema_komisi_omzet_min_non_neg CHECK (omzet_min >= 0),
+    CONSTRAINT chk_skema_komisi_persentase_range CHECK (persentase >= 0 AND persentase <= 100),
+    CONSTRAINT chk_skema_komisi_range_valid CHECK (omzet_maks IS NULL OR omzet_maks >= omzet_min)
+);
+
+CREATE INDEX IF NOT EXISTS idx_skema_komisi_urutan ON public.skema_komisi_sales (urutan ASC);
+CREATE INDEX IF NOT EXISTS idx_skema_komisi_aktif ON public.skema_komisi_sales (status_aktif);
 
 -- View Kanonikal Info Karyawan Terpadu (Menggabungkan Identitas Pengguna & Parameter Gaji)
 CREATE OR REPLACE VIEW public.v_karyawan_info AS
@@ -125,7 +143,6 @@ SELECT
     k.gaji_pokok_bulanan,
     k.uang_kehadiran_harian,
     k.tunjangan_bulanan,
-    k.persentase_komisi_sales,
     p.nama_pengguna,
     p.peran_id,
     p.karyawan_legacy_id AS id_legacy
@@ -144,7 +161,6 @@ CREATE TABLE IF NOT EXISTS public.pemasok (
     nomor_whatsapp VARCHAR(25) DEFAULT NULL,
     email VARCHAR(150) DEFAULT NULL,
     termin_bayar VARCHAR(30) DEFAULT 'cash',
-    detail_bank JSONB NOT NULL DEFAULT '[]'::jsonb,
     nama_bank VARCHAR(50) DEFAULT NULL,
     nomor_rekening VARCHAR(50) DEFAULT NULL,
     atas_nama_rekening VARCHAR(100) DEFAULT NULL,
@@ -595,15 +611,6 @@ CREATE TABLE IF NOT EXISTS public.produksi_harian (
     CONSTRAINT uq_produksi_karyawan_tanggal_item UNIQUE (karyawan_id, tanggal, item_id)
 );
 
-CREATE TABLE IF NOT EXISTS public.target_produksi (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tanggal DATE NOT NULL,
-    item_id UUID NOT NULL REFERENCES public.item(id),
-    target_pcs INT NOT NULL CHECK (target_pcs > 0),
-    keterangan TEXT,
-    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
 CREATE TABLE IF NOT EXISTS public.absensi (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     id_legacy INT UNIQUE,
@@ -885,7 +892,6 @@ ALTER TABLE public.stok_konsinyasi_toko ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kunjungan_konsinyasi ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rincian_kunjungan_konsinyasi ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tagihan_kunjungan ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.target_produksi ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.produksi_harian ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.absensi ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.kasbon ENABLE ROW LEVEL SECURITY;

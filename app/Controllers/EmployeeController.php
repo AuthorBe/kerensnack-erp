@@ -25,7 +25,7 @@ class EmployeeController extends Controller
             $employees = Database::fetchAll("
                 SELECT k.id, k.nik, k.nama_karyawan, k.posisi, k.tipe_penggajian,
                        k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
-                       k.persentase_komisi_sales, k.nomor_telepon, k.alamat, k.tanggal_bergabung,
+                       k.nomor_telepon, k.alamat, k.tanggal_bergabung,
                        k.nomor_polisi_kendaraan,
                        k.bank_nama, k.bank_nomor_rekening, k.bank_atas_nama,
                        k.status_aktif,
@@ -97,9 +97,9 @@ class EmployeeController extends Controller
         $gajiPokok = (float)preg_replace('/[^0-9]/', '', (string)$this->input('gaji_pokok_bulanan', '0'));
         $uangHadir = (float)preg_replace('/[^0-9]/', '', (string)$this->input('uang_kehadiran_harian', '0'));
         $tunjangan = (float)preg_replace('/[^0-9]/', '', (string)$this->input('tunjangan_bulanan', '0'));
-        $komisi = (float)$this->input('persentase_komisi_sales', 0);
-        if ($posisi !== 'sales') {
-            $komisi = 0.00;
+
+        if ($posisi === 'sales') {
+            $tipeGaji = ($gajiPokok > 0) ? 'bulanan' : (($uangHadir > 0) ? 'harian' : 'bulanan');
         }
         $telepon = trim((string)$this->input('nomor_telepon'));
         $alamat = trim((string)$this->input('alamat', '-'));
@@ -151,9 +151,9 @@ class EmployeeController extends Controller
             $stmt = $pdo->prepare("
                 INSERT INTO public.karyawan (
                     pengguna_id, tipe_penggajian, gaji_pokok_bulanan,
-                    uang_kehadiran_harian, tunjangan_bulanan, persentase_komisi_sales
+                    uang_kehadiran_harian, tunjangan_bulanan
                 ) VALUES (
-                    :pengguna_id, :tipe, :gapok, :hadir, :tunjangan, :komisi
+                    :pengguna_id, :tipe, :gapok, :hadir, :tunjangan
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -161,8 +161,7 @@ class EmployeeController extends Controller
                 'tipe' => $tipeGaji,
                 'gapok' => $gajiPokok,
                 'hadir' => $uangHadir,
-                'tunjangan' => $tunjangan,
-                'komisi' => $komisi
+                'tunjangan' => $tunjangan
             ]);
             
             $karyawanId = $stmt->fetchColumn();
@@ -172,6 +171,23 @@ class EmployeeController extends Controller
                 ->execute(['id' => $karyawanId]);
 
             $pdo->commit();
+
+            \App\Helpers\ActivityLog::log(
+                'hr_payroll',
+                'CREATE',
+                "Mendaftarkan karyawan baru: {$nama} ({$posisi}, Tipe: {$tipeGaji})",
+                'karyawan',
+                (string)$karyawanId,
+                null,
+                [
+                    'nama_lengkap' => $nama,
+                    'posisi' => $posisi,
+                    'tipe_penggajian' => $tipeGaji,
+                    'gaji_pokok_bulanan' => $gajiPokok,
+                    'uang_kehadiran_harian' => $uangHadir,
+                    'tunjangan_bulanan' => $tunjangan
+                ]
+            );
 
             $this->flashSuccess("Karyawan {$nama} berhasil ditambahkan!");
             $this->redirect('/employees');
@@ -195,9 +211,9 @@ class EmployeeController extends Controller
         $gajiPokok = (float)preg_replace('/[^0-9]/', '', (string)$this->input('gaji_pokok_bulanan', '0'));
         $uangHadir = (float)preg_replace('/[^0-9]/', '', (string)$this->input('uang_kehadiran_harian', '0'));
         $tunjangan = (float)preg_replace('/[^0-9]/', '', (string)$this->input('tunjangan_bulanan', '0'));
-        $komisi = (float)$this->input('persentase_komisi_sales', 0);
-        if ($posisi !== 'sales') {
-            $komisi = 0.00;
+
+        if ($posisi === 'sales') {
+            $tipeGaji = ($gajiPokok > 0) ? 'bulanan' : (($uangHadir > 0) ? 'harian' : 'bulanan');
         }
         $telepon = trim((string)$this->input('nomor_telepon'));
         $alamat = trim((string)$this->input('alamat', '-'));
@@ -269,7 +285,6 @@ class EmployeeController extends Controller
                     gaji_pokok_bulanan = :gapok,
                     uang_kehadiran_harian = :hadir,
                     tunjangan_bulanan = :tunjangan,
-                    persentase_komisi_sales = :komisi,
                     diubah_pada = NOW()
                 WHERE id = :id
             ");
@@ -278,11 +293,36 @@ class EmployeeController extends Controller
                 'tipe' => $tipeGaji,
                 'gapok' => $gajiPokok,
                 'hadir' => $uangHadir,
-                'tunjangan' => $tunjangan,
-                'komisi' => $komisi
+                'tunjangan' => $tunjangan
             ]);
 
+            $oldData = Database::fetchOne("
+                SELECT k.tipe_penggajian, k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
+                       p.nama_lengkap, p.posisi, p.nomor_telepon, p.bank_nama, p.bank_nomor_rekening, p.status_aktif
+                FROM public.karyawan k
+                LEFT JOIN public.pengguna p ON k.pengguna_id = p.id
+                WHERE k.id = :id
+            ", ['id' => $id]);
+
             $pdo->commit();
+
+            \App\Helpers\ActivityLog::log(
+                'hr_payroll',
+                'UPDATE',
+                "Memperbarui data karyawan {$nama}",
+                'karyawan',
+                (string)$id,
+                $oldData,
+                [
+                    'nama_lengkap' => $nama,
+                    'posisi' => $posisi,
+                    'tipe_penggajian' => $tipeGaji,
+                    'gaji_pokok_bulanan' => $gajiPokok,
+                    'uang_kehadiran_harian' => $uangHadir,
+                    'tunjangan_bulanan' => $tunjangan,
+                    'status_aktif' => $statusAktif
+                ]
+            );
 
             $this->flashSuccess("Data karyawan {$nama} berhasil diperbarui!");
             $this->redirect('/employees');
@@ -457,6 +497,16 @@ class EmployeeController extends Controller
             }
 
             $pdo->commit();
+
+            \App\Helpers\ActivityLog::log(
+                'hr_payroll',
+                'UPDATE',
+                "Memperbarui konfigurasi skema komisi sales bertingkat (" . count($cleanedTiers) . " tingkat tier)",
+                'skema_komisi_sales',
+                null,
+                null,
+                ['tiers' => array_map(fn($t) => ['nama' => $t['nama_tier'], 'persen' => $t['persentase'], 'min' => $t['omzet_min'], 'maks' => $t['omzet_maks']], $cleanedTiers)]
+            );
 
             if ($isAjax) {
                 header('Content-Type: application/json');

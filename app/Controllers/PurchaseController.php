@@ -6,6 +6,8 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\DocumentNumber;
+use App\Helpers\CashVoucher;
+use App\Helpers\PrintDocumentHelper;
 use Database;
 use Throwable;
 
@@ -436,8 +438,8 @@ class PurchaseController extends Controller
                 }
             }
 
-            // 3. Catat Kas Keluar (Hanya jika Faktur Langsung, Lunas & ada akun_kas_id)
-            if ($jenisDokumen === 'faktur' && $statusBayar === 'lunas' && $akunKasId) {
+            // 3. Catat Kas Keluar jika pembelian berstatus lunas & ada akun_kas_id (baik Faktur Langsung maupun PO Lunas Transfer)
+            if ($statusBayar === 'lunas' && !empty($akunKasId)) {
                 $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
                 $stmtKasLock->execute(['id' => $akunKasId]);
                 $akunKasRow = $stmtKasLock->fetch();
@@ -458,19 +460,25 @@ class PurchaseController extends Controller
                 $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
                     ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
 
+                $voucherNo = CashVoucher::generate('keluar', $tanggal, $pdo);
+                $keteranganKas = ($jenisDokumen === 'faktur')
+                    ? "Pembayaran faktur pembelian vendor: {$nomorFaktur}"
+                    : "Pembayaran PO pembelian vendor (Transfer): {$nomorFaktur}";
+
                 $pdo->prepare("
                     INSERT INTO public.arus_kas (
-                        akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                        nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
                         referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
                     ) VALUES (
-                        :akun_id, :tgl, 'keluar', 'pembelian_bahan', :nominal, :ket,
+                        :nomor_tx, :akun_id, :tgl, 'keluar', 'pembelian_bahan', :nominal, :ket,
                         'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
                     )
                 ")->execute([
+                    'nomor_tx' => $voucherNo,
                     'akun_id' => $akunKasId,
                     'tgl' => $tanggal,
                     'nominal' => $totalBiaya,
-                    'ket' => "Pembayaran faktur pembelian vendor: {$nomorFaktur}",
+                    'ket' => $keteranganKas,
                     'pb_id' => $pembelianId,
                     'saldo_berjalan' => $saldoBaru,
                     'user_id' => $userId
@@ -482,20 +490,14 @@ class PurchaseController extends Controller
                 ? "Menerbitkan PO Pembelian #{$nomorFaktur} ke vendor {$supplier['nama_pemasok']} (Metode: " . ($metodeLogistik === 'diambil_driver' ? 'Diambil Driver' : 'Diantar Supplier') . ")"
                 : "Mencatat Faktur Pembelian Langsung #{$nomorFaktur} vendor {$supplier['nama_pemasok']} total Rp " . number_format($totalBiaya, 0, ',', '.') . " (" . ($statusBayar === 'lunas' ? 'LUNAS' : 'TEMPO/HUTANG') . ")";
 
-            $pdo->prepare("
-                INSERT INTO public.log_aktivitas (
-                    nama_aktor, peran_aktor, sumber_aksi, kategori_aktivitas, jenis_aksi,
-                    tabel_terdampak, id_referensi, deskripsi_aktivitas, data_sesudah
-                ) VALUES (
-                    :nama, :peran, 'web_app', 'gudang_stok', 'INSERT',
-                    'pembelian', :pb_id, :desc, :data_json
-                )
-            ")->execute([
-                'nama' => Auth::name(),
-                'peran' => Auth::role(),
-                'pb_id' => $pembelianId,
-                'desc' => $descLog,
-                'data_json' => json_encode([
+            \App\Helpers\ActivityLog::log(
+                'gudang_stok',
+                'INSERT',
+                $descLog,
+                'pembelian',
+                (string)$pembelianId,
+                null,
+                [
                     'nomor_faktur' => $nomorFaktur,
                     'jenis_dokumen' => $jenisDokumen,
                     'total' => $totalBiaya,
@@ -503,8 +505,8 @@ class PurchaseController extends Controller
                     'status_penerimaan' => $statusPenerimaan,
                     'metode_logistik' => $metodeLogistik,
                     'items_count' => count($validItems)
-                ])
-            ]);
+                ]
+            );
 
             $pdo->commit();
 
@@ -878,8 +880,12 @@ class PurchaseController extends Controller
                 ]);
             }
 
-            // 2. Potong kas jika lunas
-            if ($statusBayar === 'lunas' && $akunKasId) {
+            // 2. Potong kas jika lunas dan belum pernah dicatat di arus kas (anti double-entry)
+            $stmtCheckKas = $pdo->prepare("SELECT COUNT(*) FROM public.arus_kas WHERE referensi_tabel = 'pembelian' AND referensi_id = :id AND jenis_kas = 'keluar'");
+            $stmtCheckKas->execute(['id' => $id]);
+            $alreadyPaidCash = (int)$stmtCheckKas->fetchColumn() > 0;
+
+            if (!$alreadyPaidCash && $statusBayar === 'lunas' && $akunKasId) {
                 $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
                 $stmtKasLock->execute(['id' => $akunKasId]);
                 $kasRow = $stmtKasLock->fetch();
@@ -897,15 +903,18 @@ class PurchaseController extends Controller
                     }
                 }
 
+                $voucherNo = CashVoucher::generate('keluar', date('Y-m-d'), $pdo);
+
                 $pdo->prepare("
                     INSERT INTO public.arus_kas (
-                        akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                        nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
                         referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
                     ) VALUES (
-                        :akun_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nominal, :ket,
+                        :nomor_tx, :akun_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nominal, :ket,
                         'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
                     )
                 ")->execute([
+                    'nomor_tx' => $voucherNo,
                     'akun_id' => $akunKasId,
                     'nominal' => $totalBiaya,
                     'ket' => "Pembayaran faktur vendor penerimaan fisik: {$nomorFaktur}{$driverKet}",
@@ -952,9 +961,9 @@ class PurchaseController extends Controller
     }
 
     /**
-     * Cetak Dokumen PDF Surat Pesanan Pembelian (PO)
+     * Cetak Lembar Surat Pesanan Pembelian / PO Vendor (HTML Preview & Switcher)
      */
-    public function pdf(): void
+    public function print(): void
     {
         Auth::requirePermission('purchases.view');
         $id = $this->input('id');
@@ -994,16 +1003,75 @@ class PurchaseController extends Controller
 
             $company = \App\Helpers\CompanySetting::getAll();
 
+            $this->view('purchases.po_pdf', [
+                'purchase' => $purchase,
+                'items' => $items,
+                'company' => $company,
+                'isPdf' => false
+            ]);
+
+        } catch (Throwable $e) {
+            $this->flashError("Gagal membuka dokumen PO: " . $e->getMessage());
+            $this->redirect('/purchases');
+        }
+    }
+
+    /**
+     * Cetak Dokumen PDF Surat Pesanan Pembelian (PO)
+     */
+    public function pdf(): void
+    {
+        Auth::requirePermission('purchases.view');
+        $id = $this->input('id');
+        $format = PrintDocumentHelper::resolveFormat($this->input('format', 'standard'));
+
+        if (empty($id)) {
+            $this->flashError('ID Pembelian/PO tidak ditemukan.');
+            $this->redirect('/purchases');
+            return;
+        }
+
+        try {
+            $purchase = Database::fetchOne("
+                SELECT pb.*, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon, sup.alamat_lengkap,
+                       sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa, sup.email as supplier_email,
+                       sup.termin_bayar as supplier_termin_bayar, sup.link_google_maps as supplier_maps,
+                       p.nama_lengkap as pembuat,
+                       drv.nama_karyawan as nama_driver, drv.nomor_telepon as telp_driver, drv.nomor_polisi_kendaraan as nopol_driver
+                FROM public.pembelian pb
+                JOIN public.pemasok sup ON pb.pemasok_id = sup.id
+                LEFT JOIN public.pengguna p ON pb.dibuat_oleh = p.id
+                LEFT JOIN public.v_karyawan_info drv ON pb.sales_driver_id = drv.id
+                WHERE pb.id = :id
+            ", ['id' => $id]);
+
+            if (!$purchase) {
+                $this->flashError('Dokumen tidak ditemukan.');
+                $this->redirect('/purchases');
+                return;
+            }
+
+            $items = Database::fetchAll("
+                SELECT rp.*, it.nama_item, it.kode_sku 
+                FROM public.rincian_pembelian rp
+                JOIN public.item it ON rp.item_id = it.id
+                WHERE rp.pembelian_id = :id
+                ORDER BY it.nama_item ASC
+            ", ['id' => $id]);
+
+            $company = \App\Helpers\CompanySetting::getAll();
+
             ob_start();
+            extract(['purchase' => $purchase, 'items' => $items, 'company' => $company, 'isPdf' => true, 'formatMode' => $format]);
             require __DIR__ . '/../../views/purchases/po_pdf.php';
             $html = ob_get_clean();
 
-            $filename = "SURAT_PESANAN_" . str_replace(['/', '\\', ' '], '_', $purchase['nomor_faktur_pembelian']) . ".pdf";
-            \App\Helpers\PdfExport::stream($html, $filename);
+            $cleanNomor = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$purchase['nomor_faktur_pembelian']);
+            PrintDocumentHelper::downloadPdf($html, "SURAT_PESANAN_{$cleanNomor}", $format);
 
         } catch (Throwable $e) {
             $this->flashError("Gagal cetak PDF: " . $e->getMessage());
-            $this->redirect('/purchases');
+            $this->redirect('/purchases/print?id=' . urlencode((string)$id));
         }
     }
 
@@ -1094,15 +1162,17 @@ class PurchaseController extends Controller
                 ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
 
             // 3. Catat arus kas keluar
+            $voucherNo = CashVoucher::generate('keluar', $tanggalBayar, $pdo);
             $pdo->prepare("
                 INSERT INTO public.arus_kas (
-                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
                     referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
                 ) VALUES (
-                    :akun_id, :tgl, 'keluar', 'pembelian_bahan', :nominal, :ket,
+                    :nomor_tx, :akun_id, :tgl, 'keluar', 'pembelian_bahan', :nominal, :ket,
                     'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
                 )
             ")->execute([
+                'nomor_tx' => $voucherNo,
                 'akun_id' => $akunKasId,
                 'tgl' => $tanggalBayar,
                 'nominal' => $totalBiaya,
@@ -1113,21 +1183,15 @@ class PurchaseController extends Controller
             ]);
 
             // 4. Catat log aktivitas
-            $pdo->prepare("
-                INSERT INTO public.log_aktivitas (
-                    nama_aktor, peran_aktor, sumber_aksi, kategori_aktivitas, jenis_aksi,
-                    tabel_terdampak, id_referensi, deskripsi_aktivitas, data_sesudah
-                ) VALUES (
-                    :nama, :peran, 'web_app', 'keuangan_kas', 'UPDATE',
-                    'pembelian', :pb_id, :desc, :data_json
-                )
-            ")->execute([
-                'nama' => Auth::name(),
-                'peran' => Auth::role(),
-                'pb_id' => $pembelianId,
-                'desc' => "Pelunasan Faktur Vendor: {$nomorFaktur} sebesar Rp " . number_format($totalBiaya, 0, ',', '.'),
-                'data_json' => json_encode(['nomor_faktur' => $nomorFaktur, 'total' => $totalBiaya, 'akun_kas' => $akunKas['nama_akun']])
-            ]);
+            \App\Helpers\ActivityLog::log(
+                'keuangan',
+                'UPDATE',
+                "Pelunasan Faktur Vendor: {$nomorFaktur} sebesar Rp " . number_format($totalBiaya, 0, ',', '.'),
+                'pembelian',
+                (string)$pembelianId,
+                null,
+                ['nomor_faktur' => $nomorFaktur, 'total' => $totalBiaya, 'akun_kas' => $akunKas['nama_akun']]
+            );
 
             $pdo->commit();
 
@@ -1290,15 +1354,17 @@ class PurchaseController extends Controller
                             $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
                                 ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
 
+                            $voucherNo = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
                             $pdo->prepare("
                                 INSERT INTO public.arus_kas (
-                                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
                                     referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
                                 ) VALUES (
-                                    :akun_id, CURRENT_DATE, 'masuk', 'pembelian_bahan', :nominal, :ket,
+                                    :nomor_tx, :akun_id, CURRENT_DATE, 'masuk', 'pembelian_bahan', :nominal, :ket,
                                     'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
                                 )
                             ")->execute([
+                                'nomor_tx' => $voucherNo,
                                 'akun_id' => $akunKasId,
                                 'nominal' => $totalBiaya,
                                 'ket' => "Pengembalian dana pembatalan faktur vendor: {$nomorFaktur} ({$alasan})",
@@ -1321,21 +1387,15 @@ class PurchaseController extends Controller
             ")->execute(['id' => $pembelianId, 'alasan' => $alasan]);
 
             // 5. Log audit trail
-            $pdo->prepare("
-                INSERT INTO public.log_aktivitas (
-                    nama_aktor, peran_aktor, sumber_aksi, kategori_aktivitas, jenis_aksi,
-                    tabel_terdampak, id_referensi, deskripsi_aktivitas, data_sesudah
-                ) VALUES (
-                    :nama, :peran, 'web_app', 'gudang_stok', 'CANCEL',
-                    'pembelian', :pb_id, :desc, :data_json
-                )
-            ")->execute([
-                'nama' => Auth::name(),
-                'peran' => Auth::role(),
-                'pb_id' => $pembelianId,
-                'desc' => "Pembatalan Faktur Vendor: {$nomorFaktur} ({$alasan})",
-                'data_json' => json_encode(['nomor_faktur' => $nomorFaktur, 'alasan' => $alasan, 'total' => $totalBiaya])
-            ]);
+            \App\Helpers\ActivityLog::log(
+                'gudang_stok',
+                'CANCEL',
+                "Pembatalan Faktur Vendor: {$nomorFaktur} ({$alasan})",
+                'pembelian',
+                (string)$pembelianId,
+                null,
+                ['nomor_faktur' => $nomorFaktur, 'alasan' => $alasan, 'total' => $totalBiaya]
+            );
 
             $pdo->commit();
 

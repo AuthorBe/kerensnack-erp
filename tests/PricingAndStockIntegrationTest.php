@@ -470,7 +470,7 @@ runTest("2.5.3 Integrasi DB: Snapshot HPP Tersimpan di item_pesanan", function()
                 tipe_pembayaran, status_pemrosesan, status_pembayaran
             ) VALUES (
                 :nota, :pelanggan_id, CURRENT_DATE, 50000, 0, 50000,
-                'cash', 'menunggu_approval', 'lunas'
+                'cash', 'po', 'lunas'
             ) RETURNING id
         ");
         $stmtOrder->execute([

@@ -29,7 +29,7 @@ if (!function_exists('isActiveSection')) {
     <!-- Brand Header -->
     <div class="sidebar-brand">
         <div class="sidebar-brand-icon" style="background:transparent;border:none;box-shadow:none;display:flex;align-items:center;justify-content:center;">
-            <img src="<?= Router::asset('/favicon/favicon-96x96.png') ?>" alt="Logo Keren Snack" style="width:28px;height:28px;object-fit:contain;border-radius:6px;display:block;">
+            <img src="<?= Router::asset('/favicon/favicon-96x96.png') ?>" alt="Logo Keren Snack" style="width:26px;height:26px;object-fit:contain;border-radius:6px;display:block;">
         </div>
         <div class="sidebar-brand-text">
             <div class="sidebar-brand-name">KEREN SNACK</div>

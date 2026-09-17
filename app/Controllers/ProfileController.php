@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\Flash;
+use App\Helpers\ActivityLog;
 use Database;
 
 /**
@@ -207,25 +208,19 @@ class ProfileController extends Controller
             ]);
 
             // 5. Catat riwayat perubahan ke tabel log_aktivitas
-            Database::execute("
-                INSERT INTO public.log_aktivitas (
-                    pengguna_id, nama_aktor, peran_aktor, sumber_aksi, 
-                    kategori_aktivitas, jenis_aksi, tabel_terdampak, id_referensi,
-                    deskripsi_aktivitas, data_sebelum, data_sesudah, ip_address
-                ) VALUES (
-                    :uid, :aktor, :peran, 'web_app',
-                    'keamanan_auth', 'ubah_nama_pengguna', 'pengguna', :uid,
-                    :deskripsi, :sebelum, :sesudah, :ip
-                )
-            ", [
-                'uid' => $actualUid,
-                'aktor' => Auth::name(),
-                'peran' => Auth::role(),
-                'deskripsi' => "Mengubah nama pengguna dari '{$currentUsername}' menjadi '{$newUsername}'",
-                'sebelum' => json_encode(['nama_pengguna' => $currentUsername]),
-                'sesudah' => json_encode(['nama_pengguna' => $newUsername]),
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
-            ]);
+            ActivityLog::log(
+                'keamanan_auth',
+                'ubah_nama_pengguna',
+                "Mengubah nama pengguna dari '{$currentUsername}' menjadi '{$newUsername}'",
+                'pengguna',
+                $actualUid,
+                ['nama_pengguna' => $currentUsername],
+                ['nama_pengguna' => $newUsername],
+                'web_app',
+                $actualUid,
+                Auth::name(),
+                Auth::role()
+            );
 
             // 6. Update session aktif
             $_SESSION['user']['nama_pengguna'] = $newUsername;
@@ -309,22 +304,19 @@ class ProfileController extends Controller
             ]);
 
             // Catat log aktivitas
-            Database::execute("
-                INSERT INTO public.log_aktivitas (
-                    pengguna_id, nama_aktor, peran_aktor, sumber_aksi, 
-                    kategori_aktivitas, jenis_aksi, tabel_terdampak, id_referensi,
-                    deskripsi_aktivitas, ip_address
-                ) VALUES (
-                    :uid, :aktor, :peran, 'web_app',
-                    'keamanan_auth', 'ubah_kata_sandi', 'pengguna', :uid,
-                    'Memperbarui kata sandi akun', :ip
-                )
-            ", [
-                'uid' => $actualUid,
-                'aktor' => Auth::name(),
-                'peran' => Auth::role(),
-                'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
-            ]);
+            ActivityLog::log(
+                'keamanan_auth',
+                'ubah_kata_sandi',
+                'Memperbarui kata sandi akun',
+                'pengguna',
+                $actualUid,
+                null,
+                ['kata_sandi_diubah' => true],
+                'web_app',
+                $actualUid,
+                Auth::name(),
+                Auth::role()
+            );
 
             Flash::success('Kata sandi berhasil diperbarui!');
             $this->redirect('/profile');

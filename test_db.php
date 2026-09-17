@@ -64,10 +64,16 @@ if (!$isCli) {
     }
     @file_put_contents($rateFile, json_encode($rateData));
 
+    // Disable web diagnostic console entirely in production environment
+    if (!$isCli && (($_ENV['APP_ENV'] ?? getenv('APP_ENV')) === 'production')) {
+        http_response_code(403);
+        die('Forbidden: Diagnostics disabled in production web environment.');
+    }
+
     // Access Gate: Localhost / Active ERP Session / Secret PIN
     $isLocalhost = in_array($clientIp, ['127.0.0.1', '::1', 'localhost']) || str_starts_with($clientIp, '192.168.');
     $isUserLoggedIn = !empty($_SESSION['user']['id']);
-    $defaultPin = '2026';
+    $defaultPin = getenv('DIAGNOSTIC_PIN') ?: ($_ENV['DIAGNOSTIC_PIN'] ?? '2026');
     $accessKey = $_GET['key'] ?? ($_POST['key'] ?? '');
 
     if ($accessKey === $defaultPin) {
@@ -297,7 +303,7 @@ try {
 
     // 4. Stored Procedure RPC: Universal Barcode Resolver
     $rpcBarcodeStart = microtime(true);
-    $sampleBarcode = Database::fetchOne("SELECT barcode FROM public.item WHERE barcode IS NOT NULL AND barcode != '' LIMIT 1")['barcode'] ?? null;
+    $sampleBarcode = Database::fetchOne("SELECT barcode_universal FROM public.grup_produk WHERE barcode_universal IS NOT NULL AND barcode_universal != '' LIMIT 1")['barcode_universal'] ?? null;
     if ($sampleBarcode) {
         $barcodeRow = Database::fetchOne("
             SELECT public.fn_cari_item_by_barcode(:barcode) AS json_res

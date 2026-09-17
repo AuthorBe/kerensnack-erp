@@ -9,14 +9,15 @@ Dokumen ini merupakan **kontrak arsitektur resmi** bagi seluruh pengembang manus
 Sistem membedakan secara tegas antara posisi **Sales** dan **Driver**:
 1. **Sales**:
    - Memegang pembinaan dan tanggung jawab toko mitra konsinyasi (**Toko Binaan**).
-   - Berhak mendapatkan **komisi penjualan/konsinyasi** (`persentase_komisi_sales > 0`).
+   - Berhak mendapatkan **komisi penjualan/konsinyasi bertingkat** berdasarkan pencapaian akumulasi omzet toko binaan (dihitung otomatis melalui `public.skema_komisi_sales` dan `public.fn_hitung_tier_komisi_sales`).
+   - Tidak lagi menggunakan persentase komisi statis per-karyawan (`persentase_komisi_sales` telah dihapus permanen dari skema).
    - Dapat ditugaskan melakukan pengantaran barang (`surat_jalan`) dan belanja/ambil bahan baku vendor (`pembelian`).
    - Berwenang membuat pesanan pelanggan (`orders.create`), melihat katalog & matriks harga, serta mengunjungi toko konsinyasi.
 
 2. **Driver**:
    - Murni bertugas pada **operasional armada logistik** (pengantaran pesanan & penjemputan barang supplier).
    - **MUTLAK DILARANG** ditetapkan sebagai penanggung jawab / pembina toko binaan (`pelanggan.sales_driver_id`).
-   - **MUTLAK DILARANG** memiliki komisi penjualan (`persentase_komisi_sales = 0.00`).
+   - Karena tidak membina toko dan skema komisi berbasis omzet toko binaan sales, Driver **TIDAK PERNAH** menerima komisi penjualan.
    - Mengakses tugas harian melalui modul **Surat Jalan Pengiriman** (`deliveries.*`) dan serah terima dokumen POD.
 
 ---
@@ -27,29 +28,31 @@ Terkait aktivitas **Opname Fisik Rak Konsinyasi** (`kunjungan_konsinyasi`):
 - Driver **TIDAK DIBLOKIR KAKU** oleh trigger database untuk mencatat kunjungan opname rak.
 - Siapa yang berhak melakukan opname fisik rak **dikendalikan secara dinamis melalui tiket izin akses RBAC** (`consignment.opname_all` atau `consignment.opname_assigned`).
 - **Ketentuan Owner**: Jika Owner memberikan izin opname kepada Driver (misal supir saat mengantar barang diminta sekalian menghitung sisa stok rak toko), Driver dapat mencatat opname rak toko.
-- **Proteksi Komisi**: Aktivitas opname oleh Driver **murni pencatatan fisik stok**. Nilai omset laku konsinyasi dari toko tersebut **TETAP dialokasikan kepada Sales Pembina Toko**, dan Driver **tetap tidak menerima komisi** (komisi driver tetap 0.00%).
+- **Proteksi Komisi**: Aktivitas opname oleh Driver **murni pencatatan fisik stok**. Nilai omset laku konsinyasi dari toko tersebut **TETAP dialokasikan kepada Sales Pembina Toko**, dan Driver **tetap tidak menerima komisi**.
 
 ---
 
-## 3. Pengaman Integritas Berlapis (Multi-Layer Safeguards)
+## 3. Pengaman Integritas Berlapis & Sistem Komisi Bertingkat
 
-### A. Level Basis Data (PostgreSQL Triggers)
-Tercantum pada `database/32_add_sales_driver_integrity_guards.sql` dan disinkronkan ke `02_triggers_and_rpc.sql`:
+### A. Level Basis Data (PostgreSQL Triggers & Master Skema)
 1. **`trg_guard_pelanggan_sales_driver` pada `public.pelanggan`**:
    - Mencegah penetapan karyawan dengan posisi `driver` pada kolom `sales_driver_id`. Jika dicoba, database langsung menolak dengan pengecualian:
      `Driver (%) tidak dapat ditugaskan sebagai Penanggung Jawab Toko Binaan! Posisi karyawan harus Sales.`
-2. **`trg_guard_karyawan_driver_no_commission` pada `public.karyawan`**:
-   - Mencegah pemberian komisi `persentase_komisi_sales > 0` pada karyawan berposisi `driver`. Database menolak dengan pengecualian:
-     `Driver (%) tidak berhak mendapatkan komisi penjualan! Nilai persentase komisi driver harus 0.00%.`
-3. **`trg_guard_pengguna_driver_reset_commission` pada `public.pengguna`**:
-   - Jika posisi karyawan dialihkan menjadi `driver`, sistem secara otomatis mereset komisi ke `0.00%` di tabel `karyawan`.
+2. **Master Skema Komisi Bertingkat (`public.skema_komisi_sales`)**:
+   - Menjadi satu-satunya sumber kebenaran (*single source of truth*) persentase komisi berbasis tier omzet bulanan.
+   - Fungsi `public.fn_hitung_tier_komisi_sales(omzet)` menghitung tier dan nominal komisi secara otomatis, deterministik, dan konsisten di seluruh modul.
+3. **Pembersihan Kolom Legacy**:
+   - Kolom legacy `persentase_komisi_sales` pada `public.karyawan` serta view `public.v_karyawan_info` telah dihapus secara permanen via migrasi `42_cleanup_legacy_sales_commission.sql`.
 
 ### B. Level Backend (PHP Controllers)
 1. **`CustomerController.php`**:
    - Metode `store()` dan `update()` memvalidasi bahwa `sales_driver_id` toko binaan yang dipilih berposisi `sales`.
 2. **`EmployeeController.php`**:
-   - Metode `store()` dan `update()` mengunci nilai komisi menjadi `0.00` apabila posisi karyawan bukan `sales`.
-3. **`UserController.php`**:
+   - Form karyawan dan query penyimpanan karyawan sepenuhnya bersih dari parameter legacy `persentase_komisi_sales`.
+   - Mengelola master tier komisi terpusat via modal batch (`saveCommissionTiersBatch`).
+3. **`ConsignmentController.php` & `PayrollService.php`**:
+   - Perhitungan komisi konsinyasi dan penggajian 100% mengevaluasi pencapaian omzet toko binaan terhadap `public.skema_komisi_sales`.
+4. **`UserController.php`**:
    - Sinkronisasi otomatis posisi karyawan sesuai peran (`driver` -> `driver`, `sales` -> `sales`).
 
 ---

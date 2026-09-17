@@ -957,22 +957,20 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
 
         <div class="page-header-actions flex items-center gap-2 flex-wrap">
             <?php if ($hasInvoice): ?>
-                <a href="<?= Router::url('/consignment/opname/hasil/pdf?pesanan_id=' . urlencode((string)$visit['pesanan_id'])) ?>" 
-                   target="_blank" 
+                <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . urlencode((string)$visit['pesanan_id'])) ?>" 
                    class="btn btn-primary btn-sm flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl shadow-sm text-white" 
                    style="background:#10b981;border-color:#10b981;"
-                   title="Unduh Faktur Penjualan Resmi (PDF)">
+                   title="Cetak Faktur Penjualan (Dot Matrix & A4)">
                     <i data-lucide="receipt" class="w-4 h-4"></i>
-                    <span>Cetak Faktur Penjualan (PDF)</span>
+                    <span>Cetak Faktur Penjualan</span>
                 </a>
             <?php else: ?>
-                <a href="<?= Router::url('/consignment/opname/hasil/pdf?kunjungan_id=' . urlencode((string)$visit['id'])) ?>" 
-                   target="_blank" 
+                <a href="<?= Router::url('/consignment/nota-print?kunjungan_id=' . urlencode((string)$visit['id'])) ?>" 
                    class="btn btn-primary btn-sm flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl shadow-sm text-white" 
                    style="background:#6366f1;border-color:#6366f1;"
-                   title="Unduh Berita Acara Hasil Audit Rak Fisik (PDF)">
+                   title="Cetak Berita Acara Hasil Audit Rak (Dot Matrix & A4)">
                     <i data-lucide="printer" class="w-4 h-4"></i>
-                    <span>Cetak Berita Acara PDF</span>
+                    <span>Cetak Berita Acara</span>
                 </a>
             <?php endif; ?>
             <a href="<?= Router::url('/consignment/stok-rak') ?>" class="btn btn-secondary btn-sm flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl">

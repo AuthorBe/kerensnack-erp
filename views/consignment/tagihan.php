@@ -380,7 +380,7 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
 
 @media (min-width: 1024px) {
     .floating-action-bar {
-        left: var(--sidebar-width, 260px);
+        left: var(--sidebar-width, 224px);
         padding: 11px 28px;
     }
 }
@@ -1464,11 +1464,10 @@ document.addEventListener('alpine:init', () => {
                                 <!-- Aksi -->
                                 <td class="cell-center">
                                     <div class="flex items-center justify-center gap-1.5">
-                                        <a href="<?= Router::url('/consignment/nota-pdf?pesanan_id=' . $t['pesanan_id']) ?>" 
-                                           target="_blank" 
+                                        <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $t['pesanan_id']) ?>" 
                                            class="btn btn-secondary btn-sm" 
                                            style="padding:5px 8px;border-radius:8px;" 
-                                           title="Cetak Faktur PDF">
+                                           title="Cetak Faktur (Dot Matrix & A4)">
                                             <i data-lucide="printer" style="width:14px;height:14px;"></i>
                                         </a>
 

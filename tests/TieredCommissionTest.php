@@ -215,8 +215,8 @@ runTest("4. Business Rule: Kunjungan opname yang BELUM DITAGIHKAN (unbilled) = 0
         VALUES ('{$dummyUserId}', '{$roleId}', 'Sales Uji Coba', 'sales_uji_1', 'dummyhash', 'sales', TRUE)
     ");
     $pdo->exec("
-        INSERT INTO public.karyawan (id, pengguna_id, persentase_komisi_sales, tipe_penggajian)
-        VALUES ('{$dummyEmpId}', '{$dummyUserId}', 2.00, 'bulanan')
+        INSERT INTO public.karyawan (id, pengguna_id, tipe_penggajian)
+        VALUES ('{$dummyEmpId}', '{$dummyUserId}', 'bulanan')
     ");
 
     // Insert toko konsinyasi binaan

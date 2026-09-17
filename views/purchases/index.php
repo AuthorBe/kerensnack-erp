@@ -1369,14 +1369,14 @@ ob_start();
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <!-- Aksi 1: Cetak Dokumen PDF -->
-                                <a :href="'<?= Router::url('/purchases/pdf') ?>?id=' + encodeURIComponent(activeDetail.purchase.id)" target="_blank" class="card p-3.5 hover:border-primary transition-all flex items-start gap-3" style="text-decoration:none;border-radius:12px;">
+                                <!-- Aksi 1: Cetak Dokumen PO (A4 & Dot Matrix) -->
+                                <a :href="'<?= Router::url('/purchases/print') ?>?id=' + encodeURIComponent(activeDetail.purchase.id)" class="card p-3.5 hover:border-primary transition-all flex items-start gap-3" style="text-decoration:none;border-radius:12px;">
                                     <div style="width:40px;height:40px;border-radius:10px;background:#ecfdf5;color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                         <i data-lucide="printer" style="width:20px;height:20px;"></i>
                                     </div>
                                     <div>
-                                        <div style="font-weight:700;font-size:13px;color:var(--color-ink);">Cetak / Unduh PDF PO</div>
-                                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Dokumen resmi purchase order A4 dengan logo &amp; rincian item</div>
+                                        <div style="font-weight:700;font-size:13px;color:var(--color-ink);">Cetak Dokumen PO</div>
+                                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Format resmi Standar A4 &amp; Dot Matrix Continuous Form</div>
                                     </div>
                                 </a>
 

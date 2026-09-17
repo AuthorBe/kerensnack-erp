@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\CompanySetting;
+use App\Helpers\ActivityLog;
 use Database;
 use Throwable;
 
@@ -451,22 +452,14 @@ class PosController extends Controller
             }
 
             // 5. Catat Audit Trail
-            $stmtLog = $pdo->prepare("
-                INSERT INTO public.log_aktivitas (
-                    nama_aktor, peran_aktor, sumber_aksi, kategori_aktivitas, jenis_aksi,
-                    tabel_terdampak, id_referensi, deskripsi_aktivitas, data_sesudah
-                ) VALUES (
-                    :nama, :peran, 'web_app', 'penjualan', 'INSERT',
-                    'pesanan', :pesanan_id, :desc, :data_json
-                )
-            ");
-
-            $stmtLog->execute([
-                'nama' => Auth::name(),
-                'peran' => Auth::role(),
-                'pesanan_id' => $pesananId,
-                'desc' => "Transaksi POS Kasir ({$paymentType} -> {$namaKas}): {$nomorNota} total Rp " . number_format($totalNetto, 0, ',', '.') . ($paymentType === 'cash' ? " (Diterima: Rp " . number_format($paidAmount, 0, ',', '.') . ", Kembali: Rp " . number_format($kembalian, 0, ',', '.') . ")" : ""),
-                'data_json' => json_encode([
+            ActivityLog::log(
+                'penjualan',
+                'INSERT',
+                "Transaksi POS Kasir ({$paymentType} -> {$namaKas}): {$nomorNota} total Rp " . number_format($totalNetto, 0, ',', '.') . ($paymentType === 'cash' ? " (Diterima: Rp " . number_format($paidAmount, 0, ',', '.') . ", Kembali: Rp " . number_format($kembalian, 0, ',', '.') . ")" : ""),
+                'pesanan',
+                (string)$pesananId,
+                null,
+                [
                     'nomor_nota' => $nomorNota,
                     'total' => $totalNetto,
                     'uang_diterima' => $paidAmount,
@@ -475,10 +468,9 @@ class PosController extends Controller
                     'akun_kas' => $namaKas,
                     'saldo_kas_sebelum' => $saldoKasAwal,
                     'saldo_kas_sesudah' => $saldoKasAkhir,
-                    'is_override_tukar_uang' => ($paymentType === 'cash' && $kembalian > $saldoKasAwal && $forceCashChange),
                     'items_count' => count($cart)
-                ])
-            ]);
+                ]
+            );
 
             $pdo->commit();
 

@@ -2,6 +2,7 @@
 use App\Helpers\Format;
 use App\Core\Router;
 use App\Helpers\CompanySetting;
+use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
 ?>
@@ -272,7 +273,7 @@ $comp = CompanySetting::getAll();
                 <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
                 <div class="brand-subtitle"><?= htmlspecialchars($comp['tagline']) ?></div>
                 <div style="font-size:11px;color:#64748b;margin-top:4px;">
-                    <?= htmlspecialchars($comp['alamat']) ?> • Telp/WA: <?= htmlspecialchars($comp['telepon']) ?><?= !empty($comp['email']) ? ' • Email: ' . htmlspecialchars($comp['email']) : '' ?><?= !empty($comp['website']) ? ' • Web: ' . htmlspecialchars($comp['website']) : '' ?>
+                    <?= htmlspecialchars($comp['alamat']) ?> • <?= PrintDocumentHelper::formatContactLine($comp, ' • ') ?>
                 </div>
             </div>
             <div style="text-align:right;">

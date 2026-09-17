@@ -190,6 +190,7 @@ Router::get('/purchases/detail', [PurchaseController::class, 'detailAjax']);
 Router::post('/purchases/store', [PurchaseController::class, 'store']);
 Router::post('/purchases/update-po', [PurchaseController::class, 'updatePo']);
 Router::post('/purchases/receive', [PurchaseController::class, 'receiveGoods']);
+Router::get('/purchases/print', [PurchaseController::class, 'print']);
 Router::get('/purchases/pdf', [PurchaseController::class, 'pdf']);
 Router::post('/purchases/pay', [PurchaseController::class, 'payDebt']);
 Router::post('/purchases/cancel', [PurchaseController::class, 'cancel']);
@@ -209,7 +210,6 @@ Router::get('/deliveries/print', [DeliveryController::class, 'print']);
 Router::get('/deliveries/pdf', [DeliveryController::class, 'pdf']);
 Router::post('/deliveries/store', [DeliveryController::class, 'store']);
 Router::post('/deliveries/update', [DeliveryController::class, 'update']);
-Router::post('/deliveries/approve', [DeliveryController::class, 'approve']);
 Router::post('/deliveries/update-status', [DeliveryController::class, 'updateStatus']);
 
 // --- LOGISTIK 2: TITIP JUAL KONSINYASI RAK (PORTAL TERPADU) ---
@@ -221,6 +221,7 @@ Router::get('/consignment/opname/hasil', [ConsignmentController::class, 'hasilKu
 Router::post('/consignment/opname/bayar-langsung', [ConsignmentController::class, 'bayarLangsungKunjungan']);
 Router::get('/consignment/opname/hasil/pdf', [ConsignmentController::class, 'notaPdf']);
 Router::get('/consignment/nota-pdf', [ConsignmentController::class, 'notaPdf']);
+Router::get('/consignment/nota-print', [ConsignmentController::class, 'printNota']);
 Router::post('/consignment/konfirmasi-terima', [ConsignmentController::class, 'konfirmasiTerima']);
 Router::get('/consignment/laporan-penjualan', [ConsignmentController::class, 'laporanPenjualan']);
 Router::get('/consignment/laporan-penjualan/detail-toko', [ConsignmentController::class, 'detailTokoAjax']);
@@ -263,6 +264,7 @@ Router::post('/cash/store-inflow', [CashController::class, 'storeInflow']);
 Router::post('/cash/store-outflow', [CashController::class, 'storeOutflow']);
 Router::post('/cash/store-transfer', [CashController::class, 'storeTransfer']);
 Router::post('/cash/set-default-pos', [CashController::class, 'setDefaultPos']);
+Router::post('/cash/delete-account', [CashController::class, 'deleteAccount']);
 
 // --- MASTER DATA 1: TOKO PELANGGAN & WILAYAH ---
 Router::get('/customers', [CustomerController::class, 'index']);
@@ -308,12 +310,9 @@ Router::post('/products/store-borongan-group', [ProductController::class, 'store
 Router::post('/products/update-borongan-group', [ProductController::class, 'updateBoronganGroup']);
 Router::post('/products/delete-borongan-group', [ProductController::class, 'deleteBoronganGroup']);
 
-// --- MANAJEMEN 1: OWNER COMMAND CENTER & LIVE STREAM ---
+// --- MANAJEMEN 1: OWNER EXECUTIVE DASHBOARD (BUSINESS PERFORMANCE) ---
 Router::get('/owner', [OwnerController::class, 'index']);
-Router::post('/owner/approve-draft', [OwnerController::class, 'approveDraft']);
-Router::post('/owner/reject-draft', [OwnerController::class, 'rejectDraft']);
-Router::post('/owner/consignment/approve-delivery', [OwnerController::class, 'approveConsignmentDelivery']);
-Router::post('/owner/consignment/reject-delivery', [OwnerController::class, 'rejectConsignmentDelivery']);
+
 
 // --- MANAJEMEN 2: PROFIL PENGGUNA & PENGATURAN AKUN ---
 Router::get('/profile', [ProfileController::class, 'index']);
@@ -351,6 +350,8 @@ Router::get('/pengaturan/perusahaan', [SettingsController::class, 'company']);
 Router::post('/pengaturan/perusahaan', [SettingsController::class, 'updateCompany']);
 Router::get('/settings/activity-logs', [ActivityLogController::class, 'index']);
 Router::get('/settings/logs', [ActivityLogController::class, 'index']);
+Router::get('/settings/activity-logs/export', [ActivityLogController::class, 'exportExcel']);
+Router::post('/settings/activity-logs/prune', [ActivityLogController::class, 'prune']);
 
 // --- DEVELOPER EXCLUSIVE: VISUAL ARCHITECTURE & AI BLUEPRINT ---
 Router::get('/developer/architecture', [DeveloperController::class, 'architecture']);

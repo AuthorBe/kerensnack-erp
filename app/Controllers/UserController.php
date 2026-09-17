@@ -334,7 +334,18 @@ class UserController extends Controller
             ActivityLog::record(
                 Auth::id(),
                 'UPDATE_USER',
-                "Memperbarui data akun pengguna @{$username}"
+                "Memperbarui data akun pengguna @{$username}" . (!empty($password) ? " (Reset Kata Sandi)" : ""),
+                'pengguna',
+                $id,
+                $user,
+                [
+                    'nama_lengkap' => $namaLengkap,
+                    'nama_pengguna' => $username,
+                    'peran_id' => $peranId,
+                    'status_aktif' => $statusAktif,
+                    'id_telegram' => $idTelegram,
+                    'kata_sandi_diubah' => !empty($password)
+                ]
             );
 
             Flash::success("Data akun @{$username} berhasil diperbarui.");
@@ -385,7 +396,15 @@ class UserController extends Controller
 
         Auth::touchPermissionsCache();
         $statusLabel = $newStatus ? 'diaktifkan' : 'disuspend (dinonaktifkan)';
-        ActivityLog::record(Auth::id(), 'TOGGLE_USER_STATUS', "Status user @{$user['nama_pengguna']} diubah menjadi: {$statusLabel}");
+        ActivityLog::record(
+            Auth::id(),
+            'TOGGLE_USER_STATUS',
+            "Status user @{$user['nama_pengguna']} diubah menjadi: {$statusLabel}",
+            'pengguna',
+            $id,
+            ['status_aktif' => $currentStatus],
+            ['status_aktif' => $newStatus]
+        );
         Flash::success("Akun @{$user['nama_pengguna']} berhasil {$statusLabel}.");
         $this->redirect('/users');
     }
@@ -402,7 +421,7 @@ class UserController extends Controller
         }
 
         $user = Database::fetchOne("
-            SELECT p.id, p.nama_pengguna, pr.nama_peran as peran 
+            SELECT p.id, p.nama_pengguna, p.nama_lengkap, p.status_aktif, pr.nama_peran as peran 
             FROM public.pengguna p
             JOIN public.peran pr ON p.peran_id = pr.id
             WHERE p.id = :id
@@ -440,14 +459,30 @@ class UserController extends Controller
                 ", ['id' => $id]);
 
                 Auth::touchPermissionsCache();
-                ActivityLog::record(Auth::id(), 'REVOKE_USER_ACCESS', "Mencabut akses login pengguna: @{$user['nama_pengguna']}");
+                ActivityLog::record(
+                    Auth::id(),
+                    'REVOKE_USER_ACCESS',
+                    "Mencabut akses login pengguna: @{$user['nama_pengguna']}",
+                    'pengguna',
+                    $id,
+                    ['nama_pengguna' => $user['nama_pengguna'], 'status_aktif' => $user['status_aktif']],
+                    ['nama_pengguna' => null, 'status_aktif' => false]
+                );
                 Flash::success("Akses login untuk @{$user['nama_pengguna']} berhasil dicabut. Profil karyawan tetap tersimpan aman.");
             } else {
                 // Hapus pengguna murni jika bukan karyawan
                 Database::execute("DELETE FROM public.pengguna WHERE id = :id", ['id' => $id]);
 
                 Auth::touchPermissionsCache();
-                ActivityLog::record(Auth::id(), 'DELETE_USER', "Menghapus akun pengguna: @{$user['nama_pengguna']}");
+                ActivityLog::record(
+                    Auth::id(),
+                    'DELETE_USER',
+                    "Menghapus akun pengguna: @{$user['nama_pengguna']}",
+                    'pengguna',
+                    $id,
+                    ['nama_pengguna' => $user['nama_pengguna'], 'nama_lengkap' => $user['nama_lengkap']],
+                    null
+                );
                 Flash::success("Akun @{$user['nama_pengguna']} berhasil dihapus.");
             }
         } catch (Throwable $e) {

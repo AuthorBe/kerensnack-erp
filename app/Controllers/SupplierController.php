@@ -45,7 +45,7 @@ class SupplierController extends Controller
             $suppliers = Database::fetchAll("
                 SELECT s.id, s.kode_pemasok, s.nama_pemasok, s.nama_kontak, s.alamat_lengkap, s.link_google_maps,
                        s.nomor_telepon, s.nomor_whatsapp, s.email, s.termin_bayar, s.catatan,
-                       s.detail_bank, s.nama_bank, s.nomor_rekening, s.atas_nama_rekening,
+                       s.nama_bank, s.nomor_rekening, s.atas_nama_rekening,
                        s.status_aktif, s.wilayah_id, w.nama_wilayah
                 FROM public.pemasok s
                 LEFT JOIN public.wilayah w ON s.wilayah_id = w.id
