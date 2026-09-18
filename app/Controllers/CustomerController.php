@@ -98,7 +98,7 @@ class CustomerController extends Controller
             // 1. Ambil data toko pelanggan beserta relasi & jumlah item khusus (dengan limit & offset)
             $customers = Database::fetchAll("
                 SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.is_konsinyasi,
-                       p.alamat_lengkap, p.link_google_maps, p.nomor_telepon, p.nomor_whatsapp, p.tipe_pembayaran_default,
+                       p.alamat_lengkap, p.link_google_maps, p.nomor_whatsapp, p.tipe_pembayaran_default,
                        p.nama_bank, p.nomor_rekening, p.atas_nama_rekening,
                        p.plafon_piutang, p.total_piutang_berjalan, p.status_aktif,
                        p.grup_pelanggan_id, p.wilayah_id, p.sales_driver_id,
@@ -248,8 +248,7 @@ class CustomerController extends Controller
         $wilayahId = $this->input('wilayah_id') ?: null;
         $salesDriverId = $this->input('sales_driver_id') ?: null;
         $alamat = trim((string)$this->input('alamat_lengkap', '-'));
-        $telepon = trim((string)$this->input('nomor_telepon'));
-        $whatsapp = trim((string)$this->input('nomor_whatsapp'));
+        $whatsapp = trim((string)($this->input('nomor_whatsapp') ?: $this->input('nomor_telepon')));
         $tipeBayar = (string)$this->input('tipe_pembayaran_default', 'cash');
         if (!in_array($tipeBayar, self::ALLOWED_TIPE_BAYAR, true)) {
             $tipeBayar = 'cash';
@@ -296,12 +295,12 @@ class CustomerController extends Controller
             Database::execute("
                 INSERT INTO public.pelanggan (
                     kode_pelanggan, nama_toko, nama_pemilik, grup_pelanggan_id, is_konsinyasi,
-                    wilayah_id, sales_driver_id, alamat_lengkap, link_google_maps, nomor_telepon, nomor_whatsapp,
+                    wilayah_id, sales_driver_id, alamat_lengkap, link_google_maps, nomor_whatsapp,
                     tipe_pembayaran_default, plafon_piutang,
                     nama_bank, nomor_rekening, atas_nama_rekening, status_aktif
                 ) VALUES (
                     :kode, :nama, :pemilik, :grup, :konsinyasi,
-                    :wilayah, :sales_driver_id, :alamat, :link_maps, :telp, :wa,
+                    :wilayah, :sales_driver_id, :alamat, :link_maps, :wa,
                     :bayar, :plafon,
                     :nama_bank, :nomor_rek, :atas_nama, TRUE
                 )
@@ -315,7 +314,6 @@ class CustomerController extends Controller
                 'sales_driver_id' => $salesDriverId,
                 'alamat' => $alamat,
                 'link_maps' => $linkMaps,
-                'telp' => $telepon ?: ($whatsapp ?: null),
                 'wa' => $whatsapp ?: null,
                 'bayar' => $tipeBayar,
                 'plafon' => $plafon,
@@ -354,8 +352,7 @@ class CustomerController extends Controller
         if ($alamat === '') {
             $alamat = '-';
         }
-        $telepon = trim((string)$this->input('nomor_telepon'));
-        $whatsapp = trim((string)$this->input('nomor_whatsapp'));
+        $whatsapp = trim((string)($this->input('nomor_whatsapp') ?: $this->input('nomor_telepon')));
         $tipeBayar = (string)$this->input('tipe_pembayaran_default', 'cash');
         if (!in_array($tipeBayar, self::ALLOWED_TIPE_BAYAR, true)) {
             $tipeBayar = 'cash';
@@ -628,11 +625,11 @@ class CustomerController extends Controller
                     // Insert Item Pesanan, Nolkan Rak, Catat Riwayat Stok
                     $stmtItemPesanan = $pdo->prepare("
                         INSERT INTO public.item_pesanan (
-                            pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
+                            pesanan_id, item_id, kuantitas_satuan_dasar,
                             harga_satuan_deal, diskon_item_persen, diskon_item_nominal, is_bonus,
                             subtotal, harga_pokok_satuan
                         ) VALUES (
-                            :pesanan_id, :item_id, :qty, 0,
+                            :pesanan_id, :item_id, :qty,
                             :harga_deal, 0, 0, FALSE,
                             :subtotal, :harga_pokok
                         )
@@ -735,7 +732,6 @@ class CustomerController extends Controller
                     sales_driver_id = :sales_driver_id,
                     alamat_lengkap = :alamat,
                     link_google_maps = :link_maps,
-                    nomor_telepon = :telp,
                     nomor_whatsapp = :wa,
                     tipe_pembayaran_default = :bayar,
                     plafon_piutang = :plafon,
@@ -756,7 +752,6 @@ class CustomerController extends Controller
                 'sales_driver_id' => $salesDriverId,
                 'alamat' => $alamat,
                 'link_maps' => $linkMaps,
-                'telp' => $telepon ?: ($whatsapp ?: null),
                 'wa' => $whatsapp ?: null,
                 'bayar' => $tipeBayar,
                 'plafon' => $plafon,

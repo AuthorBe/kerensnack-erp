@@ -155,10 +155,10 @@ runTest("2. Lifecycle Pesanan: Membuat pesanan B2B dengan status 'po' dan snapsh
         // Simpan rincian pesanan
         $stmtItem = $pdo->prepare("
             INSERT INTO public.item_pesanan (
-                pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
+                pesanan_id, item_id, kuantitas_satuan_dasar,
                 harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan
             ) VALUES (
-                :oid, :iid, :qty, 0,
+                :oid, :iid, :qty,
                 :harga, 0, FALSE, :subtotal, :hpp
             ) RETURNING id
         ");

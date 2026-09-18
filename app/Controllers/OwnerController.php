@@ -191,7 +191,7 @@ class OwnerController extends Controller
 
             // Top Toko dengan Piutang Terbesar
             $unpaidStoreList = Database::fetchAll("
-                SELECT p.id, p.nama_toko, p.kode_pelanggan, p.nomor_telepon,
+                SELECT p.id, p.nama_toko, p.kode_pelanggan, p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon,
                        COALESCE(k.nama_karyawan, '—') as nama_sales,
                        SUM(pes.sisa_tagihan) as total_sisa_tagihan,
                        COUNT(pes.id) as total_nota_belum_lunas
@@ -202,7 +202,7 @@ class OwnerController extends Controller
                   AND pes.status_pembayaran != 'lunas' 
                   AND pes.status_pemrosesan != 'dibatalkan'
                   AND pes.status_pembayaran != 'dibatalkan'
-                GROUP BY p.id, p.nama_toko, p.kode_pelanggan, p.nomor_telepon, k.nama_karyawan
+                GROUP BY p.id, p.nama_toko, p.kode_pelanggan, p.nomor_whatsapp, k.nama_karyawan
                 ORDER BY total_sisa_tagihan DESC
                 LIMIT 5
             ");
@@ -411,7 +411,7 @@ class OwnerController extends Controller
                     FROM public.stok_konsinyasi_toko
                     GROUP BY pelanggan_id
                 )
-                SELECT p.id, p.nama_toko, p.kode_pelanggan, p.nomor_telepon, p.alamat_lengkap,
+                SELECT p.id, p.nama_toko, p.kode_pelanggan, p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.alamat_lengkap,
                        COALESCE(k.nama_karyawan, '—') as nama_sales,
                        lo.terakhir_opname,
                        CASE 

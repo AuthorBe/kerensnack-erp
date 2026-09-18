@@ -35,6 +35,7 @@ $roleThemes = [
     'developer' => ['label' => 'Developer', 'bg' => '#fff1f2', 'color' => '#be123c', 'border' => '#fecdd3'],
     'owner'     => ['label' => 'Owner',     'bg' => '#faf5ff', 'color' => '#7e22ce', 'border' => '#e9d5ff'],
     'admin'     => ['label' => 'Admin',     'bg' => '#eff6ff', 'color' => '#1d4ed8', 'border' => '#bfdbfe'],
+    'mandor'    => ['label' => 'Mandor',    'bg' => '#fff7ed', 'color' => '#c2410c', 'border' => '#ffedd5'],
     'sales'     => ['label' => 'Sales',     'bg' => '#fefce8', 'color' => '#a16207', 'border' => '#fef08a'],
     'driver'    => ['label' => 'Driver',    'bg' => '#f0fdf4', 'color' => '#15803d', 'border' => '#bbf7d0'],
     'system'    => ['label' => 'System',    'bg' => '#f1f5f9', 'color' => '#475569', 'border' => '#cbd5e1'],
@@ -366,6 +367,8 @@ $roleThemes = [
                             $badgeStyle = 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;';
                         } elseif (str_contains($jenis, 'DELETE') || str_contains($jenis, 'HAPUS') || str_contains($jenis, 'VOID') || str_contains($jenis, 'CANCEL') || str_contains($jenis, 'BATAL')) {
                             $badgeStyle = 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;';
+                        } elseif (str_contains($jenis, 'SYNC') || str_contains($jenis, 'IMPOR')) {
+                            $badgeStyle = 'background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;';
                         } elseif (str_contains($jenis, 'PRICE') || str_contains($jenis, 'HARGA')) {
                             $badgeStyle = 'background:#fffbeb;color:#b45309;border:1px solid #fde68a;';
                         } elseif (str_contains($jenis, 'LOGIN')) {
@@ -991,6 +994,7 @@ function activityLogApp() {
             if (act.includes('CREATE') || act.includes('INSERT') || act.includes('TAMBAH')) return 'background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;';
             if (act.includes('UPDATE') || act.includes('EDIT') || act.includes('UBAH')) return 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;';
             if (act.includes('DELETE') || act.includes('HAPUS') || act.includes('VOID') || act.includes('CANCEL') || act.includes('BATAL')) return 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;';
+            if (act.includes('SYNC') || act.includes('IMPOR')) return 'background:#f0fdfa;color:#0f766e;border:1px solid #99f6e4;';
             if (act.includes('PRICE') || act.includes('HARGA')) return 'background:#fffbeb;color:#b45309;border:1px solid #fde68a;';
             if (act.includes('LOGIN')) return 'background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;';
             if (act.includes('APPROVE')) return 'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;';

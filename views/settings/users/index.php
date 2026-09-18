@@ -160,6 +160,7 @@ ob_start();
                                         'developer' => 'background:rgba(139,92,246,0.12);color:#8b5cf6;border:1px solid rgba(139,92,246,0.25);',
                                         'owner' => 'background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);',
                                         'admin' => 'background:rgba(59,130,246,0.12);color:#2563eb;border:1px solid rgba(59,130,246,0.25);',
+                                        'mandor' => 'background:rgba(249,115,22,0.12);color:#ea580c;border:1px solid rgba(249,115,22,0.25);',
                                         'sales' => 'background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.25);',
                                         'driver' => 'background:rgba(2,132,199,0.12);color:#0284c7;border:1px solid rgba(2,132,199,0.25);',
                                         default => 'background:var(--color-canvas-soft);color:var(--color-ink-secondary);border:1px solid var(--color-hairline);',
@@ -168,6 +169,7 @@ ob_start();
                                             'developer' => 'terminal',
                                             'owner' => 'crown',
                                             'admin' => 'briefcase',
+                                            'mandor' => 'hard-hat',
                                             'sales' => 'trending-up',
                                             'driver' => 'truck',
                                             default => 'tag',
@@ -198,8 +200,8 @@ ob_start();
                                     <?php endif; ?>
                                 </td>                                <td style="padding:10px 14px;text-align:right;">
                                     <div style="display:inline-flex;align-items:center;gap:4px;">
-                                        <!-- Link Loket Izin (Hanya untuk non-developer) -->
-                                        <?php if (!$isDev): ?>
+                                        <!-- Link Loket Izin (Hanya untuk non-developer jika punya izin rbac.permissions_manage) -->
+                                        <?php if (!$isDev && Auth::can('rbac.permissions_manage')): ?>
                                             <a href="<?= Router::url('/permissions?tab=user&user_id=' . urlencode($u['id'])) ?>" 
                                                data-loader="action"
                                                data-action-text="Memuat izin pengguna..."

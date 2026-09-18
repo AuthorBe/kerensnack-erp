@@ -151,6 +151,7 @@ ob_start();
                             </div>
 
                             <!-- Add Level Button -->
+                            <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
                             <template x-if="getAvailableLevels(g).length > 0">
                                 <button type="button" @click="openAddLevelModal(g)" class="btn btn-primary btn-sm flex-shrink-0 w-full sm:w-auto flex justify-center mt-2 sm:mt-0" style="padding:6px 12px;height:32px;">
                                     <i data-lucide="plus" style="width:14px;height:14px;"></i>
@@ -160,6 +161,7 @@ ob_start();
                             <template x-if="getAvailableLevels(g).length === 0">
                                 <span class="badge badge-success w-full sm:w-auto text-center justify-center mt-2 sm:mt-0">30 Level Lengkap</span>
                             </template>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -198,7 +200,9 @@ ob_start();
                                             <th style="width:120px;" class="cell-nowrap">Level</th>
                                             <th style="min-width:250px;">Nama / Sasaran Mitra Toko</th>
                                             <th class="cell-right cell-nowrap" style="width:200px;">Harga Jual Satuan</th>
+                                            <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
                                             <th class="cell-center cell-nowrap" style="width:120px;">Aksi</th>
+                                            <?php endif; ?>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -226,6 +230,7 @@ ob_start();
                                                     <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">per bungkus (pcs)</div>
                                                 </td>
 
+                                                <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
                                                 <!-- Col 4: Aksi -->
                                                 <td class="cell-center cell-nowrap">
                                                     <div class="flex items-center justify-center gap-2">
@@ -245,6 +250,7 @@ ob_start();
                                                         </template>
                                                     </div>
                                                 </td>
+                                                <?php endif; ?>
                                             </tr>
                                         </template>
                                     </tbody>
@@ -262,6 +268,7 @@ ob_start();
                                                 <span class="badge badge-mono"
                                                       :class="Number(p.level_harga) === 1 ? 'badge-primary' : 'badge-secondary'"
                                                       x-text="'Level ' + p.level_harga"></span>
+                                                <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
                                                 <div class="flex items-center gap-1">
                                                     <button type="button" @click="openEditLevelModal(g, p)" class="btn btn-ghost btn-sm" style="padding:4px 6px;" title="Ubah">
                                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
@@ -277,6 +284,7 @@ ob_start();
                                                         </span>
                                                     </template>
                                                 </div>
+                                                <?php endif; ?>
                                             </div>
                                             <div style="font-weight:700;font-size:14px;color:var(--color-ink);margin-bottom:4px;" class="truncate" :title="p.nama_level || ('Level ' + p.level_harga)" x-text="p.nama_level || ('Level ' + p.level_harga)"></div>
                                             <div style="font-size:11px;color:var(--color-ink-mute);min-height:32px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;" x-text="getMasterDesc(p.level_harga)"></div>
@@ -301,6 +309,7 @@ ob_start();
     </div>
 
     <!-- MODAL: ATUR / TAMBAH LEVEL HARGA PRODUK -->
+    <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
     <template x-teleport="body">
     <div x-show="showLevelModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:480px;padding:24px;">
@@ -375,6 +384,7 @@ ob_start();
     <form id="delete-level-form" action="<?= Router::url('/pricing/delete-level') ?>" method="POST" data-action-text="Menghapus level harga..." style="display:none;">
         <input type="hidden" name="id" id="delete-level-id">
     </form>
+    <?php endif; ?>
 
 </div>
 

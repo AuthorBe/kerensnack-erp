@@ -1,6 +1,7 @@
 <?php
 use App\Helpers\Format;
 use App\Core\Router;
+use App\Core\Auth;
 ob_start();
 ?>
 
@@ -28,6 +29,7 @@ ob_start();
                 <i data-lucide="book-open" style="width:15px;height:15px;"></i>
                 <span class="hidden sm:inline">Panduan Alur</span>
             </button>
+            <?php if (Auth::can('purchases.create')): ?>
             <button @click="openAddModal('faktur')" class="btn btn-secondary" style="font-weight:700;">
                 <i data-lucide="receipt"></i>
                 <span>+ Catat Faktur Langsung</span>
@@ -36,6 +38,7 @@ ob_start();
                 <i data-lucide="shopping-cart"></i>
                 <span>+ Buat PO Pembelian</span>
             </button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -236,12 +239,14 @@ ob_start();
                             </td>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:inline-flex;align-items:center;gap:6px;">
+                                    <?php if (Auth::can('purchases.edit')): ?>
                                     <template x-if="pb.status_penerimaan !== 'diterima' && pb.status_pembayaran !== 'batal' && pb.status_penerimaan !== 'kendala_batal'">
                                         <button type="button" @click="openQuickReceive(pb.id)" class="btn btn-sm" style="background:#059669;color:#ffffff;border-color:#059669;font-weight:700;font-size:11.5px;padding:4px 9px;border-radius:9px;display:inline-flex;align-items:center;gap:4px;" title="Verifikasi &amp; Terima Barang Fisik">
                                             <i data-lucide="package-check" style="width:13px;height:13px;"></i>
                                             <span>Terima</span>
                                         </button>
                                     </template>
+                                    <?php endif; ?>
                                     <button type="button" @click="openDetailModal(pb.id)" class="btn btn-secondary btn-sm" style="font-weight:700;font-size:12px;padding:5px 12px;border-radius:9px;display:inline-flex;align-items:center;gap:5px;">
                                         <i data-lucide="eye" style="width:14px;height:14px;color:var(--color-primary);"></i>
                                         <span>Detail</span>
@@ -267,6 +272,7 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- MODAL INPUT FAKTUR PEMBELIAN (BERJENJANG / PROGRESSIVE)                    -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can('purchases.create')): ?>
     <template x-teleport="body">
     <div x-show="showModal" x-cloak class="modal-backdrop" @keydown.window="handleModalKeydown($event)">
         <div class="modal-box purchase-modal-box" style="max-width:740px;">
@@ -816,6 +822,7 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- MODAL DETAIL PEMBELIAN / PO (TABBED - MATCHING CUSTOMER ORDERS)          -->
@@ -1316,10 +1323,12 @@ ob_start();
                                             </div>
                                         </div>
                                     </div>
+                                    <?php if (Auth::can(['purchases.edit', 'cash.outflow'])): ?>
                                     <button type="button" @click="showDetailModal = false; openPayModal(activeDetail.purchase)" class="btn" style="background:#d97706;border-color:#d97706;color:#ffffff;font-weight:700;font-size:12px;padding:9px 18px;border-radius:8px;box-shadow:0 1px 3px rgba(217,119,6,0.3);display:inline-flex;align-items:center;gap:7px;">
                                         <i data-lucide="credit-card" style="width:15px;height:15px;"></i>
                                         <span>Catat Pelunasan Sekarang</span>
                                     </button>
+                                    <?php endif; ?>
                                 </div>
                             </template>
                         </div>
@@ -1352,14 +1361,18 @@ ob_start();
                                         Barang belum dibeli di vendor. Silakan tindak lanjuti dokumen ini:
                                     </div>
                                     <div class="flex items-center gap-2 flex-wrap">
+                                        <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
                                         <button type="button" @click="openEditPoModal(activeDetail)" class="btn btn-primary btn-sm" style="background:#2563eb;border-color:#2563eb;font-weight:700;font-size:12px;padding:6px 14px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;">
                                             <i data-lucide="calendar-clock" style="width:14px;height:14px;"></i>
                                             <span>Jadwalkan Ulang / Ganti Driver</span>
                                         </button>
+                                        <?php endif; ?>
+                                        <?php if (Auth::can('purchases.edit')): ?>
                                         <button type="button" @click="showDetailModal = false; openCancelModal(activeDetail.purchase)" class="btn btn-secondary btn-sm" style="color:#991b1b;border-color:#fca5a5;font-weight:700;font-size:12px;padding:6px 14px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;">
                                             <i data-lucide="ban" style="width:14px;height:14px;"></i>
                                             <span>Batalkan PO Resmi</span>
                                         </button>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </template>
@@ -1381,6 +1394,7 @@ ob_start();
                                 </a>
 
                                 <!-- Aksi 2: Konfirmasi Penerimaan Barang di Gudang -->
+                                <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
                                 <template x-if="activeDetail.purchase.status_penerimaan !== 'diterima' && activeDetail.purchase.status_pembayaran !== 'batal' && activeDetail.purchase.status_penerimaan !== 'kendala_batal'">
                                     <button type="button" @click="openReceiveModal(activeDetail)" class="card p-3.5 hover:border-primary transition-all text-left flex items-start gap-3" style="border-radius:12px;background:rgba(16,185,129,0.04);border-color:rgba(16,185,129,0.3);">
                                         <div style="width:40px;height:40px;border-radius:10px;background:#d1fae5;color:#065f46;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1392,8 +1406,10 @@ ob_start();
                                         </div>
                                     </button>
                                 </template>
+                                <?php endif; ?>
 
                                 <!-- Aksi 3: Edit Rincian PO (Khusus PO yang belum diterima/batal) -->
+                                <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
                                 <template x-if="activeDetail.purchase.jenis_dokumen === 'po' && activeDetail.purchase.status_penerimaan !== 'diterima' && activeDetail.purchase.status_pembayaran !== 'batal'">
                                     <button type="button" @click="openEditPoModal(activeDetail)" class="card p-3.5 hover:border-blue-500 transition-all text-left flex items-start gap-3" style="border-radius:12px;background:rgba(59,130,246,0.04);border-color:rgba(59,130,246,0.3);">
                                         <div style="width:40px;height:40px;border-radius:10px;background:#dbeafe;color:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1405,8 +1421,10 @@ ob_start();
                                         </div>
                                     </button>
                                 </template>
+                                <?php endif; ?>
 
                                 <!-- Aksi 4: Bayar Hutang (Jika belum lunas) -->
+                                <?php if (Auth::can(['purchases.edit', 'cash.outflow'])): ?>
                                 <template x-if="activeDetail.purchase.status_pembayaran === 'belum_lunas'">
                                     <button type="button" @click="showDetailModal = false; openPayModal(activeDetail.purchase)" class="card p-3.5 hover:border-amber-500 transition-all text-left flex items-start gap-3" style="border-radius:12px;background:rgba(245,158,11,0.04);border-color:rgba(245,158,11,0.3);">
                                         <div style="width:40px;height:40px;border-radius:10px;background:#fef3c7;color:#92400e;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1418,8 +1436,10 @@ ob_start();
                                         </div>
                                     </button>
                                 </template>
+                                <?php endif; ?>
 
                                 <!-- Aksi 5: Batalkan Faktur/PO -->
+                                <?php if (Auth::can('purchases.edit')): ?>
                                 <template x-if="activeDetail.purchase.status_pembayaran !== 'batal'">
                                     <button type="button" @click="showDetailModal = false; openCancelModal(activeDetail.purchase)" class="card p-3.5 hover:border-red-500 transition-all text-left flex items-start gap-3" style="border-radius:12px;background:rgba(239,68,68,0.03);border-color:rgba(239,68,68,0.25);">
                                         <div style="width:40px;height:40px;border-radius:10px;background:#fee2e2;color:#991b1b;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1431,6 +1451,7 @@ ob_start();
                                         </div>
                                     </button>
                                 </template>
+                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -1483,6 +1504,7 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- MODAL PELUNASAN HUTANG VENDOR (AP)                                        -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can(['purchases.edit', 'cash.outflow'])): ?>
     <template x-teleport="body">
     <div x-show="showPayModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:480px;padding:24px;">
@@ -1536,10 +1558,12 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- MODAL BATAL FAKTUR PEMBELIAN                                              -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can('purchases.edit')): ?>
     <template x-teleport="body">
     <div x-show="showCancelModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:460px;padding:24px;">
@@ -1599,10 +1623,12 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- MODAL EDIT PO PEMBELIAN (FLEKSIBEL)                                       -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
     <template x-teleport="body">
     <div x-show="showEditPoModal" x-cloak class="modal-backdrop" @click.self="showEditPoModal = false">
         <div class="modal-box purchase-modal-box" style="max-width:760px;" @click.stop>
@@ -1836,10 +1862,12 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- MODAL KONFIRMASI TERIMA BARANG DI GUDANG (RECEIVE GOODS)                  -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
     <template x-teleport="body">
     <div x-show="showReceiveModal" x-cloak class="modal-backdrop" @click.self="showReceiveModal = false">
         <div class="modal-box purchase-modal-box" style="max-width:860px;width:94vw;" @click.stop>
@@ -2000,6 +2028,7 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- MODAL PANDUAN ALUR PEMBELIAN & PO (UNTUK ADMIN TOKO / OPERASIONAL AWAM)    -->

@@ -176,12 +176,14 @@ foreach ($stores as $st) {
                         <span x-text="expandedStoreId === '<?= $storeId ?>' ? 'Tutup Rincian' : 'Rincian Item (<?= count($storeItems) ?>)'"></span>
                         <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform duration-200" :class="expandedStoreId === '<?= $storeId ?>' ? 'rotate-180' : ''"></i>
                     </button>
+                    <?php if (Auth::can(['consignment.opname_all', 'consignment.opname_assigned'])): ?>
                     <a href="<?= Router::url('/consignment/opname?pelanggan_id=' . urlencode((string)$store['id'])) ?>" 
                        class="btn btn-primary btn-sm flex items-center justify-center gap-1 text-xs py-2 px-3.5 rounded-xl font-bold"
                        style="background:#0284c7;border-color:#0284c7;color:#fff;">
                         <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
                         <span>Opname</span>
                     </a>
+                    <?php endif; ?>
                 </div>
 
                 <!-- MOBILE DRILLDOWN (SMOOTH & LIGHTWEIGHT TRANSITION) -->
@@ -300,10 +302,12 @@ foreach ($stores as $st) {
 
                             <td class="py-3.5 px-4 text-right" @click.stop>
                                 <div class="flex items-center justify-end gap-1.5">
+                                    <?php if (Auth::can(['consignment.opname_all', 'consignment.opname_assigned'])): ?>
                                     <a href="<?= Router::url('/consignment/opname?pelanggan_id=' . urlencode((string)$store['id'])) ?>" class="btn btn-primary btn-sm py-1.5 px-2.5 rounded-lg text-xs font-bold" style="background:#0284c7;border-color:#0284c7;color:#fff;" title="Mulai Opname Toko Ini">
                                         <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
                                         <span>Opname</span>
                                     </a>
+                                    <?php endif; ?>
                                     <button type="button" @click="toggleStore('<?= $storeId ?>')" class="btn btn-secondary btn-sm p-1.5 rounded-lg transition-transform duration-200" title="Buka/Tutup Rincian">
                                         <i data-lucide="chevron-down" class="w-4 h-4 transition-transform duration-200" :class="expandedStoreId === '<?= $storeId ?>' ? 'rotate-180' : ''"></i>
                                     </button>

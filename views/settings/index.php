@@ -70,9 +70,18 @@ ob_start();
     .card-ai:hover { border-color: #8b5cf6; }
     .card-ai .icon-box { background: rgba(139, 92, 246, 0.1); color: #7c3aed; }
 
+    /* Developer Card Slot: Selalu di urutan paling akhir/bawah di grid */
+    .developer-card-slot {
+        order: 999999 !important;
+    }
+
     .card-log::before { background: linear-gradient(90deg, #0284c7, #38bdf8); }
     .card-log:hover { border-color: #0284c7; }
     .card-log .icon-box { background: rgba(2, 132, 199, 0.1); color: #0284c7; }
+
+    .card-import::before { background: linear-gradient(90deg, #059669, #34d399); }
+    .card-import:hover { border-color: #059669; }
+    .card-import .icon-box { background: rgba(5, 150, 105, 0.1); color: #059669; }
 
     .icon-box {
         width: 44px;
@@ -149,6 +158,56 @@ ob_start();
     .settings-card:hover .settings-link i {
         transform: translateX(4px);
     }
+
+    /* ── Settings Card Badges (Comfortable padding & clean typography) ── */
+    .settings-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 11px;
+        border-radius: 9999px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.35;
+        letter-spacing: 0.015em;
+        white-space: nowrap;
+        border: 1px solid transparent;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+    }
+
+    .settings-badge-blue {
+        background-color: rgba(59, 130, 246, 0.08);
+        color: #1d4ed8;
+        border-color: rgba(59, 130, 246, 0.25);
+    }
+    .dark .settings-badge-blue {
+        background-color: rgba(59, 130, 246, 0.18);
+        color: #93c5fd;
+        border-color: rgba(59, 130, 246, 0.35);
+    }
+
+    .settings-badge-purple {
+        background-color: rgba(139, 92, 246, 0.08);
+        color: #6d28d9;
+        border-color: rgba(139, 92, 246, 0.25);
+    }
+    .dark .settings-badge-purple {
+        background-color: rgba(139, 92, 246, 0.18);
+        color: #c4b5fd;
+        border-color: rgba(139, 92, 246, 0.35);
+    }
+
+    .settings-badge-emerald {
+        background-color: rgba(16, 185, 129, 0.08);
+        color: #047857;
+        border-color: rgba(16, 185, 129, 0.25);
+    }
+    .dark .settings-badge-emerald {
+        background-color: rgba(16, 185, 129, 0.18);
+        color: #6ee7b7;
+        border-color: rgba(16, 185, 129, 0.35);
+    }
 </style>
 
 <div class="space-y-4 sm:space-y-6 pb-20 max-w-7xl mx-auto">
@@ -216,14 +275,14 @@ ob_start();
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5 settings-grid">
 
         <!-- KARTU 0: Profil & Informasi Perusahaan (Kop Dokumen) -->
-        <?php if (Auth::can('settings.company_manage') || in_array(strtolower((string)Auth::role()), ['developer', 'owner', 'admin'], true)): ?>
+        <?php if (Auth::can('settings.company_manage')): ?>
         <div>
             <a href="<?= Router::url('/settings/company') ?>" class="settings-card card-company group">
                 <div class="flex items-center justify-between">
                     <div class="icon-box">
                         <i data-lucide="building-2" class="w-5 h-5 sm:w-6 sm:h-6"></i>
                     </div>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                    <span class="settings-badge settings-badge-blue">
                         Kop &amp; Dokumen
                     </span>
                 </div>
@@ -271,29 +330,7 @@ ob_start();
         </div>
         <?php endif; ?>
 
-        <!-- KARTU 3: Portal Developer (Khusus Role Developer) -->
-        <?php if (Auth::isDeveloper()): ?>
-        <div>
-            <a href="<?= Router::url('/developer') ?>" class="settings-card card-ai group">
-                <div class="flex items-center justify-between">
-                    <div class="icon-box">
-                        <i data-lucide="terminal" class="w-5 h-5 sm:w-6 sm:h-6"></i>
-                    </div>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                        Khusus Developer
-                    </span>
-                </div>
-                <h5 class="card-title text-slate-900 dark:text-white">Portal Developer</h5>
-                <p class="card-desc text-slate-500 dark:text-slate-400">Pusat kendali pengembang: Arsitektur Sistem (Blueprint &amp; AI Studio), Diagnostik Database (Test DB), dan Test Source Runner otomatis (23 suites).</p>
-                <div class="settings-link text-purple-600 dark:text-purple-400">
-                    <span>Buka Portal Developer</span>
-                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
-                </div>
-            </a>
-        </div>
-        <?php endif; ?>
-
-        <!-- KARTU 4: Log Aktivitas Sistem & Audit Trail -->
+        <!-- KARTU 3: Log Aktivitas Sistem & Audit Trail -->
         <?php if (Auth::can('system.activity_log')): ?>
         <div>
             <a href="<?= Router::url('/settings/activity-logs') ?>" class="settings-card card-log group">
@@ -304,6 +341,51 @@ ob_start();
                 <p class="card-desc text-slate-500 dark:text-slate-400">Periksa rekam jejak audit staf: siapa yang mengubah harga, membatalkan faktur, waktu kejadian, dan detail data sebelum/sesudah.</p>
                 <div class="settings-link text-sky-600 dark:text-sky-400">
                     <span>Lihat Log Aktivitas</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+                </div>
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <!-- KARTU 4: Impor & Sinkronisasi Data Excel/CSV -->
+        <?php if (Auth::can('system.import_data')): ?>
+        <div>
+            <a href="<?= Router::url('/settings/impor-data') ?>" class="settings-card card-import group">
+                <div class="flex items-center justify-between">
+                    <div class="icon-box">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                    </div>
+                    <span class="settings-badge settings-badge-emerald">
+                        Excel &bull; 10 Master
+                    </span>
+                </div>
+                <h5 class="card-title text-slate-900 dark:text-white">Impor &amp; Sinkronisasi Data</h5>
+                <p class="card-desc text-slate-500 dark:text-slate-400">Sinkronisasi massal seluruh master data (Pelanggan, Produk, Pemasok, Karyawan, Matriks Harga) via Excel dengan smart diff, deteksi konflik, dan proteksi transaksi.</p>
+                <div class="settings-link text-emerald-600 dark:text-emerald-400">
+                    <span>Buka Pusat Sinkronisasi</span>
+                    <i data-lucide="arrow-right" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+                </div>
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <?php if (Auth::isDeveloper()): ?>
+        <!-- KARTU TERAKHIR: Portal Developer (Khusus Developer, Selalu di Urutan Paling Bawah) -->
+        <!-- NOTE: Kelas .developer-card-slot & inline style order: 999999 menjamin kartu ini tetap di paling akhir meskipun di kemudian hari ada menu kartu baru yang ditambahkan ke grid -->
+        <div class="developer-card-slot" style="order: 999999;">
+            <a href="<?= Router::url('/developer') ?>" class="settings-card card-ai group">
+                <div class="flex items-center justify-between">
+                    <div class="icon-box">
+                        <i data-lucide="terminal" class="w-5 h-5 sm:w-6 sm:h-6"></i>
+                    </div>
+                    <span class="settings-badge settings-badge-purple">
+                        Khusus Developer
+                    </span>
+                </div>
+                <h5 class="card-title text-slate-900 dark:text-white">Portal Developer</h5>
+                <p class="card-desc text-slate-500 dark:text-slate-400">Pusat kendali pengembang: Arsitektur Sistem (Blueprint &amp; AI Studio), Diagnostik Database (Test DB), dan Test Source Runner otomatis (23 suites).</p>
+                <div class="settings-link text-purple-600 dark:text-purple-400">
+                    <span>Buka Portal Developer</span>
                     <i data-lucide="arrow-right" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
                 </div>
             </a>

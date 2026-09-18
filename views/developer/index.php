@@ -36,6 +36,10 @@ ob_start();
             </div>
 
             <div class="flex items-center gap-3">
+                <a href="<?= Router::url('/developer/preview-403') ?>" class="btn btn-secondary" style="font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);color:#f43f5e;">
+                    <i data-lucide="gift" style="width:16px;height:16px;"></i>
+                    <span>Preview 403 Kado</span>
+                </a>
                 <div class="text-right hidden sm:block">
                     <div style="font-size:11px;color:var(--color-ink-mute);font-weight:600;">PENGGUNA AKTIF</div>
                     <div style="font-size:13px;font-weight:800;color:var(--color-ink);"><?= htmlspecialchars($telemetry['active_user'] ?? 'Developer') ?></div>
@@ -129,7 +133,7 @@ ob_start();
                 </p>
 
                 <div class="flex flex-wrap gap-1.5 mb-6">
-                    <span class="badge badge-mono" style="font-size:10px;">23 Test Suites</span>
+                    <span class="badge badge-mono" style="font-size:10px;">24 Test Suites</span>
                     <span class="badge badge-mono" style="font-size:10px;">Real-time AJAX</span>
                     <span class="badge badge-mono" style="font-size:10px;">Auto Rollback</span>
                     <span class="badge badge-mono" style="font-size:10px;">Anti-Timeout</span>
@@ -201,7 +205,7 @@ ob_start();
                         <div style="width:26px;height:26px;border-radius:6px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);display:flex;align-items:center;justify-content:center;color:#a78bfa;flex-shrink:0;">
                             <i data-lucide="play" style="width:14px;height:14px;"></i>
                         </div>
-                        <span style="font-size:13px;font-weight:800;color:#f8fafc;letter-spacing:0.01em;">2. Jalankan Seluruh 23 Test Suites via CLI</span>
+                        <span style="font-size:13px;font-weight:800;color:#f8fafc;letter-spacing:0.01em;">2. Jalankan Seluruh 24 Test Suites via CLI</span>
                     </div>
                     <p style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">
                         Mengeksekusi 23 test suites terpadu secara batch lengkap dengan tabel kalkulasi waktu dan status:

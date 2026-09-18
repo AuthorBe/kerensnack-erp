@@ -1,6 +1,7 @@
 <?php
 use App\Helpers\Format;
 use App\Core\Router;
+use App\Core\Auth;
 ob_start();
 ?>
 
@@ -24,18 +25,24 @@ ob_start();
             </div>
         </div>
         <div class="page-header-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <?php if (Auth::can('cash.inflow')): ?>
             <button type="button" @click="openInflowModal()" class="btn btn-success" style="background:#059669; color:#fff; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
                 <i data-lucide="arrow-down-left" style="width:16px; height:16px;"></i>
                 <span>Kas Masuk</span>
             </button>
+            <?php endif; ?>
+            <?php if (Auth::can('cash.outflow')): ?>
             <button type="button" @click="openOutflowModal()" class="btn btn-danger" style="background:#ef4444; color:#fff; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
                 <i data-lucide="arrow-up-right" style="width:16px; height:16px;"></i>
                 <span>Kas Keluar (Beban)</span>
             </button>
+            <?php endif; ?>
+            <?php if (Auth::can('cash.transfer')): ?>
             <button type="button" @click="openTransferModal()" class="btn btn-primary" style="background:#3b82f6; color:#fff; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
                 <i data-lucide="arrow-left-right" style="width:16px; height:16px;"></i>
                 <span>Transfer Antar Kas</span>
             </button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -300,6 +307,7 @@ ob_start();
     <!-- ========================================================================= -->
 
     <!-- MODAL 1: CATAT KAS MASUK -->
+    <?php if (Auth::can('cash.inflow')): ?>
     <template x-teleport="body">
     <div x-show="showInflowModal" x-cloak class="modal-backdrop" @click.self="showInflowModal = false">
         <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
@@ -366,8 +374,10 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- MODAL 2: CATAT KAS KELUAR (BEBAN OPERASIONAL) -->
+    <?php if (Auth::can('cash.outflow')): ?>
     <template x-teleport="body">
     <div x-show="showOutflowModal" x-cloak class="modal-backdrop" @click.self="showOutflowModal = false">
         <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
@@ -434,8 +444,10 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- MODAL 3: TRANSFER ANTAR KAS (MUTASI DANA) -->
+    <?php if (Auth::can('cash.transfer')): ?>
     <template x-teleport="body">
     <div x-show="showTransferModal" x-cloak class="modal-backdrop" @click.self="showTransferModal = false">
         <div class="modal-box" style="max-width:500px;padding:24px;" @click.stop>
@@ -519,6 +531,7 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
 </div>
 

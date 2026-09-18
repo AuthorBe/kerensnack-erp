@@ -287,10 +287,10 @@ runTest("2.4.1 Registrasi Produk dengan Saldo Awal > 0 Mencatat Riwayat Stok", f
 
     $stmt = $pdo->prepare("
         INSERT INTO public.item (
-            grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, satuan_distribusi,
+            grup_id, kode_sku, nama_item, tipe_item, satuan_dasar,
             harga_pokok_pembelian, stok_minimum_peringatan, stok_fisik_saat_ini, status_jual, status_aktif
         ) VALUES (
-            :gid, :sku, :nama, 'barang_jadi', 'pcs', 'bal',
+            :gid, :sku, :nama, 'barang_jadi', 'pcs',
             12500, 10, :stok, TRUE, TRUE
         ) RETURNING id
     ");
@@ -484,10 +484,10 @@ runTest("2.5.3 Integrasi DB: Snapshot HPP Tersimpan di item_pesanan", function()
 
         $stmtItem = $pdo->prepare("
             INSERT INTO public.item_pesanan (
-                pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
+                pesanan_id, item_id, kuantitas_satuan_dasar,
                 harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan
             ) VALUES (
-                :order_id, :item_id, 2, 0,
+                :order_id, :item_id, 2,
                 25000, 0, FALSE, 50000, :hpp
             ) RETURNING id
         ");

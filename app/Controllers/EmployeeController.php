@@ -25,7 +25,7 @@ class EmployeeController extends Controller
             $employees = Database::fetchAll("
                 SELECT k.id, k.nik, k.nama_karyawan, k.posisi, k.tipe_penggajian,
                        k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
-                       k.nomor_telepon, k.alamat, k.tanggal_bergabung,
+                       k.nomor_telepon, k.nomor_whatsapp, k.alamat, k.tanggal_bergabung,
                        k.nomor_polisi_kendaraan,
                        k.bank_nama, k.bank_nomor_rekening, k.bank_atas_nama,
                        k.status_aktif,
@@ -93,15 +93,15 @@ class EmployeeController extends Controller
         $nama = trim((string)$this->input('nama_karyawan'));
         $nik = trim((string)$this->input('nik')) ?: null;
         $posisi = $this->input('posisi', 'pengemasan');
-        $tipeGaji = $this->input('tipe_penggajian', 'borongan');
+        $tipeGaji = strtolower(trim((string)$this->input('tipe_penggajian', 'borongan')));
+        if (!in_array($tipeGaji, ['borongan', 'bulanan'], true)) {
+            $tipeGaji = ($posisi === 'pengemasan') ? 'borongan' : 'bulanan';
+        }
         $gajiPokok = (float)preg_replace('/[^0-9]/', '', (string)$this->input('gaji_pokok_bulanan', '0'));
         $uangHadir = (float)preg_replace('/[^0-9]/', '', (string)$this->input('uang_kehadiran_harian', '0'));
         $tunjangan = (float)preg_replace('/[^0-9]/', '', (string)$this->input('tunjangan_bulanan', '0'));
 
-        if ($posisi === 'sales') {
-            $tipeGaji = ($gajiPokok > 0) ? 'bulanan' : (($uangHadir > 0) ? 'harian' : 'bulanan');
-        }
-        $telepon = trim((string)$this->input('nomor_telepon'));
+        $whatsapp = trim((string)($this->input('nomor_whatsapp') ?: $this->input('nomor_telepon')));
         $alamat = trim((string)$this->input('alamat', '-'));
         $nopol = trim((string)$this->input('nomor_polisi_kendaraan', ''));
         $tglBergabung = $this->input('tanggal_bergabung') ?: date('Y-m-d');
@@ -127,10 +127,10 @@ class EmployeeController extends Controller
 
             $stmt = $pdo->prepare("
                 INSERT INTO public.pengguna (
-                    nama_lengkap, nik, posisi, nomor_telepon, alamat, nomor_polisi_kendaraan,
+                    nama_lengkap, nik, posisi, nomor_telepon, nomor_whatsapp, alamat, nomor_polisi_kendaraan,
                     tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif
                 ) VALUES (
-                    :nama, :nik, :posisi, :telp, :alamat, :nopol, :tgl,
+                    :nama, :nik, :posisi, :wa, :wa, :alamat, :nopol, :tgl,
                     :bank, :rek, :an, TRUE
                 ) RETURNING id
             ");
@@ -138,7 +138,7 @@ class EmployeeController extends Controller
                 'nama' => $nama,
                 'nik' => $nik,
                 'posisi' => $posisi,
-                'telp' => $telepon ?: null,
+                'wa' => $whatsapp ?: null,
                 'alamat' => $alamat,
                 'nopol' => $nopol ?: null,
                 'tgl' => $tglBergabung,
@@ -207,15 +207,15 @@ class EmployeeController extends Controller
         $nama = trim((string)$this->input('nama_karyawan'));
         $nik = trim((string)$this->input('nik')) ?: null;
         $posisi = $this->input('posisi', 'pengemasan');
-        $tipeGaji = $this->input('tipe_penggajian', 'borongan');
+        $tipeGaji = strtolower(trim((string)$this->input('tipe_penggajian', 'borongan')));
+        if (!in_array($tipeGaji, ['borongan', 'bulanan'], true)) {
+            $tipeGaji = ($posisi === 'pengemasan') ? 'borongan' : 'bulanan';
+        }
         $gajiPokok = (float)preg_replace('/[^0-9]/', '', (string)$this->input('gaji_pokok_bulanan', '0'));
         $uangHadir = (float)preg_replace('/[^0-9]/', '', (string)$this->input('uang_kehadiran_harian', '0'));
         $tunjangan = (float)preg_replace('/[^0-9]/', '', (string)$this->input('tunjangan_bulanan', '0'));
 
-        if ($posisi === 'sales') {
-            $tipeGaji = ($gajiPokok > 0) ? 'bulanan' : (($uangHadir > 0) ? 'harian' : 'bulanan');
-        }
-        $telepon = trim((string)$this->input('nomor_telepon'));
+        $whatsapp = trim((string)($this->input('nomor_whatsapp') ?: $this->input('nomor_telepon')));
         $alamat = trim((string)$this->input('alamat', '-'));
         $nopol = trim((string)$this->input('nomor_polisi_kendaraan', ''));
         $bankNama = trim((string)$this->input('bank_nama', 'Tunai'));
@@ -253,8 +253,8 @@ class EmployeeController extends Controller
                         nik = :nik,
                         nama_lengkap = :nama,
                         posisi = :posisi,
-                        nomor_telepon = :telp,
-                        nomor_whatsapp = :telp,
+                        nomor_telepon = :wa,
+                        nomor_whatsapp = :wa,
                         alamat = :alamat,
                         nomor_polisi_kendaraan = :nopol,
                         bank_nama = :bank,
@@ -269,7 +269,7 @@ class EmployeeController extends Controller
                     'nik' => $nik,
                     'nama' => $nama,
                     'posisi' => $posisi,
-                    'telp' => $telepon ?: null,
+                    'wa' => $whatsapp ?: null,
                     'alamat' => $alamat,
                     'nopol' => $nopol ?: null,
                     'bank' => $bankNama ?: 'Tunai',

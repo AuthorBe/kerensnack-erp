@@ -344,12 +344,11 @@ class CustomerOrderController extends Controller
             // 2. Daftar Item Pesanan
             $sqlItems = "
                 SELECT ip.id, ip.item_id, ip.kuantitas_satuan_dasar, 
-                       ip.kuantitas_satuan_distribusi as jumlah_bal,
                        ip.harga_satuan_deal as harga_satuan_dasar, 
                        ip.diskon_item_persen as diskon_persen, 
                        ip.diskon_item_nominal as diskon_nominal, 
                        ip.is_bonus, ip.subtotal,
-                       i.kode_sku, i.nama_item, i.satuan_dasar, i.satuan_distribusi,
+                       i.kode_sku, i.nama_item, i.satuan_dasar,
                        gp.nama_grup as nama_grup_produk
                 FROM public.item_pesanan ip
                 JOIN public.item i ON ip.item_id = i.id
@@ -486,7 +485,7 @@ class CustomerOrderController extends Controller
             // 4. Ambil Katalog Barang Jadi (137 SKU)
             $products = Database::fetchAll("
                 SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
-                       i.satuan_dasar, i.satuan_distribusi, i.stok_fisik_saat_ini,
+                       i.satuan_dasar, i.stok_fisik_saat_ini,
                        gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
@@ -752,10 +751,10 @@ class CustomerOrderController extends Controller
             // 4. Insert Detail Items (Stok gudang belum dipotong di tahap PO)
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
-                    pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
+                    pesanan_id, item_id, kuantitas_satuan_dasar,
                     harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan, dibuat_pada
                 ) VALUES (
-                    :pesanan_id, :item_id, :qty_dasar, :qty_dist,
+                    :pesanan_id, :item_id, :qty_dasar,
                     :harga, :diskon, :bonus, :subtotal, :hpp, NOW()
                 )
             ");
@@ -773,7 +772,6 @@ class CustomerOrderController extends Controller
                     'pesanan_id' => $orderId,
                     'item_id' => $itemId,
                     'qty_dasar' => $qtyPcs,
-                    'qty_dist' => 0,
                     'harga' => $harga,
                     'diskon' => $diskon,
                     'bonus' => $isBonus ? 'true' : 'false',
@@ -941,7 +939,7 @@ class CustomerOrderController extends Controller
             // Ambil Katalog Barang Jadi
             $products = Database::fetchAll("
                 SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
-                       i.satuan_dasar, i.satuan_distribusi, i.stok_fisik_saat_ini,
+                       i.satuan_dasar, i.stok_fisik_saat_ini,
                        gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
@@ -1280,10 +1278,10 @@ class CustomerOrderController extends Controller
             // 4. Insert Detail Items Baru (Stok gudang belum dipotong di tahap PO)
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
-                    pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
+                    pesanan_id, item_id, kuantitas_satuan_dasar,
                     harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan, dibuat_pada
                 ) VALUES (
-                    :pesanan_id, :item_id, :qty_dasar, :qty_dist,
+                    :pesanan_id, :item_id, :qty_dasar,
                     :harga, :diskon, :bonus, :subtotal, :hpp, NOW()
                 )
             ");
@@ -1301,7 +1299,6 @@ class CustomerOrderController extends Controller
                     'pesanan_id' => $id,
                     'item_id' => $itemId,
                     'qty_dasar' => $qtyPcs,
-                    'qty_dist' => $qtyPcs,
                     'harga' => $harga,
                     'diskon' => $diskon,
                     'bonus' => $isBonus ? 'true' : 'false',

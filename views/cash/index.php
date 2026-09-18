@@ -1,6 +1,7 @@
 <?php
 use App\Helpers\Format;
 use App\Core\Router;
+use App\Core\Auth;
 ob_start();
 ?>
 
@@ -28,10 +29,12 @@ ob_start();
                 <i data-lucide="arrow-left-right" style="width:15px; height:15px;"></i>
                 <span>Lihat Transaksi Kas</span>
             </a>
+            <?php if (Auth::can('cash.manage_accounts')): ?>
             <button @click="openAddAccountModal()" class="btn btn-primary" style="font-weight:700; display:inline-flex; align-items:center; gap:6px;">
                 <i data-lucide="plus" style="width:16px; height:16px;"></i>
                 <span>Tambah Akun Kas</span>
             </button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -208,7 +211,7 @@ ob_start();
                             <i data-lucide="check-circle-2" style="width:12px;height:12px;"></i>
                             <span>Default POS</span>
                         </span>
-                    <?php elseif ($acc['status_aktif']): ?>
+                    <?php elseif ($acc['status_aktif'] && Auth::can('cash.manage_accounts')): ?>
                         <form action="<?= Router::url('/cash/set-default-pos') ?>" method="POST" style="margin:0;">
                             <input type="hidden" name="id" value="<?= $acc['id'] ?>">
                             <button type="submit" class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--color-ink-mute);padding:3px 8px;border-radius:12px;border:1px dashed var(--color-hairline);" title="Jadikan akun ini sebagai penerima kasir POS">
@@ -252,6 +255,7 @@ ob_start();
                         <span>Mutasi</span>
                     </a>
 
+                    <?php if (Auth::can('cash.manage_accounts')): ?>
                     <!-- Edit Button -->
                     <button type="button" @click="openEditAccountModal(<?= htmlspecialchars(json_encode($acc)) ?>)" class="btn btn-ghost btn-sm" style="padding:4px 8px;" title="Edit Akun Kas">
                         <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
@@ -263,6 +267,7 @@ ob_start();
                             <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
                         </button>
                     <?php endif; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -272,6 +277,7 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- MODAL 1: TAMBAH / EDIT AKUN KAS                                           -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can('cash.manage_accounts')): ?>
     <template x-teleport="body">
     <div x-show="showAccountModal" x-cloak class="modal-backdrop" @click.self="showAccountModal = false">
         <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
@@ -380,6 +386,7 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
 </div>
 

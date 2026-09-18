@@ -254,6 +254,10 @@ class AuthController extends Controller
                     $this->redirect('/consignment');
                     return;
                 }
+                if ($userDb['peran'] === 'mandor') {
+                    $this->redirect('/inventory');
+                    return;
+                }
                 if ($userDb['peran'] === 'owner') {
                     $this->redirect('/owner');
                     return;

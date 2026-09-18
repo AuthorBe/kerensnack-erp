@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * developer/run_all.php
- * Developer Console CLI Shortcut for Unified Test Suite Runner (23 Suites)
+ * Developer Console CLI Shortcut for Unified Test Suite Runner (26 Suites)
  * Delegates to App\Services\TestRunnerService (Single Source of Truth)
  * 
  * Usage:

@@ -509,7 +509,7 @@ ob_start();
                     </div>
                     <?php else: ?>
                     <?php foreach ($unpaidStoreList as $us): 
-                        $storePhone = preg_replace('/[^0-9]/', '', (string)($us['nomor_telepon'] ?? ''));
+                        $storePhone = preg_replace('/[^0-9]/', '', (string)($us['nomor_whatsapp'] ?? $us['nomor_telepon'] ?? ''));
                         if (str_starts_with($storePhone, '0')) {
                             $storePhone = '62' . substr($storePhone, 1);
                         }
@@ -907,7 +907,7 @@ ob_start();
                         <div class="flex justify-between items-center text-[10.5px]" style="color:var(--color-ink-mute);">
                             <span>Sales: <strong style="color:var(--color-ink);"><?= htmlspecialchars($os['nama_sales'] ?? '—') ?></strong></span>
                             <?php 
-                            $osPhone = preg_replace('/[^0-9]/', '', (string)($os['nomor_telepon'] ?? ''));
+                            $osPhone = preg_replace('/[^0-9]/', '', (string)($os['nomor_whatsapp'] ?? $os['nomor_telepon'] ?? ''));
                             if (str_starts_with($osPhone, '0')) {
                                 $osPhone = '62' . substr($osPhone, 1);
                             }
@@ -917,10 +917,10 @@ ob_start();
                                target="_blank"
                                class="badge badge-success font-mono text-[9.5px] hover:opacity-80 inline-flex items-center gap-1" title="Chat WhatsApp Toko">
                                 <i data-lucide="message-circle" style="width:10px;height:10px;"></i>
-                                <span><?= htmlspecialchars($os['nomor_telepon']) ?></span>
+                                <span><?= htmlspecialchars($os['nomor_whatsapp'] ?? $os['nomor_telepon'] ?? '') ?></span>
                             </a>
                             <?php else: ?>
-                            <span>Telp: —</span>
+                            <span>WA: —</span>
                             <?php endif; ?>
                         </div>
                     </div>

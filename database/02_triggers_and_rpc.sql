@@ -102,8 +102,7 @@ BEGIN
             'varian_rasa', i.varian_rasa,
             'grup_nama', gp.nama_grup,
             'stok_fisik', i.stok_fisik_saat_ini,
-            'satuan_dasar', i.satuan_dasar,
-            'satuan_distribusi', i.satuan_distribusi
+            'satuan_dasar', i.satuan_dasar
         )
     ) INTO v_items
     FROM public.item i
@@ -451,7 +450,7 @@ BEGIN
     -- Insert item_pesanan: agregasi dari semua rincian kunjungan terpilih (group by item)
     INSERT INTO public.item_pesanan (
         pesanan_id, item_id,
-        kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
+        kuantitas_satuan_dasar,
         harga_satuan_deal, diskon_item_persen, diskon_item_nominal,
         is_bonus, subtotal, dibuat_pada
     )
@@ -459,7 +458,6 @@ BEGIN
         v_pesanan_id,
         rkk.item_id,
         SUM(rkk.jumlah_laku_terjual),
-        0,
         MAX(rkk.harga_satuan_deal),
         0.00, 0.00,
         FALSE,

@@ -573,6 +573,12 @@
         return 'Keluar sistem...';
       } else if (formAction.includes('toggle-status')) {
         return 'Mengubah status akun pengguna...';
+      } else if (formAction.includes('preview') || formAction.includes('pratinjau') || formId.includes('preview')) {
+        return 'Membaca berkas & menganalisis pratinjau...';
+      } else if ((formAction.includes('confirm') || formId.includes('confirm')) && (formAction.includes('impor') || formId.includes('sync'))) {
+        return 'Menerapkan sinkronisasi data...';
+      } else if (formAction.includes('impor') || formAction.includes('import')) {
+        return 'Memproses impor data...';
       } else if (formAction.includes('delete') || formAction.includes('hapus') || formId.includes('delete') || formId.includes('hapus')) {
         return 'Menghapus data...';
       } else if (formAction.includes('update') || formAction.includes('edit')) {
@@ -598,6 +604,30 @@
     }
   }
 
+  function getSmartActionSubtext(form) {
+    if (!form) return '';
+    try {
+      let customSubtext = (typeof form.getAttribute === 'function') ? form.getAttribute('data-action-subtext') : null;
+      if (customSubtext) return customSubtext;
+
+      let formAction = '';
+      if (typeof form.getAttribute === 'function') {
+        formAction = (form.getAttribute('action') || '').toLowerCase();
+      } else if (typeof form.action === 'string') {
+        formAction = form.action.toLowerCase();
+      }
+
+      if (formAction.includes('preview') || formAction.includes('pratinjau')) {
+        return 'Mempersiapkan pratinjau perbandingan data...';
+      } else if (formAction.includes('confirm') && (formAction.includes('impor') || formAction.includes('sync'))) {
+        return 'Menjalankan transaksi database secara atomic...';
+      }
+      return '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   // Global Native form.submit() & requestSubmit() Monkey-Patch (Intersepsi seluruh submit form via script / Alpine / modal)
   const _nativeFormSubmit = HTMLFormElement.prototype.submit;
   HTMLFormElement.prototype.submit = function() {
@@ -608,7 +638,8 @@
         if (wantsAction) {
           if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
           const text = getSmartActionText(this);
-          if (typeof AppAction !== 'undefined') AppAction.show(text);
+          const subtext = getSmartActionSubtext(this);
+          if (typeof AppAction !== 'undefined') AppAction.show(text, subtext);
           try {
             sessionStorage.setItem('app_action_triggered', 'true');
             if (method === 'GET') sessionStorage.setItem('app_action_dismiss_on_load', 'true');
@@ -619,7 +650,8 @@
         } else {
           if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
           const text = getSmartActionText(this);
-          if (typeof AppAction !== 'undefined') AppAction.show(text);
+          const subtext = getSmartActionSubtext(this);
+          if (typeof AppAction !== 'undefined') AppAction.show(text, subtext);
           try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (e) {}
         }
       }
@@ -639,7 +671,8 @@
           if (wantsAction || method !== 'GET') {
             if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
             const text = getSmartActionText(this);
-            if (typeof AppAction !== 'undefined') AppAction.show(text);
+            const subtext = getSmartActionSubtext(this);
+            if (typeof AppAction !== 'undefined') AppAction.show(text, subtext);
             try {
               sessionStorage.setItem('app_action_triggered', 'true');
               if (method === 'GET') sessionStorage.setItem('app_action_dismiss_on_load', 'true');
@@ -681,7 +714,8 @@
         form.removeAttribute('data-confirm'); // prevent infinite loop
         if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
         const customText = getSmartActionText(form);
-        if (typeof AppAction !== 'undefined') AppAction.show(customText);
+        const customSubtext = getSmartActionSubtext(form);
+        if (typeof AppAction !== 'undefined') AppAction.show(customText, customSubtext);
         try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (err) {}
         
         // Defensive: Jika form terlepas dari DOM (misal modal tertutup/terdestroy oleh Alpine),

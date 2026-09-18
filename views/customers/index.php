@@ -146,10 +146,12 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 </select>
             </div>
 
+            <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
             <button @click="openAddModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Toko Baru</span>
             </button>
+            <?php endif; ?>
         </div>
 
         <!-- TABLE LIST -->
@@ -231,6 +233,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                 </template>
                             </td>
                             <td class="cell-center cell-nowrap">
+                                <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
                                 <template x-if="c.total_item_khusus > 0">
                                     <button type="button" @click="openCustomerItemsModal(c)" class="badge badge-success" title="Klik untuk atur daftar item khusus toko ini">
                                         <span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;opacity:0.85;"></span>
@@ -243,12 +246,27 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                         <span>Semua Produk (Default)</span>
                                     </button>
                                 </template>
+                                <?php else: ?>
+                                <template x-if="c.total_item_khusus > 0">
+                                    <span class="badge badge-success">
+                                        <span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;opacity:0.85;"></span>
+                                        <span x-text="c.total_item_khusus + ' Item Khusus'"></span>
+                                    </span>
+                                </template>
+                                <template x-if="!c.total_item_khusus || c.total_item_khusus == 0">
+                                    <span class="badge badge-secondary">
+                                        <span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;opacity:0.5;"></span>
+                                        <span>Semua Produk (Default)</span>
+                                    </span>
+                                </template>
+                                <?php endif; ?>
                             </td>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
                                     <a :href="'/customer-orders?pelanggan_id=' + c.id" class="btn btn-ghost btn-sm" style="padding:6px;color:#2563eb;" title="Lihat Faktur & Riwayat Pesanan Toko">
                                         <i data-lucide="receipt" style="width:14px;height:14px;"></i>
                                     </a>
+                                    <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
                                     <button @click="openCustomerItemsModal(c)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Atur Item Khusus Toko">
                                         <i data-lucide="list-checks" style="width:15px;height:15px;color:var(--color-ink-secondary);"></i>
                                     </button>
@@ -258,6 +276,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                     <button @click="deleteCustomer(c.id, c.nama_toko)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Toko">
                                         <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                                     </button>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -308,10 +327,12 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 <input type="text" x-model="searchCustomerGroup" placeholder="Cari nama grup / kode..." class="form-input" style="height:38px;font-size:13px;">
             </div>
 
+            <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
             <button @click="openAddCustomerGroupModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Grup Pelanggan</span>
             </button>
+            <?php endif; ?>
         </div>
 
         <!-- TABLE LIST GRUP PELANGGAN -->
@@ -326,7 +347,9 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <th class="cell-right cell-nowrap" style="width:150px;">Diskon Nominal</th>
                         <th class="cell-center cell-nowrap" style="width:120px;">Toko Terdaftar</th>
                         <th class="cell-center cell-nowrap" style="width:90px;">Status</th>
+                        <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
                         <th class="cell-center cell-nowrap" style="width:90px;">Aksi</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -350,6 +373,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                 <span :class="cg.status_aktif ? 'badge badge-success' : 'badge badge-danger'"
                                       x-text="cg.status_aktif ? 'Aktif' : 'Nonaktif'"></span>
                             </td>
+                            <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
                                     <button @click="openEditCustomerGroupModal(cg)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Grup">
@@ -367,12 +391,13 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                     </template>
                                 </div>
                             </td>
+                            <?php endif; ?>
                         </tr>
                     </template>
 
                     <template x-if="filteredCustomerGroups.length === 0">
                         <tr>
-                            <td colspan="8" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= \App\Core\Auth::can('master.customers_manage') ? '8' : '7' ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="users" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Tidak ada data grup pelanggan</div>
                             </td>
@@ -394,10 +419,12 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 <input type="text" x-model="searchTerritory" placeholder="Cari nama wilayah / kota / rute..." class="form-input" style="height:38px;font-size:13px;">
             </div>
 
+            <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
             <button @click="openAddTerritoryModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Wilayah / Rute Baru</span>
             </button>
+            <?php endif; ?>
         </div>
 
         <!-- TABLE LIST WILAYAH -->
@@ -413,7 +440,9 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <th class="cell-center cell-nowrap" style="width:110px;">Toko Terhubung</th>
                         <th class="cell-center cell-nowrap" style="width:110px;">Vendor Terhubung</th>
                         <th class="cell-center cell-nowrap" style="width:90px;">Status</th>
+                        <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
                         <th class="cell-center cell-nowrap" style="width:90px;">Aksi</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -438,6 +467,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                 <span :class="t.status_aktif ? 'badge badge-success' : 'badge badge-danger'"
                                       x-text="t.status_aktif ? 'Aktif' : 'Nonaktif'"></span>
                             </td>
+                            <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
                                     <button @click="openEditTerritoryModal(t)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Wilayah">
@@ -455,12 +485,13 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                     </template>
                                 </div>
                             </td>
+                            <?php endif; ?>
                         </tr>
                     </template>
 
                     <template x-if="filteredTerritories.length === 0">
                         <tr>
-                            <td colspan="9" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= \App\Core\Auth::can('master.customers_manage') ? '9' : '8' ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="map-pin-off" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Tidak ada data wilayah / rute logistik</div>
                             </td>
@@ -1282,7 +1313,6 @@ function customerApp(initialTab) {
             sales_driver_id: '',
             alamat_lengkap: '',
             link_google_maps: '',
-            nomor_telepon: '',
             nomor_whatsapp: '',
             tipe_pembayaran_default: 'cash',
             plafon_piutang: '5.000.000',
@@ -1564,7 +1594,6 @@ function customerApp(initialTab) {
                 sales_driver_id: '',
                 alamat_lengkap: '',
                 link_google_maps: '',
-                nomor_telepon: '',
                 nomor_whatsapp: '',
                 tipe_pembayaran_default: 'cash',
                 plafon_piutang: window.formatRupiahNumber ? window.formatRupiahNumber(5000000) : '5.000.000',
@@ -1598,7 +1627,6 @@ function customerApp(initialTab) {
                 sales_driver_id: c.sales_driver_id || '',
                 alamat_lengkap: c.alamat_lengkap || '',
                 link_google_maps: c.link_google_maps || '',
-                nomor_telepon: c.nomor_telepon || '',
                 nomor_whatsapp: c.nomor_whatsapp || '',
                 tipe_pembayaran_default: Boolean(c.is_konsinyasi) ? 'konsinyasi' : (c.tipe_pembayaran_default || 'cash'),
                 plafon_piutang: window.formatRupiahNumber ? window.formatRupiahNumber(c.plafon_piutang) : String(c.plafon_piutang || 0),

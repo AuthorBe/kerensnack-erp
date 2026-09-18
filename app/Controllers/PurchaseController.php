@@ -531,7 +531,7 @@ class PurchaseController extends Controller
      */
     public function updatePo(): void
     {
-        Auth::requirePermission('purchases.create');
+        Auth::requirePermission(['purchases.edit', 'purchases.create']);
 
         $payload = null;
         if (!empty($_POST)) {
@@ -684,7 +684,7 @@ class PurchaseController extends Controller
      */
     public function receiveGoods(): void
     {
-        Auth::requirePermission('purchases.create');
+        Auth::requirePermission(['purchases.edit', 'purchases.create']);
 
         $payload = null;
         if (!empty($_POST)) {

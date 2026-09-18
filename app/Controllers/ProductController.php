@@ -400,12 +400,12 @@ class ProductController extends Controller
             $stmt = $pdo->prepare("
                 INSERT INTO public.item (
                     grup_id, kode_sku, nama_item, tipe_item,
-                    satuan_dasar, satuan_distribusi, kelompok_borongan_id, upah_per_bungkus, pemasok_utama_id,
+                    satuan_dasar, kelompok_borongan_id, upah_per_bungkus, pemasok_utama_id,
                     harga_pokok_pembelian, stok_minimum_peringatan, stok_fisik_saat_ini,
                     status_jual, status_aktif
                 ) VALUES (
                     :grup, :sku, :nama, 'barang_jadi',
-                    'pcs', 'bal', :borongan, :upah, NULL,
+                    'pcs', :borongan, :upah, NULL,
                     :hpp, :stok_min, :stok_awal,
                     TRUE, TRUE
                 ) RETURNING id

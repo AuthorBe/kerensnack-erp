@@ -150,4 +150,12 @@ class Controller
         }
         return true;
     }
+
+    /**
+     * Tolak akses: tampilkan halaman 403 interaktif (kado kejutan) dan akhiri eksekusi.
+     */
+    protected function denyAccess(string|array|null $reason = null): never
+    {
+        Auth::denyAccess($reason);
+    }
 }

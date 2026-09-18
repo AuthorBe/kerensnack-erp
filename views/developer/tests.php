@@ -746,7 +746,7 @@ use App\Core\Auth;
             <div class="btn-group">
                 <template x-if="!isRunning && !isInCooldown && !isGloballyLocked">
                     <button type="button" @click="runAll()" class="btn btn-primary" id="btn-run-all">
-                        <span>&#x25b6; Run All (23)</span>
+                        <span>&#x25b6; Run All (<?= count($suites) ?>)</span>
                     </button>
                 </template>
 
@@ -809,7 +809,7 @@ use App\Core\Auth;
                     <span>Test Suite Registry</span>
                     <span style="color:var(--accent-purple);">&#x25cf;</span>
                 </div>
-                <div class="metric-value">23<span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px;">Suites</span></div>
+                <div class="metric-value"><?= count($suites) ?><span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px;">Suites</span></div>
                 <div class="metric-meta">100% Modul ERP Aktif</div>
             </div>
 
@@ -819,7 +819,7 @@ use App\Core\Auth;
                     <span style="color:var(--accent-green);">&#x25cf;</span>
                 </div>
                 <div class="metric-value" style="color:var(--accent-green);">
-                    <span x-text="passedCount">0</span><span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px;" x-text="'/ ' + totalSuites">/ 23</span>
+                    <span x-text="passedCount">0</span><span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px;" x-text="'/ ' + totalSuites">/ <?= count($suites) ?></span>
                 </div>
                 <div class="metric-meta" x-text="passPercentage + '% dari total suite'">0% dari total suite</div>
             </div>
@@ -862,7 +862,7 @@ use App\Core\Auth;
         <div class="filter-bar">
             <div class="pills-group">
                 <button type="button" @click="activeCategory = 'all'" class="pill" :class="activeCategory === 'all' ? 'active' : ''">
-                    All Categories (23)
+                    All Categories (<?= count($suites) ?>)
                 </button>
                 <template x-for="cat in categories" :key="cat">
                     <button type="button" @click="activeCategory = cat" class="pill" :class="activeCategory === cat ? 'active' : ''" x-text="cat">
@@ -879,7 +879,7 @@ use App\Core\Auth;
         <!-- Checklist Panel -->
         <div class="panel">
             <div class="panel-header">
-                <span>Automated Test Suites &bull; 23 Registered</span>
+                <span>Automated Test Suites &bull; <?= count($suites) ?> Registered</span>
                 <span>Rollback Safe &bull; Zero DB Pollution</span>
             </div>
 
@@ -1172,9 +1172,9 @@ use App\Core\Auth;
                 if (this.isRunning)          return 'EXECUTING SUITES // REAL-TIME RUNNER ACTIVE';
                 if (this.isInCooldown)       return 'COOLDOWN AKTIF // TUNGGU ' + this.cooldownRemaining + ' DETIK';
                 if (this.isGloballyLocked)   return 'LOCKED // TEST BERJALAN OLEH USER LAIN';
-                if (this.completedCount === 0) return 'SYSTEM TEST CONSOLE // READY TO RUN (23 SUITES)';
+                if (this.completedCount === 0) return 'SYSTEM TEST CONSOLE // READY TO RUN (' + this.totalSuites + ' SUITES)';
                 if (this.failedCount > 0)    return 'EXECUTION COMPLETED // ' + this.failedCount + ' SUITES FAILED';
-                if (this.passedCount === this.totalSuites) return 'ALL 23 TEST SUITES PASSED // SYSTEM 100% HEALTHY';
+                if (this.passedCount === this.totalSuites) return 'ALL ' + this.totalSuites + ' TEST SUITES PASSED // SYSTEM 100% HEALTHY';
                 return 'IDLE';
             },
             get tagClass() {
@@ -1202,7 +1202,7 @@ use App\Core\Auth;
                 }
                 if (this.completedCount === this.totalSuites && this.totalSuites > 0) {
                     return this.failedCount === 0
-                        ? '🎉 Completed: All 23 test suites passed successfully (100%)'
+                        ? '🎉 Completed: All ' + this.totalSuites + ' test suites passed successfully (100%)'
                         : '⚠️ Completed: ' + this.failedCount + ' test suite(s) failed';
                 }
                 if (this.completedCount > 0) {

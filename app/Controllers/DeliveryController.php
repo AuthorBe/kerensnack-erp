@@ -648,9 +648,7 @@ class DeliveryController extends Controller
             $statusFilter = $this->input('status', 'semua');
 
             $myEmpId = Auth::employeeId();
-            $userRole = Auth::role();
-            // Role sales / driver terkunci ke ID karyawan miliknya
-            $isRestricted = in_array($userRole, ['sales', 'driver'], true) || !Auth::can('deliveries.view_all');
+            $isRestricted = !Auth::can('deliveries.view_all');
             $isManager = !$isRestricted;
 
             if ($isRestricted) {

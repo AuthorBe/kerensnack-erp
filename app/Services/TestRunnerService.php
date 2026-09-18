@@ -51,7 +51,7 @@ class TestRunnerService
     // -------------------------------------------------------------------------
 
     /**
-     * Master Registry 23 Test Suites Resmi ERP
+     * Master Registry 26 Test Suites Resmi ERP
      */
     public const SUITES = [
         'sales_vs_driver' => [
@@ -191,6 +191,24 @@ class TestRunnerService
             'title'       => 'Owner Executive Dashboard & KPI Metrics',
             'category'    => 'Executive & KPI',
             'description' => 'Pengujian metrik KPI bisnis, omzet, margin kotor, laba bersih, dan grafik performa.'
+        ],
+        'import_data' => [
+            'file'        => 'ImportDataLifecycleTest.php',
+            'title'       => 'Master Data Import, Diffing Engine & Full-Sync Reconciliation',
+            'category'    => 'Master Data & System',
+            'description' => 'Verifikasi komprehensif smart reader Excel, 10 entity handler, deteksi diff (INSERT/UPDATE/DELETE/NO_CHANGE), foreign key resolution, dan proteksi sensor transaksi (soft-deactivate vs hard delete).'
+        ],
+        'employee_type_and_whatsapp' => [
+            'file'        => 'EmployeeManualTypeAndWhatsAppTest.php',
+            'title'       => 'Employee Manual Payroll Type & WhatsApp Unification',
+            'category'    => 'Master Data & HR',
+            'description' => 'Verifikasi input manual tipe penggajian pada form karyawan, generator template excel string murni, dan unifikasi kontak ke nomor WhatsApp.'
+        ],
+        'access_denied_403' => [
+            'file'        => 'AccessDenied403Test.php',
+            'title'       => 'Access Denied 403 & CSRF Security Protection',
+            'category'    => 'Security & RBAC',
+            'description' => 'Verifikasi halaman 403 kado kejutan, auto-logout timer, audio API, proteksi route developer, dan penolakan akses tanpa izin.'
         ],
     ];
 
@@ -650,7 +668,7 @@ class TestRunnerService
     // -------------------------------------------------------------------------
 
     /**
-     * Jalankan SELURUH 23 Test Suites di Terminal CLI.
+     * Jalankan SELURUH 24 Test Suites di Terminal CLI.
      *
      * Catatan: CLI runner TIDAK menggunakan global lock/cooldown karena:
      * - Dijalankan oleh developer secara langsung di terminal lokal
@@ -662,7 +680,7 @@ class TestRunnerService
         $testsDir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'tests';
 
         echo "====================================================================\n";
-        echo " KEREN SNACK ERP - UNIFIED TEST SUITE RUNNER (23 SUITES)\n";
+        echo " KEREN SNACK ERP - UNIFIED TEST SUITE RUNNER (26 SUITES)\n";
         echo "====================================================================\n";
         echo "PHP Binary : {$phpBin}\n";
         echo "Test Suite : " . count(self::SUITES) . " comprehensive suites\n\n";

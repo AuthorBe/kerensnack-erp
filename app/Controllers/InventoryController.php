@@ -29,7 +29,7 @@ class InventoryController extends Controller
         try {
             $items = Database::fetchAll("
                 SELECT i.id, i.kode_sku, i.nama_item,
-                       i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar, i.satuan_distribusi,
+                       i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar,
                        i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
@@ -277,7 +277,7 @@ class InventoryController extends Controller
         try {
             $items = Database::fetchAll("
                 SELECT i.id, i.kode_sku, i.nama_item,
-                       i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar, i.satuan_distribusi,
+                       i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar,
                        i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id

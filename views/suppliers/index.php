@@ -1,5 +1,6 @@
 <?php
 use App\Core\Router;
+use App\Middleware\Auth;
 ob_start();
 ?>
 
@@ -22,12 +23,14 @@ ob_start();
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Kelola Data Supplier Bahan Baku Curah, Plastik &amp; Bumbu' ?></p>
             </div>
         </div>
+        <?php if (Auth::can('master.suppliers_manage')): ?>
         <div class="page-header-actions">
             <button @click="openAddModal()" class="btn btn-primary" style="font-weight:700;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Pemasok Baru</span>
             </button>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- STATS -->
@@ -95,7 +98,9 @@ ob_start();
                         <th style="min-width:180px;">Kontak &amp; PIC</th>
                         <th style="min-width:180px;">Wilayah / Alamat</th>
                         <th style="min-width:180px;">Ketentuan &amp; Rekening</th>
+                        <?php if (Auth::can('master.suppliers_manage')): ?>
                         <th class="cell-center cell-nowrap" style="width:85px; min-width:80px;">Aksi</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -178,6 +183,7 @@ ob_start();
                                     <span style="color:var(--color-ink-mute);font-size:11.5px;">-</span>
                                 </template>
                             </td>
+                            <?php if (Auth::can('master.suppliers_manage')): ?>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
                                     <button @click="openEditModal(s)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Data Vendor Lengkap">
@@ -188,12 +194,13 @@ ob_start();
                                     </button>
                                 </div>
                             </td>
+                            <?php endif; ?>
                         </tr>
                     </template>
 
                     <template x-if="filteredSuppliers.length === 0">
                         <tr>
-                            <td colspan="6" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= Auth::can('master.suppliers_manage') ? 6 : 5 ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="search-x" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Tidak ada data pemasok yang cocok</div>
                             </td>
@@ -228,6 +235,7 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- MODAL TAMBAH / EDIT PEMASOK LENGKAP                                       -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can('master.suppliers_manage')): ?>
     <template x-teleport="body">
     <div x-show="showModal" x-cloak class="modal-backdrop">
         <div @click.away="showModal = false" class="modal-box" style="max-width:620px;max-height:90vh;overflow-y:auto;padding:24px;">
@@ -406,6 +414,7 @@ ob_start();
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-supplier-id">
     </form>
+    <?php endif; ?>
 
 </div>
 

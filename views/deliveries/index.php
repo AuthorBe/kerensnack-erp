@@ -88,10 +88,12 @@ ob_start();
                     <i data-lucide="file-spreadsheet"></i>
                     <span>Export Excel</span>
                 </a>
+                <?php if (Auth::can('deliveries.create')): ?>
                 <button @click="openAddModal()" :disabled="pendingOrders.length === 0" class="btn btn-primary" style="height:38px;white-space:nowrap;">
                     <i data-lucide="plus"></i>
                     <span>Terbitkan Surat Jalan</span>
                 </button>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -193,6 +195,7 @@ ob_start();
                                     </template>
                                     <?php endif; ?>
 
+                                    <?php if (Auth::can('deliveries.print')): ?>
                                     <a :href="'<?= Router::url('/deliveries/print') ?>?id=' + d.id" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#0284c7;" title="Cetak Surat Jalan (Standar / Dot Matrix)">
                                         <i data-lucide="printer" style="width:14px;height:14px;"></i>
                                     </a>
@@ -200,6 +203,7 @@ ob_start();
                                     <a :href="'<?= Router::url('/deliveries/pdf') ?>?id=' + d.id" target="_blank" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#dc2626;" title="Unduh PDF Surat Jalan">
                                         <i data-lucide="file-text" style="width:14px;height:14px;"></i>
                                     </a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -219,6 +223,7 @@ ob_start();
     </div>
 
     <!-- MODAL 1: BUAT SURAT JALAN -->
+    <?php if (Auth::can('deliveries.create')): ?>
     <template x-teleport="body">
     <div x-show="showAddModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:500px;padding:24px;">
@@ -282,10 +287,12 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- 4. MODAL UBAH SURAT JALAN (DRIVER & TANGGAL PENGIRIMAN)                  -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can(['deliveries.create', 'deliveries.update_all'])): ?>
     <template x-teleport="body">
     <div x-show="showEditModal" x-cloak class="modal-backdrop" @click.self="showEditModal = false" @keydown.escape.window="showEditModal = false" style="z-index:9999;">
         <div class="modal-box" style="max-width:500px;padding:24px;">
@@ -345,6 +352,7 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
 </div>
 

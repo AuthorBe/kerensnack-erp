@@ -594,7 +594,7 @@ ob_start();
                                 <span>Siap Dikirim</span>
                             </button>
                         </form>
-                        <?php elseif ($isReady && empty($po['nomor_surat_jalan'])): ?>
+                        <?php elseif ($isReady && empty($po['nomor_surat_jalan']) && Auth::can('deliveries.create')): ?>
                         <a href="<?= Router::url('/deliveries?create_for_order=' . urlencode($po['id'])) ?>" class="btn btn-primary btn-sm" style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 5px; background: #059669; border-color: #059669;">
                             <i data-lucide="truck" style="width: 15px; height: 15px;"></i>
                             <span>Buat SJ</span>
@@ -755,6 +755,7 @@ ob_start();
                 <?php endif; ?>
 
                 <!-- Tombol Terbitkan SJ Langsung Dari Modal jika Sudah Siap Kirim -->
+                <?php if (Auth::can('deliveries.create')): ?>
                 <template x-if="activePo && (activePo.status_pemrosesan === 'siap_dikirim' || activePo.status_pemrosesan === 'siap_kirim') && !activePo.surat_jalan_id">
                     <a :href="'<?= Router::url('/deliveries?create_for_order=') ?>' + (activePo ? activePo.id : '')"
                        class="btn btn-primary"
@@ -763,6 +764,7 @@ ob_start();
                         <span>Buat Surat Jalan</span>
                     </a>
                 </template>
+                <?php endif; ?>
             </div>
 
         </div>
@@ -790,11 +792,13 @@ ob_start();
                 <button type="button" @click="selectedPoIds = []" class="btn btn-sm" style="background: rgba(255,255,255,0.12); color: #cbd5e1; border: none; font-weight: 600; padding: 7px 14px; border-radius: 10px;">
                     Batal
                 </button>
+                <?php if (Auth::can('orders.po_print')): ?>
                 <a :href="'<?= Router::url('/customer-orders/po-list/batch-pdf?ids=') ?>' + selectedPoIds.join(',') + '<?= $sortParam ?>'" target="_blank"
                    class="btn btn-sm" style="background: #dc2626; color: #ffffff; border: none; font-weight: 800; padding: 7px 18px; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
                     <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
                     <span x-text="'Unduh PDF (' + selectedPoIds.length + ' PO)'">Unduh PDF</span>
                 </a>
+                <?php endif; ?>
             </div>
         </div>
     </div>

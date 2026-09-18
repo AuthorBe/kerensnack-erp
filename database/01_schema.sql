@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS public.wilayah (
 CREATE TABLE IF NOT EXISTS public.karyawan (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pengguna_id UUID UNIQUE REFERENCES public.pengguna(id) ON DELETE SET NULL,
-    tipe_penggajian VARCHAR(30) NOT NULL CHECK (tipe_penggajian IN ('borongan', 'harian', 'bulanan')),
+    tipe_penggajian VARCHAR(30) NOT NULL CHECK (tipe_penggajian IN ('borongan', 'bulanan')),
     gaji_pokok_bulanan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     uang_kehadiran_harian NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     tunjangan_bulanan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
@@ -131,7 +131,7 @@ SELECT
     p.nama_lengkap AS nama_karyawan,
     p.nik,
     p.posisi,
-    p.nomor_telepon,
+    COALESCE(p.nomor_whatsapp, p.nomor_telepon) AS nomor_telepon,
     p.nomor_polisi_kendaraan,
     p.alamat,
     p.tanggal_bergabung,
@@ -139,11 +139,14 @@ SELECT
     p.bank_nomor_rekening,
     p.bank_atas_nama,
     p.status_aktif,
+    p.nama_pengguna,
     k.tipe_penggajian,
     k.gaji_pokok_bulanan,
     k.uang_kehadiran_harian,
     k.tunjangan_bulanan,
-    p.nama_pengguna,
+    k.dibuat_pada,
+    k.diubah_pada,
+    p.nomor_whatsapp,
     p.peran_id,
     p.karyawan_legacy_id AS id_legacy
 FROM public.karyawan k
@@ -243,7 +246,6 @@ CREATE TABLE IF NOT EXISTS public.pelanggan (
     is_konsinyasi BOOLEAN NOT NULL DEFAULT FALSE, -- True jika toko titip jual (konsinyasi)
     wilayah_id UUID REFERENCES public.wilayah(id),
     alamat_lengkap TEXT NOT NULL,
-    nomor_telepon VARCHAR(25),
     nomor_whatsapp VARCHAR(25),
     tipe_pembayaran_default VARCHAR(30) NOT NULL DEFAULT 'cash' CHECK (tipe_pembayaran_default IN ('cash', 'qris', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi')),
     plafon_piutang NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
@@ -311,8 +313,6 @@ CREATE TABLE IF NOT EXISTS public.item (
     varian_rasa VARCHAR(100), -- 'Asin', 'Manis', 'Opak', 'Balado'
     tipe_item VARCHAR(30) NOT NULL CHECK (tipe_item IN ('barang_jadi', 'bahan_mentah', 'bahan_kemas')),
     satuan_dasar VARCHAR(30) NOT NULL,
-    satuan_distribusi VARCHAR(30) NOT NULL DEFAULT 'bal',
-    konversi_distribusi_ke_dasar INT NOT NULL DEFAULT 1,
     kelompok_borongan_id UUID REFERENCES public.kelompok_upah_borongan(id),
     upah_per_bungkus NUMERIC(15, 2) DEFAULT NULL, -- Upah borongan per pack langsung pada SKU barang jadi (jika tidak menggunakan kelompok)
     pemasok_utama_id UUID REFERENCES public.pemasok(id),
@@ -483,7 +483,6 @@ CREATE TABLE IF NOT EXISTS public.item_pesanan (
     pesanan_id UUID NOT NULL REFERENCES public.pesanan(id) ON DELETE CASCADE,
     item_id UUID NOT NULL REFERENCES public.item(id),
     kuantitas_satuan_dasar INT NOT NULL CHECK (kuantitas_satuan_dasar > 0),
-    kuantitas_satuan_distribusi INT NOT NULL DEFAULT 0,
     harga_satuan_deal NUMERIC(15, 2) NOT NULL,
     diskon_item_persen NUMERIC(5, 2) DEFAULT 0.00,
     diskon_item_nominal NUMERIC(15, 2) DEFAULT 0.00,

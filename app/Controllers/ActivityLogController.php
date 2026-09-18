@@ -136,6 +136,7 @@ class ActivityLogController extends Controller
                 'CREATE' => 'Tambah Data (Create)',
                 'UPDATE' => 'Ubah Data (Update)',
                 'DELETE' => 'Hapus Data (Delete)',
+                'SYNC' => 'Sinkronisasi Massal (Sync)',
                 'PRICE_CHANGE' => 'Perubahan Harga',
                 'APPROVE' => 'Persetujuan (Approve)',
                 'VOID' => 'Pembatalan / Void',

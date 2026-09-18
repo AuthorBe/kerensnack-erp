@@ -39,7 +39,7 @@ if (!ob_get_level() && extension_loaded('zlib') && !ini_get('zlib.output_compres
 // Security & Performance Headers
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: SAMEORIGIN');
-header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'self';");
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; connect-src 'self'; frame-ancestors 'self';");
 header("Referrer-Policy: strict-origin-when-cross-origin");
 header("Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()");
 
@@ -105,6 +105,7 @@ use App\Controllers\UserController;
 use App\Controllers\PermissionController;
 use App\Controllers\SettingsController;
 use App\Controllers\ActivityLogController;
+use App\Controllers\ImportDataController;
 
 // =========================================================================
 // ROUTE REGISTRATION (Enterprise Router)
@@ -114,6 +115,7 @@ use App\Controllers\ActivityLogController;
 Router::get('/login', [AuthController::class, 'showLogin']);
 Router::post('/login', [AuthController::class, 'login']);
 Router::get('/logout', [AuthController::class, 'logout']);
+Router::post('/logout', [AuthController::class, 'logout']);
 
 // --- ROOT REDIRECT ---
 Router::get('/', function () {
@@ -354,6 +356,13 @@ Router::get('/settings/activity-logs', [ActivityLogController::class, 'index']);
 Router::get('/settings/logs', [ActivityLogController::class, 'index']);
 Router::get('/settings/activity-logs/export', [ActivityLogController::class, 'exportExcel']);
 Router::post('/settings/activity-logs/prune', [ActivityLogController::class, 'prune']);
+Router::get('/settings/impor-data', [ImportDataController::class, 'index']);
+Router::get('/pengaturan/impor-data', [ImportDataController::class, 'index']);
+Router::get('/settings/impor-data/download-template', [ImportDataController::class, 'downloadTemplate']);
+Router::post('/settings/impor-data/preview', [ImportDataController::class, 'preview']);
+Router::post('/settings/impor-data/confirm', [ImportDataController::class, 'confirm']);
+Router::post('/settings/impor-data/cancel', [ImportDataController::class, 'cancel']);
+Router::get('/settings/impor-data/cancel', [ImportDataController::class, 'cancel']);
 
 // --- DEVELOPER EXCLUSIVE: PORTAL HUB, ARCHITECTURE, TEST DB & TEST SOURCE ---
 Router::get('/developer', [DeveloperController::class, 'index']);
@@ -370,6 +379,8 @@ Router::get('/developer/tests', [DeveloperController::class, 'tests']);
 Router::get('/developer/run-all', [DeveloperController::class, 'tests']);
 Router::post('/developer/tests/run-single', [DeveloperController::class, 'runSingleTest']);
 Router::post('/developer/tests/clear-locks', [DeveloperController::class, 'clearTestLocks']);
+Router::get('/developer/preview-403', [DeveloperController::class, 'preview403']);
+Router::get('/preview-403', [DeveloperController::class, 'preview403']);
 
 // Dispatch the incoming HTTP request
 Router::dispatch();

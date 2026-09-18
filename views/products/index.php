@@ -141,6 +141,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 <?php endif; ?>
             </div>
 
+            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
             <div class="flex items-center gap-2">
                 <button type="button" @click="openManageGroupsModal()" class="btn btn-secondary" style="height:38px;" title="Kelola / Edit Grup Kemasan">
                     <i data-lucide="folder-cog" style="width:14px;height:14px;"></i>
@@ -151,6 +152,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     <span>Tambah Barang Jadi</span>
                 </button>
             </div>
+            <?php endif; ?>
         </form>
 
         <!-- TABLE LIST BARANG JADI (Hierarki Jelas & Anti-Duplikasi) -->
@@ -165,7 +167,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                         <th class="cell-right cell-nowrap" style="width:130px;">Estimasi HPP</th>
                         <th class="cell-right cell-nowrap" style="width:125px;">Harga Ritel (L1)</th>
                         <th class="cell-center cell-nowrap" style="width:110px;">Stok Fisik</th>
+                        <?php if (\App\Core\Auth::can('master.products_manage')): ?>
                         <th class="cell-center cell-nowrap" style="width:90px;">Aksi</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -244,6 +248,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                 </div>
                                 <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="'Min: ' + formatQty(item.stok_minimum_peringatan)"></div>
                             </td>
+                            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
                             <td class="cell-center cell-nowrap">
                                 <div class="flex items-center justify-center gap-1">
                                     <button @click="openEditItemModal(item)" class="btn btn-ghost btn-sm" style="padding:6px 8px;" title="Edit Barang Jadi">
@@ -254,12 +259,13 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     </button>
                                 </div>
                             </td>
+                            <?php endif; ?>
                         </tr>
                     </template>
 
                     <template x-if="finishedGoods.length === 0">
                         <tr>
-                            <td colspan="8" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= \App\Core\Auth::can('master.products_manage') ? 8 : 7 ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="search-x" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Tidak ada Barang Jadi yang cocok dengan pencarian / filter</div>
                             </td>
@@ -310,12 +316,14 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 </select>
             </div>
 
+            <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
             <div>
                 <button @click="openAddMaterialModal()" class="btn btn-primary" style="height:38px;">
                     <i data-lucide="plus"></i>
                     <span>Tambah Bahan / Kemasan</span>
                 </button>
             </div>
+            <?php endif; ?>
         </div>
 
         <!-- TABLE LIST BAHAN BAKU -->
@@ -330,7 +338,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                         <th style="min-width:160px;">Vendor Pemasok Utama</th>
                         <th class="cell-right cell-nowrap" style="width:130px; min-width:120px;">HPP Beli Vendor</th>
                         <th class="cell-center cell-nowrap" style="width:110px; min-width:100px;">Stok Fisik</th>
+                        <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
                         <th class="cell-center cell-nowrap" style="width:100px; min-width:90px;">Aksi</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -369,6 +379,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                 </div>
                                 <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="'Min: ' + formatQty(mat.stok_minimum_peringatan)"></div>
                             </td>
+                            <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
                                     <button @click="openEditMaterialModal(mat)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Bahan">
@@ -379,12 +390,13 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     </button>
                                 </div>
                             </td>
+                            <?php endif; ?>
                         </tr>
                     </template>
 
                     <template x-if="filteredMaterials.length === 0">
                         <tr>
-                            <td colspan="8" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= \App\Core\Auth::can(['master.materials_manage', 'master.products_manage']) ? 8 : 7 ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="boxes" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Belum ada master bahan baku / kemasan</div>
                                 <div style="font-size:12px;color:var(--color-ink-mute);margin-top:4px;">Klik tombol "+ Tambah Bahan / Kemasan" untuk mendaftarkan bahan balan, plastik, atau label.</div>
@@ -417,6 +429,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 </div>
 
                 <template x-if="selectedRecipeProduct">
+                    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
                     <div class="flex items-center gap-2 shrink-0">
                         <button type="button" @click="openCopyRecipeModal()" class="btn btn-secondary" style="height:40px;padding:0 14px;white-space:nowrap;font-size:12.5px;margin:0;" title="Salin resep ke produk lain">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
@@ -427,6 +440,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                             <span>Tambah Komponen Bahan</span>
                         </button>
                     </div>
+                    <?php endif; ?>
                 </template>
             </div>
         </div>
@@ -550,7 +564,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     <th style="width:115px; padding:11px 14px;" class="cell-nowrap">Kategori</th>
                                     <th class="cell-center cell-nowrap" style="width:140px; padding:11px 14px;">Kebutuhan / Pcs</th>
                                     <th class="cell-right cell-nowrap" style="width:130px; padding:11px 14px;">Biaya / Pcs</th>
+                                    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
                                     <th class="cell-center cell-nowrap" style="width:65px; padding:11px 10px;">Aksi</th>
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -581,17 +597,19 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                         <td class="cell-right cell-nowrap" style="padding:12px 14px;">
                                             <div style="font-family:var(--font-mono);font-size:13.5px;font-weight:800;color:var(--color-ink);" x-text="formatRupiah(r.subtotal_biaya_bahan)"></div>
                                         </td>
+                                        <?php if (\App\Core\Auth::can('master.products_manage')): ?>
                                         <td class="cell-center cell-nowrap" style="padding:12px 10px;">
                                             <button @click="deleteRecipeItem(r.id)" class="btn btn-ghost btn-sm" style="padding:4px 8px;color:#ef4444;border-radius:6px;" title="Hapus Komponen Resep">
                                                 <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                                             </button>
                                         </td>
+                                        <?php endif; ?>
                                     </tr>
                                 </template>
 
                                 <template x-if="currentProductRecipeList.length === 0">
                                     <tr>
-                                        <td colspan="6" style="text-align:center;padding:48px 24px;color:var(--color-ink-mute);">
+                                        <td colspan="<?= \App\Core\Auth::can('master.products_manage') ? 6 : 5 ?>" style="text-align:center;padding:48px 24px;color:var(--color-ink-mute);">
                                             <i data-lucide="flask-conical" style="width:40px;height:40px;margin:0 auto 10px auto;opacity:0.4;"></i>
                                             <div style="font-weight:700;font-size:13.5px;color:var(--color-ink);">Belum ada komposisi bahan untuk produk ini</div>
                                             <div style="font-size:12px;color:var(--color-ink-mute);margin-top:4px;">Klik "+ Tambah Komponen Bahan" atau "Salin Resep" untuk menetapkan bahan balan curah, plastik kemasan, atau label.</div>
@@ -610,7 +628,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     <td class="cell-right cell-nowrap" style="padding:12px 14px;">
                                         <div style="font-family:var(--font-mono);font-size:14px;font-weight:900;color:#2563eb;" x-text="formatRupiah(Number(recipeSummary.rawMaterialCost || 0) + Number(recipeSummary.packagingCost || 0))"></div>
                                     </td>
+                                    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
                                     <td style="padding:12px 10px;"></td>
+                                    <?php endif; ?>
                                 </tr>
                             </tfoot>
                         </table>
@@ -641,10 +661,12 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 <div class="hidden sm:block" style="font-size:11.5px;color:var(--color-ink-mute);">Tarif upah borongan buruh packing per bungkus kemasan</div>
             </div>
 
+            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
             <button @click="openAddBoronganModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Kelompok Borongan</span>
             </button>
+            <?php endif; ?>
         </div>
 
         <!-- TABLE LIST KELOMPOK BORONGAN -->
@@ -657,7 +679,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                         <th style="min-width:180px;">Deskripsi &amp; Keterangan</th>
                         <th class="cell-center cell-nowrap" style="width:150px; min-width:120px;">SKU Terhubung</th>
                         <th class="cell-center cell-nowrap" style="width:100px; min-width:85px;">Status</th>
+                        <?php if (\App\Core\Auth::can('master.products_manage')): ?>
                         <th class="cell-center cell-nowrap" style="width:100px; min-width:85px;">Aksi</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -682,6 +706,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     <span class="badge badge-danger">Nonaktif</span>
                                 </template>
                             </td>
+                            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
                             <td class="cell-center cell-nowrap">
                                 <div class="flex items-center justify-center gap-1">
                                     <button @click="openEditBoronganModal(w)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Kelompok">
@@ -694,12 +719,13 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     </template>
                                 </div>
                             </td>
+                            <?php endif; ?>
                         </tr>
                     </template>
 
                     <template x-if="filteredWageGroups.length === 0">
                         <tr>
-                            <td colspan="6" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= \App\Core\Auth::can('master.products_manage') ? 6 : 5 ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="badge-percent" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Belum ada kelompok upah borongan yang cocok</div>
                             </td>
@@ -714,6 +740,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- MODALS SECTION                                                            -->
     <!-- ========================================================================= -->
 
+    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
     <!-- MODAL 1: TAMBAH / EDIT BARANG JADI -->
     <template x-teleport="body">
     <div x-show="showItemModal" x-cloak class="modal-backdrop">
@@ -977,8 +1004,10 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- MODAL 3: TAMBAH / EDIT BAHAN BAKU & KEMASAN -->
+    <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
     <template x-teleport="body">
     <div x-show="showMaterialModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:500px;padding:24px;">
@@ -1067,8 +1096,10 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- MODAL 4: TAMBAH KOMPONEN RESEP BOM (DENGAN KALKULATOR HASIL BUNGKUS / YIELD) -->
+    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
     <template x-teleport="body">
     <div x-show="showRecipeModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:520px;padding:24px;">
@@ -1388,8 +1419,10 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- HIDDEN FORM FOR DELETING ITEM, GROUP, MATERIAL, RECIPE & BORONGAN -->
+    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
     <form id="delete-item-form" action="<?= Router::url('/products/delete-item') ?>" method="POST" data-action-text="Menghapus barang jadi..." style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-item-id">
@@ -1398,10 +1431,14 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-group-id">
     </form>
+    <?php endif; ?>
+    <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
     <form id="delete-material-form" action="<?= Router::url('/products/delete-material') ?>" method="POST" data-action-text="Menghapus bahan mentah/kemasan..." style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-material-id">
     </form>
+    <?php endif; ?>
+    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
     <form id="delete-recipe-form" action="<?= Router::url('/products/delete-recipe-item') ?>" method="POST" data-action-text="Menghapus komponen resep..." style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-recipe-id">
@@ -1410,6 +1447,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-borongan-id">
     </form>
+    <?php endif; ?>
 
 </div>
 

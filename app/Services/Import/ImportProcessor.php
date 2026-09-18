@@ -1,0 +1,193 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Services\Import;
+
+use App\Services\Import\Handlers\EntityImportHandlerInterface;
+use App\Services\Import\Handlers\CustomerImportHandler;
+use App\Services\Import\Handlers\CustomerGroupImportHandler;
+use App\Services\Import\Handlers\TerritoryImportHandler;
+use App\Services\Import\Handlers\SupplierImportHandler;
+use App\Services\Import\Handlers\EmployeeImportHandler;
+use App\Services\Import\Handlers\ProductGroupImportHandler;
+use App\Services\Import\Handlers\ProductItemImportHandler;
+use App\Services\Import\Handlers\MaterialItemImportHandler;
+use App\Services\Import\Handlers\PricingMatrixImportHandler;
+use App\Services\Import\Handlers\PieceRateImportHandler;
+use App\Helpers\ActivityLog;
+use PDO;
+use Exception;
+use RuntimeException;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
+class ImportProcessor
+{
+    /**
+     * Daftar seluruh handler master data terdaftar
+     * 
+     * @return array<string, EntityImportHandlerInterface>
+     */
+    public static function getHandlers(): array
+    {
+        return [
+            // Fase 1: Master Pondasi Independen (Zero Dependency)
+            'territories'     => new TerritoryImportHandler(),
+            'customer_groups' => new CustomerGroupImportHandler(),
+            'product_groups'  => new ProductGroupImportHandler(),
+            'piece_rates'     => new PieceRateImportHandler(),
+
+            // Fase 2: Sumber Daya, Vendor & Matriks Harga
+            'employees'       => new EmployeeImportHandler(),
+            'suppliers'       => new SupplierImportHandler(),
+            'pricing_matrix'  => new PricingMatrixImportHandler(),
+
+            // Fase 3: Katalog Inventori & Produksi
+            'materials'       => new MaterialItemImportHandler(),
+            'products'        => new ProductItemImportHandler(),
+
+            // Fase 4: Jaringan Mitra & Toko
+            'customers'       => new CustomerImportHandler(),
+        ];
+    }
+
+    /**
+     * Dapatkan handler berdasarkan kunci tipe data
+     */
+    public static function getHandler(string $type): ?EntityImportHandlerInterface
+    {
+        $handlers = self::getHandlers();
+        return $handlers[$type] ?? null;
+    }
+
+    /**
+     * Memproses file upload untuk menghasilkan pratinjau perbandingan (Diff)
+     */
+    public static function processPreview(string $tempFile, string $type, string $mode, PDO $pdo): array
+    {
+        $handler = self::getHandler($type);
+        if (!$handler) {
+            throw new RuntimeException("Tipe master data '{$type}' tidak valid atau belum didukung.");
+        }
+
+        $spreadsheet = IOFactory::load($tempFile);
+        $originalRows = $spreadsheet->getActiveSheet()->toArray();
+
+        if (count($originalRows) <= 1) {
+            throw new RuntimeException("File kosong atau hanya berisi judul tanpa baris data.");
+        }
+
+        // Ekstraksi header secara cerdas
+        $extracted = SmartReader::extractSmartHeader($originalRows, $handler->getRequiredHeaderGroups());
+        $header = $extracted['header'];
+        $headerIndex = $extracted['index'];
+
+        if ($headerIndex === -1) {
+            throw new RuntimeException("Format kolom tidak dikenali. Kolom wajib untuk master " . $handler->getEntityLabel() . " tidak ditemukan.");
+        }
+
+        $rowsRaw = array_values(array_slice($originalRows, $headerIndex + 1));
+        $rows = SmartReader::filterSmartDataRows($rowsRaw);
+
+        if (empty($rows)) {
+            throw new RuntimeException("Tidak ditemukan baris data yang valid di bawah baris header.");
+        }
+
+        // Jalankan pratinjau diff pada handler
+        $previewList = $handler->previewRows($rows, $header, $pdo, $mode);
+
+        // Simpan ke file temporary JSON untuk menghindari pembengkakan sesi PHP
+        $previewJsonFile = sys_get_temp_dir() . '/ks_sync_preview_' . uniqid() . '.json';
+        file_put_contents($previewJsonFile, json_encode($previewList, JSON_UNESCAPED_UNICODE));
+
+        return [
+            'preview_list'      => $previewList,
+            'preview_json_file' => $previewJsonFile,
+            'handler'           => $handler
+        ];
+    }
+
+    /**
+     * Menerapkan hasil pratinjau yang disetujui ke dalam database dalam satu transaksi utuh
+     */
+    public static function applySyncFromPreview(
+        string $previewJsonFile, 
+        string $type, 
+        PDO $pdo,
+        ?string $filename = null,
+        ?string $mode = null
+    ): array
+    {
+        $handler = self::getHandler($type);
+        if (!$handler) {
+            throw new RuntimeException("Tipe data tidak valid.");
+        }
+
+        if (!file_exists($previewJsonFile)) {
+            throw new RuntimeException("Data pratinjau kedaluwarsa atau file temporary telah dibersihkan.");
+        }
+
+        $previewList = json_decode((string)file_get_contents($previewJsonFile), true);
+        if (!is_array($previewList)) {
+            throw new RuntimeException("Format data pratinjau korup.");
+        }
+
+        // Cek apakah masih ada baris ERROR
+        $hasError = false;
+        foreach ($previewList as $r) {
+            if (($r['action'] ?? '') === 'ERROR') {
+                $hasError = true;
+                break;
+            }
+        }
+
+        if ($hasError) {
+            throw new RuntimeException("Terdapat baris data berstatus ERROR. Perbaiki file Excel terlebih dahulu sebelum konfirmasi.");
+        }
+
+        $pdo->beginTransaction();
+
+        try {
+            $stats = $handler->applySync($previewList, $pdo);
+
+            // Pemetaan nama tabel riil database PostgreSQL
+            $tableMap = [
+                'customers'       => 'pelanggan',
+                'customer_groups' => 'grup_pelanggan',
+                'territories'     => 'wilayah',
+                'suppliers'       => 'pemasok',
+                'employees'       => 'pengguna',
+                'product_groups'  => 'grup_produk',
+                'products'        => 'item',
+                'materials'       => 'item',
+                'pricing_matrix'  => 'grup_produk_harga_level',
+                'piece_rates'     => 'kelompok_upah_borongan',
+            ];
+            $targetTable = $tableMap[$type] ?? $handler->getEntityKey();
+
+            $modeLabel = ($mode === 'full_sync') ? 'Sinkronisasi Penuh (+ Hapus)' : 'Mode Aman (Upsert)';
+            $fileInfo  = !empty($filename) ? " via berkas '{$filename}'" : '';
+
+            // Audit Trail Log Rinci
+            $logMsg = "Sinkronisasi massal {$handler->getEntityLabel()}{$fileInfo} [{$modeLabel}]: {$stats['insert']} INSERT, {$stats['update']} UPDATE, {$stats['delete']} DELETE, {$stats['deactivate']} DINONAKTIFKAN.";
+            ActivityLog::log('master_data', 'SYNC', $logMsg, $targetTable);
+
+            $pdo->commit();
+
+            return [
+                'stats'   => $stats,
+                'handler' => $handler,
+                'message' => $logMsg
+            ];
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw new RuntimeException("Gagal menerapkan sinkronisasi: " . $e->getMessage(), (int)$e->getCode(), $e);
+        } finally {
+            // Bersihkan file JSON preview
+            if (file_exists($previewJsonFile)) {
+                @unlink($previewJsonFile);
+            }
+        }
+    }
+}

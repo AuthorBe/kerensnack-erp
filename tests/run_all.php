@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * tests/run_all.php
- * Keren Snack ERP - Unified Automated Test Suite Runner (23 Test Suites)
+ * Keren Snack ERP - Unified Automated Test Suite Runner (26 Test Suites)
  * Thin wrapper delegating to App\Services\TestRunnerService (Single Source of Truth)
  * 
  * Usage:

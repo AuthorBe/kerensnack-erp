@@ -679,12 +679,137 @@ $cLogoUrl       = $company['logo_url'] ?? '';
     }
 
     /* Fullscreen / Centered Zoomed Document Modal */
+    .company-preview-modal-box {
+        max-width: 920px;
+        width: 95%;
+        max-height: 90vh;
+        max-height: 90dvh;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        background: var(--color-canvas);
+        border: 1px solid var(--color-hairline);
+    }
+
+    .company-preview-modal-header {
+        padding: 14px 22px;
+        background: var(--color-canvas);
+        border-bottom: 1px solid var(--color-hairline);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-shrink: 0;
+    }
+
+    .preview-header-main {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .preview-header-title-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 0;
+    }
+
+    .preview-header-icon {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+    }
+
+    .preview-header-title {
+        font-size: 15px;
+        font-weight: 800;
+        margin: 0;
+        color: var(--color-ink);
+        white-space: nowrap;
+    }
+
+    .preview-header-subtitle {
+        font-size: 12px;
+        color: var(--color-ink-mute);
+        margin: 2px 0 0 0;
+        white-space: nowrap;
+    }
+
+    .preview-close-btn-mobile {
+        display: none !important;
+    }
+
+    .preview-header-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+
+    .preview-modal-tabs {
+        margin-bottom: 0 !important;
+        padding: 3px;
+    }
+
+    .preview-modal-tabs .preview-tab-button {
+        padding: 6px 14px;
+        font-size: 12px;
+    }
+
+    .preview-close-btn-desktop {
+        padding: 6px;
+        border-radius: 8px;
+        color: var(--color-ink-mute);
+    }
+
+    .company-preview-modal-body {
+        padding: 20px;
+        overflow-y: auto;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        background: var(--color-canvas-soft, #f8fafc);
+        flex: 1;
+        min-height: 0;
+    }
+
+    .company-preview-sheet-scroller {
+        min-width: min-content;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .preview-mobile-scroll-hint {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--color-ink-mute);
+        background: var(--color-canvas, #ffffff);
+        border: 1px solid var(--color-hairline, #e2e8f0);
+        padding: 6px 14px;
+        border-radius: 20px;
+        margin-bottom: 12px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        flex-shrink: 0;
+    }
+
     .zoomed-paper-sheet {
         background-color: #ffffff;
         color: #0f172a;
         border: 1px solid #cbd5e1;
         border-radius: 10px;
         width: 100%;
+        min-width: 680px;
         max-width: 820px;
         margin: 0 auto;
         padding: 24px 28px;
@@ -694,6 +819,7 @@ $cLogoUrl       = $company['logo_url'] ?? '';
         line-height: 1.5;
         position: relative;
         box-sizing: border-box;
+        flex-shrink: 0;
     }
 
     .zoomed-dm-sheet {
@@ -702,15 +828,17 @@ $cLogoUrl       = $company['logo_url'] ?? '';
         border: 1px dashed #cbd5e1;
         border-radius: 8px;
         width: 100%;
+        min-width: 700px;
         max-width: 840px;
         margin: 0 auto;
-        padding: 22px 32px;
+        padding: 22px 30px;
         font-family: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
         font-size: 11.5px;
         line-height: 1.45;
         position: relative;
         box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
         box-sizing: border-box;
+        flex-shrink: 0;
     }
 
     .zoomed-dm-perforation {
@@ -724,6 +852,152 @@ $cLogoUrl       = $company['logo_url'] ?? '';
     }
     .zoomed-dm-left { left: 4px; }
     .zoomed-dm-right { right: 4px; }
+
+    .company-preview-modal-footer {
+        padding: 12px 22px;
+        background: var(--color-canvas);
+        border-top: 1px solid var(--color-hairline);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        flex-shrink: 0;
+        gap: 12px;
+    }
+
+    .company-preview-footer-info {
+        color: var(--color-ink-mute);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .preview-footer-text-mobile {
+        display: none;
+    }
+
+    .preview-footer-text-desktop {
+        display: inline;
+    }
+
+    .company-preview-close-footer-btn {
+        padding: 6px 16px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+        .company-preview-modal-box {
+            width: 96% !important;
+            max-height: 94dvh !important;
+            max-height: 94vh !important;
+            border-radius: 12px !important;
+            margin: auto !important;
+        }
+
+        .company-preview-modal-header {
+            padding: 12px 14px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .preview-header-main {
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .preview-header-title-wrap {
+            gap: 10px;
+        }
+
+        .preview-header-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        .preview-header-icon svg,
+        .preview-header-icon i {
+            width: 16px;
+            height: 16px;
+        }
+
+        .preview-header-title {
+            font-size: 14px;
+            white-space: normal;
+            line-height: 1.25;
+        }
+
+        .preview-header-subtitle {
+            display: none;
+        }
+
+        .preview-close-btn-mobile {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+            border-radius: 8px;
+            color: var(--color-ink-mute);
+            flex-shrink: 0;
+        }
+
+        .preview-close-btn-desktop {
+            display: none !important;
+        }
+
+        .preview-header-controls {
+            width: 100%;
+        }
+
+        .preview-modal-tabs {
+            width: 100%;
+            display: flex;
+        }
+
+        .preview-modal-tabs .preview-tab-button {
+            flex: 1;
+            justify-content: center;
+            padding: 7px 10px;
+            font-size: 11.5px;
+        }
+
+        .company-preview-modal-body {
+            padding: 12px 8px;
+        }
+
+        .preview-mobile-scroll-hint {
+            display: inline-flex;
+        }
+
+        .company-preview-modal-footer {
+            padding: 10px 14px;
+            flex-direction: column-reverse;
+            align-items: stretch;
+            gap: 8px;
+        }
+
+        .preview-footer-text-desktop {
+            display: none;
+        }
+
+        .preview-footer-text-mobile {
+            display: inline;
+            font-size: 11px;
+        }
+
+        .company-preview-footer-info {
+            justify-content: center;
+            text-align: center;
+        }
+
+        .company-preview-close-footer-btn {
+            width: 100%;
+            padding: 8px;
+            justify-content: center;
+        }
+    }
 </style>
 
 <script>
@@ -1409,54 +1683,68 @@ $cLogoUrl       = $company['logo_url'] ?? '';
              class="modal-backdrop"
              @click.self="closePreviewModal()"
              @keydown.escape.window="closePreviewModal()">
-            <div class="modal-box modal-box-lg"
-                 style="max-width: 920px; width: 95%; max-height: 90vh; max-height: 90dvh; padding: 0; display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+            <div class="modal-box modal-box-lg company-preview-modal-box">
                 
                 <!-- Modal Top Header -->
-                <div style="padding: 16px 22px; background: var(--color-canvas); border-bottom: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div class="panel-icon-circle panel-icon-blue" style="width: 38px; height: 38px;">
-                            <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                <div class="company-preview-modal-header">
+                    <div class="preview-header-main">
+                        <div class="preview-header-title-wrap">
+                            <div class="panel-icon-circle panel-icon-blue preview-header-icon">
+                                <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                            </div>
+                            <div>
+                                <h3 class="preview-header-title">Pratinjau Dokumen Cetak Penuh</h3>
+                                <p class="preview-header-subtitle">Detail kop resmi, alamat web, kontak, dan tata letak dokumen cetak</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 style="font-size: 15px; font-weight: 800; margin: 0; color: var(--color-ink);">Pratinjau Dokumen Cetak Penuh</h3>
-                            <p style="font-size: 12px; color: var(--color-ink-mute); margin: 2px 0 0 0;">Detail kop resmi, alamat web, kontak, dan tata letak dokumen cetak</p>
-                        </div>
+
+                        <!-- Close Button on Mobile (Header Row 1) -->
+                        <button type="button"
+                                @click="closePreviewModal()"
+                                class="btn btn-ghost btn-sm preview-close-btn-mobile"
+                                title="Tutup Pratinjau (Esc)">
+                            <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                        </button>
                     </div>
 
-                    <!-- Modal Controls (Tab Switcher + Close Button) -->
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <div class="preview-tabs-nav" style="margin-bottom: 0; padding: 3px;">
+                    <!-- Modal Controls (Tab Switcher + Desktop Close Button) -->
+                    <div class="preview-header-controls">
+                        <div class="preview-tabs-nav preview-modal-tabs">
                             <button type="button"
                                     @click="activeTab = 'standard'"
                                     class="preview-tab-button"
-                                    :class="{ 'is-active': activeTab === 'standard' }"
-                                    style="padding: 6px 14px; font-size: 11.5px;">
+                                    :class="{ 'is-active': activeTab === 'standard' }">
                                 <i data-lucide="file-text" style="width: 13px; height: 13px;"></i>
                                 <span>Kertas A4 Biasa</span>
                             </button>
                             <button type="button"
                                     @click="activeTab = 'dotmatrix'"
                                     class="preview-tab-button"
-                                    :class="{ 'is-active': activeTab === 'dotmatrix' }"
-                                    style="padding: 6px 14px; font-size: 11.5px;">
+                                    :class="{ 'is-active': activeTab === 'dotmatrix' }">
                                 <i data-lucide="printer" style="width: 13px; height: 13px;"></i>
                                 <span>Printer Dot Matrix</span>
                             </button>
                         </div>
 
+                        <!-- Close Button on Desktop -->
                         <button type="button"
                                 @click="closePreviewModal()"
-                                class="btn btn-ghost btn-sm"
-                                style="padding: 6px; border-radius: 8px; color: var(--color-ink-mute);"
+                                class="btn btn-ghost btn-sm preview-close-btn-desktop"
                                 title="Tutup Pratinjau (Esc)">
-                            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                            <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                         </button>
                     </div>
                 </div>
 
                 <!-- Modal Body: High Resolution Document Preview -->
-                <div style="padding: 24px 20px; overflow-y: auto; overflow-x: auto; background: var(--color-canvas-soft, #f8fafc); flex: 1; min-height: 0; display: block;">
+                <div class="company-preview-modal-body">
+                    <!-- Mobile Horizontal Scroll Helper Badge -->
+                    <div class="preview-mobile-scroll-hint">
+                        <i data-lucide="move-horizontal" style="width: 13px; height: 13px; color: var(--color-primary);"></i>
+                        <span>Geser dokumen ke samping untuk melihat tampilan lengkap</span>
+                    </div>
+
+                    <div class="company-preview-sheet-scroller">
                     
                     <!-- ZOOMED PREVIEW 1: FORMAT KERTAS A4 BIASA (FAKTUR PENJUALAN & DOKUMEN RESMI) -->
                     <div x-show="activeTab === 'standard'" class="zoomed-paper-sheet">
@@ -1742,15 +2030,17 @@ $cLogoUrl       = $company['logo_url'] ?? '';
                             <span>[ ] Lembar 3 (Kuning): Petugas Driver</span>
                         </div>
                     </div>
+                    </div>
                 </div>
 
                 <!-- Modal Footer Bar -->
-                <div style="padding: 12px 22px; background: var(--color-canvas); border-top: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; font-size: 12px; flex-shrink: 0;">
-                    <div style="color: var(--color-ink-mute); display: flex; align-items: center; gap: 6px;">
-                        <i data-lucide="info" style="width: 14px; height: 14px; color: var(--color-primary);"></i>
-                        <span>Live Sync: Data di pratinjau ini berubah otomatis mengikuti formulir. Tekan <strong>Esc</strong> untuk menutup.</span>
+                <div class="company-preview-modal-footer">
+                    <div class="company-preview-footer-info">
+                        <i data-lucide="info" style="width: 14px; height: 14px; color: var(--color-primary); flex-shrink: 0;"></i>
+                        <span class="preview-footer-text-desktop">Live Sync: Data di pratinjau ini berubah otomatis mengikuti formulir. Tekan <strong>Esc</strong> untuk menutup.</span>
+                        <span class="preview-footer-text-mobile">Live Sync: Pratinjau sinkron otomatis dengan formulir.</span>
                     </div>
-                    <button type="button" @click="closePreviewModal()" class="btn btn-secondary btn-sm" style="padding: 6px 16px; font-weight: 600;">
+                    <button type="button" @click="closePreviewModal()" class="btn btn-secondary btn-sm company-preview-close-footer-btn">
                         Tutup Pratinjau
                     </button>
                 </div>

@@ -539,11 +539,11 @@ ob_start();
                 <span>Atur Skema Komisi Bertingkat</span>
                 <span class="badge badge-warning text-[10px] py-0.5 px-1.5" x-text="editableTiers.length + ' Tier'"></span>
             </button>
-            <?php endif; ?>
             <button @click="openAddModal()" class="btn btn-primary" style="font-weight:700;">
                 <i data-lucide="user-plus"></i>
                 <span>Tambah Karyawan</span>
             </button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -661,7 +661,9 @@ ob_start();
                         <th style="min-width:150px;">Uang Hadir &amp; Tunjangan</th>
                         <th style="min-width:160px;">Rekening Bank / Pembayaran</th>
                         <th class="cell-center cell-nowrap" style="width:90px; min-width:80px;">Status</th>
+                        <?php if (\App\Core\Auth::can('master.employees_manage')): ?>
                         <th class="cell-center cell-nowrap" style="width:90px; min-width:80px;">Aksi</th>
+                        <?php endif; ?>
                     </tr>
                 </thead>
                 <tbody>
@@ -672,7 +674,7 @@ ob_start();
                             <td>
                                 <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);" x-text="e.nama_karyawan"></div>
                                 <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                    <span x-text="e.nomor_telepon ? ('HP: ' + e.nomor_telepon) : (e.nik ? ('NIK: ' + e.nik) : 'Belum ada kontak')"></span>
+                                    <span x-text="(e.nomor_whatsapp || e.nomor_telepon) ? ('WA: ' + (e.nomor_whatsapp || e.nomor_telepon)) : (e.nik ? ('NIK: ' + e.nik) : 'Belum ada kontak')"></span>
                                     <template x-if="e.nomor_polisi_kendaraan">
                                         <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:#0284c7;border-color:rgba(2,132,199,0.3);background:rgba(2,132,199,0.08);">
                                             &#x1F69A; <span x-text="e.nomor_polisi_kendaraan"></span>
@@ -690,52 +692,58 @@ ob_start();
                                     <span class="badge badge-info" style="font-weight:700;">🚚 Driver Logistik</span>
                                 </template>
                                 <template x-if="e.posisi === 'pengemasan'">
-                                    <span class="badge badge-info" style="font-weight:700;">🍿 Pengemasan</span>
+                                    <span class="badge badge-success" style="font-weight:700;">📦 Buruh Kemas</span>
                                 </template>
                                 <template x-if="e.posisi === 'gudang'">
-                                    <span class="badge badge-secondary" style="font-weight:700;">📦 Staff Gudang</span>
+                                    <span class="badge badge-secondary" style="font-weight:700;">🏭 Staf Gudang</span>
                                 </template>
                                 <template x-if="e.posisi === 'admin'">
-                                    <span class="badge badge-success" style="font-weight:700;">👩‍💼 Admin Kantor</span>
+                                    <span class="badge badge-primary" style="font-weight:700;">💻 Admin Kantor</span>
                                 </template>
                                 <template x-if="e.posisi === 'mandor'">
-                                    <span class="badge badge-mono" style="font-weight:700;">👷 Mandor</span>
+                                    <span class="badge" style="font-weight:700;background:rgba(245,158,11,0.15);color:#d97706;border:1px solid rgba(245,158,11,0.3);">👷 Mandor / SPV</span>
                                 </template>
                             </td>
 
                             <!-- Tipe Gaji -->
                             <td class="cell-center cell-nowrap">
-                                <template x-if="e.posisi === 'sales'">
-                                    <span class="badge" :class="Number(e.gaji_pokok_bulanan) > 0 ? 'badge-info' : (Number(e.uang_kehadiran_harian) > 0 ? 'badge-mono' : 'badge-warning')" style="text-transform:capitalize;font-weight:700;" x-text="Number(e.gaji_pokok_bulanan) > 0 ? 'Bulanan' : (Number(e.uang_kehadiran_harian) > 0 ? 'Harian' : 'Komisi Murni')"></span>
-                                </template>
-                                <template x-if="e.posisi !== 'sales'">
-                                    <span class="badge" :class="e.tipe_penggajian === 'borongan' ? 'badge-primary' : (e.tipe_penggajian === 'bulanan' ? 'badge-info' : 'badge-mono')" style="text-transform:capitalize;font-weight:700;" x-text="e.tipe_penggajian"></span>
-                                </template>
+                                <span class="badge" :class="e.tipe_penggajian === 'borongan' ? 'badge-primary' : 'badge-info'" style="text-transform:capitalize;font-weight:700;" x-text="e.tipe_penggajian || 'borongan'"></span>
                             </td>
 
                             <!-- Gaji Pokok & Komisi -->
-                            <td class="cell-currency cell-right cell-nowrap">
-                                <template x-if="e.posisi === 'sales'">
+                            <td class="cell-right cell-nowrap">
+                                <template x-if="e.tipe_penggajian === 'borongan'">
                                     <div>
-                                        <div style="font-weight:800;" x-text="formatRupiah(e.gaji_pokok_bulanan)"></div>
-                                        <button type="button" @click="openTierModal()" class="badge badge-warning" style="font-size:10px;padding:2px 7px;font-weight:800;display:inline-flex;align-items:center;gap:4px;margin-top:3px;cursor:pointer;" title="Lihat skema tier komisi bertingkat">
-                                            <i data-lucide="award" style="width:11px;height:11px;"></i>
-                                            <span>Tier Bertingkat</span>
-                                        </button>
+                                        <div style="font-weight:700;font-size:13px;font-family:var(--font-mono);color:var(--color-ink);" x-text="formatRupiah(e.gaji_pokok_bulanan)"></div>
+                                        <span class="badge badge-secondary font-mono" style="font-size:10px;padding:1px 5px;margin-top:2px;display:inline-block;">+ Upah Borongan</span>
+                                        <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:1px;">Hasil Kemas (Pcs)</div>
                                     </div>
                                 </template>
-                                <template x-if="e.posisi !== 'sales'">
-                                    <div style="font-weight:700;" x-text="formatRupiah(e.gaji_pokok_bulanan)"></div>
+                                <template x-if="e.tipe_penggajian !== 'borongan'">
+                                    <div>
+                                        <div style="font-weight:700;font-size:13px;font-family:var(--font-mono);color:var(--color-ink);" x-text="formatRupiah(e.gaji_pokok_bulanan)"></div>
+                                        <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:1px;">Gaji Pokok Tetap</div>
+                                        <template x-if="e.posisi === 'sales'">
+                                            <span class="badge badge-warning" style="font-size:10px;padding:1px 5px;margin-top:3px;display:inline-block;" x-text="'+ Komisi Omzet'"></span>
+                                        </template>
+                                        <template x-if="e.posisi === 'driver'">
+                                            <span class="badge badge-info" style="font-size:10px;padding:1px 5px;margin-top:3px;display:inline-block;" x-text="'+ Uang Jalan / Hadir'"></span>
+                                        </template>
+                                    </div>
                                 </template>
                             </td>
 
                             <!-- Uang Hadir & Tunjangan -->
-                            <td class="cell-nowrap">
-                                <div style="font-size:12px;">
-                                    <span style="color:var(--color-ink-mute);">Hadir:</span> <strong class="cell-currency" x-text="formatRupiah(e.uang_kehadiran_harian)"></strong><span style="font-size:10.5px;color:var(--color-ink-mute);">/hari</span>
-                                </div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;">
-                                    <span>Tunj:</span> <span class="cell-currency" x-text="formatRupiah(e.tunjangan_bulanan)"></span><span style="font-size:10.5px;">/bln</span>
+                            <td>
+                                <div style="display:flex;flex-direction:column;gap:2px;">
+                                    <div style="font-size:12px;display:flex;align-items:center;gap:4px;">
+                                        <span style="color:var(--color-ink-mute);font-size:11px;">Hadir:</span>
+                                        <span style="font-family:var(--font-mono);font-weight:600;" x-text="formatRupiah(e.uang_kehadiran_harian) + '/hr'"></span>
+                                    </div>
+                                    <div style="font-size:12px;display:flex;align-items:center;gap:4px;">
+                                        <span style="color:var(--color-ink-mute);font-size:11px;">Tunjangan:</span>
+                                        <span style="font-family:var(--font-mono);font-weight:600;" x-text="formatRupiah(e.tunjangan_bulanan) + '/bln'"></span>
+                                    </div>
                                 </div>
                             </td>
 
@@ -752,6 +760,7 @@ ob_start();
                                 <span class="badge" :class="e.status_aktif ? 'badge-success' : 'badge-danger'" x-text="e.status_aktif ? 'Aktif' : 'Nonaktif'"></span>
                             </td>
 
+                            <?php if (\App\Core\Auth::can('master.employees_manage')): ?>
                             <!-- Aksi -->
                             <td class="cell-center cell-nowrap">
                                 <div class="flex items-center justify-center gap-1">
@@ -765,13 +774,14 @@ ob_start();
                                     </template>
                                 </div>
                             </td>
+                            <?php endif; ?>
 
                         </tr>
                     </template>
 
                     <template x-if="filteredEmployees.length === 0">
                         <tr>
-                            <td colspan="8" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= \App\Core\Auth::can('master.employees_manage') ? 8 : 7 ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="search-x" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Tidak ada data karyawan yang cocok</div>
                             </td>
@@ -786,6 +796,7 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- MODAL: TAMBAH / EDIT MASTER KARYAWAN                                     -->
     <!-- ========================================================================= -->
+    <?php if (\App\Core\Auth::can('master.employees_manage')): ?>
     <template x-teleport="body">
     <div x-show="showModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:580px;padding:24px;">
@@ -815,8 +826,8 @@ ob_start();
                         <input type="text" name="nama_karyawan" x-model="form.nama_karyawan" required class="form-input" placeholder="Contoh: Teh Ika">
                     </div>
                     <div>
-                        <label class="form-label">Nomor WhatsApp / HP</label>
-                        <input type="text" name="nomor_telepon" x-model="form.nomor_telepon" class="form-input font-mono" placeholder="08123456789">
+                        <label class="form-label">Nomor WhatsApp *</label>
+                        <input type="text" name="nomor_whatsapp" x-model="form.nomor_whatsapp" class="form-input font-mono" placeholder="08123456789">
                     </div>
                 </div>
 
@@ -838,42 +849,65 @@ ob_start();
                     2. Penempatan Kerja &amp; Skema Remunerasi
                 </div>
 
-                <div>
-                    <label class="form-label">Divisi / Posisi Kerja *</label>
-                    <select name="posisi" x-model="form.posisi" @change="onPosisiChange()" required class="form-input" style="font-weight:600;">
-                        <option value="sales">💼 Sales (Canvaser &amp; Komisi Toko)</option>
-                        <option value="driver">🚚 Driver (Supir Logistik &amp; Pengantar)</option>
-                        <option value="pengemasan">🍿 Pengemasan (Packing Borongan)</option>
-                        <option value="gudang">📦 Staff Gudang &amp; Sortir</option>
-                        <option value="admin">👩‍💼 Admin &amp; Kasir Kantor</option>
-                        <option value="mandor">👷 Mandor / Supervisor</option>
-                    </select>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="form-label">Divisi / Posisi Kerja *</label>
+                        <select name="posisi" x-model="form.posisi" @change="onPosisiChange()" required class="form-input" style="font-weight:600;">
+                            <option value="sales">💼 Sales (Canvaser &amp; Komisi Toko)</option>
+                            <option value="driver">🚚 Driver (Supir Logistik &amp; Pengantar)</option>
+                            <option value="pengemasan">🍿 Pengemasan (Packing Borongan)</option>
+                            <option value="gudang">📦 Staff Gudang &amp; Sortir</option>
+                            <option value="admin">👩‍💼 Admin &amp; Kasir Kantor</option>
+                            <option value="mandor">👷 Mandor / Supervisor</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Tipe Penggajian *</label>
+                        <select name="tipe_penggajian" x-model="form.tipe_penggajian" required class="form-input" style="font-weight:600;">
+                            <option value="borongan">🍿 Borongan (Kolom Terisi + Upah Borongan)</option>
+                            <option value="bulanan">💼 Bulanan (Sesuai Kolom Terisi)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- FORMULA KETENTUAN TIPE PENGGAJIAN -->
+                <div style="padding:10px 14px;background:rgba(241,245,249,0.9);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);font-size:11.5px;color:var(--color-ink-secondary);line-height:1.45;">
+                    <div style="font-weight:700;color:var(--color-ink);margin-bottom:4px;display:flex;align-items:center;gap:5px;">
+                        <i data-lucide="calculator" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                        Formula Perhitungan Gaji:
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        <div>• <strong style="color:var(--color-primary);">Borongan:</strong> Total Gaji = <em>Kolom Terisi (Gaji Pokok + Uang Hadir × Hari Masuk + Tunjangan)</em> + <strong>Upah Borongan</strong> (Pcs hasil produksi packing).</div>
+                        <div>• <strong style="color:#0284c7);">Bulanan:</strong> Total Gaji = <em>Hanya Kolom Terisi (Gaji Pokok + Uang Hadir × Hari Masuk + Tunjangan)</em>. Khusus Sales ditambah <strong>Komisi Omzet</strong>. Driver tanpa gapok cukup isi Uang Hadir/Jalan.</div>
+                    </div>
                 </div>
 
                 <!-- DYNAMIC CASE 1: PENGEMASAN (BORONGAN) -->
                 <template x-if="form.posisi === 'pengemasan'">
                     <div style="display:flex;flex-direction:column;gap:12px;">
-                        <input type="hidden" name="tipe_penggajian" value="borongan">
-                        <input type="hidden" name="gaji_pokok_bulanan" value="0">
-
                         <div style="padding:10px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:var(--rounded-md);font-size:12px;color:var(--color-ink-secondary);display:flex;align-items:flex-start;gap:8px;">
                             <i data-lucide="info" style="width:16px;height:16px;color:#3b82f6;flex-shrink:0;margin-top:2px;"></i>
                             <div>
-                                <strong style="color:var(--color-ink);">Skema Upah Borongan Murni:</strong>
-                                <div>Upah pokok dihitung otomatis per bungkus produk snack yang dikemas saat input data hasil produksi packing.</div>
+                                <strong style="color:var(--color-ink);">Skema Upah Borongan:</strong>
+                                <div>Upah borongan dihitung otomatis per bungkus snack saat input data produksi packing, ditambah nominal kolom terisi di bawah.</div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                                <label class="form-label">Uang Kehadiran Harian (Rp/hari) *</label>
+                                <label class="form-label">Gaji Pokok (Rp/bln)</label>
+                                <input type="text" name="gaji_pokok_bulanan" x-model="form.gaji_pokok_bulanan" class="form-input font-mono input-rupiah" placeholder="0">
+                                <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Opsional / default 0</div>
+                            </div>
+                            <div>
+                                <label class="form-label">Uang Hadir Harian (Rp/hari) *</label>
                                 <input type="text" name="uang_kehadiran_harian" x-model="form.uang_kehadiran_harian" required class="form-input font-mono input-rupiah" placeholder="10.000">
                                 <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Diberikan setiap hari masuk kerja</div>
                             </div>
                             <div>
                                 <label class="form-label">Tunjangan Bulanan (Rp/bln)</label>
                                 <input type="text" name="tunjangan_bulanan" x-model="form.tunjangan_bulanan" class="form-input font-mono input-rupiah" placeholder="50.000">
-                                <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Bonus / tunjangan tetap per bulan</div>
+                                <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Bonus / tunjangan tetap bulanan</div>
                             </div>
                         </div>
                     </div>
@@ -882,8 +916,6 @@ ob_start();
                 <!-- DYNAMIC CASE 2: SALES (KOMISI BERTINGKAT & PARAMETER PENGGAJIAN FLEKSIBEL) -->
                 <template x-if="form.posisi === 'sales'">
                     <div style="display:flex;flex-direction:column;gap:12px;">
-                        <input type="hidden" name="tipe_penggajian" :value="salesTipePenggajian">
-
                         <div style="padding:10px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:var(--rounded-md);font-size:12px;color:var(--color-ink-secondary);display:flex;align-items:center;justify-content:space-between;gap:10px;">
                             <div style="display:flex;align-items:flex-start;gap:8px;">
                                 <i data-lucide="trending-up" style="width:16px;height:16px;color:#10b981;flex-shrink:0;margin-top:2px;"></i>
@@ -931,36 +963,29 @@ ob_start();
                 <!-- DYNAMIC CASE 3: DRIVER (MURNI PENGANTAR, TANPA KOMISI) -->
                 <template x-if="form.posisi === 'driver'">
                     <div style="display:flex;flex-direction:column;gap:12px;">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                                <label class="form-label">Tipe Penggajian *</label>
-                                <select name="tipe_penggajian" x-model="form.tipe_penggajian" required class="form-input">
-                                    <option value="bulanan">Bulanan (Gaji Tetap Per Bulan)</option>
-                                    <option value="harian">Harian (Uang Jalan Harian)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="form-label">Plat No. Armada Truk / Mobil *</label>
-                                <input type="text" name="nomor_polisi_kendaraan" x-model="form.nomor_polisi_kendaraan" 
-                                       @input="form.nomor_polisi_kendaraan = $event.target.value.toUpperCase().slice(0, 12)"
-                                       maxlength="12" class="form-input font-mono uppercase" placeholder="Contoh: B 1234 ABC" required>
-                            </div>
+                        <div>
+                            <label class="form-label">Plat No. Armada Truk / Mobil *</label>
+                            <input type="text" name="nomor_polisi_kendaraan" x-model="form.nomor_polisi_kendaraan" 
+                                   @input="form.nomor_polisi_kendaraan = $event.target.value.toUpperCase().slice(0, 12)"
+                                   maxlength="12" class="form-input font-mono uppercase" placeholder="Contoh: B 1234 ABC" required>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="form-label">Gaji Pokok (Rp/bln)</label>
-                                <input type="text" name="gaji_pokok_bulanan" x-model="form.gaji_pokok_bulanan" class="form-input font-mono input-rupiah" placeholder="1.500.000">
+                                <input type="text" name="gaji_pokok_bulanan" x-model="form.gaji_pokok_bulanan" class="form-input font-mono input-rupiah" placeholder="0">
+                                <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Isi 0 jika tanpa gaji pokok tetap</div>
                             </div>
                             <div>
-                                <label class="form-label">Uang Jalan / Hadir (Rp/hari)</label>
-                                <input type="text" name="uang_kehadiran_harian" x-model="form.uang_kehadiran_harian" class="form-input font-mono input-rupiah" placeholder="20.000">
+                                <label class="form-label">Uang Jalan / Hadir Harian (Rp/hari) *</label>
+                                <input type="text" name="uang_kehadiran_harian" x-model="form.uang_kehadiran_harian" class="form-input font-mono input-rupiah" placeholder="120.000">
+                                <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Dikalikan jumlah hari jalan/kerja</div>
                             </div>
                         </div>
 
                         <div>
                             <label class="form-label">Tunjangan Bulanan (Rp/bln)</label>
-                            <input type="text" name="tunjangan_bulanan" x-model="form.tunjangan_bulanan" class="form-input font-mono input-rupiah" placeholder="50.000">
+                            <input type="text" name="tunjangan_bulanan" x-model="form.tunjangan_bulanan" class="form-input font-mono input-rupiah" placeholder="0">
                         </div>
                     </div>
                 </template>
@@ -970,27 +995,18 @@ ob_start();
                     <div style="display:flex;flex-direction:column;gap:12px;">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="form-label">Tipe Penggajian *</label>
-                                <select name="tipe_penggajian" x-model="form.tipe_penggajian" required class="form-input">
-                                    <option value="bulanan">Bulanan (Gaji Tetap Per Bulan)</option>
-                                    <option value="harian">Harian Lepas (Per Hari Kerja)</option>
-                                </select>
-                            </div>
-                            <div>
                                 <label class="form-label">Gaji Pokok (Rp/bln) *</label>
                                 <input type="text" name="gaji_pokok_bulanan" x-model="form.gaji_pokok_bulanan" required class="form-input font-mono input-rupiah" placeholder="2.500.000">
                             </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="form-label">Uang Kehadiran (Rp/hari)</label>
                                 <input type="text" name="uang_kehadiran_harian" x-model="form.uang_kehadiran_harian" class="form-input font-mono input-rupiah" placeholder="15.000">
                             </div>
-                            <div>
-                                <label class="form-label">Tunjangan Bulanan (Rp/bln)</label>
-                                <input type="text" name="tunjangan_bulanan" x-model="form.tunjangan_bulanan" class="form-input font-mono input-rupiah" placeholder="100.000">
-                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Tunjangan Bulanan (Rp/bln)</label>
+                            <input type="text" name="tunjangan_bulanan" x-model="form.tunjangan_bulanan" class="form-input font-mono input-rupiah" placeholder="100.000">
                         </div>
                     </div>
                 </template>
@@ -998,8 +1014,6 @@ ob_start();
                 <!-- DYNAMIC CASE 4: MANDOR / SUPERVISOR -->
                 <template x-if="form.posisi === 'mandor'">
                     <div style="display:flex;flex-direction:column;gap:12px;">
-                        <input type="hidden" name="tipe_penggajian" value="bulanan">
-
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="form-label">Gaji Pokok Bulanan (Rp/bln) *</label>
@@ -1353,6 +1367,7 @@ ob_start();
     <form id="delete-employee-form" action="<?= Router::url('/employees/delete') ?>" method="POST" data-action-text="Menonaktifkan karyawan..." style="display:none;">
         <input type="hidden" name="id" id="delete-employee-id">
     </form>
+    <?php endif; ?>
 
 </div>
 
@@ -1437,10 +1452,6 @@ function employeeApp() {
         },
 
         get salesTipePenggajian() {
-            const gp = this.parseInputRupiah(this.form.gaji_pokok_bulanan);
-            const hadir = this.parseInputRupiah(this.form.uang_kehadiran_harian);
-            if (gp > 0) return 'bulanan';
-            if (hadir > 0) return 'harian';
             return 'bulanan';
         },
 
@@ -1653,15 +1664,15 @@ function employeeApp() {
 
         onPosisiChange() {
             if (this.form.posisi === 'pengemasan') {
-                this.form.tipe_penggajian = 'borongan';
                 if (!this.isEdit) {
+                    this.form.tipe_penggajian = 'borongan';
                     this.form.gaji_pokok_bulanan = '0';
                     this.form.uang_kehadiran_harian = '10.000';
                     this.form.tunjangan_bulanan = '50.000';
                 }
             } else if (this.form.posisi === 'sales') {
-                this.form.tipe_penggajian = this.salesTipePenggajian;
                 if (!this.isEdit) {
+                    this.form.tipe_penggajian = 'bulanan';
                     this.form.gaji_pokok_bulanan = '0';
                     this.form.uang_kehadiran_harian = '0';
                     this.form.tunjangan_bulanan = '0';
@@ -1709,7 +1720,7 @@ function employeeApp() {
                 gaji_pokok_bulanan: '0',
                 uang_kehadiran_harian: '10.000',
                 tunjangan_bulanan: '50.000',
-                nomor_telepon: '',
+                nomor_whatsapp: '',
                 alamat: '',
                 nomor_polisi_kendaraan: '',
                 bank_nama: 'Tunai',
@@ -1732,7 +1743,7 @@ function employeeApp() {
                 gaji_pokok_bulanan: window.formatRupiahNumber ? window.formatRupiahNumber(e.gaji_pokok_bulanan) : String(e.gaji_pokok_bulanan || 0),
                 uang_kehadiran_harian: window.formatRupiahNumber ? window.formatRupiahNumber(e.uang_kehadiran_harian) : String(e.uang_kehadiran_harian || 0),
                 tunjangan_bulanan: window.formatRupiahNumber ? window.formatRupiahNumber(e.tunjangan_bulanan) : String(e.tunjangan_bulanan || 0),
-                nomor_telepon: e.nomor_telepon || '',
+                nomor_whatsapp: e.nomor_whatsapp || e.nomor_telepon || '',
                 alamat: e.alamat === '-' ? '' : (e.alamat || ''),
                 nomor_polisi_kendaraan: e.nomor_polisi_kendaraan || '',
                 bank_nama: e.bank_nama || 'Tunai',

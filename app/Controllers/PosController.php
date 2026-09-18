@@ -58,7 +58,7 @@ class PosController extends Controller
 
             $items = Database::fetchAll("
                 SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
-                       i.satuan_dasar, i.satuan_distribusi, i.stok_fisik_saat_ini, i.harga_pokok_pembelian,
+                       i.satuan_dasar, i.stok_fisik_saat_ini, i.harga_pokok_pembelian,
                        gp.nama_grup, gp.kode_grup, gp.barcode_universal,
                        COALESCE(gphl.harga_jual_pcs, 15000) AS harga_jual_satuan
                 FROM public.item i
@@ -331,10 +331,10 @@ class PosController extends Controller
             // 3. Insert ke item_pesanan + POTONG STOK FISIK & CATAT RIWAYAT MUTASI STOK
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
-                    pesanan_id, item_id, kuantitas_satuan_dasar, kuantitas_satuan_distribusi,
+                    pesanan_id, item_id, kuantitas_satuan_dasar,
                     harga_satuan_deal, diskon_item_persen, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan
                 ) VALUES (
-                    :pesanan_id, :item_id, :qty_pcs, :qty_bal, :harga, :disc_persen, :disc_nom, FALSE, :subtotal, :hpp
+                    :pesanan_id, :item_id, :qty_pcs, :harga, :disc_persen, :disc_nom, FALSE, :subtotal, :hpp
                 )
             ");
 
@@ -388,7 +388,6 @@ class PosController extends Controller
                     'pesanan_id' => $pesananId,
                     'item_id' => $itemId,
                     'qty_pcs' => $qtyPcs,
-                    'qty_bal' => 0,
                     'harga' => $hargaDeal,
                     'disc_persen' => $discPersen,
                     'disc_nom' => $discNom,

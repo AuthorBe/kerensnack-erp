@@ -26,7 +26,7 @@ INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, alamat_lengkap, nomor_te
 ON CONFLICT (kode_pemasok) DO NOTHING;
 
 -- 4. Master Pelanggan (Toko Langganan Reguler & Toko Konsinyasi - Data Dummy)
-INSERT INTO public.pelanggan (kode_pelanggan, nama_toko, grup_pelanggan_id, is_konsinyasi, alamat_lengkap, nomor_telepon, tipe_pembayaran_default, plafon_piutang) VALUES
+INSERT INTO public.pelanggan (kode_pelanggan, nama_toko, grup_pelanggan_id, is_konsinyasi, alamat_lengkap, nomor_whatsapp, tipe_pembayaran_default, plafon_piutang) VALUES
 ('CUST-001', 'Toko Umum / Walk-in Cash', '44444444-4444-4444-4444-444444444401', FALSE, 'Toko Langsung / Walk-in', '', 'cash', 0.00),
 ('CUST-002', 'Toko Konsinyasi Contoh A', '44444444-4444-4444-4444-444444444404', TRUE, 'Jl. Contoh Raya No. 10', '081200000011', 'konsinyasi', 5000000.00),
 ('CUST-003', 'Toko Konsinyasi Contoh B', '44444444-4444-4444-4444-444444444404', TRUE, 'Jl. Contoh Boulevard No. 25', '081200000012', 'konsinyasi', 5000000.00),
@@ -37,5 +37,5 @@ ON CONFLICT (kode_pelanggan) DO UPDATE SET
     grup_pelanggan_id = EXCLUDED.grup_pelanggan_id,
     is_konsinyasi = EXCLUDED.is_konsinyasi,
     alamat_lengkap = EXCLUDED.alamat_lengkap, 
-    nomor_telepon = EXCLUDED.nomor_telepon, 
+    nomor_whatsapp = EXCLUDED.nomor_whatsapp, 
     plafon_piutang = EXCLUDED.plafon_piutang;

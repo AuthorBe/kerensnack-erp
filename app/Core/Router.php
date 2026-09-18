@@ -132,6 +132,11 @@ class Router
                     return;
                 }
 
+                if ($path === '/logout') {
+                    self::redirect('/logout');
+                    return;
+                }
+
                 \App\Helpers\Flash::error('Sesi formulir kadaluarsa (CSRF Mismatch). Silakan ulangi aksi Anda.');
                 $referer = $_SERVER['HTTP_REFERER'] ?? self::url('/');
                 header("Location: {$referer}");

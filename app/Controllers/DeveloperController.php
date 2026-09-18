@@ -153,7 +153,7 @@ class DeveloperController extends Controller
 
         $this->view('developer.tests', [
             'pageTitle'     => 'Test Source & Lifecycle Console',
-            'pageSubtitle'  => 'Eksekusi Real-time 23 Test Suites ERP (Anti-Timeout, Rollback Aman)',
+            'pageSubtitle'  => 'Eksekusi Real-time ' . count($suites) . ' Test Suites ERP (Anti-Timeout, Rollback Aman)',
             'suites'        => $suites,
             'telemetry'     => $telemetry,
             'csrfToken'     => CSRF::token(),
@@ -309,6 +309,22 @@ class DeveloperController extends Controller
             'cleared' => $result['cleared'],
             'message' => $result['message'],
         ]);
+    }
+
+    /**
+     * Preview Halaman 403 Access Denied (Kado Kejutan) Khusus Developer
+     */
+    public function preview403(): void
+    {
+        $viewFile = ROOT_PATH . '/views/errors/403.php';
+        if (file_exists($viewFile)) {
+            $title = 'Preview: 403 – Akses Ditolak (Kado Kejutan)';
+            $reason = 'developer_preview_mode';
+            $isPreview = true;
+            require $viewFile;
+            exit;
+        }
+        $this->denyAccess('preview_not_found');
     }
 }
 

@@ -794,7 +794,7 @@ function devArchitectureApp() {
             {
                 id: 'tests',
                 name: 'tests/',
-                badge: '23 Test Suites',
+                badge: '24 Test Suites',
                 icon: '🧪',
                 desc: 'Rangkaian pengujian integrasi otomatis menyeluruh yang memverifikasi 100% kesehatan kode ERP.',
                 files: [

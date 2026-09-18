@@ -413,7 +413,7 @@ class ConsignmentController extends Controller
 
         try {
             $visit = Database::fetchOne("
-                SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
+                SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
                        COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
                        COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                        peng.nama_lengkap as auditor_name,
@@ -450,7 +450,7 @@ class ConsignmentController extends Controller
                 ORDER BY rkk.subtotal_laku DESC, i.nama_item ASC
             ", ['id' => $kunjunganId]);
 
-            $canManageTagihan = Auth::can('consignment.piutang') && (Auth::isAdmin() || Auth::isOwner());
+            $canManageTagihan = Auth::can('consignment.piutang');
             $canSpotBill = Auth::can(['consignment.opname_all', 'consignment.opname_assigned', 'consignment.piutang']);
 
             $this->view('consignment.opname_hasil', [
@@ -625,7 +625,7 @@ class ConsignmentController extends Controller
                            pes.status_pembayaran, pes.sisa_tagihan, pes.tanggal_pesanan,
                            pes.catatan,
                            p.id as pelanggan_id, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, 
-                           p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
+                           p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                            peng.nama_lengkap as auditor_name,
@@ -659,7 +659,7 @@ class ConsignmentController extends Controller
             } else {
                 // Kasus 2: Diberikan kunjungan_id (Dari Halaman Hasil Opname)
                 $sql = "
-                    SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
+                    SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                            peng.nama_lengkap as auditor_name,
@@ -753,7 +753,7 @@ class ConsignmentController extends Controller
                            pes.status_pembayaran, pes.sisa_tagihan, pes.tanggal_pesanan,
                            pes.catatan,
                            p.id as pelanggan_id, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, 
-                           p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
+                           p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                            peng.nama_lengkap as auditor_name,
@@ -788,7 +788,7 @@ class ConsignmentController extends Controller
             } else {
                 // Kasus 2: Diberikan kunjungan_id (Dari Halaman Hasil Opname)
                 $sql = "
-                    SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_telepon, p.nama_pemilik,
+                    SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                            peng.nama_lengkap as auditor_name,
@@ -1237,8 +1237,6 @@ class ConsignmentController extends Controller
         Auth::requirePermission('consignment.piutang');
 
         try {
-            $isOwner = Auth::isOwner();
-            $isAdmin = Auth::isAdmin() && !$isOwner;
             $activeTab = (string)$this->input('tab', 'buat');
 
             // Filter untuk tab Buat Tagihan

@@ -17,7 +17,7 @@ use Throwable;
  */
 class PermissionController extends Controller
 {
-    private const PROTECTED_ROLES = ['developer', 'owner', 'admin', 'sales', 'driver'];
+    private const PROTECTED_ROLES = ['developer', 'owner', 'admin', 'sales', 'driver', 'mandor'];
 
     public function __construct()
     {

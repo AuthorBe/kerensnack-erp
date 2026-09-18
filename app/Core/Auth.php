@@ -118,6 +118,11 @@ class Auth
         return in_array(self::role(), ['developer', 'owner', 'admin'], true);
     }
 
+    public static function isMandor(): bool
+    {
+        return in_array(self::role(), ['developer', 'owner', 'admin', 'mandor'], true);
+    }
+
     public static function isSales(): bool
     {
         return in_array(self::role(), ['developer', 'owner', 'admin', 'sales'], true);
@@ -466,75 +471,78 @@ class Auth
     }
 
     /**
-     * Middleware Guard Berlapis: Wajib memiliki izin tertentu
+     * Tolak Akses: Catat audit keamanan, atur status HTTP 403, dan tampilkan halaman kado kejutan interaktif.
      */
-    public static function requirePermission(string|array $permissions): void
+    public static function denyAccess(string|array|null $reason = null): never
     {
-        self::requireLogin();
+        $userId = self::id();
+        $userName = self::name();
+        $userRole = ucfirst(self::role());
+        $requestedUri = $_SERVER['REQUEST_URI'] ?? '/';
+        $reasonStr = is_array($reason) ? implode(', ', $reason) : (string)($reason ?? 'Akses tanpa izin');
 
-        // Tambahkan header anti-cache agar halaman terproteksi tidak bisa diakses via tombol Back browser
+        // 1. Catat Log Audit Keamanan
+        try {
+            \App\Helpers\ActivityLog::log(
+                'keamanan',
+                'ACCESS_DENIED',
+                "Percobaan bypass akses ilegal oleh {$userName} ({$userRole}) ke '{$requestedUri}'. Alasan/Tiket: {$reasonStr}",
+                'pengguna',
+                $userId
+            );
+        } catch (\Throwable $e) {
+            error_log("Gagal mencatat log access denied: " . $e->getMessage());
+        }
+
+        // 2. Proteksi Header Anti-Cache
         if (!headers_sent()) {
+            http_response_code(403);
             header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
             header("Cache-Control: post-check=0, pre-check=0", false);
             header("Pragma: no-cache");
             header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
         }
 
-        if (!self::can($permissions)) {
-            http_response_code(403);
+        // 3. Response untuk AJAX / JSON Requests
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+               || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+               || (isset($_SERVER['CONTENT_TYPE']) && str_contains($_SERVER['CONTENT_TYPE'], 'application/json'));
 
-            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
-                   || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
-
-            if ($isAjax) {
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'Akses ditolak (403 Forbidden). Anda tidak memiliki izin untuk aksi ini.',
-                    'required_permissions' => (array)$permissions
-                ]);
-                exit;
-            }
-
-            $posUrl = Router::url('/pos');
-            $permStr = is_array($permissions) ? implode(', ', $permissions) : $permissions;
-            $userRole = ucfirst(self::role());
-
-            echo "<!DOCTYPE html>
-            <html lang='id' class='dark'>
-            <head>
-                <meta charset='UTF-8'>
-                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                <title>403 - Akses Ditolak | KEREN Snack ERP</title>
-                <style>
-                    body { margin: 0; padding: 0; background: #090d16; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-                    .card { max-width: 460px; width: 90%; padding: 36px 28px; background: #0f172a; border: 1.5px solid rgba(244,63,94,0.35); border-radius: 24px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); }
-                    .icon { font-size: 52px; margin-bottom: 14px; }
-                    .title { font-size: 22px; font-weight: 800; color: #fb7185; margin: 0 0 10px; letter-spacing: -0.3px; }
-                    .desc { font-size: 13.5px; color: #94a3b8; margin: 0 0 20px; line-height: 1.6; }
-                    .badge-role { display: inline-block; background: rgba(37,99,235,0.2); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 24px; }
-                    .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-                    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 22px; border-radius: 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
-                    .btn-primary { background: #2563eb; color: #fff; }
-                    .btn-primary:hover { background: #1d4ed8; }
-                    .btn-secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
-                    .btn-secondary:hover { background: #334155; }
-                </style>
-            </head>
-            <body>
-                <div class='card'>
-                    <div class='icon'>🛡️</div>
-                    <h1 class='title'>Akses Ditolak (403 Forbidden)</h1>
-                    <p class='desc'>Akun Anda tidak memiliki tiket izin untuk mengakses halaman atau fitur ini.<br><span style='font-family:monospace;font-size:11px;color:#cbd5e1;background:#1e293b;padding:2px 6px;border-radius:4px;'>Kode Izin: {$permStr}</span></p>
-                    <div class='badge-role'>Peran Aktif: {$userRole}</div>
-                    <div class='btn-group'>
-                        <a href='javascript:history.back()' class='btn btn-secondary'>Kembali</a>
-                        <a href='{$posUrl}' class='btn btn-primary'>Layar Utama</a>
-                    </div>
-                </div>
-            </body>
-            </html>";
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'status'  => 403,
+                'error'   => 'Akses ditolak (403 Forbidden). Sistem mendeteksi tindakan akses tidak sah.',
+                'reason'  => $reasonStr,
+                'redirect'=> Router::url('/logout')
+            ]);
             exit;
+        }
+
+        // 4. Render Halaman 403 Kado Kejutan
+        $viewFile = ROOT_PATH . '/views/errors/403.php';
+        if (file_exists($viewFile)) {
+            $title = '403 – Akses Ditolak | KEREN SNACK ERP';
+            $reason = $reasonStr;
+            require $viewFile;
+            exit;
+        }
+
+        // Fallback jika file view tidak sengaja hilang
+        echo "<!DOCTYPE html><html><head><title>403 Forbidden</title></head><body style='font-family:sans-serif;text-align:center;padding:50px;'><h1>403 Forbidden</h1><p>Akses Ditolak.</p><a href='" . Router::url('/logout') . "'>Logout</a></body></html>";
+        exit;
+    }
+
+    /**
+     * Middleware Guard Berlapis: Wajib memiliki izin tertentu
+     */
+    public static function requirePermission(string|array $permissions): void
+    {
+        self::requireLogin();
+
+        if (!self::can($permissions)) {
+            self::denyAccess($permissions);
         }
     }
 
@@ -548,7 +556,7 @@ class Auth
             return;
         }
         if (!in_array(self::role(), $allowedRoles, true)) {
-            self::requirePermission('non_existent_role_permission');
+            self::denyAccess($allowedRoles);
         }
     }
 
@@ -559,66 +567,8 @@ class Auth
     {
         self::requireLogin();
 
-        if (!headers_sent()) {
-            header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-            header("Cache-Control: post-check=0, pre-check=0", false);
-            header("Pragma: no-cache");
-            header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
-        }
-
         if (!self::isDeveloper()) {
-            http_response_code(403);
-
-            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
-                   || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
-
-            if ($isAjax) {
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => false,
-                    'error'   => 'Akses ditolak (403 Forbidden). Portal ini dikhususkan hanya untuk pengguna dengan peran Developer.'
-                ]);
-                exit;
-            }
-
-            $userRole = ucfirst(self::role());
-            $homeUrl = Router::url('/');
-
-            echo "<!DOCTYPE html>
-            <html lang='id' class='dark'>
-            <head>
-                <meta charset='UTF-8'>
-                <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                <title>403 - Akses Ditolak | Khusus Developer</title>
-                <style>
-                    body { margin: 0; padding: 0; background: #090d16; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-                    .card { max-width: 480px; width: 90%; padding: 36px 28px; background: #0f172a; border: 1.5px solid rgba(239,68,68,0.4); border-radius: 24px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.8); }
-                    .icon { font-size: 52px; margin-bottom: 14px; }
-                    .title { font-size: 22px; font-weight: 800; color: #ef4444; margin: 0 0 10px; letter-spacing: -0.3px; }
-                    .desc { font-size: 13.5px; color: #94a3b8; margin: 0 0 20px; line-height: 1.6; }
-                    .badge-role { display: inline-block; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; margin-bottom: 24px; }
-                    .btn-group { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-                    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 22px; border-radius: 12px; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
-                    .btn-primary { background: #3b82f6; color: #fff; }
-                    .btn-primary:hover { background: #2563eb; }
-                    .btn-secondary { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; }
-                    .btn-secondary:hover { background: #334155; }
-                </style>
-            </head>
-            <body>
-                <div class='card'>
-                    <div class='icon'>🔒</div>
-                    <h1 class='title'>Akses Ditolak (403 Forbidden)</h1>
-                    <p class='desc'>Portal kendali Developer bersifat tertutup dan hanya dapat diakses oleh akun dengan peran <strong>Developer</strong>.</p>
-                    <div class='badge-role'>Peran Anda Saat Ini: {$userRole}</div>
-                    <div class='btn-group'>
-                        <a href='javascript:history.back()' class='btn btn-secondary'>Kembali</a>
-                        <a href='{$homeUrl}' class='btn btn-primary'>Kembali ke Beranda</a>
-                    </div>
-                </div>
-            </body>
-            </html>";
-            exit;
+            self::denyAccess('developer_only');
         }
     }
 }

@@ -374,7 +374,6 @@ runTest("9. CustomerController: Validasi backend store() memblokir Driver sebaga
         'grup_pelanggan_id' => $sampleGrup,
         'sales_driver_id' => $driverEmp['karyawan_id'],
         'alamat_lengkap' => 'Alamat Mock',
-        'nomor_telepon' => '08123456789',
         'nomor_whatsapp' => '08123456789',
         'tipe_pembayaran_default' => 'cash'
     ];

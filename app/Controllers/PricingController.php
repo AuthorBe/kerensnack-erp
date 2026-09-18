@@ -92,7 +92,7 @@ class PricingController extends Controller
      */
     public function storeLevel(): void
     {
-        Auth::requirePermission('pricing.manage');
+        Auth::requirePermission('master.pricing_manage');
 
         $id = trim((string)$this->input('id', ''));
         $groupId = trim((string)$this->input('grup_produk_id', ''));
@@ -202,6 +202,14 @@ class PricingController extends Controller
             $this->flashError('Gagal menyimpan level harga: ' . $e->getMessage());
             $this->redirect('/pricing');
         }
+    }
+
+    /**
+     * Alias untuk rute POST /pricing/update-level
+     */
+    public function updateLevelPrice(): void
+    {
+        $this->storeLevel();
     }
 
     public function deleteLevelPrice(): void

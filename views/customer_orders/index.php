@@ -428,10 +428,12 @@ ob_start();
                 <i data-lucide="file-spreadsheet"></i>
                 <span>Export Excel</span>
             </a>
+            <?php if (Auth::can('orders.create')): ?>
             <a href="<?= Router::url('/customer-orders/create') ?>" class="btn btn-primary" style="font-weight:700;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Penjualan Baru</span>
             </a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -604,10 +606,12 @@ ob_start();
                                 </div>
                                 <div style="font-size: 15px; font-weight: 700; color: var(--color-ink);">Belum Ada Transaksi Penjualan Toko</div>
                                 <div style="font-size: 13px; color: var(--color-ink-mute); margin-top: 4px; margin-bottom: 16px;">Belum ada faktur penjualan yang sesuai dengan filter pencarian.</div>
+                                <?php if (Auth::can('orders.create')): ?>
                                 <a href="<?= Router::url('/customer-orders/create') ?>" class="btn btn-primary btn-sm">
                                     <i data-lucide="plus"></i>
                                     <span>Input Penjualan Toko Baru</span>
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </td>
                     </tr>
@@ -1475,6 +1479,7 @@ ob_start();
                             </template>
 
                             <!-- FORM CATAT BAYAR JIKA BELUM LUNAS DAN BUKAN STATUS GAGAL/BATAL -->
+                            <?php if (Auth::can('orders.pay')): ?>
                             <template x-if="calcSisaTagihan() > 0 && !['gagal_dikirim', 'gagal_kembali', 'gagal_kirim', 'dibatalkan'].includes(orderDetail?.status_pemrosesan)">
                                 <div style="padding:16px;background:var(--color-canvas);border:1.5px solid rgba(30,58,138,0.2);border-radius:14px;">
                                     <div style="font-size:13px;font-weight:800;color:var(--color-ink);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
@@ -1535,6 +1540,7 @@ ob_start();
                                     </form>
                                 </div>
                             </template>
+                            <?php endif; ?>
 
                             <!-- SEKSI RIWAYAT PEMBAYARAN FAKTUR -->
                             <div style="margin-top:4px;">
@@ -1600,6 +1606,7 @@ ob_start();
                 <div x-show="!loadingDetail && activeTab === 'actions'" style="padding-top:4px;padding-bottom:10px;">
                     
                     <!-- GRUP 1: CETAK & SALINAN DOKUMEN FAKTUR -->
+                    <?php if (Auth::can('orders.print_invoice')): ?>
                     <div>
                         <div style="font-size:11px;font-weight:800;color:var(--color-ink-secondary);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;gap:7px;padding:0 2px;margin-bottom:12px;">
                             <i data-lucide="printer" style="width:14px;height:14px;color:var(--color-ink-mute);"></i>
@@ -1644,6 +1651,7 @@ ob_start();
                             </a>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <!-- GRUP 2: PENGENDALIAN & KEAMANAN TRANSAKSI -->
                     <div style="margin-top:26px;">
@@ -1704,6 +1712,7 @@ ob_start();
                             </template>
 
                             <!-- Status Belum Selesai: Zona Bahaya Batalkan Transaksi (Full Width) -->
+                            <?php if (Auth::can('orders.cancel')): ?>
                             <template x-if="orderDetail && !['selesai_dikirim', 'selesai_diterima', 'selesai'].includes(orderDetail.status_pemrosesan)">
                                 <div class="w-full col-span-full" style="padding:16px 18px;background:rgba(239,68,68,0.05);border:1.5px solid rgba(239,68,68,0.22);border-radius:14px;">
                                     <div style="font-size:13px;font-weight:800;color:#ef4444;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
@@ -1733,6 +1742,7 @@ ob_start();
                                     </form>
                                 </div>
                             </template>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -2257,6 +2267,7 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- MODAL: POP-UP KONFIRMASI MINIMALIS KIRIM ULANG PESANAN GAGAL              -->
     <!-- ========================================================================= -->
+    <?php if (Auth::can('orders.retry_delivery')): ?>
     <template x-teleport="body">
     <div x-show="showRetryModal" x-cloak class="modal-backdrop" @click.self="showRetryModal = false" style="z-index: 10050;">
         <div class="modal-box" style="max-width: 480px; padding: 24px; border-radius: 20px; text-align: left;" @click.stop>
@@ -2334,6 +2345,7 @@ ob_start();
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
 </div>
 

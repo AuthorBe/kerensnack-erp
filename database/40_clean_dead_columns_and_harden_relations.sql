@@ -41,8 +41,7 @@ BEGIN
             'nama_item', i.nama_item,
             'grup_nama', gp.nama_grup,
             'stok_fisik', i.stok_fisik_saat_ini,
-            'satuan_dasar', i.satuan_dasar,
-            'satuan_distribusi', i.satuan_distribusi
+            'satuan_dasar', i.satuan_dasar
         )
     ) INTO v_items
     FROM public.item i
