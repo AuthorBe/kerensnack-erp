@@ -210,6 +210,12 @@ class TestRunnerService
             'category'    => 'Security & RBAC',
             'description' => 'Verifikasi halaman 403 kado kejutan, auto-logout timer, audio API, proteksi route developer, dan penolakan akses tanpa izin.'
         ],
+        'brand_master' => [
+            'file'        => 'BrandMasterModuleTest.php',
+            'title'       => 'Master Data Merek & Relasi Grup Produk',
+            'category'    => 'Master Data & Produk',
+            'description' => 'Validasi master merek dagang (Brand), relasi FK ke grup produk, CRUD, dan impor data merek.'
+        ],
     ];
 
     // -------------------------------------------------------------------------

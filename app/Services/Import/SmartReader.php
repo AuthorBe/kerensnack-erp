@@ -119,14 +119,22 @@ class SmartReader
             }
         }
 
-        // 2. Partial match (skip kunci pendek atau generik seperti 'id', 'no', 'kd', 'nama', 'kode' agar tidak salah tangkap)
+        // 2. Partial match (skip kunci pendek atau generik seperti 'id', 'no', 'kd', 'nama', 'kode', 'merek' agar tidak salah tangkap)
         foreach ($keys as $k) {
             $kNorm = str_replace([' ', '-'], '_', strtolower(trim((string)$k)));
-            if (in_array($kNorm, ['id', 'no', 'kd', 'nama', 'kode'], true) || strlen($kNorm) <= 4) {
+            if (in_array($kNorm, ['id', 'no', 'kd', 'nama', 'kode', 'merek', 'brand'], true) || strlen($kNorm) <= 4) {
                 continue;
             }
+            $isCodeKey = str_contains($kNorm, 'kode') || str_contains($kNorm, 'kd');
             foreach ($row as $rowKey => $rowVal) {
                 $rKeyNorm = str_replace([' ', '-'], '_', strtolower(trim((string)$rowKey)));
+                $isCodeCol = str_contains($rKeyNorm, 'kode') || str_contains($rKeyNorm, 'kd');
+                
+                // Jangan cocokkan pencarian nama parsial ke kolom kode, atau sebaliknya
+                if ($isCodeKey !== $isCodeCol) {
+                    continue;
+                }
+
                 if (str_contains($rKeyNorm, $kNorm) && $rowVal !== '' && $rowVal !== null) {
                     return is_string($rowVal) ? trim($rowVal) : $rowVal;
                 }

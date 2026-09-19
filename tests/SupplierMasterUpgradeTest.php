@@ -50,11 +50,11 @@ runTest("2. Insert Pemasok baru dengan data lokasi maps & kontak PIC lengkap", f
     $stmt = $pdo->prepare("
         INSERT INTO public.pemasok (
             kode_pemasok, nama_pemasok, nama_kontak, alamat_lengkap, link_google_maps,
-            nomor_telepon, nomor_whatsapp, email, termin_bayar, catatan,
+            nomor_whatsapp, email, termin_bayar, catatan,
             nama_bank, nomor_rekening, atas_nama_rekening
         ) VALUES (
             :kode, 'PT Test Pemasok Plastik', 'Pak Hendra Sales', 'Jl. Industri No. 88, Cikarang', 'https://maps.app.goo.gl/example123',
-            '021-8989898', '081299998888', 'sales@testpemasok.co.id', 'tempo_14_hari', 'Pengiriman sebelum jam 16:00',
+            '081299998888', 'sales@testpemasok.co.id', 'tempo_14_hari', 'Pengiriman sebelum jam 16:00',
             'BCA', '1234567890', 'PT Test Pemasok Plastik'
         ) RETURNING id
     ");

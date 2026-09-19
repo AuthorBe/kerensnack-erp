@@ -38,7 +38,6 @@ class SupplierImportHandler implements EntityImportHandlerInterface
             'Nama PIC / Kontak',
             'Wilayah / Kota',
             'Alamat Lengkap',
-            'No Telepon',
             'No WhatsApp',
             'Email',
             'Termin Bayar',
@@ -52,15 +51,15 @@ class SupplierImportHandler implements EntityImportHandlerInterface
 
     public function getTemplateWidths(): array
     {
-        return [18, 30, 22, 22, 35, 16, 16, 24, 16, 14, 18, 22, 25, 14];
+        return [18, 30, 22, 22, 35, 18, 24, 16, 14, 18, 22, 25, 14];
     }
 
     public function getTemplateExamples(): array
     {
         return [
-            ['SUPP-0001', 'PT Sumber Rasa Sejahtera', 'Bpk. Gunawan', 'Kota Tangerang', 'Kawasan Industri Jatake Blok C No. 5', '021-5566778', '081299887766', 'sales@sumberrasa.com', 'tempo_30_hari', 'BCA', '5544332211', 'PT Sumber Rasa Sejahtera', 'Supplier bumbu tabur', 'Aktif'],
-            ['SUPP-0002', 'UD Plastik Prima Abadi', 'Ibu Melati', 'Kota Jakarta Barat', 'Jl. Daan Mogot KM 11 No. 88', '021-5432109', '081765432109', 'order@primaabadi.com', 'tempo_14_hari', 'Mandiri', '1122334455', 'Melati', 'Supplier roll kemasan foil', 'Aktif'],
-            ['', 'Sentra Singkong Subang', 'Kang Asep', 'Subang', 'Desa Cijambe, Subang', '', '082133445566', '', 'cash', 'BRI', '9988776655', 'Asep Saepudin', 'Supplier singkong basah', 'Aktif'],
+            ['SUPP-0001', 'PT Sumber Rasa Sejahtera', 'Bpk. Gunawan', 'Kota Tangerang', 'Kawasan Industri Jatake Blok C No. 5', '081299887766', 'sales@sumberrasa.com', 'tempo_30_hari', 'BCA', '5544332211', 'PT Sumber Rasa Sejahtera', 'Supplier bumbu tabur', 'Aktif'],
+            ['SUPP-0002', 'UD Plastik Prima Abadi', 'Ibu Melati', 'Kota Jakarta Barat', 'Jl. Daan Mogot KM 11 No. 88', '081765432109', 'order@primaabadi.com', 'tempo_14_hari', 'Mandiri', '1122334455', 'Melati', 'Supplier roll kemasan foil', 'Aktif'],
+            ['', 'Sentra Singkong Subang', 'Kang Asep', 'Subang', 'Desa Cijambe, Subang', '082133445566', '', 'cash', 'BRI', '9988776655', 'Asep Saepudin', 'Supplier singkong basah', 'Aktif'],
         ];
     }
 
@@ -80,7 +79,6 @@ class SupplierImportHandler implements EntityImportHandlerInterface
         $sql = "SELECT p.kode_pemasok, p.nama_pemasok, COALESCE(p.nama_kontak, '') as nama_kontak,
                        COALESCE(w.nama_wilayah, '') as nama_wilayah,
                        COALESCE(p.alamat_lengkap, '') as alamat_lengkap,
-                       COALESCE(p.nomor_telepon, '') as nomor_telepon,
                        COALESCE(p.nomor_whatsapp, '') as nomor_whatsapp,
                        COALESCE(p.email, '') as email,
                        COALESCE(p.termin_bayar, 'cash') as termin_bayar,
@@ -125,8 +123,7 @@ class SupplierImportHandler implements EntityImportHandlerInterface
             $kontak = (string)(SmartReader::getSmartValue($rowData, ['nama_kontak', 'kontak', 'pic']) ?? '');
             $wilayahRaw = (string)(SmartReader::getSmartValue($rowData, ['wilayah', 'kota', 'wilayah_kota']) ?? '');
             $alamat = (string)(SmartReader::getSmartValue($rowData, ['alamat_lengkap', 'alamat']) ?? '');
-            $telepon = (string)(SmartReader::getSmartValue($rowData, ['nomor_telepon', 'telepon', 'telp']) ?? '');
-            $whatsapp = (string)(SmartReader::getSmartValue($rowData, ['nomor_whatsapp', 'whatsapp', 'wa']) ?? '');
+            $whatsapp = (string)(SmartReader::getSmartValue($rowData, ['nomor_whatsapp', 'whatsapp', 'wa', 'nomor_telepon', 'telepon', 'telp']) ?? '');
             $email = (string)(SmartReader::getSmartValue($rowData, ['email', 'surel']) ?? '');
             $termin = (string)(SmartReader::getSmartValue($rowData, ['termin_bayar', 'termin', 'syarat_bayar']) ?? 'cash');
             $bankNama = (string)(SmartReader::getSmartValue($rowData, ['nama_bank', 'bank']) ?? '');
@@ -185,7 +182,6 @@ class SupplierImportHandler implements EntityImportHandlerInterface
                 'nama_kontak'        => $kontak,
                 'wilayah_id'         => $wilayahId,
                 'alamat_lengkap'     => $alamat,
-                'nomor_telepon'      => $telepon,
                 'nomor_whatsapp'     => $whatsapp,
                 'email'              => $email,
                 'termin_bayar'       => $termin ?: 'cash',
@@ -214,7 +210,6 @@ class SupplierImportHandler implements EntityImportHandlerInterface
                 $isDiff = trim($nama) !== trim((string)$dbRow['nama_pemasok'])
                     || trim($kontak) !== trim((string)($dbRow['nama_kontak'] ?? ''))
                     || trim($alamat) !== trim((string)($dbRow['alamat_lengkap'] ?? ''))
-                    || trim($telepon) !== trim((string)($dbRow['nomor_telepon'] ?? ''))
                     || trim($whatsapp) !== trim((string)($dbRow['nomor_whatsapp'] ?? ''))
                     || trim($email) !== trim((string)($dbRow['email'] ?? ''))
                     || trim($termin) !== trim((string)($dbRow['termin_bayar'] ?? 'cash'))
@@ -261,11 +256,11 @@ class SupplierImportHandler implements EntityImportHandlerInterface
         $nextSeq = ((int)($stmtMaxCode->fetch(PDO::FETCH_ASSOC)['max_seq'] ?? 0)) + 1;
 
         $stmtIns = $pdo->prepare("INSERT INTO public.pemasok 
-            (kode_pemasok, nama_pemasok, nama_kontak, wilayah_id, alamat_lengkap, nomor_telepon, nomor_whatsapp, email, termin_bayar, nama_bank, nomor_rekening, atas_nama_rekening, catatan, status_aktif)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            (kode_pemasok, nama_pemasok, nama_kontak, wilayah_id, alamat_lengkap, nomor_whatsapp, email, termin_bayar, nama_bank, nomor_rekening, atas_nama_rekening, catatan, status_aktif)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmtUpd = $pdo->prepare("UPDATE public.pemasok SET 
-            nama_pemasok = ?, nama_kontak = ?, wilayah_id = ?, alamat_lengkap = ?, nomor_telepon = ?, nomor_whatsapp = ?, email = ?, termin_bayar = ?, nama_bank = ?, nomor_rekening = ?, atas_nama_rekening = ?, catatan = ?, status_aktif = ?, diubah_pada = NOW()
+            nama_pemasok = ?, nama_kontak = ?, wilayah_id = ?, alamat_lengkap = ?, nomor_whatsapp = ?, email = ?, termin_bayar = ?, nama_bank = ?, nomor_rekening = ?, atas_nama_rekening = ?, catatan = ?, status_aktif = ?, diubah_pada = NOW()
             WHERE id = ?");
 
         $stmtDeactivate = $pdo->prepare("UPDATE public.pemasok SET status_aktif = FALSE, diubah_pada = NOW() WHERE id = ?");
@@ -292,7 +287,6 @@ class SupplierImportHandler implements EntityImportHandlerInterface
                     $d['nama_kontak'] ?: null,
                     $d['wilayah_id'] ?: null,
                     $d['alamat_lengkap'] ?: null,
-                    $d['nomor_telepon'] ?: null,
                     $d['nomor_whatsapp'] ?: null,
                     $d['email'] ?: null,
                     $d['termin_bayar'] ?: 'cash',
@@ -309,7 +303,6 @@ class SupplierImportHandler implements EntityImportHandlerInterface
                     $d['nama_kontak'] ?: null,
                     $d['wilayah_id'] ?: null,
                     $d['alamat_lengkap'] ?: null,
-                    $d['nomor_telepon'] ?: null,
                     $d['nomor_whatsapp'] ?: null,
                     $d['email'] ?: null,
                     $d['termin_bayar'] ?: 'cash',

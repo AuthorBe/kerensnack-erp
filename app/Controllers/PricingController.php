@@ -33,7 +33,7 @@ class PricingController extends Controller
 
             // 2. Ambil seluruh grup produk aktif
             $groups = Database::fetchAll("
-                SELECT id, kode_grup, nama_grup, barcode_universal, konversi_bal_ke_pcs
+                SELECT id, kode_grup, nama_grup, barcode_universal
                 FROM public.grup_produk
                 WHERE status_aktif = TRUE
                 ORDER BY kode_grup ASC
@@ -238,27 +238,6 @@ class PricingController extends Controller
             }
 
             $levelHarga = (int)$row['level_harga'];
-
-            // Proteksi 1: Level 1 adalah baseline ritel acuan sistem, tidak boleh dihapus
-            if ($levelHarga === 1) {
-                $this->flashError('Level 1 (Ritel Standar) adalah harga dasar acuan utama sistem dan tidak boleh dihapus.');
-                $this->redirect('/pricing');
-                return;
-            }
-
-            // Proteksi 2: Level yang sedang aktif digunakan oleh grup pelanggan dilarang dihapus
-            $usedGroups = Database::fetchAll("
-                SELECT kode_grup, nama_grup 
-                FROM public.grup_pelanggan 
-                WHERE default_level_harga = :lvl
-            ", ['lvl' => $levelHarga]);
-
-            if (!empty($usedGroups)) {
-                $groupNames = implode(', ', array_map(fn($g) => $g['nama_grup'] . ' (' . $g['kode_grup'] . ')', $usedGroups));
-                $this->flashError("Level {$levelHarga} tidak dapat dihapus karena sedang aktif digunakan oleh grup pelanggan: {$groupNames}. Pindahkan tier grup pelanggan tersebut terlebih dahulu.");
-                $this->redirect('/pricing');
-                return;
-            }
 
             Database::execute("DELETE FROM public.grup_produk_harga_level WHERE id = :id", ['id' => $id]);
 

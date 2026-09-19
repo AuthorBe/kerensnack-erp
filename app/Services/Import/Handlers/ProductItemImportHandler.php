@@ -39,7 +39,6 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
             'Grup Produk',
             'Satuan Dasar',
             'Kelompok Upah Borongan',
-            'Upah Borongan Manual (Rp)',
             'Pemasok Utama',
             'HPP Pokok (Rp)',
             'Stok Minimum Warning',
@@ -50,15 +49,15 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
 
     public function getTemplateWidths(): array
     {
-        return [18, 34, 26, 14, 24, 22, 24, 18, 20, 16, 16];
+        return [18, 34, 26, 14, 24, 24, 18, 20, 16, 16];
     }
 
     public function getTemplateExamples(): array
     {
         return [
-            ['KS-SK-ASIN-250', 'Keripik Singkong Asin Gurih 250gr', 'Keripik Singkong 250gr', 'pcs', 'Kelompok 600', 0, 'Sentra Singkong Subang', 8500, 50, 'Aktif', 'Aktif'],
-            ['KS-SK-PEDAS-250', 'Keripik Singkong Pedas Balado 250gr', 'Keripik Singkong 250gr', 'pcs', 'Kelompok 600', 0, 'Sentra Singkong Subang', 9000, 50, 'Aktif', 'Aktif'],
-            ['KS-BRNG-ORI-150', 'Basreng Original Daun Jeruk 150gr', 'Basreng Pedas Daun Jeruk 150gr', 'pcs', 'Kelompok 500', 0, 'UD Plastik Prima Abadi', 7000, 30, 'Aktif', 'Aktif'],
+            ['KS-SK-ASIN-250', 'Keripik Singkong Asin Gurih 250gr', 'Keripik Singkong 250gr', 'pcs', 'Kelompok 600', 'Sentra Singkong Subang', 8500, 50, 'Aktif', 'Aktif'],
+            ['KS-SK-PEDAS-250', 'Keripik Singkong Pedas Balado 250gr', 'Keripik Singkong 250gr', 'pcs', 'Kelompok 600', 'Sentra Singkong Subang', 9000, 50, 'Aktif', 'Aktif'],
+            ['KS-BRNG-ORI-150', 'Basreng Original Daun Jeruk 150gr', 'Basreng Pedas Daun Jeruk 150gr', 'pcs', 'Kelompok 500', 'UD Plastik Prima Abadi', 7000, 30, 'Aktif', 'Aktif'],
         ];
     }
 
@@ -68,7 +67,7 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
             'Kode SKU WAJIB unik (contoh: KS-SK-ASIN-250). Jika dikosongkan untuk produk baru, sistem akan men-generate otomatis.',
             'Nama Item Produk WAJIB diisi.',
             'Grup Produk dapat diisi Nama atau Kode Grup Produk yang sudah terdaftar di sistem.',
-            'Kelompok Upah Borongan: isi nama kelompok (contoh: "Kelompok 600") atau isi upah borongan manual.',
+            'Kelompok Upah Borongan: isi nama kelompok (contoh: "Kelompok 600") atau kosongkan jika tidak ada upah borongan.',
             'Pemasok Utama: isi nama pemasok atau kosongkan jika diproduksi repacking internal.'
         ];
     }
@@ -78,7 +77,6 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
         $sql = "SELECT i.kode_sku, i.nama_item,
                        COALESCE(g.nama_grup, '') as nama_grup, i.satuan_dasar,
                        COALESCE(k.nama_kelompok, '') as kelompok_borongan,
-                       COALESCE(i.upah_per_bungkus, 0) as upah_manual,
                        COALESCE(s.nama_pemasok, '') as nama_pemasok,
                        i.harga_pokok_pembelian, i.stok_minimum_peringatan,
                        CASE WHEN i.status_jual THEN 'Aktif' ELSE 'Nonaktif' END as status_jual_label,
@@ -140,7 +138,6 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
             $grupRaw = (string)(SmartReader::getSmartValue($rowData, ['grup_produk', 'grup', 'kategori']) ?? '');
             $satuanDasar = (string)(SmartReader::getSmartValue($rowData, ['satuan_dasar', 'satuan']) ?? 'pcs');
             $boronganRaw = (string)(SmartReader::getSmartValue($rowData, ['kelompok_upah_borongan', 'kelompok_borongan', 'borongan']) ?? '');
-            $upahManualRaw = SmartReader::getSmartValue($rowData, ['upah_borongan_manual', 'upah_per_bungkus', 'upah_manual']);
             $pemasokRaw = (string)(SmartReader::getSmartValue($rowData, ['pemasok_utama', 'pemasok', 'supplier']) ?? '');
             $hppRaw = SmartReader::getSmartValue($rowData, ['hpp_pokok', 'harga_pokok_pembelian', 'hpp']);
             $stokMinRaw = SmartReader::getSmartValue($rowData, ['stok_minimum_warning', 'stok_minimum_peringatan', 'stok_min']);
@@ -160,7 +157,6 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
                 continue;
             }
 
-            $upahManual = SmartReader::normalizeNumeric($upahManualRaw, 0.0);
             $hpp = SmartReader::normalizeNumeric($hppRaw, 0.0);
             $stokMin = SmartReader::normalizeNumeric($stokMinRaw, 10.0);
             $statusJual = SmartReader::normalizeBoolean($statusJualRaw, true);
@@ -219,20 +215,20 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
             }
 
             $itemData = [
-                'id'                      => $dbRow['id'] ?? null,
-                'kode_sku'                => !empty($sku) ? $sku : ($dbRow['kode_sku'] ?? ''),
-                'nama_item'               => $nama,
-                'tipe_item'               => 'barang_jadi',
-                'satuan_dasar'            => $satuanDasar ?: 'pcs',
-                'grup_id'                 => $grupId ?: ($dbRow['grup_id'] ?? null),
-                'kelompok_borongan_id'    => $boronganId ?: ($dbRow['kelompok_borongan_id'] ?? null),
-                'upah_per_bungkus'        => $upahManual,
-                'pemasok_utama_id'        => $pemasokId ?: ($dbRow['pemasok_utama_id'] ?? null),
-                'harga_pokok_pembelian'   => $hpp,
-                'stok_minimum_peringatan' => $stokMin,
-                'status_jual'             => $statusJual,
-                'status_aktif'            => $statusAktif,
-                'display_grup'            => $grupRaw ?: ($dbRow['nama_grup'] ?? '—')
+                'id'                         => $dbRow['id'] ?? null,
+                'kode_sku'                   => !empty($sku) ? $sku : ($dbRow['kode_sku'] ?? ''),
+                'nama_item'                  => $nama,
+                'tipe_item'                  => 'barang_jadi',
+                'satuan_dasar'               => $satuanDasar ?: 'pcs',
+                'grup_id'                    => $grupId ?: ($dbRow['grup_id'] ?? null),
+                'kelompok_borongan_id'       => $boronganId ?: ($dbRow['kelompok_borongan_id'] ?? null),
+                'pemasok_utama_id'           => $pemasokId ?: ($dbRow['pemasok_utama_id'] ?? null),
+                'harga_pokok_pembelian'      => $hpp,
+                'stok_minimum_peringatan'    => $stokMin,
+                'status_jual'                => $statusJual,
+                'status_aktif'               => $statusAktif,
+                'display_grup'               => $grupRaw ?: ($dbRow['nama_grup'] ?? '—'),
+                'display_kelompok_borongan'  => $boronganRaw ?: ($dbRow['nama_kelompok'] ?? '—')
             ];
 
             if ($dbRow) {
@@ -256,7 +252,6 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
                     || ($pemasokId && $pemasokId !== $dbRow['pemasok_utama_id'])
                     || abs($hpp - (float)$dbRow['harga_pokok_pembelian']) > 0.01
                     || abs($stokMin - (float)$dbRow['stok_minimum_peringatan']) > 0.01
-                    || abs($upahManual - (float)($dbRow['upah_per_bungkus'] ?? 0)) > 0.01
                     || $statusJual !== (bool)$dbRow['status_jual']
                     || $statusAktif !== (bool)$dbRow['status_aktif'];
 
@@ -315,11 +310,11 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
         $nextSeq = ((int)($stmtMaxCode->fetch(PDO::FETCH_ASSOC)['max_seq'] ?? 0)) + 1;
 
         $stmtIns = $pdo->prepare("INSERT INTO public.item 
-            (kode_sku, nama_item, tipe_item, satuan_dasar, grup_id, kelompok_borongan_id, upah_per_bungkus, pemasok_utama_id, harga_pokok_pembelian, stok_minimum_peringatan, status_jual, status_aktif)
-            VALUES (?, ?, 'barang_jadi', ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            (kode_sku, nama_item, tipe_item, satuan_dasar, grup_id, kelompok_borongan_id, pemasok_utama_id, harga_pokok_pembelian, stok_minimum_peringatan, status_jual, status_aktif)
+            VALUES (?, ?, 'barang_jadi', ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmtUpd = $pdo->prepare("UPDATE public.item SET 
-            nama_item = ?, satuan_dasar = ?, grup_id = ?, kelompok_borongan_id = ?, upah_per_bungkus = ?, pemasok_utama_id = ?, harga_pokok_pembelian = ?, stok_minimum_peringatan = ?, status_jual = ?, status_aktif = ?, diubah_pada = NOW()
+            nama_item = ?, satuan_dasar = ?, grup_id = ?, kelompok_borongan_id = ?, pemasok_utama_id = ?, harga_pokok_pembelian = ?, stok_minimum_peringatan = ?, status_jual = ?, status_aktif = ?, diubah_pada = NOW()
             WHERE id = ?");
 
         $stmtDeactivate = $pdo->prepare("UPDATE public.item SET status_aktif = FALSE, status_jual = FALSE, diubah_pada = NOW() WHERE id = ?");
@@ -342,7 +337,6 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
                     $d['satuan_dasar'] ?: 'pcs',
                     $d['grup_id'] ?: null,
                     $d['kelompok_borongan_id'] ?: null,
-                    $d['upah_per_bungkus'] ?: 0,
                     $d['pemasok_utama_id'] ?: null,
                     $d['harga_pokok_pembelian'] ?: 0,
                     $d['stok_minimum_peringatan'] ?: 10,
@@ -356,7 +350,6 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
                     $d['satuan_dasar'] ?: 'pcs',
                     $d['grup_id'] ?: null,
                     $d['kelompok_borongan_id'] ?: null,
-                    $d['upah_per_bungkus'] ?: 0,
                     $d['pemasok_utama_id'] ?: null,
                     $d['harga_pokok_pembelian'] ?: 0,
                     $d['stok_minimum_peringatan'] ?: 10,

@@ -79,7 +79,30 @@ function runTest(string $title, callable $fn) {
 
 $pdo = Database::getConnection();
 
-// Ambil sample Driver dan sample Sales
+// Transient Fixture Tracking for Clean Teardown
+$createdTransientIds = [
+    'pengguna' => [],
+    'karyawan' => [],
+    'pelanggan' => []
+];
+
+register_shutdown_function(function() use ($pdo, &$createdTransientIds) {
+    if (!empty($createdTransientIds['pelanggan'])) {
+        $in = "'" . implode("','", $createdTransientIds['pelanggan']) . "'";
+        $pdo->exec("DELETE FROM public.pelanggan WHERE id IN ($in)");
+    }
+    if (!empty($createdTransientIds['karyawan'])) {
+        $in = "'" . implode("','", $createdTransientIds['karyawan']) . "'";
+        $pdo->exec("DELETE FROM public.tabungan WHERE karyawan_id IN ($in)");
+        $pdo->exec("DELETE FROM public.karyawan WHERE id IN ($in)");
+    }
+    if (!empty($createdTransientIds['pengguna'])) {
+        $in = "'" . implode("','", $createdTransientIds['pengguna']) . "'";
+        $pdo->exec("DELETE FROM public.pengguna WHERE id IN ($in)");
+    }
+});
+
+// Ambil sample Driver dan sample Sales (atau buat data uji transien jika basis data bersih)
 $driverEmp = Database::fetchOne("
     SELECT k.id as karyawan_id, p.id as pengguna_id, p.nama_lengkap 
     FROM public.karyawan k 
@@ -87,6 +110,32 @@ $driverEmp = Database::fetchOne("
     WHERE p.posisi = 'driver' 
     LIMIT 1
 ");
+
+if (!$driverEmp) {
+    $driverUserId = '71111111-1111-1111-1111-111111111111';
+    $driverEmpId  = '72222222-2222-2222-2222-222222222222';
+    $roleDriverId = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'driver' LIMIT 1")['id']
+        ?? Database::fetchOne("SELECT id FROM public.peran LIMIT 1")['id'];
+    
+    $pdo->exec("
+        INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
+        VALUES ('{$driverUserId}', '{$roleDriverId}', 'TEST Driver Transien', 'test_driver_transient', 'hash', 'driver', TRUE)
+        ON CONFLICT (id) DO NOTHING
+    ");
+    $pdo->exec("
+        INSERT INTO public.karyawan (id, pengguna_id, tipe_penggajian)
+        VALUES ('{$driverEmpId}', '{$driverUserId}', 'bulanan')
+        ON CONFLICT (id) DO NOTHING
+    ");
+    $createdTransientIds['pengguna'][] = $driverUserId;
+    $createdTransientIds['karyawan'][] = $driverEmpId;
+
+    $driverEmp = [
+        'karyawan_id' => $driverEmpId,
+        'pengguna_id' => $driverUserId,
+        'nama_lengkap' => 'TEST Driver Transien'
+    ];
+}
 
 $salesEmp = Database::fetchOne("
     SELECT k.id as karyawan_id, p.id as pengguna_id, p.nama_lengkap 
@@ -96,8 +145,49 @@ $salesEmp = Database::fetchOne("
     LIMIT 1
 ");
 
+if (!$salesEmp) {
+    $salesUserId = '73333333-3333-3333-3333-333333333333';
+    $salesEmpId  = '74444444-4444-4444-4444-444444444444';
+    $roleSalesId = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'sales' LIMIT 1")['id']
+        ?? Database::fetchOne("SELECT id FROM public.peran LIMIT 1")['id'];
+    
+    $pdo->exec("
+        INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
+        VALUES ('{$salesUserId}', '{$roleSalesId}', 'TEST Sales Transien', 'test_sales_transient', 'hash', 'sales', TRUE)
+        ON CONFLICT (id) DO NOTHING
+    ");
+    $pdo->exec("
+        INSERT INTO public.karyawan (id, pengguna_id, tipe_penggajian)
+        VALUES ('{$salesEmpId}', '{$salesUserId}', 'bulanan')
+        ON CONFLICT (id) DO NOTHING
+    ");
+    $createdTransientIds['pengguna'][] = $salesUserId;
+    $createdTransientIds['karyawan'][] = $salesEmpId;
+
+    $salesEmp = [
+        'karyawan_id' => $salesEmpId,
+        'pengguna_id' => $salesUserId,
+        'nama_lengkap' => 'TEST Sales Transien'
+    ];
+}
+
 $sampleCust = Database::fetchOne("SELECT id, kode_pelanggan, nama_toko FROM public.pelanggan WHERE status_aktif = TRUE LIMIT 1");
 $sampleGrup = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1")['id'];
+
+if (!$sampleCust && $sampleGrup) {
+    $custTransId = '75555555-5555-5555-5555-555555555555';
+    $pdo->exec("
+        INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, alamat_lengkap, status_aktif)
+        VALUES ('{$custTransId}', 'TK-TEST-TRANS', 'Toko Test Transien', '{$sampleGrup}', 'Alamat Uji', TRUE)
+        ON CONFLICT (id) DO NOTHING
+    ");
+    $createdTransientIds['pelanggan'][] = $custTransId;
+    $sampleCust = [
+        'id' => $custTransId,
+        'kode_pelanggan' => 'TK-TEST-TRANS',
+        'nama_toko' => 'Toko Test Transien'
+    ];
+}
 
 // -------------------------------------------------------------
 // TEST 1: DB Trigger memblokir Driver sebagai Toko Binaan
@@ -301,7 +391,16 @@ runTest("7. Pengadaan Bahan: Driver sah ditugaskan mengambil belanjaan PO vendor
     if (!$driverEmp) return "Driver tidak ditemukan.";
 
     $supplier = Database::fetchOne("SELECT id FROM public.pemasok LIMIT 1");
-    if (!$supplier) return "Pemasok tidak ditemukan.";
+    $createdSuppId = null;
+    if (!$supplier) {
+        $createdSuppId = '76666666-6666-6666-6666-666666666666';
+        $pdo->exec("
+            INSERT INTO public.pemasok (id, kode_pemasok, nama_pemasok, status_aktif)
+            VALUES ('{$createdSuppId}', 'VEND-TEST-TRANS', 'Pemasok Test Transien', TRUE)
+            ON CONFLICT (id) DO NOTHING
+        ");
+        $supplier = ['id' => $createdSuppId];
+    }
 
     $dummyPo = 'PO-TEST-' . time();
     $poId = null;
@@ -318,6 +417,7 @@ runTest("7. Pengadaan Bahan: Driver sah ditugaskan mengambil belanjaan PO vendor
         $poId = $stmt->fetchColumn();
     } finally {
         if ($poId) $pdo->prepare("DELETE FROM public.pembelian WHERE id = :id")->execute(['id' => $poId]);
+        if ($createdSuppId) $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $createdSuppId]);
     }
 
     if (!$poId) return "Driver gagal ditugaskan pada faktur pembelian / PO!";

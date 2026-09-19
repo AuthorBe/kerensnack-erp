@@ -238,14 +238,17 @@ class Auth
         if (!$userId) return;
 
         try {
-            // 1. Verifikasi status akun aktif langsung ke Database
+            // 1. Verifikasi status akun aktif & ambil data profil terbaru langsung dari Database
             $userDb = Database::fetchOne("
-                SELECT p.id, p.status_aktif, p.peran_id, pr.nama_peran as peran
+                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.posisi, p.status_aktif, p.peran_id, pr.nama_peran as peran
                 FROM public.pengguna p
                 LEFT JOIN public.peran pr ON p.peran_id = pr.id
-                WHERE p.id = :id
+                WHERE p.id = :id OR LOWER(p.nama_pengguna) = LOWER(:username)
                 LIMIT 1
-            ", ['id' => $userId]);
+            ", [
+                'id' => $userId ?: '00000000-0000-0000-0000-000000000000',
+                'username' => $_SESSION['user']['nama_pengguna'] ?? ''
+            ]);
 
             if (!$userDb || empty($userDb['status_aktif'])) {
                 self::logout();
@@ -253,8 +256,17 @@ class Auth
                 exit;
             }
 
-            // Update role jika peran di database telah diubah admin
-            if (isset($_SESSION['user'])) {
+            // Sinkronisasi profil & role pengguna jika ada pembaruan di database secara real-time
+            if (isset($_SESSION['user']) && $userDb) {
+                $_SESSION['user']['id'] = $userDb['id'];
+                if (!empty($userDb['nama_lengkap'])) {
+                    $_SESSION['user']['nama_lengkap'] = $userDb['nama_lengkap'];
+                }
+                if (!empty($userDb['nama_pengguna'])) {
+                    $_SESSION['user']['nama_pengguna'] = $userDb['nama_pengguna'];
+                }
+                $_SESSION['user']['posisi'] = $userDb['posisi'];
+
                 $currentPeranId = (string)($_SESSION['user']['peran_id'] ?? '');
                 $dbPeranId = (string)($userDb['peran_id'] ?? '');
                 if ($currentPeranId !== $dbPeranId) {

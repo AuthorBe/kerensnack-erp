@@ -189,68 +189,65 @@ runTest("3. EmployeeController: Validasi saveCommissionTiersBatch() menolak data
 
 // TEST 4: Strict Business Rule: Unbilled Visit opname MUST NOT enter omzet
 runTest("4. Business Rule: Kunjungan opname yang BELUM DITAGIHKAN (unbilled) = 0% Omzet", function() use ($pdo) {
-    // 1. Buat sales dummy & toko konsinyasi dummy
     $dummyUserId = '88888888-8888-8888-8888-888888888881';
     $dummyEmpId  = '99999999-9999-9999-9999-999999999991';
     $dummyStoreId = '77777777-7777-7777-7777-777777777771';
     $dummyVisitId = '66666666-6666-6666-6666-666666666661';
 
-    // Cleanup first
-    $pdo->exec("DELETE FROM public.tagihan_kunjungan WHERE kunjungan_id = '{$dummyVisitId}'");
-    $pdo->exec("DELETE FROM public.rincian_kunjungan_konsinyasi WHERE kunjungan_id = '{$dummyVisitId}'");
-    $pdo->exec("DELETE FROM public.kunjungan_konsinyasi WHERE id = '{$dummyVisitId}'");
-    $pdo->exec("DELETE FROM public.pesanan WHERE pelanggan_id = '{$dummyStoreId}'");
-    $pdo->exec("DELETE FROM public.pelanggan WHERE id = '{$dummyStoreId}'");
-    $pdo->exec("DELETE FROM public.karyawan WHERE id = '{$dummyEmpId}'");
-    $pdo->exec("DELETE FROM public.pengguna WHERE id = '{$dummyUserId}'");
+    $pdo->beginTransaction();
+    try {
+        // Ambil default peran
+        $roleId = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'sales' LIMIT 1")['id']
+            ?? Database::fetchOne("SELECT id FROM public.peran LIMIT 1")['id'];
+        $grupPelangganId = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1")['id'];
 
-    // Ambil default peran
-    $roleId = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'sales' LIMIT 1")['id']
-        ?? Database::fetchOne("SELECT id FROM public.peran LIMIT 1")['id'];
-    $grupPelangganId = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1")['id'];
+        // Insert user & karyawan sales
+        $pdo->exec("
+            INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
+            VALUES ('{$dummyUserId}', '{$roleId}', 'Sales Uji Coba', 'sales_uji_1', 'dummyhash', 'sales', TRUE)
+        ");
+        $pdo->exec("
+            INSERT INTO public.karyawan (id, pengguna_id, tipe_penggajian)
+            VALUES ('{$dummyEmpId}', '{$dummyUserId}', 'bulanan')
+        ");
 
-    // Insert user & karyawan sales
-    $pdo->exec("
-        INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
-        VALUES ('{$dummyUserId}', '{$roleId}', 'Sales Uji Coba', 'sales_uji_1', 'dummyhash', 'sales', TRUE)
-    ");
-    $pdo->exec("
-        INSERT INTO public.karyawan (id, pengguna_id, tipe_penggajian)
-        VALUES ('{$dummyEmpId}', '{$dummyUserId}', 'bulanan')
-    ");
+        // Insert toko konsinyasi binaan
+        $pdo->exec("
+            INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, is_konsinyasi, sales_driver_id, alamat_lengkap, status_aktif)
+            VALUES ('{$dummyStoreId}', 'TK-UJI-01', 'Toko Uji Konsinyasi', '{$grupPelangganId}', TRUE, '{$dummyEmpId}', 'Jl. Uji Coba No. 1', TRUE)
+        ");
 
-    // Insert toko konsinyasi binaan
-    $pdo->exec("
-        INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, is_konsinyasi, sales_driver_id, alamat_lengkap, status_aktif)
-        VALUES ('{$dummyStoreId}', 'TK-UJI-01', 'Toko Uji Konsinyasi', '{$grupPelangganId}', TRUE, '{$dummyEmpId}', 'Jl. Uji Coba No. 1', TRUE)
-    ");
+        // Insert kunjungan opname dengan omzet fisik Rp 5.000.000 (TETAPI TANPA FAKTUR TAGIHAN!)
+        $curDate = date('Y-m-d');
+        $pdo->exec("
+            INSERT INTO public.kunjungan_konsinyasi (id, nomor_kunjungan, pelanggan_id, sales_driver_id, tanggal_kunjungan, total_laku_nominal, dibuat_oleh)
+            VALUES ('{$dummyVisitId}', 'KONSIN-UJI-01', '{$dummyStoreId}', '{$dummyEmpId}', '{$curDate}', 5000000.00, '{$dummyUserId}')
+        ");
 
-    // Insert kunjungan opname dengan omzet fisik Rp 5.000.000 (TETAPI TANPA FAKTUR TAGIHAN!)
-    $curDate = date('Y-m-d');
-    $pdo->exec("
-        INSERT INTO public.kunjungan_konsinyasi (id, nomor_kunjungan, pelanggan_id, sales_driver_id, tanggal_kunjungan, total_laku_nominal, dibuat_oleh)
-        VALUES ('{$dummyVisitId}', 'KONSIN-UJI-01', '{$dummyStoreId}', '{$dummyEmpId}', '{$curDate}', 5000000.00, '{$dummyUserId}')
-    ");
+        // Evaluasi omzet komisi via formula backend yang baru
+        $konsinRow = Database::fetchOne("
+            SELECT COALESCE(SUM(pes.total_dibayar), 0) as omzet_terbayar
+            FROM public.pesanan pes
+            JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+            WHERE p.sales_driver_id = '{$dummyEmpId}'
+              AND pes.adalah_tagihan = TRUE
+              AND pes.tipe_pembayaran = 'konsinyasi'
+              AND pes.status_pemrosesan != 'dibatalkan'
+              AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)
+        ");
 
-    // Evaluasi omzet komisi via formula backend yang baru
-    $konsinRow = Database::fetchOne("
-        SELECT COALESCE(SUM(pes.total_dibayar), 0) as omzet_terbayar
-        FROM public.pesanan pes
-        JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-        WHERE p.sales_driver_id = '{$dummyEmpId}'
-          AND pes.adalah_tagihan = TRUE
-          AND pes.tipe_pembayaran = 'konsinyasi'
-          AND pes.status_pemrosesan != 'dibatalkan'
-          AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)
-    ");
+        $omzetDiakui = (float)($konsinRow['omzet_terbayar'] ?? 0);
 
-    $omzetDiakui = (float)($konsinRow['omzet_terbayar'] ?? 0);
+        if ($omzetDiakui !== 0.0) {
+            return "GAGAL: Kunjungan tanpa tagihan dihitung ke dalam omzet! Nilai diakui: {$omzetDiakui}";
+        }
 
-    if ($omzetDiakui !== 0.0) {
-        return "GAGAL: Kunjungan tanpa tagihan dihitung ke dalam omzet! Nilai diakui: {$omzetDiakui}";
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
     }
-
-    return true;
 });
 
 // TEST 5: Strict Business Rule: Tagihan terbit hanya mengakui total_dibayar (sisa_tagihan tidak masuk omzet)
@@ -260,91 +257,103 @@ runTest("5. Business Rule: Tagihan terbit Rp 10 Jt dgn bayar Rp 6 Jt & sisa Rp 4
     $dummyStoreId = '77777777-7777-7777-7777-777777777771';
     $dummyOrderId = '55555555-5555-5555-5555-555555555551';
 
-    $pdo->exec("DELETE FROM public.pesanan WHERE id = '{$dummyOrderId}'");
+    $pdo->beginTransaction();
+    try {
+        $roleId = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'sales' LIMIT 1")['id']
+            ?? Database::fetchOne("SELECT id FROM public.peran LIMIT 1")['id'];
+        $grupPelangganId = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1")['id'];
 
-    // Buat tagihan konsinyasi: total_netto = 10 Jt, total_dibayar = 6 Jt, sisa_tagihan = 4 Jt
-    $curDate = date('Y-m-d');
-    $pdo->exec("
-        INSERT INTO public.pesanan (
-            id, nomor_nota, pelanggan_id, sales_driver_id, tanggal_pesanan,
-            total_bruto, total_diskon, total_netto, tipe_pembayaran, status_pembayaran,
-            status_pemrosesan, total_dibayar, sisa_tagihan, adalah_tagihan, dibuat_oleh
-        ) VALUES (
-            '{$dummyOrderId}', 'INV-KONSIN-UJI-01', '{$dummyStoreId}', '{$dummyEmpId}', '{$curDate}',
-            10000000.00, 0.00, 10000000.00, 'konsinyasi', 'sebagian',
-            'selesai', 6000000.00, 4000000.00, TRUE, '{$dummyUserId}'
-        )
-    ");
+        $pdo->exec("
+            INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
+            VALUES ('{$dummyUserId}', '{$roleId}', 'Sales Uji Coba', 'sales_uji_1', 'dummyhash', 'sales', TRUE)
+        ");
+        $pdo->exec("
+            INSERT INTO public.karyawan (id, pengguna_id, tipe_penggajian)
+            VALUES ('{$dummyEmpId}', '{$dummyUserId}', 'bulanan')
+        ");
+        $pdo->exec("
+            INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, is_konsinyasi, sales_driver_id, alamat_lengkap, status_aktif)
+            VALUES ('{$dummyStoreId}', 'TK-UJI-01', 'Toko Uji Konsinyasi', '{$grupPelangganId}', TRUE, '{$dummyEmpId}', 'Jl. Uji Coba No. 1', TRUE)
+        ");
 
-    // Hitung omzet terbayar & sisa piutang
-    $row = Database::fetchOne("
-        SELECT 
-            COALESCE(SUM(pes.total_dibayar), 0) as omzet_terbayar,
-            COALESCE(SUM(pes.sisa_tagihan), 0) as sisa_hutang
-        FROM public.pesanan pes
-        JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-        WHERE p.sales_driver_id = '{$dummyEmpId}'
-          AND pes.adalah_tagihan = TRUE
-          AND pes.tipe_pembayaran = 'konsinyasi'
-          AND pes.status_pemrosesan != 'dibatalkan'
-          AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)
-    ");
+        // Buat tagihan konsinyasi: total_netto = 10 Jt, total_dibayar = 6 Jt, sisa_tagihan = 4 Jt
+        $curDate = date('Y-m-d');
+        $pdo->exec("
+            INSERT INTO public.pesanan (
+                id, nomor_nota, pelanggan_id, sales_driver_id, tanggal_pesanan,
+                total_bruto, total_diskon, total_netto, tipe_pembayaran, status_pembayaran,
+                status_pemrosesan, total_dibayar, sisa_tagihan, adalah_tagihan, dibuat_oleh
+            ) VALUES (
+                '{$dummyOrderId}', 'INV-KONSIN-UJI-01', '{$dummyStoreId}', '{$dummyEmpId}', '{$curDate}',
+                10000000.00, 0.00, 10000000.00, 'konsinyasi', 'sebagian',
+                'selesai', 6000000.00, 4000000.00, TRUE, '{$dummyUserId}'
+            )
+        ");
 
-    $omzetTerbayar = (float)$row['omzet_terbayar'];
-    $sisaHutang = (float)$row['sisa_hutang'];
+        // Hitung omzet terbayar & sisa piutang
+        $row = Database::fetchOne("
+            SELECT 
+                COALESCE(SUM(pes.total_dibayar), 0) as omzet_terbayar,
+                COALESCE(SUM(pes.sisa_tagihan), 0) as sisa_hutang
+            FROM public.pesanan pes
+            JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+            WHERE p.sales_driver_id = '{$dummyEmpId}'
+              AND pes.adalah_tagihan = TRUE
+              AND pes.tipe_pembayaran = 'konsinyasi'
+              AND pes.status_pemrosesan != 'dibatalkan'
+              AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)
+        ");
 
-    if ($omzetTerbayar !== 6000000.00) {
-        return "GAGAL: Omzet terbayar salah! Diharapkan 6.000.000, didapat: {$omzetTerbayar}";
+        $omzetTerbayar = (float)$row['omzet_terbayar'];
+        $sisaHutang = (float)$row['sisa_hutang'];
+
+        if ($omzetTerbayar !== 6000000.00) {
+            return "GAGAL: Omzet terbayar salah! Diharapkan 6.000.000, didapat: {$omzetTerbayar}";
+        }
+        if ($sisaHutang !== 4000000.00) {
+            return "GAGAL: Sisa hutang salah! Diharapkan 4.000.000, didapat: {$sisaHutang}";
+        }
+
+        // Cek komisi yang dihitung: 6.000.000 -> Tier 1 (1%) -> Rp 60.000
+        $tier = json_decode(Database::fetchOne("SELECT public.fn_hitung_tier_komisi_sales(:omzet) as r", ['omzet' => $omzetTerbayar])['r'], true);
+        if ((float)$tier['nominal_komisi'] !== 60000.00) {
+            return "GAGAL: Komisi salah! Diharapkan 60.000 (1% dari 6 Jt), didapat: " . $tier['nominal_komisi'];
+        }
+
+        // Step B: Simulasikan toko melunasi sisa Rp 4.000.000
+        $pdo->exec("
+            UPDATE public.pesanan
+            SET total_dibayar = 10000000.00, sisa_tagihan = 0.00, status_pembayaran = 'lunas'
+            WHERE id = '{$dummyOrderId}'
+        ");
+
+        $rowLunas = Database::fetchOne("
+            SELECT COALESCE(SUM(pes.total_dibayar), 0) as omzet_terbayar
+            FROM public.pesanan pes
+            JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+            WHERE p.sales_driver_id = '{$dummyEmpId}'
+              AND pes.adalah_tagihan = TRUE
+              AND pes.tipe_pembayaran = 'konsinyasi'
+              AND pes.status_pemrosesan != 'dibatalkan'
+              AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)
+        ");
+
+        $omzetLunas = (float)$rowLunas['omzet_terbayar'];
+        if ($omzetLunas !== 10000000.00) {
+            return "GAGAL: Pasca pelunasan omzet gagal naik ke 10.000.000! Didapat: {$omzetLunas}";
+        }
+
+        $tierLunas = json_decode(Database::fetchOne("SELECT public.fn_hitung_tier_komisi_sales(:omzet) as r", ['omzet' => $omzetLunas])['r'], true);
+        if ((float)$tierLunas['nominal_komisi'] !== 100000.00) {
+            return "GAGAL: Komisi pasca pelunasan salah! Diharapkan 100.000 (1% dari 10 Jt), didapat: " . $tierLunas['nominal_komisi'];
+        }
+
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
     }
-    if ($sisaHutang !== 4000000.00) {
-        return "GAGAL: Sisa hutang salah! Diharapkan 4.000.000, didapat: {$sisaHutang}";
-    }
-
-    // Cek komisi yang dihitung: 6.000.000 -> Tier 1 (1%) -> Rp 60.000
-    $tier = json_decode(Database::fetchOne("SELECT public.fn_hitung_tier_komisi_sales(:omzet) as r", ['omzet' => $omzetTerbayar])['r'], true);
-    if ((float)$tier['nominal_komisi'] !== 60000.00) {
-        return "GAGAL: Komisi salah! Diharapkan 60.000 (1% dari 6 Jt), didapat: " . $tier['nominal_komisi'];
-    }
-
-    // Step B: Simulasikan toko melunasi sisa Rp 4.000.000
-    $pdo->exec("
-        UPDATE public.pesanan
-        SET total_dibayar = 10000000.00, sisa_tagihan = 0.00, status_pembayaran = 'lunas'
-        WHERE id = '{$dummyOrderId}'
-    ");
-
-    $rowLunas = Database::fetchOne("
-        SELECT COALESCE(SUM(pes.total_dibayar), 0) as omzet_terbayar
-        FROM public.pesanan pes
-        JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-        WHERE p.sales_driver_id = '{$dummyEmpId}'
-          AND pes.adalah_tagihan = TRUE
-          AND pes.tipe_pembayaran = 'konsinyasi'
-          AND pes.status_pemrosesan != 'dibatalkan'
-          AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)
-    ");
-
-    $omzetLunas = (float)$rowLunas['omzet_terbayar'];
-    if ($omzetLunas !== 10000000.00) {
-        return "GAGAL: Pasca pelunasan omzet gagal naik ke 10.000.000! Didapat: {$omzetLunas}";
-    }
-
-    $tierLunas = json_decode(Database::fetchOne("SELECT public.fn_hitung_tier_komisi_sales(:omzet) as r", ['omzet' => $omzetLunas])['r'], true);
-    if ((float)$tierLunas['nominal_komisi'] !== 100000.00) {
-        return "GAGAL: Komisi pasca pelunasan salah! Diharapkan 100.000 (1% dari 10 Jt), didapat: " . $tierLunas['nominal_komisi'];
-    }
-
-    // Cleanup test dummy records
-    $dummyVisitId = '66666666-6666-6666-6666-666666666661';
-    $pdo->exec("DELETE FROM public.tagihan_kunjungan WHERE kunjungan_id = '{$dummyVisitId}'");
-    $pdo->exec("DELETE FROM public.rincian_kunjungan_konsinyasi WHERE kunjungan_id = '{$dummyVisitId}'");
-    $pdo->exec("DELETE FROM public.kunjungan_konsinyasi WHERE id = '{$dummyVisitId}'");
-    $pdo->exec("DELETE FROM public.pesanan WHERE pelanggan_id = '{$dummyStoreId}'");
-    $pdo->exec("DELETE FROM public.pelanggan WHERE id = '{$dummyStoreId}'");
-    $pdo->exec("DELETE FROM public.karyawan WHERE id = '{$dummyEmpId}'");
-    $pdo->exec("DELETE FROM public.pengguna WHERE id = '{$dummyUserId}'");
-
-    return true;
 });
 
 echo "\n====================================================================\n";

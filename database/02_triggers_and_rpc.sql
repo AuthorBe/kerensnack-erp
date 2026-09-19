@@ -1199,6 +1199,39 @@ BEFORE INSERT OR UPDATE OF sales_driver_id ON public.pelanggan
 FOR EACH ROW
 EXECUTE FUNCTION public.fn_guard_pelanggan_sales_driver();
 
+-- Trigger Proteksi Mutlak Pelanggan Default POS (CUST-001 / Toko Umum / Walk-in Cash)
+CREATE OR REPLACE FUNCTION public.fn_guard_protect_default_customer()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        IF OLD.kode_pelanggan = 'CUST-001' OR UPPER(TRIM(OLD.nama_toko)) LIKE '%WALK-IN CASH%' THEN
+            RAISE EXCEPTION 'Pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak dapat dihapus.';
+        END IF;
+        RETURN OLD;
+    END IF;
+
+    IF TG_OP = 'UPDATE' THEN
+        IF OLD.kode_pelanggan = 'CUST-001' THEN
+            IF NEW.kode_pelanggan != 'CUST-001' THEN
+                RAISE EXCEPTION 'Kode pelanggan default sistem (CUST-001) terkunci dan tidak boleh diubah.';
+            END IF;
+            IF NEW.status_aktif = FALSE THEN
+                RAISE EXCEPTION 'Pelanggan default sistem (CUST-001) wajib tetap aktif untuk operasional kasir POS.';
+            END IF;
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_guard_protect_default_customer ON public.pelanggan;
+CREATE TRIGGER trg_guard_protect_default_customer
+BEFORE UPDATE OR DELETE ON public.pelanggan
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_guard_protect_default_customer();
+
 -- 2. Fungsi Helper PostgreSQL untuk Perhitungan Tier Komisi Sales Bertingkat
 CREATE OR REPLACE FUNCTION public.fn_hitung_tier_komisi_sales(p_omzet NUMERIC)
 RETURNS JSONB

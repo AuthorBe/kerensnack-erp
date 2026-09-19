@@ -65,11 +65,12 @@ class ImportDataController
 
         // Statistik ringkas master data terkini di database
         $entityStats = [
+            'brands'          => (int)$pdo->query("SELECT COUNT(*) FROM public.merek")->fetchColumn(),
             'territories'     => (int)$pdo->query("SELECT COUNT(*) FROM public.wilayah")->fetchColumn(),
             'customer_groups' => (int)$pdo->query("SELECT COUNT(*) FROM public.grup_pelanggan")->fetchColumn(),
             'product_groups'  => (int)$pdo->query("SELECT COUNT(*) FROM public.grup_produk")->fetchColumn(),
             'piece_rates'     => (int)$pdo->query("SELECT COUNT(*) FROM public.kelompok_upah_borongan")->fetchColumn(),
-            'employees'       => (int)$pdo->query("SELECT COUNT(*) FROM public.pengguna")->fetchColumn(),
+            'employees'       => (int)$pdo->query("SELECT COUNT(*) FROM public.pengguna WHERE posisi NOT IN ('developer')")->fetchColumn(),
             'suppliers'       => (int)$pdo->query("SELECT COUNT(*) FROM public.pemasok")->fetchColumn(),
             'pricing_matrix'  => (int)$pdo->query("SELECT COUNT(*) FROM public.grup_produk_harga_level")->fetchColumn(),
             'materials'       => (int)$pdo->query("SELECT COUNT(*) FROM public.item WHERE tipe_item != 'barang_jadi'")->fetchColumn(),

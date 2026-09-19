@@ -166,7 +166,7 @@ runTest("4.2.1 SupplierController: store() & update() Menyimpan Kolom Relasional
     // 1. Uji store
     $ctrl->mockInput = [
         'nama_pemasok' => $dummyName,
-        'nomor_telepon' => '081299887766',
+        'nomor_whatsapp' => '081299887766',
         'alamat_lengkap' => 'Kawasan Industri Cikupa No. 12',
         'bank_nama' => 'Bank Mandiri',
         'bank_rekening' => '1370-001-992288',
@@ -212,7 +212,7 @@ runTest("4.2.1 SupplierController: store() & update() Menyimpan Kolom Relasional
     $ctrl->mockInput = [
         'id' => $saved['id'],
         'nama_pemasok' => $dummyName . ' Updated',
-        'nomor_telepon' => '081299887766',
+        'nomor_whatsapp' => '081299887766',
         'alamat_lengkap' => 'Kawasan Industri Cikupa No. 12 Blok B',
         'bank_nama' => 'Bank BCA',
         'bank_rekening' => '8820-9988-77',
@@ -399,68 +399,81 @@ runTest("4.4.1 CustomerController: saveCustomerItems() Mengelola Whitelist Produ
     $custDummyId = 'ffffffff-bbbb-4444-9999-000000000001';
     $grupRow = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
     $items = Database::fetchAll("SELECT id FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 2");
+    $createdItemIds = [];
 
     if (count($items) < 2) {
-        return "Prasyarat minimal 2 barang jadi tidak terpenuhi di DB.";
+        $grupProdId = Database::fetchOne("SELECT id FROM public.grup_produk LIMIT 1")['id'] ?? null;
+        for ($i = count($items) + 1; $i <= 2; $i++) {
+            $tmpId = "ffffffff-cccc-4444-9999-00000000000{$i}";
+            $pdo->exec("
+                INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, grup_id, satuan_dasar, status_aktif)
+                VALUES ('{$tmpId}', 'SKU-TMP-WHT-{$i}', 'Item Whitelist Transien {$i}', 'barang_jadi', '{$grupProdId}', 'pcs', TRUE)
+                ON CONFLICT (id) DO NOTHING
+            ");
+            $createdItemIds[] = $tmpId;
+            $items[] = ['id' => $tmpId];
+        }
     }
 
-    $pdo->prepare("DELETE FROM public.pelanggan_item WHERE pelanggan_id = :cid")->execute(['cid' => $custDummyId]);
-    $pdo->prepare("DELETE FROM public.pelanggan WHERE id = :cid")->execute(['cid' => $custDummyId]);
-
-    // Insert dummy toko
-    $pdo->prepare("
-        INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, alamat_lengkap, grup_pelanggan_id, status_aktif)
-        VALUES (:id, 'CUST-WHITELIST', 'Toko Whitelist Test', 'Jl. Whitelist No. 1', :gid, TRUE)
-    ")->execute(['id' => $custDummyId, 'gid' => $grupRow['id']]);
-
-    $ctrl = new class extends CustomerController {
-        public ?string $capturedSuccess = null;
-        public ?string $capturedError = null;
-        public array $mockInput = [];
-        protected function input(string $key, mixed $default = null): mixed {
-            return $this->mockInput[$key] ?? $default;
-        }
-        protected function flashSuccess(string $message, ?string $title = null): void {
-            $this->capturedSuccess = $message;
-        }
-        protected function flashError(string $message, ?string $title = null): void {
-            $this->capturedError = $message;
-        }
-        protected function redirect(string $url): void {}
-    };
-
-    // 1. Simpan 2 item khusus
-    $itemIds = [$items[0]['id'], $items[1]['id']];
-    $ctrl->mockInput = [
-        'pelanggan_id' => $custDummyId,
-        'item_ids' => $itemIds
-    ];
-    $ctrl->saveCustomerItems();
-
-    $savedCount = (int)(Database::fetchOne("SELECT count(*) as total FROM public.pelanggan_item WHERE pelanggan_id = :cid", ['cid' => $custDummyId])['total'] ?? 0);
-    if ($savedCount !== 2) {
+    try {
         $pdo->prepare("DELETE FROM public.pelanggan_item WHERE pelanggan_id = :cid")->execute(['cid' => $custDummyId]);
         $pdo->prepare("DELETE FROM public.pelanggan WHERE id = :cid")->execute(['cid' => $custDummyId]);
-        return "Gagal menyimpan 2 item whitelist (got: {$savedCount})";
+
+        // Insert dummy toko
+        $pdo->prepare("
+            INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, alamat_lengkap, grup_pelanggan_id, status_aktif)
+            VALUES (:id, 'CUST-WHITELIST', 'Toko Whitelist Test', 'Jl. Whitelist No. 1', :gid, TRUE)
+        ")->execute(['id' => $custDummyId, 'gid' => $grupRow['id']]);
+
+        $ctrl = new class extends CustomerController {
+            public ?string $capturedSuccess = null;
+            public ?string $capturedError = null;
+            public array $mockInput = [];
+            protected function input(string $key, mixed $default = null): mixed {
+                return $this->mockInput[$key] ?? $default;
+            }
+            protected function flashSuccess(string $message, ?string $title = null): void {
+                $this->capturedSuccess = $message;
+            }
+            protected function flashError(string $message, ?string $title = null): void {
+                $this->capturedError = $message;
+            }
+            protected function redirect(string $url): void {}
+        };
+
+        // 1. Simpan 2 item khusus
+        $itemIds = [$items[0]['id'], $items[1]['id']];
+        $ctrl->mockInput = [
+            'pelanggan_id' => $custDummyId,
+            'item_ids' => $itemIds
+        ];
+        $ctrl->saveCustomerItems();
+
+        $savedCount = (int)(Database::fetchOne("SELECT count(*) as total FROM public.pelanggan_item WHERE pelanggan_id = :cid", ['cid' => $custDummyId])['total'] ?? 0);
+        if ($savedCount !== 2) {
+            return "Gagal menyimpan 2 item whitelist (got: {$savedCount})";
+        }
+
+        // 2. Kosongkan item (toko kembali dapat memesan semua item default)
+        $ctrl->mockInput = [
+            'pelanggan_id' => $custDummyId,
+            'item_ids' => []
+        ];
+        $ctrl->saveCustomerItems();
+
+        $clearedCount = (int)(Database::fetchOne("SELECT count(*) as total FROM public.pelanggan_item WHERE pelanggan_id = :cid", ['cid' => $custDummyId])['total'] ?? 0);
+        if ($clearedCount !== 0) {
+            return "Gagal mengosongkan item whitelist (got: {$clearedCount})";
+        }
+
+        return true;
+    } finally {
+        $pdo->prepare("DELETE FROM public.pelanggan_item WHERE pelanggan_id = :cid")->execute(['cid' => $custDummyId]);
+        $pdo->prepare("DELETE FROM public.pelanggan WHERE id = :cid")->execute(['cid' => $custDummyId]);
+        foreach ($createdItemIds as $tmpItemId) {
+            $pdo->prepare("DELETE FROM public.item WHERE id = :id")->execute(['id' => $tmpItemId]);
+        }
     }
-
-    // 2. Kosongkan item (toko kembali dapat memesan semua item default)
-    $ctrl->mockInput = [
-        'pelanggan_id' => $custDummyId,
-        'item_ids' => []
-    ];
-    $ctrl->saveCustomerItems();
-
-    $clearedCount = (int)(Database::fetchOne("SELECT count(*) as total FROM public.pelanggan_item WHERE pelanggan_id = :cid", ['cid' => $custDummyId])['total'] ?? 0);
-
-    // Cleanup
-    $pdo->prepare("DELETE FROM public.pelanggan_item WHERE pelanggan_id = :cid")->execute(['cid' => $custDummyId]);
-    $pdo->prepare("DELETE FROM public.pelanggan WHERE id = :cid")->execute(['cid' => $custDummyId]);
-
-    if ($clearedCount !== 0) {
-        return "Gagal mengosongkan item whitelist (got: {$clearedCount})";
-    }
-    return true;
 });
 
 // -------------------------------------------------------------

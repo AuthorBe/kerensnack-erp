@@ -50,7 +50,7 @@ class PosController extends Controller
 
             // 2. Ambil master grup produk & item SKU lengkap dengan Harga Retail Level 1
             $groups = Database::fetchAll("
-                SELECT id, kode_grup, nama_grup, barcode_universal, satuan_dasar, satuan_distribusi, konversi_bal_ke_pcs
+                SELECT id, kode_grup, nama_grup, barcode_universal, satuan_dasar
                 FROM public.grup_produk
                 WHERE status_aktif = TRUE
                 ORDER BY kode_grup ASC
@@ -64,7 +64,7 @@ class PosController extends Controller
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 1
-                WHERE i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
+                WHERE i.status_aktif = TRUE AND i.status_jual = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
 

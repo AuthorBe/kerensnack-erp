@@ -22,9 +22,9 @@
 -- ==============================================================================
 
 -- Contoh: Insert Grup Produk (ganti dengan katalog aktual)
--- INSERT INTO public.grup_produk (kode_grup, nama_grup, barcode_universal, satuan_dasar, satuan_distribusi, konversi_bal_ke_pcs) VALUES
--- ('GRP-001', 'Nama Produk Grup 1 (misal: Kerupuk Singkong 150gr)', 'barcode123', 'pcs', 'bal', 20),
--- ('GRP-002', 'Nama Produk Grup 2 (misal: Keripik Jagung 100gr)',   'barcode456', 'pcs', 'bal', 20)
+-- INSERT INTO public.grup_produk (kode_grup, nama_grup, barcode_universal, satuan_dasar) VALUES
+-- ('GRP-001', 'Nama Produk Grup 1 (misal: Kerupuk Singkong 150gr)', 'barcode123', 'pcs'),
+-- ('GRP-002', 'Nama Produk Grup 2 (misal: Keripik Jagung 100gr)',   'barcode456', 'pcs')
 -- ON CONFLICT (kode_grup) DO UPDATE SET nama_grup = EXCLUDED.nama_grup, barcode_universal = EXCLUDED.barcode_universal;
 
 -- Contoh: Insert Harga Level Default per Grup (Level 1 - Ritel Standar)

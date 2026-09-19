@@ -69,7 +69,8 @@ class CustomerImportHandler implements EntityImportHandlerInterface
     public function getTemplateNotes(): array
     {
         return [
-            'Kolom Kode Pelanggan dapat dikosongkan untuk entri baru (akan dibuatkan otomatis oleh sistem).',
+            'Kolom Kode Pelanggan dapat dikosongkan untuk entri baru (akan dibuatkan otomatis oleh sistem: CUST-0002, dst).',
+            'Pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak akan pernah terhapus atau dinonaktifkan pada proses sinkronisasi.',
             'Nama Toko dan Alamat Lengkap WAJIB diisi di setiap baris.',
             'Model Kerjasama: isi "Konsinyasi" untuk toko titip jual rak, atau "Reguler" untuk jual putus / tempo.',
             'Tipe Bayar Default: Cash, Transfer, QRIS, Tempo 7 Hari, Tempo 14 Hari, Tempo 30 Hari, atau Konsinyasi (dapat ditulis dengan spasi atau huruf kecil/besar).',
@@ -240,6 +241,11 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             $statusAktif = SmartReader::normalizeBoolean($statusAktifRaw, true);
             $tipeBayar = self::normalizePaymentType($tipeBayarRaw, $isKonsinyasi);
 
+            // Proteksi status_aktif untuk pelanggan default POS CUST-001
+            if (strtoupper(trim((string)$kode)) === 'CUST-001') {
+                $statusAktif = true;
+            }
+
             // Validasi Field Wajib
             if (empty($nama)) {
                 $previewList[] = [
@@ -335,6 +341,11 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 $dbRow = $dbByName[strtolower(trim($nama))];
             }
 
+            // Proteksi status_aktif untuk record default CUST-001
+            if ($dbRow && strtoupper(trim((string)$dbRow['kode_pelanggan'])) === 'CUST-001') {
+                $statusAktif = true;
+            }
+
             $itemData = [
                 'id'                      => $dbRow['id'] ?? null,
                 'kode_pelanggan'          => !empty($kode) ? $kode : ($dbRow['kode_pelanggan'] ?? ''),
@@ -404,6 +415,11 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         if ($mode === 'full_sync') {
             foreach ($currentDbRows as $c) {
                 if (!in_array($c['id'], $processedDbIds, true)) {
+                    // Proteksi Pelanggan Default POS (CUST-001): Kebal dari penghapusan Full-Sync
+                    if (strtoupper(trim((string)$c['kode_pelanggan'])) === 'CUST-001') {
+                        continue;
+                    }
+
                     $previewList[] = [
                         'action' => 'DELETE',
                         'data'   => [
@@ -443,9 +459,12 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         $deleteCount = 0;
         $deactivateCount = 0;
 
-        // Query generator kode baru jika kosong
-        $stmtMaxCode = $pdo->query("SELECT MAX(SUBSTRING(kode_pelanggan FROM 6)::int) as max_seq FROM public.pelanggan WHERE kode_pelanggan ~ '^CUST-[0-9]+$'");
+        // Query generator kode baru jika kosong (abaikan CUST-001 agar sekuens rapi)
+        $stmtMaxCode = $pdo->query("SELECT MAX(NULLIF(regexp_replace(kode_pelanggan, '[^0-9]', '', 'g'), '')::int) as max_seq FROM public.pelanggan WHERE kode_pelanggan ~ '^CUST-[0-9]+$' AND kode_pelanggan != 'CUST-001'");
         $nextSeq = ((int)($stmtMaxCode->fetch(PDO::FETCH_ASSOC)['max_seq'] ?? 0)) + 1;
+        if ($nextSeq <= 1) {
+            $nextSeq = 2; // CUST-001 adalah walk-in cash default
+        }
 
         $stmtIns = $pdo->prepare("INSERT INTO public.pelanggan 
             (kode_pelanggan, nama_toko, nama_pemilik, grup_pelanggan_id, is_konsinyasi, wilayah_id, 
@@ -495,6 +514,9 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 ]);
                 $insertCount++;
             } elseif ($act === 'UPDATE') {
+                $isCust001 = strtoupper(trim((string)($d['kode_pelanggan'] ?? ''))) === 'CUST-001';
+                $statusAktifVal = $isCust001 ? 1 : (!empty($d['status_aktif']) ? 1 : 0);
+
                 $stmtUpd->execute([
                     $d['nama_toko'] ?? '',
                     $d['nama_pemilik'] ?? null,
@@ -509,12 +531,16 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     $d['nama_bank'] ?? null,
                     $d['nomor_rekening'] ?? null,
                     $d['atas_nama_rekening'] ?? null,
-                    !empty($d['status_aktif']) ? 1 : 0,
+                    $statusAktifVal,
                     $d['id']
                 ]);
                 $updateCount++;
             } elseif ($act === 'DELETE') {
                 $cid = (string)$d['id'];
+                $ckode = strtoupper(trim((string)($d['kode_pelanggan'] ?? '')));
+                if ($ckode === 'CUST-001') {
+                    continue; // Skip proteksi default customer CUST-001
+                }
                 if ($this->hasTransactionHistory($cid, $pdo)) {
                     // Sensor cerdas: jika ada transaksi, soft-deactivate
                     $stmtDeactivate->execute([$cid]);

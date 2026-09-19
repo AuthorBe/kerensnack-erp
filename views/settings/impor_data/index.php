@@ -15,11 +15,11 @@ require_once __DIR__ . '/shared.php';
 
 ob_start();
 
-$selectedKey = $syncType ?? 'territories';
-if (!isset($entityMeta[$selectedKey])) {
-    $selectedKey = 'territories';
+$selectedKey = $syncType ?? null;
+if ($selectedKey !== null && !isset($entityMeta[$selectedKey])) {
+    $selectedKey = null;
 }
-$activeMeta = $entityMeta[$selectedKey];
+$activeMeta = $selectedKey ? ($entityMeta[$selectedKey] ?? null) : null;
 $totalMasterRows = array_sum($entityStats ?? []);
 ?>
 
@@ -250,9 +250,9 @@ $totalMasterRows = array_sum($entityStats ?? []);
             <div style="min-width: 0;">
                 <div class="stat-card-label" style="font-size: 11px; margin-bottom: 2px;">Kategori Terhubung</div>
                 <div class="stat-card-value" style="font-size: 20px; font-weight: 800; line-height: 1.1;">
-                    10 <span style="font-size: 12px; font-weight: 600; color: var(--color-ink-mute);">Master</span>
+                    <?= count($handlers ?? []) ?> <span style="font-size: 12px; font-weight: 600; color: var(--color-ink-mute);">Master</span>
                 </div>
-                <div class="stat-card-footer" style="font-size: 11px; color: var(--color-ink-mute-2); margin-top: 2px;">Pelanggan, Produk, Vendor, SDM</div>
+                <div class="stat-card-footer" style="font-size: 11px; color: var(--color-ink-mute-2); margin-top: 2px;">Merek, Pelanggan, Produk, Vendor, SDM</div>
             </div>
         </div>
 
@@ -361,26 +361,26 @@ $totalMasterRows = array_sum($entityStats ?? []);
                 </div>
 
                 <!-- Entity Detail & Download Box -->
-                <div style="border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); padding: 16px; background-color: var(--color-canvas-soft);">
+                <div id="importDetailBox" style="border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); padding: 16px; background-color: var(--color-canvas-soft);">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <i data-lucide="folder-check" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                            <i id="importDetailIcon" data-lucide="<?= $selectedKey ? 'folder-check' : 'mouse-pointer-click' ?>" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
                             <span id="importDetailTitle" style="font-size: 14px; font-weight: 800; color: var(--color-ink);">
-                                <?= htmlspecialchars($handlers[$selectedKey]->getEntityLabel() ?? 'Wilayah & Rute Distribusi') ?>
+                                <?= $selectedKey ? htmlspecialchars($handlers[$selectedKey]->getEntityLabel()) : 'Pilih Salah Satu Master Data' ?>
                             </span>
                         </div>
-                        <span class="badge badge-primary" id="importDetailCountBadge" style="font-size: 11px;">
+                        <span class="badge badge-primary" id="importDetailCountBadge" style="font-size: 11px; <?= $selectedKey ? '' : 'display: none;' ?>">
                             <i data-lucide="database" style="width: 12px; height: 12px;"></i>
-                            <span id="importDetailCountText"><?= number_format($entityStats[$selectedKey] ?? 0, 0, ',', '.') ?> Baris di DB</span>
+                            <span id="importDetailCountText"><?= $selectedKey ? number_format($entityStats[$selectedKey] ?? 0, 0, ',', '.') . ' Baris di DB' : '' ?></span>
                         </span>
                     </div>
 
                     <p id="importDetailDesc" style="font-size: 12px; color: var(--color-ink-mute); margin: 0 0 14px 0; line-height: 1.45;">
-                        <?= htmlspecialchars($activeMeta['desc'] ?? '') ?>
+                        <?= $selectedKey ? htmlspecialchars($activeMeta['desc'] ?? '') : 'Klik salah satu kartu kategori master data di atas untuk melihat detail format, mengunduh template Excel, dan mengunggah berkas.' ?>
                     </p>
 
                     <!-- 2 Tombol Download -->
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; padding-top: 12px; border-top: 1px solid var(--color-hairline);">
+                    <div id="importDownloadButtonsWrap" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; padding-top: 12px; border-top: 1px solid var(--color-hairline); <?= $selectedKey ? '' : 'opacity: 0.55; pointer-events: none;' ?>">
                         <!-- Download Template Kosong -->
                         <a href="#" id="btnDownloadTemplateEmpty" class="import-dl-card is-template no-loader" data-no-loader="true" onclick="handleImportDownload(event, 'empty')">
                             <div style="width: 36px; height: 36px; border-radius: var(--rounded-xs); background: rgba(16, 185, 129, 0.12); color: var(--color-success); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -433,7 +433,7 @@ $totalMasterRows = array_sum($entityStats ?? []);
                   style="padding: 20px; display: flex; flex-direction: column; gap: 18px;">
                 
                 <?= CSRF::field() ?>
-                <input type="hidden" name="tipe_data" id="hiddenTipeData" value="<?= htmlspecialchars($selectedKey) ?>">
+                <input type="hidden" name="tipe_data" id="hiddenTipeData" value="<?= htmlspecialchars($selectedKey ?? '') ?>">
                 <input type="hidden" name="mode_sinkronisasi" id="hiddenSyncMode" value="<?= htmlspecialchars($syncMode ?? 'update_insert') ?>">
 
                 <!-- Mode Kebijakan -->
@@ -608,18 +608,22 @@ $totalMasterRows = array_sum($entityStats ?? []);
                         <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--color-ink);">
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
                                 <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">1.</span>
-                                <div><strong>Wilayah &amp; Rute Distribusi:</strong> Menentukan zona logistik dan rute pengantaran toko.</div>
+                                <div><strong>Merek Produk (Brand):</strong> Identitas merek dagang snack (contoh: Kerensnack) untuk segmentasi katalog produk.</div>
                             </div>
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
                                 <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">2.</span>
-                                <div><strong>Grup Pelanggan:</strong> Segmentasi tier mitra (Grosir, Ritel, Konsinyasi) dan default level harga (1-30). Toko tidak bisa dibuat tanpa grup ini.</div>
+                                <div><strong>Wilayah &amp; Rute Distribusi:</strong> Menentukan zona logistik dan rute pengantaran toko.</div>
                             </div>
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
                                 <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">3.</span>
-                                <div><strong>Grup Kemasan Produk:</strong> Ukuran gramasi, barcode universal grup, dan rasio bal ke pcs. Diperlukan sebelum mengisi harga dan produk jadi.</div>
+                                <div><strong>Grup Pelanggan:</strong> Segmentasi tier mitra (Grosir, Ritel, Konsinyasi) dan default level harga (1-30). Toko tidak bisa dibuat tanpa grup ini.</div>
                             </div>
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
                                 <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">4.</span>
+                                <div><strong>Grup Kemasan Produk:</strong> Ukuran gramasi, barcode universal grup, dan rasio bal ke pcs. Diperlukan sebelum mengisi harga dan produk jadi.</div>
+                            </div>
+                            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">5.</span>
                                 <div><strong>Kelompok Upah Borongan:</strong> Standar tarif upah kemas per bungkus (contoh: Kelompok 600).</div>
                             </div>
                         </div>
@@ -636,15 +640,15 @@ $totalMasterRows = array_sum($entityStats ?? []);
                         </div>
                         <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--color-ink);">
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
-                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">5.</span>
+                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">6.</span>
                                 <div><strong>Data Karyawan &amp; Akun:</strong> Mendaftarkan staf internal (khususnya posisi <code>sales</code> dan <code>driver</code>) agar bisa menjadi Sales Pembina saat toko diimpor.</div>
                             </div>
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
-                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">6.</span>
+                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">7.</span>
                                 <div><strong>Pemasok Vendor:</strong> Daftar vendor bahan mentah, plastik, bumbu, dan karton.</div>
                             </div>
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
-                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">7.</span>
+                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">8.</span>
                                 <div><strong>Matriks 30 Level Harga:</strong> Menentukan nominal harga per pcs untuk Level 1-30 pada setiap Grup Produk yang telah dibuat di Fase 1.</div>
                             </div>
                         </div>
@@ -661,12 +665,12 @@ $totalMasterRows = array_sum($entityStats ?? []);
                         </div>
                         <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--color-ink);">
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
-                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">8.</span>
+                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">9.</span>
                                 <div><strong>Bahan Baku &amp; Kemas:</strong> Singkong curah, bumbu tabur, plastik sablon (dapat ditautkan ke Pemasok Utama dari Fase 2).</div>
                             </div>
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
-                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">9.</span>
-                                <div><strong>Barang Jadi Siap Jual:</strong> Varian snack SKU siap jual (wajib mencantumkan Grup Produk dan Kelompok Upah Borongan yang sah).</div>
+                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">10.</span>
+                                <div><strong>Barang Jadi Siap Jual:</strong> Varian snack SKU siap jual (wajib mencantumkan Merek Produk, Grup Produk, dan Kelompok Upah Borongan yang sah).</div>
                             </div>
                         </div>
                     </div>
@@ -682,7 +686,7 @@ $totalMasterRows = array_sum($entityStats ?? []);
                         </div>
                         <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 12px; color: var(--color-ink);">
                             <div style="display: flex; align-items: flex-start; gap: 8px;">
-                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">10.</span>
+                                <span style="font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); width: 18px;">11.</span>
                                 <div><strong>Toko Pelanggan:</strong> Diimpor paling akhir karena mengikat 3 relasi sekaligus: <em>Wilayah (Fase 1)</em>, <em>Grup Pelanggan (Fase 1)</em>, dan <em>Sales Pembina (Fase 2)</em>.</div>
                             </div>
                         </div>
@@ -806,13 +810,22 @@ $totalMasterRows = array_sum($entityStats ?? []);
 <!-- ========================================================================= -->
 <script>
 // State Management
-let currentSelectedEntity = '<?= htmlspecialchars($selectedKey) ?>';
+let currentSelectedEntity = '<?= htmlspecialchars($selectedKey ?? '') ?>';
 let currentSyncMode       = '<?= htmlspecialchars($syncMode ?? 'update_insert') ?>';
 
 function selectImportEntity(key) {
     currentSelectedEntity = key;
     const hiddenTypeInput = document.getElementById('hiddenTipeData');
     if (hiddenTypeInput) hiddenTypeInput.value = key;
+
+    const dlWrap = document.getElementById('importDownloadButtonsWrap');
+    if (dlWrap) {
+        dlWrap.style.opacity = '1';
+        dlWrap.style.pointerEvents = 'auto';
+    }
+
+    const countBadge = document.getElementById('importDetailCountBadge');
+    if (countBadge) countBadge.style.display = 'inline-flex';
 
     document.querySelectorAll('.import-entity-card').forEach(card => {
         if (card.getAttribute('data-key') === key) {
@@ -833,7 +846,14 @@ function selectImportEntity(key) {
         }
     });
 
+    const fileInput = document.getElementById('file_impor');
+    const btnSubmit = document.getElementById('btnSubmitImportPreview');
+    if (fileInput && fileInput.files && fileInput.files[0] && btnSubmit) {
+        btnSubmit.disabled = false;
+    }
+
     updateImportDownloadLinks();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function setImportSyncMode(mode) {
@@ -854,6 +874,8 @@ function setImportSyncMode(mode) {
 }
 
 function updateImportDownloadLinks() {
+    if (!currentSelectedEntity) return;
+
     const emptyUrl = '<?= Router::url('/settings/impor-data/download-template') ?>?tipe=' + encodeURIComponent(currentSelectedEntity) + '&mode=empty';
     const currUrl  = '<?= Router::url('/settings/impor-data/download-template') ?>?tipe=' + encodeURIComponent(currentSelectedEntity) + '&mode=current_data';
 
@@ -876,6 +898,15 @@ async function handleImportDownload(e, mode) {
     }
 
     if (isDownloadingTemplate) return;
+
+    if (!currentSelectedEntity) {
+        if (typeof AppAction !== 'undefined' && typeof AppAction.error === 'function') {
+            AppAction.error('Pilih Kategori!', 'Silakan pilih salah satu kategori master data pada Langkah 1 terlebih dahulu.', 2000);
+        } else {
+            alert('Silakan pilih salah satu kategori master data pada Langkah 1 terlebih dahulu.');
+        }
+        return;
+    }
 
     // Pastikan skeleton screen ditutup jika ada yang terpanggil
     if (typeof AppSkeleton !== 'undefined' && typeof AppSkeleton.hide === 'function') {
@@ -999,7 +1030,7 @@ function handleImportFileSelected(input) {
         if (selectedState) selectedState.style.display = 'flex';
         if (fileNameEl) fileNameEl.textContent = file.name;
         if (fileSizeEl) fileSizeEl.textContent = formatBytes(file.size);
-        if (btnSubmit) btnSubmit.disabled = false;
+        if (btnSubmit) btnSubmit.disabled = !currentSelectedEntity;
 
         if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -1029,6 +1060,19 @@ function formatBytes(bytes, decimals = 2) {
 }
 
 function handleUploadSyncSubmit(e) {
+    if (!currentSelectedEntity) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        if (window.AppAction && typeof window.AppAction.error === 'function') {
+            window.AppAction.error('Pilih Kategori!', 'Silakan pilih salah satu kategori master data pada Langkah 1 terlebih dahulu.', 2200);
+        } else {
+            alert('Silakan pilih salah satu kategori master data pada Langkah 1 terlebih dahulu.');
+        }
+        return false;
+    }
+
     if (window.AppAction && typeof window.AppAction.show === 'function') {
         window.AppAction.show('Membaca & Menganalisis Berkas...', 'Mempersiapkan pratinjau perbandingan data...');
     }

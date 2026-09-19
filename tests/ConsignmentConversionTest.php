@@ -94,14 +94,58 @@ function createMockCustomerController(array $postData): App\Controllers\Customer
 
 $db = Database::getConnection();
 
+$transientIds = ['item' => [], 'pelanggan' => [], 'pesanan' => []];
+
+register_shutdown_function(function() use ($db, &$transientIds) {
+    if (!empty($transientIds['pesanan'])) {
+        $in = "'" . implode("','", $transientIds['pesanan']) . "'";
+        $db->exec("DELETE FROM public.riwayat_stok WHERE referensi_tabel = 'pesanan' AND referensi_id IN ($in)");
+        $db->exec("DELETE FROM public.arus_kas WHERE referensi_tabel = 'pesanan' AND referensi_id IN ($in)");
+        $db->exec("DELETE FROM public.item_pesanan WHERE pesanan_id IN ($in)");
+        $db->exec("DELETE FROM public.pesanan WHERE id IN ($in)");
+    }
+    if (!empty($transientIds['pelanggan'])) {
+        $in = "'" . implode("','", $transientIds['pelanggan']) . "'";
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id IN ($in)");
+        $db->exec("DELETE FROM public.pelanggan WHERE id IN ($in)");
+    }
+    if (!empty($transientIds['item'])) {
+        $in = "'" . implode("','", $transientIds['item']) . "'";
+        $db->exec("DELETE FROM public.item WHERE id IN ($in)");
+    }
+});
+
 $grupId = $db->query("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1")->fetchColumn()
     ?: $db->query("SELECT id FROM public.grup_pelanggan LIMIT 1")->fetchColumn();
 $wilId = $db->query("SELECT id FROM public.wilayah LIMIT 1")->fetchColumn();
 $item = $db->query("SELECT id, nama_item, kode_sku, stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 $akunKas = $db->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 
-if (!$item || !$akunKas) {
-    echo "Master item atau akun kas tidak tersedia untuk pengujian.\n";
+if (!$item) {
+    $tmpItemId = 'e0000000-0000-0000-0000-000000000010';
+    $grupProdId = $db->query("SELECT id FROM public.grup_produk LIMIT 1")->fetchColumn();
+    $db->exec("
+        INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, grup_id, satuan_dasar, stok_fisik_saat_ini, harga_pokok_pembelian, status_aktif)
+        VALUES ('{$tmpItemId}', 'SKU-CONV-TMP', 'Item Konversi Transien', 'barang_jadi', '{$grupProdId}', 'pcs', 100, 5000, TRUE)
+        ON CONFLICT (id) DO NOTHING
+    ");
+    $db->exec("
+        INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs)
+        VALUES ('{$grupProdId}', 1, 10000.00)
+        ON CONFLICT (grup_produk_id, level_harga) DO NOTHING
+    ");
+    $transientIds['item'][] = $tmpItemId;
+    $item = [
+        'id' => $tmpItemId,
+        'nama_item' => 'Item Konversi Transien',
+        'kode_sku' => 'SKU-CONV-TMP',
+        'stok_fisik_saat_ini' => 100,
+        'harga_pokok_pembelian' => 5000
+    ];
+}
+
+if (!$akunKas) {
+    echo "Akun kas tidak tersedia untuk pengujian.\n";
     exit(1);
 }
 

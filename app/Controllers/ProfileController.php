@@ -117,77 +117,84 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update Username dengan batas kuota 2x/30 hari untuk non-developer
+     * Unified Update: Menyimpan Perubahan Profil, Username, dan/atau Kata Sandi Sekaligus
      */
-    public function updateUsername(): void
+    public function update(): void
     {
         Auth::requireLogin();
 
-        $newUsername = strtolower(trim((string)$this->input('new_username')));
-        $currentUsername = strtolower(Auth::user()['nama_pengguna'] ?? '');
+        if (!$this->validateCsrf()) {
+            $this->redirect('/profile');
+            return;
+        }
+
         $userId = Auth::id();
         $isDeveloper = Auth::isDeveloper();
+        $currentUsername = strtolower(Auth::user()['nama_pengguna'] ?? '');
+        $currentNamaLengkap = trim(Auth::name() ?: (Auth::user()['nama_lengkap'] ?? ''));
 
+        // 1. Nama Lengkap: Non-developer terkunci mengikuti Master Karyawan (HRD)
+        $namaLengkap = $isDeveloper ? trim((string)$this->input('nama_lengkap')) : $currentNamaLengkap;
+        if (empty($namaLengkap)) {
+            $namaLengkap = $currentNamaLengkap;
+        }
+
+        // 2. Nama Pengguna (Username)
+        $newUsername = strtolower(trim((string)$this->input('new_username')));
         if (empty($newUsername)) {
-            Flash::error('Nama pengguna baru tidak boleh kosong.');
+            $newUsername = $currentUsername;
+        }
+
+        // 3. Password (Opsional)
+        $currentPassword = (string)$this->input('current_password');
+        $newPassword = (string)$this->input('new_password');
+        $confirmPassword = (string)$this->input('confirm_password');
+
+        $isNameChanged = ($isDeveloper && $namaLengkap !== $currentNamaLengkap);
+        $isUsernameChanged = ($newUsername !== $currentUsername);
+        $isPasswordChanged = (!empty($newPassword) || !empty($confirmPassword));
+
+        // Cek jika tidak ada perubahan sama sekali
+        if (!$isNameChanged && !$isUsernameChanged && !$isPasswordChanged) {
+            Flash::info('Tidak ada perubahan pada data profil atau kata sandi yang disimpan.');
             $this->redirect('/profile');
             return;
         }
 
-        // Validasi format: alphanumeric dan underscore (3 - 30 karakter)
-        if (!preg_match('/^[a-z0-9_]{3,30}$/', $newUsername)) {
-            Flash::error('Format nama pengguna tidak valid. Gunakan 3-30 karakter huruf kecil, angka, atau underscore.');
-            $this->redirect('/profile');
-            return;
+        // Validasi format Username jika diubah
+        if ($isUsernameChanged) {
+            if (!preg_match('/^[a-z0-9_]{3,30}$/', $newUsername)) {
+                Flash::error('Format nama pengguna tidak valid. Gunakan 3-30 karakter huruf kecil, angka, atau underscore.');
+                $this->redirect('/profile');
+                return;
+            }
         }
 
-        if ($newUsername === $currentUsername) {
-            Flash::info('Nama pengguna tidak berubah.');
-            $this->redirect('/profile');
-            return;
-        }
-
-        try {
-            // 1. Cek apakah username baru sudah digunakan oleh akun lain
-            $existing = Database::fetchOne("
-                SELECT id FROM public.pengguna 
-                WHERE LOWER(nama_pengguna) = LOWER(:uname) AND id != :id
-                LIMIT 1
-            ", [
-                'uname' => $newUsername,
-                'id' => $userId ?: '00000000-0000-0000-0000-000000000000'
-            ]);
-
-            if ($existing) {
-                Flash::error("Nama pengguna '{$newUsername}' sudah digunakan oleh akun lain.");
+        // Validasi Password jika diisi
+        if ($isPasswordChanged) {
+            if (empty($newPassword) || empty($confirmPassword)) {
+                Flash::error('Kata sandi baru dan konfirmasi kata sandi wajib diisi jika ingin memperbarui kata sandi.');
                 $this->redirect('/profile');
                 return;
             }
 
-            // 2. Cek kuota 2x dalam 30 hari untuk non-developer
-            if (!$isDeveloper) {
-                $countRow = Database::fetchOne("
-                    SELECT COUNT(*) as total
-                    FROM public.log_aktivitas
-                    WHERE (pengguna_id = :id OR nama_aktor = :username)
-                      AND jenis_aksi = 'ubah_nama_pengguna'
-                      AND waktu_kejadian >= NOW() - INTERVAL '30 days'
-                ", [
-                    'id' => $userId ?: '00000000-0000-0000-0000-000000000000',
-                    'username' => $currentUsername
-                ]);
-                $used = (int)($countRow['total'] ?? 0);
-
-                if ($used >= 2) {
-                    Flash::error("Batas penggantian nama pengguna telah tercapai (maksimal 2 kali dalam 30 hari). Silakan coba lagi bulan depan atau hubungi Developer.");
-                    $this->redirect('/profile');
-                    return;
-                }
+            if (strlen($newPassword) < 6) {
+                Flash::error('Kata sandi baru minimal 6 karakter.');
+                $this->redirect('/profile');
+                return;
             }
 
-            // 3. Ambil ID pengguna yang valid dari DB
+            if ($newPassword !== $confirmPassword) {
+                Flash::error('Konfirmasi kata sandi baru tidak cocok dengan kata sandi baru.');
+                $this->redirect('/profile');
+                return;
+            }
+        }
+
+        try {
+            // Ambil data pengguna dari database
             $userDb = Database::fetchOne("
-                SELECT id, nama_pengguna FROM public.pengguna 
+                SELECT id, nama_pengguna, nama_lengkap, kata_sandi FROM public.pengguna 
                 WHERE id = :id OR LOWER(nama_pengguna) = LOWER(:old_uname)
                 LIMIT 1
             ", [
@@ -196,134 +203,174 @@ class ProfileController extends Controller
             ]);
             $actualUid = $userDb['id'] ?? ($userId ?: null);
 
-            // 4. Update nama_pengguna di Database
-            Database::execute("
-                UPDATE public.pengguna 
-                SET nama_pengguna = :new_uname, diubah_pada = NOW() 
-                WHERE id = :id OR LOWER(nama_pengguna) = LOWER(:old_uname)
-            ", [
-                'new_uname' => $newUsername,
-                'id' => $userId ?: '00000000-0000-0000-0000-000000000000',
-                'old_uname' => $currentUsername
-            ]);
+            // Validasi Keunikan & Kuota Username
+            if ($isUsernameChanged) {
+                $existing = Database::fetchOne("
+                    SELECT id FROM public.pengguna 
+                    WHERE LOWER(nama_pengguna) = LOWER(:uname) AND id != :id
+                    LIMIT 1
+                ", [
+                    'uname' => $newUsername,
+                    'id' => $actualUid ?: '00000000-0000-0000-0000-000000000000'
+                ]);
 
-            // 5. Catat riwayat perubahan ke tabel log_aktivitas
-            ActivityLog::log(
-                'keamanan_auth',
-                'ubah_nama_pengguna',
-                "Mengubah nama pengguna dari '{$currentUsername}' menjadi '{$newUsername}'",
-                'pengguna',
-                $actualUid,
-                ['nama_pengguna' => $currentUsername],
-                ['nama_pengguna' => $newUsername],
-                'web_app',
-                $actualUid,
-                Auth::name(),
-                Auth::role()
-            );
+                if ($existing) {
+                    Flash::error("Nama pengguna '{$newUsername}' sudah digunakan oleh akun lain.");
+                    $this->redirect('/profile');
+                    return;
+                }
 
-            // 6. Update session aktif
+                if (!$isDeveloper) {
+                    $countRow = Database::fetchOne("
+                        SELECT COUNT(*) as total
+                        FROM public.log_aktivitas
+                        WHERE (pengguna_id = :id OR nama_aktor = :username)
+                          AND jenis_aksi = 'ubah_nama_pengguna'
+                          AND waktu_kejadian >= NOW() - INTERVAL '30 days'
+                    ", [
+                        'id' => $actualUid ?: '00000000-0000-0000-0000-000000000000',
+                        'username' => $currentUsername
+                    ]);
+                    $used = (int)($countRow['total'] ?? 0);
+
+                    if ($used >= 2) {
+                        Flash::error("Batas penggantian nama pengguna telah tercapai (maksimal 2 kali dalam 30 hari). Silakan coba lagi bulan depan atau hubungi Developer.");
+                        $this->redirect('/profile');
+                        return;
+                    }
+                }
+            }
+
+            // Validasi Password Lama
+            $newPasswordHash = null;
+            if ($isPasswordChanged) {
+                if ($userDb && !empty($userDb['kata_sandi']) && !$isDeveloper) {
+                    $isOldMatch = password_verify($currentPassword, $userDb['kata_sandi']) || ($currentPassword === $userDb['kata_sandi']);
+                    if (!$isOldMatch) {
+                        Flash::error('Kata sandi saat ini tidak sesuai.');
+                        $this->redirect('/profile');
+                        return;
+                    }
+                }
+                $newPasswordHash = password_hash($newPassword, PASSWORD_BCRYPT);
+            }
+
+            // Eksekusi Update ke Database
+            if ($newPasswordHash !== null) {
+                Database::execute("
+                    UPDATE public.pengguna 
+                    SET nama_lengkap = :nama_lengkap,
+                        nama_pengguna = :new_uname,
+                        kata_sandi = :pw,
+                        diubah_pada = NOW() 
+                    WHERE id = :id OR LOWER(nama_pengguna) = LOWER(:old_uname)
+                ", [
+                    'nama_lengkap' => $namaLengkap,
+                    'new_uname' => $newUsername,
+                    'pw' => $newPasswordHash,
+                    'id' => $actualUid ?: '00000000-0000-0000-0000-000000000000',
+                    'old_uname' => $currentUsername
+                ]);
+            } else {
+                Database::execute("
+                    UPDATE public.pengguna 
+                    SET nama_lengkap = :nama_lengkap,
+                        nama_pengguna = :new_uname,
+                        diubah_pada = NOW() 
+                    WHERE id = :id OR LOWER(nama_pengguna) = LOWER(:old_uname)
+                ", [
+                    'nama_lengkap' => $namaLengkap,
+                    'new_uname' => $newUsername,
+                    'id' => $actualUid ?: '00000000-0000-0000-0000-000000000000',
+                    'old_uname' => $currentUsername
+                ]);
+            }
+
+            // Catat Log Aktivitas
+            if ($isUsernameChanged) {
+                ActivityLog::log(
+                    'keamanan_auth',
+                    'ubah_nama_pengguna',
+                    "Mengubah nama pengguna dari '{$currentUsername}' menjadi '{$newUsername}'",
+                    'pengguna',
+                    $actualUid,
+                    ['nama_pengguna' => $currentUsername],
+                    ['nama_pengguna' => $newUsername],
+                    'web_app',
+                    $actualUid,
+                    $namaLengkap,
+                    Auth::role()
+                );
+            }
+
+            if ($isPasswordChanged) {
+                ActivityLog::log(
+                    'keamanan_auth',
+                    'ubah_kata_sandi',
+                    'Memperbarui kata sandi akun',
+                    'pengguna',
+                    $actualUid,
+                    null,
+                    ['kata_sandi_diubah' => true],
+                    'web_app',
+                    $actualUid,
+                    $namaLengkap,
+                    Auth::role()
+                );
+            }
+
+            if ($isNameChanged && !$isUsernameChanged) {
+                ActivityLog::log(
+                    'keamanan_auth',
+                    'ubah_profil',
+                    "Mengubah nama profil dari '{$currentNamaLengkap}' menjadi '{$namaLengkap}'",
+                    'pengguna',
+                    $actualUid,
+                    ['nama_lengkap' => $currentNamaLengkap],
+                    ['nama_lengkap' => $namaLengkap],
+                    'web_app',
+                    $actualUid,
+                    $namaLengkap,
+                    Auth::role()
+                );
+            }
+
+            // Update Sesi Aktif
+            $_SESSION['user']['nama_lengkap'] = $namaLengkap;
             $_SESSION['user']['nama_pengguna'] = $newUsername;
 
-            Flash::success("Nama pengguna berhasil diubah menjadi '{$newUsername}'!");
+            // Flash Message Informatif
+            if ($isUsernameChanged && $isPasswordChanged) {
+                Flash::success("Nama pengguna (@{$newUsername}) dan kata sandi berhasil diperbarui!");
+            } elseif ($isUsernameChanged) {
+                Flash::success("Nama pengguna berhasil diubah menjadi '@{$newUsername}'!");
+            } elseif ($isPasswordChanged) {
+                Flash::success("Kata sandi berhasil diperbarui!");
+            } else {
+                Flash::success("Data profil berhasil diperbarui!");
+            }
+
             $this->redirect('/profile');
 
         } catch (\Throwable $e) {
-            Flash::error("Gagal mengubah nama pengguna: " . $e->getMessage());
+            Flash::error("Gagal memperbarui pengaturan profil: " . $e->getMessage());
             $this->redirect('/profile');
         }
     }
 
     /**
-     * Update Password
+     * Backward-compatible handler untuk update username
+     */
+    public function updateUsername(): void
+    {
+        $this->update();
+    }
+
+    /**
+     * Backward-compatible handler untuk update password
      */
     public function updatePassword(): void
     {
-        Auth::requireLogin();
-
-        $currentPassword = (string)$this->input('current_password');
-        $newPassword = (string)$this->input('new_password');
-        $confirmPassword = (string)$this->input('confirm_password');
-
-        $userId = Auth::id();
-        $username = Auth::user()['nama_pengguna'] ?? '';
-        $isDeveloper = Auth::isDeveloper();
-
-        if (empty($newPassword) || empty($confirmPassword)) {
-            Flash::error('Kata sandi baru dan konfirmasi wajib diisi.');
-            $this->redirect('/profile');
-            return;
-        }
-
-        if (strlen($newPassword) < 6) {
-            Flash::error('Kata sandi baru minimal 6 karakter.');
-            $this->redirect('/profile');
-            return;
-        }
-
-        if ($newPassword !== $confirmPassword) {
-            Flash::error('Konfirmasi kata sandi baru tidak cocok.');
-            $this->redirect('/profile');
-            return;
-        }
-
-        try {
-            // Cek kata sandi lama jika tersimpan di database dan bukan developer bypass
-            $userDb = Database::fetchOne("
-                SELECT id, kata_sandi FROM public.pengguna
-                WHERE id = :id OR LOWER(nama_pengguna) = LOWER(:username)
-                LIMIT 1
-            ", [
-                'id' => $userId ?: '00000000-0000-0000-0000-000000000000',
-                'username' => $username
-            ]);
-
-            $actualUid = $userDb['id'] ?? ($userId ?: null);
-
-            if ($userDb && !empty($userDb['kata_sandi']) && !$isDeveloper) {
-                $isOldMatch = password_verify($currentPassword, $userDb['kata_sandi']) || ($currentPassword === $userDb['kata_sandi']);
-                if (!$isOldMatch) {
-                    Flash::error('Kata sandi saat ini tidak sesuai.');
-                    $this->redirect('/profile');
-                    return;
-                }
-            }
-
-            // Hash kata sandi baru dengan Bcrypt
-            $hashedPassword = password_hash($newPassword, PASSWORD_BCRYPT);
-
-            // Update ke database
-            Database::execute("
-                UPDATE public.pengguna 
-                SET kata_sandi = :pw, diubah_pada = NOW() 
-                WHERE id = :id OR LOWER(nama_pengguna) = LOWER(:username)
-            ", [
-                'pw' => $hashedPassword,
-                'id' => $userId ?: '00000000-0000-0000-0000-000000000000',
-                'username' => $username
-            ]);
-
-            // Catat log aktivitas
-            ActivityLog::log(
-                'keamanan_auth',
-                'ubah_kata_sandi',
-                'Memperbarui kata sandi akun',
-                'pengguna',
-                $actualUid,
-                null,
-                ['kata_sandi_diubah' => true],
-                'web_app',
-                $actualUid,
-                Auth::name(),
-                Auth::role()
-            );
-
-            Flash::success('Kata sandi berhasil diperbarui!');
-            $this->redirect('/profile');
-
-        } catch (\Throwable $e) {
-            Flash::error('Gagal memperbarui kata sandi: ' . $e->getMessage());
-            $this->redirect('/profile');
-        }
+        $this->update();
     }
 }

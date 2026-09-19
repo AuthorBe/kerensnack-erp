@@ -318,60 +318,76 @@ runTest('Consignment Store with Active Shelf Stock Cannot be Converted to Non-Co
         $tempCustomerId = 'a0000000-0000-0000-0000-000000000099';
         $grupId = $db->query("SELECT id FROM public.grup_pelanggan LIMIT 1")->fetchColumn();
         $wilId = $db->query("SELECT id FROM public.wilayah LIMIT 1")->fetchColumn();
-        $itemId = $db->query("SELECT id FROM public.item_master WHERE tipe = 'barang_jadi' LIMIT 1")->fetchColumn();
+        $itemRow = $db->query("SELECT id FROM public.item WHERE tipe_item = 'barang_jadi' LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        $itemId = $itemRow['id'] ?? null;
+        $tempItemId = null;
 
-        $db->exec("
-            INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, status_aktif)
-            VALUES ('{$tempCustomerId}', 'CUST-TEST-CONS', 'Toko Titip Test', '{$grupId}', '{$wilId}', true, true)
-            ON CONFLICT (id) DO UPDATE SET is_konsinyasi = true
-        ");
+        if (!$itemId) {
+            $tempItemId = 'c0000000-0000-0000-0000-000000000099';
+            $grupProdId = $db->query("SELECT id FROM public.grup_produk LIMIT 1")->fetchColumn();
+            $db->exec("
+                INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, grup_id, satuan_dasar, status_aktif)
+                VALUES ('{$tempItemId}', 'SKU-TMP-CONS', 'Item Titip Transien', 'barang_jadi', '{$grupProdId}', 'pcs', TRUE)
+                ON CONFLICT (id) DO NOTHING
+            ");
+            $itemId = $tempItemId;
+        }
 
-        $db->exec("
-            INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
-            VALUES ('b0000000-0000-0000-0000-000000000099', '{$tempCustomerId}', '{$itemId}', 15)
-            ON CONFLICT (pelanggan_id, item_id) DO UPDATE SET stok_titip_saat_ini = 15
-        ");
+        try {
+            $db->exec("
+                INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, alamat_lengkap, status_aktif)
+                VALUES ('{$tempCustomerId}', 'CUST-TEST-CONS', 'Toko Titip Test', '{$grupId}', '{$wilId}', true, 'Jl. Titip Uji No. 1', true)
+                ON CONFLICT (id) DO UPDATE SET is_konsinyasi = true
+            ");
 
-        $consCust = [
-            'id' => $tempCustomerId,
-            'nama_toko' => 'Toko Titip Test',
-            'grup_pelanggan_id' => $grupId,
-            'wilayah_id' => $wilId,
-            'total_titip' => 15
-        ];
-        $tempInserted = true;
-    }
+            $db->exec("
+                INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
+                VALUES ('b0000000-0000-0000-0000-000000000099', '{$tempCustomerId}', '{$itemId}', 15)
+                ON CONFLICT (pelanggan_id, item_id) DO UPDATE SET stok_titip_saat_ini = 15
+            ");
 
-    // Now attempt to update this customer with is_konsinyasi turned off (cash, is_konsinyasi false)
-    $ctrl = createMockCustomerController([
-        'id' => $consCust['id'],
-        'nama_toko' => $consCust['nama_toko'],
-        'grup_pelanggan_id' => $consCust['grup_pelanggan_id'],
-        'wilayah_id' => $consCust['wilayah_id'],
-        'tipe_pembayaran_default' => 'cash',
-        'plafon_piutang' => '1.000.000',
-        'status_aktif' => true,
-        'is_konsinyasi' => false
-    ]);
-    $ctrl->update();
+            $consCust = [
+                'id' => $tempCustomerId,
+                'nama_toko' => 'Toko Titip Test',
+                'grup_pelanggan_id' => $grupId,
+                'wilayah_id' => $wilId,
+                'total_titip' => 15
+            ];
 
-    // Verify in DB that is_konsinyasi is STILL true!
-    $stmtCheck = $db->prepare("SELECT is_konsinyasi FROM public.pelanggan WHERE id = ?");
-    $stmtCheck->execute([$consCust['id']]);
-    $stillConsignment = (bool)$stmtCheck->fetchColumn();
+            // Now attempt to update this customer with is_konsinyasi turned off (cash, is_konsinyasi false)
+            $ctrl = createMockCustomerController([
+                'id' => $consCust['id'],
+                'nama_toko' => $consCust['nama_toko'],
+                'grup_pelanggan_id' => $consCust['grup_pelanggan_id'],
+                'wilayah_id' => $consCust['wilayah_id'],
+                'tipe_pembayaran_default' => 'cash',
+                'plafon_piutang' => '1.000.000',
+                'status_aktif' => true,
+                'is_konsinyasi' => false
+            ]);
+            $ctrl->update();
 
-    // Clean up temporary data if inserted
-    if ($tempInserted && $tempCustomerId) {
-        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$tempCustomerId}'");
-        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$tempCustomerId}'");
-    }
+            // Verify in DB that is_konsinyasi is STILL true!
+            $stmtCheck = $db->prepare("SELECT is_konsinyasi FROM public.pelanggan WHERE id = ?");
+            $stmtCheck->execute([$consCust['id']]);
+            $stillConsignment = (bool)$stmtCheck->fetchColumn();
 
-    if (!$stillConsignment) {
-        return "Consignment flag was wrongly removed despite active shelf stock!";
-    }
+            if (!$stillConsignment) {
+                return "Consignment flag was wrongly removed despite active shelf stock!";
+            }
 
-    if (empty($ctrl->capturedError) || !str_contains($ctrl->capturedError, 'stok konsinyasi')) {
-        return "Expected error regarding active consignment stock, got: " . var_export($ctrl->capturedError, true);
+            if (empty($ctrl->capturedError) || !str_contains($ctrl->capturedError, 'stok konsinyasi')) {
+                return "Expected error regarding active consignment stock, got: " . var_export($ctrl->capturedError, true);
+            }
+
+            return true;
+        } finally {
+            $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$tempCustomerId}'");
+            $db->exec("DELETE FROM public.pelanggan WHERE id = '{$tempCustomerId}'");
+            if ($tempItemId) {
+                $db->exec("DELETE FROM public.item WHERE id = '{$tempItemId}'");
+            }
+        }
     }
 
     return true;
@@ -409,7 +425,7 @@ runTest('Customer Group Duplicate Code Check & Last Group Protection', function 
         $ctrlDelete = createMockCustomerController(['id' => $existingGroup['id']]);
         $ctrlDelete->deleteGroup();
 
-        if (empty($ctrlDelete->capturedError) || !str_contains($ctrlDelete->capturedError, 'satu-satunya')) {
+        if (empty($ctrlDelete->capturedError) || (!str_contains($ctrlDelete->capturedError, 'satu-satunya') && !str_contains($ctrlDelete->capturedError, 'minimal 1 grup'))) {
             return "Expected last group protection warning, got: " . var_export($ctrlDelete->capturedError, true);
         }
     }

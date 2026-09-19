@@ -63,6 +63,9 @@ if (is_array($previewData)) {
     }
 }
 
+$hasBlocker = ($cnt_error > 0 || $cnt_fatal > 0);
+$totalBlocker = $cnt_error + $cnt_fatal;
+
 $uploadedFilename = $_SESSION['ks_sync_filename'] ?? 'Berkas Excel';
 $totalRows = is_array($previewData) ? count($previewData) : 0;
 ?>
@@ -325,35 +328,34 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
         <!-- ===================================================================== -->
         <!-- 3. BANNER PERINGATAN VALIDASI & KONFLIK IDENTITAS                     -->
         <!-- ===================================================================== -->
-        <?php if ($cnt_error > 0): ?>
-            <div style="border-left: 4px solid var(--color-danger); border-radius: var(--rounded-md); padding: 16px 18px; background-color: var(--color-danger-soft); border: 1px solid rgba(239, 68, 68, 0.3); border-left-width: 5px; display: flex; gap: 14px; align-items: flex-start;">
-                <div style="width: 38px; height: 38px; border-radius: var(--rounded-full); background: rgba(239, 68, 68, 0.18); color: var(--color-danger); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <i data-lucide="x-circle" style="width: 20px; height: 20px;"></i>
+        <?php if ($hasBlocker): ?>
+            <div style="border-left: 5px solid var(--color-danger); border-radius: var(--rounded-md); padding: 18px 20px; background-color: var(--color-danger-soft); border: 1px solid rgba(239, 68, 68, 0.35); display: flex; gap: 16px; align-items: flex-start;">
+                <div style="width: 42px; height: 42px; border-radius: var(--rounded-full); background: rgba(239, 68, 68, 0.2); color: var(--color-danger); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i data-lucide="shield-alert" style="width: 24px; height: 24px;"></i>
                 </div>
                 <div style="min-width: 0; flex: 1;">
-                    <div style="font-size: 14px; font-weight: 800; color: var(--color-danger); margin-bottom: 2px;">
-                        Ditemukan <?= $cnt_error ?> Baris Bermasalah (Validasi Gagal)
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                        <span class="badge badge-danger" style="font-size: 11px; font-weight: 800; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Sinkronisasi Terkunci
+                        </span>
+                        <span style="font-size: 14.5px; font-weight: 800; color: var(--color-danger);">
+                            Terdeteksi <?= $totalBlocker ?> Baris Bermasalah (<?= $cnt_fatal > 0 ? $cnt_fatal . ' Konflik Fatal' : '' ?><?= ($cnt_fatal > 0 && $cnt_error > 0) ? ' & ' : '' ?><?= $cnt_error > 0 ? $cnt_error . ' Validasi Gagal' : '' ?>)
+                        </span>
                     </div>
-                    <p style="font-size: 12px; color: var(--color-ink); margin: 0 0 6px 0; line-height: 1.45;">
-                        Sinkronisasi ditahan untuk mencegah inkonsistensi data. Ditemukan baris dengan kolom wajib yang kosong, format angka tidak valid, atau relasi master yang belum terdaftar. Tombol simpan dikunci secara aman.
+                    <p style="font-size: 12.5px; color: var(--color-ink); margin: 0 0 10px 0; line-height: 1.5;">
+                        Tombol konfirmasi <strong>dikunci total demi keamanan dan integritas data operasional</strong>. Sinkronisasi tidak dapat dilanjutkan karena terdapat konflik kode identitas master atau kolom data yang tidak valid.
                     </p>
-                    <div style="font-size: 11.5px; font-weight: 700; color: var(--color-danger);">
-                        Solusi: Periksa baris bertanda <span class="badge badge-danger">ERROR</span> di tabel bawah, perbaiki berkas Excel Anda, lalu klik "Batal &amp; Unggah Ulang".
+                    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--color-ink); background: rgba(255,255,255,0.7); padding: 10px 14px; border-radius: var(--rounded-xs); border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 10px;">
+                        <?php if ($cnt_fatal > 0): ?>
+                            <div>&bull; <strong>Konflik Fatal (<?= $cnt_fatal ?> baris):</strong> Kode pada file Excel Anda sudah dimiliki oleh data master lain di database dengan nama yang berbeda jauh.</div>
+                        <?php endif; ?>
+                        <?php if ($cnt_error > 0): ?>
+                            <div>&bull; <strong>Validasi Error (<?= $cnt_error ?> baris):</strong> Kolom wajib belum diisi, format data rusak, atau data relasi tidak ditemukan di database.</div>
+                        <?php endif; ?>
                     </div>
-                </div>
-            </div>
-        <?php elseif ($cnt_fatal > 0): ?>
-            <div style="border-left: 4px solid var(--color-warning); border-radius: var(--rounded-md); padding: 16px 18px; background-color: var(--color-warning-soft); border: 1px solid rgba(245, 158, 11, 0.3); border-left-width: 5px; display: flex; gap: 14px; align-items: flex-start;">
-                <div style="width: 38px; height: 38px; border-radius: var(--rounded-full); background: rgba(245, 158, 11, 0.18); color: var(--color-warning); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <i data-lucide="shield-alert" style="width: 20px; height: 20px;"></i>
-                </div>
-                <div style="min-width: 0; flex: 1;">
-                    <div style="font-size: 14px; font-weight: 800; color: var(--color-warning); margin-bottom: 2px;">
-                        Terdeteksi <?= $cnt_fatal ?> Konflik Identitas Master
+                    <div style="font-size: 12px; font-weight: 700; color: var(--color-danger);">
+                        Langkah Perbaikan: Periksa baris bertanda <span class="badge badge-danger">FATAL</span> / <span class="badge badge-danger">ERROR</span> di tabel bawah, benarkan datanya pada berkas Excel Anda, lalu klik tombol <strong>"Batal &amp; Unggah Ulang"</strong>.
                     </div>
-                    <p style="font-size: 12px; color: var(--color-ink); margin: 0; line-height: 1.45;">
-                        Kode pada berkas Excel Anda terdaftar dengan nama yang berbeda di sistem. Demi keamanan, data lama di database dipertahankan dan sistem akan membuatkan kode/ID baru secara aman saat dikonfirmasi.
-                    </p>
                 </div>
             </div>
         <?php endif; ?>
@@ -563,11 +565,11 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
                     <button type="button" 
                             id="btnTriggerConfirmModal"
                             class="btn btn-primary" 
-                            style="font-weight: 700; display: flex; align-items: center; gap: 6px;"
-                            onclick="openImportConfirmModal()" 
-                            <?= $cnt_error > 0 ? 'disabled' : '' ?>>
-                        <i data-lucide="<?= $cnt_error > 0 ? 'lock' : 'check-circle' ?>" style="width: 16px; height: 16px;"></i>
-                        <span><?= $cnt_error > 0 ? 'Perbaiki File Dulu' : 'Konfirmasi &amp; Terapkan' ?></span>
+                            style="font-weight: 700; display: flex; align-items: center; gap: 6px; <?= $hasBlocker ? 'opacity: 0.65; cursor: not-allowed;' : '' ?>"
+                            onclick="<?= $hasBlocker ? 'return false;' : 'openImportConfirmModal()' ?>" 
+                            <?= $hasBlocker ? 'disabled title="Perbaiki data ERROR atau FATAL pada file Excel terlebih dahulu"' : '' ?>>
+                        <i data-lucide="<?= $hasBlocker ? 'lock' : 'check-circle' ?>" style="width: 16px; height: 16px;"></i>
+                        <span><?= $hasBlocker ? 'Perbaiki File Dulu (Terkunci)' : 'Konfirmasi &amp; Terapkan' ?></span>
                     </button>
                 </div>
             </div>
@@ -698,7 +700,15 @@ function applyPreviewTableFilters() {
 }
 
 // Modal Konfirmasi Manajemen
+const IS_SYNC_BLOCKED = <?= $hasBlocker ? 'true' : 'false' ?>;
+
 function openImportConfirmModal() {
+    if (IS_SYNC_BLOCKED) {
+        if (window.AppToast && typeof window.AppToast.error === 'function') {
+            window.AppToast.error('Sinkronisasi dikunci. Terdapat baris data FATAL atau ERROR yang harus diperbaiki terlebih dahulu.', 'Aksi Ditolak');
+        }
+        return;
+    }
     const modal = document.getElementById('importConfirmModal');
     if (!modal) return;
     modal.style.display = 'flex';
@@ -714,6 +724,10 @@ function closeImportConfirmModal() {
 }
 
 function executeSyncConfirm() {
+    if (IS_SYNC_BLOCKED) {
+        closeImportConfirmModal();
+        return;
+    }
     closeImportConfirmModal();
     if (window.AppAction && typeof window.AppAction.show === 'function') {
         window.AppAction.show('Menerapkan Sinkronisasi Data...', 'Menjalankan transaksi database secara atomic...');

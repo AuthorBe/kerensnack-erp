@@ -183,8 +183,8 @@ runTest("1.3.1 - Stored Procedure: Pilihan B menolak transaksi jika harga level 
     try {
         // Buat dummy grup produk tanpa level harga dan dummy item
         $gpStmt = $pdo->prepare("
-            INSERT INTO public.grup_produk (kode_grup, nama_grup, konversi_bal_ke_pcs)
-            VALUES ('GRP-TEST-P0', 'Grup Test P0 Fallback', 20)
+            INSERT INTO public.grup_produk (kode_grup, nama_grup)
+            VALUES ('GRP-TEST-P0', 'Grup Test P0 Fallback')
             RETURNING id
         ");
         $gpStmt->execute();

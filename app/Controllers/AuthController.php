@@ -156,7 +156,7 @@ class AuthController extends Controller
         }
 
         try {
-            // 1. Cari pengguna dari Database PostgreSQL
+            // 1. Cari pengguna dari Database PostgreSQL (Hanya yang memiliki username & kata sandi sah)
             $userDb = Database::fetchOne("
                 SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi,
                        p.posisi, p.peran_id, pr.nama_peran as peran, p.status_aktif,
@@ -164,20 +164,55 @@ class AuthController extends Controller
                 FROM public.pengguna p
                 JOIN public.peran pr ON p.peran_id = pr.id
                 LEFT JOIN public.v_karyawan_info k ON k.pengguna_id = p.id
-                WHERE LOWER(p.nama_pengguna) = LOWER(:username)
+                WHERE p.nama_pengguna IS NOT NULL 
+                  AND TRIM(p.nama_pengguna) != ''
+                  AND p.kata_sandi IS NOT NULL 
+                  AND TRIM(p.kata_sandi) != ''
+                  AND LOWER(p.nama_pengguna) = LOWER(:username)
                 LIMIT 1
             ", ['username' => $username]);
 
+            // Jika username tidak terdaftar atau belum disetel akunnya
+            if (!$userDb || empty($userDb['nama_pengguna']) || empty($userDb['kata_sandi'])) {
+                $this->recordFailedAttempt($ip);
+                ActivityLog::log(
+                    'keamanan',
+                    'LOGIN_FAILED',
+                    "Percobaan login gagal untuk username '{$username}' (akun tidak ditemukan/belum aktif) dari IP {$ip}",
+                    'pengguna',
+                    null,
+                    null,
+                    null,
+                    'web_app',
+                    null,
+                    'Tamu / Unauthenticated',
+                    'guest'
+                );
+
+                $newRateCheck = $this->checkRateLimit($ip);
+                $attemptsLeft = max(0, self::MAX_ATTEMPTS - (int)($newRateCheck['attempts'] ?? 0));
+
+                if ($attemptsLeft > 0) {
+                    $_SESSION['auth_error'] = "<div>Nama pengguna atau kata sandi tidak sesuai.</div><div class='alert-sub'>Sisa <strong>{$attemptsLeft} kali</strong> percobaan sebelum akses diblokir.</div>";
+                } else {
+                    $_SESSION['auth_error'] = "<div>Terlalu banyak percobaan gagal.</div><div class='alert-sub'>Silakan coba lagi dalam <span id='countdown-timer' class='font-bold font-mono'></span>.</div>";
+                }
+
+                $this->redirect('/login');
+                return;
+            }
+
             $passwordMatch = false;
             $needsRehash = false;
+            $dbHash = (string)$userDb['kata_sandi'];
 
-            if ($userDb && !empty($userDb['kata_sandi'])) {
-                if (password_verify($password, $userDb['kata_sandi'])) {
+            if ($password !== '' && $dbHash !== '') {
+                if (password_verify($password, $dbHash)) {
                     $passwordMatch = true;
-                    if (password_needs_rehash($userDb['kata_sandi'], PASSWORD_BCRYPT)) {
+                    if (password_needs_rehash($dbHash, PASSWORD_BCRYPT)) {
                         $needsRehash = true;
                     }
-                } elseif (hash_equals((string)$userDb['kata_sandi'], (string)$password)) {
+                } elseif (strlen($dbHash) >= 6 && hash_equals($dbHash, $password)) {
                     $passwordMatch = true;
                     $needsRehash = true;
                 }
@@ -185,7 +220,7 @@ class AuthController extends Controller
 
             // Anti-brute-force guard: Jika IP diblokir, HANYA izinkan jika role developer dengan password benar
             if ($rateCheck['blocked']) {
-                $isBypass = $passwordMatch && $userDb && (strtolower(trim((string)($userDb['peran'] ?? ''))) === 'developer');
+                $isBypass = $passwordMatch && (strtolower(trim((string)($userDb['peran'] ?? ''))) === 'developer');
                 if (!$isBypass) {
                     $_SESSION['auth_error'] = "<div>Terlalu banyak percobaan gagal.</div><div class='alert-sub'>Silakan coba lagi dalam <span id='countdown-timer' class='font-bold font-mono'></span>.</div>";
                     $this->redirect('/login');
@@ -195,15 +230,7 @@ class AuthController extends Controller
                 $this->resetRateLimit($ip);
             }
 
-            // Tolak akun yang belum disetel kata sandinya
-            if ($userDb && empty($userDb['kata_sandi'])) {
-                $this->recordFailedAttempt($ip);
-                $_SESSION['auth_error'] = 'Akun belum aktif atau kata sandi belum disetel. Hubungi Administrator.';
-                $this->redirect('/login');
-                return;
-            }
-
-            if ($userDb && $passwordMatch) {
+            if ($passwordMatch) {
                 if (!$userDb['status_aktif']) {
                     $this->recordFailedAttempt($ip);
                     $_SESSION['auth_error'] = 'Akun Anda telah dinonaktifkan oleh Administrator.';

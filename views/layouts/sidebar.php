@@ -272,10 +272,10 @@ if (!function_exists('isActiveSection')) {
                 </div>
                 <div class="sidebar-profile-info">
                     <div class="sidebar-user-name">
-                        <?= htmlspecialchars(Auth::user()['nama_lengkap'] ?? Auth::name() ?? 'Pengguna') ?>
+                        <?= htmlspecialchars(Auth::name() ?: (Auth::user()['nama_lengkap'] ?? 'Pengguna')) ?>
                     </div>
                     <div class="sidebar-user-role">
-                        <?= htmlspecialchars(Auth::role() ?? '—') ?>
+                        <?= htmlspecialchars(ucwords(str_replace('_', ' ', Auth::role() ?? '—'))) ?>
                     </div>
                 </div>
             </a>
@@ -333,8 +333,8 @@ if (!function_exists('isActiveSection')) {
                  x-cloak>
 
                 <div class="sidebar-profile-popup-header">
-                    <div class="sidebar-popup-name"><?= htmlspecialchars(Auth::user()['nama_lengkap'] ?? Auth::name() ?? 'Pengguna') ?></div>
-                    <div class="sidebar-popup-role"><?= htmlspecialchars(Auth::role() ?? '—') ?></div>
+                    <div class="sidebar-popup-name"><?= htmlspecialchars(Auth::name() ?: (Auth::user()['nama_lengkap'] ?? 'Pengguna')) ?></div>
+                    <div class="sidebar-popup-role"><?= htmlspecialchars(ucwords(str_replace('_', ' ', Auth::role() ?? '—'))) ?></div>
                 </div>
 
                 <div class="sidebar-profile-popup-actions">

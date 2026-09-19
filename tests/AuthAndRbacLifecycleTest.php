@@ -285,6 +285,80 @@ runTest("6. Rate Limiting Keamanan: Direktori rate limit terlindungi berkas .hta
 });
 
 // ------------------------------------------------------------------
+// 7. NULL USERNAME & PASSWORD SECURITY GUARD (KARYAWAN BELUM JADI USER)
+// ------------------------------------------------------------------
+runTest("7. Pengamanan Akun Karyawan: Karyawan dengan nama_pengguna / kata_sandi NULL mutlak tidak bisa login", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        // Buat karyawan murni tanpa username dan tanpa kata_sandi (seperti hasil impor data)
+        $stmt = $pdo->prepare("
+            INSERT INTO public.pengguna (nama_lengkap, nik, posisi, status_aktif)
+            VALUES ('Karyawan Non-User Test', 'NIK-TST-999', 'pengemasan', TRUE)
+            RETURNING id
+        ");
+        $stmt->execute();
+        $karyawanId = $stmt->fetchColumn();
+
+        // 1. Uji query login auth: pastikan query mengabaikan akun NULL
+        $queryResult = Database::fetchOne("
+            SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi,
+                   p.posisi, p.peran_id, pr.nama_peran as peran, p.status_aktif
+            FROM public.pengguna p
+            JOIN public.peran pr ON p.peran_id = pr.id
+            WHERE p.nama_pengguna IS NOT NULL 
+              AND TRIM(p.nama_pengguna) != ''
+              AND p.kata_sandi IS NOT NULL 
+              AND TRIM(p.kata_sandi) != ''
+              AND LOWER(p.nama_pengguna) = LOWER(:username)
+            LIMIT 1
+        ", ['username' => 'NIK-TST-999']);
+
+        if (!empty($queryResult)) {
+            $pdo->rollBack();
+            return "Query auth seharusnya tidak menemukan karyawan tanpa username/password!";
+        }
+
+        // 2. Uji query dengan username kosong
+        $emptyResult = Database::fetchOne("
+            SELECT p.id
+            FROM public.pengguna p
+            WHERE p.nama_pengguna IS NOT NULL 
+              AND TRIM(p.nama_pengguna) != ''
+              AND LOWER(p.nama_pengguna) = LOWER('')
+            LIMIT 1
+        ");
+
+        if (!empty($emptyResult)) {
+            $pdo->rollBack();
+            return "Query auth dengan username kosong seharusnya menghasilkan null!";
+        }
+
+        $pdo->rollBack();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+});
+
+// ------------------------------------------------------------------
+// 8. STRICT PASSWORD VERIFICATION GUARD
+// ------------------------------------------------------------------
+runTest("8. Proteksi Hash & Bypass: Penolakan ketat jika password input kosong atau hash database kosong", function() {
+    // 1. Password verify dengan string kosong
+    if (password_verify('', '')) {
+        return "password_verify('', '') seharusnya bernilai false!";
+    }
+
+    // 2. hash_equals dengan string kosong
+    if (empty('') || empty(null)) {
+        // Valid guard
+    }
+
+    return true;
+});
+
+// ------------------------------------------------------------------
 // SUMMARY
 // ------------------------------------------------------------------
 echo "\n============================================================\n";

@@ -238,16 +238,9 @@ ob_start();
                                                             <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                                                         </button>
                                                         
-                                                        <template x-if="Number(p.level_harga) !== 1">
-                                                            <button type="button" @click="deleteLevel(p.id, p.level_harga)" class="btn btn-ghost btn-sm" style="padding:6px 10px;color:var(--color-danger);" title="Hapus Level">
-                                                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                                            </button>
-                                                        </template>
-                                                        <template x-if="Number(p.level_harga) === 1">
-                                                            <span class="btn btn-ghost btn-sm" style="padding:6px 10px;opacity:0.4;cursor:not-allowed;" title="Level 1 adalah acuan dasar sistem dan tidak dapat dihapus">
-                                                                <i data-lucide="lock" style="width:14px;height:14px;"></i>
-                                                            </span>
-                                                        </template>
+                                                        <button type="button" @click="deleteLevel(p.id, p.level_harga)" class="btn btn-ghost btn-sm" style="padding:6px 10px;color:var(--color-danger);" title="Hapus Level">
+                                                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                                        </button>
                                                     </div>
                                                 </td>
                                                 <?php endif; ?>
@@ -273,16 +266,9 @@ ob_start();
                                                     <button type="button" @click="openEditLevelModal(g, p)" class="btn btn-ghost btn-sm" style="padding:4px 6px;" title="Ubah">
                                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                                                     </button>
-                                                    <template x-if="Number(p.level_harga) !== 1">
-                                                        <button type="button" @click="deleteLevel(p.id, p.level_harga)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:var(--color-danger);" title="Hapus">
-                                                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                                        </button>
-                                                    </template>
-                                                    <template x-if="Number(p.level_harga) === 1">
-                                                        <span class="btn btn-ghost btn-sm" style="padding:4px 6px;opacity:0.4;cursor:not-allowed;" title="Terkunci">
-                                                            <i data-lucide="lock" style="width:14px;height:14px;"></i>
-                                                        </span>
-                                                    </template>
+                                                    <button type="button" @click="deleteLevel(p.id, p.level_harga)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:var(--color-danger);" title="Hapus">
+                                                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                                    </button>
                                                 </div>
                                                 <?php endif; ?>
                                             </div>

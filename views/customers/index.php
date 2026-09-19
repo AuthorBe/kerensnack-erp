@@ -273,9 +273,16 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                     <button @click="openEditModal(c)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Data Toko">
                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                                     </button>
-                                    <button @click="deleteCustomer(c.id, c.nama_toko)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Toko">
-                                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                    </button>
+                                    <template x-if="c.kode_pelanggan === 'CUST-001' || (c.nama_toko && c.nama_toko.toLowerCase().includes('walk-in'))">
+                                        <button type="button" class="btn btn-ghost btn-sm" style="padding:6px;color:var(--color-ink-mute);cursor:not-allowed;opacity:0.5;" title="Pelanggan Default POS (CUST-001 / Walk-in Cash) Terkunci & Tidak Dapat Dihapus" disabled>
+                                            <i data-lucide="lock" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
+                                    <template x-if="!(c.kode_pelanggan === 'CUST-001' || (c.nama_toko && c.nama_toko.toLowerCase().includes('walk-in')))">
+                                        <button @click="deleteCustomer(c.id, c.nama_toko, c.kode_pelanggan)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Toko">
+                                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
                                     <?php endif; ?>
                                 </div>
                             </td>
@@ -989,11 +996,22 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
                 <template x-if="isEdit">
                     <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
-                        <input type="hidden" name="status_aktif" value="0">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
-                            <input type="checkbox" name="status_aktif" value="1" x-model="form.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                            <span>Status Toko Aktif (Dapat Bertransaksi)</span>
-                        </label>
+                        <template x-if="form.kode_pelanggan === 'CUST-001'">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <input type="hidden" name="status_aktif" value="1">
+                                <span class="badge badge-success" style="font-size:11.5px;padding:4px 10px;display:inline-flex;align-items:center;gap:5px;">
+                                    <i data-lucide="lock" style="width:13px;height:13px;"></i>
+                                    Status Toko Aktif (Terkunci Otomatis - Pelanggan Default POS)
+                                </span>
+                            </div>
+                        </template>
+                        <template x-if="form.kode_pelanggan !== 'CUST-001'">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                                <input type="hidden" name="status_aktif" value="0">
+                                <input type="checkbox" name="status_aktif" value="1" x-model="form.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                                <span>Status Toko Aktif (Dapat Bertransaksi)</span>
+                            </label>
+                        </template>
                     </div>
                 </template>
 
@@ -1608,6 +1626,7 @@ function customerApp(initialTab) {
             const defaultAcc = this.cashAccounts.find(a => a.is_default_pos) || this.cashAccounts[0];
             this.form = {
                 id: c.id,
+                kode_pelanggan: c.kode_pelanggan || '',
                 nama_toko: c.nama_toko,
                 nama_pemilik: c.nama_pemilik || '',
                 grup_pelanggan_id: c.grup_pelanggan_id || '',
@@ -1631,7 +1650,20 @@ function customerApp(initialTab) {
             this.$nextTick(() => lucide.createIcons());
         },
 
-        async deleteCustomer(id, name) {
+        async deleteCustomer(id, name, code) {
+            if (code === 'CUST-001' || (name && name.toLowerCase().includes('walk-in'))) {
+                if (window.AppAlert) {
+                    await window.AppAlert({
+                        title: 'Pelanggan Terkunci',
+                        message: 'Pelanggan default sistem (CUST-001 / Walk-in Cash) terkunci permanen dan tidak dapat dihapus.',
+                        type: 'warning'
+                    });
+                } else {
+                    alert('Pelanggan default sistem (CUST-001 / Walk-in Cash) terkunci permanen dan tidak dapat dihapus.');
+                }
+                return;
+            }
+
             const confirmed = window.AppConfirm ? await window.AppConfirm({
                 title: 'Hapus Toko Pelanggan',
                 message: `Apakah Anda yakin ingin menghapus toko "${name}"?`,

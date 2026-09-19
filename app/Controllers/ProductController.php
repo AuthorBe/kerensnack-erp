@@ -27,14 +27,24 @@ class ProductController extends Controller
     public function index(): void
     {
         try {
+            // 0. Master Merek (Brand)
+            $brands = Database::fetchAll("
+                SELECT m.id, m.kode_merek, m.nama_merek, m.status_aktif, m.dibuat_pada,
+                       (SELECT COUNT(*) FROM public.grup_produk gp WHERE gp.merek_id = m.id) as total_grup
+                FROM public.merek m
+                ORDER BY m.status_aktif DESC, m.kode_merek ASC
+            ");
+
             // 1. Grup Kemasan Luar (Barcode Universal)
             $groups = Database::fetchAll("
                 SELECT gp.id, gp.kode_grup, gp.nama_grup, gp.barcode_universal,
-                       gp.satuan_dasar, gp.status_aktif,
+                       gp.satuan_dasar, gp.status_aktif, gp.merek_id,
+                       m.kode_merek, m.nama_merek,
                        COUNT(i.id) as total_sku
                 FROM public.grup_produk gp
+                LEFT JOIN public.merek m ON gp.merek_id = m.id
                 LEFT JOIN public.item i ON gp.id = i.grup_id AND i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
-                GROUP BY gp.id
+                GROUP BY gp.id, m.id, m.kode_merek, m.nama_merek
                 ORDER BY gp.status_aktif DESC, gp.kode_grup ASC
             ");
 
@@ -48,7 +58,7 @@ class ProductController extends Controller
             $whereFg = "WHERE i.tipe_item = 'barang_jadi'";
             $paramsFg = [];
             if (!empty($qFg)) {
-                $whereFg .= " AND (i.nama_item ILIKE :q OR i.kode_sku ILIKE :q OR gp.barcode_universal ILIKE :q OR gp.nama_grup ILIKE :q)";
+                $whereFg .= " AND (i.nama_item ILIKE :q OR i.kode_sku ILIKE :q OR gp.barcode_universal ILIKE :q OR gp.nama_grup ILIKE :q OR m.nama_merek ILIKE :q OR m.kode_merek ILIKE :q)";
                 $paramsFg['q'] = "%{$qFg}%";
             }
             if (!empty($groupIdFg) && $groupIdFg !== 'all') {
@@ -60,6 +70,7 @@ class ProductController extends Controller
                 SELECT COUNT(*) as total
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.merek m ON gp.merek_id = m.id
                 {$whereFg}
             ", $paramsFg)['total'] ?? 0);
             $totalPagesFg = max(1, (int)ceil($countFg / $perPageFg));
@@ -72,9 +83,10 @@ class ProductController extends Controller
                 SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
                        i.tipe_item, i.satuan_dasar, i.harga_pokok_pembelian,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.status_jual, i.status_aktif,
-                       i.kelompok_borongan_id, i.upah_per_bungkus,
-                       COALESCE(i.upah_per_bungkus, kub.upah_per_bungkus, 0) as upah_bungkus_efektif,
-                       gp.nama_grup, gp.kode_grup, gp.barcode_universal,
+                       i.kelompok_borongan_id,
+                       COALESCE(kub.upah_per_bungkus, 0) as upah_bungkus_efektif,
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal, gp.merek_id,
+                       m.kode_merek, m.nama_merek,
                        gphl.harga_jual_pcs as harga_jual_ritel,
                        kub.nama_kelompok, kub.upah_per_bungkus as kelompok_upah_bungkus,
                        (SELECT COUNT(*) FROM public.komposisi_item ki WHERE ki.item_jadi_id = i.id) as total_resep_bahan,
@@ -86,6 +98,7 @@ class ProductController extends Controller
                        ), 0) as estimasi_biaya_bahan
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.merek m ON gp.merek_id = m.id
                 LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 1
                 LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
                 {$whereFg}
@@ -96,9 +109,10 @@ class ProductController extends Controller
             // Daftar lengkap seluruh barang jadi aktif (untuk dropdown seleksi Resep BOM Tab 3 agar tidak terpotong paginasi)
             $allFinishedGoodsList = Database::fetchAll("
                 SELECT i.id, i.kode_sku, i.nama_item, i.grup_id, i.satuan_dasar,
-                       i.harga_pokok_pembelian, i.upah_per_bungkus,
-                       COALESCE(i.upah_per_bungkus, kub.upah_per_bungkus, 0) as upah_bungkus_efektif,
-                       gp.nama_grup, gp.barcode_universal,
+                       i.harga_pokok_pembelian,
+                       COALESCE(kub.upah_per_bungkus, 0) as upah_bungkus_efektif,
+                       gp.nama_grup, gp.barcode_universal, gp.merek_id,
+                       m.kode_merek, m.nama_merek,
                        gphl.harga_jual_pcs as harga_jual_ritel,
                        (SELECT COUNT(*) FROM public.komposisi_item ki WHERE ki.item_jadi_id = i.id) as total_resep_bahan,
                        COALESCE((
@@ -109,6 +123,7 @@ class ProductController extends Controller
                        ), 0) as estimasi_biaya_bahan
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.merek m ON gp.merek_id = m.id
                 LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 1
                 LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
                 WHERE i.tipe_item = 'barang_jadi' AND i.status_aktif = TRUE
@@ -168,6 +183,7 @@ class ProductController extends Controller
             $this->view('products.index', [
                 'pageTitle' => 'Master Produk, Bahan & Resep',
                 'pageSubtitle' => 'Katalog Barang Jadi, Bahan Baku Curah, Kemasan & Resep BOM',
+                'brands' => $brands,
                 'groups' => $groups,
                 'finishedGoods' => $finishedGoods,
                 'allFinishedGoodsList' => $allFinishedGoodsList,
@@ -194,6 +210,7 @@ class ProductController extends Controller
             $this->view('products.index', [
                 'pageTitle' => 'Master Produk, Bahan & Resep',
                 'pageSubtitle' => 'Katalog Barang Jadi, Bahan Baku Curah, Kemasan & Resep BOM',
+                'brands' => [],
                 'groups' => [],
                 'finishedGoods' => [],
                 'materials' => [],
@@ -213,6 +230,129 @@ class ProductController extends Controller
     }
 
     // ==========================================
+    // 0. MASTER MEREK (BRAND)
+    // ==========================================
+    public function storeBrand(): void
+    {
+        Auth::requirePermission('master.products_manage');
+
+        $kode = strtoupper(trim((string)$this->input('kode_merek')));
+        $nama = trim((string)$this->input('nama_merek'));
+
+        if (empty($nama)) {
+            $this->flashError('Nama merek wajib diisi.');
+            $this->redirect('/products?tab=brands');
+            return;
+        }
+
+        try {
+            if (empty($kode)) {
+                $maxNum = (int)(Database::fetchOne("
+                    SELECT COALESCE(MAX(NULLIF(regexp_replace(kode_merek, '^MRK-', ''), '')::integer), 0) as max_num
+                    FROM public.merek
+                    WHERE kode_merek ~ '^MRK-[0-9]+$'
+                ")['max_num'] ?? 0);
+                $kode = 'MRK-' . str_pad((string)($maxNum + 1), 3, '0', STR_PAD_LEFT);
+            } else {
+                $exist = Database::fetchOne("SELECT id FROM public.merek WHERE UPPER(kode_merek) = :kode", ['kode' => $kode]);
+                if ($exist) {
+                    $this->flashError("Kode merek '{$kode}' sudah digunakan. Silakan gunakan kode lain.");
+                    $this->redirect('/products?tab=brands');
+                    return;
+                }
+            }
+
+            Database::execute("
+                INSERT INTO public.merek (kode_merek, nama_merek, status_aktif, dibuat_pada, diubah_pada)
+                VALUES (:kode, :nama, TRUE, NOW(), NOW())
+            ", [
+                'kode' => $kode,
+                'nama' => $nama
+            ]);
+
+            ActivityLog::log('master_data', 'Tambah Merek', "Merek {$nama} ({$kode}) berhasil ditambahkan.");
+
+            $this->flashSuccess("Merek {$nama} ({$kode}) berhasil ditambahkan!");
+            $this->redirect('/products?tab=brands');
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal menambahkan merek: ' . $e->getMessage());
+            $this->redirect('/products?tab=brands');
+        }
+    }
+
+    public function updateBrand(): void
+    {
+        Auth::requirePermission('master.products_manage');
+
+        $id = $this->input('id');
+        $nama = trim((string)$this->input('nama_merek'));
+        $statusAktif = !empty($this->input('status_aktif'));
+
+        if (empty($id) || empty($nama)) {
+            $this->flashError('ID dan Nama merek wajib diisi.');
+            $this->redirect('/products?tab=brands');
+            return;
+        }
+
+        try {
+            Database::execute("
+                UPDATE public.merek SET
+                    nama_merek = :nama,
+                    status_aktif = :aktif,
+                    diubah_pada = NOW()
+                WHERE id = :id
+            ", [
+                'id' => $id,
+                'nama' => $nama,
+                'aktif' => $statusAktif ? 'true' : 'false'
+            ]);
+
+            ActivityLog::log('master_data', 'Update Merek', "Merek {$nama} berhasil diperbarui.");
+            $this->flashSuccess("Merek {$nama} berhasil diperbarui!");
+            $this->redirect('/products?tab=brands');
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal memperbarui merek: ' . $e->getMessage());
+            $this->redirect('/products?tab=brands');
+        }
+    }
+
+    public function deleteBrand(): void
+    {
+        Auth::requirePermission('master.products_manage');
+
+        $id = $this->input('id');
+        if (empty($id)) {
+            $this->flashError('ID merek tidak valid.');
+            $this->redirect('/products?tab=brands');
+            return;
+        }
+
+        try {
+            $linkedGroups = (int)(Database::fetchOne("
+                SELECT COUNT(*) as total FROM public.grup_produk WHERE merek_id = :id
+            ", ['id' => $id])['total'] ?? 0);
+
+            if ($linkedGroups > 0) {
+                $this->flashError("Merek ini tidak dapat dihapus karena masih digunakan oleh {$linkedGroups} grup produk.");
+                $this->redirect('/products?tab=brands');
+                return;
+            }
+
+            Database::execute("DELETE FROM public.merek WHERE id = :id", ['id' => $id]);
+
+            ActivityLog::log('master_data', 'Hapus Merek', "Merek ID {$id} berhasil dihapus.");
+            $this->flashSuccess('Merek berhasil dihapus.');
+            $this->redirect('/products?tab=brands');
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal menghapus merek: ' . $e->getMessage());
+            $this->redirect('/products?tab=brands');
+        }
+    }
+
+    // ==========================================
     // 1. GRUP KEMASAN (BARCODE UNIVERSAL)
     // ==========================================
     public function storeGroup(): void
@@ -221,6 +361,7 @@ class ProductController extends Controller
 
         $nama = trim((string)$this->input('nama_grup'));
         $barcode = trim((string)$this->input('barcode_universal'));
+        $merekId = trim((string)$this->input('merek_id')) ?: null;
         $rawHarga = $this->input('harga_ritel_l1', $this->input('harga_jual_pcs', '15000'));
         $hargaL1 = (float)preg_replace('/[^0-9]/', '', (string)$rawHarga);
         if ($hargaL1 <= 0) {
@@ -234,6 +375,11 @@ class ProductController extends Controller
         }
 
         try {
+            if (empty($merekId)) {
+                $defaultBrand = Database::fetchOne("SELECT id FROM public.merek WHERE status_aktif = TRUE ORDER BY kode_merek ASC LIMIT 1");
+                $merekId = $defaultBrand['id'] ?? null;
+            }
+
             $maxNum = (int)(Database::fetchOne("
                 SELECT COALESCE(MAX(NULLIF(regexp_replace(kode_grup, '^GRP-', ''), '')::integer), 0) as max_num
                 FROM public.grup_produk
@@ -246,21 +392,12 @@ class ProductController extends Controller
 
             $stmt = $pdo->prepare("
                 INSERT INTO public.grup_produk (
-                    kode_grup, nama_grup, barcode_universal, satuan_dasar, status_aktif
+                    kode_grup, nama_grup, barcode_universal, satuan_dasar, status_aktif, merek_id
                 ) VALUES (
-                    :kode, :nama, :barcode, 'pcs', TRUE
+                    :kode, :nama, :barcode, 'pcs', TRUE, :merek_id
                 ) RETURNING id
             ");
-            $stmt->execute(['kode' => $kode, 'nama' => $nama, 'barcode' => $barcode ?: null]);
-            $grupId = $stmt->fetchColumn();
-
-            // Insert level harga default bawaan (Hanya Level 1 Ritel Standar murni per pcs)
-            $pdo->prepare("
-                INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs, dibuat_pada, diubah_pada)
-                VALUES 
-                (:id, 1, :harga, NOW(), NOW())
-                ON CONFLICT (grup_produk_id, level_harga) DO UPDATE SET harga_jual_pcs = EXCLUDED.harga_jual_pcs
-            ")->execute(['id' => $grupId, 'harga' => $hargaL1]);
+            $stmt->execute(['kode' => $kode, 'nama' => $nama, 'barcode' => $barcode ?: null, 'merek_id' => $merekId]);
 
             $pdo->commit();
 
@@ -283,6 +420,7 @@ class ProductController extends Controller
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_grup'));
         $barcode = trim((string)$this->input('barcode_universal'));
+        $merekId = trim((string)$this->input('merek_id')) ?: null;
         $statusAktif = !empty($this->input('status_aktif'));
 
         if (empty($id) || empty($nama)) {
@@ -292,18 +430,25 @@ class ProductController extends Controller
         }
 
         try {
+            if (empty($merekId)) {
+                $defaultBrand = Database::fetchOne("SELECT id FROM public.merek WHERE status_aktif = TRUE ORDER BY kode_merek ASC LIMIT 1");
+                $merekId = $defaultBrand['id'] ?? null;
+            }
+
             Database::execute("
                 UPDATE public.grup_produk SET
                     nama_grup = :nama,
                     barcode_universal = :barcode,
                     status_aktif = :aktif,
+                    merek_id = :merek_id,
                     diubah_pada = NOW()
                 WHERE id = :id
             ", [
                 'id' => $id,
                 'nama' => $nama,
                 'barcode' => $barcode ?: null,
-                'aktif' => $statusAktif ? 'true' : 'false'
+                'aktif' => $statusAktif ? 'true' : 'false',
+                'merek_id' => $merekId
             ]);
 
             ActivityLog::log('master_data', 'Update Grup Kemasan', "Grup kemasan {$nama} berhasil diperbarui.");
@@ -372,8 +517,6 @@ class ProductController extends Controller
         $stokMin = (int)$this->input('stok_minimum_peringatan', 10);
         $stokAwal = (int)$this->input('stok_awal', 0);
         $kelompokBoronganId = $this->input('kelompok_borongan_id') ?: null;
-        $rawUpah = $this->input('upah_per_bungkus');
-        $upahPerBungkus = ($rawUpah !== null && $rawUpah !== '') ? (float)preg_replace('/[^0-9]/', '', (string)$rawUpah) : null;
 
         if (empty($namaItem)) {
             $this->flashError('Nama barang jadi wajib diisi.');
@@ -400,12 +543,12 @@ class ProductController extends Controller
             $stmt = $pdo->prepare("
                 INSERT INTO public.item (
                     grup_id, kode_sku, nama_item, tipe_item,
-                    satuan_dasar, kelompok_borongan_id, upah_per_bungkus, pemasok_utama_id,
+                    satuan_dasar, kelompok_borongan_id, pemasok_utama_id,
                     harga_pokok_pembelian, stok_minimum_peringatan, stok_fisik_saat_ini,
                     status_jual, status_aktif
                 ) VALUES (
                     :grup, :sku, :nama, 'barang_jadi',
-                    'pcs', :borongan, :upah, NULL,
+                    'pcs', :borongan, NULL,
                     :hpp, :stok_min, :stok_awal,
                     TRUE, TRUE
                 ) RETURNING id
@@ -415,7 +558,6 @@ class ProductController extends Controller
                 'sku' => $kodeSku,
                 'nama' => $namaItem,
                 'borongan' => $kelompokBoronganId,
-                'upah' => $upahPerBungkus,
                 'hpp' => $hpp,
                 'stok_min' => $stokMin,
                 'stok_awal' => $stokAwal
@@ -471,8 +613,6 @@ class ProductController extends Controller
         $hpp = (float)preg_replace('/[^0-9]/', '', (string)$this->input('harga_pokok_pembelian', '0'));
         $stokMin = (int)$this->input('stok_minimum_peringatan', 10);
         $kelompokBoronganId = $this->input('kelompok_borongan_id') ?: null;
-        $rawUpah = $this->input('upah_per_bungkus');
-        $upahPerBungkus = ($rawUpah !== null && $rawUpah !== '') ? (float)preg_replace('/[^0-9]/', '', (string)$rawUpah) : null;
         $statusJual = !empty($this->input('status_jual'));
         $statusAktif = !empty($this->input('status_aktif'));
 
@@ -496,7 +636,6 @@ class ProductController extends Controller
                     harga_pokok_pembelian = :hpp,
                     stok_minimum_peringatan = :stok_min,
                     kelompok_borongan_id = :borongan,
-                    upah_per_bungkus = :upah,
                     status_jual = :jual,
                     status_aktif = :aktif,
                     diubah_pada = NOW()
@@ -508,7 +647,6 @@ class ProductController extends Controller
                 'hpp' => $hpp,
                 'stok_min' => $stokMin,
                 'borongan' => $kelompokBoronganId,
-                'upah' => $upahPerBungkus,
                 'jual' => $statusJual ? 'true' : 'false',
                 'aktif' => $statusAktif ? 'true' : 'false'
             ]);

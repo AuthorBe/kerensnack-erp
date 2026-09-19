@@ -82,6 +82,111 @@ $_SESSION['permissions_version'] = time();
 
 $pdo = Database::getConnection();
 
+$transientFixtureIds = [
+    'pesanan' => [],
+    'pelanggan' => [],
+    'karyawan' => [],
+    'item' => [],
+    'grup_produk_harga_level' => []
+];
+
+register_shutdown_function(function() use ($pdo, &$transientFixtureIds) {
+    if (!empty($transientFixtureIds['pesanan'])) {
+        $in = "'" . implode("','", $transientFixtureIds['pesanan']) . "'";
+        $pdo->exec("DELETE FROM public.surat_jalan WHERE pesanan_id IN ($in)");
+        $pdo->exec("DELETE FROM public.item_pesanan WHERE pesanan_id IN ($in)");
+        $pdo->exec("DELETE FROM public.pesanan WHERE id IN ($in)");
+    }
+    if (!empty($transientFixtureIds['pelanggan'])) {
+        $in = "'" . implode("','", $transientFixtureIds['pelanggan']) . "'";
+        $pdo->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id IN ($in)");
+        $pdo->exec("DELETE FROM public.pelanggan WHERE id IN ($in)");
+    }
+    if (!empty($transientFixtureIds['karyawan'])) {
+        $in = "'" . implode("','", $transientFixtureIds['karyawan']) . "'";
+        $pdo->exec("DELETE FROM public.karyawan WHERE id IN ($in)");
+    }
+    if (!empty($transientFixtureIds['item'])) {
+        $in = "'" . implode("','", $transientFixtureIds['item']) . "'";
+        $pdo->exec("DELETE FROM public.item WHERE id IN ($in)");
+    }
+    if (!empty($transientFixtureIds['grup_produk_harga_level'])) {
+        $in = "'" . implode("','", $transientFixtureIds['grup_produk_harga_level']) . "'";
+        $pdo->exec("DELETE FROM public.grup_produk_harga_level WHERE id IN ($in)");
+    }
+});
+
+function ks_get_or_create_test_item(PDO $pdo): array {
+    global $transientFixtureIds;
+    $item = Database::fetchOne("SELECT id, grup_id FROM public.item WHERE status_aktif = TRUE AND tipe_item = 'barang_jadi' LIMIT 1");
+    if ($item) {
+        return $item;
+    }
+
+    $grup = Database::fetchOne("SELECT id FROM public.grup_produk LIMIT 1");
+    $brand = Database::fetchOne("SELECT id FROM public.merek LIMIT 1");
+    if (!$grup) {
+        $stmtG = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup, status_aktif, merek_id) VALUES ('GRP-FXTR-TMP', 'Grup Fixture Transien', TRUE, :mid) RETURNING id");
+        $stmtG->execute(['mid' => $brand['id'] ?? null]);
+        $grupId = $stmtG->fetchColumn();
+    } else {
+        $grupId = $grup['id'];
+    }
+
+    $stmtI = $pdo->prepare("INSERT INTO public.item (kode_sku, nama_item, tipe_item, grup_id, satuan_dasar, status_aktif) VALUES ('SUB-FXTR-TMP', 'Item Fixture Transien', 'barang_jadi', :gid, 'pcs', TRUE) RETURNING id");
+    $stmtI->execute(['gid' => $grupId]);
+    $itemId = $stmtI->fetchColumn();
+    $transientFixtureIds['item'][] = $itemId;
+
+    $stmtH = $pdo->prepare("INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs) VALUES (:gid, 1, 10000.00) ON CONFLICT (grup_produk_id, level_harga) DO NOTHING RETURNING id");
+    $stmtH->execute(['gid' => $grupId]);
+    $hId = $stmtH->fetchColumn();
+    if ($hId) {
+        $transientFixtureIds['grup_produk_harga_level'][] = $hId;
+    }
+
+    return ['id' => $itemId, 'grup_id' => $grupId];
+}
+
+function ks_get_or_create_test_sales(PDO $pdo): array {
+    global $transientFixtureIds;
+    $sales = Database::fetchOne("SELECT id FROM public.v_karyawan_info WHERE status_aktif = TRUE LIMIT 1");
+    if ($sales) return $sales;
+
+    $user = Database::fetchOne("SELECT id FROM public.pengguna WHERE status_aktif = TRUE LIMIT 1");
+    if ($user) {
+        $k = Database::fetchOne("SELECT id FROM public.karyawan WHERE pengguna_id = :uid", ['uid' => $user['id']]);
+        if ($k) return ['id' => $k['id']];
+        $stmtK = $pdo->prepare("INSERT INTO public.karyawan (pengguna_id, tipe_penggajian) VALUES (:uid, 'bulanan') RETURNING id");
+        $stmtK->execute(['uid' => $user['id']]);
+        $kId = $stmtK->fetchColumn();
+        $transientFixtureIds['karyawan'][] = $kId;
+        return ['id' => $kId];
+    }
+    return ['id' => '00000000-0000-0000-0000-000000000000'];
+}
+
+function ks_get_or_create_test_order(PDO $pdo): array {
+    global $transientFixtureIds;
+    $order = Database::fetchOne("SELECT id FROM public.pesanan LIMIT 1");
+    if ($order) return $order;
+
+    $grup = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
+    $grupId = $grup['id'] ?? null;
+
+    $stmtC = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, nama_toko, alamat_lengkap, grup_pelanggan_id, status_aktif) VALUES ('CUST-FXTR-TMP', 'Toko Order Fixture Transien', 'Jl. Toko Fixture No. 1', :gid, TRUE) RETURNING id");
+    $stmtC->execute(['gid' => $grupId]);
+    $custId = $stmtC->fetchColumn();
+    $transientFixtureIds['pelanggan'][] = $custId;
+
+    $stmtO = $pdo->prepare("INSERT INTO public.pesanan (nomor_nota, pelanggan_id, total_bruto, total_netto, tipe_pembayaran, status_pembayaran) VALUES ('NOTA-FXTR-TMP', :cid, 50000, 50000, 'cash', 'lunas') RETURNING id");
+    $stmtO->execute(['cid' => $custId]);
+    $orderId = $stmtO->fetchColumn();
+    $transientFixtureIds['pesanan'][] = $orderId;
+
+    return ['id' => $orderId];
+}
+
 // -------------------------------------------------------------
 // ITEM 3.1 & 3.5: BERKAS MIGRASI 28 & INTEGRITAS DATABASE
 // -------------------------------------------------------------
@@ -174,11 +279,13 @@ runTest("3.5.2 Live DB: Verifikasi Tipe Giro / Kartu Kredit Mengizinkan Fasilita
 // -------------------------------------------------------------
 runTest("3.1.3 CustomerController: Blokir Penghapusan Toko yang Memiliki Stok Konsinyasi", function() use ($pdo) {
     $custDummyId = 'ffffffff-bbbb-4444-8888-000000000001';
-    $itemRow = Database::fetchOne("SELECT id FROM public.item WHERE status_aktif = TRUE LIMIT 1");
+    $itemRow = ks_get_or_create_test_item($pdo);
     $grupRow = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
 
-    if (!$itemRow || !$grupRow) {
-        return "Prasyarat item/grup tidak terpenuhi di DB.";
+    if (!$grupRow) {
+        $stmtG = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, status_aktif) VALUES ('GRP-CUST-FXTR', 'Grup Cust Fixture', TRUE) RETURNING id");
+        $stmtG->execute();
+        $grupRow = ['id' => $stmtG->fetchColumn()];
     }
 
     $pdo->prepare("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = :cid")->execute(['cid' => $custDummyId]);
@@ -327,11 +434,7 @@ runTest("3.1.5 CustomerController: Toko Bersih Tanpa Riwayat Dapat Dihapus", fun
 runTest("3.3.1 CustomerController: Blokir Hapus Wilayah yang Dipakai Surat Jalan", function() use ($pdo) {
     $wilayahDummyId = 'ffffffff-dddd-4444-8888-000000000001';
     $sjDummyId = 'ffffffff-eeee-4444-8888-000000000001';
-    $orderRow = Database::fetchOne("SELECT id FROM public.pesanan LIMIT 1");
-
-    if (!$orderRow) {
-        return "Prasyarat pesanan tidak terpenuhi di DB.";
-    }
+    $orderRow = ks_get_or_create_test_order($pdo);
 
     $pdo->prepare("DELETE FROM public.surat_jalan WHERE id = :sjid")->execute(['sjid' => $sjDummyId]);
     $pdo->prepare("DELETE FROM public.wilayah WHERE id = :wid")->execute(['wid' => $wilayahDummyId]);
@@ -418,11 +521,12 @@ runTest("3.3.2 CustomerController: Hapus Wilayah Bersih Berhasil", function() us
 // -------------------------------------------------------------
 runTest("3.4.1 CustomerController: store() & update() Menyimpan sales_driver_id dan Data Toko", function() use ($pdo) {
     $grupRow = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
-    $salesRow = Database::fetchOne("SELECT id FROM public.v_karyawan_info WHERE status_aktif = TRUE LIMIT 1");
-
-    if (!$grupRow || !$salesRow) {
-        return "Prasyarat grup / sales tidak terpenuhi di DB.";
+    if (!$grupRow) {
+        $stmtG = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, status_aktif) VALUES ('GRP-CUST-FXTR2', 'Grup Cust Fixture 2', TRUE) RETURNING id");
+        $stmtG->execute();
+        $grupRow = ['id' => $stmtG->fetchColumn()];
     }
+    $salesRow = ks_get_or_create_test_sales($pdo);
 
     $createdTokoName = 'Toko Override Test ' . time();
 
@@ -517,12 +621,13 @@ runTest("3.4.1 CustomerController: store() & update() Menyimpan sales_driver_id 
 runTest("3.4.2 CustomerOrderController: Order Mewarisi sales_driver_id dari Pelanggan Secara Default", function() use ($pdo) {
     $grupRow = Database::fetchOne("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1") 
             ?: Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
-    $salesRow = Database::fetchOne("SELECT id FROM public.v_karyawan_info WHERE status_aktif = TRUE LIMIT 1");
-    $itemRow = Database::fetchOne("SELECT id FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 1");
-
-    if (!$grupRow || !$salesRow || !$itemRow) {
-        return "Prasyarat item / grup / sales tidak terpenuhi di DB.";
+    if (!$grupRow) {
+        $stmtG = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga, status_aktif) VALUES ('GRP-CUST-FXTR3', 'Grup Cust Fixture 3', 1, TRUE) RETURNING id");
+        $stmtG->execute();
+        $grupRow = ['id' => $stmtG->fetchColumn()];
     }
+    $salesRow = ks_get_or_create_test_sales($pdo);
+    $itemRow = ks_get_or_create_test_item($pdo);
 
     // Insert dummy toko yang terikat sales ini
     $dummyCustId = 'ffffffff-bbbb-4444-8888-000000000004';

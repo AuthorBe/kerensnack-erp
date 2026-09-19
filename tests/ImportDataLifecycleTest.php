@@ -264,14 +264,14 @@ runTest("1.8 - CustomerImportHandler::normalizePaymentType menangani spasi, huru
 echo "\n--- 2. HANDLER REGISTRY & CONTRACTS ---\n";
 
 $expectedEntities = [
-    'customers', 'customer_groups', 'territories', 'suppliers', 'employees',
+    'brands', 'customers', 'customer_groups', 'territories', 'suppliers', 'employees',
     'product_groups', 'products', 'materials', 'pricing_matrix', 'piece_rates'
 ];
 
-runTest("2.1 - ImportProcessor::getHandlers mengembalikan tepat 10 handler master data", function() use ($expectedEntities) {
+runTest("2.1 - ImportProcessor::getHandlers mengembalikan tepat 11 handler master data", function() use ($expectedEntities) {
     $handlers = ImportProcessor::getHandlers();
-    if (count($handlers) !== 10) {
-        return "Expected 10 handlers, got " . count($handlers);
+    if (count($handlers) !== 11) {
+        return "Expected 11 handlers, got " . count($handlers);
     }
     foreach ($expectedEntities as $key) {
         if (!isset($handlers[$key])) {
@@ -329,7 +329,7 @@ runTest("2.4 - Seluruh handler memiliki contoh baris dan catatan panduan", funct
 // ==================================================================
 echo "\n--- 3. TEMPLATE GENERATOR ENGINE ---\n";
 
-runTest("3.1 - TemplateGenerator mode kosong (contoh) menghasilkan spreadsheet valid untuk 10 handler", function() use ($expectedEntities, $pdo) {
+runTest("3.1 - TemplateGenerator mode kosong (contoh) menghasilkan spreadsheet valid untuk 11 handler", function() use ($expectedEntities, $pdo) {
     foreach ($expectedEntities as $type) {
         $spreadsheet = TemplateGenerator::generate($type, false, $pdo);
         $sheet = $spreadsheet->getActiveSheet();
@@ -344,7 +344,7 @@ runTest("3.1 - TemplateGenerator mode kosong (contoh) menghasilkan spreadsheet v
     return true;
 });
 
-runTest("3.2 - Seluruh 10 handler getCurrentDataRows query valid terhadap live database", function() use ($pdo) {
+runTest("3.2 - Seluruh 11 handler getCurrentDataRows query valid terhadap live database", function() use ($pdo) {
     $handlers = ImportProcessor::getHandlers();
     foreach ($handlers as $key => $handler) {
         $rows = $handler->getCurrentDataRows($pdo);
@@ -610,23 +610,42 @@ runTest("6.2 - ProductItemImportHandler::hasTransactionHistory mendeteksi relasi
     return $handler->hasTransactionHistory($fakeId, $pdo) === false;
 });
 
-runTest("6.3 - Full-Sync: Mode full_sync menandai data database yang hilang di file Excel sebagai DELETE", function() use ($pdo) {
+runTest("6.3 - Full-Sync: Mode full_sync menandai data database yang hilang di file Excel sebagai DELETE & melindungi CUST-001", function() use ($pdo) {
     $handler = new CustomerImportHandler();
     $header = $handler->getTemplateHeaders();
 
-    // Jalankan preview mode full_sync dengan file kosong (seolah-olah user menghapus semua baris di file)
-    $preview = $handler->previewRows([], $header, $pdo, 'full_sync');
+    // Buat pelanggan sementara untuk uji full-sync
+    $tmpCustId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+    $grupId = $pdo->query("SELECT id FROM public.grup_pelanggan LIMIT 1")->fetchColumn();
+    $pdo->exec("INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, alamat_lengkap, grup_pelanggan_id) 
+                VALUES ('{$tmpCustId}', 'CUST-TMP-SYNC', 'Toko Uji Sync', 'Jl. Sync No. 1', '{$grupId}')");
 
-    $totalCust = (int)$pdo->query("SELECT COUNT(*) FROM public.pelanggan")->fetchColumn();
-    if ($totalCust > 0) {
-        if (empty($preview)) {
-            return "Full sync preview should not be empty when database has customers";
-        }
+    try {
+        // Jalankan preview mode full_sync dengan file kosong (seolah-olah user menghapus semua baris di file)
+        $preview = $handler->previewRows([], $header, $pdo, 'full_sync');
+
+        $foundTmp = false;
+        $foundCust001 = false;
         foreach ($preview as $r) {
             if ($r['action'] !== 'DELETE') {
                 return "Expected action DELETE for missing rows, got: " . $r['action'];
             }
+            if (($r['data']['kode_pelanggan'] ?? '') === 'CUST-TMP-SYNC') {
+                $foundTmp = true;
+            }
+            if (($r['data']['kode_pelanggan'] ?? '') === 'CUST-001') {
+                $foundCust001 = true;
+            }
         }
+
+        if (!$foundTmp) {
+            return "Expected temporary customer CUST-TMP-SYNC to be marked as DELETE in full-sync";
+        }
+        if ($foundCust001) {
+            return "CUST-001 (default walk-in customer) must NEVER be marked as DELETE in full-sync";
+        }
+    } finally {
+        $pdo->exec("DELETE FROM public.pelanggan WHERE id = '{$tmpCustId}'");
     }
 
     return true;
@@ -637,25 +656,52 @@ runTest("6.3 - Full-Sync: Mode full_sync menandai data database yang hilang di f
 // ==================================================================
 echo "\n--- 7. ATOMIC TRANSACTION & ROLLBACK SAFETY ---\n";
 
-runTest("7.1 - applySyncFromPreview menolak eksekusi jika terdapat baris berstatus ERROR", function() use ($pdo) {
-    $tmpFile = sys_get_temp_dir() . '/ks_test_err_' . uniqid() . '.json';
-    $mockPreview = [
+runTest("7.1 - applySyncFromPreview menolak eksekusi jika terdapat baris berstatus ERROR atau FATAL", function() use ($pdo) {
+    // 1. Uji penolakan baris ERROR
+    $tmpFileErr = sys_get_temp_dir() . '/ks_test_err_' . uniqid() . '.json';
+    $mockPreviewErr = [
         [
             'action' => 'ERROR',
             'error_msg' => 'Kolom nama wajib diisi',
             'data' => []
         ]
     ];
-    file_put_contents($tmpFile, json_encode($mockPreview));
+    file_put_contents($tmpFileErr, json_encode($mockPreviewErr));
 
+    $rejectedErr = false;
     try {
-        ImportProcessor::applySyncFromPreview($tmpFile, 'customers', $pdo);
-        @unlink($tmpFile);
-        return "Should have thrown RuntimeException";
+        ImportProcessor::applySyncFromPreview($tmpFileErr, 'customers', $pdo);
     } catch (RuntimeException $e) {
-        @unlink($tmpFile);
-        return str_contains($e->getMessage(), 'ERROR');
+        $rejectedErr = str_contains($e->getMessage(), 'ERROR') || str_contains($e->getMessage(), 'FATAL');
+    } finally {
+        if (file_exists($tmpFileErr)) @unlink($tmpFileErr);
     }
+
+    // 2. Uji penolakan baris FATAL (Konflik Identitas)
+    $tmpFileFatal = sys_get_temp_dir() . '/ks_test_fatal_' . uniqid() . '.json';
+    $mockPreviewFatal = [
+        [
+            'action' => 'INSERT',
+            'is_fatal' => true,
+            'fatal_reason' => 'Kode bentrok di database',
+            'data' => [
+                'kode_grup' => 'GRP-001',
+                'nama_grup' => 'Nama Sangat Berbeda'
+            ]
+        ]
+    ];
+    file_put_contents($tmpFileFatal, json_encode($mockPreviewFatal));
+
+    $rejectedFatal = false;
+    try {
+        ImportProcessor::applySyncFromPreview($tmpFileFatal, 'product_groups', $pdo);
+    } catch (RuntimeException $e) {
+        $rejectedFatal = str_contains($e->getMessage(), 'FATAL') || str_contains($e->getMessage(), 'ERROR');
+    } finally {
+        if (file_exists($tmpFileFatal)) @unlink($tmpFileFatal);
+    }
+
+    return $rejectedErr && $rejectedFatal;
 });
 
 runTest("7.2 - Eksekusi applySync terisolasi di dalam sub-transaksi berhasil di-rollback tanpa polusi data", function() use ($pdo) {
@@ -721,12 +767,13 @@ runTest("7.2 - Eksekusi applySync terisolasi di dalam sub-transaksi berhasil di-
 
 runTest("7.3 - Pembersihan file preview temporary JSON berjalan otomatis setelah eksekusi", function() use ($pdo) {
     $tmpFile = sys_get_temp_dir() . '/ks_test_clean_' . uniqid() . '.json';
+    $testKode = 'TEST-CLEANUP-' . uniqid();
     $mockPreview = [
         [
             'action' => 'INSERT',
             'data' => [
                 'id' => null,
-                'kode_pelanggan' => 'TEST-CLEANUP-' . uniqid(),
+                'kode_pelanggan' => $testKode,
                 'nama_toko' => 'Toko Cleanup Test',
                 'alamat_lengkap' => 'Jl. Bersih No. 1',
                 'status_aktif' => true
@@ -739,15 +786,15 @@ runTest("7.3 - Pembersihan file preview temporary JSON berjalan otomatis setelah
         return "Failed to create temp file";
     }
 
-    // Eksekusi dalam transaksi yang kita rollback setelah applySync
-    // Karena applySyncFromPreview mengontrol transaksinya sendiri, kita biarkan ia commit lalu kita bersihkan data uji
-    $res = ImportProcessor::applySyncFromPreview($tmpFile, 'customers', $pdo);
-    
-    // Hapus data uji yang sempat masuk
-    $pdo->exec("DELETE FROM public.pelanggan WHERE nama_toko = 'Toko Cleanup Test'");
-
-    // File JSON harus sudah terhapus oleh blok finally
-    return !file_exists($tmpFile) && isset($res['stats']);
+    try {
+        $res = ImportProcessor::applySyncFromPreview($tmpFile, 'customers', $pdo);
+        return !file_exists($tmpFile) && isset($res['stats']);
+    } finally {
+        $pdo->exec("DELETE FROM public.pelanggan WHERE kode_pelanggan = " . $pdo->quote($testKode));
+        if (file_exists($tmpFile)) {
+            @unlink($tmpFile);
+        }
+    }
 });
 
 // ==================================================================

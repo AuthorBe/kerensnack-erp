@@ -123,6 +123,15 @@ CREATE TABLE IF NOT EXISTS public.skema_komisi_sales (
 CREATE INDEX IF NOT EXISTS idx_skema_komisi_urutan ON public.skema_komisi_sales (urutan ASC);
 CREATE INDEX IF NOT EXISTS idx_skema_komisi_aktif ON public.skema_komisi_sales (status_aktif);
 
+-- Seed 4 Skema Tier Komisi Sales Standar
+INSERT INTO public.skema_komisi_sales (urutan, nama_tier, omzet_min, omzet_maks, persentase, status_aktif)
+VALUES
+(1, 'Tier 1 (Dasar)', 0.00, 20000000.00, 1.00, TRUE),
+(2, 'Tier 2 (Reguler)', 20000000.01, 35000000.00, 2.50, TRUE),
+(3, 'Tier 3 (Gold)', 35000000.01, 50000000.00, 4.00, TRUE),
+(4, 'Tier 4 (Platinum)', 50000000.01, NULL, 5.00, TRUE)
+ON CONFLICT DO NOTHING;
+
 -- View Kanonikal Info Karyawan Terpadu (Menggabungkan Identitas Pengguna & Parameter Gaji)
 CREATE OR REPLACE VIEW public.v_karyawan_info AS
 SELECT
@@ -160,7 +169,6 @@ CREATE TABLE IF NOT EXISTS public.pemasok (
     wilayah_id UUID REFERENCES public.wilayah(id),
     alamat_lengkap TEXT,
     link_google_maps TEXT DEFAULT NULL,
-    nomor_telepon VARCHAR(25),
     nomor_whatsapp VARCHAR(25) DEFAULT NULL,
     email VARCHAR(150) DEFAULT NULL,
     termin_bayar VARCHAR(30) DEFAULT 'cash',
@@ -261,19 +269,27 @@ CREATE TABLE IF NOT EXISTS public.pelanggan (
 );
 
 -- ==============================================================================
--- MODUL 3: GRUP PRODUK, ITEM (VARIAN RASA / SKU) & PRICING MATRIX DINAMIS
+-- MODUL 3: MEREK, GRUP PRODUK, ITEM & PRICING MATRIX DINAMIS
 -- ==============================================================================
 
--- Grup Produk: Pemegang Barcode Universal, Harga Level Dinamis, & Kategori
+-- Master Data Merek Dagang
+CREATE TABLE IF NOT EXISTS public.merek (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    kode_merek VARCHAR(50) NOT NULL UNIQUE, -- 'KRN', 'MRK-001'
+    nama_merek VARCHAR(150) NOT NULL, -- 'KEREN SNACK'
+    status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Grup Produk: Pemegang Barcode Universal, Harga Level Dinamis, & Relasi Merek
 CREATE TABLE IF NOT EXISTS public.grup_produk (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     kode_grup VARCHAR(50) NOT NULL UNIQUE, -- 'GRP-SINGKONG-250', 'GRP-BRND-135'
     nama_grup VARCHAR(150) NOT NULL,
+    merek_id UUID REFERENCES public.merek(id) ON UPDATE CASCADE ON DELETE RESTRICT,
     barcode_universal VARCHAR(100), -- Barcode kemasan luar yang dipakai bersama oleh varian rasa
-    merek VARCHAR(100) NOT NULL DEFAULT 'KEREN SNACK',
     satuan_dasar VARCHAR(30) NOT NULL DEFAULT 'pcs',
-    satuan_distribusi VARCHAR(30) NOT NULL DEFAULT 'bal',
-    konversi_bal_ke_pcs INT NOT NULL DEFAULT 20, -- 1 bal isi 20 pcs
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -314,7 +330,6 @@ CREATE TABLE IF NOT EXISTS public.item (
     tipe_item VARCHAR(30) NOT NULL CHECK (tipe_item IN ('barang_jadi', 'bahan_mentah', 'bahan_kemas')),
     satuan_dasar VARCHAR(30) NOT NULL,
     kelompok_borongan_id UUID REFERENCES public.kelompok_upah_borongan(id),
-    upah_per_bungkus NUMERIC(15, 2) DEFAULT NULL, -- Upah borongan per pack langsung pada SKU barang jadi (jika tidak menggunakan kelompok)
     pemasok_utama_id UUID REFERENCES public.pemasok(id),
     harga_pokok_pembelian NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     stok_minimum_peringatan NUMERIC(15, 2) NOT NULL DEFAULT 10.00,

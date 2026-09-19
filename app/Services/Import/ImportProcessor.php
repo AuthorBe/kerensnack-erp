@@ -14,6 +14,7 @@ use App\Services\Import\Handlers\ProductItemImportHandler;
 use App\Services\Import\Handlers\MaterialItemImportHandler;
 use App\Services\Import\Handlers\PricingMatrixImportHandler;
 use App\Services\Import\Handlers\PieceRateImportHandler;
+use App\Services\Import\Handlers\BrandImportHandler;
 use App\Helpers\ActivityLog;
 use PDO;
 use Exception;
@@ -31,6 +32,7 @@ class ImportProcessor
     {
         return [
             // Fase 1: Master Pondasi Independen (Zero Dependency)
+            'brands'          => new BrandImportHandler(),
             'territories'     => new TerritoryImportHandler(),
             'customer_groups' => new CustomerGroupImportHandler(),
             'product_groups'  => new ProductGroupImportHandler(),
@@ -131,17 +133,20 @@ class ImportProcessor
             throw new RuntimeException("Format data pratinjau korup.");
         }
 
-        // Cek apakah masih ada baris ERROR
-        $hasError = false;
+        // Cek apakah masih ada baris ERROR atau FATAL konflik
+        $hasBlocker = false;
+        $blockerCount = 0;
         foreach ($previewList as $r) {
-            if (($r['action'] ?? '') === 'ERROR') {
-                $hasError = true;
-                break;
+            $act = $r['action'] ?? '';
+            $isFatal = !empty($r['is_fatal']);
+            if ($act === 'ERROR' || $act === 'FATAL' || $isFatal) {
+                $hasBlocker = true;
+                $blockerCount++;
             }
         }
 
-        if ($hasError) {
-            throw new RuntimeException("Terdapat baris data berstatus ERROR. Perbaiki file Excel terlebih dahulu sebelum konfirmasi.");
+        if ($hasBlocker) {
+            throw new RuntimeException("Terdapat {$blockerCount} baris data bermasalah (ERROR / FATAL). Tombol konfirmasi dikunci demi keamanan data. Harap perbaiki berkas Excel Anda terlebih dahulu sebelum menerapkan sinkronisasi.");
         }
 
         $pdo->beginTransaction();
@@ -151,6 +156,7 @@ class ImportProcessor
 
             // Pemetaan nama tabel riil database PostgreSQL
             $tableMap = [
+                'brands'          => 'merek',
                 'customers'       => 'pelanggan',
                 'customer_groups' => 'grup_pelanggan',
                 'territories'     => 'wilayah',

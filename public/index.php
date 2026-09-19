@@ -305,6 +305,9 @@ Router::post('/employees/commission-tiers/batch-save', [EmployeeController::clas
 
 // --- MASTER DATA 4: PRODUK, BAHAN BAKU, RESEP BOM & UPAH BORONGAN ---
 Router::get('/products', [ProductController::class, 'index']);
+Router::post('/products/store-brand', [ProductController::class, 'storeBrand']);
+Router::post('/products/update-brand', [ProductController::class, 'updateBrand']);
+Router::post('/products/delete-brand', [ProductController::class, 'deleteBrand']);
 Router::post('/products/store-group', [ProductController::class, 'storeGroup']);
 Router::post('/products/update-group', [ProductController::class, 'updateGroup']);
 Router::post('/products/delete-group', [ProductController::class, 'deleteGroup']);
@@ -327,8 +330,9 @@ Router::get('/owner', [OwnerController::class, 'index']);
 
 // --- MANAJEMEN 2: PROFIL PENGGUNA & PENGATURAN AKUN ---
 Router::get('/profile', [ProfileController::class, 'index']);
-Router::post('/profile/update-username', [ProfileController::class, 'updateUsername']);
-Router::post('/profile/update-password', [ProfileController::class, 'updatePassword']);
+Router::post('/profile/update', [ProfileController::class, 'update']);
+Router::post('/profile/update-username', [ProfileController::class, 'update']);
+Router::post('/profile/update-password', [ProfileController::class, 'update']);
 
 // --- MANAJEMEN 3: HAK AKSES, PENGGUNA & RBAC (5-TAB MASTER) ---
 Router::get('/users', [UserController::class, 'index']);

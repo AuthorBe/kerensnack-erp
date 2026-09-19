@@ -398,7 +398,7 @@ class CustomerController extends Controller
 
         // Proteksi Pelanggan Default POS (CUST-001): Status wajib aktif
         if ($currentCust['kode_pelanggan'] === 'CUST-001' && !$statusAktif) {
-            $this->flashError('Status toko default sistem (CUST-001 / UMUM / CASH) wajib tetap aktif untuk operasional kasir POS.');
+            $this->flashError('Status toko default sistem (CUST-001 / Toko Umum / Walk-in Cash) wajib tetap aktif untuk operasional kasir POS.');
             $this->redirect('/customers');
             return;
         }
@@ -821,9 +821,10 @@ class CustomerController extends Controller
                 return;
             }
 
-            // Proteksi Pelanggan Default POS (CUST-001 / UMUM / CASH)
-            if ($custRow['kode_pelanggan'] === 'CUST-001' || strtoupper(trim($custRow['nama_toko'])) === 'UMUM/CASH') {
-                $this->flashError('Toko pelanggan default sistem (CUST-001 / UMUM / CASH) tidak dapat dihapus.');
+            // Proteksi Pelanggan Default POS (CUST-001 / Toko Umum / Walk-in Cash)
+            $namaTokoUpper = strtoupper(trim($custRow['nama_toko']));
+            if ($custRow['kode_pelanggan'] === 'CUST-001' || $namaTokoUpper === 'UMUM/CASH' || str_contains($namaTokoUpper, 'WALK-IN CASH') || str_contains($namaTokoUpper, 'TOKO UMUM')) {
+                $this->flashError('Toko pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak dapat dihapus.');
                 $this->redirect('/customers');
                 return;
             }

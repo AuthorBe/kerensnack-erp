@@ -104,6 +104,14 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             <i data-lucide="badge-percent" style="width:14px;height:14px;"></i>
             <span>4. Upah Borongan (<?= count($wageGroups) ?>)</span>
         </button>
+
+        <button type="button"
+                @click="activeTab = 'brands'"
+                :class="activeTab === 'brands' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
+                style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
+            <i data-lucide="tag" style="width:14px;height:14px;"></i>
+            <span>5. Merek Produk (<?= count($brands ?? []) ?>)</span>
+        </button>
     </div>
 
     <!-- ========================================================================= -->
@@ -181,6 +189,12 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                             <td>
                                 <div style="font-weight:700;font-size:13.5px;color:var(--color-ink);" x-text="item.nama_item"></div>
                                 <div class="flex items-center flex-wrap gap-1.5 mt-1">
+                                    <template x-if="item.nama_merek">
+                                        <span class="badge" style="font-size:10px;padding:1px 5px;background:rgba(245,158,11,0.08);color:#d97706;border:1px solid rgba(245,158,11,0.25);font-weight:700;">
+                                            <i data-lucide="tag" style="width:10px;height:10px;margin-right:2px;display:inline-block;vertical-align:middle;"></i>
+                                            <span x-text="item.nama_merek"></span>
+                                        </span>
+                                    </template>
                                     <span class="badge" style="font-size:10.5px;padding:1px 6px;background:rgba(99,102,241,0.08);color:#6366f1;border:1px solid rgba(99,102,241,0.2);">
                                         <i data-lucide="package" style="width:11px;height:11px;margin-right:3px;display:inline-block;vertical-align:middle;"></i>
                                         <span x-text="item.nama_grup || 'Tanpa Grup'"></span>
@@ -192,7 +206,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                 <template x-if="Number(item.upah_bungkus_efektif) > 0">
                                     <div>
                                         <span class="badge" style="font-family:var(--font-mono);font-weight:700;background:rgba(16,185,129,0.08);color:#10b981;border:1px solid rgba(16,185,129,0.2);" x-text="formatRupiah(item.upah_bungkus_efektif) + '/pack'"></span>
-                                        <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;" x-text="item.upah_per_bungkus ? 'Tarif Khusus Item' : (item.nama_kelompok || 'Tarif Kelompok')"></div>
+                                        <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;" x-text="item.nama_kelompok || 'Tarif Kelompok'"></div>
                                     </div>
                                 </template>
                                 <template x-if="!item.upah_bungkus_efektif || Number(item.upah_bungkus_efektif) == 0">
@@ -485,7 +499,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                             <div class="my-1">
                                 <div style="font-size:15px;font-weight:800;color:#059669;font-family:var(--font-mono);line-height:1.2;" x-text="formatRupiah(recipeSummary.wageCost)"></div>
                             </div>
-                            <div style="font-size:10.5px;color:var(--color-ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="selectedRecipeProduct?.upah_per_bungkus ? 'Tarif Khusus' : (selectedRecipeProduct?.nama_kelompok || 'Borongan')"></div>
+                            <div style="font-size:10.5px;color:var(--color-ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="selectedRecipeProduct?.nama_kelompok || 'Tanpa Borongan'"></div>
                         </div>
                     </div>
 
@@ -737,6 +751,94 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     </div>
 
     <!-- ========================================================================= -->
+    <!-- TAB 5: MASTER MEREK PRODUK                                                -->
+    <!-- ========================================================================= -->
+    <div x-show="activeTab === 'brands'" class="card" style="padding:0;overflow:hidden;">
+        <!-- ACTION & HEADER BAR -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
+            <div class="flex items-center gap-3 w-full sm:w-auto flex-1">
+                <div class="form-input-icon flex-1 sm:max-w-xs">
+                    <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+                    <input type="text" x-model="searchBrand" placeholder="Cari kode / nama merek..." class="form-input" style="height:38px;font-size:13px;">
+                </div>
+                <div class="hidden sm:block" style="font-size:11.5px;color:var(--color-ink-mute);">Master Merek dagang yang menaungi grup produk dan varian kemasan</div>
+            </div>
+
+            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+            <div class="flex items-center gap-2">
+                <button @click="openAddBrandModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
+                    <i data-lucide="plus"></i>
+                    <span>Tambah Merek Baru</span>
+                </button>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- TABLE LIST MASTER MEREK -->
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="data-table" style="min-width: 860px;">
+                <thead>
+                    <tr>
+                        <th style="width:140px; min-width:120px;">Kode Merek</th>
+                        <th style="min-width:220px;">Nama Merek</th>
+                        <th class="cell-center cell-nowrap" style="width:180px; min-width:140px;">Grup Produk Menaungi</th>
+                        <th class="cell-center cell-nowrap" style="width:120px; min-width:90px;">Status</th>
+                        <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                        <th class="cell-center cell-nowrap" style="width:110px; min-width:90px;">Aksi</th>
+                        <?php endif; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="b in filteredBrands" :key="b.id">
+                        <tr :style="!b.status_aktif ? 'opacity:0.5;' : ''">
+                            <td class="cell-nowrap">
+                                <span class="badge badge-mono font-bold" style="font-size:12px;" x-text="b.kode_merek"></span>
+                            </td>
+                            <td>
+                                <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);" x-text="b.nama_merek"></div>
+                            </td>
+                            <td class="cell-center cell-nowrap">
+                                <span class="badge badge-secondary" style="font-weight:700;" x-text="(b.total_grup || 0) + ' Grup Produk'"></span>
+                            </td>
+                            <td class="cell-center cell-nowrap">
+                                <template x-if="b.status_aktif">
+                                    <span class="badge badge-success">Aktif</span>
+                                </template>
+                                <template x-if="!b.status_aktif">
+                                    <span class="badge badge-danger">Nonaktif</span>
+                                </template>
+                            </td>
+                            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                            <td class="cell-center cell-nowrap">
+                                <div class="flex items-center justify-center gap-1">
+                                    <button @click="openEditBrandModal(b)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Merek">
+                                        <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                                    </button>
+                                    <template x-if="!b.total_grup || b.total_grup == 0">
+                                        <button @click="deleteBrand(b.id, b.nama_merek)" class="btn btn-ghost btn-sm" style="padding:6px;color:#ef4444;" title="Hapus Merek">
+                                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
+                                </div>
+                            </td>
+                            <?php endif; ?>
+                        </tr>
+                    </template>
+
+                    <template x-if="filteredBrands.length === 0">
+                        <tr>
+                            <td colspan="<?= \App\Core\Auth::can('master.products_manage') ? 5 : 4 ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                                <i data-lucide="tag" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
+                                <div style="font-weight:600;font-size:13px;">Belum ada merek produk yang cocok</div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- MODALS SECTION                                                            -->
     <!-- ========================================================================= -->
 
@@ -768,23 +870,17 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     <input type="text" name="nama_item" x-model="itemForm.nama_item" required class="form-input" placeholder="Contoh: Berondong Beras Manis Gurih 135gr">
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Template Kelompok Upah Borongan</label>
-                        <select name="kelompok_borongan_id" x-model="itemForm.kelompok_borongan_id" @change="onKelompokBoronganChange()" class="form-input">
-                            <option value="">-- Bebas / Khusus (Custom) --</option>
-                            <?php foreach ($wageGroups as $w): ?>
-                            <option value="<?= $w['id'] ?>" data-wage="<?= (float)$w['upah_per_bungkus'] ?>"><?= htmlspecialchars($w['nama_kelompok']) ?> (Rp <?= number_format((float)$w['upah_per_bungkus'], 0, ',', '.') ?>/pack)</option>
-                            <?php endforeach; ?>
-                        </select>
+                <div>
+                    <label class="form-label">Kelompok Upah Borongan</label>
+                    <select name="kelompok_borongan_id" x-model="itemForm.kelompok_borongan_id" class="form-input">
+                        <option value="">-- Tanpa Kelompok Upah (Rp 0) --</option>
+                        <?php foreach ($wageGroups as $w): ?>
+                        <option value="<?= $w['id'] ?>" data-wage="<?= (float)$w['upah_per_bungkus'] ?>"><?= htmlspecialchars($w['nama_kelompok']) ?> (Rp <?= number_format((float)$w['upah_per_bungkus'], 0, ',', '.') ?>/pack)</option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
+                        Tarif upah borongan kemas otomatis mengikuti master kelompok upah borongan yang dipilih.
                     </div>
-                    <div>
-                        <label class="form-label">Upah Borongan per Bungkus (Rp/pack)</label>
-                        <input type="text" name="upah_per_bungkus" x-model="itemForm.upah_per_bungkus" class="form-input font-mono input-rupiah" placeholder="Contoh: 600">
-                    </div>
-                </div>
-                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:-6px;">
-                    💡 <em>Otomatis terisi jika memilih template di atas, atau ketik nominal langsung untuk upah khusus produk ini.</em>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -833,13 +929,22 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- MODAL 2: TAMBAH GRUP KEMASAN -->
     <template x-teleport="body">
     <div x-show="showGroupModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:440px;padding:24px;">
+        <div class="modal-box" style="max-width:460px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title">Tambah Grup Kemasan Baru</div>
             </div>
 
             <form action="<?= Router::url('/products/store-group') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
                 <?= \App\Helpers\CSRF::field() ?>
+                <div>
+                    <label class="form-label">Merek Dagang *</label>
+                    <select name="merek_id" required class="form-input">
+                        <?php foreach ($brands as $b): ?>
+                        <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['nama_merek']) ?> (<?= $b['kode_merek'] ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
                 <div>
                     <label class="form-label">Nama Grup Kemasan *</label>
                     <input type="text" name="nama_grup" required class="form-input" placeholder="Contoh: KEREN SNACK SINGKONG 250GR">
@@ -872,7 +977,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- MODAL 2B: KELOLA DAFTAR GRUP KEMASAN -->
     <template x-teleport="body">
     <div x-show="showManageGroupsModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:720px;padding:24px;">
+        <div class="modal-box" style="max-width:780px;padding:24px;">
             <div class="modal-header">
                 <div>
                     <div class="modal-title">Kelola Grup Kemasan Luar</div>
@@ -891,12 +996,13 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 <table class="data-table" style="width:100%;font-size:12.5px;">
                     <thead>
                         <tr>
-                            <th style="width:90px;">Kode</th>
+                            <th style="width:85px;">Kode</th>
+                            <th style="width:120px;">Merek</th>
                             <th>Nama Grup Kemasan</th>
-                            <th style="width:130px;">Barcode Pabrik</th>
-                            <th class="cell-center" style="width:90px;">Total SKU</th>
-                            <th class="cell-center" style="width:80px;">Status</th>
-                            <th class="cell-center" style="width:90px;">Aksi</th>
+                            <th style="width:120px;">Barcode Pabrik</th>
+                            <th class="cell-center" style="width:85px;">Total SKU</th>
+                            <th class="cell-center" style="width:75px;">Status</th>
+                            <th class="cell-center" style="width:85px;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -904,6 +1010,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                             <tr :style="!g.status_aktif ? 'opacity:0.5;' : ''">
                                 <td class="cell-nowrap">
                                     <span class="badge badge-mono" x-text="g.kode_grup"></span>
+                                </td>
+                                <td class="cell-nowrap">
+                                    <span class="badge badge-mono" style="font-weight:700;" x-text="g.nama_merek || 'KEREN SNACK'"></span>
                                 </td>
                                 <td>
                                     <div style="font-weight:700;" x-text="g.nama_grup"></div>
@@ -950,7 +1059,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- MODAL 2C: EDIT GRUP KEMASAN -->
     <template x-teleport="body">
     <div x-show="showEditGroupModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:440px;padding:24px;">
+        <div class="modal-box" style="max-width:460px;padding:24px;">
             <div class="modal-header">
                 <div>
                     <div class="modal-title">Edit Grup Kemasan</div>
@@ -961,6 +1070,15 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             <form action="<?= Router::url('/products/update-group') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
                 <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="id" :value="editGroupForm.id">
+
+                <div>
+                    <label class="form-label">Merek Dagang *</label>
+                    <select name="merek_id" x-model="editGroupForm.merek_id" required class="form-input">
+                        <?php foreach ($brands as $b): ?>
+                        <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['nama_merek']) ?> (<?= $b['kode_merek'] ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
                 <div>
                     <label class="form-label">Nama Grup Kemasan *</label>
@@ -1395,9 +1513,53 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         </div>
     </div>
     </template>
+    <!-- MODAL 6: TAMBAH / EDIT MASTER MEREK -->
+    <template x-teleport="body">
+    <div x-show="showBrandModal" x-cloak class="modal-backdrop">
+        <div class="modal-box" style="max-width:460px;padding:24px;">
+            <div class="modal-header">
+                <div class="modal-title" x-text="isEditBrand ? 'Edit Merek Produk' : 'Tambah Merek Produk Baru'"></div>
+            </div>
+
+            <form :action="isEditBrand ? '<?= Router::url('/products/update-brand') ?>' : '<?= Router::url('/products/store-brand') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+                <?= \App\Helpers\CSRF::field() ?>
+                <input type="hidden" name="id" :value="brandForm.id">
+
+                <div>
+                    <label class="form-label">Kode Merek</label>
+                    <input type="text" name="kode_merek" x-model="brandForm.kode_merek" :readonly="isEditBrand" class="form-input font-mono" placeholder="Otomatis (Contoh: KRN / KEREN)">
+                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;">
+                        <span x-show="!isEditBrand">💡 Kosongkan untuk kode otomatis <code>MRK-XXX</code> atau ketik kode khusus.</span>
+                        <span x-show="isEditBrand">🔒 Kode merek bersifat permanen untuk integritas database.</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Nama Merek Dagang *</label>
+                    <input type="text" name="nama_merek" x-model="brandForm.nama_merek" required class="form-input" placeholder="Contoh: KEREN SNACK, SNACK NUSANTARA">
+                </div>
+
+                <template x-if="isEditBrand">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
+                        <input type="checkbox" name="status_aktif" x-model="brandForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                        <span>Status Merek Aktif</span>
+                    </label>
+                </template>
+
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
+                    <button type="button" @click="showBrandModal = false" class="btn btn-secondary">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="save"></i>
+                        <span x-text="isEditBrand ? 'Simpan Perubahan' : 'Tambah Merek'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </template>
     <?php endif; ?>
 
-    <!-- HIDDEN FORM FOR DELETING ITEM, GROUP, MATERIAL, RECIPE & BORONGAN -->
+    <!-- HIDDEN FORM FOR DELETING ITEM, GROUP, BRAND, MATERIAL, RECIPE & BORONGAN -->
     <?php if (\App\Core\Auth::can('master.products_manage')): ?>
     <form id="delete-item-form" action="<?= Router::url('/products/delete-item') ?>" method="POST" data-action-text="Menghapus barang jadi..." style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
@@ -1406,6 +1568,10 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <form id="delete-group-form" action="<?= Router::url('/products/delete-group') ?>" method="POST" data-action-text="Menghapus grup kemasan..." style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-group-id">
+    </form>
+    <form id="delete-brand-form" action="<?= Router::url('/products/delete-brand') ?>" method="POST" data-action-text="Menghapus merek..." style="display:none;">
+        <?= \App\Helpers\CSRF::field() ?>
+        <input type="hidden" name="id" id="delete-brand-id">
     </form>
     <?php endif; ?>
     <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
@@ -1431,6 +1597,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 function productApp(initialTab, initialRecipeItemId) {
     return {
         activeTab: initialTab || 'finished_goods',
+        brands: <?= json_encode($brands ?? []) ?>,
         groups: <?= json_encode($groups) ?>,
         finishedGoods: <?= json_encode($finishedGoods) ?>,
         allFinishedGoods: <?= json_encode($allFinishedGoodsList ?? $finishedGoods) ?>,
@@ -1445,6 +1612,7 @@ function productApp(initialTab, initialRecipeItemId) {
         materialTypeFilter: 'all',
         selectedRecipeProductId: initialRecipeItemId || '',
         searchBorongan: '',
+        searchBrand: '',
 
         showItemModal: false,
         showGroupModal: false,
@@ -1454,10 +1622,12 @@ function productApp(initialTab, initialRecipeItemId) {
         showRecipeModal: false,
         showCopyRecipeModal: false,
         showBoronganModal: false,
+        showBrandModal: false,
 
         isEditItem: false,
         isEditMaterial: false,
         isEditBorongan: false,
+        isEditBrand: false,
 
         selectedTargetItemIds: [],
         copySearchQuery: '',
@@ -1465,11 +1635,19 @@ function productApp(initialTab, initialRecipeItemId) {
         recipeInputMode: 'yield',
         recipeYieldPcs: '',
 
+        brandForm: {
+            id: '',
+            kode_merek: '',
+            nama_merek: '',
+            status_aktif: true
+        },
+
         editGroupForm: {
             id: '',
             kode_grup: '',
             nama_grup: '',
             barcode_universal: '',
+            merek_id: '',
             status_aktif: true
         },
 
@@ -1486,7 +1664,6 @@ function productApp(initialTab, initialRecipeItemId) {
             grup_id: '',
             nama_item: '',
             kelompok_borongan_id: '',
-            upah_per_bungkus: '',
             harga_pokok_pembelian: '10.000',
             stok_minimum_peringatan: 10,
             stok_awal: 0,
@@ -1641,6 +1818,15 @@ function productApp(initialTab, initialRecipeItemId) {
             });
         },
 
+        get filteredBrands() {
+            return this.brands.filter(b => {
+                const q = (this.searchBrand || '').toLowerCase();
+                return !q ||
+                    (b.nama_merek && b.nama_merek.toLowerCase().includes(q)) ||
+                    (b.kode_merek && b.kode_merek.toLowerCase().includes(q));
+            });
+        },
+
         selectProductForRecipe(fgId) {
             this.selectedRecipeProductId = fgId;
             this.activeTab = 'recipes';
@@ -1656,14 +1842,6 @@ function productApp(initialTab, initialRecipeItemId) {
             const num = Number(val);
             if (isNaN(num)) return '0';
             return num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
-        },
-
-        onKelompokBoronganChange() {
-            if (!this.itemForm.kelompok_borongan_id) return;
-            const grp = this.wageGroups.find(w => w.id === this.itemForm.kelompok_borongan_id);
-            if (grp) {
-                this.itemForm.upah_per_bungkus = window.formatRupiahNumber ? window.formatRupiahNumber(grp.upah_per_bungkus) : String(grp.upah_per_bungkus || '');
-            }
         },
 
         onRecipeMaterialChange() {
@@ -1712,7 +1890,6 @@ function productApp(initialTab, initialRecipeItemId) {
                 grup_id: this.groups[0]?.id || '',
                 nama_item: '',
                 kelompok_borongan_id: '',
-                upah_per_bungkus: '',
                 harga_pokok_pembelian: '10.000',
                 stok_minimum_peringatan: 10,
                 stok_awal: 0,
@@ -1734,9 +1911,6 @@ function productApp(initialTab, initialRecipeItemId) {
                 grup_id: it.grup_id || '',
                 nama_item: it.nama_item,
                 kelompok_borongan_id: it.kelompok_borongan_id || '',
-                upah_per_bungkus: (it.upah_per_bungkus !== null && it.upah_per_bungkus !== undefined && it.upah_per_bungkus !== '')
-                    ? (window.formatRupiahNumber ? window.formatRupiahNumber(it.upah_per_bungkus) : String(it.upah_per_bungkus))
-                    : '',
                 harga_pokok_pembelian: window.formatRupiahNumber ? window.formatRupiahNumber(it.harga_pokok_pembelian) : String(it.harga_pokok_pembelian || 0),
                 stok_minimum_peringatan: Number(it.stok_minimum_peringatan || 10),
                 status_jual: Boolean(it.status_jual),
@@ -1787,6 +1961,7 @@ function productApp(initialTab, initialRecipeItemId) {
                 kode_grup: g.kode_grup,
                 nama_grup: g.nama_grup,
                 barcode_universal: g.barcode_universal || '',
+                merek_id: g.merek_id || (this.brands[0]?.id || ''),
                 status_aktif: Boolean(g.status_aktif)
             };
             this.showManageGroupsModal = false;
@@ -1977,6 +2152,57 @@ function productApp(initialTab, initialRecipeItemId) {
             if (confirmed) {
                 document.getElementById('delete-borongan-id').value = id;
                 document.getElementById('delete-borongan-form').submit();
+            }
+        },
+
+        // --- BRAND MODALS ---
+        openAddBrandModal() {
+            this.showItemModal = false;
+            this.showGroupModal = false;
+            this.showMaterialModal = false;
+            this.showRecipeModal = false;
+            this.showCopyRecipeModal = false;
+            this.showBoronganModal = false;
+            this.isEditBrand = false;
+            this.brandForm = {
+                id: '',
+                kode_merek: '',
+                nama_merek: '',
+                status_aktif: true
+            };
+            this.showBrandModal = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        openEditBrandModal(b) {
+            this.showItemModal = false;
+            this.showGroupModal = false;
+            this.showMaterialModal = false;
+            this.showRecipeModal = false;
+            this.showCopyRecipeModal = false;
+            this.showBoronganModal = false;
+            this.isEditBrand = true;
+            this.brandForm = {
+                id: b.id,
+                kode_merek: b.kode_merek,
+                nama_merek: b.nama_merek,
+                status_aktif: Boolean(b.status_aktif)
+            };
+            this.showBrandModal = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        async deleteBrand(id, name) {
+            const confirmed = window.AppConfirm ? await window.AppConfirm({
+                title: 'Hapus Merek Produk',
+                message: `Apakah Anda yakin ingin menghapus merek "${name}"? Merek hanya dapat dihapus jika tidak ada grup produk yang terhubung.`,
+                type: 'danger',
+                confirmText: 'Ya, Hapus'
+            }) : confirm(`Hapus merek "${name}"?`);
+
+            if (confirmed) {
+                document.getElementById('delete-brand-id').value = id;
+                document.getElementById('delete-brand-form').submit();
             }
         }
     }

@@ -2023,17 +2023,17 @@ ob_start();
                                         <template x-if="activeShoppingTask?.supplier_kontak">
                                             <span> &bull; PIC: <strong style="color: var(--color-ink);" x-text="activeShoppingTask.supplier_kontak"></strong></span>
                                         </template>
-                                        <template x-if="activeShoppingTask?.supplier_telepon || activeShoppingTask?.supplier_wa">
-                                            <span> &bull; Kontak: <span class="font-mono" x-text="activeShoppingTask.supplier_wa || activeShoppingTask.supplier_telepon"></span></span>
+                                        <template x-if="activeShoppingTask?.supplier_wa">
+                                            <span> &bull; Kontak: <span class="font-mono" x-text="activeShoppingTask.supplier_wa"></span></span>
                                         </template>
                                     </div>
                                 </div>
 
                                 <!-- Quick WA Button -->
-                                <template x-if="activeShoppingTask?.supplier_wa || activeShoppingTask?.supplier_telepon">
-                                    <a :href="'https://wa.me/' + cleanWa(activeShoppingTask?.supplier_wa || activeShoppingTask?.supplier_telepon) + '?text=' + encodeURIComponent('Halo ' + (activeShoppingTask?.supplier_kontak ? (activeShoppingTask.supplier_kontak + ' (' + activeShoppingTask.nama_pemasok + ')') : (activeShoppingTask?.nama_pemasok || '')) + ', armada KEREN Snack sedang menuju ke lokasi Anda untuk pengambilan belanjaan PO #' + (activeShoppingTask?.nomor_faktur_pembelian || '') + '.')" target="_blank" class="quick-action-pill is-wa">
+                                <template x-if="activeShoppingTask?.supplier_wa">
+                                    <a :href="'https://wa.me/' + cleanWa(activeShoppingTask?.supplier_wa) + '?text=' + encodeURIComponent('Halo ' + (activeShoppingTask?.supplier_kontak ? (activeShoppingTask.supplier_kontak + ' (' + activeShoppingTask.nama_pemasok + ')') : (activeShoppingTask?.nama_pemasok || '')) + ', armada KEREN Snack sedang menuju ke lokasi Anda untuk pengambilan belanjaan PO #' + (activeShoppingTask?.nomor_faktur_pembelian || '') + '.')" target="_blank" class="quick-action-pill is-wa">
                                         <i data-lucide="message-circle" style="width: 15px; height: 15px;"></i>
-                                        <span>WhatsApp ( <span x-text="activeShoppingTask?.supplier_wa || activeShoppingTask?.supplier_telepon"></span> )</span>
+                                        <span>WhatsApp ( <span x-text="activeShoppingTask?.supplier_wa"></span> )</span>
                                     </a>
                                 </template>
                             </div>

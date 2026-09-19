@@ -30,7 +30,7 @@ class SupplierController extends Controller
             $where = "WHERE 1=1";
             $params = [];
             if (!empty($q)) {
-                $where .= " AND (s.nama_pemasok ILIKE :q OR s.kode_pemasok ILIKE :q OR s.nama_kontak ILIKE :q OR s.nomor_telepon ILIKE :q OR s.nomor_whatsapp ILIKE :q OR s.email ILIKE :q OR s.nomor_rekening ILIKE :q OR s.alamat_lengkap ILIKE :q OR w.nama_wilayah ILIKE :q)";
+                $where .= " AND (s.nama_pemasok ILIKE :q OR s.kode_pemasok ILIKE :q OR s.nama_kontak ILIKE :q OR s.nomor_whatsapp ILIKE :q OR s.email ILIKE :q OR s.nomor_rekening ILIKE :q OR s.alamat_lengkap ILIKE :q OR w.nama_wilayah ILIKE :q)";
                 $params['q'] = "%{$q}%";
             }
 
@@ -44,7 +44,7 @@ class SupplierController extends Controller
 
             $suppliers = Database::fetchAll("
                 SELECT s.id, s.kode_pemasok, s.nama_pemasok, s.nama_kontak, s.alamat_lengkap, s.link_google_maps,
-                       s.nomor_telepon, s.nomor_whatsapp, s.email, s.termin_bayar, s.catatan,
+                       s.nomor_whatsapp, s.email, s.termin_bayar, s.catatan,
                        s.nama_bank, s.nomor_rekening, s.atas_nama_rekening,
                        s.status_aktif, s.wilayah_id, w.nama_wilayah
                 FROM public.pemasok s
@@ -94,7 +94,6 @@ class SupplierController extends Controller
 
         $nama = trim((string)$this->input('nama_pemasok'));
         $kontak = trim((string)$this->input('nama_kontak')) ?: null;
-        $telepon = trim((string)$this->input('nomor_telepon')) ?: null;
         $whatsapp = trim((string)$this->input('nomor_whatsapp')) ?: null;
         $email = trim((string)$this->input('email')) ?: null;
         $alamat = trim((string)$this->input('alamat_lengkap', '-'));
@@ -137,11 +136,11 @@ class SupplierController extends Controller
             Database::execute("
                 INSERT INTO public.pemasok (
                     kode_pemasok, nama_pemasok, nama_kontak, wilayah_id, alamat_lengkap,
-                    link_google_maps, nomor_telepon, nomor_whatsapp, email, termin_bayar, catatan,
+                    link_google_maps, nomor_whatsapp, email, termin_bayar, catatan,
                     nama_bank, nomor_rekening, atas_nama_rekening, status_aktif
                 ) VALUES (
                     :kode, :nama, :kontak, :wilayah, :alamat,
-                    :maps, :telp, :wa, :email, :termin, :catatan,
+                    :maps, :wa, :email, :termin, :catatan,
                     :nama_bank, :nomor_rek, :atas_nama, TRUE
                 )
             ", [
@@ -151,7 +150,6 @@ class SupplierController extends Controller
                 'wilayah' => $wilayahId,
                 'alamat' => $alamat,
                 'maps' => $linkMaps,
-                'telp' => $telepon,
                 'wa' => $whatsapp,
                 'email' => $email,
                 'termin' => $terminBayar,
@@ -185,7 +183,6 @@ class SupplierController extends Controller
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_pemasok'));
         $kontak = trim((string)$this->input('nama_kontak')) ?: null;
-        $telepon = trim((string)$this->input('nomor_telepon')) ?: null;
         $whatsapp = trim((string)$this->input('nomor_whatsapp')) ?: null;
         $email = trim((string)$this->input('email')) ?: null;
         $alamat = trim((string)$this->input('alamat_lengkap', '-'));
@@ -221,7 +218,6 @@ class SupplierController extends Controller
                     wilayah_id = :wilayah,
                     alamat_lengkap = :alamat,
                     link_google_maps = :maps,
-                    nomor_telepon = :telp,
                     nomor_whatsapp = :wa,
                     email = :email,
                     termin_bayar = :termin,
@@ -239,7 +235,6 @@ class SupplierController extends Controller
                 'wilayah' => $wilayahId,
                 'alamat' => $alamat,
                 'maps' => $linkMaps,
-                'telp' => $telepon,
                 'wa' => $whatsapp,
                 'email' => $email,
                 'termin' => $terminBayar,

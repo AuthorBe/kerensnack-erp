@@ -80,7 +80,7 @@ ob_start();
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
             <div class="form-input-icon flex-1 sm:max-w-md">
                 <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                <input type="text" x-model="searchQuery" placeholder="Cari nama, PIC, nomor WA, telepon, email, alamat..." class="form-input" style="height:38px;font-size:13px;">
+                <input type="text" x-model="searchQuery" placeholder="Cari nama, PIC, nomor WhatsApp, email, alamat..." class="form-input" style="height:38px;font-size:13px;">
             </div>
 
             <div class="text-xs" style="color:var(--color-ink-mute);font-weight:600;white-space:nowrap;">
@@ -142,12 +142,6 @@ ob_start();
                                             </a>
                                         </div>
                                     </template>
-                                    <template x-if="s.nomor_telepon && s.nomor_telepon !== s.nomor_whatsapp">
-                                        <div style="font-family:var(--font-mono);font-size:11.5px;color:var(--color-ink-secondary);display:flex;align-items:center;gap:4px;">
-                                            <i data-lucide="phone" style="width:11px;height:11px;color:var(--color-ink-mute);"></i>
-                                            <span x-text="s.nomor_telepon"></span>
-                                        </div>
-                                    </template>
                                     <template x-if="s.email">
                                         <div>
                                             <a :href="'mailto:' + s.email" style="font-size:11px;color:var(--color-ink-mute);display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Kirim Email PO">
@@ -156,7 +150,7 @@ ob_start();
                                             </a>
                                         </div>
                                     </template>
-                                    <template x-if="!s.nama_kontak && !s.nomor_whatsapp && !s.nomor_telepon && !s.email">
+                                    <template x-if="!s.nama_kontak && !s.nomor_whatsapp && !s.email">
                                         <span style="color:var(--color-ink-mute);font-size:12px;">-</span>
                                     </template>
                                 </div>
@@ -275,11 +269,7 @@ ob_start();
                         <span>2. Kontak &amp; Komunikasi</span>
                     </div>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div>
-                            <label class="form-label">Telepon Kantor / Toko</label>
-                            <input type="text" name="nomor_telepon" x-model="form.nomor_telepon" class="form-input font-mono" placeholder="021-1234567">
-                        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="form-label">Nomor WhatsApp PIC</label>
                             <input type="text" name="nomor_whatsapp" x-model="form.nomor_whatsapp"
@@ -426,7 +416,6 @@ function supplierApp() {
             id: '',
             nama_pemasok: '',
             nama_kontak: '',
-            nomor_telepon: '',
             nomor_whatsapp: '',
             email: '',
             wilayah_id: '',
@@ -471,7 +460,6 @@ function supplierApp() {
                 return (s.nama_pemasok && s.nama_pemasok.toLowerCase().includes(q)) ||
                     (s.kode_pemasok && s.kode_pemasok.toLowerCase().includes(q)) ||
                     (s.nama_kontak && s.nama_kontak.toLowerCase().includes(q)) ||
-                    (s.nomor_telepon && s.nomor_telepon.toLowerCase().includes(q)) ||
                     (s.nomor_whatsapp && s.nomor_whatsapp.toLowerCase().includes(q)) ||
                     (s.email && s.email.toLowerCase().includes(q)) ||
                     (s.nama_bank && s.nama_bank.toLowerCase().includes(q)) ||
@@ -489,7 +477,6 @@ function supplierApp() {
                 id: '',
                 nama_pemasok: '',
                 nama_kontak: '',
-                nomor_telepon: '',
                 nomor_whatsapp: '',
                 email: '',
                 wilayah_id: '',
@@ -512,7 +499,6 @@ function supplierApp() {
                 id: s.id,
                 nama_pemasok: s.nama_pemasok || '',
                 nama_kontak: s.nama_kontak || '',
-                nomor_telepon: s.nomor_telepon || '',
                 nomor_whatsapp: s.nomor_whatsapp || '',
                 email: s.email || '',
                 wilayah_id: s.wilayah_id || '',

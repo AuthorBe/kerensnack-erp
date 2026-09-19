@@ -500,7 +500,7 @@ class CustomerOrderController extends Controller
                        gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
-                WHERE i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
+                WHERE i.status_aktif = TRUE AND i.status_jual = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
 
@@ -954,7 +954,7 @@ class CustomerOrderController extends Controller
                        gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
-                WHERE i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
+                WHERE i.status_aktif = TRUE AND i.status_jual = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
 

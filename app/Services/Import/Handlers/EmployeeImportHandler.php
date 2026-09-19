@@ -15,7 +15,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
 
     public function getEntityLabel(): string
     {
-        return 'Data Karyawan & Akun';
+        return 'Data Karyawan';
     }
 
     public function getRequiredPermission(): string
@@ -36,7 +36,6 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
         return [
             'NIK Karyawan',
             'Nama Lengkap',
-            'Username / Nama Pengguna',
             'Posisi / Tugas',
             'Tipe Penggajian',
             'Gaji Pokok Bulanan (Rp)',
@@ -55,15 +54,15 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
 
     public function getTemplateWidths(): array
     {
-        return [16, 26, 22, 18, 18, 22, 20, 20, 18, 18, 30, 18, 14, 18, 22, 14];
+        return [16, 26, 18, 18, 22, 20, 20, 18, 18, 30, 18, 14, 18, 22, 14];
     }
 
     public function getTemplateExamples(): array
     {
         return [
-            ['NIK-001', 'Budi Santoso', 'budi_sales', 'sales', 'bulanan', 3500000, 25000, 500000, '081234567890', 'B 1234 ABC', 'Tangerang', '2023-01-15', 'BCA', '1122334455', 'Budi Santoso', 'Aktif'],
-            ['NIK-002', 'Ahmad Dani', 'dani_driver', 'driver', 'bulanan', 0, 120000, 0, '085678901234', 'B 5678 XYZ', 'Jakarta Barat', '2023-05-10', 'BRI', '5566778899', 'Ahmad Dani', 'Aktif'],
-            ['NIK-003', 'Siti Rohani', '', 'pengemasan', 'borongan', 0, 0, 0, '087812345678', '', 'Pasar Kemis', '2024-02-01', '', '', '', 'Aktif'],
+            ['NIK-001', 'Budi Santoso', 'sales', 'bulanan', 3500000, 25000, 500000, '081234567890', 'B 1234 ABC', 'Tangerang', '2023-01-15', 'BCA', '1122334455', 'Budi Santoso', 'Aktif'],
+            ['NIK-002', 'Ahmad Dani', 'driver', 'bulanan', 0, 120000, 0, '085678901234', 'B 5678 XYZ', 'Jakarta Barat', '2023-05-10', 'BRI', '5566778899', 'Ahmad Dani', 'Aktif'],
+            ['NIK-003', 'Siti Rohani', 'pengemasan', 'borongan', 0, 0, 0, '087812345678', '', 'Pasar Kemis', '2024-02-01', '', '', '', 'Aktif'],
         ];
     }
 
@@ -75,13 +74,13 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             'Posisi yang valid: admin, mandor, pengemasan, sales, driver (developer/owner diatur khusus).',
             'Tipe Penggajian: borongan, bulanan.',
             'No WhatsApp: Nomor WhatsApp aktif karyawan untuk koordinasi kerja (format 08xxx).',
-            'Username bersifat opsional (jika diisi, akun dapat login ke ERP). Password default akun baru: "KerenSnack2026!".'
+            'Pembuatan akun login pengguna dikelola secara terpisah melalui menu Pengaturan Pengguna (/users).'
         ];
     }
 
     public function getCurrentDataRows(PDO $pdo): array
     {
-        $sql = "SELECT COALESCE(p.nik, '') as nik, p.nama_lengkap, COALESCE(p.nama_pengguna, '') as nama_pengguna,
+        $sql = "SELECT COALESCE(p.nik, '') as nik, p.nama_lengkap,
                        p.posisi, COALESCE(k.tipe_penggajian, 'borongan') as tipe_penggajian,
                        COALESCE(k.gaji_pokok_bulanan, 0) as gaji_pokok,
                        COALESCE(k.uang_kehadiran_harian, 0) as uang_hadir,
@@ -115,16 +114,13 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                                 WHERE p.posisi NOT IN ('developer')")->fetchAll(PDO::FETCH_ASSOC);
         $dbByNik = [];
         $dbByName = [];
-        $dbByUsername = [];
         foreach ($dbUsers as $u) {
             if (!empty($u['nik'])) $dbByNik[strtolower(trim($u['nik']))] = $u;
             $dbByName[strtolower(trim($u['nama_lengkap']))] = $u;
-            if (!empty($u['nama_pengguna'])) $dbByUsername[strtolower(trim($u['nama_pengguna']))] = $u;
         }
 
         $previewList = [];
         $seenNiks = [];
-        $seenUsernames = [];
         $processedDbIds = [];
 
         foreach ($rows as $idx => $row) {
@@ -133,7 +129,6 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
 
             $nik = (string)(SmartReader::getSmartValue($rowData, ['nik_karyawan', 'nik', 'nomor_induk']) ?? '');
             $nama = (string)(SmartReader::getSmartValue($rowData, ['nama_lengkap', 'nama', 'nama_karyawan']) ?? '');
-            $username = (string)(SmartReader::getSmartValue($rowData, ['username', 'nama_pengguna']) ?? '');
             $posisiRaw = (string)(SmartReader::getSmartValue($rowData, ['posisi', 'jabatan', 'tugas']) ?? '');
             $tipeGajiRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_penggajian', 'sistem_gaji', 'tipe_gaji']) ?? 'borongan');
             $gapokRaw = SmartReader::getSmartValue($rowData, ['gaji_pokok_bulanan', 'gaji_pokok', 'gapok']);
@@ -195,24 +190,9 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 $seenNiks[$nKey] = true;
             }
 
-            if (!empty($username)) {
-                $uKey = strtolower(trim($username));
-                if (isset($seenUsernames[$uKey])) {
-                    $previewList[] = [
-                        'action' => 'ERROR',
-                        'error_msg' => "Duplikasi Username '{$username}' pada baris {$lineNo}.",
-                        'data' => ['nik' => $nik, 'nama_lengkap' => $nama, 'posisi' => $posisi]
-                    ];
-                    continue;
-                }
-                $seenUsernames[$uKey] = true;
-            }
-
             $dbRow = null;
             if (!empty($nik) && isset($dbByNik[strtolower(trim($nik))])) {
                 $dbRow = $dbByNik[strtolower(trim($nik))];
-            } elseif (!empty($username) && isset($dbByUsername[strtolower(trim($username))])) {
-                $dbRow = $dbByUsername[strtolower(trim($username))];
             } elseif (empty($nik) && isset($dbByName[strtolower(trim($nama))])) {
                 $dbRow = $dbByName[strtolower(trim($nama))];
             }
@@ -223,7 +203,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 'id'                     => $dbRow['id'] ?? null,
                 'nik'                    => !empty($nik) ? $nik : ($dbRow['nik'] ?? ''),
                 'nama_lengkap'           => $nama,
-                'nama_pengguna'          => !empty($username) ? $username : ($dbRow['nama_pengguna'] ?? null),
+                'nama_pengguna'          => $dbRow['nama_pengguna'] ?? null,
                 'posisi'                 => $posisi,
                 'peran_id'               => $peranId,
                 'tipe_penggajian'        => $tipeGaji,
@@ -304,8 +284,6 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
         $stmtMaxNik = $pdo->query("SELECT MAX(SUBSTRING(nik FROM 5)::int) as max_seq FROM public.pengguna WHERE nik ~ '^NIK-[0-9]+$'");
         $nextSeq = ((int)($stmtMaxNik->fetch(PDO::FETCH_ASSOC)['max_seq'] ?? 0)) + 1;
 
-        $defaultHash = password_hash('KerenSnack2026!', PASSWORD_BCRYPT);
-
         $stmtInsUser = $pdo->prepare("INSERT INTO public.pengguna 
             (nama_lengkap, nama_pengguna, kata_sandi, nik, posisi, peran_id, nomor_telepon, nomor_whatsapp, nomor_polisi_kendaraan, alamat, tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?) RETURNING id");
@@ -346,7 +324,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 $stmtInsUser->execute([
                     $d['nama_lengkap'],
                     !empty($d['nama_pengguna']) ? $d['nama_pengguna'] : null,
-                    $defaultHash,
+                    null, // kata_sandi (akun login dibuat terpisah via /users)
                     $nik,
                     $d['posisi'],
                     $d['peran_id'],

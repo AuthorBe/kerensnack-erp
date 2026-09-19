@@ -41,6 +41,8 @@ if (!function_exists('ks_format_diff_label')) {
             'stok_minimum_peringatan' => 'Stok Minimum Peringatan',
             'status_jual'             => 'Status Jual',
             'status_aktif'            => 'Status Master Data',
+            'kode_merek'              => 'Kode Merek',
+            'nama_merek'              => 'Nama Merek Dagang',
             'kode_pelanggan'          => 'Kode Pelanggan',
             'nama_toko'               => 'Nama Toko / Mitra',
             'nama_pemilik'            => 'Nama Pemilik',
@@ -157,7 +159,7 @@ $entityColumnsConfig = [
         'columns'    => [
             ['key' => 'display_grup', 'label' => 'Grup Produk'],
             ['key' => 'satuan_dasar', 'label' => 'Satuan'],
-            ['key' => 'upah_per_bungkus', 'label' => 'Upah Borongan', 'type' => 'currency'],
+            ['key' => 'display_kelompok_borongan', 'label' => 'Kelompok Upah'],
             ['key' => 'harga_pokok_pembelian', 'label' => 'HPP Pokok', 'type' => 'currency'],
             ['key' => 'stok_minimum_peringatan', 'label' => 'Stok Min'],
             ['key' => 'status_jual', 'label' => 'Status Jual', 'type' => 'boolean'],
@@ -196,10 +198,12 @@ $entityColumnsConfig = [
         'name_key'   => 'nama_lengkap',
         'name_label' => 'Nama Karyawan',
         'columns'    => [
-            ['key' => 'peran', 'label' => 'Peran / Jabatan'],
-            ['key' => 'nomor_telepon', 'label' => 'Telepon'],
-            ['key' => 'email', 'label' => 'Email'],
-            ['key' => 'status_aktif', 'label' => 'Status Akun', 'type' => 'boolean'],
+            ['key' => 'posisi', 'label' => 'Posisi / Tugas'],
+            ['key' => 'tipe_penggajian', 'label' => 'Sistem Gaji'],
+            ['key' => 'gaji_pokok_bulanan', 'label' => 'Gaji Pokok', 'type' => 'currency'],
+            ['key' => 'uang_kehadiran_harian', 'label' => 'Uang Hadir', 'type' => 'currency'],
+            ['key' => 'nomor_whatsapp', 'label' => 'WhatsApp'],
+            ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
     ],
     'product_groups' => [
@@ -209,7 +213,6 @@ $entityColumnsConfig = [
         'name_label' => 'Nama Grup Produk',
         'columns'    => [
             ['key' => 'barcode_universal', 'label' => 'Barcode Universal'],
-            ['key' => 'jumlah_pcs_per_bal', 'label' => 'Isi Bal (Pcs)'],
             ['key' => 'deskripsi', 'label' => 'Deskripsi'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
@@ -255,11 +258,29 @@ $entityColumnsConfig = [
             ['key' => 'keterangan', 'label' => 'Keterangan'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
+    ],
+    'brands' => [
+        'code_key'   => 'kode_merek',
+        'code_label' => 'Kode Merek',
+        'name_key'   => 'nama_merek',
+        'name_label' => 'Nama Merek Dagang',
+        'columns'    => [
+            ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
+        ]
     ]
 ];
 
-// Metadata representasi visual 10 master data
+// Metadata representasi visual 11 master data
 $entityMeta = [
+    'brands' => [
+        'icon'      => 'tag',
+        'badge'     => 'Merek Produk',
+        'category'  => 'Produk & BOM',
+        'color'     => '#d97706',
+        'bg'        => 'rgba(217, 119, 6, 0.12)',
+        'desc'      => 'Master merek dagang produk (Brand) yang menaungi grup kemasan.',
+        'url'       => '/products'
+    ],
     'customers' => [
         'icon'      => 'store',
         'badge'     => 'Pelanggan',
@@ -298,11 +319,11 @@ $entityMeta = [
     ],
     'employees' => [
         'icon'      => 'user-check',
-        'badge'     => 'Karyawan & Akun',
+        'badge'     => 'Data Karyawan',
         'category'  => 'SDM & Keamanan',
         'color'     => '#8b5cf6',
         'bg'        => 'rgba(139, 92, 246, 0.12)',
-        'desc'      => 'Master data karyawan, peran sistem (Sales, Driver, Kasir), dan akun login.',
+        'desc'      => 'Master data profil karyawan, posisi/tugas operasional, dan skema penggajian.',
         'url'       => '/employees'
     ],
     'product_groups' => [
@@ -311,7 +332,7 @@ $entityMeta = [
         'category'  => 'Produk & BOM',
         'color'     => '#ec4899',
         'bg'        => 'rgba(236, 72, 153, 0.12)',
-        'desc'      => 'Kategori kemasan universal, barcode universal grup, dan rasio bal ke pcs.',
+        'desc'      => 'Kategori kemasan universal, barcode universal grup, dan satuan dasar produk.',
         'url'       => '/products'
     ],
     'products' => [
