@@ -52,6 +52,8 @@ class DeveloperController extends Controller
                 'active_user'      => Auth::name(),
                 'active_role'      => Auth::role(),
                 'server_time'      => date('d M Y H:i:s') . ' WIB',
+                'session_timeout'  => \App\Core\Auth::INACTIVITY_TIMEOUT . ' detik (1 Jam)',
+                'last_activity'    => date('d M Y H:i:s', (int)($_SESSION['last_activity'] ?? time())) . ' WIB'
             ];
 
             $this->view('developer.index', [

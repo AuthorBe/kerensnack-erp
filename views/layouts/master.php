@@ -34,14 +34,15 @@ $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemt
     <script>
         window.APP_BASE_PATH = '<?= Router::getBasePath() ?>';
         <?php
-        $authLoginTime = (int)($_SESSION['login_time'] ?? time());
-        $authLifetime  = \App\Core\Auth::MAX_SESSION_LIFETIME;
-        $authExpiresAt = $authLoginTime + $authLifetime;
+        $authLastActivity = (int)($_SESSION['last_activity'] ?? $_SESSION['login_time'] ?? time());
+        $authTimeout      = \App\Core\Auth::INACTIVITY_TIMEOUT;
         ?>
         window.KSNACK_SESSION = {
-            loginTime: <?= $authLoginTime ?>,
-            lifetime: <?= $authLifetime ?>,
-            expiresAt: <?= $authExpiresAt ?>,
+            lastActivity: <?= $authLastActivity ?>,
+            timeoutSeconds: <?= $authTimeout ?>,
+            warningSeconds: 300,
+            heartbeatInterval: 300000,
+            heartbeatUrl: '<?= Router::url('/api/auth/heartbeat') ?>',
             logoutUrl: '<?= Router::url('/logout?reason=timeout') ?>',
             loginUrl: '<?= Router::url('/login?timeout=1') ?>'
         };

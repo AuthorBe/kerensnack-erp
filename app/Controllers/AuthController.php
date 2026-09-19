@@ -126,7 +126,7 @@ class AuthController extends Controller
         }
 
         if (isset($_GET['timeout'])) {
-            $info = "<div><strong>Sesi Berakhir Otomatis</strong></div><div class='alert-sub'>Sesi login Anda telah berakhir otomatis karena telah melebihi batas waktu maksimal (12 jam). Silakan masuk kembali untuk melanjutkan.</div>";
+            $info = "<div><strong>Sesi Berakhir Otomatis</strong></div><div class='alert-sub'>Sesi login Anda telah berakhir otomatis karena tidak ada aktivitas selama 1 jam. Silakan masuk kembali untuk melanjutkan.</div>";
         } elseif (isset($_GET['illegal'])) {
             $info = 'Silakan login terlebih dahulu untuk mengakses sistem.';
         } elseif (isset($_GET['suspended'])) {
@@ -327,6 +327,35 @@ class AuthController extends Controller
         }
     }
 
+    /**
+     * Endpoint API Heartbeat: Memperpanjang sesi PHP saat pengguna aktif berinteraksi di frontend
+     */
+    public function heartbeat(): void
+    {
+        if (!Auth::check()) {
+            http_response_code(401);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success'  => false,
+                'timeout'  => true,
+                'error'    => 'Sesi telah berakhir karena tidak ada aktivitas.',
+                'redirect' => \App\Core\Router::url('/login?timeout=1')
+            ]);
+            exit;
+        }
+
+        Auth::refreshActivity();
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success'         => true,
+            'last_activity'   => time(),
+            'timeout_seconds' => Auth::INACTIVITY_TIMEOUT,
+            'warning_seconds' => 300
+        ]);
+        exit;
+    }
+
     public function logout(): void
     {
         $isTimeout = isset($_GET['timeout']) || ($_GET['reason'] ?? '') === 'timeout';
@@ -335,7 +364,7 @@ class AuthController extends Controller
             $userName  = Auth::user()['nama_lengkap'] ?? Auth::name() ?? 'Pengguna';
             $logAction = $isTimeout ? 'LOGOUT_TIMEOUT' : 'LOGOUT';
             $logDesc   = $isTimeout
-                ? "Sesi pengguna {$userName} diakhiri otomatis karena melebihi batas waktu 12 jam"
+                ? "Sesi pengguna {$userName} diakhiri otomatis karena tidak ada aktivitas selama 1 jam"
                 : "Pengguna {$userName} telah keluar dari sistem";
 
             ActivityLog::log(

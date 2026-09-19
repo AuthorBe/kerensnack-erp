@@ -359,6 +359,48 @@ runTest("8. Proteksi Hash & Bypass: Penolakan ketat jika password input kosong a
 });
 
 // ------------------------------------------------------------------
+// 9. SLIDING INACTIVITY TIMEOUT (1 JAM / 3.600 DETIK)
+// ------------------------------------------------------------------
+runTest("9. Manajemen Sesi: Sliding Inactivity Timeout 1 jam (3.600 detik) & refreshActivity", function() {
+    if (Auth::INACTIVITY_TIMEOUT !== 3600) {
+        return "INACTIVITY_TIMEOUT harus bernilai 3600 detik (1 jam).";
+    }
+
+    // Setup sesi aktif
+    $_SESSION['user'] = ['id' => '00000000-0000-0000-0000-000000000001', 'nama_lengkap' => 'Test User', 'peran' => 'admin'];
+    $_SESSION['login_time'] = time();
+    $_SESSION['last_activity'] = time();
+
+    if (Auth::isSessionExpired()) {
+        return "Sesi baru seharusnya belum expired.";
+    }
+
+    // Simulasi user diam / tidak aktif selama 3.601 detik (> 1 jam)
+    $_SESSION['last_activity'] = time() - 3601;
+    if (!Auth::isSessionExpired()) {
+        return "Sesi setelah 3.601 detik tidak aktif seharusnya expired!";
+    }
+
+    // Simulasi refresh aktivitas sebelum timeout (misal di menit ke-50 / 3.000 detik)
+    $_SESSION['last_activity'] = time() - 3000;
+    if (Auth::isSessionExpired()) {
+        return "Sesi di menit ke-50 (< 1 jam) seharusnya masih aktif.";
+    }
+
+    // Panggil refreshActivity() untuk memperpanjang masa aktif sesi
+    Auth::refreshActivity();
+    if (time() - (int)$_SESSION['last_activity'] > 5) {
+        return "refreshActivity() gagal memperbarui timestamp aktivitas terbaru.";
+    }
+
+    if (Auth::isSessionExpired()) {
+        return "Sesi setelah refreshActivity() seharusnya tidak expired.";
+    }
+
+    return true;
+});
+
+// ------------------------------------------------------------------
 // SUMMARY
 // ------------------------------------------------------------------
 echo "\n============================================================\n";

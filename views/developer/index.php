@@ -149,6 +149,106 @@ ob_start();
     </div>
 
     <!-- ========================================================================= -->
+    <!-- 4. SIMULATOR & PENGUJIAN SESI INAKTIF (TRIAL CONSOLE)                      -->
+    <!-- ========================================================================= -->
+    <div class="card p-6" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);box-shadow:var(--shadow-1);">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4" style="border-bottom:1px solid var(--color-hairline);">
+            <div class="flex items-start sm:items-center gap-3">
+                <div style="width:44px;height:44px;border-radius:12px;background:rgba(225,29,72,0.1);color:#e11d48;display:flex;align-items:center;justify-content:center;border:1px solid rgba(225,29,72,0.25);flex-shrink:0;">
+                    <i data-lucide="timer" style="width:22px;height:22px;"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="badge badge-error" style="font-size:10px;font-weight:700;background:rgba(225,29,72,0.12);color:#e11d48;border:1px solid rgba(225,29,72,0.25);">DEVELOPER TRIAL CONSOLE</span>
+                        <span class="badge badge-mono" style="font-size:10px;">Sliding Idle 1 Jam</span>
+                        <span class="badge badge-mono" style="font-size:10px;color:var(--color-success);" id="sim-status-badge">Engine Online</span>
+                    </div>
+                    <h3 style="font-size:17px;font-weight:800;color:var(--color-ink);margin-top:2px;">
+                        Simulator Masa Aktif Sesi &amp; Inactivity Timeout
+                    </h3>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+                <span class="text-muted" style="font-size:11.5px;color:var(--color-ink-mute);">Aktivitas Terakhir:</span>
+                <span class="badge badge-mono font-bold" id="sim-last-act-time" style="font-size:11px;color:var(--color-primary);"><?= $telemetry['last_activity'] ?? date('d M Y H:i:s') ?></span>
+            </div>
+        </div>
+
+        <!-- Telemetry Status Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+            <div class="p-3 rounded-xl" style="background:var(--color-surface-2, rgba(0,0,0,0.03));border:1px solid var(--color-hairline);">
+                <div class="text-xs text-muted font-medium mb-1" style="color:var(--color-ink-mute);">Durasi Timeout</div>
+                <div class="text-sm font-bold" id="sim-timeout-val" style="color:var(--color-ink);font-variant-numeric:tabular-nums;">3600s (1 Jam)</div>
+            </div>
+            <div class="p-3 rounded-xl" style="background:var(--color-surface-2, rgba(0,0,0,0.03));border:1px solid var(--color-hairline);">
+                <div class="text-xs text-muted font-medium mb-1" style="color:var(--color-ink-mute);">Peringatan (Warning)</div>
+                <div class="text-sm font-bold" id="sim-warning-val" style="color:#d97706;font-variant-numeric:tabular-nums;">300s (5 Menit)</div>
+            </div>
+            <div class="p-3 rounded-xl" style="background:var(--color-surface-2, rgba(0,0,0,0.03));border:1px solid var(--color-hairline);">
+                <div class="text-xs text-muted font-medium mb-1" style="color:var(--color-ink-mute);">Heartbeat Ping</div>
+                <div class="text-sm font-bold" style="color:#10b981;font-variant-numeric:tabular-nums;">Otomatis (5 Menit)</div>
+            </div>
+            <div class="p-3 rounded-xl" style="background:var(--color-surface-2, rgba(0,0,0,0.03));border:1px solid var(--color-hairline);">
+                <div class="text-xs text-muted font-medium mb-1" style="color:var(--color-ink-mute);">Status Sesi</div>
+                <div class="text-sm font-bold flex items-center gap-1.5" style="color:#10b981;">
+                    <span style="width:6px;height:6px;border-radius:9999px;background:#10b981;display:inline-block;"></span>
+                    <span>Aktif &amp; Terverifikasi</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Control Buttons -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
+            <button id="sim-btn-1" type="button" onclick="simTriggerWarning(this)" class="btn btn-secondary justify-center text-xs font-bold" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.08);color:#d97706;">
+                <i data-lucide="bell-ring" style="width:15px;height:15px;margin-right:6px;"></i>
+                <span>1. Test Modal Warning (10s)</span>
+            </button>
+            <button id="sim-btn-2" type="button" onclick="simTriggerFastTimeout(this)" class="btn btn-secondary justify-center text-xs font-bold" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(225,29,72,0.3);background:rgba(225,29,72,0.08);color:#e11d48;">
+                <i data-lucide="zap" style="width:15px;height:15px;margin-right:6px;"></i>
+                <span>2. Test Fast Timeout (15s)</span>
+            </button>
+            <button id="sim-btn-3" type="button" onclick="simSendHeartbeat(this)" class="btn btn-secondary justify-center text-xs font-bold" style="padding:10px 14px;border-radius:12px;border:1px solid rgba(16,185,129,0.3);background:rgba(16,185,129,0.08);color:#059669;">
+                <i data-lucide="activity" style="width:15px;height:15px;margin-right:6px;"></i>
+                <span>3. Ping Heartbeat API</span>
+            </button>
+            <button id="sim-btn-4" type="button" onclick="simResetSession(this)" class="btn btn-secondary justify-center text-xs font-bold" style="padding:10px 14px;border-radius:12px;border:1px solid var(--color-hairline);">
+                <i data-lucide="rotate-ccw" style="width:15px;height:15px;margin-right:6px;"></i>
+                <span>4. Reset Standar (1 Jam)</span>
+            </button>
+        </div>
+
+        <!-- Live Simulation Console Log Header & Box -->
+        <div class="p-5 sm:p-6" style="border-radius:18px;border:1px solid #1e293b;background:#070a12;color:#f8fafc;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);margin-top:6px;">
+            <!-- Window Controls & Header Bar -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3.5" style="border-bottom:1px solid #1e293b;">
+                <div class="flex items-center gap-3">
+                    <!-- Traffic Lights -->
+                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <div style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></div>
+                        <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></div>
+                        <div style="width:10px;height:10px;border-radius:50%;background:#10b981;"></div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span style="font-family:'JetBrains Mono', monospace;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;">TERMINAL SIMULATOR OUTPUT</span>
+                        <span style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono', monospace;">LIVE TELEMETRY STREAM</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <button type="button" onclick="clearSimLog()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono', monospace;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
+                        <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                        <span>Bersihkan</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Console Body Output -->
+            <div class="p-3.5 sm:p-4" style="background:#040711;border:1px solid #1e293b;border-radius:10px;font-family:'JetBrains Mono', monospace;font-size:12px;line-height:1.8;color:#94a3b8;min-height:85px;max-height:180px;overflow-y:auto;" id="sim-log-console">
+                <span style="color: #64748b;">[Ready]</span> Simulator sesi siap digunakan. Silakan klik salah satu tombol uji di atas untuk menguji alur secara instan.
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- 3. TERMINAL CLI INTEGRATION & QUICK CHEATSHEET                             -->
     <!-- ========================================================================= -->
     <div class="card p-5 sm:p-6" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:#070a12;color:#f8fafc;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);">
@@ -282,6 +382,162 @@ function fallbackCopy(text, callback) {
         if (ok && callback) callback();
     } catch(e) {}
     document.body.removeChild(ta);
+}
+
+/* =========================================================================
+   SESSION TIMEOUT SIMULATOR (TRIAL HELPERS WITH ANTI-SPAM COOLDOWN)
+   ========================================================================= */
+function appendSimLog(msg, type = 'info') {
+    var consoleEl = document.getElementById('sim-log-console');
+    if (!consoleEl) return;
+    var now = new Date().toTimeString().split(' ')[0];
+    var color = '#94a3b8';
+    if (type === 'success') color = '#10b981';
+    if (type === 'warn') color = '#f59e0b';
+    if (type === 'error') color = '#ef4444';
+    if (type === 'primary') color = '#38bdf8';
+    
+    var line = document.createElement('div');
+    line.style.padding = '3px 0';
+    line.style.lineHeight = '1.6';
+    line.innerHTML = '<span style="color:#64748b;font-weight:600;">[' + now + ']</span> <span style="color:' + color + ';">' + msg + '</span>';
+    consoleEl.appendChild(line);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+}
+
+function clearSimLog() {
+    var consoleEl = document.getElementById('sim-log-console');
+    if (!consoleEl) return;
+    consoleEl.innerHTML = '<span style="color:#64748b;">[Ready]</span> Log telah dibersihkan.';
+}
+
+function simTriggerWarning(btn) {
+    if (btn && btn.disabled) return;
+    if (btn) {
+        btn.disabled = true;
+        setTimeout(function() { btn.disabled = false; }, 1200);
+    }
+
+    appendSimLog('Memicu modal peringatan countdown trial (10 detik)...', 'warn');
+    if (window.SessionTimeoutEngine) {
+        window.SessionTimeoutEngine.timeoutSeconds = 10;
+        window.SessionTimeoutEngine.warningSeconds = 10;
+        window.SessionTimeoutEngine._lastActivityTime = Date.now();
+        window.SessionTimeoutEngine._showWarning(10);
+        var tVal = document.getElementById('sim-timeout-val');
+        var wVal = document.getElementById('sim-warning-val');
+        var sBadge = document.getElementById('sim-status-badge');
+        if (tVal) tVal.textContent = '10s (Trial Mode)';
+        if (wVal) wVal.textContent = '10s (Trial Mode)';
+        if (sBadge) {
+            sBadge.textContent = 'Modal Testing (10s)';
+            sBadge.style.color = '#d97706';
+        }
+        appendSimLog('Modal peringatan muncul! Latar belakang di-freeze. Coba klik "Lanjutkan Sesi".', 'success');
+    } else {
+        appendSimLog('SessionTimeoutEngine tidak ditemukan.', 'error');
+    }
+}
+
+function simTriggerFastTimeout(btn) {
+    if (btn && btn.disabled) return;
+    if (btn) {
+        btn.disabled = true;
+        setTimeout(function() { btn.disabled = false; }, 1500);
+    }
+
+    appendSimLog('Mengaktifkan mode Fast Timeout: 15 detik (Warning di 5s, Auto-Logout di 0s)...', 'warn');
+    if (window.SessionTimeoutEngine) {
+        window.SessionTimeoutEngine.timeoutSeconds = 15;
+        window.SessionTimeoutEngine.warningSeconds = 5;
+        window.SessionTimeoutEngine._lastActivityTime = Date.now();
+        var tVal = document.getElementById('sim-timeout-val');
+        var wVal = document.getElementById('sim-warning-val');
+        var sBadge = document.getElementById('sim-status-badge');
+        if (tVal) tVal.textContent = '15s (Trial Mode)';
+        if (wVal) wVal.textContent = '5s (Trial Mode)';
+        if (sBadge) {
+            sBadge.textContent = 'Trial Running (15s)';
+            sBadge.style.color = '#ef4444';
+        }
+        appendSimLog('Sistem akan idle 10 detik, lalu modal countdown muncul 5 detik, kemudian auto-logout.', 'primary');
+    }
+}
+
+function simSendHeartbeat(btn) {
+    if (btn && btn.disabled) return;
+    var origText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.65';
+        btn.innerHTML = '<span>Pinging...</span>';
+    }
+
+    appendSimLog('Mengirim live request ke POST /api/auth/heartbeat...', 'primary');
+    var start = performance.now();
+    var heartbeatUrl = (window.APP_BASE_PATH || '') + '/api/auth/heartbeat';
+    
+    fetch(heartbeatUrl, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var latency = Math.round(performance.now() - start);
+        if (data && data.success) {
+            appendSimLog('✓ Heartbeat Berhasil (' + latency + 'ms) &mdash; Sesi PHP di server ter-refresh!', 'success');
+            var timeEl = document.getElementById('sim-last-act-time');
+            if (timeEl) timeEl.textContent = new Date().toLocaleTimeString() + ' WIB';
+        } else {
+            appendSimLog('✗ Heartbeat Gagal: ' + JSON.stringify(data), 'error');
+        }
+    })
+    .catch(function(err) {
+        appendSimLog('✗ Network Error Heartbeat: ' + err.message, 'error');
+    })
+    .finally(function() {
+        setTimeout(function() {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = origText;
+                if (window.lucide) window.lucide.createIcons();
+            }
+        }, 600);
+    });
+}
+
+function simResetSession(btn) {
+    if (btn && btn.disabled) return;
+    if (btn) {
+        btn.disabled = true;
+        setTimeout(function() { btn.disabled = false; }, 1000);
+    }
+
+    if (window.SessionTimeoutEngine) {
+        var alreadyStandard = window.SessionTimeoutEngine.timeoutSeconds === 3600 && !window.SessionTimeoutEngine._warningShown;
+        window.SessionTimeoutEngine.timeoutSeconds = 3600;
+        window.SessionTimeoutEngine.warningSeconds = 300;
+        window.SessionTimeoutEngine.extendSession();
+        var tVal = document.getElementById('sim-timeout-val');
+        var wVal = document.getElementById('sim-warning-val');
+        var sBadge = document.getElementById('sim-status-badge');
+        if (tVal) tVal.textContent = '3600s (1 Jam)';
+        if (wVal) wVal.textContent = '300s (5 Menit)';
+        if (sBadge) {
+            sBadge.textContent = 'Engine Online';
+            sBadge.style.color = '#10b981';
+        }
+        
+        if (alreadyStandard) {
+            appendSimLog('ℹ Sesi sudah dalam mode standar produksi (1 Jam / 3.600s).', 'info');
+        } else {
+            appendSimLog('✓ Sesi berhasil direset kembali ke mode produksi (1 Jam / 3.600s).', 'success');
+        }
+    }
 }
 </script>
 

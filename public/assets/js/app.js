@@ -766,6 +766,12 @@
     const logoutTrigger = e.target.closest('a[href$="/logout"], a[href*="/logout?"], [data-action="logout"]');
     if (!logoutTrigger) return;
 
+    // Jika trigger berasal dari modal inactivity timeout (#ksnack-session-warning-modal) atau ber-atribut data-instant-logout:
+    // Jangan munculkan pop up konfirmasi ganda, langsung eksekusi logout instan
+    if (logoutTrigger.closest('#ksnack-session-warning-modal') || logoutTrigger.id === 'ksnack-session-logout-btn' || logoutTrigger.hasAttribute('data-instant-logout')) {
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -1702,32 +1708,263 @@
   };
 
   /* =====================================================================
-     10. SESSION TIMEOUT ENGINE (Auto-Logout 12 Jam & Sinkronisasi Sesi)
+     10. SESSION TIMEOUT ENGINE (Sliding Inactivity 1 Jam + Interactive Warning)
      ===================================================================== */
   const SessionTimeoutEngine = {
     _isTriggered: false,
     _intervalId: null,
+    _lastActivityTime: Date.now(),
+    _lastHeartbeatTime: Date.now(),
+    _warningShown: false,
+    _modalEl: null,
+    _countdownEl: null,
+
+    // Konfigurasi default (didukung sinkronisasi via window.KSNACK_SESSION)
+    timeoutSeconds: 3600,      // 1 Jam (3600 detik)
+    warningSeconds: 300,       // 5 Menit countdown sebelum logout otomatis
+    heartbeatInterval: 300000, // 5 Menit (300.000 ms) antara heartbeat ping
 
     init() {
-      if (!window.KSNACK_SESSION || !window.KSNACK_SESSION.expiresAt) return;
+      if (!window.KSNACK_SESSION) return;
 
-      const checkExpiry = () => {
-        if (this._isTriggered) return;
-        const now = Math.floor(Date.now() / 1000);
-        if (now >= window.KSNACK_SESSION.expiresAt) {
-          this.handleTimeout();
+      if (window.KSNACK_SESSION.timeoutSeconds) {
+        this.timeoutSeconds = parseInt(window.KSNACK_SESSION.timeoutSeconds, 10) || 3600;
+      }
+      if (window.KSNACK_SESSION.warningSeconds) {
+        this.warningSeconds = parseInt(window.KSNACK_SESSION.warningSeconds, 10) || 300;
+      }
+      if (window.KSNACK_SESSION.heartbeatInterval) {
+        this.heartbeatInterval = parseInt(window.KSNACK_SESSION.heartbeatInterval, 10) || 300000;
+      }
+
+      this._lastActivityTime = Date.now();
+      this._lastHeartbeatTime = Date.now();
+
+      // Pasang event listener aktivitas pengguna (Throttled & Passive)
+      this._attachActivityListeners();
+
+      // Bangun modal peringatan di DOM
+      this._createWarningModal();
+
+      // Evaluasi timer berkala tiap detik
+      this._intervalId = setInterval(() => this._tick(), 1000);
+
+      // Cek seketika saat user kembali membuka tab browser dari sleep/background
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          this._tick();
+        }
+      });
+    },
+
+    _attachActivityListeners() {
+      const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+      let lastRecorded = 0;
+
+      const onUserActivity = () => {
+        // JIKA warning modal sedang aktif/terbuka:
+        // Jangan pernah perpanjang sesi otomatis lewat klik/scroll sembarangan!
+        // Pengguna WAJIB secara sadar mengklik tombol "Lanjutkan Sesi".
+        if (this._warningShown) {
+          return;
+        }
+
+        const now = Date.now();
+        // Throttle pencatatan aktivitas lokal maksimal 1x per 2 detik
+        if (now - lastRecorded < 2000) return;
+        lastRecorded = now;
+        this._lastActivityTime = now;
+
+        // Jika waktu sejak heartbeat terakhir sudah melebihi interval (5 menit), kirim heartbeat otomatis
+        if (now - this._lastHeartbeatTime >= this.heartbeatInterval) {
+          this.sendHeartbeat();
         }
       };
 
-      // Periodic check setiap 30 detik
-      this._intervalId = setInterval(checkExpiry, 30000);
-
-      // Cek seketika saat user kembali fokus membuka tab browser
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          checkExpiry();
-        }
+      activityEvents.forEach(evt => {
+        window.addEventListener(evt, onUserActivity, { passive: true });
       });
+    },
+
+    _createWarningModal() {
+      if (document.getElementById('ksnack-session-warning-modal')) {
+        this._modalEl = document.getElementById('ksnack-session-warning-modal');
+        this._countdownEl = document.getElementById('ksnack-session-countdown');
+        return;
+      }
+
+      const logoutUrl = window.KSNACK_SESSION?.logoutUrl || ((window.APP_BASE_PATH || '') + '/logout?reason=timeout');
+
+      const modalHtml = `
+        <div id="ksnack-session-warning-modal" class="session-warning-backdrop modal-backdrop confirm-overlay" data-popup-backdrop="true" role="dialog" aria-modal="true" style="position:fixed;inset:0;background:rgba(9,13,22,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:999999;display:none;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity 0.25s ease-out;">
+          <style>
+            .session-warning-box { background: #ffffff; color: #0f172a; border: 1px solid rgba(226,232,240,0.8); }
+            .dark .session-warning-box { background: #0f172a !important; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.12) !important; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7) !important; }
+            .dark .session-warning-box h3 { color: #f8fafc !important; }
+            .dark .session-warning-box p { color: #94a3b8 !important; }
+            .dark .session-warning-box #ksnack-session-logout-btn { color: #94a3b8 !important; }
+            .dark .session-warning-box #ksnack-session-logout-btn:hover { color: #f8fafc !important; }
+          </style>
+          <div class="session-warning-box modal-box confirm-modal" style="border-radius:24px;max-width:420px;width:100%;padding:32px 28px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);text-align:center;transform:scale(0.95);transition:transform 0.25s ease-out;position:relative;">
+            <div style="width:60px;height:60px;margin:0 auto 16px;border-radius:50%;background:#fee2e2;color:#e11d48;display:flex;align-items:center;justify-content:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Sesi Tidak Aktif</h3>
+            <p style="font-size:13.5px;color:#64748b;line-height:1.5;margin-bottom:20px;">
+              Tidak ada aktivitas selama beberapa waktu. Demi keamanan, sesi login Anda akan otomatis berakhir dalam:
+            </p>
+            <div style="font-family:inherit;font-variant-numeric:tabular-nums;font-size:36px;font-weight:800;color:#e11d48;margin-bottom:24px;letter-spacing:1px;" id="ksnack-session-countdown">
+              05:00
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button id="ksnack-session-extend-btn" type="button" style="width:100%;padding:12px 20px;border-radius:12px;background:#e11d48;color:#ffffff;font-weight:700;font-size:14px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(225,29,72,0.35);transition:all 0.2s;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                Lanjutkan Sesi
+              </button>
+              <button id="ksnack-session-logout-btn" type="button" data-instant-logout="true" style="width:100%;padding:10px 20px;border-radius:12px;background:transparent;color:#64748b;font-weight:600;font-size:13px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;">
+                Keluar Sekarang
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const div = document.createElement('div');
+      div.innerHTML = modalHtml.trim();
+      document.body.appendChild(div.firstElementChild);
+
+      this._modalEl = document.getElementById('ksnack-session-warning-modal');
+      this._countdownEl = document.getElementById('ksnack-session-countdown');
+
+      const extendBtn = document.getElementById('ksnack-session-extend-btn');
+      if (extendBtn) {
+        extendBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.extendSession();
+        });
+      }
+
+      const logoutBtn = document.getElementById('ksnack-session-logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+          if (typeof AppAction !== 'undefined') AppAction.show('Mengakhiri sesi sistem...');
+          try { sessionStorage.setItem('app_action_triggered', 'true'); } catch (err) {}
+          window.location.replace(logoutUrl);
+        });
+      }
+    },
+
+    _tick() {
+      if (this._isTriggered) return;
+
+      const idleSeconds = Math.floor((Date.now() - this._lastActivityTime) / 1000);
+      const remainingSeconds = this.timeoutSeconds - idleSeconds;
+
+      if (remainingSeconds <= 0) {
+        this.handleTimeout();
+        return;
+      }
+
+      if (remainingSeconds <= this.warningSeconds) {
+        this._showWarning(remainingSeconds);
+      } else if (this._warningShown) {
+        this._hideWarning();
+      }
+    },
+
+    _showWarning(remainingSeconds) {
+      if (!this._modalEl) this._createWarningModal();
+      if (!this._modalEl) return;
+
+      this._warningShown = true;
+      const mins = Math.floor(remainingSeconds / 60);
+      const secs = remainingSeconds % 60;
+      const formattedTime = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+      if (this._countdownEl) {
+        this._countdownEl.textContent = formattedTime;
+      }
+
+      this._modalEl.style.display = 'flex';
+      if (window.PopupManager) window.PopupManager.freeze(this._modalEl);
+      document.body.classList.add('modal-open');
+
+      requestAnimationFrame(() => {
+        this._modalEl.style.opacity = '1';
+        const box = this._modalEl.querySelector('.session-warning-box');
+        if (box) box.style.transform = 'scale(1)';
+      });
+    },
+
+    _hideWarning() {
+      this._warningShown = false;
+      if (!this._modalEl) return;
+
+      if (window.PopupManager) window.PopupManager.unfreeze(this._modalEl);
+      document.body.classList.remove('modal-open');
+
+      this._modalEl.style.opacity = '0';
+      const box = this._modalEl.querySelector('.session-warning-box');
+      if (box) box.style.transform = 'scale(0.95)';
+      setTimeout(() => {
+        if (!this._warningShown && this._modalEl) {
+          this._modalEl.style.display = 'none';
+        }
+      }, 250);
+    },
+
+    sendHeartbeat() {
+      this._lastHeartbeatTime = Date.now();
+      const heartbeatUrl = window.KSNACK_SESSION?.heartbeatUrl || ((window.APP_BASE_PATH || '') + '/api/auth/heartbeat');
+
+      fetch(heartbeatUrl, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        }
+      })
+      .then(res => {
+        if (res.status === 401) {
+          this.handleTimeout();
+          return null;
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (data && data.success) {
+          this._lastActivityTime = Date.now();
+        }
+      })
+      .catch(() => {});
+    },
+
+    extendSession() {
+      const defaultTimeout = window.KSNACK_SESSION?.timeoutSeconds || 3600;
+      const defaultWarning = window.KSNACK_SESSION?.warningSeconds || 300;
+      this.timeoutSeconds = defaultTimeout;
+      this.warningSeconds = defaultWarning;
+      this._lastActivityTime = Date.now();
+      this._hideWarning();
+      this.sendHeartbeat();
+
+      const tVal = document.getElementById('sim-timeout-val');
+      const wVal = document.getElementById('sim-warning-val');
+      const sBadge = document.getElementById('sim-status-badge');
+      if (tVal) tVal.textContent = `${defaultTimeout}s (1 Jam)`;
+      if (wVal) wVal.textContent = `${defaultWarning}s (5 Menit)`;
+      if (sBadge) {
+        sBadge.textContent = 'Engine Online';
+        sBadge.style.color = 'var(--color-success)';
+      }
+      if (typeof appendSimLog === 'function') {
+        appendSimLog('✓ Sesi berhasil diperpanjang oleh pengguna. Modal ditutup dan masa aktif kembali ke 1 jam (3.600s).', 'success');
+      }
     },
 
     handleTimeout() {
@@ -1735,10 +1972,12 @@
       this._isTriggered = true;
       if (this._intervalId) clearInterval(this._intervalId);
 
-      if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
-      if (typeof AppAction !== 'undefined') AppAction.show('Sesi telah berakhir (12 jam)...');
+      this._hideWarning();
 
-      const logoutUrl = window.KSNACK_SESSION.logoutUrl || ((window.APP_BASE_PATH || '') + '/logout?reason=timeout');
+      if (typeof AppSkeleton !== 'undefined') AppSkeleton.hide();
+      if (typeof AppAction !== 'undefined') AppAction.show('Sesi telah berakhir karena tidak ada aktivitas (1 jam)...');
+
+      const logoutUrl = window.KSNACK_SESSION?.logoutUrl || ((window.APP_BASE_PATH || '') + '/logout?reason=timeout');
       window.location.replace(logoutUrl);
     }
   };

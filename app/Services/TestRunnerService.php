@@ -166,7 +166,7 @@ class TestRunnerService
             'file'        => 'AuthAndRbacLifecycleTest.php',
             'title'       => 'Authentication, Bcrypt & RBAC Matrix',
             'category'    => 'Security & RBAC',
-            'description' => 'Verifikasi hash password Bcrypt, otentikasi sesi 12 jam, dan matriks hak akses multi-peran.'
+            'description' => 'Verifikasi hash password Bcrypt, otentikasi sesi sliding inactivity 1 jam, dan matriks hak akses multi-peran.'
         ],
         'security_reconcile' => [
             'file'        => 'SecurityAndReconciliationTest.php',

@@ -13,24 +13,25 @@ use Database;
 
 class Auth
 {
-    public const MAX_SESSION_LIFETIME = 43200; // 12 jam (12 * 3600 detik)
+    public const INACTIVITY_TIMEOUT = 3600; // 1 jam (3600 detik) sliding inactivity timeout
+    public const MAX_SESSION_LIFETIME = 3600; // Alias kompatibilitas
     private const VERSION_FILE = ROOT_PATH . '/cache/permissions_version.txt';
 
     public static function init(): void
     {
         if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-            ini_set('session.gc_maxlifetime', '43200');
+            ini_set('session.gc_maxlifetime', '86400');
             session_start([
                 'cookie_httponly' => true,
                 'cookie_samesite' => 'Lax',
-                'cookie_lifetime' => 43200,
-                'gc_maxlifetime'  => 43200
+                'cookie_lifetime' => 0,
+                'gc_maxlifetime'  => 86400
             ]);
         }
     }
 
     /**
-     * Memeriksa apakah sesi login telah melampaui batas waktu maksimal 12 jam
+     * Memeriksa apakah sesi login telah melampaui batas waktu tidak aktif (1 jam / 3.600 detik)
      */
     public static function isSessionExpired(): bool
     {
@@ -38,11 +39,24 @@ class Auth
         if (empty($_SESSION['user']['id'])) {
             return false;
         }
-        if (empty($_SESSION['login_time'])) {
+        $lastActivity = $_SESSION['last_activity'] ?? $_SESSION['login_time'] ?? null;
+        if (empty($lastActivity)) {
+            $_SESSION['last_activity'] = time();
             $_SESSION['login_time'] = time();
             return false;
         }
-        return (time() - (int)$_SESSION['login_time']) >= self::MAX_SESSION_LIFETIME;
+        return (time() - (int)$lastActivity) >= self::INACTIVITY_TIMEOUT;
+    }
+
+    /**
+     * Memperbarui timestamp aktivitas terakhir pengguna (sliding session refresh)
+     */
+    public static function refreshActivity(): void
+    {
+        self::init();
+        if (!empty($_SESSION['user']['id'])) {
+            $_SESSION['last_activity'] = time();
+        }
     }
 
     public static function check(): bool
@@ -402,6 +416,7 @@ class Auth
         $_SESSION['user'] = $userData;
         $_SESSION['permissions_version'] = -1; // Akan di-sync pada request berikutnya
         $_SESSION['login_time'] = time();
+        $_SESSION['last_activity'] = time();
 
         self::syncPermissions();
     }
@@ -409,20 +424,20 @@ class Auth
     public static function logout(): void
     {
         self::init();
-        unset($_SESSION['user'], $_SESSION['permissions'], $_SESSION['permissions_version'], $_SESSION['login_time']);
+        unset($_SESSION['user'], $_SESSION['permissions'], $_SESSION['permissions_version'], $_SESSION['login_time'], $_SESSION['last_activity']);
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_destroy();
         }
     }
 
     /**
-     * Middleware check: Wajib login & validasi durasi sesi 12 jam
+     * Middleware check: Wajib login & validasi durasi tidak aktif (inactivity timeout 1 jam)
      */
     public static function requireLogin(): void
     {
         self::init();
 
-        // 1. Validasi batas waktu maksimal sesi login (12 jam)
+        // 1. Validasi batas waktu tidak aktif sesi login (1 jam)
         if (self::isSessionExpired()) {
             $user = self::user();
             $userName = $user['nama_lengkap'] ?? self::name() ?? 'Pengguna';
@@ -434,7 +449,7 @@ class Auth
                 \App\Helpers\ActivityLog::log(
                     'keamanan',
                     'LOGOUT_TIMEOUT',
-                    "Sesi pengguna {$userName} diakhiri otomatis karena melebihi batas waktu 12 jam",
+                    "Sesi pengguna {$userName} diakhiri otomatis karena tidak ada aktivitas selama 1 jam",
                     'pengguna',
                     $userId
                 );
@@ -449,7 +464,7 @@ class Auth
                 echo json_encode([
                     'success' => false,
                     'timeout' => true,
-                    'error'   => 'Sesi login telah berakhir secara otomatis karena melebihi batas waktu 12 jam.',
+                    'error'   => 'Sesi login telah berakhir secara otomatis karena tidak ada aktivitas selama 1 jam.',
                     'redirect'=> Router::url('/login?timeout=1')
                 ]);
                 exit;
@@ -478,6 +493,9 @@ class Auth
             header('Location: ' . Router::url('/login?illegal=1'));
             exit;
         }
+
+        // 3. Perbarui timestamp aktivitas terakhir pada setiap request aktif
+        self::refreshActivity();
 
         self::syncPermissions();
     }

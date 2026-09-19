@@ -43,14 +43,14 @@ header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-i
 header("Referrer-Policy: strict-origin-when-cross-origin");
 header("Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()");
 
-// 1. Session Initialization (Maksimal 12 jam / 43.200 detik)
-ini_set('session.gc_maxlifetime', '43200');
+// 1. Session Initialization (Sliding Inactivity Timeout 1 Jam / 3.600 detik)
+ini_set('session.gc_maxlifetime', '86400');
 if (session_status() === PHP_SESSION_NONE) {
     session_start([
         'cookie_httponly' => true,
         'cookie_samesite' => 'Lax',
-        'cookie_lifetime' => 43200,
-        'gc_maxlifetime'  => 43200
+        'cookie_lifetime' => 0,
+        'gc_maxlifetime'  => 86400
     ]);
 }
 
@@ -117,6 +117,7 @@ Router::get('/login', [AuthController::class, 'showLogin']);
 Router::post('/login', [AuthController::class, 'login']);
 Router::get('/logout', [AuthController::class, 'logout']);
 Router::post('/logout', [AuthController::class, 'logout']);
+Router::post('/api/auth/heartbeat', [AuthController::class, 'heartbeat']);
 
 // --- CLOUDFLARE R2 & LOCAL CACHE MEDIA PROXY ---
 Router::get('/media/view', [MediaController::class, 'serveFile']);
