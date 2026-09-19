@@ -1180,7 +1180,7 @@ ob_start();
     <!-- 5. POP-UP MODAL DETAIL LENGKAP BERTAB (SPACIOUS & BEAUTIFULLY SPACED)      -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDetailModal" x-cloak class="modal-backdrop" @click.self="closeDetailModal()" style="z-index: 9999;">
+    <div x-show="showDetailModal" x-cloak class="modal-backdrop" style="z-index: 9999;">
         <div class="modal-box modal-box-lg" style="max-width: 760px; padding: 0; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;" @click.stop>
             
             <!-- MOBILE PULL HANDLE -->
@@ -1850,6 +1850,8 @@ ob_start();
                 <template x-if="photoModalUrl">
                     <img :src="photoModalUrl" 
                          alt="Foto Bukti Pengiriman" 
+                         loading="lazy"
+                         decoding="async"
                          x-show="!photoLoadError"
                          @load="onPhotoImageLoaded()"
                          @error="photoLoadError = true; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });"
@@ -1914,7 +1916,7 @@ ob_start();
     <!-- 6. POP-UP MODAL DETAIL LENGKAP TUGAS BELANJA PO (BERTAB & MULTI-MODE)     -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showShoppingDetailModal" x-cloak class="modal-backdrop" @click.self="closeShoppingDetailModal()" style="z-index: 9999;">
+    <div x-show="showShoppingDetailModal" x-cloak class="modal-backdrop" style="z-index: 9999;">
         <div class="modal-box modal-box-lg" style="max-width: 760px; padding: 0; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;" @click.stop>
             
             <!-- MOBILE PULL HANDLE -->
@@ -2320,26 +2322,34 @@ ob_start();
                                     </button>
                                 </div>
                                 <div style="max-width: 320px; border-radius: 14px; overflow: hidden; border: 1px solid var(--color-hairline); cursor: pointer;" @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))">
-                                    <img :src="'<?= Router::url('/') ?>' + (activeShoppingTask.url_foto_nota || '').replace(/^\//, '')" alt="Nota Vendor" style="width: 100%; height: auto; max-height: 200px; object-fit: cover;">
+                                    <img :src="(activeShoppingTask.url_foto_nota || '').startsWith('http') ? activeShoppingTask.url_foto_nota : ('<?= Router::url('/') ?>' + (activeShoppingTask.url_foto_nota || '').replace(/^\//, ''))" 
+                                         alt="Nota Vendor" 
+                                         loading="lazy" 
+                                         decoding="async" 
+                                         style="width: 100%; height: auto; max-height: 200px; object-fit: cover;">
                                 </div>
                             </div>
                         </template>
 
-                        <!-- Box Bukti Foto Kendala -->
+                        <!-- Display Existing Issue Photo If Any -->
                         <template x-if="activeShoppingTask?.foto_bukti_kendala">
-                            <div style="background: #fff1f2; border: 1px solid #fecaca; border-radius: 20px; padding: 20px 24px;" class="space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <div class="text-xs font-bold uppercase tracking-wider text-rose-800 flex items-center gap-2">
-                                        <i data-lucide="alert-octagon" style="width: 15px; height: 15px; color: #e11d48;"></i>
-                                        <span>Foto Bukti Kendala Belanja:</span>
-                                    </div>
+                            <div class="mt-3 p-3 bg-red-50/80 rounded-xl border border-red-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-semibold text-red-800 flex items-center gap-1.5">
+                                        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-red-600"></i>
+                                        Foto Bukti Kendala Belanja
+                                    </span>
                                     <button type="button" @click="openPhotoViewer(activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala - ' + (activeShoppingTask?.nama_pemasok || ''))" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 10px; border-radius: 8px; color: #e11d48; border-color: #fecaca;">
-                                        <i data-lucide="zoom-in" style="width: 13px; height: 13px;"></i>
-                                        <span>Perbesar</span>
+                                        <i data-lucide="maximize-2" class="w-3 h-3"></i>
+                                        Perbesar
                                     </button>
                                 </div>
                                 <div style="max-width: 320px; border-radius: 14px; overflow: hidden; border: 1px solid #fca5a5; cursor: pointer;" @click="openPhotoViewer(activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala - ' + (activeShoppingTask?.nama_pemasok || ''))">
-                                    <img :src="'<?= Router::url('/') ?>' + (activeShoppingTask.foto_bukti_kendala || '').replace(/^\//, '')" alt="Foto Kendala" style="width: 100%; height: auto; max-height: 200px; object-fit: cover;">
+                                    <img :src="(activeShoppingTask.foto_bukti_kendala || '').startsWith('http') ? activeShoppingTask.foto_bukti_kendala : ('<?= Router::url('/') ?>' + (activeShoppingTask.foto_bukti_kendala || '').replace(/^\//, ''))" 
+                                         alt="Foto Kendala" 
+                                         loading="lazy" 
+                                         decoding="async" 
+                                         style="width: 100%; height: auto; max-height: 200px; object-fit: cover;">
                                 </div>
                             </div>
                         </template>
@@ -2799,8 +2809,10 @@ function driverDeliveryApp() {
         openPhotoViewer(url, title, subtitle) {
             if (!url) return;
             this.resetZoom();
-            this.photoLoadError = false;
-            this.photoModalUrl = '<?= Router::url('/') ?>' + url.replace(/^\//, '');
+            const cleanUrl = String(url).trim();
+            this.photoModalUrl = (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) 
+                ? cleanUrl 
+                : ('<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, ''));
             this.photoModalTitle = title || 'Foto Bukti Pengiriman';
             this.photoModalSubtitle = subtitle || '';
             this.showPhotoModal = true;

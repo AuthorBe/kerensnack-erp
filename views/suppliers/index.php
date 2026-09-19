@@ -238,15 +238,12 @@ ob_start();
     <?php if (Auth::can('master.suppliers_manage')): ?>
     <template x-teleport="body">
     <div x-show="showModal" x-cloak class="modal-backdrop">
-        <div @click.away="showModal = false" class="modal-box" style="max-width:620px;max-height:90vh;overflow-y:auto;padding:24px;">
+        <div class="modal-box" style="max-width:620px;max-height:90vh;overflow-y:auto;padding:24px;">
             <div class="modal-header" style="margin-bottom:18px;">
                 <div>
                     <div class="modal-title" x-text="isEdit ? 'Edit Master Pemasok' : 'Tambah Pemasok Baru'"></div>
                     <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Lengkapi data vendor, titik presisi peta, kontak PIC, dan syarat pembayaran</div>
                 </div>
-                <button @click="showModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:18px;height:18px;"></i>
-                </button>
             </div>
 
             <form :action="isEdit ? '<?= Router::url('/suppliers/update') ?>' : '<?= Router::url('/suppliers/store') ?>'" method="POST" style="display:flex;flex-direction:column;gap:16px;">

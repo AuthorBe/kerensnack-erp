@@ -343,6 +343,31 @@ runTest("6. Database Constraint: Menolak status draf_n8n pada surat_jalan", func
 });
 
 // ------------------------------------------------------------------
+// 7. VIEW DELIVERIES INDEX CLEANLINESS
+// ------------------------------------------------------------------
+runTest("7. Views deliveries/index.php: Bebas dari input status terlarang 'disetujui_owner'", function() {
+    $fileContent = file_get_contents(APP_ROOT . '/views/deliveries/index.php');
+    if (strpos($fileContent, 'value="disetujui_owner"') !== false) {
+        return "views/deliveries/index.php masih mengirim atau memuat value='disetujui_owner'.";
+    }
+    if (strpos($fileContent, 'name="status_surat_jalan" value="siap_kirim"') === false) {
+        return "views/deliveries/index.php belum menyertakan input status 'siap_kirim' yang valid.";
+    }
+    return true;
+});
+
+// ------------------------------------------------------------------
+// 8. DELIVERYCONTROLLER DEFENSIVE INPUT SANITIZATION
+// ------------------------------------------------------------------
+runTest("8. DeliveryController::store: Sanitasi input otomatis menormalkan input invalid ke 'siap_kirim'", function() {
+    $fileContent = file_get_contents(APP_ROOT . '/app/Controllers/DeliveryController.php');
+    if (strpos($fileContent, "in_array(\$status, \$validStatuses") === false) {
+        return "DeliveryController::store() belum memiliki whitelist sanitasi status_surat_jalan.";
+    }
+    return true;
+});
+
+// ------------------------------------------------------------------
 // SUMMARY
 // ------------------------------------------------------------------
 echo "\n============================================================\n";

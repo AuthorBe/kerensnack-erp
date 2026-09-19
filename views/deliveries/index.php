@@ -46,7 +46,7 @@ ob_start();
             <div>
                 <div class="stat-card-label">Sedang Dalam Rute</div>
                 <div class="stat-card-value" style="color:#3b82f6;">
-                    <?= count(array_filter($deliveries, fn($d) => in_array($d['status_surat_jalan'], ['disetujui_owner', 'sedang_dikirim']))) ?>
+                    <?= count(array_filter($deliveries, fn($d) => in_array($d['status_surat_jalan'], ['siap_kirim', 'sedang_dikirim']))) ?>
                 </div>
                 <div style="font-size:11px;color:var(--color-ink-mute-2);margin-top:2px;">Mobil delivery bergerak</div>
             </div>
@@ -77,7 +77,7 @@ ob_start();
 
                 <select x-model="filterStatus" class="form-input" style="height:38px;font-size:13px;max-width:180px;">
                     <option value="all">Semua Status</option>
-                    <option value="disetujui_owner">Siap Kirim</option>
+                    <option value="siap_kirim">Siap Kirim</option>
                     <option value="sedang_dikirim">Sedang Dikirim</option>
                     <option value="selesai_diterima">Selesai (Diterima)</option>
                 </select>
@@ -229,9 +229,6 @@ ob_start();
         <div class="modal-box" style="max-width:500px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title">Terbitkan Surat Jalan Pengiriman</div>
-                <button @click="showAddModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/deliveries/store') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -274,7 +271,7 @@ ob_start();
                     <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
                     <span>Surat Jalan otomatis berstatus <strong>Siap Dikirim</strong> dan langsung dialokasikan ke jadwal rute driver.</span>
                 </div>
-                <input type="hidden" name="status_surat_jalan" value="disetujui_owner">
+                <input type="hidden" name="status_surat_jalan" value="siap_kirim">
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
                     <button type="button" @click="showAddModal = false" class="btn btn-secondary">Batal</button>
@@ -294,7 +291,7 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can(['deliveries.create', 'deliveries.update_all'])): ?>
     <template x-teleport="body">
-    <div x-show="showEditModal" x-cloak class="modal-backdrop" @click.self="showEditModal = false" @keydown.escape.window="showEditModal = false" style="z-index:9999;">
+    <div x-show="showEditModal" x-cloak class="modal-backdrop" @keydown.escape.window="showEditModal = false" style="z-index:9999;">
         <div class="modal-box" style="max-width:500px;padding:24px;">
             <div class="modal-header" style="margin-bottom:16px;">
                 <div class="flex items-center gap-3">
@@ -306,9 +303,6 @@ ob_start();
                         <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Ubah Pengemudi/Sales &amp; Tanggal Pengiriman</div>
                     </div>
                 </div>
-                <button @click="showEditModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/deliveries/update') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">

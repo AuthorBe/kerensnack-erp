@@ -279,13 +279,10 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can('cash.manage_accounts')): ?>
     <template x-teleport="body">
-    <div x-show="showAccountModal" x-cloak class="modal-backdrop" @click.self="showAccountModal = false">
+    <div x-show="showAccountModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
             <div class="modal-header">
                 <div class="modal-title" x-text="isEditAccount ? 'Edit Akun Kas / Bank' : 'Tambah Akun Kas / Bank Baru'"></div>
-                <button type="button" @click="showAccountModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form :action="isEditAccount ? '<?= Router::url('/cash/update-account') ?>' : '<?= Router::url('/cash/store-account') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -356,7 +353,7 @@ ob_start();
     <!-- MODAL 2: KONFIRMASI HAPUS AKUN KAS                                        -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDeleteModal" x-cloak class="modal-backdrop" @click.self="showDeleteModal = false">
+    <div x-show="showDeleteModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:420px;padding:24px;" @click.stop>
             <div class="modal-header">
                 <div style="display:flex; align-items:center; gap:8px;">
@@ -365,9 +362,6 @@ ob_start();
                     </div>
                     <div class="modal-title">Hapus Akun Kas</div>
                 </div>
-                <button type="button" @click="showDeleteModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <p style="font-size:13px; color:var(--color-ink); line-height:1.5;">

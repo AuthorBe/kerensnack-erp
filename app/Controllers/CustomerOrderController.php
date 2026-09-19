@@ -389,7 +389,7 @@ class CustomerOrderController extends Controller
             // 5. Riwayat Seluruh Surat Jalan Terkait Pesanan Ini (Termasuk Arsip Gagal Kirim)
             $sqlShipping = "
                 SELECT sj.id, sj.nomor_surat_jalan, sj.status_surat_jalan, sj.waktu_berangkat, sj.waktu_sampai,
-                       sj.bukti_terima_foto, sj.nama_penerima_toko, sj.dibuat_pada,
+                       sj.bukti_terima_foto, sj.foto_bukti_gagal, sj.nama_penerima_toko, sj.dibuat_pada,
                        k.nama_karyawan as nama_driver, k.nomor_polisi_kendaraan as nopol_driver, k.nomor_telepon as telp_driver,
                        w.nama_wilayah
                 FROM public.surat_jalan sj
@@ -399,6 +399,17 @@ class CustomerOrderController extends Controller
                 ORDER BY sj.dibuat_pada DESC
             ";
             $shippingHistory = Database::fetchAll($sqlShipping, ['id' => $id]);
+
+            // Generate presigned/proxy URLs untuk foto pengiriman di setiap riwayat surat jalan
+            foreach ($shippingHistory as &$sj) {
+                if (!empty($sj['bukti_terima_foto'])) {
+                    $sj['bukti_terima_foto'] = \App\Helpers\Upload::presignedUrl($sj['bukti_terima_foto']) ?: $sj['bukti_terima_foto'];
+                }
+                if (!empty($sj['foto_bukti_gagal'])) {
+                    $sj['foto_bukti_gagal'] = \App\Helpers\Upload::presignedUrl($sj['foto_bukti_gagal']) ?: $sj['foto_bukti_gagal'];
+                }
+            }
+            unset($sj);
 
             // 6. Audit Trail Aktivitas Terkait Pesanan Ini
             $sqlLogs = "
@@ -1718,6 +1729,11 @@ class CustomerOrderController extends Controller
             $this->flashError('Parameter update pengiriman tidak lengkap.');
             $this->redirect('/customer-orders');
             return;
+        }
+
+        $validStatuses = ['siap_kirim', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'gagal_kirim'];
+        if (!in_array($statusBaru, $validStatuses, true)) {
+            $statusBaru = 'siap_kirim';
         }
 
         try {

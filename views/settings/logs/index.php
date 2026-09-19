@@ -540,7 +540,7 @@ $roleThemes = [
     <!-- 5. MODAL SIDE-BY-SIDE VISUAL DIFF INSPECTOR                               -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDiffModal" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;" @click.self="showDiffModal = false">
+    <div x-show="showDiffModal" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
         <div class="modal-box modal-box-lg" style="max-width:760px;width:94vw;max-height:90vh;padding:0;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;background:var(--color-canvas);border:1.5px solid var(--color-hairline);box-shadow:0 25px 60px -15px rgba(0,0,0,0.25);" @click.stop>
             
             <!-- Mobile Pull Handle -->
@@ -610,12 +610,6 @@ $roleThemes = [
                             title="Salin rekaman ini dalam format JSON">
                         <i data-lucide="copy" style="width:13px;height:13px;"></i>
                         <span x-text="copiedJson ? 'Tersalin!' : 'Salin JSON'"></span>
-                    </button>
-                    <button type="button" @click="showDiffModal = false" 
-                            class="btn btn-ghost btn-sm" 
-                            style="width:36px;height:36px;padding:0;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--color-ink-mute);background:var(--color-canvas-soft);border:1px solid var(--color-hairline);" 
-                            title="Tutup Modal">
-                        <i data-lucide="x" style="width:18px;height:18px;"></i>
                     </button>
                 </div>
             </div>
@@ -807,7 +801,7 @@ $roleThemes = [
     <!-- ========================================================================= -->
     <?php if ($isDeveloper): ?>
     <template x-teleport="body">
-    <div x-show="showPruneModal" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;" @click.self="showPruneModal = false">
+    <div x-show="showPruneModal" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
         <div class="modal-box" style="max-width:480px;width:94vw;border-radius:20px;padding:24px;background:var(--color-canvas);border:1.5px solid var(--color-hairline);box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
             
             <form method="POST" action="<?= Router::url('/settings/activity-logs/prune') ?>">
@@ -824,13 +818,6 @@ $roleThemes = [
                             <p style="font-size:0.8rem;color:var(--color-ink-mute);margin:0;">Fitur proteksi developer untuk merampingkan database</p>
                         </div>
                     </div>
-                    <button type="button" @click="showPruneModal = false" 
-                            style="width:32px;height:32px;border-radius:8px;background:var(--color-canvas);border:1px solid var(--color-hairline);color:var(--color-ink-mute);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;"
-                            onmouseover="this.style.background='#fee2e2';this.style.color='#ef4444';this.style.borderColor='#fecaca';"
-                            onmouseout="this.style.background='var(--color-canvas)';this.style.color='var(--color-ink-mute)';this.style.borderColor='var(--color-hairline)';"
-                            title="Tutup Modal">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
-                    </button>
                 </div>
 
                 <!-- Alert Callout Box -->

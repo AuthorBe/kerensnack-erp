@@ -1776,8 +1776,8 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
         <div x-show="showConfirmModal" 
              x-cloak 
              class="modal-backdrop"
-             style="position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end;justify-content:center;z-index:9999;"
-             @click.self="showConfirmModal = false"
+             style="display:flex;align-items:flex-end;justify-content:center;"
+            
              @keydown.escape.window="showConfirmModal = false">
             
             <div class="modal-box" 

@@ -318,9 +318,6 @@ ob_start();
                     <div class="modal-title" x-text="isEditLevel ? ('Ubah Harga Level ' + levelForm.level_harga) : 'Tambah Level Harga Baru'"></div>
                     <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;" x-text="selectedGroup?.nama_grup"></div>
                 </div>
-                <button @click="showLevelModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/pricing/update-level') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">

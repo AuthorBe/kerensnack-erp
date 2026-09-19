@@ -402,6 +402,142 @@ ob_start();
 .dark .alert-warning .tracking-alert-desc { color: #a5b4fc; }
 .dark .alert-muted { background: rgba(100, 116, 139, 0.1); border-color: rgba(100, 116, 139, 0.25); }
 .dark .alert-muted .tracking-alert-desc { color: #cbd5e1; }
+
+/* ========================================================================= */
+/* STYLES INTERACTIVE PHOTO VIEWER (PINCH, PAN & MOBILE FULLSCREEN)          */
+/* ========================================================================= */
+.co-receipt-backdrop {
+    z-index: 99999;
+    background: rgba(15, 23, 42, 0.65) !important;
+    backdrop-filter: blur(14px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    position: fixed;
+    inset: 0;
+    overscroll-behavior: contain;
+    touch-action: none;
+}
+.co-receipt-container {
+    width: 100%;
+    max-width: 980px;
+    height: 88vh;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface, #ffffff);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--color-hairline);
+    position: relative;
+}
+.co-receipt-viewport {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050811;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.co-receipt-floating-toolbar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    padding: 5px 8px;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    color: #f8fafc;
+    user-select: none;
+}
+.co-receipt-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #f8fafc;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+.co-receipt-tool-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+}
+.co-receipt-tool-btn:active:not(:disabled) {
+    transform: scale(0.92);
+}
+.co-receipt-tool-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+.co-receipt-tool-badge {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9999px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #f8fafc;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.co-receipt-tool-badge:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+.co-receipt-tool-divider {
+    width: 1px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 3px;
+}
+
+@media (max-width: 640px) {
+    .co-receipt-backdrop {
+        padding: 0 !important;
+    }
+    .co-receipt-container {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+    .co-receipt-floating-toolbar {
+        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        gap: 6px;
+        padding: 6px 12px;
+    }
+    .co-receipt-tool-btn {
+        width: 40px;
+        height: 40px;
+    }
+    .co-receipt-tool-badge {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+}
 </style>
 
 <div class="space-y-6" x-data="salesOrderListApp()">
@@ -829,7 +965,7 @@ ob_start();
     <!-- MODAL: POP-UP DETAIL PESANAN LENGKAP (MODERN & RESPONSIF)                 -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDetailModal" x-cloak class="modal-backdrop" @click.self="showDetailModal = false">
+    <div x-show="showDetailModal" x-cloak class="modal-backdrop">
         <div class="modal-box modal-box-lg" @click.stop>
             
             <!-- MOBILE PULL HANDLE -->
@@ -2202,6 +2338,30 @@ ob_start();
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                <!-- Tombol Lihat Foto Bukti -->
+                                                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;">
+                                                    <!-- Foto Serah Terima (Selesai) -->
+                                                    <template x-if="sj.status_surat_jalan === 'selesai_diterima' && sj.bukti_terima_foto">
+                                                        <button type="button"
+                                                                @click="openPhotoViewer(sj.bukti_terima_foto, 'Bukti Serah Terima - #' + sj.nomor_surat_jalan, sj.nama_driver || '')"
+                                                                class="btn btn-secondary btn-sm"
+                                                                style="border-radius:10px;font-weight:700;font-size:11.5px;padding:6px 12px;color:#059669;border-color:#a7f3d0;background:#ecfdf5;display:inline-flex;align-items:center;gap:5px;">
+                                                            <i data-lucide="image" style="width:13px;height:13px;"></i>
+                                                            <span>Lihat Foto Bukti</span>
+                                                        </button>
+                                                    </template>
+                                                    <!-- Foto Gagal Kirim -->
+                                                    <template x-if="sj.status_surat_jalan === 'gagal_kirim' && sj.foto_bukti_gagal">
+                                                        <button type="button"
+                                                                @click="openPhotoViewer(sj.foto_bukti_gagal, 'Bukti Gagal Kirim - #' + sj.nomor_surat_jalan, sj.nama_driver || '')"
+                                                                class="btn btn-secondary btn-sm"
+                                                                style="border-radius:10px;font-weight:700;font-size:11.5px;padding:6px 12px;color:#e11d48;border-color:#fecaca;background:#fff1f2;display:inline-flex;align-items:center;gap:5px;">
+                                                            <i data-lucide="image" style="width:13px;height:13px;"></i>
+                                                            <span>Lihat Foto Gagal</span>
+                                                        </button>
+                                                    </template>
+                                                </div>
                                             </div>
                                         </template>
                                     </div>
@@ -2269,7 +2429,7 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can('orders.retry_delivery')): ?>
     <template x-teleport="body">
-    <div x-show="showRetryModal" x-cloak class="modal-backdrop" @click.self="showRetryModal = false" style="z-index: 10050;">
+    <div x-show="showRetryModal" x-cloak class="modal-backdrop" style="z-index: 10050;">
         <div class="modal-box" style="max-width: 480px; padding: 24px; border-radius: 20px; text-align: left;" @click.stop>
             
             <!-- JIKA KEDALUWARSA (> 7 HARI) -->
@@ -2347,6 +2507,115 @@ ob_start();
     </template>
     <?php endif; ?>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI PENGIRIMAN (TOUCH PINCH & PAN VIEWER) -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="showPhotoModal"
+         x-cloak
+         class="co-receipt-backdrop"
+         @keydown.window="coHandleViewerKeydown($event)">
+
+        <div class="co-receipt-container" @click.stop>
+            <!-- Header Modal -->
+            <div class="receipt-header" style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--color-hairline);background:var(--color-surface, #ffffff);z-index:10;">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;color:#3b82f6;flex-shrink:0;">
+                        <i data-lucide="image" style="width:18px;height:18px;"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Pengiriman</h3>
+                        <div style="font-size:11px;color:var(--color-ink-mute);font-family:monospace;" x-text="photoModalSubtitle"></div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <button type="button" @click="closePhotoViewer()" class="btn btn-ghost btn-sm" style="padding:6px;border-radius:8px;" title="Tutup">
+                        <i data-lucide="x" style="width:20px;height:20px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport) -->
+            <div class="co-receipt-viewport"
+                 x-ref="coPhotoViewport"
+                 @wheel.prevent="coHandleWheel($event)"
+                 @mousedown="coHandleMouseDown($event)"
+                 @touchstart="coHandleTouchStart($event)"
+                 @touchmove.prevent="coHandleTouchMove($event)"
+                 @touchend="coHandleTouchEnd($event)"
+                 @touchcancel="coHandleTouchEnd($event)"
+                 @dblclick="coToggleDoubleTap($event.clientX, $event.clientY)">
+
+                <!-- State Error jika file fisik tidak ditemukan / dibersihkan -->
+                <div x-show="photoLoadError" style="margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:440px;width:100%;padding:32px 16px;z-index:5;">
+                    <div style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;color:#ef4444;margin:0 auto 16px auto;box-shadow:0 4px 12px rgba(239,68,68,0.12);">
+                        <i data-lucide="image-off" style="width:28px;height:28px;display:block;"></i>
+                    </div>
+                    <div style="font-size:15px;font-weight:700;color:#f8fafc;margin-bottom:6px;text-align:center;width:100%;">Foto Bukti Tidak Ditemukan</div>
+                    <div style="font-size:12.5px;color:#94a3b8;max-width:380px;line-height:1.6;margin:0 auto;text-align:center;width:100%;">
+                        Berkas foto bukti ini tidak ditemukan di direktori server. Kemungkinan merupakan berkas lama yang telah dibersihkan atau belum berhasil terunggah.
+                    </div>
+                </div>
+
+                <!-- Gambar Bukti Utama (Hardware-Accelerated CSS Transform) -->
+                <template x-if="photoModalUrl">
+                    <img :src="photoModalUrl"
+                         alt="Foto Bukti Pengiriman"
+                         loading="lazy"
+                         decoding="async"
+                         x-show="!photoLoadError"
+                         @load="coOnPhotoImageLoaded()"
+                         @error="photoLoadError = true; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });"
+                         draggable="false"
+                         :style="{
+                             display: photoLoadError ? 'none' : 'block',
+                             maxWidth: '100%',
+                             maxHeight: '100%',
+                             objectFit: 'contain',
+                             transform: 'translate3d(' + coZoomPanX + 'px, ' + coZoomPanY + 'px, 0) scale(' + coZoomScale + ') rotate(' + coZoomRotate + 'deg)',
+                             transformOrigin: 'center center',
+                             transition: coIsDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)',
+                             cursor: coZoomScale > 1.05 ? (coIsDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                             userSelect: 'none',
+                             webkitUserDrag: 'none'
+                         }">
+                </template>
+
+                <!-- Floating Glassmorphism Controls -->
+                <div x-show="!photoLoadError" class="co-receipt-floating-toolbar">
+                    <!-- Zoom Out -->
+                    <button type="button" @click="coZoomStep(-0.3)" class="co-receipt-tool-btn" title="Perkecil Zoom (-)" :disabled="coZoomScale <= 0.6">
+                        <i data-lucide="minus" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <!-- Persentase & Reset -->
+                    <button type="button" @click="coResetZoom()" class="co-receipt-tool-badge" title="Klik untuk Reset Tampilan Fit">
+                        <span x-text="Math.round(coZoomScale * 100) + '%'"></span>
+                    </button>
+
+                    <!-- Zoom In -->
+                    <button type="button" @click="coZoomStep(0.3)" class="co-receipt-tool-btn" title="Perbesar Zoom (+)" :disabled="coZoomScale >= 5.0">
+                        <i data-lucide="plus" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <div class="co-receipt-tool-divider"></div>
+
+                    <!-- Rotate 90° Clockwise -->
+                    <button type="button" @click="coRotateClockwise()" class="co-receipt-tool-btn" title="Putar Posisi 90°">
+                        <i data-lucide="rotate-cw" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <!-- Fit / Reset -->
+                    <button type="button" @click="coResetZoom()" class="co-receipt-tool-btn" title="Reset Ukuran Normal (Fit Layar)">
+                        <i data-lucide="maximize-2" style="width:15px;height:15px;"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    </template>
+
 </div>
 
 <script>
@@ -2366,6 +2635,24 @@ function salesOrderListApp() {
         retryOrder: null,
         retryExpired: false,
         isSubmittingRetry: false,
+
+        // Photo Viewer State
+        showPhotoModal: false,
+        photoModalUrl: '',
+        photoModalTitle: '',
+        photoModalSubtitle: '',
+        photoLoadError: false,
+        coZoomScale: 1.0,
+        coZoomPanX: 0,
+        coZoomPanY: 0,
+        coZoomRotate: 0,
+        coIsDragging: false,
+        coIsPinching: false,
+        coDragStartX: 0,
+        coDragStartY: 0,
+        coPinchStartDist: 0,
+        coPinchStartScale: 1,
+        coLastTapTime: 0,
 
         shippingForm: {
             driver_id: '',
@@ -2406,7 +2693,7 @@ function salesOrderListApp() {
             const sisa = Math.max(0, Number(order.total_netto || 0) - Number(order.total_dibayar || 0));
             this.shippingForm = {
                 driver_id: order.sales_driver_id || '',
-                status: order.status_surat_jalan || 'disetujui_owner',
+                status: order.status_surat_jalan || 'siap_kirim',
                 nopol: order.nopol_driver || ''
             };
             this.paymentForm = {
@@ -2435,7 +2722,7 @@ function salesOrderListApp() {
                     if (data.activityLogs) this.activityLogs = data.activityLogs;
                     
                     this.shippingForm.driver_id = data.order.sales_driver_id || '';
-                    this.shippingForm.status = data.order.status_surat_jalan || 'disetujui_owner';
+                    this.shippingForm.status = data.order.status_surat_jalan || 'siap_kirim';
                     this.syncDriverNopol();
 
                     const sisaTerbaru = this.calcSisaTagihan();
@@ -2826,6 +3113,191 @@ function salesOrderListApp() {
                 }
             } finally {
                 this.isSubmittingRetry = false;
+            }
+        },
+
+        // =====================================================================
+        // Photo Viewer Methods (selaras dengan driver_route.php)
+        // =====================================================================
+
+        openPhotoViewer(url, title, subtitle) {
+            if (!url) return;
+            this.coResetZoom();
+            const cleanUrl = String(url).trim();
+            this.photoModalUrl = (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://'))
+                ? cleanUrl
+                : ('<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, ''));
+            this.photoModalTitle = title || 'Foto Bukti Pengiriman';
+            this.photoModalSubtitle = subtitle || '';
+            this.photoLoadError = false;
+            this.showPhotoModal = true;
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        closePhotoViewer() {
+            this.showPhotoModal = false;
+            this.photoModalUrl = '';
+            this.coResetZoom();
+            this.photoLoadError = false;
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        },
+
+        coResetZoom() {
+            this.coZoomScale = 1.0;
+            this.coZoomPanX = 0;
+            this.coZoomPanY = 0;
+            this.coZoomRotate = 0;
+            this.coIsDragging = false;
+            this.coIsPinching = false;
+        },
+
+        coZoomStep(step) {
+            const next = Math.min(5.0, Math.max(0.6, Number((this.coZoomScale + step).toFixed(2))));
+            this.coZoomScale = next;
+            if (next <= 1.0) {
+                this.coZoomPanX = 0;
+                this.coZoomPanY = 0;
+            } else {
+                this.coClampPan();
+            }
+        },
+
+        coRotateClockwise() {
+            this.coZoomRotate = (this.coZoomRotate + 90) % 360;
+        },
+
+        coClampPan() {
+            if (this.coZoomScale <= 1.0) {
+                this.coZoomPanX = 0;
+                this.coZoomPanY = 0;
+                return;
+            }
+            const bound = Math.max(100, 480 * (this.coZoomScale - 0.7));
+            this.coZoomPanX = Math.max(-bound, Math.min(bound, this.coZoomPanX));
+            this.coZoomPanY = Math.max(-bound, Math.min(bound, this.coZoomPanY));
+        },
+
+        coOnPhotoImageLoaded() {
+            this.photoLoadError = false;
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        coToggleDoubleTap(clientX, clientY) {
+            if (this.photoLoadError) return;
+            if (this.coZoomScale > 1.2) {
+                this.coResetZoom();
+            } else {
+                this.coZoomScale = 2.4;
+                this.coZoomPanX = 0;
+                this.coZoomPanY = 0;
+            }
+        },
+
+        coHandleMouseDown(e) {
+            if (e.button !== 0 || this.photoLoadError) return;
+            this.coIsDragging = true;
+            this.coDragStartX = e.clientX - this.coZoomPanX;
+            this.coDragStartY = e.clientY - this.coZoomPanY;
+
+            const onMouseMove = (ev) => {
+                if (!this.coIsDragging) return;
+                this.coZoomPanX = ev.clientX - this.coDragStartX;
+                this.coZoomPanY = ev.clientY - this.coDragStartY;
+                this.coClampPan();
+            };
+
+            const onMouseUp = () => {
+                this.coIsDragging = false;
+                this.coClampPan();
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        },
+
+        coHandleTouchStart(e) {
+            if (this.photoLoadError) return;
+            if (e.touches.length === 2) {
+                this.coIsPinching = true;
+                this.coIsDragging = false;
+                this.coPinchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                this.coPinchStartScale = this.coZoomScale;
+            } else if (e.touches.length === 1) {
+                const now = Date.now();
+                if (now - this.coLastTapTime < 300) {
+                    this.coToggleDoubleTap(e.touches[0].clientX, e.touches[0].clientY);
+                    this.coLastTapTime = 0;
+                    return;
+                }
+                this.coLastTapTime = now;
+                this.coIsDragging = true;
+                this.coDragStartX = e.touches[0].clientX - this.coZoomPanX;
+                this.coDragStartY = e.touches[0].clientY - this.coZoomPanY;
+            }
+        },
+
+        coHandleTouchMove(e) {
+            if (this.photoLoadError) return;
+            if (this.coIsPinching && e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                if (this.coPinchStartDist > 0) {
+                    const factor = dist / this.coPinchStartDist;
+                    this.coZoomScale = Math.min(5.0, Math.max(0.6, Number((this.coPinchStartScale * factor).toFixed(2))));
+                }
+            } else if (this.coIsDragging && e.touches.length === 1) {
+                this.coZoomPanX = e.touches[0].clientX - this.coDragStartX;
+                this.coZoomPanY = e.touches[0].clientY - this.coDragStartY;
+                this.coClampPan();
+            }
+        },
+
+        coHandleTouchEnd(e) {
+            if (e.touches.length < 2) {
+                this.coIsPinching = false;
+            }
+            if (e.touches.length === 0) {
+                this.coIsDragging = false;
+                this.coClampPan();
+            }
+        },
+
+        coHandleWheel(e) {
+            if (this.photoLoadError) return;
+            const delta = e.deltaY < 0 ? 0.25 : -0.25;
+            this.coZoomStep(delta);
+        },
+
+        coHandleViewerKeydown(e) {
+            if (!this.showPhotoModal || this.photoLoadError) return;
+            if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                this.coZoomStep(0.3);
+            } else if (e.key === '-' || e.key === '_') {
+                e.preventDefault();
+                this.coZoomStep(-0.3);
+            } else if (e.key === '0') {
+                e.preventDefault();
+                this.coResetZoom();
+            } else if (e.key === 'r' || e.key === 'R') {
+                e.preventDefault();
+                this.coRotateClockwise();
+            } else if (e.key === 'Escape') {
+                this.closePhotoViewer();
             }
         }
     }

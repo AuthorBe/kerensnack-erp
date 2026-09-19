@@ -807,9 +807,6 @@ ob_start();
                     </div>
                     <div class="modal-title" x-text="isEdit ? 'Edit Data Karyawan' : 'Tambah Karyawan Baru'"></div>
                 </div>
-                <button @click="showModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form :action="isEdit ? '<?= Router::url('/employees/update') ?>' : '<?= Router::url('/employees/store') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -1091,7 +1088,7 @@ ob_start();
     <div x-show="showTierModal" 
          x-cloak 
          class="modal-backdrop" 
-         @click.self="showTierModal = false" 
+         
          @keydown.escape.window="showTierModal = false">
         
         <div class="skema-modal-box" @click.stop>

@@ -226,7 +226,7 @@ ob_start();
         <div x-show="showAssignModal" 
              x-cloak 
              class="modal-backdrop"
-             @click.self="showAssignModal = false"
+            
              @keydown.escape.window="showAssignModal = false">
             
             <div class="modal-box" style="max-width: 680px; width: 100%; padding: 24px;">
@@ -243,9 +243,6 @@ ob_start();
                             <span class="font-bold" style="color:#8b5cf6;" x-text="selectedStoreIds.length + ' Toko Terpilih'"></span>
                         </div>
                     </div>
-                    <button type="button" @click="showAssignModal = false" class="btn btn-ghost btn-sm" style="padding:4px;" title="Tutup Modal">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
-                    </button>
                 </div>
 
                 <!-- Info Callout Banner -->
@@ -412,7 +409,7 @@ ob_start();
         <div x-show="showUnassignedModal" 
              x-cloak 
              class="modal-backdrop"
-             @click.self="showUnassignedModal = false"
+            
              @keydown.escape.window="showUnassignedModal = false">
             
             <div class="modal-box" style="max-width: 580px; width: 100%; padding: 24px;">
@@ -428,9 +425,6 @@ ob_start();
                             Daftar toko mitra konsinyasi aktif yang belum memiliki penanggung jawab tetap.
                         </div>
                     </div>
-                    <button type="button" @click="showUnassignedModal = false" class="btn btn-ghost btn-sm" style="padding:4px;" title="Tutup Modal">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
-                    </button>
                 </div>
 
                 <!-- Search Unassigned -->

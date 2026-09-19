@@ -512,9 +512,6 @@ $activeTab = $_GET['tab'] ?? 'customers';
         <div class="modal-box" :style="isChangingFromConsignment ? 'max-width:720px;padding:24px;' : 'max-width:560px;padding:24px;'" style="transition:max-width 0.2s ease;">
             <div class="modal-header">
                 <div class="modal-title" x-text="isEdit ? 'Edit Data Toko Pelanggan' : 'Tambah Toko Pelanggan Baru'"></div>
-                <button @click="showModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form id="customer-modal-form"
@@ -1021,9 +1018,6 @@ $activeTab = $_GET['tab'] ?? 'customers';
                     <div class="modal-title">Atur Daftar Item Khusus Toko</div>
                     <div style="font-size:12.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="selectedCustomer?.nama_toko + ' (' + selectedCustomer?.kode_pelanggan + ')'"></div>
                 </div>
-                <button @click="showItemsModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/customers/save-items') ?>" method="POST" style="display:flex;flex-direction:column;gap:12px;">
@@ -1095,9 +1089,6 @@ $activeTab = $_GET['tab'] ?? 'customers';
                     <div class="modal-title" x-text="isEditCustomerGroup ? 'Edit Grup Pelanggan' : 'Tambah Grup Pelanggan Baru'"></div>
                     <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Konfigurasi tier toko dan diskon standar</div>
                 </div>
-                <button @click="showCustomerGroupModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form id="customer-group-modal-form"
@@ -1184,9 +1175,6 @@ $activeTab = $_GET['tab'] ?? 'customers';
         <div class="modal-box" style="max-width:480px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title" x-text="isEditTerritory ? 'Edit Wilayah / Rute' : 'Tambah Wilayah / Rute Baru'"></div>
-                <button @click="showTerritoryModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form id="territory-modal-form"

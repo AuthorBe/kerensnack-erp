@@ -1225,7 +1225,7 @@ ob_start();
         <div x-show="showBreakdownModal"
              x-cloak
              class="modal-backdrop"
-             @click.self="showBreakdownModal = false"
+            
              @keydown.escape.window="showBreakdownModal = false">
 
             <div class="modal-box modal-box-lg" @click.stop>

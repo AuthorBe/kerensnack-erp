@@ -747,9 +747,6 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         <div class="modal-box" style="max-width:540px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title" x-text="isEditItem ? 'Edit Barang Jadi' : 'Tambah Barang Jadi Baru'"></div>
-                <button @click="showItemModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form :action="isEditItem ? '<?= Router::url('/products/update-item') ?>' : '<?= Router::url('/products/store-item') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -839,9 +836,6 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         <div class="modal-box" style="max-width:440px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title">Tambah Grup Kemasan Baru</div>
-                <button @click="showGroupModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/products/store-group') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -884,9 +878,6 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     <div class="modal-title">Kelola Grup Kemasan Luar</div>
                     <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Daftar seluruh grup kemasan dan barcode universal kemasan pabrik</div>
                 </div>
-                <button @click="showManageGroupsModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
@@ -965,9 +956,6 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     <div class="modal-title">Edit Grup Kemasan</div>
                     <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;" x-text="editGroupForm.kode_grup"></div>
                 </div>
-                <button @click="showEditGroupModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/products/update-group') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -1013,9 +1001,6 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         <div class="modal-box" style="max-width:500px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title" x-text="isEditMaterial ? 'Edit Bahan / Kemasan' : 'Tambah Bahan / Kemasan Baru'"></div>
-                <button @click="showMaterialModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form :action="isEditMaterial ? '<?= Router::url('/products/update-material') ?>' : '<?= Router::url('/products/store-material') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -1108,9 +1093,6 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     <div class="modal-title">Tambah Komponen Resep BOM</div>
                     <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;" x-text="'Produk: ' + (selectedRecipeProduct?.nama_item || '')"></div>
                 </div>
-                <button @click="showRecipeModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/products/store-recipe-item') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -1252,9 +1234,6 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     <div class="modal-title" style="font-size:16px;font-weight:800;color:var(--color-ink);">Salin &amp; Terapkan Resep ke Produk Lain</div>
                     <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Duplikasi komposisi bahan baku &amp; kemasan ke beberapa produk jadi sekaligus.</div>
                 </div>
-                <button @click="showCopyRecipeModal = false" class="btn btn-ghost btn-sm" style="padding:4px;border-radius:6px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/products/copy-recipe') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
@@ -1378,9 +1357,6 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         <div class="modal-box" style="max-width:480px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title" x-text="isEditBorongan ? 'Edit Kelompok Upah Borongan' : 'Tambah Kelompok Upah Borongan'"></div>
-                <button @click="showBoronganModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form :action="isEditBorongan ? '<?= Router::url('/products/update-borongan-group') ?>' : '<?= Router::url('/products/store-borongan-group') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">

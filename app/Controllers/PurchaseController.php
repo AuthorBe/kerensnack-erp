@@ -27,7 +27,9 @@ class PurchaseController extends Controller
         try {
             $purchases = Database::fetchAll("
                 SELECT pb.id, pb.nomor_faktur_pembelian, pb.tanggal_pembelian, pb.total_biaya,
-                       pb.status_pembayaran, pb.status_penerimaan, pb.catatan, pb.url_foto_nota, pb.dibuat_pada,
+                       pb.status_pembayaran, pb.status_penerimaan, pb.catatan, 
+                       pb.path_foto_nota, pb.path_foto_nota as url_foto_nota,
+                       pb.path_bukti_kendala, pb.path_bukti_kendala as foto_bukti_kendala, pb.dibuat_pada,
                        pb.jenis_dokumen, pb.metode_logistik, pb.sales_driver_id, pb.tanggal_jadwal_belanja,
                        pb.instruksi_driver, pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
                        pb.waktu_diambil, pb.waktu_diterima_gudang,
@@ -42,6 +44,15 @@ class PurchaseController extends Controller
                 LEFT JOIN public.v_karyawan_info drv ON pb.sales_driver_id = drv.id
                 ORDER BY pb.tanggal_pembelian DESC, pb.dibuat_pada DESC
             ");
+
+            // Injeksi Cloudflare R2 Presigned URLs (10 Menit)
+            foreach ($purchases as &$pb) {
+                $pb['presigned_foto_nota'] = \App\Helpers\Upload::presignedUrl($pb['path_foto_nota'] ?? null, 10);
+                $pb['presigned_bukti_kendala'] = \App\Helpers\Upload::presignedUrl($pb['path_bukti_kendala'] ?? null, 10);
+                $pb['url_foto_nota'] = $pb['presigned_foto_nota'] ?: ($pb['path_foto_nota'] ?? '');
+                $pb['foto_bukti_kendala'] = $pb['presigned_bukti_kendala'] ?: ($pb['path_bukti_kendala'] ?? '');
+            }
+            unset($pb);
 
             $suppliers = Database::fetchAll("
                 SELECT id, kode_pemasok, nama_pemasok, nama_kontak, nomor_telepon, nomor_whatsapp, email, termin_bayar, link_google_maps, alamat_lengkap, catatan, nama_bank, nomor_rekening, atas_nama_rekening 
@@ -104,10 +115,13 @@ class PurchaseController extends Controller
         try {
             $purchase = Database::fetchOne("
                 SELECT pb.id, pb.nomor_faktur_pembelian, pb.tanggal_pembelian, pb.total_biaya,
-                       pb.status_pembayaran, pb.status_penerimaan, pb.url_foto_nota, pb.catatan, pb.dibuat_pada,
+                       pb.status_pembayaran, pb.status_penerimaan, 
+                       pb.path_foto_nota, pb.path_foto_nota as url_foto_nota,
+                       pb.path_bukti_kendala, pb.path_bukti_kendala as foto_bukti_kendala,
+                       pb.catatan, pb.dibuat_pada,
                        pb.jenis_dokumen, pb.metode_logistik, pb.sales_driver_id, pb.tanggal_jadwal_belanja,
                        pb.instruksi_driver, pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
-                       pb.foto_bukti_kendala, pb.alasan_kendala, pb.waktu_diambil, pb.waktu_diterima_gudang,
+                       pb.alasan_kendala, pb.waktu_diambil, pb.waktu_diterima_gudang,
                        sup.id as pemasok_id, sup.kode_pemasok, sup.nama_pemasok, sup.nomor_telepon, sup.alamat_lengkap,
                        sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa, sup.email as supplier_email,
                        sup.link_google_maps as supplier_maps, sup.termin_bayar as supplier_termin_bayar, sup.catatan as supplier_catatan,
@@ -121,7 +135,7 @@ class PurchaseController extends Controller
                 LEFT JOIN public.pengguna p ON pb.dibuat_oleh = p.id
                 LEFT JOIN public.v_karyawan_info drv ON pb.sales_driver_id = drv.id
                 LEFT JOIN LATERAL (
-                    SELECT ak.nama_akun, ak_ref.tanggal_transaksi
+                    SELECT ak.id as akun_kas_id, ak.nama_akun, ak_ref.tanggal_transaksi, ak_ref.nominal as nominal_sudah_dibayar_kas
                     FROM public.arus_kas ak_ref
                     JOIN public.akun_kas ak ON ak_ref.akun_kas_id = ak.id
                     WHERE ak_ref.referensi_tabel = 'pembelian' 
@@ -140,7 +154,7 @@ class PurchaseController extends Controller
 
             $items = Database::fetchAll("
                 SELECT rp.id, rp.kuantitas, rp.satuan, rp.harga_satuan, rp.subtotal, rp.item_id,
-                       it.nama_item, it.kode_sku, it.tipe_item, it.stok_fisik_saat_ini
+                       it.nama_item, it.kode_sku, it.tipe_item, it.stok_fisik_saat_ini, it.satuan_dasar
                 FROM public.rincian_pembelian rp
                 JOIN public.item it ON rp.item_id = it.id
                 WHERE rp.pembelian_id = :id
@@ -159,6 +173,12 @@ class PurchaseController extends Controller
                 'id' => $id,
                 'faktur_match' => '%' . ($purchase['nomor_faktur_pembelian'] ?? '---') . '%'
             ]);
+
+            // Injeksi Cloudflare R2 Presigned URLs (10 Menit)
+            $purchase['presigned_foto_nota'] = \App\Helpers\Upload::presignedUrl($purchase['path_foto_nota'] ?? null, 10);
+            $purchase['presigned_bukti_kendala'] = \App\Helpers\Upload::presignedUrl($purchase['path_bukti_kendala'] ?? null, 10);
+            $purchase['url_foto_nota'] = $purchase['presigned_foto_nota'] ?: ($purchase['path_foto_nota'] ?? '');
+            $purchase['foto_bukti_kendala'] = $purchase['presigned_bukti_kendala'] ?: ($purchase['path_bukti_kendala'] ?? '');
 
             $this->json([
                 'success' => true,
@@ -319,7 +339,7 @@ class PurchaseController extends Controller
             $stmtPb = $pdo->prepare("
                 INSERT INTO public.pembelian (
                     nomor_faktur_pembelian, pemasok_id, tanggal_pembelian, total_biaya,
-                    status_pembayaran, status_penerimaan, url_foto_nota, catatan, dibuat_oleh, dibuat_pada,
+                    status_pembayaran, status_penerimaan, path_foto_nota, catatan, dibuat_oleh, dibuat_pada,
                     jenis_dokumen, metode_logistik, sales_driver_id, tanggal_jadwal_belanja,
                     instruksi_driver, metode_bayar_belanja, nomor_nota_vendor
                 ) VALUES (
@@ -748,7 +768,7 @@ class PurchaseController extends Controller
             }
 
             if ($fotoPath === null) {
-                $fotoPath = $purchase['url_foto_nota'] ?? null;
+                $fotoPath = $purchase['path_foto_nota'] ?? $purchase['url_foto_nota'] ?? null;
             }
 
             $rawItems = $payload['items'] ?? [];
@@ -781,23 +801,65 @@ class PurchaseController extends Controller
                 return;
             }
 
-            $statusBayar = $payload['status_pembayaran'] ?? 'lunas';
+            // Status pembayaran dikunci agar selaras dan sesuai dengan PO / kesepakatan awal:
+            if (($purchase['jenis_dokumen'] ?? '') === 'po') {
+                if ($purchase['status_pembayaran'] === 'lunas' || ($purchase['metode_logistik'] === 'diambil_driver' && $purchase['metode_bayar_belanja'] === 'tunai_driver')) {
+                    $statusBayar = 'lunas';
+                } else {
+                    $statusBayar = 'belum_lunas';
+                }
+            } else {
+                $statusBayar = $payload['status_pembayaran'] ?? $purchase['status_pembayaran'] ?? 'lunas';
+            }
             $akunKasId = !empty($payload['akun_kas_id']) ? $payload['akun_kas_id'] : null;
             $nomorNotaVendor = trim((string)($payload['nomor_nota_vendor'] ?? ''));
+            if ($nomorNotaVendor === '') {
+                $nomorNotaVendor = $purchase['nomor_faktur_pembelian'];
+            }
 
+            // Periksa riwayat pembayaran kas sebelumnya untuk dokumen ini (Kas Keluar & Kas Masuk/Refund)
+            $stmtSumKas = $pdo->prepare("
+                SELECT akun_kas_id,
+                       COALESCE(SUM(CASE WHEN jenis_kas = 'keluar' THEN nominal ELSE -nominal END), 0) as netto_kas_keluar
+                FROM public.arus_kas 
+                WHERE referensi_tabel = 'pembelian' AND referensi_id = :id
+                GROUP BY akun_kas_id
+                ORDER BY netto_kas_keluar DESC
+                LIMIT 1
+            ");
+            $stmtSumKas->execute(['id' => $id]);
+            $kasPrev = $stmtSumKas->fetch(\PDO::FETCH_ASSOC);
+            $kasKeluarSebelumnya = (float)($kasPrev['netto_kas_keluar'] ?? 0);
+            $akunKasPrevId = $kasPrev['akun_kas_id'] ?? null;
+            $targetKasId = $akunKasId ?: $akunKasPrevId;
+
+            // Validasi Kas jika membutuhkan pengeluaran kas baru
             if ($statusBayar === 'lunas') {
-                if (empty($akunKasId)) {
-                    $pdo->rollBack();
-                    $this->json(['success' => false, 'message' => 'Pilih akun kas sumber dana untuk pembayaran tunai/lunas.'], 400);
-                    return;
+                $kasYangPerluDipotong = 0.0;
+                if ($kasKeluarSebelumnya > 0) {
+                    if ($totalBiaya > $kasKeluarSebelumnya) {
+                        $kasYangPerluDipotong = round($totalBiaya - $kasKeluarSebelumnya, 2);
+                    }
+                } else {
+                    $kasYangPerluDipotong = $totalBiaya;
                 }
-                $stmtKasLockCheck = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
-                $stmtKasLockCheck->execute(['id' => $akunKasId]);
-                $akunKas = $stmtKasLockCheck->fetch(\PDO::FETCH_ASSOC);
-                if (!$akunKas || (float)$akunKas['saldo_saat_ini'] < $totalBiaya) {
-                    $pdo->rollBack();
-                    $this->json(['success' => false, 'message' => 'Saldo akun kas tidak mencukupi untuk pembayaran lunas ini.'], 400);
-                    return;
+
+                if ($kasYangPerluDipotong > 0) {
+                    if (empty($targetKasId)) {
+                        $pdo->rollBack();
+                        $this->json(['success' => false, 'message' => 'Pilih akun kas sumber dana untuk pembayaran tunai/lunas.'], 400);
+                        return;
+                    }
+                    $stmtKasLockCheck = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
+                    $stmtKasLockCheck->execute(['id' => $targetKasId]);
+                    $akunKas = $stmtKasLockCheck->fetch(\PDO::FETCH_ASSOC);
+                    if (!$akunKas || (float)$akunKas['saldo_saat_ini'] < $kasYangPerluDipotong) {
+                        $pdo->rollBack();
+                        $saldoFmt = number_format((float)($akunKas['saldo_saat_ini'] ?? 0), 0, ',', '.');
+                        $tagihanFmt = number_format($kasYangPerluDipotong, 0, ',', '.');
+                        $this->json(['success' => false, 'message' => "Saldo akun kas '{$akunKas['nama_akun']}' (Rp {$saldoFmt}) tidak mencukupi untuk pembayaran sebesar Rp {$tagihanFmt}."], 400);
+                        return;
+                    }
                 }
             }
 
@@ -880,48 +942,120 @@ class PurchaseController extends Controller
                 ]);
             }
 
-            // 2. Potong kas jika lunas dan belum pernah dicatat di arus kas (anti double-entry)
-            $stmtCheckKas = $pdo->prepare("SELECT COUNT(*) FROM public.arus_kas WHERE referensi_tabel = 'pembelian' AND referensi_id = :id AND jenis_kas = 'keluar'");
-            $stmtCheckKas->execute(['id' => $id]);
-            $alreadyPaidCash = (int)$stmtCheckKas->fetchColumn() > 0;
+            // 2. Sinkronisasi Finansial & Penyesuaian Kas Otomatis
+            if ($kasKeluarSebelumnya > 0) {
+                // Dokumen sebelumnya sudah dibayar sebagian/lunas (misal PO Lunas Transfer / Kas)
+                if ($totalBiaya < $kasKeluarSebelumnya) {
+                    // Kasus A: Fisik lebih sedikit -> Ada kelebihan bayar / Refund Kas kembali dari Vendor
+                    $refundNominal = round($kasKeluarSebelumnya - $totalBiaya, 2);
+                    if (!empty($targetKasId) && $refundNominal > 0) {
+                        $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                        $stmtKasLock->execute(['id' => $targetKasId]);
+                        $kasRow = $stmtKasLock->fetch();
+                        $saldoBaru = (float)($kasRow['saldo_saat_ini'] ?? 0) + $refundNominal;
 
-            if (!$alreadyPaidCash && $statusBayar === 'lunas' && $akunKasId) {
-                $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
-                $stmtKasLock->execute(['id' => $akunKasId]);
-                $kasRow = $stmtKasLock->fetch();
-                $saldoLama = (float)($kasRow['saldo_saat_ini'] ?? 0);
-                $saldoBaru = $saldoLama - $totalBiaya;
+                        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                            ->execute(['saldo' => $saldoBaru, 'id' => $targetKasId]);
 
-                $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
-                    ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
-
-                $driverKet = '';
-                if (!empty($purchase['sales_driver_id'])) {
-                    $drvInfo = Database::fetchOne("SELECT nama_karyawan FROM public.v_karyawan_info WHERE id = :id", ['id' => $purchase['sales_driver_id']]);
-                    if ($drvInfo) {
-                        $driverKet = " (Belanja Driver: {$drvInfo['nama_karyawan']})";
+                        $voucherNo = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
+                        $pdo->prepare("
+                            INSERT INTO public.arus_kas (
+                                nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                                referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                            ) VALUES (
+                                :nomor_tx, :akun_id, CURRENT_DATE, 'masuk', 'pembelian_bahan', :nominal, :ket,
+                                'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
+                            )
+                        ")->execute([
+                            'nomor_tx' => $voucherNo,
+                            'akun_id' => $targetKasId,
+                            'nominal' => $refundNominal,
+                            'ket' => "Pengembalian selisih belanja/kelebihan bayar penerimaan PO: {$nomorFaktur} (Fisik Rp " . number_format($totalBiaya, 0, ',', '.') . " vs Bayar Rp " . number_format($kasKeluarSebelumnya, 0, ',', '.') . ")",
+                            'pb_id' => $id,
+                            'saldo_berjalan' => $saldoBaru,
+                            'user_id' => $userId
+                        ]);
                     }
+                    $statusBayar = 'lunas';
+                } elseif ($totalBiaya > $kasKeluarSebelumnya) {
+                    // Kasus B: Fisik lebih banyak -> Ada kekurangan bayar
+                    $kurangNominal = round($totalBiaya - $kasKeluarSebelumnya, 2);
+                    if ($statusBayar === 'lunas' && !empty($targetKasId) && $kurangNominal > 0) {
+                        $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                        $stmtKasLock->execute(['id' => $targetKasId]);
+                        $kasRow = $stmtKasLock->fetch();
+                        $saldoBaru = (float)($kasRow['saldo_saat_ini'] ?? 0) - $kurangNominal;
+
+                        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                            ->execute(['saldo' => $saldoBaru, 'id' => $targetKasId]);
+
+                        $voucherNo = CashVoucher::generate('keluar', date('Y-m-d'), $pdo);
+                        $pdo->prepare("
+                            INSERT INTO public.arus_kas (
+                                nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                                referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                            ) VALUES (
+                                :nomor_tx, :akun_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nominal, :ket,
+                                'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
+                            )
+                        ")->execute([
+                            'nomor_tx' => $voucherNo,
+                            'akun_id' => $targetKasId,
+                            'nominal' => $kurangNominal,
+                            'ket' => "Pelunasan selisih kekurangan penerimaan fisik PO: {$nomorFaktur}",
+                            'pb_id' => $id,
+                            'saldo_berjalan' => $saldoBaru,
+                            'user_id' => $userId
+                        ]);
+                        $statusBayar = 'lunas';
+                    } else {
+                        // Sisa kekurangan masuk hutang dagang
+                        $statusBayar = 'belum_lunas';
+                    }
+                } else {
+                    // Fisik persis sama dengan yang sudah dibayar
+                    $statusBayar = 'lunas';
                 }
+            } else {
+                // Belum pernah ada pembayaran kas keluar sebelumnya (misal PO Tempo)
+                if ($statusBayar === 'lunas' && !empty($targetKasId)) {
+                    $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                    $stmtKasLock->execute(['id' => $targetKasId]);
+                    $kasRow = $stmtKasLock->fetch();
+                    $saldoLama = (float)($kasRow['saldo_saat_ini'] ?? 0);
+                    $saldoBaru = $saldoLama - $totalBiaya;
 
-                $voucherNo = CashVoucher::generate('keluar', date('Y-m-d'), $pdo);
+                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                        ->execute(['saldo' => $saldoBaru, 'id' => $targetKasId]);
 
-                $pdo->prepare("
-                    INSERT INTO public.arus_kas (
-                        nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
-                        referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
-                    ) VALUES (
-                        :nomor_tx, :akun_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nominal, :ket,
-                        'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
-                    )
-                ")->execute([
-                    'nomor_tx' => $voucherNo,
-                    'akun_id' => $akunKasId,
-                    'nominal' => $totalBiaya,
-                    'ket' => "Pembayaran faktur vendor penerimaan fisik: {$nomorFaktur}{$driverKet}",
-                    'pb_id' => $id,
-                    'saldo_berjalan' => $saldoBaru,
-                    'user_id' => $userId
-                ]);
+                    $driverKet = '';
+                    if (!empty($purchase['sales_driver_id'])) {
+                        $drvInfo = Database::fetchOne("SELECT nama_karyawan FROM public.v_karyawan_info WHERE id = :id", ['id' => $purchase['sales_driver_id']]);
+                        if ($drvInfo) {
+                            $driverKet = " (Belanja Driver: {$drvInfo['nama_karyawan']})";
+                        }
+                    }
+
+                    $voucherNo = CashVoucher::generate('keluar', date('Y-m-d'), $pdo);
+
+                    $pdo->prepare("
+                        INSERT INTO public.arus_kas (
+                            nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                            referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                        ) VALUES (
+                            :nomor_tx, :akun_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nominal, :ket,
+                            'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
+                        )
+                    ")->execute([
+                        'nomor_tx' => $voucherNo,
+                        'akun_id' => $targetKasId,
+                        'nominal' => $totalBiaya,
+                        'ket' => "Pembayaran faktur vendor penerimaan fisik: {$nomorFaktur}{$driverKet}",
+                        'pb_id' => $id,
+                        'saldo_berjalan' => $saldoBaru,
+                        'user_id' => $userId
+                    ]);
+                }
             }
 
             // 3. Update header pembelian
@@ -932,7 +1066,7 @@ class PurchaseController extends Controller
                     total_biaya = :total,
                     status_pembayaran = :status_bayar,
                     nomor_nota_vendor = :nota_vendor,
-                    url_foto_nota = :foto
+                    path_foto_nota = :foto
                 WHERE id = :id
             ")->execute([
                 'id' => $id,

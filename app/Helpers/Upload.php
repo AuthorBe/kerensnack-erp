@@ -82,14 +82,17 @@ class Upload
     }
 
     /**
-     * Inisialisasi seluruh direktori unggahan aplikasi (dapat dipanggil saat bootstrap / routing).
+     * Inisialisasi direktori aplikasi yang diperlukan (aset logo lokal & media cache).
      */
     public static function initDirectories(): void
     {
-        self::ensureDirectory('');
-        foreach (self::SUBDIRS as $sub) {
-            self::ensureDirectory($sub);
+        $logoDir = ROOT_PATH . '/public/assets/img/logo';
+        if (!is_dir($logoDir)) {
+            @mkdir($logoDir, 0755, true);
         }
+
+        // Pastikan direktori storage/cache/media dan keamanannya (.htaccess) auto-generate saat deploy
+        \App\Services\MediaCacheService::ensureCacheDirectory();
     }
 
     /**
@@ -226,34 +229,115 @@ class Upload
             return ['success' => false, 'path' => null, 'error' => 'Berkas bukan merupakan gambar valid.'];
         }
 
-        $targetDir = self::ensureDirectory($subdir);
+        // Normalisasi Kategori R2 berdasarkan subdir
+        $categoryMap = [
+            'purchases'           => 'receipts',
+            'receipts'            => 'receipts',
+            'delivery_proofs'     => 'deliveries',
+            'deliveries'          => 'deliveries',
+            'delivery_issues'     => 'delivery_issues',
+            'consignment_returns' => 'consignments',
+            'consignments'        => 'consignments',
+            'expenses'            => 'expenses',
+            'draf_pengeluaran'    => 'expenses',
+        ];
 
-        // Penamaan acak kriptografis 32-karakter hexa (Anti-Tracking, tidak memuat tanggal, tidak bisa ditebak orang luar)
+        $cleanSubdir = strtolower(trim(str_replace('\\', '/', $subdir), '/'));
+        $cleanSubdir = preg_replace('#^(public/)?uploads/?#i', '', $cleanSubdir);
+        $cleanSubdir = trim($cleanSubdir, '/');
+        $r2Category = $categoryMap[$cleanSubdir] ?? 'receipts';
+
+        // Buat file sementara di temp direktori lokal untuk proses kompresi
+        $tempDir = sys_get_temp_dir();
         $randomHash = bin2hex(random_bytes(16));
         $targetExt = function_exists('imagewebp') ? 'webp' : 'jpg';
-        $fileName = $randomHash . '.' . $targetExt;
-        $targetPath = $targetDir . '/' . $fileName;
+        $tempPath = $tempDir . DIRECTORY_SEPARATOR . 'r2_upload_' . $randomHash . '.' . $targetExt;
 
         // Kompresi resolusi dan kualitas gambar secara server-side
-        $compressed = self::compressAndSaveImage($file['tmp_name'], $targetPath, 1600, 80);
+        $compressed = self::compressAndSaveImage($file['tmp_name'], $tempPath, 1600, 80);
 
         if (!$compressed) {
             // Fallback jika kompresi GD terkendala
             $fallbackExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $fileName = $randomHash . '.' . $fallbackExt;
-            $targetPath = $targetDir . '/' . $fileName;
-            if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-                return ['success' => false, 'path' => null, 'error' => 'Gagal memindahkan berkas ke folder penyimpanan server.'];
+            $targetExt = $fallbackExt;
+            $tempPath = $tempDir . DIRECTORY_SEPARATOR . 'r2_upload_' . $randomHash . '.' . $fallbackExt;
+            if (!move_uploaded_file($file['tmp_name'], $tempPath)) {
+                return ['success' => false, 'path' => null, 'error' => 'Gagal memproses berkas sementara di server.'];
             }
         }
 
-        // Normalisasi URL path web
-        $cleanSubdir = str_replace('\\', '/', $subdir);
-        $cleanSubdir = trim($cleanSubdir, '/');
-        $cleanSubdir = preg_replace('#^(public/)?uploads/?#i', '', $cleanSubdir);
-        $cleanSubdir = trim($cleanSubdir, '/');
+        // Upload ke Cloudflare R2 privat
+        try {
+            $r2Service = \App\Services\R2StorageService::getInstance();
+            if ($r2Service->isConfigured()) {
+                $objectKey = $r2Service->uploadFile($tempPath, $r2Category, $targetExt);
+                // Simpan salinan ke cache lokal server (storage/cache/media) agar saat pertama dibuka staf 0 Class B request
+                \App\Services\MediaCacheService::saveToCache($objectKey, $tempPath);
+                @unlink($tempPath); // Bersihkan file temp lokal
+                return ['success' => true, 'path' => $objectKey, 'error' => null];
+            }
 
-        $webPath = '/uploads/' . ($cleanSubdir !== '' ? $cleanSubdir . '/' : '') . $fileName;
-        return ['success' => true, 'path' => $webPath, 'error' => null];
+            // Fallback jika R2 belum dikonfigurasi di .env (misal masa development lokal)
+            $targetDir = self::ensureDirectory($subdir);
+            $fileName = $randomHash . '.' . $targetExt;
+            $localTarget = $targetDir . '/' . $fileName;
+            @copy($tempPath, $localTarget);
+            @unlink($tempPath);
+
+            $webPath = ($cleanSubdir !== '' ? $cleanSubdir . '/' : '') . $fileName;
+            return ['success' => true, 'path' => $webPath, 'error' => null];
+        } catch (\Throwable $e) {
+            @unlink($tempPath);
+            error_log('[Upload::storeImage] R2 Upload Failure: ' . $e->getMessage());
+            return ['success' => false, 'path' => null, 'error' => 'Gagal menyimpan berkas ke Cloudflare R2: ' . $e->getMessage()];
+        }
+    }
+
+    /**
+     * Dapatkan URL penyajian media yang dioptimalkan via Server Cache Proxy (/media/view).
+     * Memangkas request Cloudflare R2 Class B ke 0 selama berkas tersimpan di cache lokal (< 14 hari).
+     *
+     * @param string|null $path Path relatif dari DB (misal: receipts/2026/09/abc.webp)
+     * @param int $minutes Disimpan untuk kompatibilitas fungsi
+     * @return string|null URL aman untuk ditampilkan di frontend
+     */
+    public static function presignedUrl(?string $path, int $minutes = 10): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+
+        $cleanPath = trim(str_replace('\\', '/', $path));
+        if ($cleanPath === '') {
+            return null;
+        }
+
+        // Jika sudah berupa URL lengkap eksternal HTTP(S)
+        if (str_starts_with($cleanPath, 'http://') || str_starts_with($cleanPath, 'https://')) {
+            return $cleanPath;
+        }
+
+        // Jika merupakan aset statis /assets/ atau /favicon/
+        if (str_starts_with($cleanPath, '/assets/') || str_starts_with($cleanPath, 'assets/') || str_starts_with($cleanPath, '/favicon/')) {
+            $norm = '/' . ltrim($cleanPath, '/');
+            return class_exists('\App\Core\Router') ? \App\Core\Router::url($norm) : $norm;
+        }
+
+        $cleanPath = ltrim($cleanPath, '/');
+
+        // Salurkan via rute media proxy server-side
+        if (class_exists('\App\Core\Router')) {
+            return \App\Core\Router::url('/media/view?path=' . urlencode($cleanPath));
+        }
+
+        return '/media/view?path=' . urlencode($cleanPath);
+    }
+
+    /**
+     * Shortcut alias untuk presignedUrl.
+     */
+    public static function url(?string $path): ?string
+    {
+        return self::presignedUrl($path);
     }
 }

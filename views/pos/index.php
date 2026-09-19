@@ -799,7 +799,7 @@ document.addEventListener('alpine:init', () => {
     <!-- MODAL 1: DISAMBIGUASI BARCODE                                          -->
     <!-- ====================================================================== -->
     <div x-show="showBarcodeModal" x-cloak class="modal-backdrop" style="display:none;">
-        <div @click.away="showBarcodeModal = false" class="modal-box">
+        <div class="modal-box">
             <div class="modal-header">
                 <div>
                     <div class="modal-title">Pilih Varian Rasa</div>
@@ -832,7 +832,7 @@ document.addEventListener('alpine:init', () => {
     <!-- ====================================================================== -->
     <!-- MODAL 2: PEMBAYARAN KASIR POS (OFFICIAL MATERIAL DESIGN 3 DIALOG)       -->
     <!-- ====================================================================== -->
-    <div x-show="showPaymentModal" x-cloak class="modal-backdrop m3-payment-backdrop" @click.self="showPaymentModal = false" style="display:none;">
+    <div x-show="showPaymentModal" x-cloak class="modal-backdrop m3-payment-backdrop" style="display:none;">
         <div class="m3-dialog" @click.stop>
             <div class="m3-drag-handle"></div>
             
@@ -845,9 +845,6 @@ document.addEventListener('alpine:init', () => {
                     <h2 class="m3-dialog-title">Pembayaran Transaksi</h2>
                     <p class="m3-dialog-subtitle">Kasir Ritel Keren Snack</p>
                 </div>
-                <button type="button" @click="showPaymentModal = false" class="m3-icon-btn" aria-label="Tutup">
-                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-                </button>
             </div>
 
             <!-- M3 Total Headline Display (Tonal Hero Card) -->
@@ -1018,7 +1015,7 @@ document.addEventListener('alpine:init', () => {
     <!-- MODAL 3: STRUK NOTA PEMBAYARAN & CETAK THERMAL                         -->
     <!-- ====================================================================== -->
     <div x-show="showReceiptModal" x-cloak class="modal-backdrop" style="display:none;">
-        <div @click.away="showReceiptModal = false" class="modal-box" style="max-width:420px;padding:20px;">
+        <div class="modal-box" style="max-width:420px;padding:20px;">
             <div class="modal-header" style="padding-bottom:12px;margin-bottom:12px;">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <div style="width:28px;height:28px;border-radius:50%;background:rgba(62,207,142,0.15);color:var(--color-primary);display:flex;align-items:center;justify-content:center;">

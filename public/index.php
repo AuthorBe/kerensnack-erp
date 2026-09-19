@@ -106,6 +106,7 @@ use App\Controllers\PermissionController;
 use App\Controllers\SettingsController;
 use App\Controllers\ActivityLogController;
 use App\Controllers\ImportDataController;
+use App\Controllers\MediaController;
 
 // =========================================================================
 // ROUTE REGISTRATION (Enterprise Router)
@@ -116,6 +117,12 @@ Router::get('/login', [AuthController::class, 'showLogin']);
 Router::post('/login', [AuthController::class, 'login']);
 Router::get('/logout', [AuthController::class, 'logout']);
 Router::post('/logout', [AuthController::class, 'logout']);
+
+// --- CLOUDFLARE R2 & LOCAL CACHE MEDIA PROXY ---
+Router::get('/media/view', [MediaController::class, 'serveFile']);
+Router::get('/api/media/presigned', [MediaController::class, 'getPresignedUrl']);
+Router::get('/api/media/cache-stats', [MediaController::class, 'cacheStats']);
+Router::post('/api/media/clear-cache', [MediaController::class, 'clearCache']);
 
 // --- ROOT REDIRECT ---
 Router::get('/', function () {

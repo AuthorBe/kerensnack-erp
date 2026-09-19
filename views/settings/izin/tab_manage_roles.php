@@ -228,7 +228,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
     <!-- MODAL TAMBAH ROLE                                                     -->
     <!-- ===================================================================== -->
     <template x-teleport="body">
-        <div x-show="addRoleModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;" @click.self="addRoleModalOpen = false">
+        <div x-show="addRoleModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
             <div class="modal-box" style="max-width:540px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
                 
                 <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1.5px solid #f1f5f9;">
@@ -241,12 +241,6 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                             <p style="font-size:0.82rem;color:#64748b;margin:0;">Definisikan nama jabatan dan hak wewenang baru dalam sistem</p>
                         </div>
                     </div>
-                    <button type="button" @click="addRoleModalOpen = false" 
-                            style="width:34px;height:34px;border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;"
-                            onmouseover="this.style.background='#fee2e2';this.style.color='#ef4444';this.style.borderColor='#fecaca';"
-                            onmouseout="this.style.background='#f8fafc';this.style.color='#64748b';this.style.borderColor='#e2e8f0';">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
-                    </button>
                 </div>
 
                 <form action="<?= Router::url('/permissions/store-role') ?>" method="POST" data-action-text="Menyimpan role baru...">
@@ -299,7 +293,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
     <!-- MODAL EDIT ROLE                                                       -->
     <!-- ===================================================================== -->
     <template x-teleport="body">
-        <div x-show="editRoleModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;" @click.self="editRoleModalOpen = false">
+        <div x-show="editRoleModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
             <div class="modal-box" style="max-width:540px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
                 
                 <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1.5px solid #f1f5f9;">
@@ -312,12 +306,6 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                             <p style="font-size:0.82rem;color:#64748b;margin:0;">Perbarui keterangan wewenang dan cakupan fungsi jabatan</p>
                         </div>
                     </div>
-                    <button type="button" @click="editRoleModalOpen = false" 
-                            style="width:34px;height:34px;border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;"
-                            onmouseover="this.style.background='#fee2e2';this.style.color='#ef4444';this.style.borderColor='#fecaca';"
-                            onmouseout="this.style.background='#f8fafc';this.style.color='#64748b';this.style.borderColor='#e2e8f0';">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
-                    </button>
                 </div>
 
                 <form action="<?= Router::url('/permissions/update-role') ?>" method="POST" data-action-text="Memperbarui deskripsi role...">
@@ -372,7 +360,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
     <template x-teleport="body">
         <div x-show="deleteRoleModalOpen" x-cloak class="modal-backdrop"
              style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;"
-             @click.self="deleteRoleModalOpen = false">
+            >
             <div class="modal-box" style="max-width:460px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #fecaca;box-shadow:0 25px 50px -12px rgba(239,68,68,0.15);" @click.stop>
 
                 <!-- Header -->
@@ -425,7 +413,7 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
     <template x-teleport="body">
         <div x-show="viewUsersRoleModalOpen" x-cloak class="modal-backdrop"
              style="background:rgba(15,23,42,0.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;"
-             @click.self="viewUsersRoleModalOpen = false"
+            
              @keydown.escape.window="viewUsersRoleModalOpen = false">
             <div style="max-width:380px;width:100%;border-radius:16px;background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 8px 30px rgba(15,23,42,0.12);display:flex;flex-direction:column;max-height:80vh;overflow:hidden;" @click.stop>
 

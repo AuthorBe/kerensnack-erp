@@ -1681,7 +1681,7 @@ $cLogoUrl       = $company['logo_url'] ?? '';
         <div x-show="previewModalOpen"
              x-cloak
              class="modal-backdrop"
-             @click.self="closePreviewModal()"
+            
              @keydown.escape.window="closePreviewModal()">
             <div class="modal-box modal-box-lg company-preview-modal-box">
                 

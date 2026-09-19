@@ -137,12 +137,15 @@ class SettingsController extends Controller
                 default => 'png'
             };
 
-            $targetDir = \App\Helpers\Upload::ensureDirectory('company');
+            $targetDir = ROOT_PATH . '/public/assets/img/logo';
+            if (!is_dir($targetDir)) {
+                @mkdir($targetDir, 0755, true);
+            }
             $fileName = 'logo_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
             $targetPath = $targetDir . '/' . $fileName;
 
             if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-                $logoUrl = '/uploads/company/' . $fileName;
+                $logoUrl = '/assets/img/logo/' . $fileName;
             } else {
                 \App\Helpers\Flash::error('Gagal menyimpan berkas logo ke server.');
                 \App\Core\Router::redirect('/settings/company');

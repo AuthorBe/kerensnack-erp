@@ -828,7 +828,7 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
     <template x-teleport="body">
         <div x-show="showGuideModal" x-cloak class="modal-backdrop"
              style="position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;">
-            <div @click.outside="showGuideModal = false" 
+            <div 
                  x-data="{ activeGuideTab: (isKonsinyasi ? 'konsinyasi' : 'reguler') }"
                  class="card shadow-2xl bg-card border border-hairline animate-scale-in"
                  style="width:100%;max-width:620px;max-height:calc(100vh - 48px);overflow-y:auto;border-radius:24px;padding:28px 30px;box-sizing:border-box;">
@@ -961,7 +961,7 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
     <template x-teleport="body">
         <div x-show="showRefundModal" x-cloak class="modal-backdrop"
              style="position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;">
-            <div @click.outside="showRefundModal = false"
+            <div
                  class="card shadow-2xl bg-card border border-hairline animate-scale-in"
                  style="max-width:480px;width:100%;border-radius:20px;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;">
                 

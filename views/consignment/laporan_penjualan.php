@@ -1333,7 +1333,7 @@ document.addEventListener('alpine:init', () => {
     <div x-show="isModalOpen" 
          x-cloak 
          class="modal-backdrop" 
-         @click.self="closeModal()" 
+         
          @keydown.escape.window="closeModal()">
         
         <div class="detail-modal-shell" @click.stop>
@@ -1369,10 +1369,6 @@ document.addEventListener('alpine:init', () => {
                         </template>
                     </div>
                 </div>
-                
-                <button type="button" @click="closeModal()" class="btn btn-ghost btn-sm flex-shrink-0" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;" aria-label="Tutup">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <!-- LAYER 2: MODAL BODY (SCROLLABLE & TOUCH FRIENDLY) -->

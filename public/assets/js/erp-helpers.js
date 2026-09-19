@@ -153,8 +153,8 @@
             var cancelText = escapeHtml(opts.cancelText || 'Batal');
             var type = opts.type || 'danger';
             var iconName = opts.icon || null;
-            var showCloseBtn = opts.showCloseBtn !== false;
             var showCancelBtn = opts.showCancelBtn !== false;
+            var showCloseBtn = opts.showCloseBtn !== undefined ? Boolean(opts.showCloseBtn) : !showCancelBtn;
             var defaultFocus = opts.defaultFocus || 'confirm';
 
             var existing = document.getElementById('app-confirm-overlay');
@@ -206,6 +206,7 @@
 
             document.body.appendChild(overlay);
             document.body.classList.add('modal-open');
+            if (window.PopupManager) window.PopupManager.freeze(overlay);
 
             var modalEl = overlay.querySelector('.confirm-modal');
             var btnCancel = overlay.querySelector('#confirm-btn-cancel');
@@ -226,6 +227,7 @@
             function closeDialog(result) {
                 if (isClosed) return;
                 isClosed = true;
+                if (window.PopupManager) window.PopupManager.unfreeze(overlay);
                 overlay.style.opacity = '0';
                 modalEl.style.transform = 'scale(0.95) translateY(6px)';
                 document.removeEventListener('keydown', handleKey);
@@ -250,9 +252,6 @@
             if (btnCancel) btnCancel.addEventListener('click', function() { closeDialog(false); });
             if (btnOk) btnOk.addEventListener('click', function() { closeDialog(true); });
             if (btnClose) btnClose.addEventListener('click', function() { closeDialog(false); });
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) closeDialog(false);
-            });
         });
     }
 
@@ -308,6 +307,7 @@
 
             document.body.appendChild(overlay);
             document.body.classList.add('modal-open');
+            if (window.PopupManager) window.PopupManager.freeze(overlay);
 
             var modalEl = overlay.querySelector('.confirm-modal');
             var btnOk = overlay.querySelector('#alert-btn-ok');
@@ -323,6 +323,7 @@
             function closeDialog() {
                 if (isClosed) return;
                 isClosed = true;
+                if (window.PopupManager) window.PopupManager.unfreeze(overlay);
                 overlay.style.opacity = '0';
                 modalEl.style.transform = 'scale(0.95) translateY(6px)';
                 document.removeEventListener('keydown', handleKey);
@@ -343,9 +344,6 @@
             document.addEventListener('keydown', handleKey);
             if (btnOk) btnOk.addEventListener('click', closeDialog);
             if (btnClose) btnClose.addEventListener('click', closeDialog);
-            overlay.addEventListener('click', function(e) {
-                if (e.target === overlay) closeDialog();
-            });
         });
     }
 

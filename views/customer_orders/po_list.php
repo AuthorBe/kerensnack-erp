@@ -622,7 +622,7 @@ ob_start();
     <!-- 5. MODAL DIALOG POP-UP: RINCIAN ITEM PRODUK (MATERIAL DESIGN 3)            -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showItemModal" x-cloak class="modal-backdrop" @click.self="showItemModal = false" @keydown.escape.window="showItemModal = false" style="z-index: 9999;">
+    <div x-show="showItemModal" x-cloak class="modal-backdrop" @keydown.escape.window="showItemModal = false" style="z-index: 9999;">
         <div class="modal-box" style="max-width: 680px; padding: 24px; border-radius: 20px;">
             
             <!-- MODAL HEADER -->
@@ -646,9 +646,6 @@ ob_start();
                         </div>
                     </div>
                 </div>
-                <button @click="showItemModal = false" class="btn btn-ghost btn-sm" style="padding: 6px; border-radius: 10px;">
-                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
-                </button>
             </div>
 
             <!-- WARNING JIKA DEFISIT STOK -->

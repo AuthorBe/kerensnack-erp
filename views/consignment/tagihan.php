@@ -1498,7 +1498,7 @@ document.addEventListener('alpine:init', () => {
     <div x-show="bayarModalOpen" 
          x-cloak 
          class="tagihan-modal-backdrop" 
-         @click.self="closeBayarModal()" 
+         
          @keydown.escape.window="closeBayarModal()">
         
         <div class="tagihan-modal-shell" @click.stop>
@@ -1516,10 +1516,6 @@ document.addEventListener('alpine:init', () => {
                         </div>
                     </div>
                 </div>
-
-                <button type="button" @click="closeBayarModal()" class="btn btn-ghost btn-sm flex-shrink-0" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;" aria-label="Tutup">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <!-- LAYER 2: MODAL BODY (SCROLLABLE & TOUCH FRIENDLY) -->
@@ -1729,7 +1725,7 @@ document.addEventListener('alpine:init', () => {
     <div x-show="guideModalOpen" 
          x-cloak 
          class="tagihan-modal-backdrop" 
-         @click.self="closeGuideModal()" 
+         
          @keydown.escape.window="closeGuideModal()">
         
         <div class="tagihan-modal-guide-shell" @click.stop>
@@ -1750,13 +1746,6 @@ document.addEventListener('alpine:init', () => {
                         </p>
                     </div>
                 </div>
-                <button type="button" 
-                        @click="closeGuideModal()" 
-                        class="btn btn-ghost btn-sm flex-shrink-0" 
-                        style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;" 
-                        aria-label="Tutup">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <!-- LAYER 2: MODAL BODY (SCROLLABLE) -->

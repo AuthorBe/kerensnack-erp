@@ -164,6 +164,108 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
 .import-row-hidden {
     display: none !important;
 }
+
+/* ── Preview Footer Responsive Styling ── */
+.import-preview-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-top: 1px solid var(--color-hairline);
+    background-color: var(--color-canvas-soft);
+}
+
+.import-footer-fileinfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    width: 100%;
+}
+
+.import-footer-fileicon {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--rounded-xs);
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.import-footer-filemeta {
+    min-width: 0;
+    flex: 1;
+}
+
+.import-footer-filename {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--color-ink);
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
+.import-footer-filesub {
+    font-size: 11px;
+    color: var(--color-ink-mute);
+    margin-top: 2px;
+}
+
+.import-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+@media (min-width: 640px) {
+    .import-preview-footer {
+        flex-direction: row;
+        align-items: center;
+    }
+    .import-footer-fileinfo {
+        flex: 1;
+    }
+    .import-footer-actions {
+        justify-content: flex-end;
+        flex-shrink: 0;
+    }
+}
+
+@media (max-width: 639px) {
+    .import-preview-footer {
+        padding: 14px 16px;
+        gap: 14px;
+    }
+    .import-footer-actions {
+        flex-direction: column-reverse;
+        width: 100%;
+        gap: 8px;
+    }
+    .import-footer-actions .btn {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+        height: 40px;
+        font-size: 12.5px;
+    }
+}
+
+/* ── Diff Table Horizontal & Vertical Scroll Engine ── */
+.import-table-scroll {
+    width: 100% !important;
+    max-height: 560px;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain;
+    scroll-behavior: auto !important;
+}
 </style>
 
 <div id="importPreviewApp">
@@ -198,12 +300,6 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
                     <span>Mode Aman (Upsert)</span>
                 </span>
             <?php endif; ?>
-
-            <!-- Tombol Batal & Unggah Ulang -->
-            <a href="<?= Router::url('/settings/impor-data/cancel') ?>" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
-                <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
-                <span>Unggah Berkas Lain</span>
-            </a>
         </div>
     </div>
 
@@ -242,7 +338,7 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
                         Sinkronisasi ditahan untuk mencegah inkonsistensi data. Ditemukan baris dengan kolom wajib yang kosong, format angka tidak valid, atau relasi master yang belum terdaftar. Tombol simpan dikunci secara aman.
                     </p>
                     <div style="font-size: 11.5px; font-weight: 700; color: var(--color-danger);">
-                        Solusi: Periksa baris bertanda <span class="badge badge-danger">ERROR</span> di tabel bawah, perbaiki berkas Excel Anda, lalu klik "Unggah Berkas Lain".
+                        Solusi: Periksa baris bertanda <span class="badge badge-danger">ERROR</span> di tabel bawah, perbaiki berkas Excel Anda, lalu klik "Batal &amp; Unggah Ulang".
                     </div>
                 </div>
             </div>
@@ -326,8 +422,8 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
             </div>
 
             <!-- Table Wrapper -->
-            <div class="table-wrapper custom-scrollbar" style="max-height: 560px; overflow-y: auto;">
-                <table class="table" id="previewDataTable" style="font-size: 12.5px;">
+            <div class="table-wrapper overflow-x-auto custom-scrollbar import-table-scroll" style="max-height: 560px; overflow-x: auto; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+                <table class="table" id="previewDataTable" style="font-size: 12.5px; width: 100%; min-width: max(100%, 680px);">
                     <thead style="position: sticky; top: 0; z-index: 10; background-color: var(--color-canvas-soft);">
                         <tr>
                             <th style="width: 80px; text-align: center; white-space: nowrap;">Aksi</th>
@@ -441,23 +537,25 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
             </div>
 
             <!-- Footer Aksi & Konfirmasi -->
-            <div style="display: flex; flex-direction: column; sm:flex-row; gap: 14px; align-items: stretch; sm:items-center; justify-content: space-between; padding: 16px 20px; border-top: 1px solid var(--color-hairline); background-color: var(--color-canvas-soft);">
+            <div class="import-preview-footer">
                 
                 <!-- Info Berkas -->
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 32px; height: 32px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.12); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <div class="import-footer-fileinfo">
+                    <div class="import-footer-fileicon">
                         <i data-lucide="file-spreadsheet" style="width: 16px; height: 16px;"></i>
                     </div>
-                    <div>
-                        <div style="font-size: 12.5px; font-weight: 700; color: var(--color-ink);"><?= htmlspecialchars($uploadedFilename) ?></div>
-                        <div style="font-size: 11px; color: var(--color-ink-mute);">
+                    <div class="import-footer-filemeta">
+                        <div class="import-footer-filename" title="<?= htmlspecialchars($uploadedFilename) ?>">
+                            <?= htmlspecialchars($uploadedFilename) ?>
+                        </div>
+                        <div class="import-footer-filesub">
                             Total <?= $totalRows ?> baris mutasi terdeteksi
                         </div>
                     </div>
                 </div>
 
                 <!-- Tombol Aksi Batal & Konfirmasi -->
-                <div style="display: flex; align-items: center; gap: 10px; justify-content: flex-end;">
+                <div class="import-footer-actions">
                     <a href="<?= Router::url('/settings/impor-data/cancel') ?>" class="btn btn-secondary" style="font-weight: 700;">
                         Batal &amp; Unggah Ulang
                     </a>
@@ -489,19 +587,17 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
 </form>
 
 <div id="importConfirmModal" class="modal-backdrop" style="display: none;" aria-modal="true" role="dialog">
-    <div class="modal-box" style="max-width: 440px;" onclick="event.stopPropagation()">
+    <div class="modal-box" style="max-width: 440px; border-radius: var(--rounded-lg, 16px); overflow: hidden;">
         
         <!-- Header Modal -->
-        <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="width: 34px; height: 34px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.14); color: var(--color-primary); display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="check-circle-2" style="width: 18px; height: 18px;"></i>
-                </div>
-                <h3 class="modal-title" style="font-size: 15px; font-weight: 800;">Terapkan Sinkronisasi?</h3>
+        <div class="modal-header" style="display: flex; align-items: center; justify-content: flex-start !important; gap: 12px; padding: 18px 20px 14px 20px; margin-bottom: 0; border-bottom: 1px solid var(--color-hairline);">
+            <div style="width: 36px; height: 36px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.14); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <i data-lucide="check-circle-2" style="width: 20px; height: 20px;"></i>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm" onclick="closeImportConfirmModal()" title="Tutup">
-                <i data-lucide="x" style="width: 16px; height: 16px;"></i>
-            </button>
+            <div style="min-width: 0;">
+                <h3 class="modal-title" style="font-size: 15.5px; font-weight: 800; margin: 0; color: var(--color-ink); line-height: 1.25;">Terapkan Sinkronisasi?</h3>
+                <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 2px;">Konfirmasi penyimpanan perubahan data</div>
+            </div>
         </div>
 
         <!-- Body Modal -->
@@ -511,48 +607,36 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
             </p>
 
             <!-- Rekap Mutasi Card -->
-            <div style="border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); background: var(--color-canvas-soft); overflow: hidden; margin-bottom: 14px;">
-                <?php if ($cnt_insert > 0): ?>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--color-hairline);">
-                        <span style="font-size: 12px; font-weight: 600; color: var(--color-success);">Data Baru (Insert)</span>
-                        <span class="badge badge-success">+<?= $cnt_insert ?></span>
-                    </div>
-                <?php endif; ?>
+            <?php 
+            $rekapList = [];
+            if ($cnt_insert > 0) $rekapList[] = ['label' => 'Data Baru (Insert)', 'badge' => 'badge badge-success', 'val' => '+' . $cnt_insert, 'color' => 'var(--color-success)'];
+            if ($cnt_update > 0) $rekapList[] = ['label' => 'Diperbarui (Update)', 'badge' => 'badge badge-warning', 'val' => '~' . $cnt_update, 'color' => 'var(--color-warning)'];
+            if ($cnt_delete > 0) $rekapList[] = ['label' => 'Dihapus / Nonaktif (Delete)', 'badge' => 'badge badge-danger', 'val' => '-' . $cnt_delete, 'color' => 'var(--color-danger)'];
+            if ($cnt_fatal > 0)  $rekapList[] = ['label' => 'Konflik ID (Generate Baru)', 'badge' => 'badge badge-danger', 'val' => '!' . $cnt_fatal, 'color' => 'var(--color-danger)'];
+            ?>
+            <?php if (!empty($rekapList)): ?>
+                <div style="border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); background: var(--color-canvas-soft); overflow: hidden; margin-bottom: 14px;">
+                    <?php foreach ($rekapList as $idx => $item): ?>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; <?= $idx < count($rekapList) - 1 ? 'border-bottom: 1px solid var(--color-hairline);' : '' ?>">
+                            <span style="font-size: 12px; font-weight: 600; color: <?= $item['color'] ?>;"><?= $item['label'] ?></span>
+                            <span class="<?= $item['badge'] ?>" style="font-size: 11px; font-weight: 700;"><?= $item['val'] ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
 
-                <?php if ($cnt_update > 0): ?>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--color-hairline);">
-                        <span style="font-size: 12px; font-weight: 600; color: var(--color-warning);">Diperbarui (Update)</span>
-                        <span class="badge badge-warning">~<?= $cnt_update ?></span>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($cnt_delete > 0): ?>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--color-hairline);">
-                        <span style="font-size: 12px; font-weight: 600; color: var(--color-danger);">Dihapus / Nonaktif (Delete)</span>
-                        <span class="badge badge-danger">-<?= $cnt_delete ?></span>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($cnt_fatal > 0): ?>
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 14px;">
-                        <span style="font-size: 12px; font-weight: 700; color: var(--color-danger);">Konflik ID (Generate Baru)</span>
-                        <span class="badge badge-danger">!<?= $cnt_fatal ?></span>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <div style="font-size: 11.5px; color: var(--color-ink-mute); line-height: 1.4;">
-                <i data-lucide="lock" style="width: 13px; height: 13px; display: inline-block; vertical-align: -2px; color: var(--color-success);"></i>
-                Semua operasi dijalankan dalam satu transaksi PostgreSQL terproteksi (atomic rollback).
+            <div style="font-size: 11.5px; color: var(--color-ink-mute); line-height: 1.45; display: flex; align-items: center; gap: 7px;">
+                <i data-lucide="shield-check" style="width: 14px; height: 14px; color: var(--color-success); flex-shrink: 0;"></i>
+                <span>Semua operasi dijalankan dalam satu transaksi aman (atomic rollback).</span>
             </div>
         </div>
 
         <!-- Footer Modal -->
-        <div class="modal-footer" style="padding: 14px 20px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--color-hairline); background-color: var(--color-canvas-soft);">
-            <button type="button" class="btn btn-secondary" onclick="closeImportConfirmModal()" style="font-weight: 700;">
+        <div class="modal-footer" style="padding: 14px 20px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--color-hairline); background-color: var(--color-canvas-soft);">
+            <button type="button" class="btn btn-secondary" onclick="closeImportConfirmModal()" style="font-weight: 700; height: 38px; padding: 0 18px;">
                 Batal
             </button>
-            <button type="button" class="btn btn-primary" onclick="executeSyncConfirm()" style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn btn-primary" onclick="executeSyncConfirm()" style="font-weight: 700; height: 38px; padding: 0 18px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="check" style="width: 16px; height: 16px;"></i>
                 <span>Terapkan Sekarang</span>
             </button>

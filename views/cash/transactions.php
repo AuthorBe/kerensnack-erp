@@ -309,7 +309,7 @@ ob_start();
     <!-- MODAL 1: CATAT KAS MASUK -->
     <?php if (Auth::can('cash.inflow')): ?>
     <template x-teleport="body">
-    <div x-show="showInflowModal" x-cloak class="modal-backdrop" @click.self="showInflowModal = false">
+    <div x-show="showInflowModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
             <div class="modal-header">
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -321,9 +321,6 @@ ob_start();
                         <div style="font-size:11.5px;color:var(--color-ink-mute);">Penerimaan modal, pendapatan lain-lain</div>
                     </div>
                 </div>
-                <button type="button" @click="showInflowModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/cash/store-inflow') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -379,7 +376,7 @@ ob_start();
     <!-- MODAL 2: CATAT KAS KELUAR (BEBAN OPERASIONAL) -->
     <?php if (Auth::can('cash.outflow')): ?>
     <template x-teleport="body">
-    <div x-show="showOutflowModal" x-cloak class="modal-backdrop" @click.self="showOutflowModal = false">
+    <div x-show="showOutflowModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
             <div class="modal-header">
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -391,9 +388,6 @@ ob_start();
                         <div style="font-size:11.5px;color:var(--color-ink-mute);">Pengeluaran operasional toko, bensin, listrik, dll</div>
                     </div>
                 </div>
-                <button type="button" @click="showOutflowModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/cash/store-outflow') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
@@ -449,7 +443,7 @@ ob_start();
     <!-- MODAL 3: TRANSFER ANTAR KAS (MUTASI DANA) -->
     <?php if (Auth::can('cash.transfer')): ?>
     <template x-teleport="body">
-    <div x-show="showTransferModal" x-cloak class="modal-backdrop" @click.self="showTransferModal = false">
+    <div x-show="showTransferModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:500px;padding:24px;" @click.stop>
             <div class="modal-header">
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -461,9 +455,6 @@ ob_start();
                         <div style="font-size:11.5px;color:var(--color-ink-mute);">Setor uang kasir ke bank / mutasi dana antar rekening</div>
                     </div>
                 </div>
-                <button type="button" @click="showTransferModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/cash/store-transfer') ?>" method="POST" @submit="submitTransferForm($event)" style="display:flex;flex-direction:column;gap:14px;">

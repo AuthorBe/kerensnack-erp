@@ -1515,15 +1515,17 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
             <div class="oh-wa-box" id="waMessageContent"><?= htmlspecialchars($fullWaMessage) ?></div>
         </div>
 
-        <?php if (!empty($visit['foto_kunjungan'])): ?>
+        <?php if (!empty($visit['foto_kunjungan'])): 
+            $presignedVisitPhoto = \App\Helpers\Upload::presignedUrl($visit['foto_kunjungan'], 10) ?: $visit['foto_kunjungan'];
+        ?>
         <div class="pt-3 border-t border-hairline">
             <div class="text-xs font-bold mb-2 flex items-center gap-1.5" style="color:var(--color-ink);">
                 <i data-lucide="camera" class="w-4 h-4 text-sky-600"></i>
                 <span>Foto Bukti Kunjungan / Barang Retur:</span>
             </div>
             <div class="inline-block rounded-xl overflow-hidden border border-hairline bg-slate-50 dark:bg-slate-800">
-                <a href="<?= htmlspecialchars($visit['foto_kunjungan']) ?>" target="_blank" title="Klik untuk memperbesar gambar">
-                    <img src="<?= htmlspecialchars($visit['foto_kunjungan']) ?>" alt="Bukti Kunjungan" style="max-height:220px;max-width:100%;object-fit:cover;display:block;" class="hover:opacity-90 transition-opacity">
+                <a href="<?= htmlspecialchars($presignedVisitPhoto) ?>" target="_blank" title="Klik untuk memperbesar gambar">
+                    <img src="<?= htmlspecialchars($presignedVisitPhoto) ?>" alt="Bukti Kunjungan" style="max-height:220px;max-width:100%;object-fit:cover;display:block;" class="hover:opacity-90 transition-opacity">
                 </a>
             </div>
         </div>

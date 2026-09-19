@@ -386,7 +386,7 @@ ob_start();
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showHistoryModal" x-cloak class="modal-backdrop">
-        <div @click.away="showHistoryModal = false" class="modal-box" style="max-width:760px; width:95%;">
+        <div class="modal-box" style="max-width:760px; width:95%;">
             <div class="modal-header">
                 <div>
                     <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
@@ -396,9 +396,6 @@ ob_start();
                     <div style="font-size:12px; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;"
                          x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
                 </div>
-                <button type="button" @click="showHistoryModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px; height:16px;"></i>
-                </button>
             </div>
 
             <div x-show="historyLoading" style="padding:36px; text-align:center; color:var(--color-ink-mute);">
@@ -470,7 +467,7 @@ ob_start();
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showConfirmModal" x-cloak class="modal-backdrop">
-        <div @click.away="showConfirmModal = false" class="modal-box" style="max-width:820px; width:95%;">
+        <div class="modal-box" style="max-width:820px; width:95%;">
             <div class="modal-header">
                 <div>
                     <div class="modal-title" style="display:flex; align-items:center; gap:8px;">

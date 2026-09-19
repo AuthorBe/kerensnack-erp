@@ -260,7 +260,7 @@ ob_start();
     <!-- MODAL TAMBAH PENGGUNA (TELEPORTED TO BODY)                                -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-        <div x-show="addModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;" @click.self="addModalOpen = false">
+        <div x-show="addModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
             <div class="modal-box" style="max-width:620px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
                 
                 <!-- Modal Header -->
@@ -274,12 +274,6 @@ ob_start();
                             <p style="font-size:0.82rem;color:#64748b;margin:0;">Buat akun login sistem baru untuk karyawan atau staf operasional</p>
                         </div>
                     </div>
-                    <button type="button" @click="addModalOpen = false" 
-                            style="width:34px;height:34px;border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;"
-                            onmouseover="this.style.background='#fee2e2';this.style.color='#ef4444';this.style.borderColor='#fecaca';"
-                            onmouseout="this.style.background='#f8fafc';this.style.color='#64748b';this.style.borderColor='#e2e8f0';">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
-                    </button>
                 </div>
 
                 <!-- Modal Body / Form -->
@@ -424,7 +418,7 @@ ob_start();
     <!-- MODAL EDIT PENGGUNA (TELEPORTED TO BODY)                                  -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-        <div x-show="editModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;" @click.self="editModalOpen = false">
+        <div x-show="editModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
             <div class="modal-box" style="max-width:620px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
                 
                 <!-- Modal Header -->
@@ -440,12 +434,6 @@ ob_start();
                             <p style="font-size:0.82rem;color:#64748b;margin:0;" x-text="editUser.is_developer ? 'Pengaturan Profil Utama Developer (Super Admin Root)' : 'Ubah data profil, peran wewenang, dan status akses pengguna'"></p>
                         </div>
                     </div>
-                    <button type="button" @click="editModalOpen = false" 
-                            style="width:34px;height:34px;border-radius:10px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;"
-                            onmouseover="this.style.background='#fee2e2';this.style.color='#ef4444';this.style.borderColor='#fecaca';"
-                            onmouseout="this.style.background='#f8fafc';this.style.color='#64748b';this.style.borderColor='#e2e8f0';">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
-                    </button>
                 </div>
 
                 <!-- Modal Body / Form -->

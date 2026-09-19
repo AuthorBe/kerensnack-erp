@@ -93,6 +93,14 @@ class DeliveryController extends Controller
             $isAfternoon = ($nowHour >= 12);
             $defaultDeliveryDate = $isAfternoon ? date('Y-m-d', strtotime('+1 day')) : date('Y-m-d');
 
+            // Injeksi Cloudflare R2 Presigned URLs (10 Menit)
+            foreach ($deliveries as &$deliv) {
+                if (!empty($deliv['bukti_terima_foto'])) {
+                    $deliv['bukti_terima_foto'] = \App\Helpers\Upload::presignedUrl($deliv['bukti_terima_foto'], 10);
+                }
+            }
+            unset($deliv);
+
             $this->view('deliveries.index', [
                 'pageTitle' => 'Status Pengiriman',
                 'pageSubtitle' => 'Manifest Rute Pengiriman & Status Antar Toko',
@@ -118,6 +126,10 @@ class DeliveryController extends Controller
         $driverId = $this->input('sales_driver_id') ?: null;
         $wilayahId = $this->input('rute_wilayah_id') ?: null;
         $status = $this->input('status_surat_jalan', 'siap_kirim');
+        $validStatuses = ['siap_kirim', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'gagal_kirim'];
+        if (!in_array($status, $validStatuses, true)) {
+            $status = 'siap_kirim';
+        }
 
         $nowHour = (int)date('H');
         $defaultDate = ($nowHour >= 12) ? date('Y-m-d', strtotime('+1 day')) : date('Y-m-d');
@@ -316,6 +328,13 @@ class DeliveryController extends Controller
 
         if (empty($id) || empty($status)) {
             $this->flashError('Parameter tidak lengkap.');
+            $this->redirect('/deliveries');
+            return;
+        }
+
+        $validStatuses = ['siap_kirim', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'gagal_kirim'];
+        if (!in_array($status, $validStatuses, true)) {
+            $this->flashError('Status pengiriman tidak valid.');
             $this->redirect('/deliveries');
             return;
         }
@@ -826,7 +845,9 @@ class DeliveryController extends Controller
                 SELECT pb.id, pb.nomor_faktur_pembelian, pb.tanggal_pembelian, pb.tanggal_jadwal_belanja, pb.total_biaya,
                        pb.status_pembayaran, pb.status_penerimaan, pb.catatan, pb.instruksi_driver,
                        pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
-                       pb.url_foto_nota, pb.foto_bukti_kendala, pb.alasan_kendala, pb.waktu_diambil,
+                       pb.path_foto_nota, pb.path_foto_nota as url_foto_nota, 
+                       pb.path_bukti_kendala, pb.path_bukti_kendala as foto_bukti_kendala, 
+                       pb.alasan_kendala, pb.waktu_diambil,
                        sup.id as pemasok_id, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon,
                        sup.alamat_lengkap as alamat_pemasok, sup.link_google_maps, sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa,
                        sup.email as supplier_email, sup.termin_bayar as supplier_termin_bayar, sup.catatan as supplier_catatan,
@@ -888,6 +909,27 @@ class DeliveryController extends Controller
                 }
                 unset($st);
             }
+
+            // Injeksi Cloudflare R2 Presigned URLs (10 Menit) untuk Pengiriman & Tugas Belanja
+            foreach ($deliveries as &$deliv) {
+                $deliv['presigned_bukti_terima'] = \App\Helpers\Upload::presignedUrl($deliv['bukti_terima_foto'] ?? null, 10);
+                $deliv['presigned_bukti_gagal'] = \App\Helpers\Upload::presignedUrl($deliv['foto_bukti_gagal'] ?? null, 10);
+                if (!empty($deliv['presigned_bukti_terima'])) {
+                    $deliv['bukti_terima_foto'] = $deliv['presigned_bukti_terima'];
+                }
+                if (!empty($deliv['presigned_bukti_gagal'])) {
+                    $deliv['foto_bukti_gagal'] = $deliv['presigned_bukti_gagal'];
+                }
+            }
+            unset($deliv);
+
+            foreach ($shoppingTasks as &$st) {
+                $st['presigned_foto_nota'] = \App\Helpers\Upload::presignedUrl($st['path_foto_nota'] ?? null, 10);
+                $st['presigned_bukti_kendala'] = \App\Helpers\Upload::presignedUrl($st['path_bukti_kendala'] ?? null, 10);
+                $st['url_foto_nota'] = $st['presigned_foto_nota'] ?: ($st['path_foto_nota'] ?? '');
+                $st['foto_bukti_kendala'] = $st['presigned_bukti_kendala'] ?: ($st['path_bukti_kendala'] ?? '');
+            }
+            unset($st);
 
             $this->view('deliveries.driver_route', [
                 'pageTitle' => 'Pengiriman Driver',
@@ -1555,7 +1597,7 @@ class DeliveryController extends Controller
                     waktu_diambil = NOW(),
                     nominal_dibayar_driver = :nominal,
                     alasan_kendala = NULL,
-                    foto_bukti_kendala = NULL,
+                    path_bukti_kendala = NULL,
                     catatan = CASE 
                         WHEN :catatan != '' THEN COALESCE(catatan, '') || ' | Catatan Driver: ' || :catatan
                         ELSE catatan 
@@ -1573,7 +1615,7 @@ class DeliveryController extends Controller
             }
 
             if (!empty($fotoPath)) {
-                $sqlUpdate .= ", url_foto_nota = :foto";
+                $sqlUpdate .= ", path_foto_nota = :foto";
                 $params['foto'] = $fotoPath;
             }
 
@@ -1595,37 +1637,38 @@ class DeliveryController extends Controller
 
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
-            $this->flashError('Gagal menyelesaikan belanja: ' . $e->getMessage());
+            $this->flashError("Gagal mencatat tugas belanja: " . $e->getMessage());
             $this->redirect('/driver-deliveries');
         }
     }
 
     /**
-     * Driver Melaporkan Kendala Belanja PO (Toko Tutup / Stok Kosong)
+     * Driver Melaporkan Kendala Belanja PO (Toko Tutup / Barang Kosong / Kendala Fisik)
      */
     public function reportShoppingIssue(): void
     {
-        Auth::requirePermission(['deliveries.update_all', 'deliveries.update_assigned']);
+        Auth::requireLogin();
+        $this->validateCsrf();
 
-        $purchaseId = $this->input('purchase_id');
-        $alasan = trim((string)$this->input('alasan_kendala', ''));
+        $purchaseId = (int)($_POST['purchase_id'] ?? 0);
+        $alasan = trim($_POST['alasan'] ?? '');
 
-        if (empty($purchaseId) || empty($alasan)) {
-            $this->flashError('Keterangan alasan kendala wajib diisi.');
+        if (!$purchaseId || empty($alasan)) {
+            $this->flashError('ID PO dan alasan kendala wajib diisi!');
             $this->redirect('/driver-deliveries');
             return;
         }
 
         try {
             $pb = Database::fetchOne("
-                SELECT pb.*, sup.nama_pemasok 
-                FROM public.pembelian pb
-                JOIN public.pemasok sup ON pb.pemasok_id = sup.id
+                SELECT pb.id, pb.nomor_faktur_pembelian, sup.nama_pemasok 
+                FROM public.pembelian pb 
+                JOIN public.pemasok sup ON pb.pemasok_id = sup.id 
                 WHERE pb.id = :id
             ", ['id' => $purchaseId]);
 
             if (!$pb) {
-                $this->flashError('Data PO belanja tidak ditemukan.');
+                $this->flashError('Data PO Belanja tidak ditemukan!');
                 $this->redirect('/driver-deliveries');
                 return;
             }
@@ -1655,7 +1698,7 @@ class DeliveryController extends Controller
             ];
 
             if (!empty($fotoPath)) {
-                $sqlUpdate .= ", foto_bukti_kendala = :foto";
+                $sqlUpdate .= ", path_bukti_kendala = :foto";
                 $params['foto'] = $fotoPath;
             }
 

@@ -382,7 +382,7 @@ $totalMasterRows = array_sum($entityStats ?? []);
                     <!-- 2 Tombol Download -->
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; padding-top: 12px; border-top: 1px solid var(--color-hairline);">
                         <!-- Download Template Kosong -->
-                        <a href="#" id="btnDownloadTemplateEmpty" class="import-dl-card is-template">
+                        <a href="#" id="btnDownloadTemplateEmpty" class="import-dl-card is-template no-loader" data-no-loader="true" onclick="handleImportDownload(event, 'empty')">
                             <div style="width: 36px; height: 36px; border-radius: var(--rounded-xs); background: rgba(16, 185, 129, 0.12); color: var(--color-success); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                 <i data-lucide="file-plus-2" style="width: 18px; height: 18px;"></i>
                             </div>
@@ -393,7 +393,7 @@ $totalMasterRows = array_sum($entityStats ?? []);
                         </a>
 
                         <!-- Download Data Terkini -->
-                        <a href="#" id="btnDownloadTemplateCurrent" class="import-dl-card is-current">
+                        <a href="#" id="btnDownloadTemplateCurrent" class="import-dl-card is-current no-loader" data-no-loader="true" onclick="handleImportDownload(event, 'current_data')">
                             <div style="width: 36px; height: 36px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.12); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                 <i data-lucide="download-cloud" style="width: 18px; height: 18px;"></i>
                             </div>
@@ -862,6 +862,99 @@ function updateImportDownloadLinks() {
 
     if (btnEmpty) btnEmpty.href = emptyUrl;
     if (btnCurr) btnCurr.href = currUrl;
+}
+
+let isDownloadingTemplate = false;
+
+async function handleImportDownload(e, mode) {
+    if (e) {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || (e.button && e.button !== 0)) {
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    if (isDownloadingTemplate) return;
+
+    // Pastikan skeleton screen ditutup jika ada yang terpanggil
+    if (typeof AppSkeleton !== 'undefined' && typeof AppSkeleton.hide === 'function') {
+        AppSkeleton.hide();
+    }
+
+    const isCurrent = (mode === 'current_data');
+    const actionTitle = isCurrent ? 'Mengekspor Data Terkini...' : 'Menyiapkan Template Kosong...';
+    const actionSubtext = isCurrent 
+        ? 'Sedang mengambil data sistem dan menyusun berkas Excel...' 
+        : 'Sedang membuat format berkas template Excel master data...';
+
+    // Tampilkan Action Popup resmi aplikasi
+    if (typeof AppAction !== 'undefined' && typeof AppAction.show === 'function') {
+        AppAction.show(actionTitle, actionSubtext);
+    }
+
+    const url = '<?= Router::url('/settings/impor-data/download-template') ?>?tipe=' + encodeURIComponent(currentSelectedEntity) + '&mode=' + encodeURIComponent(mode);
+
+    isDownloadingTemplate = true;
+
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Gagal mengunduh berkas dari server (HTTP ' + response.status + ')');
+        }
+
+        const contentType = response.headers.get('Content-Type') || '';
+        if (contentType.includes('text/html')) {
+            if (typeof AppAction !== 'undefined' && typeof AppAction.hide === 'function') {
+                AppAction.hide();
+            }
+            window.location.href = url;
+            return;
+        }
+
+        let filename = (mode === 'empty')
+            ? ('Template_Impor_' + currentSelectedEntity + '.xlsx')
+            : ('Data_Terkini_' + currentSelectedEntity + '.xlsx');
+
+        const disposition = response.headers.get('Content-Disposition');
+        if (disposition && disposition.includes('filename=')) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+            if (matches && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '').trim();
+            }
+        }
+
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.style.display = 'none';
+        link.href = blobUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+
+        setTimeout(() => {
+            window.URL.revokeObjectURL(blobUrl);
+            link.remove();
+        }, 1000);
+
+        if (typeof AppAction !== 'undefined' && typeof AppAction.success === 'function') {
+            const successTitle = isCurrent ? 'Data Berhasil Diekspor! ✨' : 'Template Berhasil Diunduh! ✨';
+            await AppAction.success(successTitle, 'Berkas Excel telah siap di perangkat Anda', 1200);
+        } else if (typeof AppAction !== 'undefined' && typeof AppAction.hide === 'function') {
+            AppAction.hide();
+        }
+    } catch (err) {
+        console.error('Download template error:', err);
+        if (typeof AppAction !== 'undefined' && typeof AppAction.error === 'function') {
+            await AppAction.error('Gagal Mengunduh!', err.message || 'Terjadi gangguan sistem', 2200);
+        } else if (typeof AppAction !== 'undefined' && typeof AppAction.hide === 'function') {
+            AppAction.hide();
+        }
+    } finally {
+        isDownloadingTemplate = false;
+    }
 }
 
 // Drag & Drop Handling

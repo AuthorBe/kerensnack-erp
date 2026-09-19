@@ -317,16 +317,13 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showAdjustModal" x-cloak class="modal-backdrop">
-        <div @click.away="showAdjustModal = false" class="modal-box">
+        <div class="modal-box">
             <div class="modal-header">
                 <div>
                     <div class="modal-title">Penyesuaian Stok (Opname Tunggal)</div>
                     <div style="font-size:11px; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;"
                          x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
                 </div>
-                <button type="button" @click="showAdjustModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:15px;height:15px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/inventory/adjust') ?>" method="POST" data-action-text="Menyimpan penyesuaian stok..." style="display:flex;flex-direction:column;gap:14px; padding:18px 22px;">
@@ -403,16 +400,13 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showWasteModal" x-cloak class="modal-backdrop">
-        <div @click.away="showWasteModal = false" class="modal-box">
+        <div class="modal-box">
             <div class="modal-header">
                 <div>
                     <div class="modal-title" style="color:#b91c1c;">Catat Barang Rusak / Waste</div>
                     <div style="font-size:11px; font-family:var(--font-mono); color:#dc2626; margin-top:2px;"
                          x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
                 </div>
-                <button type="button" @click="showWasteModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:15px;height:15px;"></i>
-                </button>
             </div>
 
             <form action="<?= Router::url('/inventory/waste') ?>" method="POST" data-action-text="Mencatat barang rusak / waste..." style="display:flex;flex-direction:column;gap:14px; padding:18px 22px;">
@@ -492,7 +486,7 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showHistoryModal" x-cloak class="modal-backdrop">
-        <div @click.away="showHistoryModal = false" class="modal-box" style="max-width:760px; width:95%;">
+        <div class="modal-box" style="max-width:760px; width:95%;">
             <div class="modal-header">
                 <div>
                     <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
@@ -502,9 +496,6 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                     <div style="font-size:12px; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;"
                          x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
                 </div>
-                <button type="button" @click="showHistoryModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px; height:16px;"></i>
-                </button>
             </div>
 
             <!-- Loading State -->

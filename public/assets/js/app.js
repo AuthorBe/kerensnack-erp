@@ -320,7 +320,8 @@
         icon = null,
         confirmIcon = null,
         cancelIcon = null,
-        showCloseBtn = true,
+        showCancelBtn = true,
+        showCloseBtn = (opts.showCloseBtn !== undefined ? Boolean(opts.showCloseBtn) : !showCancelBtn),
         defaultFocus = 'confirm'
       } = opts;
 
@@ -371,10 +372,11 @@
           </div>
 
           <div class="confirm-modal-footer">
+            ${showCancelBtn ? `
             <button type="button" id="confirm-btn-cancel" class="confirm-btn-cancel">
               ${cancelIcon ? `<i data-lucide="${cancelIcon}"></i>` : ''}
               <span>${cancelText}</span>
-            </button>
+            </button>` : ''}
             <button type="button" id="confirm-btn-ok" class="confirm-btn-action btn-action-${type}">
               ${confirmIcon ? `<i data-lucide="${confirmIcon}"></i>` : ''}
               <span>${confirmText}</span>
@@ -384,6 +386,7 @@
       `;
 
       document.body.appendChild(overlay);
+      if (window.PopupManager) window.PopupManager.freeze(overlay);
       if (typeof lucide !== 'undefined') lucide.createIcons({ el: overlay });
 
       const modalEl = overlay.querySelector('.confirm-modal');
@@ -402,6 +405,7 @@
       });
 
       const closeDialog = (result) => {
+        if (window.PopupManager) window.PopupManager.unfreeze(overlay);
         overlay.style.opacity = '0';
         modalEl.style.transform = 'scale(0.95) translateY(6px)';
         document.removeEventListener('keydown', handleKey);
@@ -425,9 +429,6 @@
       btnCancel.addEventListener('click', () => closeDialog(false));
       btnOk.addEventListener('click', () => closeDialog(true));
       if (btnClose) btnClose.addEventListener('click', () => closeDialog(false));
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeDialog(false);
-      });
     });
   };
 
@@ -525,9 +526,6 @@
       document.addEventListener('keydown', handleKey);
       btnOk.addEventListener('click', () => closeDialog());
       if (btnClose) btnClose.addEventListener('click', () => closeDialog());
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeDialog();
-      });
     });
   };
 
@@ -749,7 +747,8 @@
       type: 'danger',
       icon: 'log-out',
       confirmIcon: 'log-out',
-      cancelIcon: 'x',
+      cancelIcon: null,
+      showCloseBtn: false,
       defaultFocus: 'cancel'
     });
 
@@ -1746,6 +1745,247 @@
 
   window.SessionTimeoutEngine = SessionTimeoutEngine;
 
+  /* =====================================================================
+     CENTRALIZED POPUP FREEZE & BLUR MANAGER (window.PopupManager)
+     ===================================================================== */
+  const PopupManager = {
+    activePopups: new Set(),
+    isFrozen: false,
+    observer: null,
+    scrollCompensation: 0,
+
+    POPUP_SELECTORS: [
+      '.modal-backdrop',
+      '.tagihan-modal-backdrop',
+      '.tagihan-modal-overlay',
+      '.receipt-backdrop',
+      '.confirm-overlay',
+      '.m3-payment-backdrop',
+      '.popup-blur-backdrop',
+      '[data-popup-backdrop]',
+      '[role="dialog"]',
+      '[aria-modal="true"]'
+    ],
+
+    EXCLUDED_SELECTORS: [
+      '#app-page-loader',
+      '#app-action-loader',
+      '.app-page-loader',
+      '.action-loader-card',
+      '#sidebar-overlay',
+      '.sidebar-overlay',
+      '#toast-container',
+      '.toast-container',
+      '.toast',
+      'template',
+      '.sd-dropdown'
+    ],
+
+    isElementVisible(el) {
+      if (!el || !(el instanceof Element) || !el.isConnected) return false;
+
+      // Exclusions
+      for (let i = 0; i < this.EXCLUDED_SELECTORS.length; i++) {
+        if (el.matches(this.EXCLUDED_SELECTORS[i]) || el.closest(this.EXCLUDED_SELECTORS[i])) {
+          return false;
+        }
+      }
+
+      // Check x-cloak or hidden attribute
+      if (el.hasAttribute('x-cloak') || el.hidden) return false;
+
+      // Check inline style display: none
+      if (el.style.display === 'none') return false;
+
+      // Check computed style
+      try {
+        const cs = window.getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden') {
+          return false;
+        }
+      } catch (e) {
+        return false;
+      }
+
+      // Must occupy some dimensions or have child dialog box
+      return (el.offsetWidth > 0 || el.offsetHeight > 0 || (typeof el.getClientRects === 'function' && el.getClientRects().length > 0));
+    },
+
+    freeze(popupEl) {
+      if (popupEl && popupEl instanceof Element) {
+        this.activePopups.add(popupEl);
+      }
+      this.applyFreeze();
+    },
+
+    unfreeze(popupEl) {
+      if (popupEl && popupEl instanceof Element) {
+        this.activePopups.delete(popupEl);
+      }
+      this.updateState();
+    },
+
+    applyFreeze() {
+      if (this.isFrozen) return;
+      this.isFrozen = true;
+
+      // Calculate scrollbar compensation to prevent horizontal layout shift on Windows
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+      if (scrollbarWidth > 0) {
+        this.scrollCompensation = scrollbarWidth;
+        document.documentElement.style.setProperty('--ksnack-scrollbar-comp', `${scrollbarWidth}px`);
+      } else {
+        this.scrollCompensation = 0;
+        document.documentElement.style.removeProperty('--ksnack-scrollbar-comp');
+      }
+
+      document.documentElement.classList.add('ksnack-popup-freeze');
+      document.body.classList.add('ksnack-popup-freeze');
+
+      try {
+        window.dispatchEvent(new CustomEvent('ksnack:popup-open', { detail: { count: this.activePopups.size } }));
+      } catch (e) {}
+    },
+
+    removeFreeze() {
+      if (!this.isFrozen) return;
+      this.isFrozen = false;
+      this.scrollCompensation = 0;
+      document.documentElement.style.removeProperty('--ksnack-scrollbar-comp');
+      document.documentElement.classList.remove('ksnack-popup-freeze');
+      document.body.classList.remove('ksnack-popup-freeze');
+
+      try {
+        window.dispatchEvent(new CustomEvent('ksnack:popup-close', { detail: { count: 0 } }));
+      } catch (e) {}
+    },
+
+    updateState() {
+      // Clean up disconnected or hidden popups from activePopups
+      for (const el of this.activePopups) {
+        if (!el.isConnected || !this.isElementVisible(el)) {
+          this.activePopups.delete(el);
+        }
+      }
+
+      if (this.activePopups.size > 0) {
+        this.applyFreeze();
+      } else {
+        this.removeFreeze();
+      }
+    },
+
+    isPopupOpen() {
+      return this.activePopups.size > 0;
+    },
+
+    scan() {
+      const selector = this.POPUP_SELECTORS.join(',');
+      const candidates = document.querySelectorAll(selector);
+      let foundVisible = false;
+
+      candidates.forEach(el => {
+        // Skip child dialog elements (e.g. .m3-dialog inside .modal-backdrop)
+        if (el.matches('[role="dialog"]') && el.closest('.modal-backdrop, .confirm-overlay, .tagihan-modal-backdrop, .receipt-backdrop, .m3-payment-backdrop')) {
+          return;
+        }
+
+        if (this.isElementVisible(el)) {
+          this.activePopups.add(el);
+          foundVisible = true;
+        } else {
+          this.activePopups.delete(el);
+        }
+      });
+
+      this.updateState();
+      return foundVisible;
+    },
+
+    init() {
+      // 1. Initial scan
+      this.scan();
+
+      // 2. Setup MutationObserver for zero-boilerplate DOM reactivity
+      if (typeof MutationObserver !== 'undefined' && document.body) {
+        let timer = null;
+        this.observer = new MutationObserver(() => {
+          if (timer) return;
+          timer = requestAnimationFrame(() => {
+            this.scan();
+            timer = null;
+          });
+        });
+
+        this.observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['style', 'class', 'hidden', 'open', 'aria-hidden', 'x-cloak']
+        });
+      }
+
+      // 3. Prevent touch rubber-banding on background when touching backdrop on mobile
+      window.addEventListener('touchmove', (e) => {
+        if (!this.isFrozen) return;
+        const target = e.target;
+        if (!target) return;
+
+        const backdrop = target.closest(
+          '.modal-backdrop, .tagihan-modal-backdrop, .tagihan-modal-overlay, .confirm-overlay, .receipt-backdrop, .m3-payment-backdrop, .popup-blur-backdrop, [data-popup-backdrop]'
+        );
+        if (!backdrop) return;
+
+        const dialog = backdrop.querySelector(
+          '.modal-box, .detail-modal-shell, .tagihan-modal-shell, .tagihan-modal-guide-shell, .skema-modal-box, .receipt-container, .m3-dialog, .confirm-modal, .action-loader-card, [role="dialog"], [aria-modal="true"], [data-modal-container], .card, form'
+        ) || Array.from(backdrop.children).find(el => !['STYLE', 'SCRIPT', 'TEMPLATE'].includes(el.tagName));
+
+        // If target is inside the modal dialog, allow normal scroll
+        if (dialog && dialog.contains(target)) return;
+
+        // If target is backdrop itself or outside modal content, freeze touch drag
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      // 4. Safe ESC listener to trigger rescan
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.isFrozen) {
+          setTimeout(() => this.scan(), 60);
+        }
+      });
+
+      // 5. Cegah penutupan modal saat mengklik ruang kosong (backdrop / background)
+      // Seluruh pop up hanya dapat ditutup menggunakan tombol Batal atau Tutup eksplisit
+      window.addEventListener('click', (e) => {
+        const backdrop = e.target.closest(
+          '.modal-backdrop, .tagihan-modal-backdrop, .tagihan-modal-overlay, .confirm-overlay, .receipt-backdrop, .m3-payment-backdrop, .popup-blur-backdrop, [data-popup-backdrop]'
+        );
+        if (!backdrop) return;
+
+        // Cari elemen kotak dialog utama di dalam backdrop
+        const dialog = backdrop.querySelector(
+          '.modal-box, .detail-modal-shell, .tagihan-modal-shell, .tagihan-modal-guide-shell, .skema-modal-box, .receipt-container, .m3-dialog, .confirm-modal, .action-loader-card, [role="dialog"], [aria-modal="true"], [data-modal-container], .card, form'
+        ) || Array.from(backdrop.children).find(el => !['STYLE', 'SCRIPT', 'TEMPLATE'].includes(el.tagName));
+
+        // Jika klik berada di dalam kotak dialog (tombol Tutup/Batal, input, link, tab), IZINKAN NORMAL
+        if (dialog && dialog.contains(e.target)) {
+          return;
+        }
+
+        // Jika target klik di ruang kosong backdrop (di luar dialog modal), batalkan event
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
+      }, true);
+    }
+  };
+
+  window.PopupManager = PopupManager;
+  window.ModalFreezeManager = PopupManager;
+
   function onReady(fn) {
     if (document.readyState !== 'loading') {
       fn();
@@ -1762,6 +2002,7 @@
     TableGrabScroll.init();
     PWAEngine.init();
     SessionTimeoutEngine.init();
+    PopupManager.init();
   });
 
 })();

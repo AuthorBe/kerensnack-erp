@@ -1237,6 +1237,8 @@ class ConsignmentController extends Controller
         Auth::requirePermission('consignment.piutang');
 
         try {
+            $isOwner   = Auth::isOwner();
+            $isAdmin   = Auth::isAdmin();
             $activeTab = (string)$this->input('tab', 'buat');
 
             // Filter untuk tab Buat Tagihan

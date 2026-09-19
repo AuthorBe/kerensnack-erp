@@ -588,7 +588,7 @@ ob_start();
     <!-- 6. MODAL RINCIAN VALUASI KAS PERSEDIAAN (HPP POPUP)                       -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showHppModal" x-cloak class="modal-backdrop" @click.self="showHppModal = false">
+    <div x-show="showHppModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:540px;width:92vw;padding:20px;" @click.stop>
             <div class="modal-header">
                 <div style="display:flex;align-items:center;gap:8px;">
@@ -600,9 +600,6 @@ ob_start();
                         <div style="font-size:11px;color:var(--color-ink-mute);">Kalkulasi Berdasarkan Harga Pokok Pembelian (HPP) Murni</div>
                     </div>
                 </div>
-                <button type="button" @click="showHppModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">

@@ -169,6 +169,7 @@ ob_start();
                                     </div>
                                 </template>
                             </td>
+                            <td>
                                 <div style="font-weight:700;color:var(--color-ink);" x-text="pb.nama_pemasok || '-'"></div>
                                 <div style="font-size:11px;color:var(--color-ink-mute);display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:2px;">
                                     <span x-text="pb.kode_pemasok || ''"></span>
@@ -281,9 +282,6 @@ ob_start();
                     <div class="modal-title" style="font-size:15px;" x-text="form.jenis_dokumen === 'po' ? 'Buat PO Pembelian Bahan (Purchase Order)' : 'Catat Faktur Pembelian Bahan Vendor (Langsung)'"></div>
                     <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;" x-text="form.jenis_dokumen === 'po' ? 'Penerbitan surat pesanan ke vendor &amp; penugasan armada logistik driver' : 'Penerimaan stok bahan baku mentah &amp; kemasan langsung masuk ke gudang'"></div>
                 </div>
-                <button @click="showModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:14px;">
@@ -828,7 +826,7 @@ ob_start();
     <!-- MODAL DETAIL PEMBELIAN / PO (TABBED - MATCHING CUSTOMER ORDERS)          -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDetailModal" x-cloak class="modal-backdrop" @click.self="showDetailModal = false">
+    <div x-show="showDetailModal" x-cloak class="modal-backdrop">
         <div class="modal-box modal-box-lg" style="max-width:960px;width:94vw;padding:0;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;max-height:90vh;" @click.stop>
             
             <!-- MOBILE PULL HANDLE -->
@@ -837,29 +835,29 @@ ob_start();
             </div>
 
             <!-- 1. MODAL HEADER -->
-            <div style="padding:18px 24px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between;background:var(--color-canvas);flex-shrink:0;gap:20px;">
-                <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
-                    <div style="width:44px;height:44px;border-radius:12px;background:#eff6ff;color:#1e3a8a;border:1px solid rgba(30,58,138,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="receipt" style="width:22px;height:22px;"></i>
+            <div class="purchase-detail-modal-header" style="padding:14px 16px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:flex-start;justify-content:space-between;background:var(--color-canvas);flex-shrink:0;gap:12px;">
+                <div style="display:flex;align-items:flex-start;gap:10px;min-width:0;flex:1;">
+                    <div style="width:38px;height:38px;border-radius:10px;background:#eff6ff;color:#1e3a8a;border:1px solid rgba(30,58,138,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+                        <i data-lucide="receipt" style="width:19px;height:19px;"></i>
                     </div>
-                    <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:6px;">
+                    <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:5px;">
                         <!-- Baris 1: Nomor Faktur + Semua Badges Status Terdistribusi Rapi -->
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <span class="font-mono font-black" style="font-size:17px;color:var(--color-ink);letter-spacing:-0.02em;" x-text="activeDetail?.purchase?.nomor_faktur_pembelian"></span>
+                        <div style="display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;">
+                            <span class="font-mono font-black" style="font-size:15px;color:var(--color-ink);letter-spacing:-0.01em;white-space:nowrap;display:inline-block;" x-text="activeDetail?.purchase?.nomor_faktur_pembelian"></span>
                             
                             <!-- Badges Tipe Dokumen -->
                             <template x-if="activeDetail?.purchase?.jenis_dokumen === 'po'">
-                                <span>
+                                <span style="display:inline-flex;">
                                     <template x-if="activeDetail?.purchase?.metode_logistik === 'diambil_driver'">
-                                        <span class="badge" style="font-size:10.5px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:2.5px 8px;border-radius:6px;">&#x1F69A; PO DRIVER</span>
+                                        <span class="badge" style="font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:2px 7px;border-radius:6px;white-space:nowrap;">&#x1F69A; PO DRIVER</span>
                                     </template>
                                     <template x-if="activeDetail?.purchase?.metode_logistik !== 'diambil_driver'">
-                                        <span class="badge" style="font-size:10.5px;font-weight:700;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:2.5px 8px;border-radius:6px;">&#x1F3E2; PO SUPPLIER</span>
+                                        <span class="badge" style="font-size:10px;font-weight:700;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:2px 7px;border-radius:6px;white-space:nowrap;">&#x1F3E2; PO SUPPLIER</span>
                                     </template>
                                 </span>
                             </template>
                             <template x-if="activeDetail?.purchase?.jenis_dokumen !== 'po'">
-                                <span class="badge badge-info" style="font-size:10.5px;font-weight:700;padding:2.5px 8px;border-radius:6px;">FAKTUR LANGSUNG</span>
+                                <span class="badge badge-info" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;">FAKTUR LANGSUNG</span>
                             </template>
 
                             <!-- Status Bayar -->
@@ -869,72 +867,64 @@ ob_start();
                                       'badge-warning': activeDetail?.purchase?.status_pembayaran === 'belum_lunas',
                                       'badge-danger': activeDetail?.purchase?.status_pembayaran === 'batal'
                                   }" 
-                                  style="font-size:10.5px;font-weight:700;text-transform:uppercase;padding:2.5px 8px;border-radius:6px;" 
+                                  style="font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 7px;border-radius:6px;white-space:nowrap;" 
                                   x-text="activeDetail?.purchase?.status_pembayaran === 'belum_lunas' ? 'TEMPO (HUTANG)' : (activeDetail?.purchase?.status_pembayaran === 'batal' ? 'DIBATALKAN' : 'LUNAS')">
                             </span>
 
                             <!-- Status Penerimaan -->
                             <template x-if="activeDetail?.purchase?.status_penerimaan === 'diterima'">
-                                <span class="badge badge-success" style="font-size:10.5px;font-weight:700;padding:2.5px 8px;border-radius:6px;">DITERIMA GUDANG</span>
+                                <span class="badge badge-success" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;">DITERIMA GUDANG</span>
                             </template>
                             <template x-if="activeDetail?.purchase?.status_penerimaan === 'ditugaskan_driver'">
-                                <span class="badge" style="font-size:10.5px;font-weight:700;background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;padding:2.5px 8px;border-radius:6px;">TUGAS DRIVER</span>
+                                <span class="badge" style="font-size:10px;font-weight:700;background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe;padding:2px 7px;border-radius:6px;white-space:nowrap;">TUGAS DRIVER</span>
                             </template>
                             <template x-if="activeDetail?.purchase?.status_penerimaan === 'menunggu_supplier'">
-                                <span class="badge" style="font-size:10.5px;font-weight:700;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:2.5px 8px;border-radius:6px;">TUNGGU SUPPLIER</span>
+                                <span class="badge" style="font-size:10px;font-weight:700;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:2px 7px;border-radius:6px;white-space:nowrap;">TUNGGU SUPPLIER</span>
                             </template>
                             <template x-if="activeDetail?.purchase?.status_penerimaan === 'sudah_diambil'">
-                                <span class="badge" style="font-size:10.5px;font-weight:700;background:#ccfbf1;color:#0f766e;border:1px solid #99f6e4;padding:2.5px 8px;border-radius:6px;">DIAMBIL DRIVER</span>
+                                <span class="badge" style="font-size:10px;font-weight:700;background:#ccfbf1;color:#0f766e;border:1px solid #99f6e4;padding:2px 7px;border-radius:6px;white-space:nowrap;">DIAMBIL DRIVER</span>
                             </template>
                             <template x-if="activeDetail?.purchase?.status_penerimaan === 'kendala_batal'">
-                                <span class="badge badge-danger" style="font-size:10.5px;font-weight:700;padding:2.5px 8px;border-radius:6px;">KENDALA / BATAL</span>
+                                <span class="badge badge-danger" style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;">KENDALA / BATAL</span>
                             </template>
                         </div>
 
                         <!-- Baris 2: Meta Info Lega dengan Ikon Berjarak Nyaman -->
-                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--color-ink-secondary);line-height:1.4;">
-                            <span style="display:inline-flex;align-items:center;gap:5px;">
-                                <i data-lucide="calendar" style="width:13px;height:13px;color:var(--color-ink-mute);"></i>
+                        <div style="display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;font-size:11.5px;color:var(--color-ink-secondary);line-height:1.4;">
+                            <span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+                                <i data-lucide="calendar" style="width:12px;height:12px;color:var(--color-ink-mute);flex-shrink:0;"></i>
                                 <span class="font-mono" x-text="activeDetail?.purchase?.tanggal_pembelian"></span>
                             </span>
                             <span style="color:var(--color-hairline-strong);">&bull;</span>
-                            <span style="display:inline-flex;align-items:center;gap:5px;">
-                                <i data-lucide="store" style="width:13px;height:13px;color:var(--color-ink-mute);"></i>
+                            <span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+                                <i data-lucide="store" style="width:12px;height:12px;color:var(--color-ink-mute);flex-shrink:0;"></i>
                                 <span>Pemasok: <strong style="color:var(--color-ink);" x-text="activeDetail?.purchase?.nama_pemasok || '-'"></strong></span>
                             </span>
                             <template x-if="activeDetail?.purchase?.nama_driver">
-                                <span style="display:inline-flex;align-items:center;gap:12px;">
+                                <span style="display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
                                     <span style="color:var(--color-hairline-strong);">&bull;</span>
-                                    <span style="display:inline-flex;align-items:center;gap:5px;">
-                                        <i data-lucide="truck" style="width:13px;height:13px;color:var(--color-ink-mute);"></i>
-                                        <span>Driver: <strong style="color:var(--color-ink);" x-text="activeDetail?.purchase?.nama_driver"></strong></span>
-                                    </span>
+                                    <i data-lucide="truck" style="width:12px;height:12px;color:var(--color-ink-mute);flex-shrink:0;"></i>
+                                    <span>Driver: <strong style="color:var(--color-ink);" x-text="activeDetail?.purchase?.nama_driver"></strong></span>
                                 </span>
                             </template>
                         </div>
                     </div>
                 </div>
                 
-                <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+                <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
                     <div class="hidden sm:flex flex-col items-end justify-center" style="padding:6px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:10px;min-width:135px;">
                         <span style="font-size:10px;color:var(--color-ink-mute);font-weight:700;text-transform:uppercase;letter-spacing:0.04em;line-height:1.2;">Total Transaksi</span>
                         <span class="font-mono font-black" style="font-size:16px;color:var(--color-primary-deep);line-height:1.2;margin-top:2px;" x-text="formatRupiah(activeDetail?.purchase?.total_biaya)"></span>
                     </div>
 
-                    <!-- Tombol Cepat Terima Barang di Header Modal Detail -->
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <template x-if="activeDetail?.purchase?.status_penerimaan !== 'diterima' && activeDetail?.purchase?.status_pembayaran !== 'batal' && activeDetail?.purchase?.status_penerimaan !== 'kendala_batal'">
-                            <button type="button" @click="openReceiveModal(activeDetail)" class="btn btn-sm" style="background:#059669;color:#ffffff;border-color:#059669;font-weight:700;font-size:12px;padding:8px 16px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(5,150,105,0.25);">
-                                <i data-lucide="package-check" style="width:15px;height:15px;"></i>
-                                <span class="hidden md:inline">Verifikasi &amp; Terima</span>
-                                <span class="md:hidden">Terima</span>
-                            </button>
-                        </template>
-
-                        <button type="button" @click="showDetailModal = false" class="btn btn-ghost btn-sm" style="width:36px;height:36px;padding:0;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--color-ink-mute);background:var(--color-canvas-soft);border:1px solid var(--color-hairline);" aria-label="Tutup">
-                            <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    <!-- Tombol Cepat Terima Barang di Header Modal Detail (Tanpa Tombol X Duplikat) -->
+                    <template x-if="activeDetail?.purchase?.status_penerimaan !== 'diterima' && activeDetail?.purchase?.status_pembayaran !== 'batal' && activeDetail?.purchase?.status_penerimaan !== 'kendala_batal'">
+                        <button type="button" @click="openReceiveModal(activeDetail)" class="btn btn-sm" style="background:#059669;color:#ffffff;border-color:#059669;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 3px rgba(5,150,105,0.25);flex-shrink:0;">
+                            <i data-lucide="package-check" style="width:14px;height:14px;"></i>
+                            <span class="hidden md:inline">Verifikasi &amp; Terima</span>
+                            <span class="md:hidden">Terima</span>
                         </button>
-                    </div>
+                    </template>
                 </div>
             </div>
 
@@ -1089,11 +1079,12 @@ ob_start();
                                             <i data-lucide="maximize-2" style="width:13px;height:13px;"></i>
                                             <span>Perbesar Nota</span>
                                         </button>
-                                    </div>
                                     <div style="cursor:pointer;display:inline-block;position:relative;border-radius:10px;overflow:hidden;" @click="openReceiptPreview(activeDetail.purchase.url_foto_nota, activeDetail.purchase.nomor_faktur_pembelian)" title="Klik untuk melihat foto nota dalam ukuran penuh">
-                                        <img :src="'<?= Router::url('/') ?>' + activeDetail.purchase.url_foto_nota.replace(/^\//, '')" 
-                                             style="max-height:180px;max-width:100%;border-radius:10px;border:1px solid var(--color-hairline);display:block;" 
-                                             alt="Nota Vendor">
+                                        <img :src="(activeDetail.purchase.url_foto_nota || '').startsWith('http') ? activeDetail.purchase.url_foto_nota : ('<?= Router::url('/') ?>' + (activeDetail.purchase.url_foto_nota || '').replace(/^\//, ''))" 
+                                             alt="Nota Vendor" 
+                                             loading="lazy"
+                                             decoding="async"
+                                             style="max-height:180px;max-width:100%;border-radius:10px;border:1px solid var(--color-hairline);display:block;transition:transform 0.2s ease;">
                                     </div>
                                 </div>
                             </template>
@@ -1510,9 +1501,6 @@ ob_start();
         <div class="modal-box" style="max-width:480px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title">Pelunasan Hutang Faktur Vendor</div>
-                <button @click="showPayModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:14px;">
@@ -1569,9 +1557,6 @@ ob_start();
         <div class="modal-box" style="max-width:460px;padding:24px;">
             <div class="modal-header">
                 <div class="modal-title" style="color:var(--color-danger);">Batalkan Faktur Pembelian</div>
-                <button @click="showCancelModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:14px;">
@@ -1630,7 +1615,7 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
     <template x-teleport="body">
-    <div x-show="showEditPoModal" x-cloak class="modal-backdrop" @click.self="showEditPoModal = false">
+    <div x-show="showEditPoModal" x-cloak class="modal-backdrop">
         <div class="modal-box purchase-modal-box" style="max-width:760px;" @click.stop>
             <div class="modal-header pb-2.5 mb-1 border-b border-hairline">
                 <div>
@@ -1640,9 +1625,6 @@ ob_start();
                     </div>
                     <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Sesuaikan vendor, metode logistik driver, jadwal, instruksi, dan daftar bahan</div>
                 </div>
-                <button @click="showEditPoModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:14px;">
@@ -1869,7 +1851,7 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
     <template x-teleport="body">
-    <div x-show="showReceiveModal" x-cloak class="modal-backdrop" @click.self="showReceiveModal = false">
+    <div x-show="showReceiveModal" x-cloak class="modal-backdrop">
         <div class="modal-box purchase-modal-box" style="max-width:860px;width:94vw;" @click.stop>
             <div class="modal-header pb-2.5 mb-1 border-b border-hairline">
                 <div>
@@ -1881,9 +1863,6 @@ ob_start();
                         Vendor: <strong style="color:var(--color-ink);" x-text="receiveForm.nama_pemasok"></strong> &bull; Periksa kuantiti fisik &amp; harga faktur sebelum stok dimasukkan ke gudang
                     </div>
                 </div>
-                <button @click="showReceiveModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
-                </button>
             </div>
 
             <div style="display:flex;flex-direction:column;gap:14px;">
@@ -1910,9 +1889,9 @@ ob_start();
                                     <tr>
                                         <td>
                                             <div style="font-weight:700;color:var(--color-ink);" x-text="row.nama_item"></div>
-                                            <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="row.kode_sku + ' (' + row.satuan + ')'"></div>
+                                            <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="row.kode_sku + (row.satuan ? ' (' + row.satuan + ')' : '')"></div>
                                         </td>
-                                        <td class="cell-center font-mono cell-nowrap" style="color:var(--color-ink-mute);" x-text="row.po_qty + ' ' + row.satuan"></td>
+                                        <td class="cell-center font-mono cell-nowrap" style="color:var(--color-ink-mute);" x-text="row.po_qty + (row.satuan ? ' ' + row.satuan : '')"></td>
                                         <td class="cell-center cell-nowrap">
                                             <input type="number" min="0.01" step="any" x-model.number="row.qty" class="form-input font-mono text-center" style="font-size:12px;height:32px;font-weight:700;" @input="recalcReceiveRow(idx)">
                                         </td>
@@ -1963,22 +1942,56 @@ ob_start();
 
                 <!-- 2. PARAMETER PEMBAYARAN & NOTA VENDOR -->
                 <div style="padding:12px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:10px;">
+                    <!-- BANNER KETERANGAN PO PREPAID / SUDAH DIBAYAR -->
+                    <template x-if="receiveForm.status_pembayaran_awal === 'lunas' || receiveForm.nominal_sudah_dibayar > 0">
+                        <div style="padding:10px 12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:8px;font-size:12px;color:#065f46;display:flex;align-items:flex-start;gap:8px;">
+                            <i data-lucide="check-circle" style="width:16px;height:16px;flex-shrink:0;margin-top:2px;color:#059669;"></i>
+                            <div>
+                                <div>PO ini berstatus <strong>LUNAS / Telah Dibayar di Muka</strong> (<span class="font-mono font-bold" x-text="formatRupiah(receiveForm.nominal_sudah_dibayar)"></span>).</div>
+                                <div style="font-size:11px;color:#047857;margin-top:2px;">
+                                    <template x-if="receiveTotal < receiveForm.nominal_sudah_dibayar">
+                                        <span>Total fisik lebih kecil dari pembayaran awal. Kelebihan bayar sebesar <strong class="font-mono" x-text="formatRupiah(receiveForm.nominal_sudah_dibayar - receiveTotal)"></strong> akan otomatis dicatat sebagai <em>Kas Masuk (Refund Pembelian)</em>.</span>
+                                    </template>
+                                    <template x-if="receiveTotal > receiveForm.nominal_sudah_dibayar">
+                                        <span>Total fisik melebihi pembayaran awal. Selisih kekurangan sebesar <strong class="font-mono" x-text="formatRupiah(receiveTotal - receiveForm.nominal_sudah_dibayar)"></strong> akan dipotong dari kas.</span>
+                                    </template>
+                                    <template x-if="receiveTotal === receiveForm.nominal_sudah_dibayar">
+                                        <span>Total fisik sesuai dengan nominal pembayaran awal. Tidak ada mutasi kas tambahan.</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="form-label">Nomor Nota / Faktur Fisik dari Vendor *</label>
-                            <input type="text" x-model="receiveForm.nomor_nota_vendor" class="form-input" placeholder="Contoh: INV-SPL-2026/089...">
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="form-label mb-0">Nomor Nota / Faktur Fisik Vendor *</label>
+                                <button type="button" @click="receiveForm.nomor_nota_vendor = receiveForm.nomor_faktur_pembelian" class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:10.5px;color:var(--color-primary);" title="Salin No. PO jika vendor tidak menerbitkan nomor faktur fisik terpisah">
+                                    + Salin No. PO
+                                </button>
+                            </div>
+                            <input type="text" x-model="receiveForm.nomor_nota_vendor" class="form-input" placeholder="Contoh: INV-SPL-2026/089 atau No PO">
                         </div>
                         <div>
-                            <label class="form-label">Status Pembayaran Faktur *</label>
-                            <select x-model="receiveForm.status_pembayaran" class="form-input">
-                                <option value="lunas">Lunas (Tunai / Kas / Sudah Dibayar Driver)</option>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="form-label mb-0">Status Pembayaran Faktur *</label>
+                                <span class="badge badge-secondary" style="font-size:10px;font-weight:600;display:inline-flex;align-items:center;gap:3px;background:var(--color-canvas);border:1px solid var(--color-hairline);color:var(--color-ink-mute);">
+                                    <i data-lucide="lock" style="width:11px;height:11px;"></i> Terkunci Sesuai PO
+                                </span>
+                            </div>
+                            <select x-model="receiveForm.status_pembayaran" disabled class="form-input" style="background:var(--color-canvas);color:var(--color-ink);cursor:not-allowed;font-weight:600;" title="Status pembayaran dikunci mengikuti kesepakatan PO">
+                                <option value="lunas">Lunas (Tunai / Kas / Sudah Dibayar Driver / Transfer Kantor)</option>
                                 <option value="belum_lunas">Tempo (Masuk Hutang Dagang Vendor)</option>
                             </select>
                         </div>
                     </div>
 
                     <div x-show="receiveForm.status_pembayaran === 'lunas'">
-                        <label class="form-label">Akun Kas Sumber Dana *</label>
+                        <label class="form-label">
+                            <span x-show="receiveForm.nominal_sudah_dibayar > 0 && receiveTotal <= receiveForm.nominal_sudah_dibayar">Akun Kas Penampung Refund / Referensi *</span>
+                            <span x-show="!receiveForm.nominal_sudah_dibayar || receiveTotal > receiveForm.nominal_sudah_dibayar">Akun Kas Sumber Dana *</span>
+                        </label>
                         <select x-model="receiveForm.akun_kas_id" class="form-input">
                             <?php foreach ($cashAccounts as $ca): ?>
                             <option value="<?= $ca['id'] ?>">
@@ -2034,7 +2047,7 @@ ob_start();
     <!-- MODAL PANDUAN ALUR PEMBELIAN & PO (UNTUK ADMIN TOKO / OPERASIONAL AWAM)    -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showGuideModal" x-cloak class="modal-backdrop" @click.self="showGuideModal = false">
+    <div x-show="showGuideModal" x-cloak class="modal-backdrop">
         <div class="modal-box purchase-modal-box custom-scrollbar" style="max-width:680px;max-height:90vh;overflow-y:auto;" @click.stop>
             <!-- Header Modal -->
             <div class="flex items-start justify-between pb-3 mb-3 border-b border-hairline">
@@ -2047,9 +2060,6 @@ ob_start();
                         <p style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;">Ringkasan praktis agar stok gudang &amp; uang kas tercatat dengan akurat</p>
                     </div>
                 </div>
-                <button type="button" @click="showGuideModal = false" class="btn btn-ghost btn-sm" style="padding:4px;border-radius:8px;" aria-label="Tutup">
-                    <i data-lucide="x" style="width:18px;height:18px;"></i>
-                </button>
             </div>
 
             <!-- Isi Panduan -->
@@ -2246,6 +2256,11 @@ ob_start();
     @media (min-width: 640px) {
         .purchase-modal-box {
             padding: 24px !important;
+        }
+        .purchase-detail-modal-header {
+            padding: 18px 24px !important;
+            gap: 16px !important;
+            align-items: center !important;
         }
         .purchase-item-desktop-header {
             display: flex !important;
@@ -2667,6 +2682,10 @@ ob_start();
         .po-radio-desc { font-size: 10px; }
 
         /* Detail modal - tight tab buttons */
+        .purchase-detail-modal-header {
+            padding: 12px 14px !important;
+            gap: 10px !important;
+        }
         .modal-tab-btn {
             white-space: nowrap;
             padding: 7px 10px !important;
@@ -2748,6 +2767,8 @@ ob_start();
                 <template x-if="receiptModalUrl">
                     <img :src="receiptModalUrl" 
                          alt="Foto Nota Pembelian" 
+                         loading="lazy"
+                         decoding="async"
                          x-show="!receiptLoadError"
                          @load="onReceiptImageLoaded()"
                          @error="receiptLoadError = true; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });"
@@ -3439,8 +3460,10 @@ function purchaseApp() {
         openReceiptPreview(url, title) {
             if (!url) return;
             this.resetZoom();
-            this.receiptLoadError = false;
-            this.receiptModalUrl = '<?= Router::url('/') ?>' + url.replace(/^\//, '');
+            const cleanUrl = String(url).trim();
+            this.receiptModalUrl = (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) 
+                ? cleanUrl 
+                : ('<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, ''));
             this.receiptModalTitle = title ? ('No. Faktur: ' + title) : 'Foto Bukti Nota Pembelian';
             this.showReceiptModal = true;
             document.body.style.overflow = 'hidden';
@@ -3883,10 +3906,15 @@ function purchaseApp() {
             const pb = detail.purchase;
 
             // Logika Auto-Detect Status Pembayaran Cerdas:
+            // Jika PO sudah LUNAS (via transfer kantor, kas, atau dana driver), pertahankan LUNAS
             let defaultStatusBayar = (pb.status_pembayaran === 'lunas') ? 'lunas' : 'belum_lunas';
-            if (pb.jenis_dokumen === 'po' && pb.metode_logistik === 'diambil_driver') {
+            if (pb.status_pembayaran !== 'lunas' && pb.jenis_dokumen === 'po' && pb.metode_logistik === 'diambil_driver') {
                 defaultStatusBayar = (pb.metode_bayar_belanja === 'tunai_driver') ? 'lunas' : 'belum_lunas';
             }
+
+            const nominalPrepaid = (pb.status_pembayaran === 'lunas')
+                ? (Number(pb.nominal_sudah_dibayar_kas || 0) > 0 ? Number(pb.nominal_sudah_dibayar_kas) : (Number(pb.nominal_dibayar_driver || 0) > 0 ? Number(pb.nominal_dibayar_driver) : Number(pb.total_biaya || 0)))
+                : Number(pb.nominal_dibayar_driver || 0);
 
             this.receiveForm = {
                 id: pb.id,
@@ -3899,14 +3927,16 @@ function purchaseApp() {
                 nominal_dibayar_driver: Number(pb.nominal_dibayar_driver || 0),
                 driver_nota_photo: pb.url_foto_nota || '',
                 nomor_nota_vendor: pb.nomor_nota_vendor || '',
+                status_pembayaran_awal: pb.status_pembayaran || 'belum_lunas',
+                nominal_sudah_dibayar: nominalPrepaid,
                 status_pembayaran: defaultStatusBayar,
-                akun_kas_id: '<?= $cashAccounts[0]['id'] ?? '' ?>',
+                akun_kas_id: pb.akun_kas_id ? String(pb.akun_kas_id) : '<?= $cashAccounts[0]['id'] ?? '' ?>',
                 catatan: '',
                 items: (detail.items || []).map(it => ({
                     item_id: it.item_id,
                     nama_item: it.nama_item,
                     kode_sku: it.kode_sku,
-                    satuan: it.satuan_dasar,
+                    satuan: it.satuan_dasar || it.satuan || 'Pcs',
                     po_qty: Number(it.kuantitas || 0),
                     qty: Number(it.kuantitas || 0),
                     harga_satuan: window.formatRupiahNumber ? window.formatRupiahNumber(it.harga_satuan) : String(it.harga_satuan || 0),
@@ -3989,9 +4019,9 @@ function purchaseApp() {
         },
 
         async submitReceiveGoods() {
-            if (!this.receiveForm.nomor_nota_vendor.trim()) {
-                toast.warning('Mohon isi nomor nota fisik dari vendor / bukti jalan!');
-                return;
+            if (!this.receiveForm.nomor_nota_vendor || !this.receiveForm.nomor_nota_vendor.trim()) {
+                // Auto-fallback jika nomor nota vendor tidak diisi manual
+                this.receiveForm.nomor_nota_vendor = this.receiveForm.nomor_faktur_pembelian;
             }
             const validItems = (this.receiveForm.items || []).filter(it => it.item_id && Number(it.qty) > 0);
             if (validItems.length === 0) {
@@ -4004,8 +4034,9 @@ function purchaseApp() {
                     return;
                 }
                 const selectedKas = this.cashAccounts.find(k => String(k.id) === String(this.receiveForm.akun_kas_id));
-                if (selectedKas && Number(selectedKas.saldo_saat_ini || 0) < this.receiveTotal) {
-                    toast.warning(`Saldo kas ${selectedKas.nama_akun} (${this.formatRupiah(selectedKas.saldo_saat_ini)}) tidak mencukupi untuk total faktur ${this.formatRupiah(this.receiveTotal)}.`);
+                const sisaKurangBayar = Math.max(0, this.receiveTotal - Number(this.receiveForm.nominal_sudah_dibayar || 0));
+                if (selectedKas && sisaKurangBayar > 0 && Number(selectedKas.saldo_saat_ini || 0) < sisaKurangBayar) {
+                    toast.warning(`Saldo kas ${selectedKas.nama_akun} (${this.formatRupiah(selectedKas.saldo_saat_ini)}) tidak mencukupi untuk tambahan pembayaran ${this.formatRupiah(sisaKurangBayar)}.`);
                     return;
                 }
             }
