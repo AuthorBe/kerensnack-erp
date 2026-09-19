@@ -1,185 +1,40 @@
 -- ==============================================================================
--- SEED DATA 03: GRUP PRODUK, PRICING DINAMIS & MASTER SKU (KEREN SNACK EXCEL)
--- 1000% Selaras dengan data-stok-kerensnack.xlsx (Sheet: Stok_Katalog)
+-- SEED DATA 03: GRUP PRODUK, PRICING DINAMIS & MASTER SKU
+-- Status: Template untuk onboarding klien baru — data contoh (anonim)
+-- CATATAN: Ganti grup produk, SKU, dan barcode sesuai katalog aktual perusahaan.
 -- ==============================================================================
 
--- 1. Master Grup Produk
-INSERT INTO public.grup_produk (kode_grup, nama_grup, barcode_universal, satuan_dasar, satuan_distribusi, konversi_bal_ke_pcs) VALUES
-('GRP-001', 'KEREN SNACK BERONDONG BERAS SUPER 135GR', '88030173', 'pcs', 'bal', 20),
-('GRP-002', 'KEREN SNACK BERONDONG BERAS SUPER 200GR', '88030173', 'pcs', 'bal', 20),
-('GRP-003', 'KEREN SNACK BERONDONG JAGUNG SUPER 135GR', '88028170', 'pcs', 'bal', 20),
-('GRP-004', 'KEREN SNACK BERONDONG JAGUNG SUPER 200GR', '88028170', 'pcs', 'bal', 20),
-('GRP-005', 'KEREN SNACK IKAN PANGGANG 125GR', '88024172', 'pcs', 'bal', 20),
-('GRP-006', 'KEREN SNACK IKAN TENGIRI 135GR', '88026176', 'pcs', 'bal', 20),
-('GRP-007', 'KEREN SNACK KERITING TENGIRI 110GR', '88020174', 'pcs', 'bal', 20),
-('GRP-008', 'KEREN SNACK KERUPUK JENGKOL 135GR', '88022178', 'pcs', 'bal', 20),
-('GRP-009', 'KEREN SNACK KERUPUK SAGU STIK 130GR', '88118178', 'pcs', 'bal', 20),
-('GRP-010', 'KEREN SNACK SAGU WARNA 130GR', '88116174', 'pcs', 'bal', 20),
-('GRP-011', 'KEREN SNACK MAKARONI NGENE 200GR', '88114170', 'pcs', 'bal', 20),
-('GRP-012', 'KEREN SNACK KERIPIK TEMPE 130GR', '888025056', 'pcs', 'bal', 20),
-('GRP-013', 'KEREN SNACK KERIPIK SINGKONG 150 GR', '88110172', 'pcs', 'bal', 20),
-('GRP-014', 'KEREN SNACK LANTING 200GR', '88825364', 'pcs', 'bal', 20),
-('GRP-015', 'KEREN SNACK KERUPUK PISANG 150GR', '88112176', 'pcs', 'bal', 20),
-('GRP-016', 'KEREN SNACK GABUS KEJU 165GR', '88825382', 'pcs', 'bal', 20),
-('GRP-017', 'KEREN SNACK KERUPUK KULIT 60GR', '88825355', 'pcs', 'bal', 20),
-('GRP-018', 'KEREN SNACK PANG PANG 250GR', '88825373', 'pcs', 'bal', 20),
-('GRP-019', 'KEREN SNACK MARNING JAGUNG 220GR', '88825301', 'pcs', 'bal', 20),
-('GRP-020', 'KEREN SNACK TAMBANG GAJAH 200 GR', '88825337', 'pcs', 'bal', 20),
-('GRP-021', 'KEREN SNACK PANGSIT BAWANG 200GR', '88825328', 'pcs', 'bal', 20),
-('GRP-022', 'KEREN SNACK BASRENG 200GR', '88825319', 'pcs', 'bal', 20),
-('GRP-023', 'KEREN SNACK POTATO 200GR', '88881123', 'pcs', 'bal', 20),
-('GRP-024', 'KEREN SNACK SUMPIA UDANG 250GR', '88825390', 'pcs', 'bal', 20),
-('GRP-025', 'KEREN SNACK SERBA KACANG 220 GR', '88825346', 'pcs', 'bal', 20),
-('GRP-026', 'KEREN SNACK KERIPIK KACA 100 GR', '88825366', 'pcs', 'bal', 20),
-('GRP-027', 'KEREN SNACK GEMROSE 200 GR', '88825326', 'pcs', 'bal', 20),
-('GRP-028', 'ANEKA SNACK A', '', 'pcs', 'bal', 20),
-('GRP-029', 'ANEKA SNACK B', '', 'pcs', 'bal', 20),
-('GRP-030', 'ANEKA SNACK C', '', 'pcs', 'bal', 20)
-ON CONFLICT (kode_grup) DO UPDATE SET nama_grup = EXCLUDED.nama_grup, barcode_universal = EXCLUDED.barcode_universal;
+-- ==============================================================================
+-- CATATAN UNTUK ONBOARDING KLIEN BARU:
+--
+-- 1. Grup Produk = Pengelompokan produk berdasarkan kemasan/ukuran
+--    Setiap grup punya barcode universal (dipakai oleh semua varian rasa di grup itu)
+--
+-- 2. Item/SKU = Varian rasa spesifik dalam satu grup produk
+--    Contoh: Grup "Kerupuk Singkong 150gr" bisa punya varian: Asin, Pedas, Manis
+--
+-- 3. Harga Level = Matriks harga per grup (Level 1 = eceran, Level 5 = konsinyasi, dll)
+--    Gunakan menu Produk > Pengaturan Harga untuk setup harga via UI.
+--
+-- Untuk input produk massal, gunakan fitur:
+--   - Menu Produk > Import Data
+--   - Atau tambahkan manual satu per satu di Menu Produk > Tambah Produk
+-- ==============================================================================
 
--- 2. Default Price Levels per Grup Produk (Hanya Level 1 - Ritel Standar murni per pcs)
-INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, nama_level, harga_jual_pcs)
-SELECT gp.id, 1, 'Level 1 - Ritel Standar (Konsumen Umum / POS)', 15000.00 FROM public.grup_produk gp
-ON CONFLICT (grup_produk_id, level_harga) DO NOTHING;
+-- Contoh: Insert Grup Produk (ganti dengan katalog aktual)
+-- INSERT INTO public.grup_produk (kode_grup, nama_grup, barcode_universal, satuan_dasar, satuan_distribusi, konversi_bal_ke_pcs) VALUES
+-- ('GRP-001', 'Nama Produk Grup 1 (misal: Kerupuk Singkong 150gr)', 'barcode123', 'pcs', 'bal', 20),
+-- ('GRP-002', 'Nama Produk Grup 2 (misal: Keripik Jagung 100gr)',   'barcode456', 'pcs', 'bal', 20)
+-- ON CONFLICT (kode_grup) DO UPDATE SET nama_grup = EXCLUDED.nama_grup, barcode_universal = EXCLUDED.barcode_universal;
 
--- 3. Master SKU Varian Rasa (Item)
-INSERT INTO public.item (grup_id, kode_sku, barcode, nama_item, varian_rasa, tipe_item, satuan_dasar, stok_fisik_saat_ini, status_jual)
-VALUES
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-001'), 'SUB-0001', '88030173', 'Berondong Beras Label Jagung', 'Berondong Beras Label Jagung', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-001'), 'SUB-0002', '88030173', 'Berondong Beras 2 Susun Carrefour Baru', 'Berondong Beras 2 Susun Carrefour Baru', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-002'), 'SUB-0003', '88030173', 'Berondong Beras 3 Susun', 'Berondong Beras 3 Susun', 'barang_jadi', 'pcs', 20, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-003'), 'SUB-0004', '88028170', 'Berondong Jagung 2 Susun', 'Berondong Jagung 2 Susun', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-003'), 'SUB-0005', '88028170', 'Berondong Jagung Label Beras', 'Berondong Jagung Label Beras', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-004'), 'SUB-0006', '88028170', 'Berondong Jagung 3 Susun', 'Berondong Jagung 3 Susun', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-005'), 'SUB-0007', '88024172', 'Kerupuk Ikan Panggang Biasa', 'Kerupuk Ikan Panggang Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-005'), 'SUB-0008', '88024172', 'Kerupuk Ikan Panggang Oke', 'Kerupuk Ikan Panggang Oke', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-005'), 'SUB-0009', '88024172', 'Kerupuk Ikan Panggang Fruit 88', 'Kerupuk Ikan Panggang Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-005'), 'SUB-0010', '88024172', 'Kerupuk Panggang Jiyyan', 'Kerupuk Panggang Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-006'), 'SUB-0011', '88026176', 'Kerupuk Tengiri KK', 'Kerupuk Tengiri KK', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-006'), 'SUB-0012', '88026176', 'Kerupuk Tengiri KK Jiyyan', 'Kerupuk Tengiri KK Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-007'), 'SUB-0013', '88020174', 'Kerupuk Keriting Biasa', 'Kerupuk Keriting Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-007'), 'SUB-0014', '88020174', 'Kerupuk Keriting Oke', 'Kerupuk Keriting Oke', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-007'), 'SUB-0015', '88020174', 'Kerupuk Keriting Label Tengiri', 'Kerupuk Keriting Label Tengiri', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-007'), 'SUB-0016', '88020174', 'Kerupuk Keriting Carrefour', 'Kerupuk Keriting Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-007'), 'SUB-0017', '88020174', 'Kerupuk Keriting Jiyyan', 'Kerupuk Keriting Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-008'), 'SUB-0018', '88022178', 'Kerupuk Jengkol Klip Jiyyan', 'Kerupuk Jengkol Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-008'), 'SUB-0019', '88022178', 'Kerupuk Jengkol Biasa', 'Kerupuk Jengkol Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-008'), 'SUB-0020', '88022178', 'Kerupuk Jengkol Oke', 'Kerupuk Jengkol Oke', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-008'), 'SUB-0021', '88022178', 'Kerupuk Jengkol Fruit 88', 'Kerupuk Jengkol Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-009'), 'SUB-0022', '88118178', 'Kerupuk Sagu Putih Biasa', 'Kerupuk Sagu Putih Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-009'), 'SUB-0023', '88118178', 'Kerupuk Sagu Putih Carrefour', 'Kerupuk Sagu Putih Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-009'), 'SUB-0024', '88118178', 'Kerupuk Sagu Pedas Biasa', 'Kerupuk Sagu Pedas Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-009'), 'SUB-0025', '88118178', 'Kerupuk Sagu Pedas Carrefour', 'Kerupuk Sagu Pedas Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-009'), 'SUB-0026', '88118178', 'Kerupuk Sagu Putih Oke', 'Kerupuk Sagu Putih Oke', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-009'), 'SUB-0027', '88118178', 'Kerupuk Sagu Putih Jiyyan', 'Kerupuk Sagu Putih Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-009'), 'SUB-0028', '88118178', 'Kerupuk Sagu Pedas Jiyyan', 'Kerupuk Sagu Pedas Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-010'), 'SUB-0029', '88116174', 'Kerupuk Sagu Warna Biasa', 'Kerupuk Sagu Warna Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-010'), 'SUB-0030', '88116174', 'Kerupuk Sagu Warna Carrefour', 'Kerupuk Sagu Warna Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-010'), 'SUB-0031', '88116174', 'Kerupuk Sagu Warna Oke', 'Kerupuk Sagu Warna Oke', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-010'), 'SUB-0032', '88116174', 'Kerupuk Sagu Warna Jiyyan', 'Kerupuk Sagu Warna Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-011'), 'SUB-0033', '88114170', 'Makaroni Pedas Biasa', 'Makaroni Pedas Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-011'), 'SUB-0034', '88114170', 'Makaroni Rujak Biasa', 'Makaroni Rujak Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-011'), 'SUB-0035', '88114170', 'Makaroni Spiral / Ulir', 'Makaroni Spiral / Ulir', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-011'), 'SUB-0036', '88114170', 'Makaroni Cikruk', 'Makaroni Cikruk', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-011'), 'SUB-0037', '88114170', 'Makaroni Pedas Carrefour', 'Makaroni Pedas Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-011'), 'SUB-0038', '88114170', 'Makaroni Cikruk Jiyyan', 'Makaroni Cikruk Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-012'), 'SUB-0039', '888025056', 'Keripik Tempe Box', 'Keripik Tempe Box', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-012'), 'SUB-0040', '888025056', 'Keripik Tempe Plastik', 'Keripik Tempe Plastik', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-012'), 'SUB-0041', '888025056', 'Tempe Box Carrefour', 'Tempe Box Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0042', '88110172', 'Keripik Singkong Lengket Biasa', 'Keripik Singkong Lengket Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0043', '88110172', 'Keripik Singkong Opak', 'Keripik Singkong Opak', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0044', '88110172', 'Singkong Lengket Klip', 'Singkong Lengket Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0045', '88110172', 'Singkong Opak Klip', 'Singkong Opak Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0046', '88110172', 'Keripik Singkong Lengket Fruit 88', 'Keripik Singkong Lengket Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0047', '88110172', 'Keripik Singkong Lengket Carrefour', 'Keripik Singkong Lengket Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0048', '88110172', 'Keripik Opak Asin Stiker', 'Keripik Opak Asin Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0049', '88110172', 'Singkong Opak Klip Jiyyan', 'Singkong Opak Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0050', '88110172', 'Cingklung Klip Jiyyan', 'Cingklung Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0051', '88110172', 'Keripik Cingklung Biasa', 'Keripik Cingklung Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0052', '88110172', 'Keripik Cingklung Carrefour Baru', 'Keripik Cingklung Carrefour Baru', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0053', '88110172', 'Kerupuk Poco-Poco Klip Jiyyan', 'Kerupuk Poco-Poco Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0054', '88110172', 'Kerupuk Poco-Poco', 'Kerupuk Poco-Poco', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0055', '88110172', 'Poco-Poco Klip Biasa', 'Poco-Poco Klip Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0056', '88110172', 'Keripik Slondok Stiker', 'Keripik Slondok Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-013'), 'SUB-0057', '88110172', 'Slondok Jiyyan', 'Slondok Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-014'), 'SUB-0058', '88825364', 'Lanting', 'Lanting', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-014'), 'SUB-0059', '88825364', 'Lanting Klip Jiyyan', 'Lanting Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-015'), 'SUB-0060', '88112176', 'Sale Pisang', 'Sale Pisang', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-015'), 'SUB-0061', '88112176', 'Keripik Pisang Manis', 'Keripik Pisang Manis', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-015'), 'SUB-0062', '88112176', 'Keripik Pisang Krivil', 'Keripik Pisang Krivil', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-015'), 'SUB-0063', '88112176', 'Pisang Krivil Fruit 88', 'Pisang Krivil Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-015'), 'SUB-0064', '88112176', 'Pisang Krivil Carrefour Baru', 'Pisang Krivil Carrefour Baru', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-015'), 'SUB-0065', '88112176', 'Sale Pisang Jiyyan', 'Sale Pisang Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-015'), 'SUB-0066', '88112176', 'Pisang Krivil Jiyyan', 'Pisang Krivil Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-016'), 'SUB-0067', '88825382', 'Gabus Keju Klip Jiyyan', 'Gabus Keju Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-016'), 'SUB-0068', '88825382', 'Gabus Keju Biasa', 'Gabus Keju Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-016'), 'SUB-0069', '88825382', 'Gabus Keju Carrefour', 'Gabus Keju Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-016'), 'SUB-0070', '88825382', 'Gabus Keju Fruit 88', 'Gabus Keju Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-016'), 'SUB-0071', '88825382', 'Gabus Super Nusantara', 'Gabus Super Nusantara', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-017'), 'SUB-0072', '88825355', 'Kerupuk Kulit Klip Jiyyan', 'Kerupuk Kulit Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-017'), 'SUB-0073', '88825355', 'Kerupuk Kulit Biasa', 'Kerupuk Kulit Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-017'), 'SUB-0074', '88825355', 'Kerupuk Kulit Oke', 'Kerupuk Kulit Oke', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-017'), 'SUB-0075', '88825355', 'Kerupuk Kulit Carrefour', 'Kerupuk Kulit Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-017'), 'SUB-0076', '88825355', 'Kerupuk Kulit Fruit 88', 'Kerupuk Kulit Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-018'), 'SUB-0077', '88825373', 'Pang-pang Biasa', 'Pang-pang Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-018'), 'SUB-0078', '88825373', 'Pang-pang Klip', 'Pang-pang Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-018'), 'SUB-0079', '88825373', 'Pang pang Carrefour', 'Pang pang Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-019'), 'SUB-0080', '88825301', 'Marning Jagung Biasa', 'Marning Jagung Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-019'), 'SUB-0081', '88825301', 'Emping Marning', 'Emping Marning', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-019'), 'SUB-0082', '88825301', 'Marning Bulat Klip', 'Marning Bulat Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-019'), 'SUB-0083', '88825301', 'Emping Marning Klip', 'Emping Marning Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-019'), 'SUB-0084', '88825301', 'Marning Bulat Klip Fruit 88', 'Marning Bulat Klip Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-019'), 'SUB-0085', '88825301', 'Emping Marning Klip Fruit 88', 'Emping Marning Klip Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-020'), 'SUB-0086', '88825337', 'Tambang Gajah', 'Tambang Gajah', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-020'), 'SUB-0087', '88825337', 'Tambang Gajah Carrefour Baru', 'Tambang Gajah Carrefour Baru', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-020'), 'SUB-0088', '88825337', 'Tambang Gajah Klip Jiyyan', 'Tambang Gajah Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-020'), 'SUB-0089', '88825337', 'Kuping Gajah Klip Jiyyan', 'Kuping Gajah Klip Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-020'), 'SUB-0090', '88825337', 'Kuping Gajah', 'Kuping Gajah', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-020'), 'SUB-0091', '88825337', 'Kuping Gajah Carrefour', 'Kuping Gajah Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-021'), 'SUB-0092', '88825328', 'Pangsit Biasa', 'Pangsit Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-021'), 'SUB-0093', '88825328', 'Pangsit Jiyyan', 'Pangsit Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0094', '88825319', 'Basreng Pedas Bulat', 'Basreng Pedas Bulat', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0095', '88825319', 'Basreng Stik Pedas', 'Basreng Stik Pedas', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0096', '88825319', 'Basreng Stik Asin', 'Basreng Stik Asin', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0097', '88825319', 'Basreng Bulat Carrefour', 'Basreng Bulat Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0098', '88825319', 'Basreng Bulat Klip', 'Basreng Bulat Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0099', '88825319', 'Basreng Bulat Klip Fruit 88', 'Basreng Bulat Klip Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0100', '88825319', 'Basreng Stik Asin Fruit 88', 'Basreng Stik Asin Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0101', '88825319', 'Basreng Stik Pedas Fruit 88', 'Basreng Stik Pedas Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0102', '88825319', 'Basreng Daun Jeruk Asin', 'Basreng Daun Jeruk Asin', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0103', '88825319', 'Basreng Daun Jeruk Pedas', 'Basreng Daun Jeruk Pedas', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0104', '88825319', 'Basreng Stik Pedas Jiyyan', 'Basreng Stik Pedas Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-022'), 'SUB-0105', '88825319', 'Basreng Stik Asin Jiyyan', 'Basreng Stik Asin Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-023'), 'SUB-0106', '88881123', 'Potato Pedas', 'Potato Pedas', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-023'), 'SUB-0107', '88881123', 'Potato Keju', 'Potato Keju', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-023'), 'SUB-0108', '88881123', 'Potato Pedas Carrefour', 'Potato Pedas Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-023'), 'SUB-0109', '88881123', 'Potato Keju Carrefour', 'Potato Keju Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-023'), 'SUB-0110', '88881123', 'Potato Pedas Jiyyan', 'Potato Pedas Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-023'), 'SUB-0111', '88881123', 'Potato Keju Jiyyan', 'Potato Keju Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-024'), 'SUB-0112', '88825390', 'Sumpia', 'Sumpia', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-024'), 'SUB-0113', '88825390', 'Sumpia Jiyyan', 'Sumpia Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-025'), 'SUB-0114', '88825346', 'Kacang Bandung', 'Kacang Bandung', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-025'), 'SUB-0115', '88825346', 'Kacang Koro', 'Kacang Koro', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-025'), 'SUB-0116', '88825346', 'Kacang Campur', 'Kacang Campur', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-025'), 'SUB-0117', '88825346', 'Kacang Bandung Klip', 'Kacang Bandung Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-025'), 'SUB-0118', '88825346', 'Kacang Koro Jiyyan', 'Kacang Koro Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-025'), 'SUB-0119', '88825346', 'Kacang Campur Jiyyan', 'Kacang Campur Jiyyan', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-026'), 'SUB-0120', '88825366', 'Keripik Kaca', 'Keripik Kaca', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-026'), 'SUB-0121', '88825366', 'Keripik Kaca Klip', 'Keripik Kaca Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-026'), 'SUB-0122', '88825366', 'Keripik Kaca Fruit 88', 'Keripik Kaca Fruit 88', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-027'), 'SUB-0123', '88825326', 'Gemrose Klip', 'Gemrose Klip', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-027'), 'SUB-0124', '88825326', 'Gemrose Biasa', 'Gemrose Biasa', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-027'), 'SUB-0125', '88825326', 'Gemrose Carrefour', 'Gemrose Carrefour', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-028'), 'SUB-0126', '', 'Kerupuk Jengkol Stiker', 'Kerupuk Jengkol Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-028'), 'SUB-0127', '', 'Kerupuk Jablay Stiker', 'Kerupuk Jablay Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-029'), 'SUB-0128', '', 'Kemplang Asin Stiker', 'Kemplang Asin Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-029'), 'SUB-0129', '', 'Kemplang Pedes Stiker', 'Kemplang Pedes Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-029'), 'SUB-0130', '', 'Makaroni Asin Stiker', 'Makaroni Asin Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-029'), 'SUB-0131', '', 'Makaroni Pedas Stiker', 'Makaroni Pedas Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-029'), 'SUB-0132', '', 'Singkong Stiker', 'Singkong Stiker', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-029'), 'SUB-0133', '', 'Kerupuk Dadu', 'Kerupuk Dadu', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-029'), 'SUB-0134', '', 'Keripik Manggar', 'Keripik Manggar', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-030'), 'SUB-0135', '', 'Soya', 'Soya', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-030'), 'SUB-0136', '', 'Kacang Atom', 'Kacang Atom', 'barang_jadi', 'pcs', 0, TRUE),
-((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-030'), 'SUB-0137', '', 'Kacang Telur', 'Kacang Telur', 'barang_jadi', 'pcs', 0, TRUE)
-ON CONFLICT (kode_sku) DO UPDATE SET nama_item = EXCLUDED.nama_item, barcode = EXCLUDED.barcode, stok_fisik_saat_ini = EXCLUDED.stok_fisik_saat_ini;
+-- Contoh: Insert Harga Level Default per Grup (Level 1 - Ritel Standar)
+-- INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, nama_level, harga_jual_pcs)
+-- SELECT gp.id, 1, 'Level 1 - Ritel Standar (Konsumen Umum / POS)', 15000.00 FROM public.grup_produk gp
+-- ON CONFLICT (grup_produk_id, level_harga) DO NOTHING;
+
+-- Contoh: Insert Item/SKU Varian Rasa
+-- INSERT INTO public.item (grup_id, kode_sku, barcode, nama_item, varian_rasa, tipe_item, satuan_dasar, stok_fisik_saat_ini, status_jual)
+-- VALUES
+-- ((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-001'), 'SKU-001', 'barcode123', 'Nama Item - Rasa A', 'Rasa A', 'barang_jadi', 'pcs', 0, TRUE),
+-- ((SELECT id FROM public.grup_produk WHERE kode_grup = 'GRP-001'), 'SKU-002', 'barcode123', 'Nama Item - Rasa B', 'Rasa B', 'barang_jadi', 'pcs', 0, TRUE)
+-- ON CONFLICT (kode_sku) DO UPDATE SET nama_item = EXCLUDED.nama_item, barcode = EXCLUDED.barcode, stok_fisik_saat_ini = EXCLUDED.stok_fisik_saat_ini;
