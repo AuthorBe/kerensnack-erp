@@ -20,20 +20,45 @@ jobs:
           php-version: '8.2'
           tools: composer:v2
 
-      - name: Install Composer Dependencies
+      - name: Build Composer Dependencies
         run: |
           composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+          tar -czf vendor.tar.gz vendor/
 
-      - name: Remove Non-Production Files
-        run: |
-          rm -f README.md AGENTS.md *.sql
-
-      - name: Deploy to cPanel via Rsync
-        uses: easingthemes/ssh-deploy@v5.0.0
+      - name: Upload Vendor Archive to Server
+        uses: appleboy/scp-action@v0.1.7
         with:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
-          ARGS: "-rlgoDz --delete --exclude='.git*' --exclude='.github*'"
-          REMOTE_HOST: ${{ secrets.SSH_HOST }}
-          REMOTE_PORT: ${{ secrets.SSH_PORT }}
-          REMOTE_USER: ${{ secrets.SSH_USER }}
-          TARGET: "/home/kerensna/kerensnack-erp"
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "vendor.tar.gz"
+          target: "/home/kerensna/kerensnack-erp"
+
+      - name: Deploy Code & Extract Vendor via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            cd /home/kerensna/kerensnack-erp
+
+            # 1. Bersihkan perubahan lokal sebelum pull
+            git reset --hard HEAD
+
+            # 2. Sinkronkan kode aplikasi terbaru dari GitHub
+            git pull origin main
+
+            # 3. Ekstrak folder vendor yang sudah dibuild dari GitHub Actions
+            if [ -f vendor.tar.gz ]; then
+              tar -xzf vendor.tar.gz
+              rm -f vendor.tar.gz
+            fi
+
+            # 4. Hapus dokumen instruksi internal dan file dump database
+            rm -f README.md AGENTS.md *.sql
