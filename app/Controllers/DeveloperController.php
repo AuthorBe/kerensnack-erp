@@ -89,13 +89,16 @@ class DeveloperController extends Controller
                 ORDER BY routine_name ASC
             ");
 
+            $controllersCount = count(glob(ROOT_PATH . '/app/Controllers/*.php'));
+            $helpersCount     = count(glob(ROOT_PATH . '/app/Helpers/*.php'));
+
             $systemInfo = [
                 'php_version'       => PHP_VERSION,
                 'db_driver'         => 'PostgreSQL 17 (Supabase SSL Pooler)',
                 'total_tables'      => count($tables),
                 'total_procedures'  => count($procedures),
-                'total_controllers' => 22,
-                'total_helpers'     => 13,
+                'total_controllers' => $controllersCount ?: 24,
+                'total_helpers'     => $helpersCount ?: 13,
                 'total_suites'      => count(TestRunnerService::SUITES),
                 'active_user'       => Auth::name() ?? 'Developer',
                 'active_role'       => Auth::role() ?? 'developer',

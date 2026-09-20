@@ -39,9 +39,10 @@ ob_start();
                         <span class="badge badge-mono" style="font-size:10px;">PHP <?= htmlspecialchars($systemInfo['php_version'] ?? PHP_VERSION) ?></span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_tables'] ?? count($tables) ?> Tables (PostgreSQL 17)</span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_procedures'] ?? count($procedures) ?> Procedures &amp; RPC</span>
-                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_controllers'] ?? 22 ?> Controllers</span>
+                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_controllers'] ?? 24 ?> Controllers</span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_helpers'] ?? 13 ?> Helpers</span>
-                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_suites'] ?? 23 ?> Test Suites</span>
+                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_suites'] ?? 27 ?> Test Suites</span>
+                        <span class="badge badge-mono" style="font-size:10px;">Cloudflare R2 Storage</span>
                     </div>
                     <h1 style="font-size:18px;font-weight:900;color:var(--color-ink);line-height:1.3;">
                         System Architecture Blueprint &amp; AI Studio
@@ -184,8 +185,10 @@ ob_start();
                         <option value="pricing_engine">🏷️ Matriks 30 Level Harga &amp; Tier Toko</option>
                         <option value="master_employees">👥 Karyawan (Sales vs Driver) &amp; Penggajian</option>
                         <option value="rbac_permissions">🔐 Pengguna, Peran &amp; 5-Tab RBAC</option>
+                        <option value="import_data_engine">📥 Master Data Impor &amp; Diffing Reconciliation</option>
+                        <option value="media_cloud_storage">☁️ Cloudflare R2 Media Proxy &amp; Local Disk Cache</option>
                         <option value="settings_audit">⚙️ Pengaturan Toko &amp; Audit Log Forensik</option>
-                        <option value="developer_test_runner">🧪 Developer Portal &amp; Test Runner (23 Suites)</option>
+                        <option value="developer_test_runner">🧪 Developer Portal &amp; Test Runner (27 Suites)</option>
                     </select>
                 </div>
 
@@ -470,7 +473,7 @@ ob_start();
                             <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🧪 Developer Hub (`/developer`)</div>
                             <span class="badge badge-mono text-[9.5px]">Pilih</span>
                         </div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Portal arsitektur, diagnostik DB Supabase, dan 23 test suites runner.</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Portal arsitektur, diagnostik DB Supabase, dan <?= $systemInfo['total_suites'] ?? 27 ?> test suites runner.</div>
                     </div>
                 </div>
             </div>
@@ -497,28 +500,28 @@ ob_start();
 
                 <div class="space-y-2">
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚙️ `app/Core/Router.php` &amp; `Auth.php`</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Fast URI regex dispatcher, CSRF guard, dan RBAC multi-role terproteksi.</div>
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚙️ `app/Core/` &amp; Enterprise Foundation</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Router.php (regex matcher), Auth.php (RBAC &amp; 1-Hour Session Guard), Controller.php (Base).</div>
                     </div>
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🕹️ 22 Business Controllers (`app/Controllers/*`)</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Consignment, Delivery, POS, Order, Owner, Cash, Inventory, Developer, dll.</div>
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🕹️ 24 Business Controllers (`app/Controllers/*`)</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Consignment, Delivery, POS, Order, Owner, Cash, Inventory, ImportData, Media, Developer, dll.</div>
                     </div>
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
                         <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🛠️ 13 Enterprise Helpers (`app/Helpers/*`)</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">PrintDocument, ExcelExport, PdfExport, ActivityLog, Format, StockHelper, dll.</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">PrintDocument, ExcelExport, PdfExport, ActivityLog, CSRF, Format, StockHelper, Upload, dll.</div>
                     </div>
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🧪 `app/Services/TestRunnerService.php`</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Single Source of Truth 23 Suites, Laragon PHP 8.1 auto-detection &amp; CLI engine.</div>
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚡ 4 Enterprise Services (`app/Services/*`)</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">TestRunnerService (27 Suites), R2StorageService, MediaCacheService, dan ImportProcessor Engine.</div>
                     </div>
                 </div>
             </div>
 
-            <!-- LAYER 3: POSTGRESQL SUPABASE ENGINE -->
+            <!-- LAYER 3: POSTGRESQL SUPABASE & CLOUDFLARE R2 -->
             <div class="card p-4 sm:p-5 space-y-3" style="border-radius:16px;background:var(--color-canvas);border:1px solid var(--color-hairline);">
                 <div class="flex items-center gap-2.5 pb-2.5 border-b" style="border-color:var(--color-hairline);">
                     <div style="width:32px;height:32px;border-radius:8px;background:rgba(16,185,129,0.12);color:var(--color-success);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -531,9 +534,9 @@ ob_start();
                     <div>
                         <div class="flex items-center gap-1.5">
                             <span class="badge badge-success font-mono" style="font-size:9.5px;padding:1px 6px;">LAYER 03</span>
-                            <h3 style="font-size:13px;font-weight:800;color:var(--color-ink);">PostgreSQL 17 Supabase</h3>
+                            <h3 style="font-size:13px;font-weight:800;color:var(--color-ink);">PostgreSQL 17 &amp; Cloudflare R2</h3>
                         </div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:1px;">45 Tabel Relasional &amp; 18 Stored Procedures</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:1px;">45 Tabel Relasional, 18 Stored Procedures &amp; R2 Storage</div>
                     </div>
                 </div>
 
@@ -554,8 +557,8 @@ ob_start();
                     </div>
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚡ `fn_hitung_harga_jual_item` &amp; `fn_cari_item_by_barcode`</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Matriks lookup harga 30 level &amp; resolusi pencarian barcode snack universal.</div>
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">☁️ Cloudflare R2 Object Storage &amp; Cache</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Penyimpanan foto produk/bukti bayar S3-compatible + smart local cache.</div>
                     </div>
                 </div>
             </div>
@@ -719,43 +722,45 @@ function devArchitectureApp() {
             {
                 id: 'app_controllers',
                 name: 'app/Controllers/',
-                badge: '22 Controllers',
+                badge: '24 Controllers',
                 icon: '🕹️',
-                desc: 'Otak pengendali alur request, validasi bisnis, dan routing seluruh modul sistem.',
+                desc: 'Otak pengendali alur request HTTP, validasi bisnis, otorisasi RBAC, dan routing seluruh modul sistem.',
                 files: [
                     { name: 'ActivityLogController.php', desc: 'Audit jejak aktivitas sistem forensik, tracking IP address, user agent, filter modul & ekspor Excel.' },
-                    { name: 'AuthController.php', desc: 'Manajemen login multi-role, verifikasi kredensial bcrypt, proteksi brute force, dan logout.' },
-                    { name: 'CashController.php', desc: 'Buku kas, mutasi masuk/keluar, transfer antar rekening kas/bank, rekonsiliasi kas, dan cash flow.' },
+                    { name: 'AuthController.php', desc: 'Manajemen login multi-role, verifikasi kredensial bcrypt, heartbeat sesi, proteksi brute force, dan logout.' },
+                    { name: 'CashController.php', desc: 'Buku kas multi-akun, mutasi masuk/keluar, transfer kas/bank, rekonsiliasi kas, dan laporan cash flow.' },
                     { name: 'ConsignmentController.php', desc: 'Portal konsinyasi terpadu: stok rak fisik toko, opname rak, hitung laku otomatis, faktur tagihan, dan komisi sales.' },
                     { name: 'CustomerController.php', desc: 'Master data toko mitra pelanggan, grup tier harga, katalog item toko, dan rute wilayah logistik.' },
                     { name: 'CustomerOrderController.php', desc: 'Pesanan grosir/B2B (PO Pelanggan), invoice penjualan tempo/tunai, alokasi stok, dan status kirim.' },
-                    { name: 'DeliveryController.php', desc: 'Manajemen surat jalan ekspedisi dan Driver Mobile (tugas antar tanpa bocor harga, update status).' },
+                    { name: 'DeliveryController.php', desc: 'Manajemen surat jalan ekspedisi dan Driver Mobile (tugas antar tanpa bocor harga, update status, upload POD).' },
                     { name: 'DeveloperController.php', desc: 'Portal developer: visual blueprint arsitektur, diagnostik koneksi database Supabase, dan test runner.' },
                     { name: 'EmployeeController.php', desc: 'Master karyawan dengan pemisahan peran Sales (komisi %) vs Driver (nopol armada), kasbon, dan payroll.' },
+                    { name: 'ImportDataController.php', desc: 'Master Data Impor & Diffing Engine: upload file Excel 10 entitas, deteksi diff, dan verifikasi full-sync.' },
                     { name: 'InventoryController.php', desc: 'Inventaris fisik gudang, kartu stok, penyesuaian stok, pencatatan waste, dan bulk stock opname.' },
+                    { name: 'MediaController.php', desc: 'Media proxy Cloudflare R2: streaming file privat/publik, presigned upload URLs, dan local disk cache management.' },
                     { name: 'OrderDocumentController.php', desc: 'Unified Printing Engine: cetak PDF & Excel untuk Surat Jalan, Faktur, Batch Picking List, dan Struk POS.' },
                     { name: 'OwnerController.php', desc: 'Owner Executive Command Center: profitabilitas (omzet, HPP, laba), net working capital, dan performa sales.' },
                     { name: 'PermissionController.php', desc: '5-Tab Master RBAC: peran, permission matrix, user-level overrides, dan update hak akses massal.' },
                     { name: 'PosController.php', desc: 'Kasir ritel cepat: scan barcode universal, kalkulasi diskon otomatis, potong stok, dan mutasi kas.' },
                     { name: 'PricingController.php', desc: 'Matriks 30 level harga dinamis, grup produk, dan penentuan katalog harga khusus toko mitra.' },
-                    { name: 'ProductController.php', desc: 'Master produk jadi, bahan baku, kemasan, resep komposisi BOM (komposisi_item), dan upah borongan.' },
+                    { name: 'ProductController.php', desc: 'Master produk jadi, brand/merek, bahan baku, kemasan, resep komposisi BOM (komposisi_item), dan upah borongan.' },
                     { name: 'ProfileController.php', desc: 'Manajemen akun pengguna login, pembaruan data profil, dan ubah kata sandi.' },
                     { name: 'PurchaseController.php', desc: 'Pengadaan bahan baku ke vendor (PO Vendor), penerimaan fisik gudang, dan pembayaran hutang.' },
                     { name: 'SalesOrderController.php', desc: 'Controller alias kompatibilitas untuk transaksi pesanan penjualan grosir / B2B.' },
                     { name: 'SettingsController.php', desc: 'Pengaturan umum toko, identitas perusahaan, logo, rekening bank, dan konfigurasi master sistem.' },
                     { name: 'SupplierController.php', desc: 'Master vendor pemasok bahan baku mentah, bumbu racik, dan plastik kemasan snack.' },
-                    { name: 'UserController.php', desc: 'Manajemen pengguna sistem: buat akun, ganti role (owner, admin, sales, driver, developer), aktivasi status.' }
+                    { name: 'UserController.php', desc: 'Manajemen pengguna sistem: buat akun, ganti role (owner, admin, sales, driver, mandor, developer), aktivasi status.' }
                 ]
             },
             {
                 id: 'app_core',
                 name: 'app/Core/',
-                badge: '3 Core Engine',
+                badge: '3 Core Engines',
                 icon: '⚙️',
                 desc: 'Komponen fondasi arsitektur MVC native, request dispatcher, dan guard keamanan.',
                 files: [
                     { name: 'Router.php', desc: 'Engine routing regex cepat yang memetakan URL ke Controller dan memvalidasi token CSRF otomatis.' },
-                    { name: 'Auth.php', desc: 'Guard autentikasi, sesi keamanan, dan RBAC multi-peran dengan requireDeveloper() eksklusif.' },
+                    { name: 'Auth.php', desc: 'Guard autentikasi, sliding inactivity session 1 jam, dan RBAC multi-peran dengan requireDeveloper() eksklusif.' },
                     { name: 'Controller.php', desc: 'Base class controller induk yang menyediakan helper render view, json response, dan redirect.' }
                 ]
             },
@@ -784,21 +789,27 @@ function devArchitectureApp() {
             {
                 id: 'app_services',
                 name: 'app/Services/',
-                badge: 'Single Source of Truth',
+                badge: '4 Enterprise Services',
                 icon: '⚡',
-                desc: 'Layanan terpusat anti-duplikasi logika bisnis pengujian dan runtime sistem.',
+                desc: 'Layanan terpusat anti-duplikasi logika bisnis pengujian, media Cloudflare R2, dan engine impor data.',
                 files: [
-                    { name: 'TestRunnerService.php', desc: 'Master registry 23 test suites, Laragon PHP 8.1 auto-detection, execution timer, dan runner CLI/Web.' }
+                    { name: 'TestRunnerService.php', desc: 'Master registry 27 test suites, execution timer, global concurrency lock, dan unified runner CLI/Web.' },
+                    { name: 'R2StorageService.php', desc: 'Layanan Cloudflare R2 Object Storage berbasis S3-compatible API untuk upload dan presigned URL media.' },
+                    { name: 'MediaCacheService.php', desc: 'Layanan smart caching lokal media R2 di server untuk performa loading secepat kilat.' },
+                    { name: 'Import/ImportProcessor.php', desc: 'Engine pemroses impor file Excel dengan validasi schema, smart reader, dan deteksi perbedaan (diffing).' },
+                    { name: 'Import/SmartReader.php', desc: 'Reader cerdas parsing baris Excel dengan sanitasi nilai sel dan normalisasi tipe data.' },
+                    { name: 'Import/TemplateGenerator.php', desc: 'Generator berkas spreadsheet template impor resmi untuk 10 modul master data.' },
+                    { name: 'Import/Handlers/', desc: 'Kumpulan 10 handler entitas master: Brand, Category, Customer, Employee, Item, Material, Pricing, Supplier, Territory, User.' }
                 ]
             },
             {
                 id: 'tests',
                 name: 'tests/',
-                badge: '24 Test Suites',
+                badge: '27 Test Suites',
                 icon: '🧪',
                 desc: 'Rangkaian pengujian integrasi otomatis menyeluruh yang memverifikasi 100% kesehatan kode ERP.',
                 files: [
-                    { name: 'run_all.php', desc: 'CLI runner wrapper tipis yang mengeksekusi seluruh 23 test suites terpadu.' },
+                    { name: 'run_all.php', desc: 'CLI runner wrapper tipis yang mengeksekusi seluruh 27 test suites terpadu.' },
                     { name: 'SalesDriverIntegrityTest.php', desc: 'Integritas pemisahan tugas ketat Sales (punya komisi) vs Driver (punya armada nopol).' },
                     { name: 'CustomerIntegrityTest.php', desc: 'Integritas master pelanggan, validasi NIK/WA, grup tier harga, dan assignment sales.' },
                     { name: 'MasterDataCoreTest.php', desc: 'Integritas master data inti (produk, pelanggan, supplier, kas, karyawan).' },
@@ -811,7 +822,7 @@ function devArchitectureApp() {
                     { name: 'PosCashierLifecycleTest.php', desc: 'Siklus lengkap kasir retail: scan barcode, checkout, potong stok, mutasi kas.' },
                     { name: 'CustomerOrderLifecycleTest.php', desc: 'Siklus order grosir B2B: pesanan, picking list, faktur, surat jalan, dan pelunasan.' },
                     { name: 'PurchaseProcurementLifecycleTest.php', desc: 'Siklus pengadaan vendor: PO, penerimaan fisik gudang, dan hutang dagang.' },
-                    { name: 'DeliveryAndLogisticsLifecycleTest.php', desc: 'Siklus surat jalan: antrean kirim, keberangkatan driver, konfirmasi sampai.' },
+                    { name: 'DeliveryAndLogisticsLifecycleTest.php', desc: 'Siklus surat jalan: antrean kirim, keberangkatan driver, konfirmasi sampai (POD).' },
                     { name: 'CashLedgerFinancialTest.php', desc: 'Integritas buku kas: penerimaan, pengeluaran, transfer kas, dan saldo berjalan.' },
                     { name: 'ConsignmentFullCycleTest.php', desc: 'Siklus penuh titip jual konsinyasi: titip rak, opname sisa fisik, retur, faktur, pelunasan.' },
                     { name: 'ConsignmentConversionTest.php', desc: 'Pengujian formula konversi penjualan laku konsinyasi dan kalkulasi omzet toko.' },
@@ -821,7 +832,12 @@ function devArchitectureApp() {
                     { name: 'SecurityAndReconciliationTest.php', desc: 'Uji ketahanan keamanan: CSRF protection, SQL injection prevention, sanitasi input.' },
                     { name: 'ActivityLogComprehensiveAuditTest.php', desc: 'Uji pencatatan jejak audit forensik aktivitas pengguna secara real-time.' },
                     { name: 'DataHygieneAndSettingsTest.php', desc: 'Uji kebersihan konfigurasi sistem toko dan pengaturan perusahaan.' },
-                    { name: 'OwnerDashboardExecutiveTest.php', desc: 'Verifikasi integritas angka analitik eksekutif pada Owner Command Center.' }
+                    { name: 'OwnerDashboardExecutiveTest.php', desc: 'Verifikasi integritas angka analitik eksekutif pada Owner Command Center.' },
+                    { name: 'ImportDataLifecycleTest.php', desc: 'Verifikasi pengujian siklus impor data master Excel dan full-sync reconciliation.' },
+                    { name: 'EmployeeManualTypeAndWhatsAppTest.php', desc: 'Verifikasi tipe penggajian karyawan manual dan unifikasi kontak WhatsApp.' },
+                    { name: 'AccessDenied403Test.php', desc: 'Verifikasi halaman kejutan 403, auto-logout, audio API, dan proteksi rute developer.' },
+                    { name: 'BrandMasterModuleTest.php', desc: 'Verifikasi master data merek (Brand) dan relasinya dengan grup produk.' },
+                    { name: 'test_r2_integration.php', desc: 'Pengujian konektivitas langsung Cloudflare R2 bucket dan verifikasi presigned URL.' }
                 ]
             },
             {
@@ -832,15 +848,15 @@ function devArchitectureApp() {
                 desc: 'Alat bantu diagnostik database PostgreSQL Supabase dan runner pengujian cepat.',
                 files: [
                     { name: 'test_db.php', desc: 'Skrip diagnostik kesehatan database Supabase, SSL pooler latency, integrity schema, dan RPC test.' },
-                    { name: 'run_all.php', desc: 'Shortcut CLI runner pengujian 23 test suites di lingkungan developer.' }
+                    { name: 'run_all.php', desc: 'Shortcut CLI runner pengujian 27 test suites di lingkungan developer.' }
                 ]
             },
             {
                 id: 'views',
                 name: 'views/',
-                badge: '18 Modul Views',
+                badge: '19 Modul Views',
                 icon: '🎨',
-                desc: 'Antarmuka visual pengguna berbasis Server-Side Rendered PHP dengan Alpine.js.',
+                desc: 'Antarmuka visual pengguna berbasis Server-Side Rendered PHP dengan Alpine.js reactivity.',
                 files: [
                     { name: 'consignment/', desc: 'Portal konsinyasi: index.php, stok_rak.php, opname.php, opname_hasil.php, tagihan.php, laporan_penjualan.php, dll.' },
                     { name: 'deliveries/index.php', desc: 'Layar Driver Mobile & ekspedisi: manifest pengiriman surat jalan tanpa bocor harga.' },
@@ -856,9 +872,10 @@ function devArchitectureApp() {
                     { name: 'employees/index.php', desc: 'Layar Master Karyawan: data pegawai, input komisi sales vs nopol driver, absensi, kasbon.' },
                     { name: 'purchases/index.php', desc: 'Layar Pengadaan: PO pembelian bahan baku ke supplier dan penerimaan gudang.' },
                     { name: 'suppliers/index.php', desc: 'Layar Master Supplier: vendor bahan mentah, bumbu, dan kemasan.' },
-                    { name: 'settings/', desc: 'Layar Pengaturan: index.php (portal pengaturan), company.php (identitas toko), dan logs.php (audit log).' },
+                    { name: 'settings/', desc: 'Layar Pengaturan: index.php (portal pengaturan), company.php (identitas toko), logs.php (audit log), impor_data.php.' },
                     { name: 'auth/login.php', desc: 'Layar Autentikasi: form login multi-role dengan styling minimalis modern.' },
                     { name: 'profile/index.php', desc: 'Layar Profil: pembaruan data pengguna dan pergantian kata sandi.' },
+                    { name: 'errors/403.php', desc: 'Layar Error 403: halaman proteksi akses ditolak interaktif.' },
                     { name: 'layouts/', desc: 'Template induk: master.php (kerangka umum), sidebar.php (navigasi), header.php (topbar).' }
                 ]
             },
@@ -869,9 +886,9 @@ function devArchitectureApp() {
                 icon: '🗄️',
                 desc: 'Definisi skema basis data PostgreSQL Supabase, triggers, dan stored procedures atomik.',
                 files: [
-                    { name: '01_schema.sql', desc: 'Definisi lengkap 45 tabel master, relasi foreign key, indeks performa, dan enum sistem.' },
+                    { name: '01_schema.sql', desc: 'Single Source of Truth: Definisi lengkap 45 tabel master, relasi FK, indeks performa, dan constraint.' },
                     { name: '02_triggers_and_rpc.sql', desc: '18 Stored procedures & triggers: fn_proses_kunjungan_konsinyasi, fn_hitung_harga_jual_item, dll.' },
-                    { name: '03_migration_konsinyasi_fase1.sql', desc: 'Skrip migrasi status pengiriman dan assignment penanggung jawab toko binaan sales.' }
+                    { name: 'migrations 03 - 61.sql', desc: '60+ Berkas migrasi database terstruktur berurutan yang mencatat seluruh evolusi skema sistem.' }
                 ]
             },
             {
@@ -894,14 +911,28 @@ function devArchitectureApp() {
                 files: [
                     { name: 'index.php', desc: 'Front Controller utama: inisialisasi sesi, autoloader PSR-4, registrasi rute, dan Router::dispatch().' },
                     { name: '.htaccess', desc: 'Aturan rewrite Apache, proteksi URL, dan normalisasi trailing-slash.' },
-                    { name: 'assets/', desc: 'Direktori aset statis: css/app.css, js/app.js, dan pustaka alpine.min.js.' }
+                    { name: 'assets/', desc: 'Direktori aset statis: css/app.css, js/app.js, alpine.min.js, dan lucide.min.js.' }
+                ]
+            },
+            {
+                id: 'docs',
+                name: 'docs/',
+                badge: 'Documentation',
+                icon: '📚',
+                desc: 'Dokumentasi arsitektur sistem, PRD, dan panduan teknis operasional.',
+                files: [
+                    { name: 'ARCHITECTURE.md', desc: 'Spesifikasi teknis lengkap arsitektur sistem KEREN SNACK ERP.' },
+                    { name: 'PRD_MASTER_KEREN_SNACK.md', desc: 'Product Requirement Document induk modul ERP.' }
                 ]
             }
         ],
 
         routes: [
             { url: '/login', method: 'GET / POST', action: 'AuthController::showLogin() / login()', view: 'views/auth/login.php', role: 'Semua Pengguna' },
-            { url: '/logout', method: 'GET', action: 'AuthController::logout()', view: 'Redirect ke /login', role: 'Semua Pengguna' },
+            { url: '/logout', method: 'GET / POST', action: 'AuthController::logout()', view: 'Redirect ke /login', role: 'Semua Pengguna' },
+            { url: '/api/auth/heartbeat', method: 'POST', action: 'AuthController::heartbeat()', view: 'JSON Response', role: 'Semua Pengguna' },
+            { url: '/media/view', method: 'GET', action: 'MediaController::serveFile()', view: 'Binary Stream Response', role: 'Semua Pengguna' },
+            { url: '/api/media/presigned', method: 'GET', action: 'MediaController::getPresignedUrl()', view: 'JSON Response', role: 'Owner, Admin' },
             { url: '/pos', method: 'GET', action: 'PosController::index()', view: 'views/pos/index.php', role: 'Owner, Admin' },
             { url: '/api/pos/calculate-price', method: 'GET', action: 'PosController::calculatePrice()', view: 'JSON Response', role: 'Owner, Admin' },
             { url: '/api/pos/search-barcode', method: 'GET', action: 'PosController::searchBarcode()', view: 'JSON Response', role: 'Owner, Admin' },
@@ -951,6 +982,7 @@ function devArchitectureApp() {
             { url: '/settings', method: 'GET', action: 'SettingsController::index()', view: 'views/settings/index.php', role: 'Owner, Admin, Developer' },
             { url: '/settings/company', method: 'GET / POST', action: 'SettingsController::company()', view: 'views/settings/company.php', role: 'Owner, Admin' },
             { url: '/settings/activity-logs', method: 'GET', action: 'ActivityLogController::index()', view: 'views/settings/logs.php', role: 'Owner, Admin' },
+            { url: '/settings/impor-data', method: 'GET', action: 'ImportDataController::index()', view: 'views/settings/impor_data.php', role: 'Owner, Admin' },
             { url: '/profile', method: 'GET / POST', action: 'ProfileController::index()', view: 'views/profile/index.php', role: 'Semua Pengguna' },
             { url: '/developer', method: 'GET', action: 'DeveloperController::index()', view: 'views/developer/index.php', role: 'Khusus Developer' },
             { url: '/developer/architecture', method: 'GET', action: 'DeveloperController::architecture()', view: 'views/developer/architecture.php', role: 'Khusus Developer' },
@@ -1157,6 +1189,30 @@ function devArchitectureApp() {
                         'Akun developer dilindungi di level basis data (tidak bisa dihapus/di-downgrade).'
                     ]
                 },
+                import_data_engine: {
+                    title: '📥 Master Data Impor & Diffing Reconciliation Engine',
+                    controller: 'app/Controllers/ImportDataController.php, app/Services/Import/ImportProcessor.php',
+                    views: 'views/settings/impor_data.php',
+                    tables: 'merek, kategori, item, pemasok, pelanggan, karyawan, pengguna, master_level_harga, wilayah',
+                    rpc: 'N/A (Proses transaksi atomik di level PHP Service)',
+                    rules: [
+                        'Smart reader file Excel yang mendeteksi diff data secara otomatis (INSERT, UPDATE, DELETE, NO_CHANGE).',
+                        'Verifikasi integritas referensi foreign key lintas tabel sebelum mutasi data dieksekusi.',
+                        'Pencegahan penghapusan data berisiko tinggi (soft-deactivate vs hard delete).'
+                    ]
+                },
+                media_cloud_storage: {
+                    title: '☁️ Cloudflare R2 Media Proxy & Local Disk Cache',
+                    controller: 'app/Controllers/MediaController.php, app/Services/R2StorageService.php, app/Services/MediaCacheService.php',
+                    views: 'views/products/index.php, views/settings/company.php',
+                    tables: 'pengaturan_sistem, item',
+                    rpc: 'N/A',
+                    rules: [
+                        'Penyimpanan foto produk dan dokumen legal di Cloudflare R2 bucket berbasis S3 SDK.',
+                        'Local caching transparan pada direktori /cache dengan invalidasi cerdas.',
+                        'Presigned URL generation untuk transfer berkas terproteksi tanpa ekspos kredensial R2.'
+                    ]
+                },
                 settings_audit: {
                     title: '⚙️ Pengaturan Perusahaan & Audit Log Forensik',
                     controller: 'app/Controllers/SettingsController.php, app/Controllers/ActivityLogController.php',
@@ -1177,7 +1233,7 @@ function devArchitectureApp() {
                     rpc: 'Seluruh 18 Stored Procedures & Functions',
                     rules: [
                         'Akses eksklusif khusus user role developer (Auth::requireDeveloper()).',
-                        'Dukungan eksekusi ganda: Web Browser interaktif & Terminal CLI tanpa duplikasi kode.',
+                        'Dukungan eksekusi ganda: Web Browser interaktif & Terminal CLI tanpa duplikasi kode (27 Suites).',
                         'Seluruh pengujian berjalan dalam transaksi rollback sehingga database 100% steril.'
                     ]
                 }
@@ -1219,29 +1275,184 @@ INSTRUKSI PENGERJAAN:
         },
 
         copyFullSystemMap() {
-            const fullMap = `KEREN SNACK ERP — COMPLETE SYSTEM ARCHITECTURE MAP
-Tech Stack: PHP 8.1+ Native MVC, PostgreSQL 17 (Supabase SSL Pooler, 45 Tables, 18 Stored Procedures), 22 Controllers, 13 Helpers, 23 Automated Test Suites, Alpine.js, Design System Tokens.
+            const fullMap = `# KEREN SNACK ERP — SYSTEM ARCHITECTURE BLUEPRINT & CODEBASE GUIDE
 
-ARSITEKTUR MODUL UTAMA:
-1. Konsinyasi Terpadu (/consignment): views/consignment/* -> ConsignmentController.php
-2. Driver Logistik & Pengiriman (/deliveries): views/deliveries/* -> DeliveryController.php
-3. Kasir POS Retail (/pos): views/pos/* -> PosController.php
-4. Pesanan Pelanggan Grosir B2B (/customer-orders): views/customer_orders/* -> CustomerOrderController.php, OrderDocumentController.php
-5. Owner Command Center (/owner): views/owner/* -> OwnerController.php
-6. Keuangan, Buku Kas & Valuasi (/cash): views/cash/* -> CashController.php
-7. Inventaris Gudang, Resep BOM & Opname (/inventory): views/inventory/* -> InventoryController.php, ProductController.php
-8. Matriks 30 Level Harga (/pricing): views/pricing/* -> PricingController.php
-9. Master Karyawan (Sales vs Driver) & Payroll (/employees): views/employees/* -> EmployeeController.php
-10. Manajemen Pengguna & 5-Tab RBAC (/users, /permissions): views/users/*, views/permissions/* -> UserController.php, PermissionController.php
-11. Pengaturan Toko & Audit Log (/settings): views/settings/* -> SettingsController.php, ActivityLogController.php
-12. Developer Portal Hub & Test Runner (/developer): views/developer/* -> DeveloperController.php, TestRunnerService.php
+## 1. 📌 GAMBARAN UMUM & PROFIL PROYEK
+- **Nama Proyek**: KEREN SNACK ERP (Enterprise Resource Planning & POS System)
+- **Domain Bisnis**: Manufaktur Snack/Makanan Ringan, Distribusi Multi-Channel, Konsinyasi Rak Toko Mitra, Driver Logistik, Kasir POS Ritel, Pesanan Grosir B2B, Manajemen Gudang & Resep BOM, Keuangan & Buku Kas, HR & Komisi Sales Berjenjang.
+- **Tipe Aplikasi**: Web Application Server-Side Rendered (SSR) dengan Interaktivitas Reaktif Mobile-First (Alpine.js).
 
-Seluruh 45 tabel relasional berada di skema public PostgreSQL Supabase dengan 18 Stored Procedures/Triggers atomik.`;
+---
+
+## 2. ⚡ TECH STACK & BAHASA PEMROGRAMAN
+- **Backend Language**: PHP 8.1+ Native (Strict Types \`declare(strict_types=1)\`, PSR-4 Standard Autoloading, Zero Framework Overhead).
+- **Architecture Pattern**: Modular MVC (Model-View-Controller) dengan Pemisahan Tanggung Jawab (Separation of Concerns).
+- **Database Engine**: PostgreSQL 17 (Supabase Cloud Managed SSL Connection Pooler, 45+ Tabel Relasional, 18+ Stored Procedures & Triggers Atomik).
+- **Cloud Object Storage**: Cloudflare R2 Object Storage (S3-Compatible API) + Local Disk Media Cache Layer.
+- **Frontend Layer**: Native Server-Side Rendered PHP Views + Alpine.js (Reaktivitas Lapangan Ringan) + Native CSS Design System Tokens (Dark & Light Mode Adaptive) + Lucide Icons.
+- **Third-Party Libraries**: Composer (\`phpoffice/phpspreadsheet\` untuk Impor/Ekspor Excel, \`dompdf/dompdf\` untuk Cetak Dokumen PDF, \`aws/aws-sdk-php\` untuk Cloudflare R2).
+- **Testing & Verification Engine**: 27 Automated Test Suites Mandiri (Single Source of Truth CLI \`tests/run_all.php\` & Web Interactive \`/developer/tests\`).
+
+---
+
+## 3. 🛡️ PRINSIP REKAYASA & PROTOKOL KEAMANAN (ENGINEERING PROTOCOLS)
+1. **Zero Persistent Mock Data**: Dilarang menyisipkan data tiruan/dummy permanen di database produksi. Seluruh pengujian wajib diisolasi menggunakan blok transaksi otomatis (\`BEGIN ... ROLLBACK\`).
+2. **Single Source of Truth**:
+   - Skema Database: \`database/01_schema.sql\`
+   - Test Suites Registry: \`app/Services/TestRunnerService.php\`
+   - Rute & Dispatcher: \`public/index.php\` & \`app/Core/Router.php\`
+3. **Security Defense-in-Depth**:
+   - CSRF Protection: Token Anti-CSRF wajib di setiap form mutasi data dan request AJAX POST.
+   - Session Security: Sliding Inactivity Timeout 1 Jam (3.600 detik) dengan proteksi cookie HTTP-Only, SameSite=Lax.
+   - RBAC Multi-Peran: 5 Peran Inti (\`owner\`, \`admin\`, \`sales\`, \`driver\`, \`mandor\`) + Peran Terproteksi (\`developer\`) dengan dukungan User-Level Permission Overrides.
+   - Kredensial & Sandi: Bcrypt password hashing, parameter \`.env\` terisolasi tanpa hardcoded credentials.
+
+---
+
+## 4. 🌳 STRUKTUR DIREKTORI PROYEK (LENGKAP BESERTA TANGGUNG JAWAB)
+
+\`\`\`text
+kerensnack-erp/
+├── app/                                 # 🧠 Logika Aplikasi & Backend Core
+│   ├── Controllers/                     # 🕹️ 24 Application Controllers
+│   │   ├── ActivityLogController.php    # Audit jejak forensik, tracking IP, filter modul & ekspor Excel
+│   │   ├── AuthController.php           # Autentikasi multi-peran, verifikasi bcrypt, session heartbeat & logout
+│   │   ├── CashController.php           # Buku kas multi-akun, mutasi, transfer bank, dan laporan cash flow
+│   │   ├── ConsignmentController.php    # Konsinyasi terpadu: stok rak, opname, hitung laku, faktur tagihan & komisi
+│   │   ├── CustomerController.php       # Master toko pelanggan, grup tier harga, wilayah & katalog item khusus
+│   │   ├── CustomerOrderController.php  # Pesanan grosir B2B, invoice penjualan, alokasi stok & piutang tempo
+│   │   ├── DeliveryController.php       # Surat jalan ekspedisi, Driver Mobile tanpa bocor harga & upload bukti terima
+│   │   ├── DeveloperController.php      # Command center developer, blueprint visual, diagnostik DB & test runner
+│   │   ├── EmployeeController.php       # Master karyawan (Sales komisi vs Driver armada nopol), kasbon & payroll
+│   │   ├── ImportDataController.php     # Master Data Impor & Diffing Engine Excel 10 entitas & rekonsiliasi sync
+│   │   ├── InventoryController.php      # Stok fisik gudang, kartu stok, penyesuaian susut/waste & bulk opname
+│   │   ├── MediaController.php          # Media proxy Cloudflare R2, streaming file & manajemen cache lokal
+│   │   ├── OrderDocumentController.php  # Unified Printing Engine: cetak PDF/Excel Surat Jalan, Faktur, Picking List
+│   │   ├── OwnerController.php          # Owner Command Center: omzet, HPP, net working capital & analisis laba
+│   │   ├── PermissionController.php     # 5-Tab Master RBAC: permission matrix dinamis & user overrides
+│   │   ├── PosController.php            # Kasir POS retail, scan barcode universal, diskon & cetak struk thermal
+│   │   ├── PricingController.php        # Matriks 30 level harga dinamis & penetapan harga tier pelanggan
+│   │   ├── ProductController.php        # Master produk, brand/merek, bahan baku, kemasan, resep BOM & upah borongan
+│   │   ├── ProfileController.php        # Manajemen profil akun pengguna login & ubah kata sandi
+│   │   ├── PurchaseController.php       # Pengadaan vendor (PO), penerimaan fisik gudang & hutang dagang
+│   │   ├── SalesOrderController.php     # Router compatibility wrapper untuk pesanan penjualan grosir B2B
+│   │   ├── SettingsController.php       # Konfigurasi identitas toko, nama perusahaan, rekening bank & logo
+│   │   ├── SupplierController.php       # Master vendor pemasok bahan mentah, bumbu racik & plastik kemasan
+│   │   └── UserController.php           # Manajemen akun pengguna sistem: buat user, aktivasi status & ubah role
+│   │
+│   ├── Core/                            # ⚙️ Komponen Fondasi MVC Native
+│   │   ├── Auth.php                     # Sesi keamanan, sliding timeout 1 jam, RBAC & requireDeveloper()
+│   │   ├── Controller.php               # Base Controller: render view, json response, redirect & denyAccess
+│   │   └── Router.php                   # Fast regex route dispatcher & automatic CSRF token verification
+│   │
+│   ├── Helpers/                         # 🛠️ 13 Helper Utilitas & Dokumen
+│   │   ├── ActivityLog.php              # Logger audit forensik ke tabel log_aktivitas secara real-time
+│   │   ├── CashVoucher.php              # Generator voucher kas masuk (BKM) dan kas keluar (BKK) bernomor resmi
+│   │   ├── CompanySetting.php           # Helper konfigurasi parameter sistem dinamis dari tabel pengaturan_sistem
+│   │   ├── CSRF.php                     # Generator & validator token Anti-CSRF berbasis sesi
+│   │   ├── DocumentNumber.php           # Generator nomor transaksi resmi otomatis (SJ-..., INV-..., PO-...)
+│   │   ├── ExcelExport.php              # Engine spreadsheet XML/Excel untuk omzet, stok, arus kas & piutang
+│   │   ├── Flash.php                    # Manajer notifikasi kilat sesi pengguna (sukses, info, error)
+│   │   ├── Format.php                   # Format standar Rupiah (Rp), tanggal lokal Indonesia & parsing numerik
+│   │   ├── PaymentHelper.php            # Validasi & alokasi pembayaran piutang pelanggan dan faktur grosir
+│   │   ├── PdfExport.php                # Engine generator PDF untuk surat jalan, invoice & picking list
+│   │   ├── PrintDocumentHelper.php      # Unified print renderer untuk web browser & printer thermal 58/80mm
+│   │   ├── StockHelper.php              # Kalkulasi mutasi stok multi-satuan (pcs, pack, bal) & cek ketersediaan
+│   │   └── Upload.php                   # Secure upload handler gambar produk & bukti bayar dengan validasi MIME
+│   │
+│   └── Services/                        # ⚡ 4 Layanan Terpusat & Business Engine
+│       ├── TestRunnerService.php        # Master registry 27 test suites, execution timer & global lock engine
+│       ├── R2StorageService.php         # Cloudflare R2 Object Storage S3-compatible SDK integration
+│       ├── MediaCacheService.php        # Local disk caching layer untuk media gambar R2
+│       └── Import/                      # Engine Impor Data Master Excel
+│           ├── ImportProcessor.php      # Orchestrator pemrosesan impor, validasi schema & diffing
+│           ├── SmartReader.php          # Parser pintar berkas Excel & normalisasi tipe data sel
+│           ├── TemplateGenerator.php    # Generator template Excel resmi untuk 10 modul master data
+│           └── Handlers/                # 10 Entitas handler: Brand, Category, Customer, Employee, Item, Material, Pricing, Supplier, Territory, User
+│
+├── config/                              # 🔌 Konfigurasi Sistem & Basis Data
+│   ├── database.php                     # Singleton PDO Database::getInstance() ke Supabase PostgreSQL 17
+│   └── env.php                          # Parser mandiri berkas .env ke environment variables
+│
+├── database/                            # 🗄️ Skema SQL, RPC & Migrasi
+│   ├── 01_schema.sql                    # Definisi 45 tabel relasional, foreign keys, indexes & enum
+│   ├── 02_triggers_and_rpc.sql          # 18 Stored procedures & triggers (fn_proses_kunjungan_konsinyasi, dll)
+│   ├── migrations 03 - 61.sql           # 60+ Berkas migrasi database berurutan resmi
+│   └── seeds/                           # Seeder terisolasi untuk local sandbox testing
+│
+├── developer/                           # 💻 Alat Diagnostik Developer Lingkungan Lokal
+│   ├── test_db.php                      # Diagnostik koneksi database Supabase, SSL latency & integritas schema
+│   └── run_all.php                      # CLI shortcut runner pengujian 27 test suites
+│
+├── docs/                                # 📚 Dokumentasi Arsitektur & PRD
+│   ├── ARCHITECTURE.md                  # Manual spesifikasi arsitektur sistem
+│   └── PRD_MASTER_KEREN_SNACK.md        # Dokumen PRD master kebutuhan sistem
+│
+├── public/                              # 🌐 Web Server Entry Point (Public Web Root)
+│   ├── index.php                        # Front Controller utama (Composer Autoload, Routing & Dispatch)
+│   ├── .htaccess                        # Apache URL rewrite rules & trailing slash handling
+│   └── assets/                          # Aset statis: css/app.css, js/app.js, alpine.min.js, lucide.min.js
+│
+├── storage/                             # 💾 Penyimpanan Berkas Lokal & Uploads
+├── cache/                               # ⚡ Cache Lokal Media Cloudflare R2 & File Sementara
+├── tests/                               # 🧪 27 Test Suites Otomatis & Integration Tests
+│   ├── run_all.php                      # CLI test runner terpadu
+│   └── test_r2_integration.php          # Verifikasi konektivitas bucket Cloudflare R2
+│
+└── views/                               # 🎨 19 Direktori Modul Antarmuka Tampilan (Views)
+    ├── auth/                            # Layar login & sesi pengguna
+    ├── cash/                            # Layar buku kas, transaksi & laporan arus kas
+    ├── consignment/                     # Layar portal konsinyasi, stok rak, opname, tagihan & komisi
+    ├── customer_orders/                 # Layar pesanan B2B / grosir, invoice & picking list
+    ├── customers/                       # Layar master toko mitra pelanggan & rute wilayah
+    ├── deliveries/                      # Layar manifest ekspedisi logistik & portal Driver Mobile
+    ├── developer/                       # Layar developer command center, blueprint arsitektur & test runner
+    ├── employees/                       # Layar master karyawan (Sales vs Driver), kasbon & penggajian
+    ├── errors/                          # Layar error interaktif (403.php)
+    ├── inventory/                       # Layar stok gudang, kartu stok & bulk opname
+    ├── layouts/                         # Master template: master.php, sidebar.php, header.php
+    ├── owner/                           # Layar Owner Executive Command Center & Business Analytics
+    ├── pos/                             # Layar kasir POS retail, keranjang & scan barcode
+    ├── pricing/                         # Layar matriks 30 level harga dinamis
+    ├── products/                        # Layar master produk snack, bahan baku, kemasan & resep BOM
+    ├── profile/                         # Layar profil akun pengguna & ubah kata sandi
+    ├── purchases/                       # Layar pengadaan PO supplier & penerimaan fisik gudang
+    ├── settings/                        # Layar pengaturan identitas perusahaan, log audit & impor data
+    └── suppliers/                       # Layar master vendor pemasok bahan baku
+\`\`\`
+
+---
+
+## 5. 🗺️ KATALOG 12 MODUL BISNIS UTAMA & ALUR KERJA
+1. **Konsinyasi Terpadu & Sales Mobile (\`/consignment\`)**: Titip barang di etalase toko mitra, opname fisik rutin, formula laku instan (\`Titip Awal - (Sisa + Retur)\`), penerbitan faktur tagihan, dan komisi sales berjenjang.
+2. **Driver Logistik & Surat Jalan (\`/deliveries\`, \`/driver-deliveries\`)**: Manifest pengiriman barang ke toko tanpa membocorkan harga HPP ke driver, update status antar real-time, dan trigger otomatis tambah saldo rak saat selesai diterima.
+3. **Kasir POS Ritel Universal (\`/pos\`)**: Penjualan cepat ritel dengan scanner barcode universal kemasan snack, potong stok otomatis, dan mutasi kas masuk ke buku kas aktif.
+4. **Pesanan Pelanggan Grosir B2B (\`/customer-orders\`)**: Pencatatan PO grosir, batch picking list gudang format PDF, invoice tempo kredit, dan pelunasan piutang bertahap.
+5. **Owner Executive Command Center (\`/owner\`)**: Analitik profitabilitas (omzet bersih, HPP terjual, laba bersih), Net Working Capital (kas + piutang + valuasi stok gudang/rak - hutang vendor), dan leaderboard sales.
+6. **Keuangan & Buku Kas (\`/cash\`)**: Mutasi kas masuk/keluar multi-akun bank, transfer berpasangan, rekonsiliasi kas terpadu (POS, Grosir, Konsinyasi), dan ekspor laporan arus kas.
+7. **Gudang, Resep BOM & Opname (\`/inventory\`, \`/products\`)**: Bill of Materials (komposisi_item) dari bahan baku mentah + kemasan menjadi snack jadi, pencatatan produksi harian otomatis, dan kartu stok multi-satuan.
+8. **Matriks 30 Level Harga (\`/pricing\`)**: Penentuan harga jual bertingkat hingga 30 level per grup produk yang terhubung dengan kategori tier toko pelanggan.
+9. **Master Karyawan & Payroll (\`/employees\`)**: Pemisahan tegas posisi Sales (memiliki % komisi & toko binaan) vs Driver (memiliki nopol armada kendaraan tanpa komisi), kasbon, dan penggajian.
+10. **Pengguna & 5-Tab RBAC (\`/users\`, \`/permissions\`)**: Matriks izin dinamis per fitur dengan user-level override dan proteksi akun developer di level database.
+11. **Impor Data & Full-Sync Reconciliation (\`/settings/impor-data\`)**: Upload spreadsheet Excel untuk 10 modul master, smart reader, dan deteksi diff otomatis sebelum commit data.
+12. **Developer Portal & Test Runner (\`/developer\`, \`/developer/tests\`)**: Visual blueprint arsitektur 100% Single Source of Truth, diagnostik database Supabase, dan eksekusi 27 test suites terisolasi dengan auto-rollback.
+
+---
+
+## 6. 🗄️ DATABASE SCHEMA & STORED PROCEDURES (RPC)
+- **Tabel Relasional Utama**: \`pelanggan\`, \`stok_konsinyasi_toko\`, \`kunjungan_konsinyasi\`, \`rincian_kunjungan_konsinyasi\`, \`tagihan_kunjungan\`, \`pesanan\`, \`item_pesanan\`, \`surat_jalan\`, \`item\`, \`komposisi_item\`, \`pembelian\`, \`pemasok\`, \`karyawan\`, \`skema_komisi_sales\`, \`akun_kas\`, \`arus_kas\`, \`pengguna\`, \`peran\`, \`izin\`, \`pengaturan_sistem\`, \`log_aktivitas\`.
+- **Fungsi Stored Procedure & Trigger Utama**:
+  - \`fn_proses_kunjungan_konsinyasi\`: Kalkulasi barang laku, kerugian retur rusak, update rak toko, dan penerbitan faktur tagihan.
+  - \`fn_catat_pembayaran_konsinyasi\`: Pelunasan tagihan bertahap/lunas dan pencatatan jurnal arus kas.
+  - \`fn_trg_proses_pengiriman_konsinyasi\`: Trigger potong stok gudang dan tambah saldo rak toko saat surat jalan selesai diterima.
+  - \`fn_hitung_harga_jual_item\`: Matriks penentuan harga jual 30 level dinamis.
+  - \`fn_cari_item_by_barcode\`: Resolusi pencarian produk via barcode universal snack.
+  - \`fn_guard_pelanggan_sales_driver\`: Guard integritas bahwa hanya karyawan posisi Sales yang bisa menjadi penanggung jawab toko konsinyasi.`;
 
             this.safeCopy(fullMap, () => {
                 this.copiedFull = true;
                 setTimeout(() => { this.copiedFull = false; }, 2500);
-                this.notify('Full Arsitektur Disalin! 🗺️', 'Dokumentasi arsitektur bersih 100% siap ditempel ke AI.');
+                this.notify('Full Arsitektur Disalin! 🗺️', 'Dokumentasi arsitektur & struktur direktori lengkap 100% siap ditempel ke AI.');
             });
         },
 

@@ -24,7 +24,7 @@ ob_start();
                         </span>
                         <span class="badge badge-mono" style="font-size:10px;">PHP <?= htmlspecialchars($telemetry['php_version'] ?? PHP_VERSION) ?></span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_tables'] ?? 45 ?> Tables</span>
-                        <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_suites'] ?? 23 ?> Test Suites</span>
+                        <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_suites'] ?? count(\App\Services\TestRunnerService::SUITES) ?> Test Suites</span>
                     </div>
                     <h1 style="font-size:20px;font-weight:900;color:var(--color-ink);line-height:1.2;">
                         Pusat Kendali Pengembang &amp; Pengujian Sistem
@@ -129,11 +129,11 @@ ob_start();
                     3. Test Source / Run-All Console
                 </h3>
                 <p style="font-size:12.5px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:16px;">
-                    Pengujian otomatis seluruh 23 test suites lifecycle ERP (POS Kasir, Order B2B, Hutang Supplier, Surat Jalan POD, Buku Kas, Komisi &amp; RBAC). Menjamin 100% Zero Data Pollution.
+                    Pengujian otomatis seluruh <?= $telemetry['total_suites'] ?? 27 ?> test suites lifecycle ERP (POS Kasir, Order B2B, Hutang Supplier, Surat Jalan POD, Buku Kas, Komisi &amp; RBAC). Menjamin 100% Zero Data Pollution.
                 </p>
 
                 <div class="flex flex-wrap gap-1.5 mb-6">
-                    <span class="badge badge-mono" style="font-size:10px;">24 Test Suites</span>
+                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_suites'] ?? 27 ?> Test Suites</span>
                     <span class="badge badge-mono" style="font-size:10px;">Real-time AJAX</span>
                     <span class="badge badge-mono" style="font-size:10px;">Auto Rollback</span>
                     <span class="badge badge-mono" style="font-size:10px;">Anti-Timeout</span>
@@ -305,10 +305,10 @@ ob_start();
                         <div style="width:26px;height:26px;border-radius:6px;background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.25);display:flex;align-items:center;justify-content:center;color:#a78bfa;flex-shrink:0;">
                             <i data-lucide="play" style="width:14px;height:14px;"></i>
                         </div>
-                        <span style="font-size:13px;font-weight:800;color:#f8fafc;letter-spacing:0.01em;">2. Jalankan Seluruh 24 Test Suites via CLI</span>
+                        <span style="font-size:13px;font-weight:800;color:#f8fafc;letter-spacing:0.01em;">2. Jalankan Seluruh <?= $telemetry['total_suites'] ?? 27 ?> Test Suites via CLI</span>
                     </div>
                     <p style="font-size:12px;color:#94a3b8;line-height:1.5;margin-bottom:12px;">
-                        Mengeksekusi 23 test suites terpadu secara batch lengkap dengan tabel kalkulasi waktu dan status:
+                        Mengeksekusi <?= $telemetry['total_suites'] ?? 27 ?> test suites terpadu secara batch lengkap dengan tabel kalkulasi waktu dan status:
                     </p>
                 </div>
                 <div class="flex items-center justify-between gap-3 p-2.5 mt-auto" style="background:#040711;border:1px solid #1e293b;border-radius:8px;">
