@@ -64,6 +64,52 @@ function runTest(string $title, callable $fn): void {
     }
 }
 
+function executeSubprocessPhp(string $script): string {
+    $tempFile = ROOT_PATH . '/tests/temp_' . uniqid('subtest_', true) . '.php';
+    file_put_contents($tempFile, "<?php\n" . $script);
+    $phpBin = TestRunnerService::getPhpBinary();
+    $cmd = escapeshellarg($phpBin) . ' ' . escapeshellarg($tempFile);
+    $output = '';
+
+    try {
+        if (function_exists('proc_open')) {
+            $descriptors = [
+                0 => ['pipe', 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w'],
+            ];
+            $process = @proc_open($cmd, $descriptors, $pipes, ROOT_PATH . '/tests');
+            if (is_resource($process)) {
+                fclose($pipes[0]);
+                $stdout = stream_get_contents($pipes[1]);
+                $stderr = stream_get_contents($pipes[2]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                proc_close($process);
+                $output = (string)$stdout;
+            }
+        } elseif (function_exists('popen')) {
+            $handle = @popen($cmd . ' 2>&1', 'r');
+            if ($handle) {
+                $output = (string)stream_get_contents($handle);
+                pclose($handle);
+            }
+        } elseif (function_exists('exec')) {
+            $outArr = [];
+            @exec($cmd . ' 2>&1', $outArr);
+            $output = implode("\n", $outArr);
+        } elseif (function_exists('shell_exec')) {
+            $output = (string)@shell_exec($cmd);
+        }
+    } finally {
+        if (file_exists($tempFile)) {
+            @unlink($tempFile);
+        }
+    }
+
+    return $output;
+}
+
 echo "============================================================\n";
 echo " ACCESS DENIED (403 KADO KEJUTAN) INTEGRATION TEST SUITE\n";
 echo "============================================================\n";
@@ -132,12 +178,7 @@ runTest("2. Auth::denyAccess menghasilkan response JSON valid untuk AJAX request
         \App\Core\Auth::denyAccess("developer_only");
     ';
 
-    $tempFile = ROOT_PATH . '/tests/temp_ajax_test.php';
-    file_put_contents($tempFile, "<?php " . $script);
-
-    $cmd = escapeshellarg(TestRunnerService::getPhpBinary()) . ' ' . escapeshellarg($tempFile);
-    $output = shell_exec($cmd);
-    @unlink($tempFile);
+    $output = executeSubprocessPhp($script);
 
     if (empty($output)) {
         return "Output child process kosong";
@@ -179,12 +220,7 @@ runTest("3. Auth::requirePermission memblokir user tanpa izin dan me-render 403"
         \App\Core\Auth::requirePermission("inventory.manage");
     ';
 
-    $tempFile = ROOT_PATH . '/tests/temp_perm_test.php';
-    file_put_contents($tempFile, "<?php " . $script);
-
-    $cmd = escapeshellarg(TestRunnerService::getPhpBinary()) . ' ' . escapeshellarg($tempFile);
-    $output = shell_exec($cmd);
-    @unlink($tempFile);
+    $output = executeSubprocessPhp($script);
 
     if (empty($output)) {
         return "Output child process kosong";
@@ -217,12 +253,7 @@ runTest("4. Auth::requireDeveloper memblokir user kasir dan me-render 403", func
         \App\Core\Auth::requireDeveloper();
     ';
 
-    $tempFile = ROOT_PATH . '/tests/temp_dev_test.php';
-    file_put_contents($tempFile, "<?php " . $script);
-
-    $cmd = escapeshellarg(TestRunnerService::getPhpBinary()) . ' ' . escapeshellarg($tempFile);
-    $output = shell_exec($cmd);
-    @unlink($tempFile);
+    $output = executeSubprocessPhp($script);
 
     if (empty($output)) {
         return "Output child process kosong";
@@ -272,12 +303,7 @@ runTest("6. DeveloperController::preview403 me-render preview kado dengan banner
         (new \App\Controllers\DeveloperController())->preview403();
     ';
 
-    $tempFile = ROOT_PATH . '/tests/temp_preview_test.php';
-    file_put_contents($tempFile, "<?php " . $script);
-
-    $cmd = escapeshellarg(TestRunnerService::getPhpBinary()) . ' ' . escapeshellarg($tempFile);
-    $output = shell_exec($cmd);
-    @unlink($tempFile);
+    $output = executeSubprocessPhp($script);
 
     if (empty($output)) {
         return "Output child process kosong";
@@ -329,12 +355,7 @@ runTest("7. views/settings/index.php tidak memuat kartu Portal Developer untuk k
         echo "SUCCESS";
     ';
 
-    $tempFile = ROOT_PATH . '/tests/temp_settings_nondev_test.php';
-    file_put_contents($tempFile, "<?php " . $script);
-
-    $cmd = escapeshellarg(TestRunnerService::getPhpBinary()) . ' ' . escapeshellarg($tempFile);
-    $output = shell_exec($cmd);
-    @unlink($tempFile);
+    $output = executeSubprocessPhp($script);
 
     if (trim((string)$output) !== "SUCCESS") {
         return "Gagal: " . $output;
@@ -399,12 +420,7 @@ runTest("8. views/settings/index.php menampilkan kartu Portal Developer di palin
         echo "SUCCESS";
     ';
 
-    $tempFile = ROOT_PATH . '/tests/temp_settings_dev_test.php';
-    file_put_contents($tempFile, "<?php " . $script);
-
-    $cmd = escapeshellarg(TestRunnerService::getPhpBinary()) . ' ' . escapeshellarg($tempFile);
-    $output = shell_exec($cmd);
-    @unlink($tempFile);
+    $output = executeSubprocessPhp($script);
 
     if (trim((string)$output) !== "SUCCESS") {
         return "Gagal: " . $output;

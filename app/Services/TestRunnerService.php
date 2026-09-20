@@ -238,8 +238,25 @@ class TestRunnerService
             }
         }
 
-        if (defined('PHP_BINARY') && file_exists(PHP_BINARY) && !str_ends_with(strtolower(PHP_BINARY), 'httpd.exe')) {
-            return PHP_BINARY;
+        if (defined('PHP_BINARY') && file_exists(PHP_BINARY)) {
+            $binLower = strtolower(PHP_BINARY);
+            if (!str_ends_with($binLower, 'httpd.exe') && !str_contains($binLower, 'php-fpm') && !str_contains($binLower, 'php-cgi')) {
+                return PHP_BINARY;
+            }
+        }
+
+        $linuxCandidates = [
+            '/usr/bin/php',
+            '/usr/local/bin/php',
+            '/opt/cpanel/ea-php81/root/usr/bin/php',
+            '/opt/cpanel/ea-php82/root/usr/bin/php',
+            '/opt/cpanel/ea-php80/root/usr/bin/php',
+        ];
+
+        foreach ($linuxCandidates as $cand) {
+            if (file_exists($cand)) {
+                return $cand;
+            }
         }
 
         return 'php';
