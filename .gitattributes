@@ -1,0 +1,6 @@
+# Kecualikan file dokumentasi & dump dari deployment
+README.md export-ignore
+AGENTS.md export-ignore
+*.sql export-ignore
+.github export-ignore
+.gitattributes export-ignore

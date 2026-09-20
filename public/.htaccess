@@ -1,3 +1,26 @@
+# ==============================================================================
+# KEREN SNACK ERP - Public Directory Security & Routing Configuration
+# ==============================================================================
+
+# 1. Matikan Directory Browsing
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# 2. Blokir Akses ke Berkas Sensitif/Tersembunyi jika ada dalam public
+<IfModule mod_authz_core.c>
+    <FilesMatch "(^\..*|\.(md|sql|json|lock|env|log|yml|yaml|ini|sh|bat|cmd|bak|dist|example|config))$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    <FilesMatch "(^\..*|\.(md|sql|json|lock|env|log|yml|yaml|ini|sh|bat|cmd|bak|dist|example|config))$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# 3. Routing ke Front Controller
 <IfModule mod_rewrite.c>
     RewriteEngine On
 

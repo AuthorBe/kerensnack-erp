@@ -1,10 +1,36 @@
+# ==============================================================================
+# KEREN SNACK ERP - Root Security & Hardening Configuration
+# ==============================================================================
+
+# 1. Matikan Directory Indexing (Cegah pengunjung melihat isi direktori)
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# 2. Blokir Akses Langsung ke Berkas Sensitif Berdasarkan Ekstensi & Nama
+<IfModule mod_authz_core.c>
+    <FilesMatch "(^\..*|\.(md|sql|json|lock|env|log|yml|yaml|ini|sh|bat|cmd|bak|dist|example|config))$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+    <FilesMatch "(^\..*|\.(md|sql|json|lock|env|log|yml|yaml|ini|sh|bat|cmd|bak|dist|example|config))$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+</IfModule>
+
+# 3. URL Rewriting & Proteksi Folder
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Protect sensitive files & folders
-    RewriteRule ^(\.env|\.git|config|app|views|database|docs|tests) - [F,L,NC]
+    # Blokir akses ke direktori sensitif
+    RewriteRule ^(\.env|\.git|app|config|database|docs|tests|views|vendor|storage|cache|scratch|developer)(/.*)?$ - [F,L,NC]
 
-    # Forward all other traffic to the /public directory
+    # Blokir berkas sensitif spesifik (README.md, AGENTS.md, *.sql, composer.*, dll)
+    RewriteRule ^(README\.md|AGENTS\.md|composer\.(json|lock)|.*\.sql|.*\.md|.*\.env.*)$ - [F,L,NC]
+
+    # Teruskan seluruh traffic publik ke folder /public
     RewriteRule ^$ public/ [L]
     RewriteRule ^((?!public/).*)$ public/$1 [L]
 </IfModule>
