@@ -73,35 +73,48 @@ echo "============================================================\n";
 
 $pdo = Database::getConnection();
 
-// Sample customer & item
-$customer = Database::fetchOne("
-    SELECT id, kode_pelanggan, nama_toko, plafon_piutang, total_piutang_berjalan, sales_driver_id 
-    FROM public.pelanggan 
-    WHERE status_aktif = TRUE 
-    LIMIT 1
-");
+function createCustomerOrderFixtures(PDO $pdo): array {
+    $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-ORD-FX', 'Grup Order FX') RETURNING id");
+    $gpStmt->execute();
+    $gpId = $gpStmt->fetchColumn();
 
-$item = Database::fetchOne("
-    SELECT id, kode_sku, nama_item, harga_pokok_pembelian 
-    FROM public.item 
-    WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE 
-    LIMIT 1
-");
+    $itStmt = $pdo->prepare("INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, status_jual, status_aktif) VALUES (:gp_id, 'SKU-ORD-FX', 'Item Order FX', 'barang_jadi', 'pcs', 12000, TRUE, TRUE) RETURNING id, harga_pokok_pembelian");
+    $itStmt->execute(['gp_id' => $gpId]);
+    $item = $itStmt->fetch(PDO::FETCH_ASSOC);
 
-$cashAccount = Database::fetchOne("
-    SELECT id, nama_akun, saldo_saat_ini 
-    FROM public.akun_kas 
-    WHERE status_aktif = TRUE 
-    LIMIT 1
-");
+    $grpelStmt = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga) VALUES ('GP-ORD-FX', 'Grup Pelanggan Order FX', 1) RETURNING id");
+    $grpelStmt->execute();
+    $grpelId = $grpelStmt->fetchColumn();
 
-$driver = Database::fetchOne("
-    SELECT k.id as karyawan_id, p.id as pengguna_id, p.nama_lengkap 
-    FROM public.karyawan k 
-    JOIN public.pengguna p ON k.pengguna_id = p.id 
-    WHERE p.posisi = 'driver' AND p.status_aktif = TRUE 
-    LIMIT 1
-");
+    $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, grup_pelanggan_id, nama_toko, nama_pemilik, nomor_whatsapp, alamat_lengkap) VALUES ('PEL-ORD-FX', :gp_id, 'Toko Order FX', 'Budi', '0812345678', 'Jl. Test Order') RETURNING id");
+    $pelStmt->execute(['gp_id' => $grpelId]);
+    $customer = $pelStmt->fetch(PDO::FETCH_ASSOC);
+
+    $accStmt = $pdo->prepare("INSERT INTO public.akun_kas (nama_akun, tipe_akun, nomor_rekening, saldo_saat_ini, is_default_pos) VALUES ('Kas Order Test', 'kas_tunai', 'KAS-ORD-01', 500000, TRUE) RETURNING id, saldo_saat_ini");
+    $accStmt->execute();
+    $cashAccount = $accStmt->fetch(PDO::FETCH_ASSOC);
+
+    $roleId = $pdo->query("SELECT id FROM public.peran WHERE nama_peran != 'Developer' AND nama_peran != 'developer' LIMIT 1")->fetchColumn();
+    if (!$roleId) {
+        $rStmt = $pdo->prepare("INSERT INTO public.peran (nama_peran, deskripsi) VALUES ('Peran Driver Test', 'Driver Test Role') RETURNING id");
+        $rStmt->execute();
+        $roleId = $rStmt->fetchColumn();
+    }
+    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, posisi, peran_id) VALUES ('Driver Test', 'driver_test', 'hash', 'driver', :rid) RETURNING id");
+    $usrStmt->execute(['rid' => $roleId]);
+    $driverUserId = $usrStmt->fetchColumn();
+
+    $karStmt = $pdo->prepare("INSERT INTO public.karyawan (pengguna_id, tipe_penggajian, gaji_pokok_bulanan) VALUES (:pid, 'bulanan', 3000000) RETURNING id");
+    $karStmt->execute(['pid' => $driverUserId]);
+    $driverId = $karStmt->fetchColumn();
+
+    return [
+        'customer' => $customer,
+        'item' => $item,
+        'cashAccount' => $cashAccount,
+        'driverId' => $driverId
+    ];
+}
 
 // ------------------------------------------------------------------
 // 1. ORDER DOCUMENT NUMBERING
@@ -117,16 +130,15 @@ runTest("1. DocumentNumber::nextOrderNumber: Menghasilkan format nomor nota yang
 // ------------------------------------------------------------------
 // 2. ORDER CREATION WITH HPP SNAPSHOT & 'po' STATUS
 // ------------------------------------------------------------------
-runTest("2. Lifecycle Pesanan: Membuat pesanan B2B dengan status 'po' dan snapshot HPP", function() use ($pdo, $customer, $item) {
-    if (!$customer || !$item) return "Data customer atau item tidak lengkap.";
-
+runTest("2. Lifecycle Pesanan: Membuat pesanan B2B dengan status 'po' dan snapshot HPP", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createCustomerOrderFixtures($pdo);
         $nota = 'ORD-TEST-' . mt_rand(100000, 999999);
         $qty = 10;
         $hargaDeal = 18000.0;
         $totalBruto = $qty * $hargaDeal;
-        $expectedHpp = (float)($item['harga_pokok_pembelian'] ?? 12000.0);
+        $expectedHpp = (float)($fx['item']['harga_pokok_pembelian'] ?? 12000.0);
 
         // Simpan pesanan
         $stmtOrder = $pdo->prepare("
@@ -140,7 +152,7 @@ runTest("2. Lifecycle Pesanan: Membuat pesanan B2B dengan status 'po' dan snapsh
         ");
         $stmtOrder->execute([
             'nota' => $nota,
-            'cid' => $customer['id'],
+            'cid' => $fx['customer']['id'],
             'bruto' => $totalBruto,
             'netto' => $totalBruto
         ]);
@@ -164,7 +176,7 @@ runTest("2. Lifecycle Pesanan: Membuat pesanan B2B dengan status 'po' dan snapsh
         ");
         $stmtItem->execute([
             'oid' => $orderId,
-            'iid' => $item['id'],
+            'iid' => $fx['item']['id'],
             'qty' => $qty,
             'harga' => $hargaDeal,
             'subtotal' => $totalBruto,
@@ -172,7 +184,9 @@ runTest("2. Lifecycle Pesanan: Membuat pesanan B2B dengan status 'po' dan snapsh
         ]);
 
         // Verifikasi HPP snapshot tersimpan di database
-        $savedItem = Database::fetchOne("SELECT harga_pokok_satuan FROM public.item_pesanan WHERE pesanan_id = :oid", ['oid' => $orderId]);
+        $savedItemStmt = $pdo->prepare("SELECT harga_pokok_satuan FROM public.item_pesanan WHERE pesanan_id = :oid");
+        $savedItemStmt->execute(['oid' => $orderId]);
+        $savedItem = $savedItemStmt->fetch(PDO::FETCH_ASSOC);
         if (!$savedItem || abs((float)$savedItem['harga_pokok_satuan'] - $expectedHpp) > 0.001) {
             $pdo->rollBack();
             return "HPP Snapshot gagal tersimpan.";
@@ -187,11 +201,12 @@ runTest("2. Lifecycle Pesanan: Membuat pesanan B2B dengan status 'po' dan snapsh
 });
 
 // ------------------------------------------------------------------
-// 3. STATUS TRANSITION ('po' -> 'siap_dikirim')
+// 3. STATUS TRANSITION
 // ------------------------------------------------------------------
-runTest("3. Lifecycle Pesanan: Transisi status alur kerja dari 'po' ke 'siap_dikirim'", function() use ($pdo, $customer) {
+runTest("3. Lifecycle Pesanan: Transisi status alur kerja ke 'siap_dikirim'", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createCustomerOrderFixtures($pdo);
         $nota = 'ORD-TEST-ST-' . mt_rand(100000, 999999);
         $stmt = $pdo->prepare("
             INSERT INTO public.pesanan (
@@ -201,7 +216,7 @@ runTest("3. Lifecycle Pesanan: Transisi status alur kerja dari 'po' ke 'siap_dik
                 :nota, :cid, CURRENT_DATE, 50000, 50000, 'cash', 'po', 'belum_lunas'
             ) RETURNING id
         ");
-        $stmt->execute(['nota' => $nota, 'cid' => $customer['id']]);
+        $stmt->execute(['nota' => $nota, 'cid' => $fx['customer']['id']]);
         $orderId = $stmt->fetchColumn();
 
         // Update ke 'siap_dikirim'
@@ -230,11 +245,10 @@ runTest("3. Lifecycle Pesanan: Transisi status alur kerja dari 'po' ke 'siap_dik
 // ------------------------------------------------------------------
 // 4. ORDER PAYMENT (Pencatatan Arus Kas & Status Lunas)
 // ------------------------------------------------------------------
-runTest("4. Lifecycle Pembayaran: Pelunasan pesanan mencatat arus_kas masuk dan mengupdate total_dibayar", function() use ($pdo, $customer, $cashAccount) {
-    if (!$cashAccount) return "Akun kas tidak tersedia.";
-
+runTest("4. Lifecycle Pembayaran: Pelunasan pesanan mencatat arus_kas masuk dan mengupdate total_dibayar", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createCustomerOrderFixtures($pdo);
         $nota = 'ORD-TEST-PAY-' . mt_rand(100000, 999999);
         $totalNetto = 100000.0;
 
@@ -246,11 +260,11 @@ runTest("4. Lifecycle Pembayaran: Pelunasan pesanan mencatat arus_kas masuk dan 
                 :nota, :cid, CURRENT_DATE, :netto, :netto, 0, 'cash', 'siap_dikirim', 'belum_lunas'
             ) RETURNING id
         ");
-        $stmtOrder->execute(['nota' => $nota, 'cid' => $customer['id'], 'netto' => $totalNetto]);
+        $stmtOrder->execute(['nota' => $nota, 'cid' => $fx['customer']['id'], 'netto' => $totalNetto]);
         $orderId = $stmtOrder->fetchColumn();
 
         // Catat pelunasan via arus kas
-        $saldoBerjalan = (float)$cashAccount['saldo_saat_ini'] + $totalNetto;
+        $saldoBerjalan = (float)$fx['cashAccount']['saldo_saat_ini'] + $totalNetto;
         $stmtKas = $pdo->prepare("
             INSERT INTO public.arus_kas (
                 akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
@@ -261,7 +275,7 @@ runTest("4. Lifecycle Pembayaran: Pelunasan pesanan mencatat arus_kas masuk dan 
             ) RETURNING id
         ");
         $stmtKas->execute([
-            'ak_id' => $cashAccount['id'],
+            'ak_id' => $fx['cashAccount']['id'],
             'nom' => $totalNetto,
             'oid' => $orderId,
             'saldo' => $saldoBerjalan
@@ -293,9 +307,10 @@ runTest("4. Lifecycle Pembayaran: Pelunasan pesanan mencatat arus_kas masuk dan 
 // ------------------------------------------------------------------
 // 5. ORDER CANCELLATION
 // ------------------------------------------------------------------
-runTest("5. Pembatalan Pesanan: Status pemrosesan & status pembayaran berubah menjadi 'dibatalkan'", function() use ($pdo, $customer) {
+runTest("5. Pembatalan Pesanan: Status pemrosesan & status pembayaran berubah menjadi 'dibatalkan'", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createCustomerOrderFixtures($pdo);
         $nota = 'ORD-TEST-CNL-' . mt_rand(100000, 999999);
         $stmt = $pdo->prepare("
             INSERT INTO public.pesanan (
@@ -305,7 +320,7 @@ runTest("5. Pembatalan Pesanan: Status pemrosesan & status pembayaran berubah me
                 :nota, :cid, CURRENT_DATE, 75000, 75000, 'cash', 'po', 'belum_lunas'
             ) RETURNING id
         ");
-        $stmt->execute(['nota' => $nota, 'cid' => $customer['id']]);
+        $stmt->execute(['nota' => $nota, 'cid' => $fx['customer']['id']]);
         $orderId = $stmt->fetchColumn();
 
         // Batalkan
@@ -334,11 +349,10 @@ runTest("5. Pembatalan Pesanan: Status pemrosesan & status pembayaran berubah me
 // ------------------------------------------------------------------
 // 6. SALES/DRIVER ASSIGNMENT SYNC
 // ------------------------------------------------------------------
-runTest("6. Logistik: Penugasan driver pada pesanan memperbarui kolom sales_driver_id", function() use ($pdo, $customer, $driver) {
-    if (!$driver) return "Data driver tidak tersedia.";
-
+runTest("6. Logistik: Penugasan driver pada pesanan memperbarui kolom sales_driver_id", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createCustomerOrderFixtures($pdo);
         $nota = 'ORD-TEST-DRV-' . mt_rand(100000, 999999);
         $stmt = $pdo->prepare("
             INSERT INTO public.pesanan (
@@ -348,7 +362,7 @@ runTest("6. Logistik: Penugasan driver pada pesanan memperbarui kolom sales_driv
                 :nota, :cid, CURRENT_DATE, 60000, 60000, 'cash', 'siap_dikirim', 'belum_lunas'
             ) RETURNING id
         ");
-        $stmt->execute(['nota' => $nota, 'cid' => $customer['id']]);
+        $stmt->execute(['nota' => $nota, 'cid' => $fx['customer']['id']]);
         $orderId = $stmt->fetchColumn();
 
         // Assign driver
@@ -358,10 +372,10 @@ runTest("6. Logistik: Penugasan driver pada pesanan memperbarui kolom sales_driv
             WHERE id = :oid 
             RETURNING sales_driver_id
         ");
-        $stmtAssign->execute(['did' => $driver['karyawan_id'], 'oid' => $orderId]);
+        $stmtAssign->execute(['did' => $fx['driverId'], 'oid' => $orderId]);
         $assignedId = $stmtAssign->fetchColumn();
 
-        if ($assignedId !== $driver['karyawan_id']) {
+        if ($assignedId !== $fx['driverId']) {
             $pdo->rollBack();
             return "Driver gagal diasosiasikan pada pesanan.";
         }

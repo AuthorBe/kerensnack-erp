@@ -83,7 +83,8 @@ class ProductController extends Controller
                 SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
                        i.tipe_item, i.satuan_dasar, i.harga_pokok_pembelian,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.status_jual, i.status_aktif,
-                       i.kelompok_borongan_id,
+                       i.kelompok_borongan_id, i.pemasok_utama_id,
+                       sup.nama_pemasok, sup.kode_pemasok,
                        COALESCE(kub.upah_per_bungkus, 0) as upah_bungkus_efektif,
                        gp.nama_grup, gp.kode_grup, gp.barcode_universal, gp.merek_id,
                        m.kode_merek, m.nama_merek,
@@ -99,6 +100,7 @@ class ProductController extends Controller
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 LEFT JOIN public.merek m ON gp.merek_id = m.id
+                LEFT JOIN public.pemasok sup ON i.pemasok_utama_id = sup.id
                 LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 1
                 LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
                 {$whereFg}
@@ -536,6 +538,7 @@ class ProductController extends Controller
                 FROM public.item WHERE kode_sku ~ '^SUB-[0-9]+$'
             ")['max_sku'] ?? 0);
             $kodeSku = 'SUB-' . str_pad((string)($maxSku + 1), 4, '0', STR_PAD_LEFT);
+            $pemasokId = $this->input('pemasok_utama_id') ?: null;
 
             $pdo = Database::pdo();
             $pdo->beginTransaction();
@@ -548,7 +551,7 @@ class ProductController extends Controller
                     status_jual, status_aktif
                 ) VALUES (
                     :grup, :sku, :nama, 'barang_jadi',
-                    'pcs', :borongan, NULL,
+                    'pcs', :borongan, :pemasok,
                     :hpp, :stok_min, :stok_awal,
                     TRUE, TRUE
                 ) RETURNING id
@@ -558,6 +561,7 @@ class ProductController extends Controller
                 'sku' => $kodeSku,
                 'nama' => $namaItem,
                 'borongan' => $kelompokBoronganId,
+                'pemasok' => $pemasokId,
                 'hpp' => $hpp,
                 'stok_min' => $stokMin,
                 'stok_awal' => $stokAwal
@@ -613,6 +617,7 @@ class ProductController extends Controller
         $hpp = (float)preg_replace('/[^0-9]/', '', (string)$this->input('harga_pokok_pembelian', '0'));
         $stokMin = (int)$this->input('stok_minimum_peringatan', 10);
         $kelompokBoronganId = $this->input('kelompok_borongan_id') ?: null;
+        $pemasokId = $this->input('pemasok_utama_id') ?: null;
         $statusJual = !empty($this->input('status_jual'));
         $statusAktif = !empty($this->input('status_aktif'));
 
@@ -636,6 +641,7 @@ class ProductController extends Controller
                     harga_pokok_pembelian = :hpp,
                     stok_minimum_peringatan = :stok_min,
                     kelompok_borongan_id = :borongan,
+                    pemasok_utama_id = :pemasok,
                     status_jual = :jual,
                     status_aktif = :aktif,
                     diubah_pada = NOW()
@@ -647,6 +653,7 @@ class ProductController extends Controller
                 'hpp' => $hpp,
                 'stok_min' => $stokMin,
                 'borongan' => $kelompokBoronganId,
+                'pemasok' => $pemasokId,
                 'jual' => $statusJual ? 'true' : 'false',
                 'aktif' => $statusAktif ? 'true' : 'false'
             ]);
@@ -955,7 +962,7 @@ class ProductController extends Controller
     // ==========================================
     public function storeRecipeItem(): void
     {
-        Auth::requirePermission('master.products_manage');
+        Auth::requirePermission('production.bom_manage');
 
         $itemJadiId = $this->input('item_jadi_id');
         $itemBahanId = $this->input('item_bahan_id');
@@ -1010,7 +1017,7 @@ class ProductController extends Controller
 
     public function deleteRecipeItem(): void
     {
-        Auth::requirePermission('master.products_manage');
+        Auth::requirePermission('production.bom_manage');
 
         $id = $this->input('id');
         if (empty($id)) {
@@ -1035,7 +1042,7 @@ class ProductController extends Controller
 
     public function copyRecipe(): void
     {
-        Auth::requirePermission('master.products_manage');
+        Auth::requirePermission('production.bom_manage');
 
         $sourceId = $this->input('source_item_id');
         $targetIds = $this->input('target_item_ids');
@@ -1118,7 +1125,7 @@ class ProductController extends Controller
     // ==========================================
     public function storeBoronganGroup(): void
     {
-        Auth::requirePermission('master.products_manage');
+        Auth::requirePermission('production.bom_manage');
 
         $nama = trim((string)$this->input('nama_kelompok'));
         $upah = (float)preg_replace('/[^0-9]/', '', (string)$this->input('upah_per_bungkus', '0'));
@@ -1154,7 +1161,7 @@ class ProductController extends Controller
 
     public function updateBoronganGroup(): void
     {
-        Auth::requirePermission('master.products_manage');
+        Auth::requirePermission('production.bom_manage');
 
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_kelompok'));
@@ -1196,7 +1203,7 @@ class ProductController extends Controller
 
     public function deleteBoronganGroup(): void
     {
-        Auth::requirePermission('master.products_manage');
+        Auth::requirePermission('production.bom_manage');
 
         $id = $this->input('id');
         if (empty($id)) {

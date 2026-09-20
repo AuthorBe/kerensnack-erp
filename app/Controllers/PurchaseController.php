@@ -33,7 +33,7 @@ class PurchaseController extends Controller
                        pb.jenis_dokumen, pb.metode_logistik, pb.sales_driver_id, pb.tanggal_jadwal_belanja,
                        pb.instruksi_driver, pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
                        pb.waktu_diambil, pb.waktu_diterima_gudang,
-                       sup.id as pemasok_id, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon,
+                       sup.id as pemasok_id, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_whatsapp as supplier_telepon,
                        sup.nomor_whatsapp as supplier_wa, sup.link_google_maps as supplier_maps, sup.nama_kontak as supplier_kontak, sup.termin_bayar as supplier_termin_bayar,
                        p.nama_lengkap as pembuat,
                        drv.nama_karyawan as nama_driver, drv.nomor_polisi_kendaraan as nopol_driver,
@@ -55,7 +55,7 @@ class PurchaseController extends Controller
             unset($pb);
 
             $suppliers = Database::fetchAll("
-                SELECT id, kode_pemasok, nama_pemasok, nama_kontak, nomor_telepon, nomor_whatsapp, email, termin_bayar, link_google_maps, alamat_lengkap, catatan, nama_bank, nomor_rekening, atas_nama_rekening 
+                SELECT id, kode_pemasok, nama_pemasok, nama_kontak, nomor_whatsapp as nomor_telepon, nomor_whatsapp, email, termin_bayar, link_google_maps, alamat_lengkap, catatan, nama_bank, nomor_rekening, atas_nama_rekening 
                 FROM public.pemasok 
                 WHERE status_aktif = TRUE 
                 ORDER BY nama_pemasok ASC
@@ -64,8 +64,18 @@ class PurchaseController extends Controller
             $items = Database::fetchAll("
                 SELECT id, kode_sku, nama_item, satuan_dasar, tipe_item, harga_pokok_pembelian, stok_fisik_saat_ini, pemasok_utama_id 
                 FROM public.item 
-                WHERE status_aktif = TRUE AND tipe_item IN ('bahan_mentah', 'bahan_kemas') 
-                ORDER BY tipe_item ASC, nama_item ASC
+                WHERE status_aktif = TRUE 
+                  AND (
+                      tipe_item IN ('bahan_mentah', 'bahan_kemas')
+                      OR (tipe_item = 'barang_jadi' AND pemasok_utama_id IS NOT NULL)
+                  )
+                ORDER BY 
+                    CASE 
+                        WHEN tipe_item = 'bahan_mentah' THEN 1 
+                        WHEN tipe_item = 'bahan_kemas' THEN 2 
+                        ELSE 3 
+                    END, 
+                    nama_item ASC
             ");
 
             $cashAccounts = Database::fetchAll("
@@ -122,7 +132,7 @@ class PurchaseController extends Controller
                        pb.jenis_dokumen, pb.metode_logistik, pb.sales_driver_id, pb.tanggal_jadwal_belanja,
                        pb.instruksi_driver, pb.metode_bayar_belanja, pb.nominal_dibayar_driver, pb.nomor_nota_vendor,
                        pb.alasan_kendala, pb.waktu_diambil, pb.waktu_diterima_gudang,
-                       sup.id as pemasok_id, sup.kode_pemasok, sup.nama_pemasok, sup.nomor_telepon, sup.alamat_lengkap,
+                       sup.id as pemasok_id, sup.kode_pemasok, sup.nama_pemasok, sup.nomor_whatsapp as nomor_telepon, sup.nomor_whatsapp as supplier_telepon, sup.alamat_lengkap,
                        sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa, sup.email as supplier_email,
                        sup.link_google_maps as supplier_maps, sup.termin_bayar as supplier_termin_bayar, sup.catatan as supplier_catatan,
                        sup.nama_bank, sup.nomor_rekening, sup.atas_nama_rekening,
@@ -570,64 +580,70 @@ class PurchaseController extends Controller
             return;
         }
 
-        $purchase = Database::fetchOne("SELECT * FROM public.pembelian WHERE id = :id", ['id' => $id]);
-        if (!$purchase) {
-            $this->json(['success' => false, 'message' => 'Data pembelian/PO tidak ditemukan.'], 404);
-            return;
-        }
-
-        if ($purchase['status_penerimaan'] === 'diterima') {
-            $this->json(['success' => false, 'message' => 'PO yang sudah berstatus Diterima di gudang tidak dapat diedit.'], 400);
-            return;
-        }
-
-        if ($purchase['status_pembayaran'] === 'batal') {
-            $this->json(['success' => false, 'message' => 'PO yang telah dibatalkan tidak dapat diedit.'], 400);
-            return;
-        }
-
-        $pemasokId = $payload['pemasok_id'] ?? $purchase['pemasok_id'];
-        $metodeLogistik = $payload['metode_logistik'] ?? $purchase['metode_logistik'] ?? 'diantar_supplier';
-        $driverId = (!empty($payload['sales_driver_id']) && $metodeLogistik === 'diambil_driver') ? $payload['sales_driver_id'] : null;
-        $tglJadwal = !empty($payload['tanggal_jadwal_belanja']) ? $payload['tanggal_jadwal_belanja'] : $purchase['tanggal_jadwal_belanja'];
-        $instruksi = trim((string)($payload['instruksi_driver'] ?? $purchase['instruksi_driver'] ?? ''));
-        $metodeBayar = $payload['metode_bayar_belanja'] ?? $purchase['metode_bayar_belanja'] ?? 'tempo_vendor';
-        $statusBayar = $payload['status_pembayaran'] ?? $purchase['status_pembayaran'] ?? 'belum_lunas';
-        $catatan = trim((string)($payload['catatan'] ?? $purchase['catatan'] ?? ''));
-
-        // Status penerimaan menyesuaikan metode logistik jika belum diambil
-        $statusPenerimaan = ($metodeLogistik === 'diambil_driver') ? 'ditugaskan_driver' : 'menunggu_supplier';
-        if ($purchase['status_penerimaan'] === 'sudah_diambil') {
-            $statusPenerimaan = 'sudah_diambil';
-        }
-
-        // Validasi Items jika ada perubahan
-        $rawItems = $payload['items'] ?? [];
-        $validItems = [];
-        $totalBiaya = 0.0;
-        if (!empty($rawItems) && is_array($rawItems)) {
-            $seen = [];
-            foreach ($rawItems as $it) {
-                $itemId = $it['item_id'] ?? null;
-                if (empty($itemId) || isset($seen[$itemId])) continue;
-                $seen[$itemId] = true;
-                $qty = round((float)($it['qty'] ?? 0), 2);
-                $harga = (float)($it['harga_satuan'] ?? 0);
-                if ($qty <= 0.0001) continue;
-                $sub = round($qty * $harga, 2);
-                $validItems[] = [
-                    'item_id' => $itemId,
-                    'qty' => $qty,
-                    'harga_satuan' => $harga,
-                    'subtotal' => $sub
-                ];
-                $totalBiaya += $sub;
-            }
-        }
-
         try {
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
+
+            $stmtLock = $pdo->prepare("SELECT * FROM public.pembelian WHERE id = :id FOR UPDATE");
+            $stmtLock->execute(['id' => $id]);
+            $purchase = $stmtLock->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$purchase) {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'Data pembelian/PO tidak ditemukan.'], 404);
+                return;
+            }
+
+            if ($purchase['status_penerimaan'] === 'diterima') {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'PO yang sudah berstatus Diterima di gudang tidak dapat diedit.'], 400);
+                return;
+            }
+
+            if ($purchase['status_pembayaran'] === 'batal') {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'PO yang telah dibatalkan tidak dapat diedit.'], 400);
+                return;
+            }
+
+            $pemasokId = $payload['pemasok_id'] ?? $purchase['pemasok_id'];
+            $metodeLogistik = $payload['metode_logistik'] ?? $purchase['metode_logistik'] ?? 'diantar_supplier';
+            $driverId = (!empty($payload['sales_driver_id']) && $metodeLogistik === 'diambil_driver') ? $payload['sales_driver_id'] : null;
+            $tglJadwal = !empty($payload['tanggal_jadwal_belanja']) ? $payload['tanggal_jadwal_belanja'] : $purchase['tanggal_jadwal_belanja'];
+            $instruksi = trim((string)($payload['instruksi_driver'] ?? $purchase['instruksi_driver'] ?? ''));
+            $metodeBayar = $payload['metode_bayar_belanja'] ?? $purchase['metode_bayar_belanja'] ?? 'tempo_vendor';
+            $statusBayar = $payload['status_pembayaran'] ?? $purchase['status_pembayaran'] ?? 'belum_lunas';
+            $catatan = trim((string)($payload['catatan'] ?? $purchase['catatan'] ?? ''));
+
+            // Status penerimaan menyesuaikan metode logistik jika belum diambil
+            $statusPenerimaan = ($metodeLogistik === 'diambil_driver') ? 'ditugaskan_driver' : 'menunggu_supplier';
+            if ($purchase['status_penerimaan'] === 'sudah_diambil') {
+                $statusPenerimaan = 'sudah_diambil';
+            }
+
+            // Validasi Items jika ada perubahan
+            $rawItems = $payload['items'] ?? [];
+            $validItems = [];
+            $totalBiaya = 0.0;
+            if (!empty($rawItems) && is_array($rawItems)) {
+                $seen = [];
+                foreach ($rawItems as $it) {
+                    $itemId = $it['item_id'] ?? null;
+                    if (empty($itemId) || isset($seen[$itemId])) continue;
+                    $seen[$itemId] = true;
+                    $qty = round((float)($it['qty'] ?? 0), 2);
+                    $harga = (float)($it['harga_satuan'] ?? 0);
+                    if ($qty <= 0.0001) continue;
+                    $sub = round($qty * $harga, 2);
+                    $validItems[] = [
+                        'item_id' => $itemId,
+                        'qty' => $qty,
+                        'harga_satuan' => $harga,
+                        'subtotal' => $sub
+                    ];
+                    $totalBiaya += $sub;
+                }
+            }
 
             $sqlUpdate = "
                 UPDATE public.pembelian
@@ -704,7 +720,7 @@ class PurchaseController extends Controller
      */
     public function receiveGoods(): void
     {
-        Auth::requirePermission(['purchases.edit', 'purchases.create']);
+        Auth::requirePermission('purchases.receive');
 
         $payload = null;
         if (!empty($_POST)) {
@@ -1109,7 +1125,7 @@ class PurchaseController extends Controller
 
         try {
             $purchase = Database::fetchOne("
-                SELECT pb.*, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon, sup.alamat_lengkap,
+                SELECT pb.*, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_whatsapp as supplier_telepon, sup.alamat_lengkap,
                        sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa, sup.email as supplier_email,
                        sup.termin_bayar as supplier_termin_bayar, sup.link_google_maps as supplier_maps,
                        p.nama_lengkap as pembuat,
@@ -1167,7 +1183,7 @@ class PurchaseController extends Controller
 
         try {
             $purchase = Database::fetchOne("
-                SELECT pb.*, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_telepon as supplier_telepon, sup.alamat_lengkap,
+                SELECT pb.*, sup.nama_pemasok, sup.kode_pemasok, sup.nomor_whatsapp as supplier_telepon, sup.alamat_lengkap,
                        sup.nama_kontak as supplier_kontak, sup.nomor_whatsapp as supplier_wa, sup.email as supplier_email,
                        sup.termin_bayar as supplier_termin_bayar, sup.link_google_maps as supplier_maps,
                        p.nama_lengkap as pembuat,
@@ -1468,46 +1484,53 @@ class PurchaseController extends Controller
                         'user_id' => $userId
                     ]);
                 }
+            }
 
-                // 3. Jika berstatus lunas, kembalikan saldo kas
-                if ($purchase['status_pembayaran'] === 'lunas') {
-                    $arusKas = Database::fetchOne("
-                        SELECT akun_kas_id 
-                        FROM public.arus_kas 
-                        WHERE referensi_tabel = 'pembelian' AND referensi_id = :id AND jenis_kas = 'keluar'
-                        ORDER BY dibuat_pada DESC LIMIT 1
-                    ", ['id' => $pembelianId]);
+            // 3. Pengembalian Saldo Kas (Jika ada transaksi kas keluar sebelumnya untuk PO/Faktur ini)
+            $stmtSumKas = $pdo->prepare("
+                SELECT akun_kas_id,
+                       COALESCE(SUM(CASE WHEN jenis_kas = 'keluar' THEN nominal ELSE -nominal END), 0) as netto_kas_keluar
+                FROM public.arus_kas 
+                WHERE referensi_tabel = 'pembelian' AND referensi_id = :id
+                GROUP BY akun_kas_id
+                HAVING COALESCE(SUM(CASE WHEN jenis_kas = 'keluar' THEN nominal ELSE -nominal END), 0) > 0
+            ");
+            $stmtSumKas->execute(['id' => $pembelianId]);
+            $kasRows = $stmtSumKas->fetchAll(\PDO::FETCH_ASSOC);
 
-                    if ($arusKas && !empty($arusKas['akun_kas_id'])) {
-                        $akunKasId = $arusKas['akun_kas_id'];
-                        $akunKas = Database::fetchOne("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE", ['id' => $akunKasId]);
-                        if ($akunKas) {
-                            $saldoLama = (float)$akunKas['saldo_saat_ini'];
-                            $saldoBaru = $saldoLama + $totalBiaya;
+            foreach ($kasRows as $kasRow) {
+                $akunKasId = $kasRow['akun_kas_id'];
+                $nominalRefund = (float)$kasRow['netto_kas_keluar'];
+                if ($nominalRefund <= 0.0001 || empty($akunKasId)) continue;
 
-                            $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
-                                ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
+                $stmtAkunLock = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtAkunLock->execute(['id' => $akunKasId]);
+                $akunKas = $stmtAkunLock->fetch(\PDO::FETCH_ASSOC);
+                if ($akunKas) {
+                    $saldoLama = (float)$akunKas['saldo_saat_ini'];
+                    $saldoBaru = $saldoLama + $nominalRefund;
 
-                            $voucherNo = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
-                            $pdo->prepare("
-                                INSERT INTO public.arus_kas (
-                                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
-                                    referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
-                                ) VALUES (
-                                    :nomor_tx, :akun_id, CURRENT_DATE, 'masuk', 'pembelian_bahan', :nominal, :ket,
-                                    'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
-                                )
-                            ")->execute([
-                                'nomor_tx' => $voucherNo,
-                                'akun_id' => $akunKasId,
-                                'nominal' => $totalBiaya,
-                                'ket' => "Pengembalian dana pembatalan faktur vendor: {$nomorFaktur} ({$alasan})",
-                                'pb_id' => $pembelianId,
-                                'saldo_berjalan' => $saldoBaru,
-                                'user_id' => $userId
-                            ]);
-                        }
-                    }
+                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                        ->execute(['saldo' => $saldoBaru, 'id' => $akunKasId]);
+
+                    $voucherNo = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
+                    $pdo->prepare("
+                        INSERT INTO public.arus_kas (
+                            nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
+                            referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                        ) VALUES (
+                            :nomor_tx, :akun_id, CURRENT_DATE, 'masuk', 'pembelian_bahan', :nominal, :ket,
+                            'pembelian', :pb_id, :saldo_berjalan, :user_id, NOW()
+                        )
+                    ")->execute([
+                        'nomor_tx' => $voucherNo,
+                        'akun_id' => $akunKasId,
+                        'nominal' => $nominalRefund,
+                        'ket' => "Pengembalian dana pembatalan PO/faktur vendor: {$nomorFaktur} ({$alasan})",
+                        'pb_id' => $pembelianId,
+                        'saldo_berjalan' => $saldoBaru,
+                        'user_id' => $userId
+                    ]);
                 }
             }
 

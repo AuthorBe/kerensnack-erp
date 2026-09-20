@@ -40,8 +40,8 @@ class TestRunnerService
      */
     private const LOCK_MAX_LIFETIME  = 180;
 
-    /** Durasi cooldown global (detik) setelah setiap test selesai */
-    private const COOLDOWN_SECONDS   = 60;
+    /** Durasi cooldown global (detik) setelah setiap test selesai - dinonaktifkan (0) agar Run All & single run lancar */
+    private const COOLDOWN_SECONDS   = 0;
 
     /** Timeout subprocess PHP (detik) — auto-terminate jika melebihi batas ini */
     private const SUBPROCESS_TIMEOUT = 120;
@@ -394,6 +394,13 @@ class TestRunnerService
     {
         $cooldownFile = self::getCooldownFilePath();
 
+        if (self::COOLDOWN_SECONDS <= 0) {
+            if (file_exists($cooldownFile)) {
+                @unlink($cooldownFile);
+            }
+            return false;
+        }
+
         if (!file_exists($cooldownFile)) {
             return false;
         }
@@ -426,6 +433,14 @@ class TestRunnerService
      */
     private static function setCooldown(string $suiteKey, string $userName, string $result): void
     {
+        $cooldownFile = self::getCooldownFilePath();
+        if (self::COOLDOWN_SECONDS <= 0) {
+            if (file_exists($cooldownFile)) {
+                @unlink($cooldownFile);
+            }
+            return;
+        }
+
         $suite         = self::SUITES[$suiteKey] ?? [];
         $finishedAt    = time();
         $cooldownUntil = $finishedAt + self::COOLDOWN_SECONDS;
@@ -439,7 +454,7 @@ class TestRunnerService
             'result'         => $result,
         ], JSON_UNESCAPED_UNICODE);
 
-        @file_put_contents(self::getCooldownFilePath(), $cooldownData, LOCK_EX);
+        @file_put_contents($cooldownFile, $cooldownData, LOCK_EX);
     }
 
     // -------------------------------------------------------------------------
@@ -533,7 +548,7 @@ class TestRunnerService
                 'duration'       => 0.0,
                 'output'         => "Error: File pengujian {$suite['file']} tidak ditemukan di server.",
                 'exit_code'      => 1,
-                'cooldown_until' => time() + self::COOLDOWN_SECONDS,
+                'cooldown_until' => self::COOLDOWN_SECONDS > 0 ? (time() + self::COOLDOWN_SECONDS) : null,
             ];
         }
 
@@ -630,7 +645,7 @@ class TestRunnerService
             'duration'       => $duration,
             'output'         => $sanitizedOutput,
             'exit_code'      => $exitCode,
-            'cooldown_until' => time() + self::COOLDOWN_SECONDS,
+            'cooldown_until' => self::COOLDOWN_SECONDS > 0 ? (time() + self::COOLDOWN_SECONDS) : null,
         ];
     }
 

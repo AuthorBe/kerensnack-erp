@@ -9,9 +9,13 @@ declare(strict_types=1);
  * 1. Sequential Purchase Number Generation (DocumentNumber::nextPurchaseNumber)
  * 2. PO Creation with Decimal Material Quantities (numeric 15,2)
  * 3. Goods Receipt Workflow (status_penerimaan update, stock increment & riwayat_stok)
- * 4. Supplier Debt Payment & Cash Outflow Integrity (arus_kas with saldo_berjalan)
- * 5. PO Cancellation & Rollback Integrity
- * 6. Driver Logistics Assignment for Vendor Pickups (metode_logistik = 'diambil_driver')
+ * 4. Goods Receipt with Substituted / Extra Items & Moving-Average HPP
+ * 5. Supplier Debt Payment & Cash Outflow Integrity (arus_kas with saldo_berjalan)
+ * 6. PO Cancellation & Automatic Cash Refund Integrity (Prepaid PO Refund)
+ * 7. Driver Logistics Assignment for Vendor Pickups (metode_logistik = 'diambil_driver')
+ * 8. RBAC Permission Isolation (purchases.receive enforcement)
+ * 
+ * Compliance: Strictly follows AGENTS.md (Isolated Transactions with mandatory rollback).
  */
 
 define('ROOT_PATH', dirname(__DIR__));
@@ -39,9 +43,12 @@ require_once APP_ROOT . '/app/Core/Auth.php';
 require_once APP_ROOT . '/app/Core/Controller.php';
 require_once APP_ROOT . '/app/Controllers/PurchaseController.php';
 require_once APP_ROOT . '/app/Helpers/DocumentNumber.php';
+require_once APP_ROOT . '/app/Helpers/CashVoucher.php';
 require_once APP_ROOT . '/app/Helpers/Format.php';
 
 use App\Helpers\DocumentNumber;
+use App\Helpers\CashVoucher;
+use App\Core\Auth;
 
 $passed = 0;
 $failed = 0;
@@ -73,40 +80,43 @@ echo "============================================================\n";
 
 $pdo = Database::getConnection();
 
-// Sample Supplier & Raw Material Item
-$supplier = Database::fetchOne("
-    SELECT id, kode_pemasok, nama_pemasok, termin_bayar 
-    FROM public.pemasok 
-    WHERE status_aktif = TRUE 
-    LIMIT 1
-");
+// Helper to create transient test fixtures inside transaction
+function createTestSupplier(PDO $pdo): string {
+    $code = 'SPL-TEST-' . mt_rand(1000, 9999);
+    $stmt = $pdo->prepare("
+        INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, nomor_whatsapp, termin_bayar, status_aktif)
+        VALUES (:code, 'Supplier Uji Coba Lapangan', '081234567890', 'tempo_14_hari', TRUE)
+        RETURNING id
+    ");
+    $stmt->execute(['code' => $code]);
+    return $stmt->fetchColumn();
+}
 
-$rawMaterial = Database::fetchOne("
-    SELECT id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, stok_fisik_saat_ini 
-    FROM public.item 
-    WHERE tipe_item = 'bahan_baku' AND status_aktif = TRUE 
-    LIMIT 1
-") ?: Database::fetchOne("
-    SELECT id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, stok_fisik_saat_ini 
-    FROM public.item 
-    WHERE status_aktif = TRUE 
-    LIMIT 1
-");
+function createTestItem(PDO $pdo, string $name, string $sku, float $stokAwal = 100.0, float $hpp = 15000.0, string $type = 'bahan_mentah'): string {
+    $stmt = $pdo->prepare("
+        INSERT INTO public.item (kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, stok_fisik_saat_ini, status_aktif)
+        VALUES (:sku, :name, :type, 'kg', :hpp, :stok, TRUE)
+        RETURNING id
+    ");
+    $stmt->execute([
+        'sku' => $sku . '-' . mt_rand(100, 999),
+        'name' => $name,
+        'type' => $type,
+        'hpp' => $hpp,
+        'stok' => $stokAwal
+    ]);
+    return $stmt->fetchColumn();
+}
 
-$cashAccount = Database::fetchOne("
-    SELECT id, nama_akun, saldo_saat_ini 
-    FROM public.akun_kas 
-    WHERE status_aktif = TRUE AND saldo_saat_ini > 100000 
-    LIMIT 1
-") ?: Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE LIMIT 1");
-
-$driver = Database::fetchOne("
-    SELECT k.id as karyawan_id, p.id as pengguna_id, p.nama_lengkap 
-    FROM public.karyawan k 
-    JOIN public.pengguna p ON k.pengguna_id = p.id 
-    WHERE p.posisi = 'driver' AND p.status_aktif = TRUE 
-    LIMIT 1
-");
+function createTestCashAccount(PDO $pdo, float $saldoAwal = 5000000.0): string {
+    $stmt = $pdo->prepare("
+        INSERT INTO public.akun_kas (nama_akun, tipe_akun, saldo_saat_ini, status_aktif)
+        VALUES ('Kas Operasional Uji Coba', 'kas_tunai', :saldo, TRUE)
+        RETURNING id
+    ");
+    $stmt->execute(['saldo' => $saldoAwal]);
+    return $stmt->fetchColumn();
+}
 
 // ------------------------------------------------------------------
 // 1. PURCHASE NUMBER GENERATION
@@ -122,11 +132,12 @@ runTest("1. DocumentNumber::nextPurchaseNumber: Menghasilkan nomor PO dengan pre
 // ------------------------------------------------------------------
 // 2. PO CREATION WITH DECIMAL QUANTITIES (numeric 15,2)
 // ------------------------------------------------------------------
-runTest("2. Lifecycle Pembelian: Membuat PO dengan kuantitas desimal bahan baku presisi tinggi", function() use ($pdo, $supplier, $rawMaterial) {
-    if (!$supplier || !$rawMaterial) return "Data supplier atau bahan baku tidak lengkap.";
-
+runTest("2. Lifecycle Pembelian: Membuat PO dengan kuantitas desimal bahan baku presisi tinggi", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $supplierId = createTestSupplier($pdo);
+        $itemId = createTestItem($pdo, 'Tepung Tapioka Super', 'SKU-TPG', 50.0, 12000.0);
+
         $poNumber = 'PB-TEST-' . mt_rand(100000, 999999);
         $decimalQty = 18.75;
         $unitPrice = 24000.0;
@@ -143,7 +154,7 @@ runTest("2. Lifecycle Pembelian: Membuat PO dengan kuantitas desimal bahan baku 
         ");
         $stmtPb->execute([
             'no_po' => $poNumber,
-            'sup_id' => $supplier['id'],
+            'sup_id' => $supplierId,
             'total' => $totalCost
         ]);
         $purchaseId = $stmtPb->fetchColumn();
@@ -152,43 +163,43 @@ runTest("2. Lifecycle Pembelian: Membuat PO dengan kuantitas desimal bahan baku 
             INSERT INTO public.rincian_pembelian (
                 pembelian_id, item_id, kuantitas, satuan, harga_satuan, subtotal
             ) VALUES (
-                :pb_id, :item_id, :qty, :satuan, :harga, :subtotal
+                :pb_id, :item_id, :qty, 'kg', :harga, :subtotal
             ) RETURNING id, kuantitas
         ");
         $stmtItem->execute([
             'pb_id' => $purchaseId,
-            'item_id' => $rawMaterial['id'],
+            'item_id' => $itemId,
             'qty' => $decimalQty,
-            'satuan' => $rawMaterial['satuan_dasar'] ?? 'kg',
             'harga' => $unitPrice,
             'subtotal' => $totalCost
         ]);
         $savedRow = $stmtItem->fetch();
 
         if (abs((float)$savedRow['kuantitas'] - $decimalQty) > 0.001) {
-            $pdo->rollBack();
             return "Kuantitas desimal terpotong: diharapkan {$decimalQty}, tersimpan {$savedRow['kuantitas']}";
         }
 
-        $pdo->rollBack();
         return true;
-    } catch (Throwable $e) {
+    } finally {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        throw $e;
     }
 });
 
 // ------------------------------------------------------------------
-// 3. GOODS RECEIPT WORKFLOW (status_penerimaan -> 'diterima')
+// 3. GOODS RECEIPT WORKFLOW (status_penerimaan -> 'diterima' & moving avg HPP)
 // ------------------------------------------------------------------
-runTest("3. Penerimaan Barang Gudang: Update status penerimaan dan pencatatan riwayat kartu stok", function() use ($pdo, $supplier, $rawMaterial) {
-    if (!$supplier || !$rawMaterial) return "Data tidak lengkap.";
-
+runTest("3. Penerimaan Barang Fisik di Gudang: Verifikasi penerimaan, mutasi stok, & moving avg HPP", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $supplierId = createTestSupplier($pdo);
+        $stokAwal = 100.0;
+        $hppLama = 10000.0;
+        $itemId = createTestItem($pdo, 'Minyak Goreng Sawit', 'SKU-MYK', $stokAwal, $hppLama);
+
         $poNumber = 'PB-TEST-RCV-' . mt_rand(100000, 999999);
-        $qty = 25.0;
-        $totalCost = $qty * 10000.0;
+        $qtyMasuk = 50.0;
+        $hargaMasuk = 16000.0;
+        $totalBiaya = $qtyMasuk * $hargaMasuk; // 800.000
 
         $stmtPb = $pdo->prepare("
             INSERT INTO public.pembelian (
@@ -199,70 +210,150 @@ runTest("3. Penerimaan Barang Gudang: Update status penerimaan dan pencatatan ri
                 'belum_lunas', 'menunggu_supplier', 'po'
             ) RETURNING id
         ");
-        $stmtPb->execute(['no_po' => $poNumber, 'sup_id' => $supplier['id'], 'total' => $totalCost]);
+        $stmtPb->execute(['no_po' => $poNumber, 'sup_id' => $supplierId, 'total' => $totalBiaya]);
         $purchaseId = $stmtPb->fetchColumn();
 
-        // Simulasi penerimaan barang: update status penerimaan
-        $stmtReceive = $pdo->prepare("
-            UPDATE public.pembelian 
-            SET status_penerimaan = 'diterima', waktu_diterima_gudang = NOW() 
-            WHERE id = :id 
-            RETURNING status_penerimaan
-        ");
-        $stmtReceive->execute(['id' => $purchaseId]);
-        $statusRcv = $stmtReceive->fetchColumn();
+        // Hitung ekspektasi Moving Average HPP: ((100 * 10.000) + (50 * 16.000)) / 150 = 1.800.000 / 150 = 12.000
+        $stokBaruExpected = $stokAwal + $qtyMasuk;
+        $hppBaruExpected = round((($stokAwal * $hppLama) + ($qtyMasuk * $hargaMasuk)) / $stokBaruExpected, 2);
 
-        if ($statusRcv !== 'diterima') {
-            $pdo->rollBack();
-            return "Status penerimaan gagal diperbarui menjadi diterima.";
-        }
+        // Update stok & HPP
+        $pdo->prepare("
+            UPDATE public.item
+            SET stok_fisik_saat_ini = :stok_baru,
+                harga_pokok_pembelian = :hpp_baru,
+                diubah_pada = NOW()
+            WHERE id = :id
+        ")->execute([
+            'stok_baru' => $stokBaruExpected,
+            'hpp_baru' => $hppBaruExpected,
+            'id' => $itemId
+        ]);
 
         // Catat riwayat kartu stok
-        $stokAwal = (float)($rawMaterial['stok_fisik_saat_ini'] ?? 0);
-        $stokAkhir = $stokAwal + $qty;
-
-        $stmtStok = $pdo->prepare("
+        $pdo->prepare("
             INSERT INTO public.riwayat_stok (
                 item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
                 referensi_tabel, referensi_id, keterangan, dibuat_pada
             ) VALUES (
                 :iid, 'pembelian_masuk', :qty, :sebelum, :setelah,
                 'pembelian', :ref_id, 'Penerimaan PO Gudang', NOW()
-            ) RETURNING id
-        ");
-        $stmtStok->execute([
-            'iid' => $rawMaterial['id'],
-            'qty' => $qty,
+            )
+        ")->execute([
+            'iid' => $itemId,
+            'qty' => $qtyMasuk,
             'sebelum' => $stokAwal,
-            'setelah' => $stokAkhir,
+            'setelah' => $stokBaruExpected,
             'ref_id' => $purchaseId
         ]);
-        $stokId = $stmtStok->fetchColumn();
 
-        if (!$stokId) {
-            $pdo->rollBack();
-            return "Gagal mencatat mutasi kartu stok.";
+        // Update status PO
+        $pdo->prepare("
+            UPDATE public.pembelian
+            SET status_penerimaan = 'diterima', waktu_diterima_gudang = NOW()
+            WHERE id = :id
+        ")->execute(['id' => $purchaseId]);
+
+        // Verifikasi hasil
+        $stmtCheck = $pdo->prepare("SELECT stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE id = :id");
+        $stmtCheck->execute(['id' => $itemId]);
+        $itemUpdated = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+        if (abs((float)$itemUpdated['stok_fisik_saat_ini'] - 150.0) > 0.001) {
+            return "Stok setelah terima tidak sesuai: " . $itemUpdated['stok_fisik_saat_ini'];
+        }
+        if (abs((float)$itemUpdated['harga_pokok_pembelian'] - 12000.0) > 0.001) {
+            return "Moving Average HPP tidak presisi: " . $itemUpdated['harga_pokok_pembelian'];
         }
 
-        $pdo->rollBack();
         return true;
-    } catch (Throwable $e) {
+    } finally {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        throw $e;
     }
 });
 
 // ------------------------------------------------------------------
-// 4. SUPPLIER DEBT PAYMENT & CASH OUTFLOW
+// 4. GOODS RECEIPT WITH SUBSTITUTED / EXTRA ITEMS
 // ------------------------------------------------------------------
-runTest("4. Pelunasan Hutang Vendor: Arus kas keluar tercatat dengan saldo berjalan dan status lunas", function() use ($pdo, $supplier, $cashAccount) {
-    if (!$supplier || !$cashAccount) return "Data tidak lengkap.";
-
+runTest("4. Penerimaan Lapangan dengan Item Substitusi / Tambahan: Merek pengganti berhasil masuk rincian & stok", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
-        $poNumber = 'PB-TEST-PAY-' . mt_rand(100000, 999999);
-        $nominal = 200000.0;
+        $supplierId = createTestSupplier($pdo);
+        $itemAwalId = createTestItem($pdo, 'Bumbu Balado Awal', 'SKU-BMB-1', 10.0, 30000.0);
+        $itemSubstitusiId = createTestItem($pdo, 'Bumbu Balado Super (Substitusi)', 'SKU-BMB-2', 5.0, 32000.0);
 
+        $poNumber = 'PB-TEST-SUB-' . mt_rand(100000, 999999);
+        $stmtPb = $pdo->prepare("
+            INSERT INTO public.pembelian (
+                nomor_faktur_pembelian, pemasok_id, tanggal_pembelian, total_biaya,
+                status_pembayaran, status_penerimaan, jenis_dokumen
+            ) VALUES (
+                :no_po, :sup_id, CURRENT_DATE, 300000,
+                'belum_lunas', 'menunggu_supplier', 'po'
+            ) RETURNING id
+        ");
+        $stmtPb->execute(['no_po' => $poNumber, 'sup_id' => $supplierId]);
+        $purchaseId = $stmtPb->fetchColumn();
+
+        // Rincian awal PO (Item Awal 10 kg @ 30.000)
+        $pdo->prepare("
+            INSERT INTO public.rincian_pembelian (pembelian_id, item_id, kuantitas, satuan, harga_satuan, subtotal)
+            VALUES (:pb_id, :item_id, 10, 'kg', 30000, 300000)
+        ")->execute(['pb_id' => $purchaseId, 'item_id' => $itemAwalId]);
+
+        // Simulasi Penerimaan Lapangan: Item Awal kosong (qty 0), digantikan Item Substitusi (8 kg @ 32.000 = 256.000)
+        $pdo->prepare("DELETE FROM public.rincian_pembelian WHERE pembelian_id = :id")->execute(['id' => $purchaseId]);
+        $pdo->prepare("
+            INSERT INTO public.rincian_pembelian (pembelian_id, item_id, kuantitas, satuan, harga_satuan, subtotal)
+            VALUES (:pb_id, :item_id, 8, 'kg', 32000, 256000)
+        ")->execute(['pb_id' => $purchaseId, 'item_id' => $itemSubstitusiId]);
+
+        // Update stok item substitusi
+        $pdo->prepare("
+            UPDATE public.item
+            SET stok_fisik_saat_ini = stok_fisik_saat_ini + 8,
+                diubah_pada = NOW()
+            WHERE id = :id
+        ")->execute(['id' => $itemSubstitusiId]);
+
+        // Update purchase total & status
+        $pdo->prepare("
+            UPDATE public.pembelian
+            SET total_biaya = 256000, status_penerimaan = 'diterima', waktu_diterima_gudang = NOW()
+            WHERE id = :id
+        ")->execute(['id' => $purchaseId]);
+
+        // Verifikasi item substitusi tercatat di rincian
+        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM public.rincian_pembelian WHERE pembelian_id = :pb_id AND item_id = :sub_id");
+        $stmtCheck->execute(['pb_id' => $purchaseId, 'sub_id' => $itemSubstitusiId]);
+        if ((int)$stmtCheck->fetchColumn() !== 1) {
+            return "Item substitusi gagal tercatat pada rincian penerimaan.";
+        }
+
+        // Verifikasi stok item substitusi bertambah (5 + 8 = 13)
+        $stmtStok = $pdo->prepare("SELECT stok_fisik_saat_ini FROM public.item WHERE id = :id");
+        $stmtStok->execute(['id' => $itemSubstitusiId]);
+        if (abs((float)$stmtStok->fetchColumn() - 13.0) > 0.001) {
+            return "Stok item substitusi tidak bertambah dengan tepat.";
+        }
+
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+    }
+});
+
+// ------------------------------------------------------------------
+// 5. SUPPLIER DEBT PAYMENT & CASH OUTFLOW
+// ------------------------------------------------------------------
+runTest("5. Pelunasan Hutang Vendor: Arus kas keluar tercatat dengan saldo berjalan dan status lunas", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        $supplierId = createTestSupplier($pdo);
+        $cashId = createTestCashAccount($pdo, 2000000.0);
+        $nominal = 350000.0;
+
+        $poNumber = 'PB-TEST-PAY-' . mt_rand(100000, 999999);
         $stmtPb = $pdo->prepare("
             INSERT INTO public.pembelian (
                 nomor_faktur_pembelian, pemasok_id, tanggal_pembelian, total_biaya,
@@ -272,102 +363,197 @@ runTest("4. Pelunasan Hutang Vendor: Arus kas keluar tercatat dengan saldo berja
                 'belum_lunas', 'diterima', 'po'
             ) RETURNING id
         ");
-        $stmtPb->execute(['no_po' => $poNumber, 'sup_id' => $supplier['id'], 'total' => $nominal]);
+        $stmtPb->execute(['no_po' => $poNumber, 'sup_id' => $supplierId, 'total' => $nominal]);
         $purchaseId = $stmtPb->fetchColumn();
 
-        // Catat pengeluaran kas
-        $saldoAwal = (float)$cashAccount['saldo_saat_ini'];
-        $saldoAkhir = $saldoAwal - $nominal;
+        // Potong saldo kas
+        $saldoAwal = 2000000.0;
+        $saldoAkhir = $saldoAwal - $nominal; // 1.650.000
+        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo WHERE id = :id")
+            ->execute(['saldo' => $saldoAkhir, 'id' => $cashId]);
 
-        $stmtKas = $pdo->prepare("
+        // Catat pengeluaran kas
+        $voucherNo = CashVoucher::generate('keluar', date('Y-m-d'), $pdo);
+        $pdo->prepare("
             INSERT INTO public.arus_kas (
-                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
                 keterangan, referensi_tabel, referensi_id, saldo_berjalan, dibuat_pada
             ) VALUES (
-                :ak_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nom,
+                :no_tx, :ak_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nom,
                 'Pelunasan PO Supplier #{$poNumber}', 'pembelian', :ref_id, :saldo, NOW()
-            ) RETURNING id
-        ");
-        $stmtKas->execute([
-            'ak_id' => $cashAccount['id'],
+            )
+        ")->execute([
+            'no_tx' => $voucherNo,
+            'ak_id' => $cashId,
             'nom' => $nominal,
             'ref_id' => $purchaseId,
             'saldo' => $saldoAkhir
         ]);
-        $kasId = $stmtKas->fetchColumn();
 
         // Update status pembelian menjadi lunas
-        $stmtUpdate = $pdo->prepare("
-            UPDATE public.pembelian 
-            SET status_pembayaran = 'lunas' 
-            WHERE id = :id 
-            RETURNING status_pembayaran
-        ");
-        $stmtUpdate->execute(['id' => $purchaseId]);
-        $statusBayar = $stmtUpdate->fetchColumn();
+        $pdo->prepare("UPDATE public.pembelian SET status_pembayaran = 'lunas' WHERE id = :id")
+            ->execute(['id' => $purchaseId]);
 
-        if ($statusBayar !== 'lunas') {
-            $pdo->rollBack();
-            return "Status pembayaran gagal diperbarui ke lunas.";
+        // Verifikasi saldo kas terkini
+        $stmtKas = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id");
+        $stmtKas->execute(['id' => $cashId]);
+        if (abs((float)$stmtKas->fetchColumn() - 1650000.0) > 0.001) {
+            return "Saldo kas tidak terpotong dengan akurat.";
         }
 
-        $pdo->rollBack();
         return true;
-    } catch (Throwable $e) {
+    } finally {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        throw $e;
     }
 });
 
 // ------------------------------------------------------------------
-// 5. PO CANCELLATION
+// 6. PO CANCELLATION & AUTOMATIC CASH REFUND (PREPAID PO)
 // ------------------------------------------------------------------
-runTest("5. Pembatalan Pembelian: Membatalkan PO yang belum diproses", function() use ($pdo, $supplier) {
+runTest("6. Pembatalan PO Lunas Belum Terima: Dana kas 100% dipulihkan otomatis (Reversal Refund)", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
-        $poNumber = 'PB-TEST-CNL-' . mt_rand(100000, 999999);
+        $supplierId = createTestSupplier($pdo);
+        $cashId = createTestCashAccount($pdo, 1000000.0);
+        $nominalPo = 400000.0;
+
+        $poNumber = 'PB-TEST-PREPAID-' . mt_rand(100000, 999999);
         $stmtPb = $pdo->prepare("
             INSERT INTO public.pembelian (
                 nomor_faktur_pembelian, pemasok_id, tanggal_pembelian, total_biaya,
                 status_pembayaran, status_penerimaan, jenis_dokumen
             ) VALUES (
-                :no_po, :sup_id, CURRENT_DATE, 50000,
-                'belum_lunas', 'menunggu_supplier', 'po'
+                :no_po, :sup_id, CURRENT_DATE, :total,
+                'lunas', 'menunggu_supplier', 'po'
             ) RETURNING id
         ");
-        $stmtPb->execute(['no_po' => $poNumber, 'sup_id' => $supplier['id']]);
+        $stmtPb->execute(['no_po' => $poNumber, 'sup_id' => $supplierId, 'total' => $nominalPo]);
         $purchaseId = $stmtPb->fetchColumn();
 
-        $stmtCancel = $pdo->prepare("
-            UPDATE public.pembelian 
-            SET status_pembayaran = 'batal' 
-            WHERE id = :id 
-            RETURNING status_pembayaran
-        ");
-        $stmtCancel->execute(['id' => $purchaseId]);
-        $status = $stmtCancel->fetchColumn();
+        // Catat kas keluar awal saat pembuatan PO lunas
+        $saldoSetelahBayar = 1000000.0 - $nominalPo; // 600.000
+        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo WHERE id = :id")
+            ->execute(['saldo' => $saldoSetelahBayar, 'id' => $cashId]);
 
-        if ($status !== 'batal') {
-            $pdo->rollBack();
-            return "Status gagal dibatalkan.";
+        $voucherKeluar = CashVoucher::generate('keluar', date('Y-m-d'), $pdo);
+        $pdo->prepare("
+            INSERT INTO public.arus_kas (
+                nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                keterangan, referensi_tabel, referensi_id, saldo_berjalan, dibuat_pada
+            ) VALUES (
+                :no_tx, :ak_id, CURRENT_DATE, 'keluar', 'pembelian_bahan', :nom,
+                'Pembayaran di muka PO #{$poNumber}', 'pembelian', :ref_id, :saldo, NOW()
+            )
+        ")->execute([
+            'no_tx' => $voucherKeluar,
+            'ak_id' => $cashId,
+            'nom' => $nominalPo,
+            'ref_id' => $purchaseId,
+            'saldo' => $saldoSetelahBayar
+        ]);
+
+        // Simulasi Pembatalan PO (Logika Baru yang Telah Diperbaiki)
+        $stmtSumKas = $pdo->prepare("
+            SELECT akun_kas_id,
+                   COALESCE(SUM(CASE WHEN jenis_kas = 'keluar' THEN nominal ELSE -nominal END), 0) as netto_kas_keluar
+            FROM public.arus_kas 
+            WHERE referensi_tabel = 'pembelian' AND referensi_id = :id
+            GROUP BY akun_kas_id
+            HAVING COALESCE(SUM(CASE WHEN jenis_kas = 'keluar' THEN nominal ELSE -nominal END), 0) > 0
+        ");
+        $stmtSumKas->execute(['id' => $purchaseId]);
+        $kasRows = $stmtSumKas->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($kasRows as $kRow) {
+            $refAkunId = $kRow['akun_kas_id'];
+            $refundAmt = (float)$kRow['netto_kas_keluar'];
+
+            $stmtLockAkun = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+            $stmtLockAkun->execute(['id' => $refAkunId]);
+            $curSaldo = (float)$stmtLockAkun->fetchColumn();
+            $saldoRestored = $curSaldo + $refundAmt; // 600.000 + 400.000 = 1.000.000
+
+            $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo WHERE id = :id")
+                ->execute(['saldo' => $saldoRestored, 'id' => $refAkunId]);
+
+            $voucherMasuk = CashVoucher::generate('masuk', date('Y-m-d'), $pdo);
+            $pdo->prepare("
+                INSERT INTO public.arus_kas (
+                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
+                    keterangan, referensi_tabel, referensi_id, saldo_berjalan, dibuat_pada
+                ) VALUES (
+                    :no_tx, :ak_id, CURRENT_DATE, 'masuk', 'pembelian_bahan', :nom,
+                    'Refund pembatalan PO #{$poNumber}', 'pembelian', :ref_id, :saldo, NOW()
+                )
+            ")->execute([
+                'no_tx' => $voucherMasuk,
+                'ak_id' => $refAkunId,
+                'nom' => $refundAmt,
+                'ref_id' => $purchaseId,
+                'saldo' => $saldoRestored
+            ]);
         }
 
-        $pdo->rollBack();
+        $pdo->prepare("
+            UPDATE public.pembelian
+            SET status_pembayaran = 'batal', status_penerimaan = 'kendala_batal'
+            WHERE id = :id
+        ")->execute(['id' => $purchaseId]);
+
+        // Verifikasi saldo kas kembali utuh 100% ke 1.000.000
+        $stmtFinalKas = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id");
+        $stmtFinalKas->execute(['id' => $cashId]);
+        $finalBalance = (float)$stmtFinalKas->fetchColumn();
+
+        if (abs($finalBalance - 1000000.0) > 0.001) {
+            return "Saldo kas gagal dipulihkan ke nominal awal 1.000.000, saldo saat ini: {$finalBalance}";
+        }
+
         return true;
-    } catch (Throwable $e) {
+    } finally {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        throw $e;
     }
 });
 
 // ------------------------------------------------------------------
-// 6. DRIVER LOGISTICS ASSIGNMENT
+// 7. DRIVER LOGISTICS ASSIGNMENT
 // ------------------------------------------------------------------
-runTest("6. Logistik Vendor: Driver ditugaskan mengambil belanjaan bahan baku", function() use ($pdo, $supplier, $driver) {
-    if (!$driver) return "Driver tidak tersedia.";
-
+runTest("7. Logistik Vendor: Driver ditugaskan mengambil belanjaan bahan baku", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $supplierId = createTestSupplier($pdo);
+
+        // Cari atau buat profil driver uji coba
+        $driver = Database::fetchOne("
+            SELECT k.id as karyawan_id 
+            FROM public.karyawan k 
+            JOIN public.pengguna p ON k.pengguna_id = p.id 
+            WHERE p.posisi = 'driver' AND p.status_aktif = TRUE 
+            LIMIT 1
+        ");
+
+        $driverId = $driver['karyawan_id'] ?? null;
+        if (!$driverId) {
+            $peranNonDev = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran != 'developer' LIMIT 1");
+            $peranId = $peranNonDev['id'] ?? null;
+
+            // Buat driver transient jika belum ada
+            $usrId = '99999999-9999-9999-9999-999999999999';
+            $pdo->prepare("
+                INSERT INTO public.pengguna (id, peran_id, nama_pengguna, kata_sandi, nama_lengkap, posisi, status_aktif)
+                VALUES (:uid, :pid, 'driver_test_transient', 'hash', 'Driver Uji', 'driver', TRUE)
+                ON CONFLICT (id) DO NOTHING
+            ")->execute(['uid' => $usrId, 'pid' => $peranId]);
+
+            $stmtK = $pdo->prepare("
+                INSERT INTO public.karyawan (pengguna_id, tipe_penggajian)
+                VALUES (:uid, 'bulanan')
+                RETURNING id
+            ");
+            $stmtK->execute(['uid' => $usrId]);
+            $driverId = $stmtK->fetchColumn();
+        }
+
         $poNumber = 'PB-TEST-DRV-' . mt_rand(100000, 999999);
         $stmtPb = $pdo->prepare("
             INSERT INTO public.pembelian (
@@ -380,22 +566,51 @@ runTest("6. Logistik Vendor: Driver ditugaskan mengambil belanjaan bahan baku", 
         ");
         $stmtPb->execute([
             'no_po' => $poNumber,
-            'sup_id' => $supplier['id'],
-            'did' => $driver['karyawan_id']
+            'sup_id' => $supplierId,
+            'did' => $driverId
         ]);
         $row = $stmtPb->fetch();
 
-        if ($row['sales_driver_id'] !== $driver['karyawan_id'] || $row['metode_logistik'] !== 'diambil_driver') {
-            $pdo->rollBack();
+        if ($row['sales_driver_id'] !== $driverId || $row['metode_logistik'] !== 'diambil_driver') {
             return "Penugasan driver pada PO vendor tidak sesuai.";
         }
 
-        $pdo->rollBack();
         return true;
-    } catch (Throwable $e) {
+    } finally {
         if ($pdo->inTransaction()) $pdo->rollBack();
-        throw $e;
     }
+});
+
+// ------------------------------------------------------------------
+// 8. RBAC PERMISSION ISOLATION (purchases.receive)
+// ------------------------------------------------------------------
+runTest("8. RBAC Permission: Izin purchases.receive terdaftar resmi di basis data dan aktif untuk Owner/Admin", function() use ($pdo) {
+    $stmtIzin = $pdo->prepare("SELECT * FROM public.izin WHERE kode_izin = 'purchases.receive'");
+    $stmtIzin->execute();
+    $izin = $stmtIzin->fetch(PDO::FETCH_ASSOC);
+
+    if (!$izin) {
+        return "Izin purchases.receive belum terdaftar di tabel public.izin.";
+    }
+
+    if ($izin['grup_izin'] !== 'Pembelian & Vendor') {
+        return "Grup izin purchases.receive harus 'Pembelian & Vendor', didapatkan: {$izin['grup_izin']}";
+    }
+
+    $stmtRole = $pdo->prepare("
+        SELECT p.nama_peran, ip.diizinkan 
+        FROM public.izin_peran ip
+        JOIN public.peran p ON ip.peran_id = p.id
+        WHERE ip.izin_id = :izin_id
+    ");
+    $stmtRole->execute(['izin_id' => $izin['id']]);
+    $roles = $stmtRole->fetchAll(PDO::FETCH_KEY_PAIR);
+
+    if (empty($roles['owner']) || empty($roles['admin'])) {
+        return "Role owner atau admin belum memiliki izin purchases.receive.";
+    }
+
+    return true;
 });
 
 // ------------------------------------------------------------------

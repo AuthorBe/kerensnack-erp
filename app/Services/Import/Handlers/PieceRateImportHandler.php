@@ -20,7 +20,7 @@ class PieceRateImportHandler implements EntityImportHandlerInterface
 
     public function getRequiredPermission(): string
     {
-        return 'master.employees_manage';
+        return 'production.bom_manage';
     }
 
     public function getRequiredHeaderGroups(): array

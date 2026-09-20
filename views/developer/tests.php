@@ -1328,8 +1328,8 @@ use App\Core\Auth;
                         }
                     }
 
-                    // ── Aktifkan cooldown setelah suite selesai (PASS atau FAIL) ──
-                    if (data.cooldown_until) {
+                    // ── Cooldown dinonaktifkan untuk developer runner (hanya aktif jika backend sengaja kirim cooldown_until > 0) ──
+                    if (data.cooldown_until && data.cooldown_until > Math.floor(Date.now() / 1000)) {
                         this._applyCooldown(
                             data.cooldown_until,
                             suite.title,
@@ -1356,23 +1356,11 @@ use App\Core\Auth;
                 this.resetAll();
 
                 for (let i = 0; i < this.suites.length; i++) {
-                    if (this.shouldStop || this.isInCooldown) {
+                    if (this.shouldStop) {
                         break;
                     }
                     const suite = this.suites[i];
                     await this.runSingle(suite.key);
-
-                    // Setelah setiap suite selesai, tunggu cooldown habis sebelum lanjut
-                    if (this.isInCooldown && i < this.suites.length - 1) {
-                        await new Promise(resolve => {
-                            const check = setInterval(() => {
-                                if (!this.isInCooldown || this.shouldStop) {
-                                    clearInterval(check);
-                                    resolve();
-                                }
-                            }, 500);
-                        });
-                    }
                 }
 
                 this.isRunning = false;

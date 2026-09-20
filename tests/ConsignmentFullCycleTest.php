@@ -72,44 +72,63 @@ echo "============================================================\n";
 
 $pdo = Database::getConnection();
 
-// Sample Consignment Customer, Item, Sales & Cash Account
-$consignmentStore = Database::fetchOne("
-    SELECT id, kode_pelanggan, nama_toko, is_konsinyasi, sales_driver_id 
-    FROM public.pelanggan 
-    WHERE is_konsinyasi = TRUE AND status_aktif = TRUE 
-    LIMIT 1
-") ?: Database::fetchOne("SELECT id, kode_pelanggan, nama_toko, is_konsinyasi, sales_driver_id FROM public.pelanggan WHERE status_aktif = TRUE LIMIT 1");
+function createConsignmentFixtures(PDO $pdo): array {
+    $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-KONSIN-FX', 'Grup Konsin FX') RETURNING id");
+    $gpStmt->execute();
+    $gpId = $gpStmt->fetchColumn();
 
-$sampleItem = Database::fetchOne("
-    SELECT id, kode_sku, nama_item, harga_pokok_pembelian 
-    FROM public.item 
-    WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE 
-    LIMIT 1
-");
+    $itStmt = $pdo->prepare("INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, status_jual, status_aktif) VALUES (:gp_id, 'SKU-KONSIN-FX', 'Item Konsin FX', 'barang_jadi', 'pcs', 10000, TRUE, TRUE) RETURNING id, harga_pokok_pembelian");
+    $itStmt->execute(['gp_id' => $gpId]);
+    $item = $itStmt->fetch(PDO::FETCH_ASSOC);
 
-$salesEmp = Database::fetchOne("
-    SELECT k.id as karyawan_id, p.id as pengguna_id, p.nama_lengkap 
-    FROM public.karyawan k 
-    JOIN public.pengguna p ON k.pengguna_id = p.id 
-    WHERE p.posisi = 'sales' AND p.status_aktif = TRUE 
-    LIMIT 1
-");
+    $roleId = $pdo->query("SELECT id FROM public.peran WHERE nama_peran != 'Developer' AND nama_peran != 'developer' LIMIT 1")->fetchColumn();
+    if (!$roleId) {
+        $rStmt = $pdo->prepare("INSERT INTO public.peran (nama_peran, deskripsi) VALUES ('Peran Sales Test', 'Sales Test Role') RETURNING id");
+        $rStmt->execute();
+        $roleId = $rStmt->fetchColumn();
+    }
+    
+    // Create sales user & karyawan
+    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, posisi, peran_id) VALUES ('Sales Test Konsin', 'sales_test_konsin', 'hash', 'sales', :rid) RETURNING id");
+    $usrStmt->execute(['rid' => $roleId]);
+    $salesUserId = $usrStmt->fetchColumn();
 
-$cashAccount = Database::fetchOne("
-    SELECT id, nama_akun, saldo_saat_ini 
-    FROM public.akun_kas 
-    WHERE status_aktif = TRUE 
-    LIMIT 1
-");
+    $karStmt = $pdo->prepare("INSERT INTO public.karyawan (pengguna_id, tipe_penggajian, gaji_pokok_bulanan) VALUES (:pid, 'bulanan', 3000000) RETURNING id");
+    $karStmt->execute(['pid' => $salesUserId]);
+    $salesKaryawanId = $karStmt->fetchColumn();
+
+    // Create consignment customer
+    $grpelStmt = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga) VALUES ('GP-KONSIN-FX', 'Grup Pelanggan Konsin FX', 1) RETURNING id");
+    $grpelStmt->execute();
+    $grpelId = $grpelStmt->fetchColumn();
+
+    $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, grup_pelanggan_id, nama_toko, nama_pemilik, nomor_whatsapp, alamat_lengkap, is_konsinyasi, sales_driver_id) VALUES ('PEL-KONSIN-FX', :gp_id, 'Toko Konsin FX', 'Budi', '0812345678', 'Jl. Test Konsin', TRUE, :sid) RETURNING id");
+    $pelStmt->execute(['gp_id' => $grpelId, 'sid' => $salesKaryawanId]);
+    $consignmentStore = $pelStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Create cash account
+    $accStmt = $pdo->prepare("INSERT INTO public.akun_kas (nama_akun, tipe_akun, nomor_rekening, saldo_saat_ini, is_default_pos) VALUES ('Kas Konsin Test', 'kas_tunai', 'KAS-KONSIN-01', 500000, TRUE) RETURNING id, saldo_saat_ini");
+    $accStmt->execute();
+    $cashAccount = $accStmt->fetch(PDO::FETCH_ASSOC);
+
+    return [
+        'consignmentStore' => $consignmentStore,
+        'item' => $item,
+        'sales' => [
+            'pengguna_id' => $salesUserId,
+            'karyawan_id' => $salesKaryawanId
+        ],
+        'cashAccount' => $cashAccount
+    ];
+}
 
 // ------------------------------------------------------------------
 // 1. SHELF STOCK LEDGER
 // ------------------------------------------------------------------
-runTest("1. Buku Stok Rak: Pencatatan saldo titip nyata di rak toko mitra (stok_konsinyasi_toko)", function() use ($pdo, $consignmentStore, $sampleItem) {
-    if (!$consignmentStore || !$sampleItem) return "Data toko konsinyasi atau item tidak lengkap.";
-
+runTest("1. Buku Stok Rak: Pencatatan saldo titip nyata di rak toko mitra (stok_konsinyasi_toko)", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createConsignmentFixtures($pdo);
         // Upsert stok rak konsinyasi
         $stmt = $pdo->prepare("
             INSERT INTO public.stok_konsinyasi_toko (pelanggan_id, item_id, stok_titip_saat_ini, terakhir_opname_pada)
@@ -118,7 +137,7 @@ runTest("1. Buku Stok Rak: Pencatatan saldo titip nyata di rak toko mitra (stok_
             DO UPDATE SET stok_titip_saat_ini = 30, terakhir_opname_pada = NOW()
             RETURNING stok_titip_saat_ini
         ");
-        $stmt->execute(['cid' => $consignmentStore['id'], 'iid' => $sampleItem['id']]);
+        $stmt->execute(['cid' => $fx['consignmentStore']['id'], 'iid' => $fx['item']['id']]);
         $stok = (int)$stmt->fetchColumn();
 
         if ($stok !== 30) {
@@ -137,22 +156,21 @@ runTest("1. Buku Stok Rak: Pencatatan saldo titip nyata di rak toko mitra (stok_
 // ------------------------------------------------------------------
 // 2. STORE VISIT OPNAME RPC EXECUTION
 // ------------------------------------------------------------------
-runTest("2. RPC fn_proses_kunjungan_konsinyasi: Menghitung barang laku dan memperbarui saldo rak", function() use ($pdo, $consignmentStore, $sampleItem, $salesEmp) {
-    if (!$consignmentStore || !$sampleItem || !$salesEmp) return "Data tidak lengkap.";
-
+runTest("2. RPC fn_proses_kunjungan_konsinyasi: Menghitung barang laku dan memperbarui saldo rak", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createConsignmentFixtures($pdo);
         // 1. Inisialisasi stok rak 50 pcs
         $pdo->prepare("
             INSERT INTO public.stok_konsinyasi_toko (pelanggan_id, item_id, stok_titip_saat_ini)
             VALUES (:cid, :iid, 50)
             ON CONFLICT (pelanggan_id, item_id) DO UPDATE SET stok_titip_saat_ini = 50
-        ")->execute(['cid' => $consignmentStore['id'], 'iid' => $sampleItem['id']]);
+        ")->execute(['cid' => $fx['consignmentStore']['id'], 'iid' => $fx['item']['id']]);
 
         // 2. Petugas melakukan opname fisik: sisa di rak = 38 pcs (artinya laku = 12 pcs)
         $rincianJson = json_encode([
             [
-                'item_id' => $sampleItem['id'],
+                'item_id' => $fx['item']['id'],
                 'sisa_fisik' => 38,
                 'retur_bagus' => 0,
                 'retur_rusak' => 0
@@ -165,10 +183,10 @@ runTest("2. RPC fn_proses_kunjungan_konsinyasi: Menghitung barang laku dan mempe
             ) AS res
         ");
         $stmtRpc->execute([
-            'cid' => $consignmentStore['id'],
-            'did' => $salesEmp['karyawan_id'],
+            'cid' => $fx['consignmentStore']['id'],
+            'did' => $fx['sales']['karyawan_id'],
             'rincian' => $rincianJson,
-            'uid' => $salesEmp['pengguna_id']
+            'uid' => $fx['sales']['pengguna_id']
         ]);
         $res = json_decode((string)$stmtRpc->fetchColumn(), true);
 
@@ -178,11 +196,13 @@ runTest("2. RPC fn_proses_kunjungan_konsinyasi: Menghitung barang laku dan mempe
         }
 
         // 3. Verifikasi saldo rak terupdate menjadi 38 pcs
-        $stokRakBaru = (int)Database::fetchOne("
+        $savedStokStmt = $pdo->prepare("
             SELECT stok_titip_saat_ini 
             FROM public.stok_konsinyasi_toko 
             WHERE pelanggan_id = :cid AND item_id = :iid
-        ", ['cid' => $consignmentStore['id'], 'iid' => $sampleItem['id']])['stok_titip_saat_ini'];
+        ");
+        $savedStokStmt->execute(['cid' => $fx['consignmentStore']['id'], 'iid' => $fx['item']['id']]);
+        $stokRakBaru = (int)$savedStokStmt->fetchColumn();
 
         if ($stokRakBaru !== 38) {
             $pdo->rollBack();
@@ -200,16 +220,15 @@ runTest("2. RPC fn_proses_kunjungan_konsinyasi: Menghitung barang laku dan mempe
 // ------------------------------------------------------------------
 // 3. DIRECT VISIT PAYMENT
 // ------------------------------------------------------------------
-runTest("3. Pembayaran Langsung di Toko: Kunjungan bayar tunai di tempat mencatat arus kas masuk", function() use ($pdo, $consignmentStore, $cashAccount) {
-    if (!$consignmentStore || !$cashAccount) return "Data tidak lengkap.";
-
+runTest("3. Pembayaran Langsung di Toko: Kunjungan bayar tunai di tempat mencatat arus kas masuk", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createConsignmentFixtures($pdo);
         $nominalLaku = 150000.0;
         $nomorKunjungan = 'KONSIN-TEST-' . mt_rand(100000, 999999);
 
         // Catat mutasi penerimaan kas langsung dari toko
-        $saldoAwal = (float)$cashAccount['saldo_saat_ini'];
+        $saldoAwal = (float)$fx['cashAccount']['saldo_saat_ini'];
         $saldoAkhir = $saldoAwal + $nominalLaku;
 
         $stmtKas = $pdo->prepare("
@@ -222,7 +241,7 @@ runTest("3. Pembayaran Langsung di Toko: Kunjungan bayar tunai di tempat mencata
             ) RETURNING id
         ");
         $stmtKas->execute([
-            'ak_id' => $cashAccount['id'],
+            'ak_id' => $fx['cashAccount']['id'],
             'nom' => $nominalLaku,
             'saldo' => $saldoAkhir
         ]);
@@ -270,48 +289,53 @@ runTest("4. Skema Komisi Sales Bertingkat: RPC fn_hitung_tier_komisi_sales menge
 // ------------------------------------------------------------------
 // 5. LOSS / DAMAGE AT HPP
 // ------------------------------------------------------------------
-runTest("5. Valuasi Barang Rusak/Hilang: Menghitung nilai kerugian berbasis HPP berjalan", function() use ($sampleItem) {
-    if (!$sampleItem) return "Sample item tidak tersedia.";
+runTest("5. Valuasi Barang Rusak/Hilang: Menghitung nilai kerugian berbasis HPP berjalan", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        $fx = createConsignmentFixtures($pdo);
+        $hpp = (float)($fx['item']['harga_pokok_pembelian'] ?? 10000.0);
+        $qtyRusak = 5;
+        $nilaiKerugian = $qtyRusak * $hpp;
 
-    $hpp = (float)($sampleItem['harga_pokok_pembelian'] ?? 10000.0);
-    $qtyRusak = 5;
-    $nilaiKerugian = $qtyRusak * $hpp;
+        $pdo->rollBack();
+        if ($nilaiKerugian <= 0) {
+            return "Nilai kerugian harus positif bernilai di atas 0.";
+        }
 
-    if ($nilaiKerugian <= 0) {
-        return "Nilai kerugian harus positif bernilai di atas 0.";
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
     }
-
-    return true;
 });
 
 // ------------------------------------------------------------------
 // 6. PROTEKSI ROLE: DRIVER TIDAK DAPAT KOMISI
 // ------------------------------------------------------------------
 runTest("6. Integritas Arsitektur: Petugas Driver tidak pernah dialokasikan komisi omzet konsinyasi", function() use ($pdo) {
-    // Ambil Driver
-    $driver = Database::fetchOne("
-        SELECT k.id as karyawan_id 
-        FROM public.karyawan k 
-        JOIN public.pengguna p ON k.pengguna_id = p.id 
-        WHERE p.posisi = 'driver' AND p.status_aktif = TRUE 
-        LIMIT 1
-    ");
+    $pdo->beginTransaction();
+    try {
+        $fx = createConsignmentFixtures($pdo);
 
-    if (!$driver) return "Driver tidak tersedia.";
+        // Verifikasi bahwa toko binaan pelanggan tidak boleh memiliki driver sebagai sales_driver_id
+        $invalidCount = (int)$pdo->query("
+            SELECT COUNT(*) 
+            FROM public.pelanggan pel 
+            JOIN public.karyawan k ON pel.sales_driver_id = k.id 
+            JOIN public.pengguna p ON k.pengguna_id = p.id 
+            WHERE p.posisi = 'driver'
+        ")->fetchColumn();
 
-    // Verifikasi bahwa toko binaan pelanggan tidak boleh memiliki driver sebagai sales_driver_id
-    $invalidCount = (int)$pdo->query("
-        SELECT COUNT(*) 
-        FROM public.pelanggan pel 
-        JOIN public.pengguna p ON pel.sales_driver_id = p.id 
-        WHERE p.posisi = 'driver'
-    ")->fetchColumn();
+        $pdo->rollBack();
+        if ($invalidCount > 0) {
+            return "Ditemukan {$invalidCount} toko yang memiliki sales_driver_id berposisi driver!";
+        }
 
-    if ($invalidCount > 0) {
-        return "Ditemukan {$invalidCount} toko yang memiliki sales_driver_id berposisi driver!";
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
     }
-
-    return true;
 });
 
 // ------------------------------------------------------------------

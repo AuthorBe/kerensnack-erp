@@ -89,6 +89,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             <span>2. Bahan &amp; Kemasan (<?= count($materials) ?>)</span>
         </button>
 
+        <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
         <button type="button"
                 @click="activeTab = 'recipes'"
                 :class="activeTab === 'recipes' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
@@ -104,6 +105,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             <i data-lucide="badge-percent" style="width:14px;height:14px;"></i>
             <span>4. Upah Borongan (<?= count($wageGroups) ?>)</span>
         </button>
+        <?php endif; ?>
 
         <button type="button"
                 @click="activeTab = 'brands'"
@@ -199,6 +201,12 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                         <i data-lucide="package" style="width:11px;height:11px;margin-right:3px;display:inline-block;vertical-align:middle;"></i>
                                         <span x-text="item.nama_grup || 'Tanpa Grup'"></span>
                                     </span>
+                                    <template x-if="item.nama_pemasok">
+                                        <span class="badge" style="font-size:10px;padding:1px 6px;background:rgba(16,185,129,0.08);color:#059669;border:1px solid rgba(16,185,129,0.25);font-weight:700;" :title="'Vendor Pemasok: ' + item.nama_pemasok">
+                                            <i data-lucide="truck" style="width:10px;height:10px;margin-right:3px;display:inline-block;vertical-align:middle;"></i>
+                                            <span x-text="item.nama_pemasok"></span>
+                                        </span>
+                                    </template>
                                     <span style="font-size:11px;font-family:var(--font-mono);color:var(--color-ink-mute);" x-text="'Barcode: ' + (item.barcode_universal || '-')"></span>
                                 </div>
                             </td>
@@ -425,6 +433,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- ========================================================================= -->
     <!-- TAB 3: MASTER RESEP / BOM (BILL OF MATERIALS)                             -->
     <!-- ========================================================================= -->
+    <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
     <div x-show="activeTab === 'recipes'" class="space-y-4">
         <!-- SELECTOR BARANG JADI & AKSI -->
         <div class="card p-3.5 sm:p-4">
@@ -443,7 +452,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 </div>
 
                 <template x-if="selectedRecipeProduct">
-                    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                    <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
                     <div class="flex items-center gap-2 shrink-0">
                         <button type="button" @click="openCopyRecipeModal()" class="btn btn-secondary" style="height:40px;padding:0 14px;white-space:nowrap;font-size:12.5px;margin:0;" title="Salin resep ke produk lain">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
@@ -578,7 +587,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     <th style="width:115px; padding:11px 14px;" class="cell-nowrap">Kategori</th>
                                     <th class="cell-center cell-nowrap" style="width:140px; padding:11px 14px;">Kebutuhan / Pcs</th>
                                     <th class="cell-right cell-nowrap" style="width:130px; padding:11px 14px;">Biaya / Pcs</th>
-                                    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                                    <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
                                     <th class="cell-center cell-nowrap" style="width:65px; padding:11px 10px;">Aksi</th>
                                     <?php endif; ?>
                                 </tr>
@@ -587,7 +596,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                 <template x-for="r in currentProductRecipeList" :key="r.id">
                                     <tr style="transition:background-color 0.15s ease;">
                                         <td class="cell-nowrap" style="padding:12px 14px;">
-                                            <span class="badge badge-mono font-bold" style="font-size:11.5px;padding:2px 7px;" x-text="r.item_bahan_sku"></span>
+                                             <span class="badge badge-mono font-bold" style="font-size:11.5px;padding:2px 7px;" x-text="r.item_bahan_sku"></span>
                                         </td>
                                         <td style="padding:12px 14px;">
                                             <div style="font-weight:700;font-size:13.5px;color:var(--color-ink);line-height:1.35;" x-text="r.item_bahan_nama"></div>
@@ -611,7 +620,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                         <td class="cell-right cell-nowrap" style="padding:12px 14px;">
                                             <div style="font-family:var(--font-mono);font-size:13.5px;font-weight:800;color:var(--color-ink);" x-text="formatRupiah(r.subtotal_biaya_bahan)"></div>
                                         </td>
-                                        <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                                        <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
                                         <td class="cell-center cell-nowrap" style="padding:12px 10px;">
                                             <button @click="deleteRecipeItem(r.id)" class="btn btn-ghost btn-sm" style="padding:4px 8px;color:#ef4444;border-radius:6px;" title="Hapus Komponen Resep">
                                                 <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
@@ -623,7 +632,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
                                 <template x-if="currentProductRecipeList.length === 0">
                                     <tr>
-                                        <td colspan="<?= \App\Core\Auth::can('master.products_manage') ? 6 : 5 ?>" style="text-align:center;padding:48px 24px;color:var(--color-ink-mute);">
+                                        <td colspan="<?= \App\Core\Auth::can('production.bom_manage') ? 6 : 5 ?>" style="text-align:center;padding:48px 24px;color:var(--color-ink-mute);">
                                             <i data-lucide="flask-conical" style="width:40px;height:40px;margin:0 auto 10px auto;opacity:0.4;"></i>
                                             <div style="font-weight:700;font-size:13.5px;color:var(--color-ink);">Belum ada komposisi bahan untuk produk ini</div>
                                             <div style="font-size:12px;color:var(--color-ink-mute);margin-top:4px;">Klik "+ Tambah Komponen Bahan" atau "Salin Resep" untuk menetapkan bahan balan curah, plastik kemasan, atau label.</div>
@@ -642,7 +651,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     <td class="cell-right cell-nowrap" style="padding:12px 14px;">
                                         <div style="font-family:var(--font-mono);font-size:14px;font-weight:900;color:#2563eb;" x-text="formatRupiah(Number(recipeSummary.rawMaterialCost || 0) + Number(recipeSummary.packagingCost || 0))"></div>
                                     </td>
-                                    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                                    <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
                                     <td style="padding:12px 10px;"></td>
                                     <?php endif; ?>
                                 </tr>
@@ -661,9 +670,11 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             </div>
         </template>
     </div>
+    <?php endif; ?>
     <!-- ========================================================================= -->
     <!-- TAB 4: KELOMPOK UPAH BORONGAN PACKING                                     -->
     <!-- ========================================================================= -->
+    <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
     <div x-show="activeTab === 'borongan'" class="card" style="padding:0;overflow:hidden;">
         <!-- ACTION & HEADER BAR -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
@@ -675,7 +686,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 <div class="hidden sm:block" style="font-size:11.5px;color:var(--color-ink-mute);">Tarif upah borongan buruh packing per bungkus kemasan</div>
             </div>
 
-            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+            <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
             <button @click="openAddBoronganModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Kelompok Borongan</span>
@@ -693,7 +704,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                         <th style="min-width:180px;">Deskripsi &amp; Keterangan</th>
                         <th class="cell-center cell-nowrap" style="width:150px; min-width:120px;">SKU Terhubung</th>
                         <th class="cell-center cell-nowrap" style="width:100px; min-width:85px;">Status</th>
-                        <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                        <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
                         <th class="cell-center cell-nowrap" style="width:100px; min-width:85px;">Aksi</th>
                         <?php endif; ?>
                     </tr>
@@ -720,7 +731,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     <span class="badge badge-danger">Nonaktif</span>
                                 </template>
                             </td>
-                            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                            <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
                             <td class="cell-center cell-nowrap">
                                 <div class="flex items-center justify-center gap-1">
                                     <button @click="openEditBoronganModal(w)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Kelompok">
@@ -739,7 +750,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
                     <template x-if="filteredWageGroups.length === 0">
                         <tr>
-                            <td colspan="<?= \App\Core\Auth::can('master.products_manage') ? 6 : 5 ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= \App\Core\Auth::can('production.bom_manage') ? 6 : 5 ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="badge-percent" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Belum ada kelompok upah borongan yang cocok</div>
                             </td>
@@ -749,6 +760,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             </table>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- TAB 5: MASTER MEREK PRODUK                                                -->
@@ -880,6 +892,19 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     </select>
                     <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
                         Tarif upah borongan kemas otomatis mengikuti master kelompok upah borongan yang dipilih.
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Vendor Pemasok Utama (Opsional)</label>
+                    <select name="pemasok_utama_id" x-model="itemForm.pemasok_utama_id" class="form-input">
+                        <option value="">-- Tanpa Pemasok (Produksi Internal / Mandiri) --</option>
+                        <?php foreach ($suppliers as $sup): ?>
+                        <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['nama_pemasok']) ?> (<?= $sup['kode_pemasok'] ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
+                        Jika barang jadi dipasok oleh vendor / maklon, pilih pemasok agar item ini dapat dimasukkan ke daftar belanjaan di Pembelian (/purchases).
                     </div>
                 </div>
 
@@ -1202,7 +1227,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <?php endif; ?>
 
     <!-- MODAL 4: TAMBAH KOMPONEN RESEP BOM (DENGAN KALKULATOR HASIL BUNGKUS / YIELD) -->
-    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+    <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
     <template x-teleport="body">
     <div x-show="showRecipeModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:520px;padding:24px;">
@@ -1513,7 +1538,10 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         </div>
     </div>
     </template>
+    <?php endif; ?>
+
     <!-- MODAL 6: TAMBAH / EDIT MASTER MEREK -->
+    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
     <template x-teleport="body">
     <div x-show="showBrandModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:460px;padding:24px;">
@@ -1580,7 +1608,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         <input type="hidden" name="id" id="delete-material-id">
     </form>
     <?php endif; ?>
-    <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+    <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
     <form id="delete-recipe-form" action="<?= Router::url('/products/delete-recipe-item') ?>" method="POST" data-action-text="Menghapus komponen resep..." style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-recipe-id">
@@ -1664,6 +1692,7 @@ function productApp(initialTab, initialRecipeItemId) {
             grup_id: '',
             nama_item: '',
             kelompok_borongan_id: '',
+            pemasok_utama_id: '',
             harga_pokok_pembelian: '10.000',
             stok_minimum_peringatan: 10,
             stok_awal: 0,
@@ -1890,6 +1919,7 @@ function productApp(initialTab, initialRecipeItemId) {
                 grup_id: this.groups[0]?.id || '',
                 nama_item: '',
                 kelompok_borongan_id: '',
+                pemasok_utama_id: '',
                 harga_pokok_pembelian: '10.000',
                 stok_minimum_peringatan: 10,
                 stok_awal: 0,
@@ -1911,6 +1941,7 @@ function productApp(initialTab, initialRecipeItemId) {
                 grup_id: it.grup_id || '',
                 nama_item: it.nama_item,
                 kelompok_borongan_id: it.kelompok_borongan_id || '',
+                pemasok_utama_id: it.pemasok_utama_id || '',
                 harga_pokok_pembelian: window.formatRupiahNumber ? window.formatRupiahNumber(it.harga_pokok_pembelian) : String(it.harga_pokok_pembelian || 0),
                 stok_minimum_peringatan: Number(it.stok_minimum_peringatan || 10),
                 status_jual: Boolean(it.status_jual),

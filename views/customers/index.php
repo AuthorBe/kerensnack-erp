@@ -97,6 +97,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
             <span>2. Master Grup Pelanggan (<?= count($customerGroups) ?>)</span>
         </button>
 
+        <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
         <button type="button"
                 @click="switchTab('territories')"
                 :class="activeTab === 'territories' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
@@ -104,6 +105,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
             <i data-lucide="map-pin" style="width:14px;height:14px;"></i>
             <span>3. Master Wilayah &amp; Rute (<?= count($territories) ?>)</span>
         </button>
+        <?php endif; ?>
     </div>
 
     <!-- ========================================================================= -->
@@ -418,6 +420,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
     <!-- ========================================================================= -->
     <!-- TAB 3: MASTER WILAYAH & RUTE LOGISTIK                                     -->
     <!-- ========================================================================= -->
+    <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
     <div x-show="activeTab === 'territories'" class="card" style="padding:0;overflow:hidden;">
         <!-- ACTION & FILTER BAR -->
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
@@ -426,7 +429,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 <input type="text" x-model="searchTerritory" placeholder="Cari nama wilayah / kota / rute..." class="form-input" style="height:38px;font-size:13px;">
             </div>
 
-            <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
+            <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
             <button @click="openAddTerritoryModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Wilayah / Rute Baru</span>
@@ -447,7 +450,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <th class="cell-center cell-nowrap" style="width:110px;">Toko Terhubung</th>
                         <th class="cell-center cell-nowrap" style="width:110px;">Vendor Terhubung</th>
                         <th class="cell-center cell-nowrap" style="width:90px;">Status</th>
-                        <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
+                        <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
                         <th class="cell-center cell-nowrap" style="width:90px;">Aksi</th>
                         <?php endif; ?>
                     </tr>
@@ -474,7 +477,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                 <span :class="t.status_aktif ? 'badge badge-success' : 'badge badge-danger'"
                                       x-text="t.status_aktif ? 'Aktif' : 'Nonaktif'"></span>
                             </td>
-                            <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
+                            <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
                                     <button @click="openEditTerritoryModal(t)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Wilayah">
@@ -498,7 +501,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
                     <template x-if="filteredTerritories.length === 0">
                         <tr>
-                            <td colspan="<?= \App\Core\Auth::can('master.customers_manage') ? '9' : '8' ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                            <td colspan="<?= \App\Core\Auth::can('master.territories_manage') ? '9' : '8' ?>" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
                                 <i data-lucide="map-pin-off" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
                                 <div style="font-weight:600;font-size:13px;">Tidak ada data wilayah / rute logistik</div>
                             </td>
@@ -508,6 +511,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
             </table>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- ========================================================================= -->
     <!-- MODALS SECTION                                                            -->
@@ -1188,6 +1192,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
     </template>
 
     <!-- MODAL 4: TAMBAH / EDIT MASTER WILAYAH -->
+    <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
     <template x-teleport="body">
     <div x-show="showTerritoryModal" x-cloak class="modal-backdrop">
         <div class="modal-box" style="max-width:480px;padding:24px;">
@@ -1260,8 +1265,10 @@ $activeTab = $_GET['tab'] ?? 'customers';
         </div>
     </div>
     </template>
+    <?php endif; ?>
 
     <!-- HIDDEN FORMS FOR DELETING -->
+    <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
     <form id="delete-customer-form" action="<?= Router::url('/customers/delete') ?>" method="POST" data-action-text="Menghapus toko pelanggan..." style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-customer-id">
@@ -1270,10 +1277,13 @@ $activeTab = $_GET['tab'] ?? 'customers';
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-group-id">
     </form>
+    <?php endif; ?>
+    <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
     <form id="delete-territory-form" action="<?= Router::url('/customers/delete-territory') ?>" method="POST" data-action-text="Menghapus wilayah rute..." style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-territory-id">
     </form>
+    <?php endif; ?>
 
 </div>
 

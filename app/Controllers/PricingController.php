@@ -239,6 +239,22 @@ class PricingController extends Controller
 
             $levelHarga = (int)$row['level_harga'];
 
+            if ($levelHarga === 1) {
+                $this->flashError('Level 1 (Ritel Standar) adalah harga dasar acuan utama dan tidak boleh dihapus.');
+                $this->redirect('/pricing');
+                return;
+            }
+
+            $inUse = Database::fetchOne("
+                SELECT COUNT(*) as total FROM public.grup_pelanggan WHERE default_level_harga = :lvl
+            ", ['lvl' => $levelHarga]);
+
+            if ((int)($inUse['total'] ?? 0) > 0) {
+                $this->flashError("Level {$levelHarga} sedang aktif digunakan oleh grup pelanggan dan tidak boleh dihapus.");
+                $this->redirect('/pricing');
+                return;
+            }
+
             Database::execute("DELETE FROM public.grup_produk_harga_level WHERE id = :id", ['id' => $id]);
 
             ActivityLog::log(

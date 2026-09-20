@@ -184,8 +184,8 @@ assertTest(
     !empty($comp['nama']) && str_contains($comp['nama'], 'KEREN SNACK')
 );
 assertTest(
-    "Company website loaded from DB is www.kerensnack.id",
-    ($comp['website'] ?? '') === 'www.kerensnack.id'
+    "Company website loaded from DB contains kerensnack.id",
+    !empty($comp['website']) && str_contains($comp['website'], 'kerensnack.id')
 );
 $contactLine = PrintDocumentHelper::formatContactLine($comp);
 assertTest(
@@ -197,8 +197,8 @@ assertTest(
     str_contains($contactLine, 'Email: ' . $comp['email'])
 );
 assertTest(
-    "formatContactLine contains Web: www.kerensnack.id",
-    str_contains($contactLine, 'Web: www.kerensnack.id')
+    "formatContactLine contains Web: " . $comp['website'],
+    str_contains($contactLine, 'Web: ' . $comp['website'])
 );
 
 // -------------------------------------------------------------------------

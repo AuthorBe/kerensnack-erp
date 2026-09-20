@@ -165,7 +165,7 @@ class MediaController extends Controller
      */
     public function clearCache(): void
     {
-        Auth::requireRole(['owner', 'admin']);
+        Auth::requirePermission('system.cache_manage');
 
         $deleted = MediaCacheService::clearAll();
         $this->json([

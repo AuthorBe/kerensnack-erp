@@ -112,21 +112,36 @@ if (!$sampleCashAccount) {
 // 1. BARCODE LOOKUP RPC (fn_cari_item_by_barcode)
 // ------------------------------------------------------------------
 runTest("1. RPC fn_cari_item_by_barcode: Mengembalikan data varian untuk barcode valid", function() use ($pdo) {
-    // Barcode normalisasi 88026176 dari MasterDataCoreTest
-    $barcode = '88026176';
-    $stmt = $pdo->prepare("SELECT public.fn_cari_item_by_barcode(:barcode) AS result");
-    $stmt->execute(['barcode' => $barcode]);
-    $res = json_decode((string)$stmt->fetchColumn(), true);
+    $pdo->beginTransaction();
+    try {
+        $barcode = '88026176';
+        $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup, barcode_universal) VALUES ('GRP-POS-BARCODE', 'Grup POS Barcode', :bc) RETURNING id");
+        $gpStmt->execute(['bc' => $barcode]);
+        $gpId = $gpStmt->fetchColumn();
 
-    if (!is_array($res) || empty($res['ditemukan']) || $res['ditemukan'] !== true) {
-        return "Barcode {$barcode} tidak ditemukan oleh stored procedure.";
+        $itStmt = $pdo->prepare("INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian) VALUES (:gp_id, 'SKU-POS-BARCODE', 'Item POS Barcode', 'barang_jadi', 'pcs', 10000)");
+        $itStmt->execute(['gp_id' => $gpId]);
+
+        $stmt = $pdo->prepare("SELECT public.fn_cari_item_by_barcode(:barcode) AS result");
+        $stmt->execute(['barcode' => $barcode]);
+        $res = json_decode((string)$stmt->fetchColumn(), true);
+        $pdo->rollBack();
+
+        if (!is_array($res) || empty($res['ditemukan']) || $res['ditemukan'] !== true) {
+            return "Barcode {$barcode} tidak ditemukan oleh stored procedure.";
+        }
+
+        if (empty($res['total_varian']) || $res['total_varian'] <= 0) {
+            return "Hasil pencarian varian kosong (total_varian <= 0).";
+        }
+
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
     }
-
-    if (empty($res['total_varian']) || $res['total_varian'] <= 0) {
-        return "Hasil pencarian varian kosong (total_varian <= 0).";
-    }
-
-    return true;
 });
 
 runTest("2. RPC fn_cari_item_by_barcode: Mengembalikan ditemukan=false untuk barcode acak", function() use ($pdo) {
@@ -146,43 +161,53 @@ runTest("2. RPC fn_cari_item_by_barcode: Mengembalikan ditemukan=false untuk bar
 // 2. DYNAMIC PRICING RPC (fn_hitung_harga_jual_item)
 // ------------------------------------------------------------------
 runTest("3. RPC fn_hitung_harga_jual_item: Menghitung harga jual resmi untuk pelanggan valid", function() use ($pdo) {
-    $item = Database::fetchOne("
-        SELECT id, nama_item, harga_pokok_pembelian 
-        FROM public.item 
-        WHERE tipe_item = 'barang_jadi' AND status_jual = TRUE 
-        LIMIT 1
-    ");
+    $pdo->beginTransaction();
+    try {
+        $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-POS-T3', 'Grup POS T3') RETURNING id");
+        $gpStmt->execute();
+        $gpId = $gpStmt->fetchColumn();
 
-    $pelanggan = Database::fetchOne("
-        SELECT p.id, p.nama_toko 
-        FROM public.pelanggan p 
-        JOIN public.grup_pelanggan gp ON p.grup_pelanggan_id = gp.id 
-        WHERE gp.default_level_harga = 1 
-        LIMIT 1
-    ") ?: Database::fetchOne("SELECT id, nama_toko FROM public.pelanggan LIMIT 1");
+        $itStmt = $pdo->prepare("INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, status_jual, status_aktif) VALUES (:gp_id, 'SKU-POS-T3', 'Item POS T3', 'barang_jadi', 'pcs', 10000, TRUE, TRUE) RETURNING id, nama_item, harga_pokok_pembelian");
+        $itStmt->execute(['gp_id' => $gpId]);
+        $item = $itStmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$item || !$pelanggan) {
-        return "Data sample item atau customer tidak tersedia.";
+        $plStmt = $pdo->prepare("INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs) VALUES (:gp_id, 1, 15000)");
+        $plStmt->execute(['gp_id' => $gpId]);
+
+        $grpelStmt = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga) VALUES ('GP-POS-T3', 'Grup Pelanggan POS T3', 1) RETURNING id");
+        $grpelStmt->execute();
+        $grpelId = $grpelStmt->fetchColumn();
+
+        $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, grup_pelanggan_id, nama_toko, nama_pemilik, nomor_whatsapp, alamat_lengkap) VALUES ('PEL-POS-T3', :gp_id, 'Toko POS T3', 'Budi', '0812345678', 'Jl. Test POS') RETURNING id, nama_toko");
+        $pelStmt->execute(['gp_id' => $grpelId]);
+        $pelanggan = $pelStmt->fetch(PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->prepare("SELECT public.fn_hitung_harga_jual_item(:item_id, :cust_id) AS res");
+        $stmt->execute(['item_id' => $item['id'], 'cust_id' => $pelanggan['id']]);
+        $res = json_decode((string)$stmt->fetchColumn(), true);
+
+        $pdo->rollBack();
+
+        if (!is_array($res)) {
+            return "Output RPC harga bukan JSON yang valid.";
+        }
+
+        if (!empty($res['error']) && $res['error'] === true) {
+            return "RPC harga menghasilkan error: " . ($res['message'] ?? 'Unknown');
+        }
+
+        $hargaPcs = (float)($res['harga_pcs_netto'] ?? $res['harga_pcs_dasar'] ?? 0);
+        if ($hargaPcs <= 0) {
+            return "Harga pcs netto bernilai 0 atau tidak ditemukan: " . json_encode($res);
+        }
+
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
     }
-
-    $stmt = $pdo->prepare("SELECT public.fn_hitung_harga_jual_item(:item_id, :cust_id) AS res");
-    $stmt->execute(['item_id' => $item['id'], 'cust_id' => $pelanggan['id']]);
-    $res = json_decode((string)$stmt->fetchColumn(), true);
-
-    if (!is_array($res)) {
-        return "Output RPC harga bukan JSON yang valid.";
-    }
-
-    if (!empty($res['error']) && $res['error'] === true) {
-        return "RPC harga menghasilkan error: " . ($res['message'] ?? 'Unknown');
-    }
-
-    $hargaPcs = (float)($res['harga_pcs_netto'] ?? $res['harga_pcs_dasar'] ?? 0);
-    if ($hargaPcs <= 0) {
-        return "Harga pcs netto bernilai 0 atau tidak ditemukan: " . json_encode($res);
-    }
-
-    return true;
 });
 
 // ------------------------------------------------------------------
@@ -211,13 +236,29 @@ runTest("4. PosController::checkout: Menolak keranjang belanja kosong", function
 // ------------------------------------------------------------------
 // 4. CASH DRAWER LIQUIDITY GUARD & TRANSACTION INTEGRITY
 // ------------------------------------------------------------------
-runTest("5. Transaksi POS: Validasi uang kembalian dan pencatatan arus kas secara atomik", function() use ($pdo, $sampleItem, $sampleCustomer, $sampleCashAccount) {
-    if (!$sampleItem || !$sampleCustomer || !$sampleCashAccount) {
-        return "Data pendukung tidak lengkap untuk uji transaksi POS.";
-    }
-
+runTest("5. Transaksi POS: Validasi uang kembalian dan pencatatan arus kas secara atomik", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-POS-T5', 'Grup POS T5') RETURNING id");
+        $gpStmt->execute();
+        $gpId = $gpStmt->fetchColumn();
+
+        $itStmt = $pdo->prepare("INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, status_jual, status_aktif) VALUES (:gp_id, 'SKU-POS-T5', 'Item POS T5', 'barang_jadi', 'pcs', 10000, TRUE, TRUE) RETURNING id, harga_pokok_pembelian");
+        $itStmt->execute(['gp_id' => $gpId]);
+        $sampleItem = $itStmt->fetch(PDO::FETCH_ASSOC);
+
+        $grpelStmt = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga) VALUES ('GP-POS-T5', 'Grup Pelanggan POS T5', 1) RETURNING id");
+        $grpelStmt->execute();
+        $grpelId = $grpelStmt->fetchColumn();
+
+        $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, grup_pelanggan_id, nama_toko, nama_pemilik, nomor_whatsapp, alamat_lengkap) VALUES ('PEL-POS-T5', :gp_id, 'Toko POS T5', 'Budi', '0812345678', 'Jl. Test POS') RETURNING id");
+        $pelStmt->execute(['gp_id' => $grpelId]);
+        $sampleCustomer = $pelStmt->fetch(PDO::FETCH_ASSOC);
+
+        $accStmt = $pdo->prepare("INSERT INTO public.akun_kas (nama_akun, tipe_akun, nomor_rekening, saldo_saat_ini, is_default_pos) VALUES ('Kas POS Test', 'kas_tunai', 'KAS-POS-01', 0, TRUE) RETURNING id, saldo_saat_ini");
+        $accStmt->execute();
+        $sampleCashAccount = $accStmt->fetch(PDO::FETCH_ASSOC);
+
         $dummyNota = 'INV-POS-TEST-' . mt_rand(100000, 999999);
         $totalQty = 3;
         $unitPrice = 15000.0;
@@ -286,14 +327,18 @@ runTest("5. Transaksi POS: Validasi uang kembalian dan pencatatan arus kas secar
         $kasId = $stmtKas->fetchColumn();
 
         // 4. Verifikasi saldo berjalan & referensi tersimpan rapi
-        $savedKas = Database::fetchOne("SELECT * FROM public.arus_kas WHERE id = :id", ['id' => $kasId]);
+        $savedKasStmt = $pdo->prepare("SELECT * FROM public.arus_kas WHERE id = :id");
+        $savedKasStmt->execute(['id' => $kasId]);
+        $savedKas = $savedKasStmt->fetch(PDO::FETCH_ASSOC);
         if (!$savedKas || (float)$savedKas['nominal'] !== $totalNetto) {
             $pdo->rollBack();
             return "Pencatatan arus kas POS tidak akurat.";
         }
 
         // 5. Verifikasi HPP tersimpan di item_pesanan
-        $savedItem = Database::fetchOne("SELECT harga_pokok_satuan FROM public.item_pesanan WHERE pesanan_id = :oid", ['oid' => $orderId]);
+        $savedItemStmt = $pdo->prepare("SELECT harga_pokok_satuan FROM public.item_pesanan WHERE pesanan_id = :oid");
+        $savedItemStmt->execute(['oid' => $orderId]);
+        $savedItem = $savedItemStmt->fetch(PDO::FETCH_ASSOC);
         if (!$savedItem || abs((float)$savedItem['harga_pokok_satuan'] - $hppSatuan) > 0.001) {
             $pdo->rollBack();
             return "Snapshot HPP pada item_pesanan tidak sesuai.";
@@ -312,9 +357,17 @@ runTest("5. Transaksi POS: Validasi uang kembalian dan pencatatan arus kas secar
 // ------------------------------------------------------------------
 // 5. QRIS & TRANSFER ROUTING
 // ------------------------------------------------------------------
-runTest("6. Transaksi POS QRIS: Kembalian selalu 0 dan dicatat ke tipe pembayaran qris", function() use ($pdo, $sampleCustomer) {
+runTest("6. Transaksi POS QRIS: Kembalian selalu 0 dan dicatat ke tipe pembayaran qris", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $grpelStmt = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga) VALUES ('GP-POS-T6', 'Grup Pelanggan POS T6', 1) RETURNING id");
+        $grpelStmt->execute();
+        $grpelId = $grpelStmt->fetchColumn();
+
+        $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, grup_pelanggan_id, nama_toko, nama_pemilik, nomor_whatsapp, alamat_lengkap) VALUES ('PEL-POS-T6', :gp_id, 'Toko POS T6', 'Budi', '0812345678', 'Jl. Test POS') RETURNING id");
+        $pelStmt->execute(['gp_id' => $grpelId]);
+        $sampleCustomer = $pelStmt->fetch(PDO::FETCH_ASSOC);
+
         $dummyNota = 'INV-QRIS-TEST-' . mt_rand(100000, 999999);
         $totalNetto = 35000.0;
 

@@ -282,26 +282,27 @@ runTest("2.4.1 Registrasi Produk dengan Saldo Awal > 0 Mencatat Riwayat Stok", f
     $pdo = Database::pdo();
     $pdo->beginTransaction();
     try {
-        $grupRow = Database::fetchOne("SELECT id FROM public.grup_produk LIMIT 1");
-    $testGrupId = $grupRow['id'] ?? null;
+        $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-AUDIT-241', 'Grup Audit 241') RETURNING id");
+        $gpStmt->execute();
+        $testGrupId = $gpStmt->fetchColumn();
 
-    $stmt = $pdo->prepare("
-        INSERT INTO public.item (
-            grup_id, kode_sku, nama_item, tipe_item, satuan_dasar,
-            harga_pokok_pembelian, stok_minimum_peringatan, stok_fisik_saat_ini, status_jual, status_aktif
-        ) VALUES (
-            :gid, :sku, :nama, 'barang_jadi', 'pcs',
-            12500, 10, :stok, TRUE, TRUE
-        ) RETURNING id
-    ");
-    $stmt->execute([
-        'gid' => $testGrupId,
-        'sku' => $testSku,
-        'nama' => $testName,
-        'stok' => $stokAwal
-    ]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    $testItemId = $row['id'];
+        $stmt = $pdo->prepare("
+            INSERT INTO public.item (
+                grup_id, kode_sku, nama_item, tipe_item, satuan_dasar,
+                harga_pokok_pembelian, stok_minimum_peringatan, stok_fisik_saat_ini, status_jual, status_aktif
+            ) VALUES (
+                :gid, :sku, :nama, 'barang_jadi', 'pcs',
+                12500, 10, :stok, TRUE, TRUE
+            ) RETURNING id
+        ");
+        $stmt->execute([
+            'gid' => $testGrupId,
+            'sku' => $testSku,
+            'nama' => $testName,
+            'stok' => $stokAwal
+        ]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $testItemId = $row['id'];
 
         if ($stokAwal > 0) {
             $stmtHist = $pdo->prepare("
@@ -323,13 +324,14 @@ runTest("2.4.1 Registrasi Produk dengan Saldo Awal > 0 Mencatat Riwayat Stok", f
                 'ket' => 'Saldo awal registrasi produk baru ' . $testName
             ]);
         }
-        $pdo->commit();
 
         // Verifikasi keberadaan row di riwayat_stok
-        $hist = Database::fetchOne("
+        $histStmt = $pdo->prepare("
             SELECT * FROM public.riwayat_stok 
             WHERE item_id = :id AND referensi_tabel = 'item' AND referensi_id = :id
-        ", ['id' => $testItemId]);
+        ");
+        $histStmt->execute(['id' => $testItemId]);
+        $hist = $histStmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$hist) {
             throw new Exception("Riwayat stok tidak ditemukan untuk item yang baru dibuat.");
@@ -348,10 +350,7 @@ runTest("2.4.1 Registrasi Produk dengan Saldo Awal > 0 Mencatat Riwayat Stok", f
             throw new Exception("Tipe mutasi salah: {$hist['tipe_mutasi']}");
         }
 
-        // Clean up
-        Database::execute("DELETE FROM public.riwayat_stok WHERE item_id = :id", ['id' => $testItemId]);
-        Database::execute("DELETE FROM public.item WHERE id = :id", ['id' => $testItemId]);
-
+        $pdo->rollBack();
         return true;
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -378,50 +377,63 @@ runTest("2.4.2 Verifikasi Logika storeProduct & storeMaterial di ProductControll
 // ITEM 2.1 & 2.5: VALIDASI HARGA JUAL SERVER-SIDE & SNAPSHOT HPP
 // -------------------------------------------------------------
 runTest("2.1.1 Anti-Tampering: RPC fn_hitung_harga_jual_item Berjalan Konsisten", function() {
-    // Ambil 1 produk aktif
-    $item = Database::fetchOne("
-        SELECT id, nama_item, harga_pokok_pembelian 
-        FROM public.item 
-        WHERE tipe_item = 'barang_jadi' AND status_jual = TRUE 
-        LIMIT 1
-    ");
+    $pdo = Database::pdo();
+    $pdo->beginTransaction();
+    try {
+        // Create isolated test fixtures
+        $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-AUDIT-211', 'Grup Audit 211') RETURNING id");
+        $gpStmt->execute();
+        $gpId = $gpStmt->fetchColumn();
 
-    if (!$item) {
-        return "Tidak ada item barang_jadi aktif untuk pengujian.";
+        $itStmt = $pdo->prepare("
+            INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, status_jual, status_aktif)
+            VALUES (:gp_id, 'SKU-AUDIT-211', 'Item Audit 211', 'barang_jadi', 'pcs', 10000, TRUE, TRUE)
+            RETURNING id, nama_item, harga_pokok_pembelian
+        ");
+        $itStmt->execute(['gp_id' => $gpId]);
+        $item = $itStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Price level setup
+        $plStmt = $pdo->prepare("INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs) VALUES (:gp_id, 1, 15000) RETURNING id");
+        $plStmt->execute(['gp_id' => $gpId]);
+
+        $grpelStmt = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga) VALUES ('GP-AUDIT-211', 'Grup Pelanggan Audit 211', 1) RETURNING id");
+        $grpelStmt->execute();
+        $grpelId = $grpelStmt->fetchColumn();
+
+        $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, grup_pelanggan_id, nama_toko, nama_pemilik, nomor_whatsapp, alamat_lengkap) VALUES ('PEL-AUDIT-211', :gp_id, 'Toko Audit 211', 'Budi', '0812345678', 'Jl. Test 211') RETURNING id, nama_toko");
+        $pelStmt->execute(['gp_id' => $grpelId]);
+        $pelanggan = $pelStmt->fetch(PDO::FETCH_ASSOC);
+
+        $rpcStmt = $pdo->prepare("SELECT public.fn_hitung_harga_jual_item(:item_id, :pelanggan_id) as pricing");
+        $rpcStmt->execute([
+            'item_id' => $item['id'],
+            'pelanggan_id' => $pelanggan['id']
+        ]);
+        $rpc = $rpcStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!isset($rpc['pricing'])) {
+            $pdo->rollBack();
+            return "RPC fn_hitung_harga_jual_item gagal dipanggil: " . json_encode($rpc);
+        }
+
+        $pricing = is_string($rpc['pricing']) ? json_decode($rpc['pricing'], true) : $rpc['pricing'];
+        $hargaPcs = (float)($pricing['harga_pcs_netto'] ?? $pricing['harga_pcs_dasar'] ?? 0);
+
+        if ($hargaPcs <= 0) {
+            $pdo->rollBack();
+            return "RPC mengembalikan harga 0: " . json_encode($pricing);
+        }
+
+        echo "    (Item: {$item['nama_item']}, Harga Resmi Pcs: Rp " . number_format($hargaPcs, 0, ',', '.') . " / pcs)\n";
+        $pdo->rollBack();
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
     }
-
-    // Ambil 1 pelanggan dengan level harga terkonfigurasi (Level 1 / Ritel Standar)
-    $pelanggan = Database::fetchOne("
-        SELECT p.id, p.nama_toko 
-        FROM public.pelanggan p 
-        JOIN public.grup_pelanggan gp ON p.grup_pelanggan_id = gp.id 
-        WHERE gp.default_level_harga = 1 
-        LIMIT 1
-    ") ?: Database::fetchOne("SELECT id, nama_toko FROM public.pelanggan LIMIT 1");
-    if (!$pelanggan) {
-        return "Tidak ada pelanggan untuk pengujian.";
-    }
-
-    $rpc = Database::fetchOne("
-        SELECT public.fn_hitung_harga_jual_item(:item_id, :pelanggan_id) as pricing
-    ", [
-        'item_id' => $item['id'],
-        'pelanggan_id' => $pelanggan['id']
-    ]);
-
-    if (!isset($rpc['pricing'])) {
-        return "RPC fn_hitung_harga_jual_item gagal dipanggil: " . json_encode($rpc);
-    }
-
-    $pricing = is_string($rpc['pricing']) ? json_decode($rpc['pricing'], true) : $rpc['pricing'];
-    $hargaPcs = (float)($pricing['harga_pcs_netto'] ?? $pricing['harga_pcs_dasar'] ?? 0);
-
-    if ($hargaPcs <= 0) {
-        return "RPC mengembalikan harga 0: " . json_encode($pricing);
-    }
-
-    echo "    (Item: {$item['nama_item']}, Harga Resmi Pcs: Rp " . number_format($hargaPcs, 0, ',', '.') . " / pcs)\n";
-    return true;
 });
 
 runTest("2.1.2 & 2.5.1 CustomerOrderController Melakukan Validasi Harga & HPP Snapshot", function() {
@@ -451,18 +463,30 @@ runTest("2.5.2 PosController Melakukan Snapshot HPP (harga_pokok_satuan)", funct
 });
 
 runTest("2.5.3 Integrasi DB: Snapshot HPP Tersimpan di item_pesanan", function() {
-    // Buat dummy pesanan dan item_pesanan untuk memverifikasi snapshot HPP tersimpan dengan presisi numeric(15,2)
-    $pelanggan = Database::fetchOne("SELECT id FROM public.pelanggan LIMIT 1");
-    $item = Database::fetchOne("SELECT id, harga_pokok_pembelian FROM public.item WHERE tipe_item = 'barang_jadi' LIMIT 1");
-
-    if (!$pelanggan || !$item) {
-        return "Data pelanggan atau item tidak cukup untuk tes integrasi order.";
-    }
-
     $pdo = Database::pdo();
     $pdo->beginTransaction();
 
     try {
+        $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-AUDIT-253', 'Grup Audit 253') RETURNING id");
+        $gpStmt->execute();
+        $gpId = $gpStmt->fetchColumn();
+
+        $itStmt = $pdo->prepare("
+            INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, status_jual, status_aktif)
+            VALUES (:gp_id, 'SKU-AUDIT-253', 'Item Audit 253', 'barang_jadi', 'pcs', 8500, TRUE, TRUE)
+            RETURNING id, harga_pokok_pembelian
+        ");
+        $itStmt->execute(['gp_id' => $gpId]);
+        $item = $itStmt->fetch(PDO::FETCH_ASSOC);
+
+        $grpelStmt = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga) VALUES ('GP-AUDIT-253', 'Grup Pelanggan Audit 253', 1) RETURNING id");
+        $grpelStmt->execute();
+        $grpelId = $grpelStmt->fetchColumn();
+
+        $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, grup_pelanggan_id, nama_toko, nama_pemilik, nomor_whatsapp, alamat_lengkap) VALUES ('PEL-AUDIT-253', :gp_id, 'Pelanggan Audit 253', 'Budi', '0812345678', 'Jl. Test 253') RETURNING id");
+        $pelStmt->execute(['gp_id' => $grpelId]);
+        $pelanggan = $pelStmt->fetch(PDO::FETCH_ASSOC);
+
         $dummyNota = 'AUDIT-ORD-' . mt_rand(100000, 999999);
         $stmtOrder = $pdo->prepare("
             INSERT INTO public.pesanan (
@@ -496,14 +520,15 @@ runTest("2.5.3 Integrasi DB: Snapshot HPP Tersimpan di item_pesanan", function()
             'item_id' => $item['id'],
             'hpp' => $expectedHpp
         ]);
-        $pdo->commit();
 
         // Query check
-        $savedItem = Database::fetchOne("
+        $savedItemStmt = $pdo->prepare("
             SELECT harga_pokok_satuan, harga_satuan_deal 
             FROM public.item_pesanan 
             WHERE pesanan_id = :id
-        ", ['id' => $orderId]);
+        ");
+        $savedItemStmt->execute(['id' => $orderId]);
+        $savedItem = $savedItemStmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$savedItem) {
             throw new Exception("item_pesanan tidak tersimpan.");
@@ -513,10 +538,7 @@ runTest("2.5.3 Integrasi DB: Snapshot HPP Tersimpan di item_pesanan", function()
             throw new Exception("harga_pokok_satuan tidak sesuai: expected {$expectedHpp}, got {$savedItem['harga_pokok_satuan']}");
         }
 
-        // Clean up
-        Database::execute("DELETE FROM public.item_pesanan WHERE pesanan_id = :id", ['id' => $orderId]);
-        Database::execute("DELETE FROM public.pesanan WHERE id = :id", ['id' => $orderId]);
-
+        $pdo->rollBack();
         return true;
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {

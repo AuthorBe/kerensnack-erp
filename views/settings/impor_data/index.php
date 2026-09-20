@@ -326,6 +326,9 @@ $totalMasterRows = array_sum($entityStats ?? []);
                 <!-- 10 Master Entity Grid -->
                 <div class="import-entity-grid" id="importEntityGrid">
                     <?php foreach ($handlers as $key => $h):
+                        if (!Auth::can($h->getRequiredPermission())) {
+                            continue;
+                        }
                         $meta = $entityMeta[$key] ?? [
                             'icon' => 'folder', 'badge' => $h->getEntityLabel(), 'category' => 'Master Data',
                             'color' => '#3b82f6', 'bg' => 'rgba(59,130,246,0.12)', 'desc' => ''

@@ -240,7 +240,7 @@ ob_start();
                             </td>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:inline-flex;align-items:center;gap:6px;">
-                                    <?php if (Auth::can('purchases.edit')): ?>
+                                    <?php if (Auth::can('purchases.receive')): ?>
                                     <template x-if="pb.status_penerimaan !== 'diterima' && pb.status_pembayaran !== 'batal' && pb.status_penerimaan !== 'kendala_batal'">
                                         <button type="button" @click="openQuickReceive(pb.id)" class="btn btn-sm" style="background:#059669;color:#ffffff;border-color:#059669;font-weight:700;font-size:11.5px;padding:4px 9px;border-radius:9px;display:inline-flex;align-items:center;gap:4px;" title="Verifikasi &amp; Terima Barang Fisik">
                                             <i data-lucide="package-check" style="width:13px;height:13px;"></i>
@@ -700,7 +700,7 @@ ob_start();
                                                              style="padding:8px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--color-hairline-soft);">
                                                             <div style="min-width:0;flex:1;">
                                                                 <div style="font-weight:700;color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" x-text="it.nama_item"></div>
-                                                                <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="(it.tipe_item === 'bahan_mentah' ? 'Bahan Mentah' : 'Bahan Kemas') + ' \u2022 Satuan: ' + it.satuan_dasar"></div>
+                                                                <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="(it.tipe_item === 'bahan_mentah' ? 'Bahan Mentah' : (it.tipe_item === 'bahan_kemas' ? 'Bahan Kemas' : 'Barang Jadi')) + ' • Satuan: ' + it.satuan_dasar"></div>
                                                             </div>
                                                             <span class="badge badge-mono" style="font-size:10px;" x-text="formatRupiah(it.harga_pokok_pembelian)"></span>
                                                         </div>
@@ -1385,7 +1385,7 @@ ob_start();
                                 </a>
 
                                 <!-- Aksi 2: Konfirmasi Penerimaan Barang di Gudang -->
-                                <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
+                                <?php if (Auth::can('purchases.receive')): ?>
                                 <template x-if="activeDetail.purchase.status_penerimaan !== 'diterima' && activeDetail.purchase.status_pembayaran !== 'batal' && activeDetail.purchase.status_penerimaan !== 'kendala_batal'">
                                     <button type="button" @click="openReceiveModal(activeDetail)" class="card p-3.5 hover:border-primary transition-all text-left flex items-start gap-3" style="border-radius:12px;background:rgba(16,185,129,0.04);border-color:rgba(16,185,129,0.3);">
                                         <div style="width:40px;height:40px;border-radius:10px;background:#d1fae5;color:#065f46;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1798,7 +1798,7 @@ ob_start();
                                         <option value="">-- Pilih Bahan --</option>
                                         <?php foreach ($items as $it): ?>
                                         <option value="<?= $it['id'] ?>">
-                                            <?= htmlspecialchars($it['nama_item']) ?> (<?= $it['tipe_item'] === 'bahan_mentah' ? 'Mentah' : 'Kemasan' ?> - <?= htmlspecialchars($it['satuan_dasar']) ?>)
+                                            <?= htmlspecialchars($it['nama_item']) ?> (<?= $it['tipe_item'] === 'bahan_mentah' ? 'Mentah' : ($it['tipe_item'] === 'bahan_kemas' ? 'Kemasan' : 'Barang Jadi') ?> - <?= htmlspecialchars($it['satuan_dasar']) ?>)
                                         </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -1849,10 +1849,10 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- MODAL KONFIRMASI TERIMA BARANG DI GUDANG (RECEIVE GOODS)                  -->
     <!-- ========================================================================= -->
-    <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
+    <?php if (Auth::can('purchases.receive')): ?>
     <template x-teleport="body">
     <div x-show="showReceiveModal" x-cloak class="modal-backdrop">
-        <div class="modal-box purchase-modal-box" style="max-width:860px;width:94vw;" @click.stop>
+        <div class="modal-box purchase-modal-box" style="max-width:900px;width:95vw;" @click.stop>
             <div class="modal-header pb-2.5 mb-1 border-b border-hairline">
                 <div>
                     <div class="modal-title" style="font-size:15px;display:flex;align-items:center;gap:8px;">
@@ -1866,49 +1866,124 @@ ob_start();
             </div>
 
             <div style="display:flex;flex-direction:column;gap:14px;">
-                <!-- 1. TABEL PENERIMAAN ITEM -->
+                <!-- 1. TABEL PENERIMAAN ITEM & SUBSTITUSI -->
                 <div style="border:1px solid var(--color-hairline);border-radius:12px;overflow:hidden;background:var(--color-canvas-soft);">
-                    <div style="padding:10px 14px;background:var(--color-canvas);border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between;">
-                        <span style="font-size:12px;font-weight:700;color:var(--color-ink);">Koreksi Kuantitas &amp; Harga Nota Vendor Masuk</span>
-                        <span class="badge badge-info" style="font-size:10.5px;">Fisik vs PO</span>
+                    <div style="padding:10px 14px;background:var(--color-canvas);border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                        <div class="flex items-center gap-2">
+                            <span style="font-size:12px;font-weight:700;color:var(--color-ink);">Koreksi Kuantitas &amp; Realisasi Fisik Masuk</span>
+                            <span class="badge badge-info" style="font-size:10.5px;">Fisik vs PO</span>
+                        </div>
+                        <button type="button" @click="addReceiveItemRow()" class="btn btn-secondary btn-sm" style="font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:7px;display:inline-flex;align-items:center;gap:4px;color:#059669;border-color:#a7f3d0;background:#ecfdf5;">
+                            <i data-lucide="plus-circle" style="width:13px;height:13px;"></i>
+                            <span>+ Tambah Item Baru / Substitusi</span>
+                        </button>
                     </div>
 
                     <div class="overflow-x-auto custom-scrollbar">
-                        <table class="data-table" style="width:100%;min-width:580px;font-size:12px;">
+                        <table class="data-table" style="width:100%;min-width:640px;font-size:12px;">
                             <thead>
                                 <tr>
-                                    <th style="min-width:180px;">Nama Bahan / SKU</th>
-                                    <th class="cell-center cell-nowrap" style="width:80px;">Qty PO</th>
+                                    <th style="min-width:200px;">Nama Bahan / SKU</th>
+                                    <th class="cell-center cell-nowrap" style="width:75px;">Qty PO</th>
                                     <th class="cell-center cell-nowrap" style="width:110px;">Qty Diterima *</th>
                                     <th class="cell-right cell-nowrap" style="width:130px;">Harga Satuan *</th>
                                     <th class="cell-right cell-nowrap" style="width:130px;">Subtotal</th>
+                                    <th class="cell-center cell-nowrap" style="width:45px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="(row, idx) in receiveForm.items" :key="row.item_id">
-                                    <tr>
+                                <template x-for="(row, idx) in receiveForm.items" :key="idx">
+                                    <tr :style="row.qty <= 0 ? 'opacity:0.5;background:rgba(239,68,68,0.03);' : ''">
                                         <td>
-                                            <div style="font-weight:700;color:var(--color-ink);" x-text="row.nama_item"></div>
-                                            <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="row.kode_sku + (row.satuan ? ' (' + row.satuan + ')' : '')"></div>
+                                            <template x-if="!row.is_extra">
+                                                <div>
+                                                    <div style="font-weight:700;color:var(--color-ink);" x-text="row.nama_item"></div>
+                                                    <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="row.kode_sku + (row.satuan ? ' (' + row.satuan + ')' : '')"></div>
+                                                </div>
+                                            </template>
+                                            <template x-if="row.is_extra">
+                                                <div style="display:flex;flex-direction:column;gap:4px;">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <span class="badge" style="font-size:9.5px;padding:1px 5px;background:#fef3c7;color:#b45309;font-weight:700;">Substitusi / Tambahan</span>
+                                                    </div>
+                                                    <select class="form-input" style="font-size:11.5px;height:32px;font-weight:600;" @change="onReceiveItemChange(idx, $event)" :value="row.item_id">
+                                                        <option value="">-- Pilih Bahan / Barang Jadi --</option>
+                                                        <template x-for="avail in availableItems" :key="avail.id">
+                                                            <option :value="avail.id" :selected="String(avail.id) === String(row.item_id)" x-text="avail.nama_item + ' (' + (avail.tipe_item === 'bahan_mentah' ? 'Mentah' : (avail.tipe_item === 'bahan_kemas' ? 'Kemasan' : 'Barang Jadi')) + ' - ' + avail.satuan_dasar + ')'"></option>
+                                                        </template>
+                                                    </select>
+                                                </div>
+                                            </template>
                                         </td>
-                                        <td class="cell-center font-mono cell-nowrap" style="color:var(--color-ink-mute);" x-text="row.po_qty + (row.satuan ? ' ' + row.satuan : '')"></td>
+                                        <td class="cell-center font-mono cell-nowrap" style="color:var(--color-ink-mute);">
+                                            <span x-text="row.is_extra ? '-' : (row.po_qty + (row.satuan ? ' ' + row.satuan : ''))"></span>
+                                        </td>
                                         <td class="cell-center cell-nowrap">
-                                            <input type="number" min="0.01" step="any" x-model.number="row.qty" class="form-input font-mono text-center" style="font-size:12px;height:32px;font-weight:700;" @input="recalcReceiveRow(idx)">
+                                            <input type="number" min="0" step="any" x-model.number="row.qty" class="form-input font-mono text-center" style="font-size:12px;height:32px;font-weight:700;" @input="recalcReceiveRow(idx)">
                                         </td>
                                         <td class="cell-right cell-nowrap">
                                             <input type="text" x-model="row.harga_satuan" class="form-input font-mono text-right input-rupiah" style="font-size:12px;height:32px;" @input="recalcReceiveRow(idx)">
                                         </td>
                                         <td class="cell-right font-mono cell-nowrap" style="font-weight:700;color:var(--color-primary-deep);" x-text="formatRupiah(row.subtotal)"></td>
+                                        <td class="cell-center cell-nowrap">
+                                            <button type="button" @click="removeReceiveItemRow(idx)" class="btn btn-ghost btn-sm" style="color:#ef4444;padding:4px;" :title="row.is_extra ? 'Hapus Baris' : 'Nol-kan Qty (Batal Kirim)'">
+                                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 </template>
                             </tbody>
                             <tfoot>
                                 <tr style="background:var(--color-canvas);font-weight:700;">
-                                    <td colspan="4" class="cell-right cell-nowrap">Total Biaya Penerimaan Fisik:</td>
+                                    <td colspan="4" class="cell-right cell-nowrap">Total Biaya Realisasi Fisik:</td>
                                     <td class="cell-right font-mono cell-nowrap" style="font-size:14px;color:var(--color-primary-deep);" x-text="formatRupiah(receiveTotal)"></td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                         </table>
+                    </div>
+                </div>
+
+                <!-- LIVE REKONSILIASI KEUANGAN FISIK VS PO ESTIMASI -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:10px;padding:12px 14px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;">
+                    <div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);">Estimasi PO Awal:</div>
+                        <div class="font-mono font-bold" style="font-size:13.5px;color:var(--color-ink);" x-text="formatRupiah(receiveForm.total_biaya_estimasi)"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);">Total Realisasi Fisik:</div>
+                        <div class="font-mono font-bold" style="font-size:13.5px;color:#059669;" x-text="formatRupiah(receiveTotal)"></div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);">Status Rekonsiliasi Kas:</div>
+                        <template x-if="receiveForm.status_pembayaran_awal === 'lunas' || receiveForm.nominal_sudah_dibayar > 0">
+                            <div>
+                                <template x-if="receiveTotal < receiveForm.nominal_sudah_dibayar">
+                                    <span class="badge" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:3px;">
+                                        <span>&#x25BC; Kembalian Kasir:</span>
+                                        <strong class="font-mono" x-text="formatRupiah(receiveForm.nominal_sudah_dibayar - receiveTotal)"></strong>
+                                    </span>
+                                </template>
+                                <template x-if="receiveTotal > receiveForm.nominal_sudah_dibayar">
+                                    <span class="badge" style="background:#fef3c7;color:#b45309;border:1px solid #fde68a;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:3px;">
+                                        <span>&#x25B2; Kurang Bayar:</span>
+                                        <strong class="font-mono" x-text="formatRupiah(receiveTotal - receiveForm.nominal_sudah_dibayar)"></strong>
+                                    </span>
+                                </template>
+                                <template x-if="receiveTotal === receiveForm.nominal_sudah_dibayar">
+                                    <span class="badge badge-success" style="font-size:11px;font-weight:700;">
+                                        &#x2713; Pas Sesuai Bayar PO
+                                    </span>
+                                </template>
+                            </div>
+                        </template>
+                        <template x-if="!(receiveForm.status_pembayaran_awal === 'lunas' || receiveForm.nominal_sudah_dibayar > 0)">
+                            <div>
+                                <span class="badge badge-secondary" style="font-size:11px;font-weight:700;">
+                                    Hutang Tempo Vendor: <strong class="font-mono" x-text="formatRupiah(receiveTotal)"></strong>
+                                </span>
+                            </div>
+                        </template>
                     </div>
                 </div>
 
@@ -3042,10 +3117,11 @@ function purchaseApp() {
         },
 
         getSelectedItemName(itemId) {
-            if (!itemId) return '-- Pilih Bahan Baku / Kemasan --';
+            if (!itemId) return '-- Pilih Bahan / Barang Jadi --';
             const it = this.availableItems.find(x => String(x.id) === String(itemId));
-            if (!it) return '-- Pilih Bahan Baku / Kemasan --';
-            return it.nama_item + ' (' + (it.tipe_item === 'bahan_mentah' ? 'Mentah' : 'Kemasan') + ' - ' + it.satuan_dasar + ')';
+            if (!it) return '-- Pilih Bahan / Barang Jadi --';
+            const typeLabel = it.tipe_item === 'bahan_mentah' ? 'Mentah' : (it.tipe_item === 'bahan_kemas' ? 'Kemasan' : 'Barang Jadi');
+            return it.nama_item + ' (' + typeLabel + ' - ' + it.satuan_dasar + ')';
         },
 
         getSelectedItemUnit(itemId) {
@@ -3951,8 +4027,67 @@ function purchaseApp() {
             });
         },
 
+        addReceiveItemRow() {
+            if (!this.receiveForm.items) this.receiveForm.items = [];
+            this.receiveForm.items.push({
+                item_id: '',
+                nama_item: '',
+                kode_sku: '',
+                satuan: 'Pcs',
+                po_qty: 0,
+                qty: 1,
+                harga_satuan: '0',
+                subtotal: 0,
+                is_extra: true
+            });
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        removeReceiveItemRow(idx) {
+            const row = this.receiveForm.items[idx];
+            if (!row) return;
+            if (row.is_extra) {
+                this.receiveForm.items.splice(idx, 1);
+            } else {
+                row.qty = 0;
+                row.subtotal = 0;
+            }
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        onReceiveItemChange(idx, event) {
+            const selectedId = event.target.value;
+            const item = this.availableItems.find(x => String(x.id) === String(selectedId));
+            const row = this.receiveForm.items[idx];
+            if (!row) return;
+            if (item) {
+                row.item_id = item.id;
+                row.nama_item = item.nama_item;
+                row.kode_sku = item.kode_sku;
+                row.satuan = item.satuan_dasar || 'Pcs';
+                const hpp = Number(item.harga_pokok_pembelian || 0);
+                row.harga_satuan = window.formatRupiahNumber ? window.formatRupiahNumber(hpp) : String(hpp);
+                row.subtotal = Number(row.qty || 1) * hpp;
+            } else {
+                row.item_id = '';
+                row.nama_item = '';
+                row.kode_sku = '';
+                row.satuan = 'Pcs';
+                row.harga_satuan = '0';
+                row.subtotal = 0;
+            }
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
         recalcReceiveRow(idx) {
             const row = this.receiveForm.items[idx];
+            if (!row) return;
             const rawHarga = typeof row.harga_satuan === 'string' ? (window.unformatRupiah ? window.unformatRupiah(row.harga_satuan) : Number(row.harga_satuan.replace(/\./g, ''))) : Number(row.harga_satuan || 0);
             row.subtotal = Number(row.qty || 0) * rawHarga;
         },

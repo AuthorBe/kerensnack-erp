@@ -3586,6 +3586,8 @@ html:not(.dark) .toast-info {
   will-change: scroll-position;
   transform: translateZ(0);
   overscroll-behavior-x: contain;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .category-scroll-track:active {
   cursor: -webkit-grabbing;

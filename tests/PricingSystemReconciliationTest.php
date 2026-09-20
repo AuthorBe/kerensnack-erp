@@ -130,50 +130,78 @@ runTest("4. Pilihan B: fn_hitung_harga_jual_item Menolak Transaksi Jika Level Be
 });
 
 // TEST 5: Verifikasi Kalkulasi Normal Pcs pada Produk yang Terkonfigurasi
-runTest("5. Kalkulasi Harga Pcs Normal Berjalan Konsisten Tanpa Bal", function() {
-    $item = Database::fetchOne("SELECT id, nama_item FROM public.item WHERE status_aktif = TRUE AND tipe_item = 'barang_jadi' LIMIT 1");
-    if (!$item) return "Tidak ada item aktif.";
+runTest("5. Kalkulasi Harga Pcs Normal Berjalan Konsisten Tanpa Bal", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        $stmtGrup = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-AUDIT-T5', 'Grup Audit T5') RETURNING id");
+        $stmtGrup->execute();
+        $grupId = $stmtGrup->fetchColumn();
 
-    $res = Database::fetchOne("SELECT public.fn_hitung_harga_jual_item(:id, NULL) as res", ['id' => $item['id']]);
-    $data = json_decode($res['res'] ?? '{}', true);
+        $stmtLevel = $pdo->prepare("INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs) VALUES (:gid, 1, 12000)");
+        $stmtLevel->execute(['gid' => $grupId]);
 
-    if (!empty($data['error'])) {
-        return "Item {$item['nama_item']} gagal dihitung: " . ($data['message'] ?? '');
-    }
-    if (!isset($data['harga_pcs_bruto']) || !isset($data['harga_pcs_netto'])) {
-        return "Kunci harga_pcs tidak ditemukan pada respons: " . json_encode($data);
-    }
-    if (isset($data['harga_bal_bruto']) || isset($data['harga_bal_netto'])) {
-        return "Respons RPC masih memuat harga_bal: " . json_encode($data);
-    }
+        $stmtItem = $pdo->prepare("INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, status_jual, status_aktif) VALUES (:gid, 'SKU-AUDIT-T5', 'Item Audit T5', 'barang_jadi', 'pcs', 9000, TRUE, TRUE) RETURNING id, nama_item");
+        $stmtItem->execute(['gid' => $grupId]);
+        $item = $stmtItem->fetch(PDO::FETCH_ASSOC);
 
-    echo "    (Item: {$item['nama_item']}, Harga Netto: Rp " . number_format($data['harga_pcs_netto'], 0, ',', '.') . " / pcs)\n";
-    return true;
+        $stmtRpc = $pdo->prepare("SELECT public.fn_hitung_harga_jual_item(:id, NULL) as res");
+        $stmtRpc->execute(['id' => $item['id']]);
+        $data = json_decode($stmtRpc->fetchColumn() ?? '{}', true);
+
+        $pdo->rollBack();
+
+        if (!empty($data['error'])) {
+            return "Item {$item['nama_item']} gagal dihitung: " . ($data['message'] ?? '');
+        }
+        if (!isset($data['harga_pcs_bruto']) || !isset($data['harga_pcs_netto'])) {
+            return "Kunci harga_pcs tidak ditemukan pada respons: " . json_encode($data);
+        }
+        if (isset($data['harga_bal_bruto']) || isset($data['harga_bal_netto'])) {
+            return "Respons RPC masih memuat harga_bal: " . json_encode($data);
+        }
+
+        echo "    (Item: {$item['nama_item']}, Harga Netto: Rp " . number_format($data['harga_pcs_netto'], 0, ',', '.') . " / pcs)\n";
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 });
 
 // TEST 6: Proteksi Anti-Duplikat Level di Database
 runTest("6. Database Menolak Duplikasi Level Pada Grup Produk yang Sama", function() use ($pdo) {
-    $grup = Database::fetchOne("SELECT id FROM public.grup_produk WHERE status_aktif = TRUE LIMIT 1");
-    if (!$grup) return "Tidak ada grup produk.";
-
-    // Pastikan Level 1 sudah ada
-    $exists = Database::fetchOne("SELECT id FROM public.grup_produk_harga_level WHERE grup_produk_id = :gid AND level_harga = 1", ['gid' => $grup['id']]);
-    if (!$exists) return "Grup tidak memiliki Level 1.";
-
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare("
-            INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs)
-            VALUES (:gid, 1, 20000)
-        ");
-        $stmt->execute(['gid' => $grup['id']]);
-        $pdo->rollBack();
-        return "Database mengizinkan insert duplikat level 1!";
-    } catch (PDOException $e) {
-        $pdo->rollBack();
-        // Unique violation is code 23505
-        if ($e->getCode() === '23505' || str_contains($e->getMessage(), 'uq_grup_harga_level')) {
-            return true; // Sukses tertolak oleh DB!
+        $stmtGrup = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-AUDIT-T6', 'Grup Audit T6') RETURNING id");
+        $stmtGrup->execute();
+        $grupId = $stmtGrup->fetchColumn();
+
+        // Pastikan Level 1 pertama berhasil
+        $stmt1 = $pdo->prepare("INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs) VALUES (:gid, 1, 15000)");
+        $stmt1->execute(['gid' => $grupId]);
+
+        // Coba insert duplikat level 1
+        try {
+            $stmt2 = $pdo->prepare("
+                INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs)
+                VALUES (:gid, 1, 20000)
+            ");
+            $stmt2->execute(['gid' => $grupId]);
+            $pdo->rollBack();
+            return "Database mengizinkan insert duplikat level 1!";
+        } catch (PDOException $e) {
+            $pdo->rollBack();
+            // Unique violation is code 23505
+            if ($e->getCode() === '23505' || str_contains($e->getMessage(), 'uq_grup_harga_level')) {
+                return true; // Sukses tertolak oleh DB!
+            }
+            throw $e;
+        }
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
         }
         throw $e;
     }

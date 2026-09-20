@@ -94,7 +94,7 @@ function createMockCustomerController(array $postData): App\Controllers\Customer
 
 $db = Database::getConnection();
 
-$transientIds = ['item' => [], 'pelanggan' => [], 'pesanan' => []];
+$transientIds = ['item' => [], 'pelanggan' => [], 'pesanan' => [], 'grup_produk' => []];
 
 register_shutdown_function(function() use ($db, &$transientIds) {
     if (!empty($transientIds['pesanan'])) {
@@ -113,6 +113,12 @@ register_shutdown_function(function() use ($db, &$transientIds) {
         $in = "'" . implode("','", $transientIds['item']) . "'";
         $db->exec("DELETE FROM public.item WHERE id IN ($in)");
     }
+    if (!empty($transientIds['grup_produk'])) {
+        $in = "'" . implode("','", $transientIds['grup_produk']) . "'";
+        $db->exec("DELETE FROM public.grup_produk_harga_level WHERE grup_produk_id IN ($in)");
+        $db->exec("DELETE FROM public.item WHERE grup_id IN ($in)");
+        $db->exec("DELETE FROM public.grup_produk WHERE id IN ($in)");
+    }
 });
 
 $grupId = $db->query("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1")->fetchColumn()
@@ -123,17 +129,23 @@ $akunKas = $db->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas
 
 if (!$item) {
     $tmpItemId = 'e0000000-0000-0000-0000-000000000010';
-    $grupProdId = $db->query("SELECT id FROM public.grup_produk LIMIT 1")->fetchColumn();
+    $tmpGrupId = 'a0000000-0000-0000-0000-000000000010';
+    $db->exec("
+        INSERT INTO public.grup_produk (id, kode_grup, nama_grup, status_aktif)
+        VALUES ('{$tmpGrupId}', 'GRP-CONV-TMP', 'Grup Konversi Transien', TRUE)
+        ON CONFLICT (id) DO NOTHING
+    ");
     $db->exec("
         INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, grup_id, satuan_dasar, stok_fisik_saat_ini, harga_pokok_pembelian, status_aktif)
-        VALUES ('{$tmpItemId}', 'SKU-CONV-TMP', 'Item Konversi Transien', 'barang_jadi', '{$grupProdId}', 'pcs', 100, 5000, TRUE)
+        VALUES ('{$tmpItemId}', 'SKU-CONV-TMP', 'Item Konversi Transien', 'barang_jadi', '{$tmpGrupId}', 'pcs', 100, 5000, TRUE)
         ON CONFLICT (id) DO NOTHING
     ");
     $db->exec("
         INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs)
-        VALUES ('{$grupProdId}', 1, 10000.00)
+        VALUES ('{$tmpGrupId}', 1, 10000.00)
         ON CONFLICT (grup_produk_id, level_harga) DO NOTHING
     ");
+    $transientIds['grup_produk'][] = $tmpGrupId;
     $transientIds['item'][] = $tmpItemId;
     $item = [
         'id' => $tmpItemId,

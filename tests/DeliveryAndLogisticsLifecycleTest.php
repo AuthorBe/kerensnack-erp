@@ -75,24 +75,39 @@ echo "============================================================\n";
 
 $pdo = Database::getConnection();
 
-// Sample Driver, Customer & Territory
-$driver = Database::fetchOne("
-    SELECT k.id as karyawan_id, p.id as pengguna_id, p.nama_lengkap 
-    FROM public.karyawan k 
-    JOIN public.pengguna p ON k.pengguna_id = p.id 
-    WHERE p.posisi = 'driver' AND p.status_aktif = TRUE 
-    LIMIT 1
-");
+function createDeliveryFixtures(PDO $pdo): array {
+    $wilStmt = $pdo->prepare("INSERT INTO public.wilayah (kode_rute, nama_wilayah, provinsi, kota_kabupaten) VALUES ('RUTE-TEST-DLV', 'Wilayah Test Delivery', 'Banten', 'Tangerang') RETURNING id, nama_wilayah, kode_rute");
+    $wilStmt->execute();
+    $territory = $wilStmt->fetch(PDO::FETCH_ASSOC);
 
-$customer = Database::fetchOne("
-    SELECT p.id, p.kode_pelanggan, p.nama_toko, p.wilayah_id, w.nama_wilayah, w.kode_rute 
-    FROM public.pelanggan p 
-    LEFT JOIN public.wilayah w ON p.wilayah_id = w.id 
-    WHERE p.status_aktif = TRUE 
-    LIMIT 1
-");
+    $grpelStmt = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga) VALUES ('GP-DLV-FX', 'Grup Pelanggan DLV FX', 1) RETURNING id");
+    $grpelStmt->execute();
+    $grpelId = $grpelStmt->fetchColumn();
 
-$territory = Database::fetchOne("SELECT id, nama_wilayah, kode_rute FROM public.wilayah WHERE status_aktif = TRUE LIMIT 1");
+    $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, grup_pelanggan_id, nama_toko, nama_pemilik, nomor_whatsapp, alamat_lengkap, wilayah_id) VALUES ('PEL-DLV-FX', :gp_id, 'Toko DLV FX', 'Budi', '0812345678', 'Jl. Test DLV', :wid) RETURNING id");
+    $pelStmt->execute(['gp_id' => $grpelId, 'wid' => $territory['id']]);
+    $customer = $pelStmt->fetch(PDO::FETCH_ASSOC);
+
+    $roleId = $pdo->query("SELECT id FROM public.peran WHERE nama_peran != 'Developer' AND nama_peran != 'developer' LIMIT 1")->fetchColumn();
+    if (!$roleId) {
+        $rStmt = $pdo->prepare("INSERT INTO public.peran (nama_peran, deskripsi) VALUES ('Peran Driver Test DLV', 'Driver Test Role DLV') RETURNING id");
+        $rStmt->execute();
+        $roleId = $rStmt->fetchColumn();
+    }
+    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, posisi, peran_id) VALUES ('Driver Test DLV', 'driver_test_dlv', 'hash', 'driver', :rid) RETURNING id");
+    $usrStmt->execute(['rid' => $roleId]);
+    $driverUserId = $usrStmt->fetchColumn();
+
+    $karStmt = $pdo->prepare("INSERT INTO public.karyawan (pengguna_id, tipe_penggajian, gaji_pokok_bulanan) VALUES (:pid, 'bulanan', 3000000) RETURNING id");
+    $karStmt->execute(['pid' => $driverUserId]);
+    $driverId = $karStmt->fetchColumn();
+
+    return [
+        'customer' => $customer,
+        'territory' => $territory,
+        'driverId' => $driverId
+    ];
+}
 
 // ------------------------------------------------------------------
 // 1. SURAT JALAN NUMBER GENERATION
@@ -108,11 +123,10 @@ runTest("1. DocumentNumber::nextDeliveryNumber: Menghasilkan format SJ-YYYYMMDD-
 // ------------------------------------------------------------------
 // 2. SURAT JALAN CREATION WITH SNAPSHOT
 // ------------------------------------------------------------------
-runTest("2. Penerbitan Surat Jalan: Status operasional 'siap_kirim' dan snapshot wilayah tersimpan", function() use ($pdo, $customer, $driver, $territory) {
-    if (!$customer || !$driver || !$territory) return "Data tidak lengkap.";
-
+runTest("2. Penerbitan Surat Jalan: Status operasional 'siap_kirim' dan snapshot wilayah tersimpan", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createDeliveryFixtures($pdo);
         $dummyNota = 'ORD-SJ-TEST-' . mt_rand(100000, 999999);
         $dummySj = 'SJ-TEST-' . mt_rand(100000, 999999);
 
@@ -126,7 +140,7 @@ runTest("2. Penerbitan Surat Jalan: Status operasional 'siap_kirim' dan snapshot
                 'cash', 'siap_dikirim', 'belum_lunas'
             ) RETURNING id
         ");
-        $stmtOrder->execute(['nota' => $dummyNota, 'cid' => $customer['id']]);
+        $stmtOrder->execute(['nota' => $dummyNota, 'cid' => $fx['customer']['id']]);
         $orderId = $stmtOrder->fetchColumn();
 
         // Buat surat jalan
@@ -144,10 +158,10 @@ runTest("2. Penerbitan Surat Jalan: Status operasional 'siap_kirim' dan snapshot
         $stmtSj->execute([
             'no_sj' => $dummySj,
             'oid' => $orderId,
-            'did' => $driver['karyawan_id'],
-            'wid' => $territory['id'],
-            'w_snap' => $territory['nama_wilayah'],
-            'r_snap' => $territory['kode_rute']
+            'did' => $fx['driverId'],
+            'wid' => $fx['territory']['id'],
+            'w_snap' => $fx['territory']['nama_wilayah'],
+            'r_snap' => $fx['territory']['kode_rute']
         ]);
         $sj = $stmtSj->fetch();
 
@@ -156,7 +170,7 @@ runTest("2. Penerbitan Surat Jalan: Status operasional 'siap_kirim' dan snapshot
             return "Status awal surat jalan harus 'siap_kirim'.";
         }
 
-        if ($sj['nama_wilayah_snapshot'] !== $territory['nama_wilayah']) {
+        if ($sj['nama_wilayah_snapshot'] !== $fx['territory']['nama_wilayah']) {
             $pdo->rollBack();
             return "Snapshot wilayah gagal disimpan.";
         }
@@ -172,9 +186,10 @@ runTest("2. Penerbitan Surat Jalan: Status operasional 'siap_kirim' dan snapshot
 // ------------------------------------------------------------------
 // 3. TRIP WORKFLOW ('siap_kirim' -> 'sedang_dikirim' -> 'selesai_diterima')
 // ------------------------------------------------------------------
-runTest("3. Alur Pengiriman Driver: Transisi status dari siap kirim ke sedang dikirim lalu selesai", function() use ($pdo, $customer, $driver) {
+runTest("3. Alur Pengiriman Driver: Transisi status dari siap kirim ke sedang dikirim lalu selesai", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createDeliveryFixtures($pdo);
         $dummyNota = 'ORD-TRIP-' . mt_rand(100000, 999999);
         $dummySj = 'SJ-TRIP-' . mt_rand(100000, 999999);
 
@@ -186,7 +201,7 @@ runTest("3. Alur Pengiriman Driver: Transisi status dari siap kirim ke sedang di
                 :nota, :cid, CURRENT_DATE, 50000, 50000, 'cash', 'siap_dikirim', 'belum_lunas'
             ) RETURNING id
         ");
-        $stmtOrder->execute(['nota' => $dummyNota, 'cid' => $customer['id']]);
+        $stmtOrder->execute(['nota' => $dummyNota, 'cid' => $fx['customer']['id']]);
         $orderId = $stmtOrder->fetchColumn();
 
         $stmtSj = $pdo->prepare("
@@ -196,7 +211,7 @@ runTest("3. Alur Pengiriman Driver: Transisi status dari siap kirim ke sedang di
                 :no_sj, :oid, :did, 'siap_kirim'
             ) RETURNING id
         ");
-        $stmtSj->execute(['no_sj' => $dummySj, 'oid' => $orderId, 'did' => $driver['karyawan_id']]);
+        $stmtSj->execute(['no_sj' => $dummySj, 'oid' => $orderId, 'did' => $fx['driverId']]);
         $sjId = $stmtSj->fetchColumn();
 
         // 1. Driver Berangkat
@@ -206,7 +221,9 @@ runTest("3. Alur Pengiriman Driver: Transisi status dari siap kirim ke sedang di
             WHERE id = :id
         ")->execute(['id' => $sjId]);
 
-        $st1 = Database::fetchOne("SELECT status_surat_jalan FROM public.surat_jalan WHERE id = :id", ['id' => $sjId])['status_surat_jalan'];
+        $st1Stmt = $pdo->prepare("SELECT status_surat_jalan FROM public.surat_jalan WHERE id = :id");
+        $st1Stmt->execute(['id' => $sjId]);
+        $st1 = $st1Stmt->fetchColumn();
         if ($st1 !== 'sedang_dikirim') {
             $pdo->rollBack();
             return "Status surat jalan gagal diupdate ke sedang_dikirim.";
@@ -219,7 +236,9 @@ runTest("3. Alur Pengiriman Driver: Transisi status dari siap kirim ke sedang di
             WHERE id = :id
         ")->execute(['id' => $sjId]);
 
-        $st2 = Database::fetchOne("SELECT status_surat_jalan, nama_penerima_toko FROM public.surat_jalan WHERE id = :id", ['id' => $sjId]);
+        $st2Stmt = $pdo->prepare("SELECT status_surat_jalan, nama_penerima_toko FROM public.surat_jalan WHERE id = :id");
+        $st2Stmt->execute(['id' => $sjId]);
+        $st2 = $st2Stmt->fetch(PDO::FETCH_ASSOC);
         if ($st2['status_surat_jalan'] !== 'selesai_diterima' || $st2['nama_penerima_toko'] !== 'Bpk. Budi') {
             $pdo->rollBack();
             return "Penyelesaian surat jalan gagal tercatat.";
@@ -236,9 +255,10 @@ runTest("3. Alur Pengiriman Driver: Transisi status dari siap kirim ke sedang di
 // ------------------------------------------------------------------
 // 4. FAILED DELIVERY WITH REASON & PHOTO
 // ------------------------------------------------------------------
-runTest("4. Pengiriman Gagal: Mencatat alasan gagal kirim dan foto kendala (gagal_kirim / gagal_kembali)", function() use ($pdo, $customer, $driver) {
+runTest("4. Pengiriman Gagal: Mencatat alasan gagal kirim dan foto kendala (gagal_kirim / gagal_kembali)", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createDeliveryFixtures($pdo);
         $dummyNota = 'ORD-FAIL-' . mt_rand(100000, 999999);
         $dummySj = 'SJ-FAIL-' . mt_rand(100000, 999999);
 
@@ -250,7 +270,7 @@ runTest("4. Pengiriman Gagal: Mencatat alasan gagal kirim dan foto kendala (gaga
                 :nota, :cid, CURRENT_DATE, 50000, 50000, 'cash', 'siap_dikirim', 'belum_lunas'
             ) RETURNING id
         ");
-        $stmtOrder->execute(['nota' => $dummyNota, 'cid' => $customer['id']]);
+        $stmtOrder->execute(['nota' => $dummyNota, 'cid' => $fx['customer']['id']]);
         $orderId = $stmtOrder->fetchColumn();
 
         $stmtSj = $pdo->prepare("
@@ -260,7 +280,7 @@ runTest("4. Pengiriman Gagal: Mencatat alasan gagal kirim dan foto kendala (gaga
                 :no_sj, :oid, :did, 'sedang_dikirim'
             ) RETURNING id
         ");
-        $stmtSj->execute(['no_sj' => $dummySj, 'oid' => $orderId, 'did' => $driver['karyawan_id']]);
+        $stmtSj->execute(['no_sj' => $dummySj, 'oid' => $orderId, 'did' => $fx['driverId']]);
         $sjId = $stmtSj->fetchColumn();
 
         // Rekam kegagalan kirim
@@ -303,9 +323,10 @@ runTest("5. DeliveryController::store: Fallback default status_surat_jalan adala
 // ------------------------------------------------------------------
 // 6. DB CHECK CONSTRAINT STRICTNESS
 // ------------------------------------------------------------------
-runTest("6. Database Constraint: Menolak status draf_n8n pada surat_jalan", function() use ($pdo, $customer, $driver) {
+runTest("6. Database Constraint: Menolak status draf_n8n pada surat_jalan", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
+        $fx = createDeliveryFixtures($pdo);
         $dummyNota = 'ORD-CHK-' . mt_rand(100000, 999999);
         $dummySj = 'SJ-CHK-' . mt_rand(100000, 999999);
 
@@ -317,7 +338,7 @@ runTest("6. Database Constraint: Menolak status draf_n8n pada surat_jalan", func
                 :nota, :cid, CURRENT_DATE, 50000, 50000, 'cash', 'po', 'belum_lunas'
             ) RETURNING id
         ");
-        $stmtOrder->execute(['nota' => $dummyNota, 'cid' => $customer['id']]);
+        $stmtOrder->execute(['nota' => $dummyNota, 'cid' => $fx['customer']['id']]);
         $orderId = $stmtOrder->fetchColumn();
 
         // Coba insert draf_n8n (wajib ditolak DB)
@@ -329,7 +350,7 @@ runTest("6. Database Constraint: Menolak status draf_n8n pada surat_jalan", func
                     :no_sj, :oid, :did, 'draf_n8n'
                 )
             ");
-            $stmtSj->execute(['no_sj' => $dummySj, 'oid' => $orderId, 'did' => $driver['karyawan_id']]);
+            $stmtSj->execute(['no_sj' => $dummySj, 'oid' => $orderId, 'did' => $fx['driverId']]);
             $pdo->rollBack();
             return "Status draf_n8n seharusnya ditolak oleh database constraint!";
         } catch (PDOException $e) {

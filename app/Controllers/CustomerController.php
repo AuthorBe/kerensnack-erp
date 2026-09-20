@@ -966,7 +966,7 @@ class CustomerController extends Controller
     // ==========================================
     public function storeTerritory(): void
     {
-        Auth::requirePermission('master.customers_manage');
+        Auth::requirePermission('master.territories_manage');
 
         $nama = trim((string)$this->input('nama_wilayah'));
         $rawKode = trim((string)$this->input('kode_rute'));
@@ -1048,7 +1048,7 @@ class CustomerController extends Controller
 
     public function updateTerritory(): void
     {
-        Auth::requirePermission('master.customers_manage');
+        Auth::requirePermission('master.territories_manage');
 
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_wilayah'));
@@ -1116,7 +1116,7 @@ class CustomerController extends Controller
 
     public function deleteTerritory(): void
     {
-        Auth::requirePermission('master.customers_manage');
+        Auth::requirePermission('master.territories_manage');
 
         $id = $this->input('id');
         if (empty($id)) {

@@ -53,17 +53,63 @@ runTest("1.1.2 - Database: Kolom barcode pada public.item telah dibersihkan/diha
 });
 
 runTest("1.1.3 - Stored Procedure fn_cari_item_by_barcode mengenali barcode hasil normalisasi (88026176)", function() use ($pdo) {
-    $stmt = $pdo->prepare("SELECT public.fn_cari_item_by_barcode('88026176') as result");
-    $stmt->execute();
-    $res = json_decode($stmt->fetchColumn(), true);
-    return !empty($res['ditemukan']) && $res['ditemukan'] === true && $res['total_varian'] > 0;
+    $pdo->beginTransaction();
+    try {
+        $gpStmt = $pdo->prepare("
+            INSERT INTO public.grup_produk (kode_grup, nama_grup, barcode_universal)
+            VALUES ('GRP-TEST-88026176', 'Grup Test Barcode Normal', '88026176')
+            RETURNING id
+        ");
+        $gpStmt->execute();
+        $gpId = $gpStmt->fetchColumn();
+
+        $itemStmt = $pdo->prepare("
+            INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian)
+            VALUES (:gp_id, 'SKU-TEST-88026176', 'Item Test Barcode', 'barang_jadi', 'pcs', 10000)
+        ");
+        $itemStmt->execute(['gp_id' => $gpId]);
+
+        $stmt = $pdo->prepare("SELECT public.fn_cari_item_by_barcode('88026176') as result");
+        $stmt->execute();
+        $res = json_decode($stmt->fetchColumn(), true);
+        $pdo->rollBack();
+        return !empty($res['ditemukan']) && $res['ditemukan'] === true && $res['total_varian'] > 0;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 });
 
 runTest("1.1.4 - Stored Procedure fn_cari_item_by_barcode mengenali barcode tempe (888025056)", function() use ($pdo) {
-    $stmt = $pdo->prepare("SELECT public.fn_cari_item_by_barcode('888025056') as result");
-    $stmt->execute();
-    $res = json_decode($stmt->fetchColumn(), true);
-    return !empty($res['ditemukan']) && $res['ditemukan'] === true && $res['total_varian'] > 0;
+    $pdo->beginTransaction();
+    try {
+        $gpStmt = $pdo->prepare("
+            INSERT INTO public.grup_produk (kode_grup, nama_grup, barcode_universal)
+            VALUES ('GRP-TEST-888025056', 'Grup Test Barcode Tempe', '888025056')
+            RETURNING id
+        ");
+        $gpStmt->execute();
+        $gpId = $gpStmt->fetchColumn();
+
+        $itemStmt = $pdo->prepare("
+            INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian)
+            VALUES (:gp_id, 'SKU-TEST-888025056', 'Item Test Barcode Tempe', 'barang_jadi', 'pcs', 10000)
+        ");
+        $itemStmt->execute(['gp_id' => $gpId]);
+
+        $stmt = $pdo->prepare("SELECT public.fn_cari_item_by_barcode('888025056') as result");
+        $stmt->execute();
+        $res = json_decode($stmt->fetchColumn(), true);
+        $pdo->rollBack();
+        return !empty($res['ditemukan']) && $res['ditemukan'] === true && $res['total_varian'] > 0;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        throw $e;
+    }
 });
 
 runTest("1.1.5 - Seed File 03_seed_master_produk.sql bersih dari notasi ilmiah", function() {
@@ -89,8 +135,9 @@ runTest("1.2.3 - Transaksi: Insert arus_kas dengan transfer_masuk & transfer_kel
     try {
         $accId = $pdo->query("SELECT id FROM public.akun_kas LIMIT 1")->fetchColumn();
         if (!$accId) {
-            $pdo->rollBack();
-            return false;
+            $accStmt = $pdo->prepare("INSERT INTO public.akun_kas (nama_akun, tipe, nomor_rekening, saldo_mengendap) VALUES ('Kas Test MD', 'kas_tunai', 'KAS-TEST', 0) RETURNING id");
+            $accStmt->execute();
+            $accId = $accStmt->fetchColumn();
         }
 
         // Test transfer_keluar
@@ -120,7 +167,9 @@ runTest("1.2.3 - Transaksi: Insert arus_kas dengan transfer_masuk & transfer_kel
         $pdo->rollBack();
         return true;
     } catch (Throwable $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         throw $e;
     }
 });
@@ -130,8 +179,9 @@ runTest("1.2.4 - Transaksi: Insert arus_kas dengan kategori dinamis (modal_awal,
     try {
         $accId = $pdo->query("SELECT id FROM public.akun_kas LIMIT 1")->fetchColumn();
         if (!$accId) {
-            $pdo->rollBack();
-            return false;
+            $accStmt = $pdo->prepare("INSERT INTO public.akun_kas (nama_akun, tipe, nomor_rekening, saldo_mengendap) VALUES ('Kas Test MD', 'kas_tunai', 'KAS-TEST', 0) RETURNING id");
+            $accStmt->execute();
+            $accId = $accStmt->fetchColumn();
         }
 
         // Test modal_awal
@@ -200,6 +250,11 @@ runTest("1.3.1 - Stored Procedure: Pilihan B menolak transaksi jika harga level 
 
         // Cari atau buat pelanggan
         $pelangganId = $pdo->query("SELECT id FROM public.pelanggan LIMIT 1")->fetchColumn();
+        if (!$pelangganId) {
+            $pelStmt = $pdo->prepare("INSERT INTO public.pelanggan (nama_pelanggan, telepon, kategori_pelanggan) VALUES ('Customer Test MD', '0812345678', 'b2b_silver') RETURNING id");
+            $pelStmt->execute();
+            $pelangganId = $pelStmt->fetchColumn();
+        }
 
         // Panggil fn_hitung_harga_jual_item
         $call = $pdo->prepare("SELECT public.fn_hitung_harga_jual_item(:item_id, :pel_id) as res");
@@ -221,7 +276,9 @@ runTest("1.3.1 - Stored Procedure: Pilihan B menolak transaksi jika harga level 
 
         return true;
     } catch (Throwable $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         throw $e;
     }
 });
@@ -242,10 +299,21 @@ runTest("1.4.2 - Transaksi: Insert rincian_pembelian dengan kuantitas desimal (1
     $pdo->beginTransaction();
     try {
         $pemasokId = $pdo->query("SELECT id FROM public.pemasok LIMIT 1")->fetchColumn();
+        if (!$pemasokId) {
+            $pemStmt = $pdo->prepare("INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, nama_kontak, nomor_whatsapp) VALUES ('SUP-TEST-DEC', 'Pemasok Test Decimal', 'Budi', '08123456789') RETURNING id");
+            $pemStmt->execute();
+            $pemasokId = $pemStmt->fetchColumn();
+        }
+
         $itemId = $pdo->query("SELECT id FROM public.item LIMIT 1")->fetchColumn();
-        if (!$pemasokId || !$itemId) {
-            $pdo->rollBack();
-            return false;
+        if (!$itemId) {
+            $gpStmt = $pdo->prepare("INSERT INTO public.grup_produk (kode_grup, nama_grup) VALUES ('GRP-TEST-DEC', 'Grup Test Decimal') RETURNING id");
+            $gpStmt->execute();
+            $gpId = $gpStmt->fetchColumn();
+
+            $itStmt = $pdo->prepare("INSERT INTO public.item (grup_id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian) VALUES (:gp_id, 'SKU-TEST-DEC', 'Item Test Decimal', 'bahan_mentah', 'kg', 25000) RETURNING id");
+            $itStmt->execute(['gp_id' => $gpId]);
+            $itemId = $itStmt->fetchColumn();
         }
 
         $pbStmt = $pdo->prepare("
@@ -267,7 +335,9 @@ runTest("1.4.2 - Transaksi: Insert rincian_pembelian dengan kuantitas desimal (1
         $pdo->rollBack();
         return abs($savedQty - 12.75) < 0.001;
     } catch (Throwable $e) {
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         throw $e;
     }
 });

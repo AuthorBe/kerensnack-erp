@@ -70,7 +70,53 @@ function posApp() {
                 if (window.innerWidth >= 1024 && !('ontouchstart' in window)) {
                     this.$refs.barcodeInput?.focus();
                 }
+                this.setupCatDragScroll();
             });
+        },
+
+        setupCatDragScroll() {
+            const track = this.$refs.catTrack;
+            if (!track) return;
+
+            let isDown = false;
+            let startX = 0;
+            let scrollLeft = 0;
+            let hasMoved = false;
+
+            track.addEventListener('mousedown', (e) => {
+                isDown = true;
+                hasMoved = false;
+                startX = e.pageX - track.offsetLeft;
+                scrollLeft = track.scrollLeft;
+                track.style.cursor = 'grabbing';
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                const x = e.pageX - track.offsetLeft;
+                const walk = x - startX;
+                if (Math.abs(walk) > 4) {
+                    hasMoved = true;
+                    e.preventDefault();
+                    track.scrollLeft = scrollLeft - walk;
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!isDown) return;
+                isDown = false;
+                track.style.cursor = '';
+                if (hasMoved) {
+                    setTimeout(() => { hasMoved = false; }, 50);
+                }
+            });
+
+            track.addEventListener('click', (e) => {
+                if (hasMoved) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                }
+            }, true);
         },
 
         get hasCustomerAssignedItems() {
@@ -556,8 +602,8 @@ document.addEventListener('alpine:init', () => {
         </div>
 
         <!-- GRID PRODUK (Mobile 2-Kolom, Desktop 3-Kolom) -->
-        <div class="flex-1 overflow-visible lg:overflow-y-auto custom-scrollbar p-0 sm:p-2 lg:p-4 pb-28 lg:pb-4" style="background:transparent;">
-            <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3.5">
+        <div class="flex-1 flex flex-col overflow-visible lg:overflow-y-auto custom-scrollbar p-0 sm:p-2 lg:p-4 pb-28 lg:pb-4" style="background:transparent;">
+            <div x-show="filteredItems.length > 0" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-3.5">
                 <template x-for="item in filteredItems" :key="item.id">
                     <div @click="addItemToCart(item)"
                          class="product-card group relative"
@@ -591,8 +637,8 @@ document.addEventListener('alpine:init', () => {
 
                             <!-- Case 2: Stok Tersedia & Qty Sudah di Keranjang (Interactive Full Stepper) -->
                             <div x-show="Number(item.stok_fisik_saat_ini || 0) > 0 && getItemQty(item.id) > 0"
-                                 class="pos-stepper-full"
-                                 @click.stop>
+                                  class="pos-stepper-full"
+                                  @click.stop>
                                 <button type="button" class="pos-stepper-btn" @click.stop="decreaseItemInCart(item)" aria-label="Kurang">−</button>
                                 <span class="pos-stepper-val" x-text="getItemQty(item.id) + ' ' + item.satuan_dasar"></span>
                                 <button type="button" class="pos-stepper-btn" @click.stop="addItemToCart(item)" aria-label="Tambah">+</button>
@@ -606,16 +652,16 @@ document.addEventListener('alpine:init', () => {
                         </div>
                     </div>
                 </template>
-
-                <!-- Empty State -->
-                <template x-if="filteredItems.length === 0">
-                    <div class="col-span-full flex flex-col items-center justify-center py-16 text-center" style="color:var(--color-ink-mute);">
-                        <i data-lucide="package-x" style="width:40px;height:40px;margin-bottom:12px;opacity:0.6;"></i>
-                        <div style="font-size:14px;font-weight:600;color:var(--color-ink);">Tidak ada produk ditemukan</div>
-                        <div style="font-size:12px;margin-top:4px;">Coba ubah filter kategori atau kata kunci pencarian</div>
-                    </div>
-                </template>
             </div>
+
+            <!-- Empty State (Rata Tengah) -->
+            <template x-if="filteredItems.length === 0">
+                <div class="flex-1 flex flex-col items-center justify-center py-16 text-center" style="color:var(--color-ink-mute);min-height:320px;">
+                    <i data-lucide="package-x" style="width:44px;height:44px;margin-bottom:12px;opacity:0.6;"></i>
+                    <div style="font-size:14px;font-weight:600;color:var(--color-ink);">Tidak ada produk ditemukan</div>
+                    <div style="font-size:12px;margin-top:4px;">Coba ubah filter kategori atau kata kunci pencarian</div>
+                </div>
+            </template>
         </div>
     </div>
 

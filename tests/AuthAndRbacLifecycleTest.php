@@ -401,6 +401,79 @@ runTest("9. Manajemen Sesi: Sliding Inactivity Timeout 1 jam (3.600 detik) & ref
 });
 
 // ------------------------------------------------------------------
+// 10. INDEPENDENT PERMISSIONS & DEAD PERMISSION AUDIT
+// ------------------------------------------------------------------
+runTest("10. Audit Izin Granular: pos.void_item terhapus, izin mandiri (production.bom_manage, master.territories_manage, system.cache_manage) terdaftar", function() use ($pdo) {
+    // 1. Verifikasi pos.void_item telah terhapus
+    $voidPerm = Database::fetchOne("SELECT id FROM public.izin WHERE kode_izin = 'pos.void_item'");
+    if ($voidPerm) {
+        return "Izin mati 'pos.void_item' seharusnya sudah terhapus dari tabel public.izin!";
+    }
+
+    // 2. Verifikasi pos.discount tetap bertahan
+    $discountPerm = Database::fetchOne("SELECT id FROM public.izin WHERE kode_izin = 'pos.discount'");
+    if (!$discountPerm) {
+        return "Izin 'pos.discount' harus tetap tersedia di database!";
+    }
+
+    // 3. Verifikasi pendaftaran 3 izin mandiri baru
+    $newPerms = ['production.bom_manage', 'master.territories_manage', 'system.cache_manage'];
+    foreach ($newPerms as $code) {
+        $row = Database::fetchOne("SELECT id, grup_izin FROM public.izin WHERE kode_izin = :code", ['code' => $code]);
+        if (!$row) {
+            return "Izin mandiri '{$code}' tidak ditemukan di tabel public.izin!";
+        }
+    }
+
+    // 4. Verifikasi mapping role default (Owner, Admin, Mandor)
+    $owner = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'owner'");
+    $admin = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'admin'");
+    $mandor = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'mandor'");
+
+    if ($owner) {
+        foreach ($newPerms as $code) {
+            $has = Database::fetchOne("
+                SELECT ip.diizinkan 
+                FROM public.izin_peran ip
+                JOIN public.izin i ON ip.izin_id = i.id
+                WHERE ip.peran_id = :pid AND i.kode_izin = :code
+            ", ['pid' => $owner['id'], 'code' => $code]);
+            if (empty($has['diizinkan'])) {
+                return "Role 'owner' harus memiliki izin '{$code}'!";
+            }
+        }
+    }
+
+    if ($admin) {
+        foreach ($newPerms as $code) {
+            $has = Database::fetchOne("
+                SELECT ip.diizinkan 
+                FROM public.izin_peran ip
+                JOIN public.izin i ON ip.izin_id = i.id
+                WHERE ip.peran_id = :pid AND i.kode_izin = :code
+            ", ['pid' => $admin['id'], 'code' => $code]);
+            if (empty($has['diizinkan'])) {
+                return "Role 'admin' harus memiliki izin '{$code}'!";
+            }
+        }
+    }
+
+    if ($mandor) {
+        $hasBom = Database::fetchOne("
+            SELECT ip.diizinkan 
+            FROM public.izin_peran ip
+            JOIN public.izin i ON ip.izin_id = i.id
+            WHERE ip.peran_id = :pid AND i.kode_izin = 'production.bom_manage'
+        ", ['pid' => $mandor['id']]);
+        if (empty($hasBom['diizinkan'])) {
+            return "Role 'mandor' harus memiliki izin 'production.bom_manage'!";
+        }
+    }
+
+    return true;
+});
+
+// ------------------------------------------------------------------
 // SUMMARY
 // ------------------------------------------------------------------
 echo "\n============================================================\n";

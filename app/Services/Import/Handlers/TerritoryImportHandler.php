@@ -20,7 +20,7 @@ class TerritoryImportHandler implements EntityImportHandlerInterface
 
     public function getRequiredPermission(): string
     {
-        return 'master.customers_manage';
+        return 'master.territories_manage';
     }
 
     public function getRequiredHeaderGroups(): array
