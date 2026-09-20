@@ -52,10 +52,11 @@ runTest("1. Database Timezone Synchronization (Asia/Jakarta via PDO)", function(
 
 runTest("2. PostgreSQL NOW() matches PHP Asia/Jakarta timestamp within 60 seconds", function() {
     $pdo = Database::getConnection();
-    $dbNow = $pdo->query("SELECT TO_CHAR(NOW(), 'YYYY-MM-DD HH24:MI')")->fetchColumn();
-    $phpNow = date('Y-m-d H:i');
-    if ($dbNow !== $phpNow) {
-        throw new Exception("PostgreSQL time '{$dbNow}' does not match PHP time '{$phpNow}'");
+    $dbNow = (int)$pdo->query("SELECT EXTRACT(EPOCH FROM NOW())")->fetchColumn();
+    $phpNow = time();
+    $diff = abs($dbNow - $phpNow);
+    if ($diff > 60) {
+        throw new Exception("PostgreSQL epoch '{$dbNow}' differs from PHP epoch '{$phpNow}' by {$diff} seconds (max allowed: 60s)");
     }
     return true;
 });

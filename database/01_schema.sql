@@ -133,7 +133,8 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- View Kanonikal Info Karyawan Terpadu (Menggabungkan Identitas Pengguna & Parameter Gaji)
-CREATE OR REPLACE VIEW public.v_karyawan_info AS
+CREATE OR REPLACE VIEW public.v_karyawan_info
+WITH (security_invoker = true) AS
 SELECT
     k.id,
     k.pengguna_id,
@@ -936,3 +937,6 @@ CREATE POLICY service_role_all_pesanan ON public.pesanan FOR ALL TO service_role
 CREATE POLICY service_role_all_stok ON public.riwayat_stok FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_kas ON public.arus_kas FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_logs ON public.log_aktivitas FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_role_all_merek ON public.merek FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_role_all_opname_gudang ON public.opname_gudang FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_role_all_opname_gudang_item ON public.opname_gudang_item FOR ALL TO service_role USING (true) WITH CHECK (true);

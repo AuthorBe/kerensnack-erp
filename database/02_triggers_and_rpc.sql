@@ -13,7 +13,11 @@ CREATE OR REPLACE FUNCTION public.fn_hitung_harga_jual_item(
     p_item_id UUID,
     p_pelanggan_id UUID
 )
-RETURNS JSONB AS $$
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_grup_produk_id UUID;
     v_nama_item VARCHAR;
@@ -78,7 +82,7 @@ BEGIN
         'harga_pcs_netto', GREATEST(0, v_harga_pcs_netto)
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- ==============================================================================
 -- 2. UNIVERSAL BARCODE DISAMBIGUATION (PENCARIAN VARIAN RASA PER KEMASAN)
@@ -89,6 +93,7 @@ CREATE OR REPLACE FUNCTION public.fn_cari_item_by_barcode(p_barcode character va
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_items JSONB;
@@ -131,6 +136,7 @@ CREATE OR REPLACE FUNCTION public.fn_proses_kunjungan_konsinyasi(p_pelanggan_id 
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_kunjungan_id UUID;
@@ -360,6 +366,7 @@ CREATE OR REPLACE FUNCTION public.fn_buat_tagihan_konsinyasi(p_kunjungan_ids uui
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_pesanan_id    UUID;
@@ -501,6 +508,7 @@ CREATE OR REPLACE FUNCTION public.fn_catat_pembayaran_konsinyasi(p_pesanan_id uu
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_pesanan RECORD;
@@ -605,6 +613,7 @@ CREATE OR REPLACE FUNCTION public.fn_rekonsiliasi_piutang_pelanggan(p_pelanggan_
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_updated_count INT := 0;
@@ -676,6 +685,7 @@ CREATE OR REPLACE FUNCTION public.fn_trg_proses_pengiriman_konsinyasi()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
         DECLARE
             v_pesanan RECORD;
@@ -752,6 +762,7 @@ CREATE OR REPLACE FUNCTION public.fn_trg_produksi_harian_after_insert()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_stok_lama NUMERIC(15, 2);
@@ -832,6 +843,7 @@ CREATE OR REPLACE FUNCTION public.fn_trg_produksi_harian_after_update()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_total_pcs_lama NUMERIC(15, 2);
@@ -917,6 +929,7 @@ CREATE OR REPLACE FUNCTION public.fn_trg_produksi_harian_after_delete()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_total_pcs NUMERIC(15, 2);
@@ -988,6 +1001,7 @@ CREATE OR REPLACE FUNCTION public.fn_trg_draf_pengeluaran_approval()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_akun_id UUID;
@@ -1032,6 +1046,7 @@ CREATE OR REPLACE FUNCTION public.fn_trg_potongan_kasbon_update_saldo()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_sisa_baru NUMERIC;
@@ -1061,6 +1076,7 @@ CREATE OR REPLACE FUNCTION public.fn_trg_transaksi_tabungan_update_saldo()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 BEGIN
     IF NEW.tipe = 'deposit' THEN
@@ -1088,6 +1104,7 @@ CREATE OR REPLACE FUNCTION public.fn_guard_developer_account()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_dev_role_id UUID;
@@ -1152,6 +1169,7 @@ CREATE OR REPLACE FUNCTION public.fn_catat_log_aktivitas(p_pengguna_id uuid DEFA
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_log_id UUID;
@@ -1173,7 +1191,11 @@ $function$;
 -- H. Trigger Integritas Pemisahan Sales vs Driver
 -- 1. Toko Binaan (pelanggan.sales_driver_id) HANYA boleh dipegang oleh posisi 'sales'
 CREATE OR REPLACE FUNCTION public.fn_guard_pelanggan_sales_driver()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_posisi VARCHAR(50);
     v_nama   VARCHAR(150);
@@ -1191,7 +1213,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS trg_guard_pelanggan_sales_driver ON public.pelanggan;
 CREATE TRIGGER trg_guard_pelanggan_sales_driver
@@ -1201,7 +1223,11 @@ EXECUTE FUNCTION public.fn_guard_pelanggan_sales_driver();
 
 -- Trigger Proteksi Mutlak Pelanggan Default POS (CUST-001 / Toko Umum / Walk-in Cash)
 CREATE OR REPLACE FUNCTION public.fn_guard_protect_default_customer()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
         IF OLD.kode_pelanggan = 'CUST-001' OR UPPER(TRIM(OLD.nama_toko)) LIKE '%WALK-IN CASH%' THEN
@@ -1224,7 +1250,7 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS trg_guard_protect_default_customer ON public.pelanggan;
 CREATE TRIGGER trg_guard_protect_default_customer
@@ -1236,6 +1262,8 @@ EXECUTE FUNCTION public.fn_guard_protect_default_customer();
 CREATE OR REPLACE FUNCTION public.fn_hitung_tier_komisi_sales(p_omzet NUMERIC)
 RETURNS JSONB
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
 STABLE
 AS $$
 DECLARE

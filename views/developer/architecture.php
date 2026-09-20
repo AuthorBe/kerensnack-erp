@@ -1150,7 +1150,7 @@ function devArchitectureApp() {
                     controller: 'app/Controllers/UserController.php, app/Controllers/PermissionController.php',
                     views: 'views/users/index.php, views/permissions/index.php',
                     tables: 'pengguna, peran, izin, izin_peran, izin_pengguna',
-                    rpc: 'fn_guard_developer_account, fn_trg_proteksi_developer',
+                    rpc: 'fn_guard_developer_account',
                     rules: [
                         'Peran inti: owner, admin, sales, driver, mandor, dan role terproteksi developer.',
                         'Matriks hak akses dinamis per fitur dengan dukungan user-level permission override.',
