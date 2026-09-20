@@ -26,14 +26,14 @@ jobs:
           script: |
             cd /home/kerensna/kerensnack-erp
 
-            # 1. Bersihkan perubahan lokal/file sisa sebelum pull
+            # 1. Reset perubahan lokal sebelum pull
             git reset --hard HEAD
 
-            # 2. Tarik update terbaru dari repositori GitHub
+            # 2. Tarik update kode terbaru
             git pull origin main
 
-            # 3. Buang berkas dokumentasi, instruksi AI, dan database dump dari server produksi
+            # 3. Hapus berkas non-produksi dari direktori publik server
             rm -f README.md AGENTS.md *.sql
 
-            # 4. Optimalkan dependensi PHP tanpa paket development
-            composer install --no-dev --optimize-autoloader --no-interaction
+            # 4. Jalankan composer install menggunakan binary php aktif
+            php ~/bin/composer install --no-dev --optimize-autoloader --no-interaction
