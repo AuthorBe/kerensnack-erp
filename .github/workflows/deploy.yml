@@ -6,34 +6,34 @@ on:
       - main
 
 jobs:
-  deploy:
-    name: Deploy to Production
+  build-and-deploy:
+    name: Build & Deploy to Production
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy to Server via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Setup PHP Environment
+        uses: shivammathur/setup-php@v2
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          passphrase: ${{ secrets.SSH_PASSPHRASE }}
-          port: ${{ secrets.SSH_PORT }}
-          script_stop: true
-          script: |
-            cd /home/kerensna/kerensnack-erp
+          php-version: '8.2'
+          tools: composer:v2
 
-            # 1. Reset perubahan lokal sebelum pull
-            git reset --hard HEAD
+      - name: Install Composer Dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
 
-            # 2. Tarik update kode terbaru
-            git pull origin main
+      - name: Remove Non-Production Files
+        run: |
+          rm -f README.md AGENTS.md *.sql
 
-            # 3. Hapus berkas non-produksi dari direktori publik server
-            rm -f README.md AGENTS.md *.sql
-
-            # 4. Jalankan composer install menggunakan binary php aktif
-            php ~/bin/composer install --no-dev --optimize-autoloader --no-interaction
+      - name: Deploy to cPanel via Rsync
+        uses: easingthemes/ssh-deploy@v5.0.0
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+          ARGS: "-rlgoDz --delete --exclude='.git*' --exclude='.github*'"
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          TARGET: "/home/kerensna/kerensnack-erp"
