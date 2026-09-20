@@ -1,0 +1,39 @@
+name: Auto Deploy ERP to cPanel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            cd /home/kerensna/kerensnack-erp
+
+            # 1. Bersihkan perubahan lokal/file sisa sebelum pull
+            git reset --hard HEAD
+
+            # 2. Tarik update terbaru dari repositori GitHub
+            git pull origin main
+
+            # 3. Buang berkas dokumentasi, instruksi AI, dan database dump dari server produksi
+            rm -f README.md AGENTS.md *.sql
+
+            # 4. Optimalkan dependensi PHP tanpa paket development
+            composer install --no-dev --optimize-autoloader --no-interaction
