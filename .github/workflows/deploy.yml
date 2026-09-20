@@ -48,17 +48,20 @@ jobs:
           script: |
             cd /home/kerensna/kerensnack-erp
 
-            # 1. Bersihkan perubahan lokal sebelum pull
+            # 1. Bersihkan perubahan lokal sebelum sinkronisasi
             git reset --hard HEAD
 
-            # 2. Sinkronkan kode aplikasi terbaru dari GitHub
+            # 2. Tarik commit terbaru dari GitHub
             git pull origin main
 
-            # 3. Ekstrak folder vendor yang sudah dibuild dari GitHub Actions
+            # 3. Ekstrak arsip vendor hasil build GitHub runner
             if [ -f vendor.tar.gz ]; then
               tar -xzf vendor.tar.gz
               rm -f vendor.tar.gz
             fi
 
-            # 4. Hapus dokumen instruksi internal dan file dump database
-            rm -f README.md AGENTS.md *.sql
+            # 4. Hapus semua file .sql dan .md secara rekursif dari seluruh folder
+            find . -type f \( -name "*.sql" -o -name "*.md" \) -delete
+
+            # 5. Hapus file contoh environment
+            rm -f .env.example
