@@ -49,17 +49,19 @@ class PieceRateImportHandler implements EntityImportHandlerInterface
     public function getTemplateExamples(): array
     {
         return [
-            ['Kelompok 600', 600, 'Tarif repacking singkong dan makaroni 250gr', 'Aktif'],
-            ['Kelompok 500', 500, 'Tarif repacking basreng dan kripik kaca 150gr', 'Aktif'],
-            ['Kelompok 750', 750, 'Tarif repacking kemasan pouch premium standing zipper', 'Aktif'],
+            ['Kelompok 300', 300, 'Tarif repacking kemasan kecil 50gr (Rp 300/bungkus)', 'Aktif'],
+            ['Kelompok 500', 500, 'Tarif repacking basreng dan kripik kaca 150gr (Rp 500/bungkus)', 'Aktif'],
+            ['Kelompok 600', 600, 'Tarif repacking singkong dan makaroni 250gr (Rp 600/bungkus)', 'Aktif'],
+            ['Kelompok 750', 750, 'Tarif repacking pouch standing zipper premium (Rp 750/bungkus)', 'Aktif'],
         ];
     }
 
     public function getTemplateNotes(): array
     {
         return [
-            'Nama Kelompok Borongan bersifat unik (contoh: "Kelompok 600").',
-            'Upah per Bungkus diisi nominal rupiah upah pekerja per 1 pcs kemasan jadi.',
+            'Nama Kelompok Borongan bersifat unik (contoh: "Kelompok 300", "Kelompok 600").',
+            'Upah per Bungkus diisi nominal rupiah upah pekerja per 1 pcs kemasan jadi (mendukung nominal ratusan seperti 300, 500, 600 maupun ribuan).',
+            'Keterangan / Deskripsi dapat diisi penjelasan spesifikasi kemasan atau beban kerja.',
             'Status Aktif diisi "Aktif" atau "Nonaktif".'
         ];
     }

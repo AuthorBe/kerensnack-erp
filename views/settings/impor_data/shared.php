@@ -291,13 +291,12 @@ $entityColumnsConfig = [
         ]
     ],
     'piece_rates' => [
-        'code_key'   => 'id',
-        'code_label' => 'ID Kelompok',
-        'name_key'   => 'nama_kelompok',
-        'name_label' => 'Nama Kelompok Upah',
+        'code_key'   => 'nama_kelompok',
+        'code_label' => 'Nama Kelompok',
+        'name_key'   => 'keterangan',
+        'name_label' => 'Keterangan / Deskripsi',
         'columns'    => [
             ['key' => 'upah_per_bungkus', 'label' => 'Tarif Upah / Pcs', 'type' => 'currency'],
-            ['key' => 'keterangan', 'label' => 'Keterangan'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
     ],

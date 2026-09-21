@@ -72,22 +72,65 @@ class ImportProcessor
         }
 
         $spreadsheet = IOFactory::load($tempFile);
-        $originalRows = $spreadsheet->getActiveSheet()->toArray();
+        $candidateSheets = $spreadsheet->getAllSheets();
 
-        if (count($originalRows) <= 1) {
+        // Multi-Layer Smart Sheet Resolver:
+        // 1. Cari sheet data utama yang memiliki baris header sah (abaikan sheet bertitel Kamus/Referensi)
+        $targetRows = null;
+        $extractedHeader = null;
+
+        foreach ($candidateSheets as $sheet) {
+            $sheetTitle = strtolower(trim($sheet->getTitle()));
+            if (str_contains($sheetTitle, 'kamus') || str_contains($sheetTitle, 'referensi') || str_contains($sheetTitle, 'panduan') || str_contains($sheetTitle, 'petunjuk')) {
+                continue;
+            }
+            $rows = $sheet->toArray();
+            if (count($rows) <= 1) {
+                continue;
+            }
+            $extracted = SmartReader::extractSmartHeader($rows, $handler->getRequiredHeaderGroups());
+            if ($extracted['index'] !== -1) {
+                $targetRows = $rows;
+                $extractedHeader = $extracted;
+                break;
+            }
+        }
+
+        // 2. Jika belum ditemukan (misal user mengubah nama sheet), periksa seluruh sheet
+        if ($targetRows === null) {
+            foreach ($candidateSheets as $sheet) {
+                $rows = $sheet->toArray();
+                if (count($rows) <= 1) {
+                    continue;
+                }
+                $extracted = SmartReader::extractSmartHeader($rows, $handler->getRequiredHeaderGroups());
+                if ($extracted['index'] !== -1) {
+                    $targetRows = $rows;
+                    $extractedHeader = $extracted;
+                    break;
+                }
+            }
+        }
+
+        // 3. Fallback terakhir: gunakan Sheet Index 0 atau active sheet
+        if ($targetRows === null) {
+            $fallbackSheet = $spreadsheet->getSheet(0) ?? $spreadsheet->getActiveSheet();
+            $targetRows = $fallbackSheet->toArray();
+            $extractedHeader = SmartReader::extractSmartHeader($targetRows, $handler->getRequiredHeaderGroups());
+        }
+
+        if (count($targetRows) <= 1) {
             throw new RuntimeException("File kosong atau hanya berisi judul tanpa baris data.");
         }
 
-        // Ekstraksi header secara cerdas
-        $extracted = SmartReader::extractSmartHeader($originalRows, $handler->getRequiredHeaderGroups());
-        $header = $extracted['header'];
-        $headerIndex = $extracted['index'];
+        $header = $extractedHeader['header'];
+        $headerIndex = $extractedHeader['index'];
 
         if ($headerIndex === -1) {
-            throw new RuntimeException("Format kolom tidak dikenali. Kolom wajib untuk master " . $handler->getEntityLabel() . " tidak ditemukan.");
+            throw new RuntimeException("Format kolom tidak dikenali. Kolom wajib untuk master " . $handler->getEntityLabel() . " tidak ditemukan pada berkas Excel yang diunggah.");
         }
 
-        $rowsRaw = array_values(array_slice($originalRows, $headerIndex + 1));
+        $rowsRaw = array_values(array_slice($targetRows, $headerIndex + 1));
         $rows = SmartReader::filterSmartDataRows($rowsRaw);
 
         if (empty($rows)) {

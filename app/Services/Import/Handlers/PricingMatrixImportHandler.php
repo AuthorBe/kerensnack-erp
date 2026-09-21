@@ -65,7 +65,7 @@ class PricingMatrixImportHandler implements EntityImportHandlerInterface
             'Matriks Harga mengatur harga jual per pcs (bungkus) untuk setiap Grup Produk di Level 1 s/d 30.',
             'Kode Grup Produk atau Nama Grup Produk WAJIB sesuai dengan data Grup Produk di ERP.',
             'Level Nomor wajib bernilai 1 sampai 30.',
-            'Harga Jual per Pcs berupa angka nominal rupiah murni.'
+            'Harga Jual per Pcs berupa angka nominal rupiah murni (mendukung nominal kecil seperti 300, 600, maupun ribuan seperti 12000, 15000).'
         ];
     }
 
