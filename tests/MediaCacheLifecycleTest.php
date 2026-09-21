@@ -38,10 +38,17 @@ $cacheDir = MediaCacheService::ensureCacheDirectory();
 assertTest("Direktori storage/cache/media terbuat", is_dir($cacheDir));
 assertTest("File storage/cache/.htaccess terbuat untuk proteksi eksekusi skrip", file_exists(dirname($cacheDir) . '/.htaccess'));
 
-// TEST 2: Penyimpanan Cache & Pemeriksaan Validitas (< 14 Hari)
-echo "\n--- TEST 2: CACHE STORAGE & VALIDITY CHECK (< 14 HARI) ---\n";
 $tempFile = sys_get_temp_dir() . '/test_media_' . bin2hex(random_bytes(8)) . '.txt';
 file_put_contents($tempFile, 'TEST_IMAGE_CONTENT_SAMPLE');
+
+register_shutdown_function(function() use ($tempFile) {
+    if (file_exists($tempFile)) {
+        @unlink($tempFile);
+    }
+    if (class_exists('App\Services\MediaCacheService')) {
+        MediaCacheService::clearAll();
+    }
+});
 
 $testKey = 'receipts/2026/09/test_receipt_sample.webp';
 $saved = MediaCacheService::saveToCache($testKey, $tempFile);

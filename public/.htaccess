@@ -9,12 +9,12 @@
 
 # 2. Blokir Akses ke Berkas Sensitif/Tersembunyi jika ada dalam public
 <IfModule mod_authz_core.c>
-    <FilesMatch "(^\..*|\.(md|sql|json|lock|env|log|yml|yaml|ini|sh|bat|cmd|bak|dist|example|config))$">
+    <FilesMatch "(^\..*|\.(md|sql|dump|backup|i5bu|json|lock|env|log|yml|yaml|ini|conf|config|sh|bat|cmd|bak|tmp|swp|old|orig|tar|gz|tgz|zip|rar|7z|dist|example))$">
         Require all denied
     </FilesMatch>
 </IfModule>
 <IfModule !mod_authz_core.c>
-    <FilesMatch "(^\..*|\.(md|sql|json|lock|env|log|yml|yaml|ini|sh|bat|cmd|bak|dist|example|config))$">
+    <FilesMatch "(^\..*|\.(md|sql|dump|backup|i5bu|json|lock|env|log|yml|yaml|ini|conf|config|sh|bat|cmd|bak|tmp|swp|old|orig|tar|gz|tgz|zip|rar|7z|dist|example))$">
         Order allow,deny
         Deny from all
     </FilesMatch>

@@ -48,11 +48,13 @@ jobs:
           script: |
             cd /home/kerensna/kerensnack-erp
 
-            # 1. Bersihkan perubahan lokal sebelum sinkronisasi
-            git reset --hard HEAD
+            # 1. Ambil commit terbaru dari GitHub tanpa risiko merge conflict
+            git fetch origin main
 
-            # 2. Tarik commit terbaru dari GitHub
-            git pull origin main
+            # 2. Sinkronkan working tree 100% identik dengan commit GitHub terbaru
+            # Catatan: Perintah ini HANYA menyentuh tracked files.
+            # File .env, storage/, dan cache/ (di-ignore Git) 100% AMAN & UTUH.
+            git reset --hard origin/main
 
             # 3. Ekstrak arsip vendor hasil build GitHub runner
             if [ -f vendor.tar.gz ]; then
@@ -60,8 +62,15 @@ jobs:
               rm -f vendor.tar.gz
             fi
 
-            # 4. Hapus semua file .sql dan .md secara rekursif dari seluruh folder
-            find . -type f \( -name "*.sql" -o -name "*.md" \) -delete
+            # 4. Hapus file skema .sql dan dokumentasi .md untuk keamanan server produksi
+            # Dilengkapi proteksi: TIDAK menyentuh folder storage maupun vendor
+            find . -type f \( -name "*.sql" -o -name "*.md" \) \
+              -not -path "./storage/*" \
+              -not -path "./vendor/*" \
+              -delete
 
             # 5. Hapus file contoh environment
             rm -f .env.example
+
+            # 6. Pastikan direktori runtime dan cache tetap ada dengan hak akses aman
+            mkdir -p storage/logs storage/cache/media cache/rate_limit

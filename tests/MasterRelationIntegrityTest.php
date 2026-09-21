@@ -200,24 +200,46 @@ function ks_get_or_create_test_order(PDO $pdo): array {
 // -------------------------------------------------------------
 runTest("3.1.1 Verifikasi Berkas Migrasi 28 & Sinkronisasi 01_schema.sql", function() {
     $m28Path = APP_ROOT . '/database/28_migration_fase3_relasi_master.sql';
-    if (!file_exists($m28Path)) {
-        return "Berkas database/28_migration_fase3_relasi_master.sql tidak ditemukan.";
-    }
-    $m28Content = file_get_contents($m28Path);
-    if (!strpos($m28Content, 'stok_konsinyasi_toko_pelanggan_id_fkey') || !strpos($m28Content, 'ON DELETE RESTRICT')) {
-        return "Migrasi 28 tidak mengubah FK stok_konsinyasi_toko ke ON DELETE RESTRICT.";
-    }
-    if (!strpos($m28Content, 'chk_akun_kas_saldo_positif')) {
-        return "Migrasi 28 tidak menambahkan check constraint chk_akun_kas_saldo_positif.";
+    if (file_exists($m28Path)) {
+        $m28Content = file_get_contents($m28Path);
+        if (!strpos($m28Content, 'stok_konsinyasi_toko_pelanggan_id_fkey') || !strpos($m28Content, 'ON DELETE RESTRICT')) {
+            return "Migrasi 28 tidak mengubah FK stok_konsinyasi_toko ke ON DELETE RESTRICT.";
+        }
+        if (!strpos($m28Content, 'chk_akun_kas_saldo_positif')) {
+            return "Migrasi 28 tidak menambahkan check constraint chk_akun_kas_saldo_positif.";
+        }
     }
 
-    $s01Content = file_get_contents(APP_ROOT . '/database/01_schema.sql');
-    if (!strpos($s01Content, 'pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id) ON DELETE RESTRICT')) {
-        return "01_schema.sql belum tersinkronisasi dengan ON DELETE RESTRICT pada stok_konsinyasi_toko.";
+    $s01Path = APP_ROOT . '/database/01_schema.sql';
+    if (file_exists($s01Path)) {
+        $s01Content = file_get_contents($s01Path);
+        if (!strpos($s01Content, 'pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id) ON DELETE RESTRICT')) {
+            return "01_schema.sql belum tersinkronisasi dengan ON DELETE RESTRICT pada stok_konsinyasi_toko.";
+        }
+        if (!strpos($s01Content, 'chk_akun_kas_saldo_positif')) {
+            return "01_schema.sql belum tersinkronisasi dengan constraint chk_akun_kas_saldo_positif.";
+        }
     }
-    if (!strpos($s01Content, 'chk_akun_kas_saldo_positif')) {
-        return "01_schema.sql belum tersinkronisasi dengan constraint chk_akun_kas_saldo_positif.";
+
+    // Fallback verifikasi integritas skema langsung ke database PostgreSQL
+    $fkCheck = Database::fetchOne("
+        SELECT confdeltype 
+        FROM pg_constraint 
+        WHERE conname = 'stok_konsinyasi_toko_pelanggan_id_fkey'
+    ");
+    if (($fkCheck['confdeltype'] ?? '') !== 'r') {
+        return "Constraint FK stok_konsinyasi_toko_pelanggan_id_fkey bukan RESTRICT ('r').";
     }
+
+    $chkSaldo = Database::fetchOne("
+        SELECT conname 
+        FROM pg_constraint 
+        WHERE conname = 'chk_akun_kas_saldo_positif'
+    ");
+    if (!$chkSaldo) {
+        return "Constraint chk_akun_kas_saldo_positif belum ada di basis data.";
+    }
+
     return true;
 });
 

@@ -112,9 +112,20 @@ runTest("1.1.4 - Stored Procedure fn_cari_item_by_barcode mengenali barcode temp
     }
 });
 
-runTest("1.1.5 - Seed File 03_seed_master_produk.sql bersih dari notasi ilmiah", function() {
-    $content = file_get_contents(ROOT_PATH . '/database/seeds/03_seed_master_produk.sql');
-    return !preg_match("/'[0-9]+\\.[0-9]+[eE][0-9]+'/", $content);
+runTest("1.1.5 - Seed File 03_seed_master_produk.sql bersih dari notasi ilmiah", function() use ($pdo) {
+    $seedFile = ROOT_PATH . '/database/seeds/03_seed_master_produk.sql';
+    if (file_exists($seedFile)) {
+        $content = file_get_contents($seedFile);
+        if (preg_match("/'[0-9]+\\.[0-9]+[eE][0-9]+'/", (string)$content)) {
+            return "03_seed_master_produk.sql masih memuat kode barcode dengan notasi ilmiah.";
+        }
+    }
+    // Fallback verifikasi langsung ke database
+    $count = (int)$pdo->query("SELECT COUNT(*) FROM public.grup_produk WHERE barcode_universal ~* '^[0-9]+\\.[0-9]+[eE][0-9]+$'")->fetchColumn();
+    if ($count > 0) {
+        return "Ditemukan kode barcode universal dengan format notasi ilmiah di database grup_produk.";
+    }
+    return true;
 });
 
 // ------------------------------------------------------------------

@@ -2,19 +2,19 @@
 # KEREN SNACK ERP - Root Security & Hardening Configuration
 # ==============================================================================
 
-# 1. Matikan Directory Indexing (Cegah pengunjung melihat isi direktori)
+# 1. Matikan Directory Indexing
 <IfModule mod_autoindex.c>
     Options -Indexes
 </IfModule>
 
 # 2. Blokir Akses Langsung ke Berkas Sensitif Berdasarkan Ekstensi & Nama
 <IfModule mod_authz_core.c>
-    <FilesMatch "(^\..*|\.(md|sql|json|lock|env|log|yml|yaml|ini|sh|bat|cmd|bak|dist|example|config))$">
+    <FilesMatch "(^\..*|\.(md|sql|dump|backup|i5bu|json|lock|env|log|yml|yaml|ini|conf|config|sh|bat|cmd|bak|tmp|swp|old|orig|tar|gz|tgz|zip|rar|7z|dist|example))$">
         Require all denied
     </FilesMatch>
 </IfModule>
 <IfModule !mod_authz_core.c>
-    <FilesMatch "(^\..*|\.(md|sql|json|lock|env|log|yml|yaml|ini|sh|bat|cmd|bak|dist|example|config))$">
+    <FilesMatch "(^\..*|\.(md|sql|dump|backup|i5bu|json|lock|env|log|yml|yaml|ini|conf|config|sh|bat|cmd|bak|tmp|swp|old|orig|tar|gz|tgz|zip|rar|7z|dist|example))$">
         Order allow,deny
         Deny from all
     </FilesMatch>
@@ -24,11 +24,11 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Blokir akses ke direktori sensitif
-    RewriteRule ^(\.env|\.git|app|config|database|docs|tests|views|vendor|storage|cache|scratch|developer)(/.*)?$ - [F,L,NC]
+    # Blokir akses ke direktori internal sensitif
+    RewriteRule ^(\.env|\.git|app|config|database|docs|tests|views|vendor|storage|cache|scratch)(/.*)?$ - [F,L,NC]
 
-    # Blokir berkas sensitif spesifik (README.md, AGENTS.md, *.sql, composer.*, dll)
-    RewriteRule ^(README\.md|AGENTS\.md|composer\.(json|lock)|.*\.sql|.*\.md|.*\.env.*)$ - [F,L,NC]
+    # Blokir berkas sensitif spesifik (README.md, AGENTS.md, *.sql, *.dump, *.tar.gz, composer.*, dll)
+    RewriteRule ^(README\.md|AGENTS\.md|composer\.(json|lock)|.*\.sql|.*\.md|.*\.dump|.*\.backup|.*\.i5bu|.*\.tar\.gz|.*\.env.*)$ - [F,L,NC]
 
     # Teruskan seluruh traffic publik ke folder /public
     RewriteRule ^$ public/ [L]

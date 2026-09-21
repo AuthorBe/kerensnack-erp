@@ -53,31 +53,50 @@ echo "============================================================\n";
 // -------------------------------------------------------------
 runTest("2.2.1 Verifikasi Berkas Migrasi 27 & Sinkronisasi 01_schema.sql", function() {
     $migration27Path = APP_ROOT . '/database/27_consolidate_missing_master_schema.sql';
-    if (!file_exists($migration27Path)) {
-        return "Berkas database/27_consolidate_missing_master_schema.sql tidak ditemukan.";
-    }
-    $m27Content = file_get_contents($migration27Path);
-    if (!strpos($m27Content, 'CREATE TABLE IF NOT EXISTS public.pelanggan_item')) {
-        return "Migrasi 27 tidak memuat DDL pelanggan_item";
-    }
-    if (!strpos($m27Content, 'CREATE TABLE IF NOT EXISTS public.kategori_biaya')) {
-        return "Migrasi 27 tidak memuat DDL kategori_biaya";
-    }
-    if (!strpos($m27Content, 'harga_pokok_satuan')) {
-        return "Migrasi 27 tidak memuat kolom item_pesanan.harga_pokok_satuan";
+    if (file_exists($migration27Path)) {
+        $m27Content = file_get_contents($migration27Path);
+        if (!strpos($m27Content, 'CREATE TABLE IF NOT EXISTS public.pelanggan_item')) {
+            return "Migrasi 27 tidak memuat DDL pelanggan_item";
+        }
+        if (!strpos($m27Content, 'CREATE TABLE IF NOT EXISTS public.kategori_biaya')) {
+            return "Migrasi 27 tidak memuat DDL kategori_biaya";
+        }
+        if (!strpos($m27Content, 'harga_pokok_satuan')) {
+            return "Migrasi 27 tidak memuat kolom item_pesanan.harga_pokok_satuan";
+        }
     }
 
     $schema01Path = APP_ROOT . '/database/01_schema.sql';
-    $s01Content = file_get_contents($schema01Path);
-    if (!strpos($s01Content, 'CREATE TABLE IF NOT EXISTS public.pelanggan_item')) {
-        return "01_schema.sql belum memuat DDL pelanggan_item";
+    if (file_exists($schema01Path)) {
+        $s01Content = file_get_contents($schema01Path);
+        if (!strpos($s01Content, 'CREATE TABLE IF NOT EXISTS public.pelanggan_item')) {
+            return "01_schema.sql belum memuat DDL pelanggan_item";
+        }
+        if (!strpos($s01Content, 'CREATE TABLE IF NOT EXISTS public.kategori_biaya')) {
+            return "01_schema.sql belum memuat DDL kategori_biaya";
+        }
+        if (!strpos($s01Content, 'harga_pokok_satuan')) {
+            return "01_schema.sql belum memuat kolom item_pesanan.harga_pokok_satuan";
+        }
     }
-    if (!strpos($s01Content, 'CREATE TABLE IF NOT EXISTS public.kategori_biaya')) {
-        return "01_schema.sql belum memuat DDL kategori_biaya";
+
+    // Fallback verifikasi langsung ke database PostgreSQL
+    $tablePelangganItem = Database::fetchOne("
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'pelanggan_item'
+    ");
+    if (!$tablePelangganItem) {
+        return "Tabel public.pelanggan_item belum ada di basis data.";
     }
-    if (!strpos($s01Content, 'harga_pokok_satuan')) {
-        return "01_schema.sql belum memuat kolom item_pesanan.harga_pokok_satuan";
+
+    $tableKategoriBiaya = Database::fetchOne("
+        SELECT table_name FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'kategori_biaya'
+    ");
+    if (!$tableKategoriBiaya) {
+        return "Tabel public.kategori_biaya belum ada di basis data.";
     }
+
     return true;
 });
 

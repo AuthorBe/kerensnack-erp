@@ -9,14 +9,16 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- 1. DEVELOPER HERO & TELEMETRY BANNER                                      -->
     <!-- ========================================================================= -->
-    <div class="card p-6" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);box-shadow:var(--shadow-1);">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-            <div class="flex items-start sm:items-center gap-4">
-                <div style="width:52px;height:52px;border-radius:14px;background:rgba(59,130,246,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(59,130,246,0.25);">
-                    <i data-lucide="terminal" style="width:28px;height:28px;"></i>
+    <div class="card p-5 sm:p-6" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);box-shadow:var(--shadow-1);">
+        <!-- Top Section: Header Info & User Profile Pill -->
+        <div class="flex flex-col lg:flex-row items-start justify-between gap-4">
+            <!-- Left: Terminal Icon + Hub Badges + Title -->
+            <div class="flex items-start gap-3.5 sm:gap-4 flex-1 min-w-0">
+                <div style="width:48px;height:48px;border-radius:14px;background:rgba(59,130,246,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(59,130,246,0.25);">
+                    <i data-lucide="terminal" style="width:26px;height:26px;"></i>
                 </div>
-                <div>
-                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1.5">
                         <span class="badge badge-primary" style="font-size:10px;font-weight:800;letter-spacing:0.04em;padding:2px 8px;">DEVELOPER PORTAL HUB</span>
                         <span style="font-size:11px;font-weight:700;color:var(--color-success);display:inline-flex;align-items:center;gap:4px;">
                             <span style="width:6px;height:6px;border-radius:9999px;background:var(--color-success);display:inline-block;"></span>
@@ -26,25 +28,46 @@ ob_start();
                         <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_tables'] ?? 45 ?> Tables</span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_suites'] ?? count(\App\Services\TestRunnerService::SUITES) ?> Test Suites</span>
                     </div>
-                    <h1 style="font-size:20px;font-weight:900;color:var(--color-ink);line-height:1.2;">
+                    <h1 style="font-size:19px;font-weight:900;color:var(--color-ink);line-height:1.25;">
                         Pusat Kendali Pengembang &amp; Pengujian Sistem
                     </h1>
-                    <p style="font-size:12.5px;color:var(--color-ink-mute);margin-top:3px;">
+                    <p style="font-size:12.5px;color:var(--color-ink-mute);margin-top:4px;line-height:1.5;">
                         Portal eksklusif untuk peran Developer: Visual Blueprint Arsitektur, Diagnostik Koneksi Database, dan Test Source Runner otomatis.
                     </p>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
-                <a href="<?= Router::url('/developer/preview-403') ?>" class="btn btn-secondary" style="font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);color:#f43f5e;">
-                    <i data-lucide="gift" style="width:16px;height:16px;"></i>
+            <!-- Right: Compact User Identity Profile Chip (Generous spacing, crisp typography) -->
+            <div class="inline-flex items-center gap-3 flex-shrink-0" style="padding:10px 14px;border-radius:12px;border:1px solid var(--color-hairline);background:var(--color-canvas-soft);align-self:flex-start;">
+                <div style="width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.1);color:var(--color-primary);display:flex;align-items:center;justify-content:center;border:1px solid rgba(59,130,246,0.2);flex-shrink:0;">
+                    <i data-lucide="user-check" style="width:18px;height:18px;"></i>
+                </div>
+                <div class="flex flex-col justify-center">
+                    <span style="font-size:9.5px;color:var(--color-ink-mute);font-weight:800;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:2px;display:block;">PENGGUNA AKTIF</span>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span style="font-size:13.5px;font-weight:900;color:var(--color-ink);letter-spacing:-0.01em;"><?= htmlspecialchars($telemetry['active_user'] ?? 'Developer') ?></span>
+                        <span class="badge" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(59,130,246,0.12);color:var(--color-primary);border:1px solid rgba(59,130,246,0.25);">Role: <?= htmlspecialchars($telemetry['active_role'] ?? 'developer') ?></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Action Bar: Spacious & Clean Separator -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 sm:gap-4" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--color-hairline);">
+            <div class="flex items-center gap-2 text-xs font-bold" style="color:var(--color-ink-mute);">
+                <i data-lucide="shield-check" style="width:16px;height:16px;color:var(--color-primary);flex-shrink:0;"></i>
+                <span>Pratinjau Halaman Proteksi &amp; Error:</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:gap-3">
+                <a href="<?= Router::url('/developer/preview-403') ?>" class="btn btn-secondary justify-center text-center" style="font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(244,63,94,0.3);background:rgba(244,63,94,0.08);color:#f43f5e;white-space:nowrap;transition:all 0.15s ease;">
+                    <i data-lucide="gift" style="width:14px;height:14px;flex-shrink:0;"></i>
                     <span>Preview 403 Kado</span>
                 </a>
-                <div class="text-right hidden sm:block">
-                    <div style="font-size:11px;color:var(--color-ink-mute);font-weight:600;">PENGGUNA AKTIF</div>
-                    <div style="font-size:13px;font-weight:800;color:var(--color-ink);"><?= htmlspecialchars($telemetry['active_user'] ?? 'Developer') ?></div>
-                    <span class="badge badge-mono" style="font-size:10px;color:var(--color-primary);">Role: <?= htmlspecialchars($telemetry['active_role'] ?? 'developer') ?></span>
-                </div>
+                <a href="<?= Router::url('/developer/preview-restricted') ?>" class="btn btn-secondary justify-center text-center" style="font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(56,189,248,0.3);background:rgba(56,189,248,0.08);color:#0284c7;white-space:nowrap;transition:all 0.15s ease;">
+                    <i data-lucide="shield-alert" style="width:14px;height:14px;flex-shrink:0;"></i>
+                    <span>Preview Restricted</span>
+                </a>
             </div>
         </div>
     </div>

@@ -118,6 +118,10 @@ Router::post('/login', [AuthController::class, 'login']);
 Router::get('/logout', [AuthController::class, 'logout']);
 Router::post('/logout', [AuthController::class, 'logout']);
 Router::post('/api/auth/heartbeat', [AuthController::class, 'heartbeat']);
+Router::get('/restricted', function() {
+    http_response_code(403);
+    require ROOT_PATH . '/views/errors/restricted.php';
+});
 
 // --- CLOUDFLARE R2 & LOCAL CACHE MEDIA PROXY ---
 Router::get('/media/view', [MediaController::class, 'serveFile']);
@@ -393,6 +397,8 @@ Router::post('/developer/tests/run-single', [DeveloperController::class, 'runSin
 Router::post('/developer/tests/clear-locks', [DeveloperController::class, 'clearTestLocks']);
 Router::get('/developer/preview-403', [DeveloperController::class, 'preview403']);
 Router::get('/preview-403', [DeveloperController::class, 'preview403']);
+Router::get('/developer/preview-restricted', [DeveloperController::class, 'previewRestricted']);
+Router::get('/preview-restricted', [DeveloperController::class, 'previewRestricted']);
 
 // Dispatch the incoming HTTP request
 Router::dispatch();

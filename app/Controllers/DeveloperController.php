@@ -331,6 +331,21 @@ class DeveloperController extends Controller
         }
         $this->denyAccess('preview_not_found');
     }
+
+    /**
+     * Preview Halaman Akses Dibatasi (.htaccess & Restricted Route) Khusus Developer
+     */
+    public function previewRestricted(): void
+    {
+        $viewFile = ROOT_PATH . '/views/errors/restricted.php';
+        if (file_exists($viewFile)) {
+            $title = 'Preview: Akses Dibatasi (Restricted Guard)';
+            require $viewFile;
+            exit;
+        }
+        $this->denyAccess('preview_not_found');
+    }
 }
+
 
 
