@@ -231,6 +231,10 @@ $totalMasterRows = array_sum($entityStats ?? []);
                 <i data-lucide="arrow-left" style="width: 15px; height: 15px;"></i>
                 <span>Kembali</span>
             </a>
+            <button type="button" onclick="openTerritoryLookupModal()" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
+                <i data-lucide="map-pin" style="width: 15px; height: 15px; color: var(--color-primary);"></i>
+                <span>Kamus Wilayah / Rute</span>
+            </button>
             <button type="button" onclick="openImportGuideModal()" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
                 <i data-lucide="help-circle" style="width: 15px; height: 15px;"></i>
                 <span>Panduan Teknis</span>
@@ -381,6 +385,17 @@ $totalMasterRows = array_sum($entityStats ?? []);
                     <p id="importDetailDesc" style="font-size: 12px; color: var(--color-ink-mute); margin: 0 0 14px 0; line-height: 1.45;">
                         <?= $selectedKey ? htmlspecialchars($activeMeta['desc'] ?? '') : 'Klik salah satu kartu kategori master data di atas untuk melihat detail format, mengunduh template Excel, dan mengunggah berkas.' ?>
                     </p>
+
+                    <!-- Banner Pintas Kamus Wilayah (Khusus Toko & Pemasok) -->
+                    <div id="territoryLookupHelpBox" style="display: <?= in_array($selectedKey, ['customers', 'suppliers', 'territories'], true) ? 'flex' : 'none' ?>; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); margin-bottom: 14px;">
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-ink); min-width: 0;">
+                            <i data-lucide="map-pin" style="width: 16px; height: 16px; color: var(--color-primary); flex-shrink: 0;"></i>
+                            <span style="line-height: 1.35;">Kolom <strong>Wilayah/Kota</strong> wajib terdaftar di Master Wilayah. Cari &amp; salin nama wilayah yang valid di sini.</span>
+                        </div>
+                        <button type="button" onclick="openTerritoryLookupModal()" class="btn btn-primary btn-xs" style="font-weight: 700; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;">
+                            <i data-lucide="search" style="width: 12px; height: 12px;"></i> Cari Wilayah
+                        </button>
+                    </div>
 
                     <!-- 2 Tombol Download -->
                     <div id="importDownloadButtonsWrap" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; padding-top: 12px; border-top: 1px solid var(--color-hairline); <?= $selectedKey ? '' : 'opacity: 0.55; pointer-events: none;' ?>">
@@ -809,12 +824,84 @@ $totalMasterRows = array_sum($entityStats ?? []);
 </div>
 
 <!-- ========================================================================= -->
-<!-- 5. JAVASCRIPT LOGIKA KONTROL INTERAKTIF                                   -->
+<!-- 5. MODAL KAMUS & PENCARIAN REFERENSI WILAYAH (MULTI-FIELD LOOKUP)         -->
+<!-- ========================================================================= -->
+<div id="importTerritoryLookupModal" class="modal-backdrop" style="display: none;" aria-modal="true" role="dialog" onclick="if(event.target === this) closeTerritoryLookupModal()">
+    <div class="modal-box modal-box-lg" style="max-width: 840px; width: 95%; display: flex; flex-direction: column; max-height: 88vh; padding: 0; overflow: hidden;" onclick="event.stopPropagation()">
+        
+        <!-- Header Modal -->
+        <div class="modal-header" style="padding: 16px 22px; margin-bottom: 0; border-bottom: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; background: var(--color-canvas);">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 38px; height: 38px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.12); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i data-lucide="map-pin" style="width: 20px; height: 20px;"></i>
+                </div>
+                <div>
+                    <h3 class="modal-title" style="font-size: 15px; font-weight: 800; color: var(--color-ink); margin: 0; line-height: 1.3;">Kamus Referensi Master Wilayah &amp; Rute</h3>
+                    <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 2px;">Cari nama wilayah, kode rute, kota, atau kecamatan yang valid di database untuk disalin ke Excel</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div style="padding: 14px 20px; border-bottom: 1px solid var(--color-hairline); background-color: var(--color-canvas-soft); display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="form-input-icon" style="flex: 1;">
+                    <i data-lucide="search" class="icon-left" style="color: var(--color-ink-mute); width: 15px; height: 15px;"></i>
+                    <input type="text" 
+                           id="territorySearchInput" 
+                           oninput="handleTerritorySearch(this.value)" 
+                           placeholder="Ketik nama wilayah, kode rute, provinsi, kota, atau kecamatan..." 
+                           class="form-input" 
+                           style="height: 38px; font-size: 13px; padding-left: 36px;">
+                </div>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="clearTerritorySearch()" style="height: 38px; font-weight: 600;">
+                    Reset
+                </button>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--color-ink-mute); flex-wrap: wrap; gap: 6px;">
+                <span id="territorySearchCount" style="font-weight: 700; color: var(--color-ink);">Menampilkan <?= count($activeTerritories ?? []) ?> wilayah terdaftar</span>
+                <span style="font-style: italic;">Klik tombol "Salin" untuk menyalin teks yang sah langsung ke clipboard</span>
+            </div>
+        </div>
+
+        <!-- Body Modal (Scrollable List) -->
+        <div class="modal-body custom-scrollbar" style="padding: 16px 20px; overflow-y: auto; flex: 1; min-height: 280px; max-height: calc(88vh - 210px);">
+            <div id="territoryResultsList" style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Rendered dynamically by JavaScript -->
+            </div>
+            
+            <div id="territoryNoResults" style="display: none; text-align: center; padding: 40px 20px; color: var(--color-ink-mute);">
+                <i data-lucide="map-pin-off" style="width: 36px; height: 36px; margin: 0 auto 10px auto; opacity: 0.5;"></i>
+                <div style="font-size: 14px; font-weight: 700; color: var(--color-ink); margin-bottom: 4px;">Wilayah Tidak Ditemukan</div>
+                <div style="font-size: 12px; max-width: 420px; margin: 0 auto 16px auto; line-height: 1.4;">
+                    Wilayah yang Anda cari belum terdaftar di database. Silakan daftarkan wilayah baru di menu Master Wilayah terlebih dahulu.
+                </div>
+                <a href="<?= Router::url('/customers?tab=territories') ?>" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i>
+                    <span>Daftarkan di Master Wilayah</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer Modal -->
+        <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--color-hairline); background-color: var(--color-canvas); display: flex; align-items: center; justify-content: space-between;">
+            <a href="<?= Router::url('/customers?tab=territories') ?>" class="text-xs text-blue-600 dark:text-blue-400 font-semibold inline-flex items-center gap-1.5 hover:underline">
+                <i data-lucide="map-pin" style="width: 13px; height: 13px;"></i> Kelola Master Wilayah Lengkap
+            </a>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeTerritoryLookupModal()">Tutup</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- 6. JAVASCRIPT LOGIKA KONTROL INTERAKTIF                                   -->
 <!-- ========================================================================= -->
 <script>
 // State Management
 let currentSelectedEntity = '<?= htmlspecialchars($selectedKey ?? '') ?>';
 let currentSyncMode       = '<?= htmlspecialchars($syncMode ?? 'update_insert') ?>';
+const ALL_TERRITORIES     = <?= json_encode($activeTerritories ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
 
 function selectImportEntity(key) {
     currentSelectedEntity = key;
@@ -825,6 +912,11 @@ function selectImportEntity(key) {
     if (dlWrap) {
         dlWrap.style.opacity = '1';
         dlWrap.style.pointerEvents = 'auto';
+    }
+
+    const terrHelp = document.getElementById('territoryLookupHelpBox');
+    if (terrHelp) {
+        terrHelp.style.display = (key === 'customers' || key === 'suppliers' || key === 'territories') ? 'flex' : 'none';
     }
 
     const countBadge = document.getElementById('importDetailCountBadge');
@@ -1121,8 +1213,148 @@ function switchImportGuideTab(tabKey) {
     });
 }
 
+// Territory Lookup Modal Functions
+function openTerritoryLookupModal() {
+    const modal = document.getElementById('importTerritoryLookupModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    renderTerritoriesList(ALL_TERRITORIES);
+    const searchInput = document.getElementById('territorySearchInput');
+    if (searchInput) {
+        searchInput.value = '';
+        setTimeout(() => searchInput.focus(), 80);
+    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeTerritoryLookupModal() {
+    const modal = document.getElementById('importTerritoryLookupModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+
+function renderTerritoriesList(list) {
+    const listEl = document.getElementById('territoryResultsList');
+    const emptyEl = document.getElementById('territoryNoResults');
+    const countEl = document.getElementById('territorySearchCount');
+    if (!listEl) return;
+
+    if (countEl) {
+        countEl.textContent = 'Menampilkan ' + list.length + ' dari ' + ALL_TERRITORIES.length + ' wilayah terdaftar';
+    }
+
+    if (list.length === 0) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'block';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+    }
+
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    let html = '';
+    list.forEach(t => {
+        const subList = t.sub_wilayah ? t.sub_wilayah.split(',').map(s => s.trim()).filter(Boolean) : [];
+        const subHtml = subList.length > 0 
+            ? subList.map(s => '<span class="badge badge-secondary" style="font-size: 10px; padding: 2px 6px;">' + escapeHtml(s) + '</span>').join(' ')
+            : '<span class="text-slate-400 italic text-[11px]">—</span>';
+
+        html += `
+        <div style="display: flex; flex-direction: column; sm:flex-row; gap: 10px; align-items: stretch; sm:items-center; justify-content: space-between; padding: 11px 14px; border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); background: var(--color-canvas); transition: all 0.15s ease-in-out;">
+            <div style="min-width: 0; flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px;">
+                    <span class="badge badge-primary font-mono" style="font-size: 11px; font-weight: 800; letter-spacing: 0.3px;">${escapeHtml(t.kode_rute)}</span>
+                    <span style="font-size: 13.5px; font-weight: 800; color: var(--color-ink);">${escapeHtml(t.nama_wilayah)}</span>
+                    <span style="font-size: 11.5px; color: var(--color-ink-mute); font-weight: 600;">&bull; ${escapeHtml(t.kota_kabupaten)}, ${escapeHtml(t.provinsi)}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                    <span style="font-size: 11px; color: var(--color-ink-mute); font-weight: 700;">Cakupan Area:</span>
+                    ${subHtml}
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary btn-xs" onclick="copyTerritoryText('${escapeJs(t.nama_wilayah)}', this)" style="font-weight: 700; white-space: nowrap; height: 28px; padding: 0 10px;">
+                    <i data-lucide="copy" style="width: 12px; height: 12px;"></i> Salin Nama
+                </button>
+                <button type="button" class="btn btn-ghost btn-xs" onclick="copyTerritoryText('${escapeJs(t.kode_rute)}', this)" title="Salin Kode Rute" style="font-weight: 600; white-space: nowrap; height: 28px; padding: 0 8px; color: var(--color-ink-mute);">
+                    Salin Kode
+                </button>
+            </div>
+        </div>`;
+    });
+
+    listEl.innerHTML = html;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function handleTerritorySearch(query) {
+    const q = (query || '').toLowerCase().trim();
+    if (!q) {
+        renderTerritoriesList(ALL_TERRITORIES);
+        return;
+    }
+
+    const filtered = ALL_TERRITORIES.filter(t => {
+        const fullStr = [
+            t.kode_rute || '',
+            t.nama_wilayah || '',
+            t.provinsi || '',
+            t.kota_kabupaten || '',
+            t.sub_wilayah || ''
+        ].join(' ').toLowerCase();
+        return fullStr.includes(q);
+    });
+
+    renderTerritoriesList(filtered);
+}
+
+function clearTerritorySearch() {
+    const input = document.getElementById('territorySearchInput');
+    if (input) input.value = '';
+    renderTerritoriesList(ALL_TERRITORIES);
+}
+
+function copyTerritoryText(text, btn) {
+    if (!navigator.clipboard) {
+        const temp = document.createElement('input');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+    } else {
+        navigator.clipboard.writeText(text);
+    }
+
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i data-lucide="check" style="width: 12px; height: 12px; color: var(--color-success);"></i> Tersalin!';
+    btn.classList.add('btn-success');
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    setTimeout(() => {
+        btn.innerHTML = origHtml;
+        btn.classList.remove('btn-success');
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }, 1500);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeJs(str) {
+    if (!str) return '';
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
 window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { closeImportGuideModal(); }
+    if (e.key === 'Escape') { 
+        closeImportGuideModal();
+        closeTerritoryLookupModal();
+    }
 });
 
 document.addEventListener('DOMContentLoaded', () => {

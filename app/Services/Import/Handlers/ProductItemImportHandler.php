@@ -228,7 +228,8 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
                 'status_jual'                => $statusJual,
                 'status_aktif'               => $statusAktif,
                 'display_grup'               => $grupRaw ?: ($dbRow['nama_grup'] ?? '—'),
-                'display_kelompok_borongan'  => $boronganRaw ?: ($dbRow['nama_kelompok'] ?? '—')
+                'display_kelompok_borongan'  => $boronganRaw ?: ($dbRow['nama_kelompok'] ?? '—'),
+                'display_pemasok'            => $pemasokRaw ?: ($dbRow['nama_pemasok'] ?? '—')
             ];
 
             if ($dbRow) {

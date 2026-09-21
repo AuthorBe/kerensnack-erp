@@ -171,6 +171,7 @@ class ProductGroupImportHandler implements EntityImportHandlerInterface
                 'barcode_universal'   => !empty($barcode) ? $barcode : ($dbRow['barcode_universal'] ?? null),
                 'satuan_dasar'        => $satuanDasar ?: 'pcs',
                 'status_aktif'        => $statusAktif,
+                'display_merek'       => $merekRaw ?: ($dbRow['nama_merek'] ?? 'KEREN SNACK'),
             ];
 
             if ($dbRow) {

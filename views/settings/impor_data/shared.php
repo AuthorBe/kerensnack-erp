@@ -47,17 +47,30 @@ if (!function_exists('ks_format_diff_label')) {
             'nama_toko'               => 'Nama Toko / Mitra',
             'nama_pemilik'            => 'Nama Pemilik',
             'alamat_lengkap'          => 'Alamat Lengkap',
+            'nomor_whatsapp'          => 'No WhatsApp',
+            'nama_kontak'             => 'Kontak PIC',
             'plafon_piutang'          => 'Plafon Piutang',
             'is_konsinyasi'           => 'Tipe Toko',
             'tipe_pembayaran_default' => 'Metode Bayar Default',
             'harga_jual_per_pcs'      => 'Harga Jual / Pcs',
+            'harga_jual_pcs'          => 'Harga Jual / Pcs',
             'level_harga'             => 'Level Harga',
             'nama_grup'               => 'Nama Grup Produk',
             'kode_grup'               => 'Kode Grup',
             'kode_rute'               => 'Kode Rute Distribusi',
             'nama_wilayah'            => 'Nama Wilayah / Rute',
+            'provinsi'                => 'Provinsi',
+            'kota_kabupaten'          => 'Kota / Kabupaten',
+            'sub_wilayah'             => 'Cakupan Area',
             'nama_pemasok'            => 'Nama Pemasok',
             'kode_pemasok'            => 'Kode Pemasok',
+            'termin_bayar'            => 'Termin Bayar',
+            'nama_bank'               => 'Nama Bank',
+            'nomor_rekening'          => 'No. Rekening',
+            'atas_nama_rekening'      => 'Atas Nama Rekening',
+            'catatan'                 => 'Catatan',
+            'diskon_persen_default'   => 'Diskon Default (%)',
+            'diskon_nominal_default'  => 'Diskon Nominal Default',
             'nik'                     => 'NIK Karyawan',
             'nama_lengkap'            => 'Nama Lengkap Karyawan',
             'grup_id'                 => 'Relasi Grup Produk',
@@ -127,9 +140,25 @@ if (!function_exists('rm_format_cell_value')) {
 if (!function_exists('ks_get_row_val')) {
     function ks_get_row_val(array $arr, string $key) {
         if (array_key_exists($key, $arr)) return $arr[$key];
+        // Dynamic aliases and relational field fallbacks
         if ($key === 'display_grup' && isset($arr['nama_grup'])) return $arr['nama_grup'];
         if ($key === 'display_wilayah' && isset($arr['nama_wilayah'])) return $arr['nama_wilayah'];
         if ($key === 'display_pemasok' && isset($arr['nama_pemasok'])) return $arr['nama_pemasok'];
+        if ($key === 'display_kelompok_borongan' && isset($arr['nama_kelompok'])) return $arr['nama_kelompok'];
+        if ($key === 'display_merek' && (isset($arr['merek']) || isset($arr['nama_merek']))) return $arr['merek'] ?? $arr['nama_merek'];
+        if ($key === 'alamat' && isset($arr['alamat_lengkap'])) return $arr['alamat_lengkap'];
+        if ($key === 'alamat_lengkap' && isset($arr['alamat'])) return $arr['alamat'];
+        if ($key === 'telepon' && isset($arr['nomor_whatsapp'])) return $arr['nomor_whatsapp'];
+        if ($key === 'nomor_whatsapp' && isset($arr['nomor_telepon'])) return $arr['nomor_telepon'];
+        if ($key === 'nomor_whatsapp' && isset($arr['telepon'])) return $arr['telepon'];
+        if ($key === 'harga_jual_per_pcs' && isset($arr['harga_jual_pcs'])) return $arr['harga_jual_pcs'];
+        if ($key === 'harga_jual_pcs' && isset($arr['harga_jual_per_pcs'])) return $arr['harga_jual_per_pcs'];
+        if ($key === 'bank_nama' && isset($arr['nama_bank'])) return $arr['nama_bank'];
+        if ($key === 'bank_nomor_rekening' && isset($arr['nomor_rekening'])) return $arr['nomor_rekening'];
+        if ($key === 'bank_atas_nama' && isset($arr['atas_nama_rekening'])) return $arr['atas_nama_rekening'];
+        if ($key === 'nama_bank' && isset($arr['bank_nama'])) return $arr['bank_nama'];
+        if ($key === 'nomor_rekening' && isset($arr['bank_nomor_rekening'])) return $arr['bank_nomor_rekening'];
+        if ($key === 'atas_nama_rekening' && isset($arr['bank_atas_nama'])) return $arr['bank_atas_nama'];
         return null;
     }
 }
@@ -160,6 +189,7 @@ $entityColumnsConfig = [
             ['key' => 'display_grup', 'label' => 'Grup Produk'],
             ['key' => 'satuan_dasar', 'label' => 'Satuan'],
             ['key' => 'display_kelompok_borongan', 'label' => 'Kelompok Upah'],
+            ['key' => 'display_pemasok', 'label' => 'Pemasok Utama'],
             ['key' => 'harga_pokok_pembelian', 'label' => 'HPP Pokok', 'type' => 'currency'],
             ['key' => 'stok_minimum_peringatan', 'label' => 'Stok Min'],
             ['key' => 'status_jual', 'label' => 'Status Jual', 'type' => 'boolean'],
@@ -172,6 +202,7 @@ $entityColumnsConfig = [
         'name_key'   => 'nama_item',
         'name_label' => 'Nama Bahan / Kemasan',
         'columns'    => [
+            ['key' => 'tipe_item', 'label' => 'Tipe Bahan'],
             ['key' => 'satuan_dasar', 'label' => 'Satuan'],
             ['key' => 'harga_pokok_pembelian', 'label' => 'HPP Beli', 'type' => 'currency'],
             ['key' => 'display_pemasok', 'label' => 'Pemasok Utama'],
@@ -186,9 +217,13 @@ $entityColumnsConfig = [
         'name_label' => 'Nama Pemasok (Vendor)',
         'columns'    => [
             ['key' => 'nama_kontak', 'label' => 'Kontak PIC'],
-            ['key' => 'telepon', 'label' => 'Telepon'],
-            ['key' => 'alamat', 'label' => 'Alamat'],
+            ['key' => 'display_wilayah', 'label' => 'Wilayah / Kota'],
+            ['key' => 'alamat_lengkap', 'label' => 'Alamat Lengkap'],
+            ['key' => 'nomor_whatsapp', 'label' => 'No. WhatsApp'],
+            ['key' => 'termin_bayar', 'label' => 'Termin Bayar'],
+            ['key' => 'nama_bank', 'label' => 'Bank'],
             ['key' => 'nomor_rekening', 'label' => 'No. Rekening'],
+            ['key' => 'atas_nama_rekening', 'label' => 'Atas Nama Rekening'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
     ],
@@ -202,7 +237,10 @@ $entityColumnsConfig = [
             ['key' => 'tipe_penggajian', 'label' => 'Sistem Gaji'],
             ['key' => 'gaji_pokok_bulanan', 'label' => 'Gaji Pokok', 'type' => 'currency'],
             ['key' => 'uang_kehadiran_harian', 'label' => 'Uang Hadir', 'type' => 'currency'],
+            ['key' => 'tunjangan_bulanan', 'label' => 'Tunjangan', 'type' => 'currency'],
             ['key' => 'nomor_whatsapp', 'label' => 'WhatsApp'],
+            ['key' => 'bank_nama', 'label' => 'Bank'],
+            ['key' => 'bank_nomor_rekening', 'label' => 'No. Rekening'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
     ],
@@ -212,8 +250,9 @@ $entityColumnsConfig = [
         'name_key'   => 'nama_grup',
         'name_label' => 'Nama Grup Produk',
         'columns'    => [
+            ['key' => 'display_merek', 'label' => 'Merek'],
             ['key' => 'barcode_universal', 'label' => 'Barcode Universal'],
-            ['key' => 'deskripsi', 'label' => 'Deskripsi'],
+            ['key' => 'satuan_dasar', 'label' => 'Satuan Dasar'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
     ],
@@ -224,7 +263,8 @@ $entityColumnsConfig = [
         'name_label' => 'Nama Grup Pelanggan',
         'columns'    => [
             ['key' => 'default_level_harga', 'label' => 'Default Level'],
-            ['key' => 'keterangan', 'label' => 'Keterangan'],
+            ['key' => 'diskon_persen_default', 'label' => 'Diskon Default (%)'],
+            ['key' => 'diskon_nominal_default', 'label' => 'Diskon Nominal', 'type' => 'currency'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
     ],
@@ -234,7 +274,9 @@ $entityColumnsConfig = [
         'name_key'   => 'nama_wilayah',
         'name_label' => 'Nama Wilayah / Rute',
         'columns'    => [
-            ['key' => 'keterangan', 'label' => 'Keterangan'],
+            ['key' => 'provinsi', 'label' => 'Provinsi'],
+            ['key' => 'kota_kabupaten', 'label' => 'Kota / Kab'],
+            ['key' => 'sub_wilayah', 'label' => 'Cakupan Area'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
     ],
@@ -245,7 +287,7 @@ $entityColumnsConfig = [
         'name_label' => 'Nama Level Harga',
         'columns'    => [
             ['key' => 'display_grup', 'label' => 'Grup Produk'],
-            ['key' => 'harga_jual_per_pcs', 'label' => 'Harga Jual / Pcs', 'type' => 'currency'],
+            ['key' => 'harga_jual_pcs', 'label' => 'Harga Jual / Pcs', 'type' => 'currency'],
         ]
     ],
     'piece_rates' => [

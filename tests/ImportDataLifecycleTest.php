@@ -482,12 +482,13 @@ echo "\n--- 5. DIFFING ENGINE STATE CLASSIFICATION ---\n";
 runTest("5.1 - Diffing Engine: Baris dengan kode baru menghasilkan status INSERT", function() use ($pdo) {
     $handler = new CustomerImportHandler();
     $header = $handler->getTemplateHeaders();
+    $wilayah = $pdo->query("SELECT nama_wilayah FROM public.wilayah WHERE status_aktif = TRUE LIMIT 1")->fetchColumn() ?: 'Kota Tangerang';
 
     $row = [
         'CUST-NONEXISTENT-' . time(),
         'Toko Baru Lahir',
         'Owner Baru',
-        '', '', 'Reguler', 'Jl. Baru No. 1', '0812345', 'Tempo 7 Hari', 0, '', '', '', '', 'Aktif'
+        '', $wilayah, 'Reguler', 'Jl. Baru No. 1', '0812345', 'Tempo 7 Hari', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
@@ -496,7 +497,7 @@ runTest("5.1 - Diffing Engine: Baris dengan kode baru menghasilkan status INSERT
 
 runTest("5.2 - Diffing Engine: Baris dengan kode sama tetapi field diubah menghasilkan status UPDATE", function() use ($pdo) {
     $handler = new CustomerImportHandler();
-    $existing = $pdo->query("SELECT id, kode_pelanggan, nama_toko, alamat_lengkap FROM public.pelanggan LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    $existing = $pdo->query("SELECT p.id, p.kode_pelanggan, p.nama_toko, p.alamat_lengkap, COALESCE(w.nama_wilayah, '') as nama_wilayah FROM public.pelanggan p LEFT JOIN public.wilayah w ON w.id = p.wilayah_id WHERE p.wilayah_id IS NOT NULL LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 
     if (!$existing) {
         return true;
@@ -508,7 +509,7 @@ runTest("5.2 - Diffing Engine: Baris dengan kode sama tetapi field diubah mengha
     $row = [
         $existing['kode_pelanggan'],
         $existing['nama_toko'],
-        '', '', '', 'Reguler', $updatedAlamat, '', 'Cash', 0, '', '', '', '', 'Aktif'
+        '', '', $existing['nama_wilayah'], 'Reguler', $updatedAlamat, '', 'Cash', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
@@ -531,7 +532,17 @@ runTest("5.3 - Diffing Engine: Baris dengan seluruh field identik tidak menghasi
         return true;
     }
 
-    $row = array_values($currentRows[0]);
+    $row = null;
+    foreach ($currentRows as $cr) {
+        if (!empty($cr[4])) { // index 4 is nama_wilayah
+            $row = array_values($cr);
+            break;
+        }
+    }
+    if (!$row) {
+        return true;
+    }
+
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
     // Jika data 100% sinkron dengan database, preview harus kosong (0 diff)
     return count($preview) === 0;
@@ -544,13 +555,34 @@ runTest("5.4 - Diffing Engine: Baris tanpa field wajib (nama kosong) menghasilka
     $row = [
         'CUST-NO-NAME',
         '', // NAMA TOKO KOSONG (Wajib)
-        'Owner', '', '', 'Reguler', 'Jl. Ada', '', 'Cash', 0, '', '', '', '', 'Aktif'
+        'Owner', '', 'Kota Tangerang', 'Reguler', 'Jl. Ada', '', 'Cash', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
     return !empty($preview) &&
            $preview[0]['action'] === 'ERROR' &&
            !empty($preview[0]['error_msg']);
+});
+
+runTest("5.5 - SupplierImportHandler: Baris dengan wilayah kosong / tidak terdaftar menghasilkan status ERROR", function() use ($pdo) {
+    $handler = new SupplierImportHandler();
+    $header = $handler->getTemplateHeaders();
+
+    // 1. Wilayah kosong
+    $rowEmpty = ['', 'Vendor Uji Wilayah Kosong', 'PIC', '', 'Jl. Raya', '08123', '', 'cash', 'BCA', '123', 'PT', '', 'Aktif'];
+    $prevEmpty = $handler->previewRows([$rowEmpty], $header, $pdo, 'append');
+    if (empty($prevEmpty) || $prevEmpty[0]['action'] !== 'ERROR') {
+        return "Empty territory was not rejected with ERROR";
+    }
+
+    // 2. Wilayah tidak terdaftar
+    $rowFake = ['', 'Vendor Uji Wilayah Fiktif', 'PIC', 'WILAYAH_TIDAK_TERDAFTAR_99999', 'Jl. Raya', '08123', '', 'cash', 'BCA', '123', 'PT', '', 'Aktif'];
+    $prevFake = $handler->previewRows([$rowFake], $header, $pdo, 'append');
+    if (empty($prevFake) || $prevFake[0]['action'] !== 'ERROR') {
+        return "Unregistered territory was not rejected with ERROR";
+    }
+
+    return true;
 });
 
 // ==================================================================

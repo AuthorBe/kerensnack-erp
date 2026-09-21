@@ -243,6 +243,11 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                     || abs($tunjangan - (float)($dbRow['tunjangan_bulanan'] ?? 0)) > 0.01
                     || trim($whatsapp) !== trim((string)($dbRow['nomor_whatsapp'] ?: ($dbRow['nomor_telepon'] ?? '')))
                     || trim($nopol) !== trim((string)($dbRow['nomor_polisi_kendaraan'] ?? ''))
+                    || trim($alamat) !== trim((string)($dbRow['alamat'] ?? ''))
+                    || (!empty($tglGabung) && trim($tglGabung) !== trim((string)($dbRow['tanggal_bergabung'] ?? '')))
+                    || trim($bankNama) !== trim((string)($dbRow['bank_nama'] ?? ''))
+                    || trim($bankRek) !== trim((string)($dbRow['bank_nomor_rekening'] ?? ''))
+                    || trim($bankAtasNama) !== trim((string)($dbRow['bank_atas_nama'] ?? ''))
                     || $statusAktif !== (bool)$dbRow['status_aktif'];
 
                 if ($isDiff) {

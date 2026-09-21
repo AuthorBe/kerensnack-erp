@@ -27,7 +27,8 @@ class CustomerImportHandler implements EntityImportHandlerInterface
     {
         return [
             ['nama_toko', 'toko', 'nama_pelanggan', 'nama'],
-            ['alamat', 'alamat_lengkap']
+            ['alamat', 'alamat_lengkap'],
+            ['wilayah', 'rute', 'wilayah_rute', 'nama_wilayah']
         ];
     }
 
@@ -71,7 +72,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         return [
             'Kolom Kode Pelanggan dapat dikosongkan untuk entri baru (akan dibuatkan otomatis oleh sistem: CUST-0002, dst).',
             'Pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak akan pernah terhapus atau dinonaktifkan pada proses sinkronisasi.',
-            'Nama Toko dan Alamat Lengkap WAJIB diisi di setiap baris.',
+            'Nama Toko, Wilayah/Rute, dan Alamat Lengkap WAJIB diisi di setiap baris.',
             'Model Kerjasama: isi "Konsinyasi" untuk toko titip jual rak, atau "Reguler" untuk jual putus / tempo.',
             'Tipe Bayar Default: Cash, Transfer, QRIS, Tempo 7 Hari, Tempo 14 Hari, Tempo 30 Hari, atau Konsinyasi (dapat ditulis dengan spasi atau huruf kecil/besar).',
             'Grup Pelanggan, Wilayah/Rute, dan Sales Pembina dapat diisi Kode atau Nama yang sudah terdaftar di sistem.'
@@ -165,11 +166,20 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         }
         $defaultGroupId = $groups[0]['id'] ?? null;
 
-        $territories = $pdo->query("SELECT id, kode_rute, nama_wilayah FROM public.wilayah")->fetchAll(PDO::FETCH_ASSOC);
+        $territories = $pdo->query("SELECT id, kode_rute, nama_wilayah, sub_wilayah FROM public.wilayah WHERE status_aktif = TRUE")->fetchAll(PDO::FETCH_ASSOC);
         $territoryMap = [];
         foreach ($territories as $t) {
-            $territoryMap[strtolower(trim($t['kode_rute']))] = $t['id'];
-            $territoryMap[strtolower(trim($t['nama_wilayah']))] = $t['id'];
+            $territoryMap[strtolower(trim((string)$t['kode_rute']))] = $t['id'];
+            $territoryMap[strtolower(trim((string)$t['nama_wilayah']))] = $t['id'];
+            if (!empty($t['sub_wilayah'])) {
+                $subs = explode(',', (string)$t['sub_wilayah']);
+                foreach ($subs as $sub) {
+                    $sTrim = strtolower(trim($sub));
+                    if ($sTrim !== '' && !isset($territoryMap[$sTrim])) {
+                        $territoryMap[$sTrim] = $t['id'];
+                    }
+                }
+            }
         }
 
         $salesStaff = $pdo->query("SELECT id, nama_karyawan, nik, nama_pengguna FROM public.v_karyawan_info WHERE status_aktif = TRUE")->fetchAll(PDO::FETCH_ASSOC);
@@ -305,19 +315,25 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 $grupId = $defaultGroupId;
             }
 
-            $wilayahId = null;
-            if (!empty($wilayahRaw)) {
-                $wKey = strtolower(trim($wilayahRaw));
-                if (!isset($territoryMap[$wKey])) {
-                    $previewList[] = [
-                        'action' => 'ERROR',
-                        'error_msg' => "Wilayah / Rute '{$wilayahRaw}' pada baris {$lineNo} tidak terdaftar di sistem. Daftarkan wilayah di Master Wilayah (Fase 1) atau kosongkan kolom ini jika belum ada.",
-                        'data' => ['kode_pelanggan' => $kode, 'nama_toko' => $nama, 'alamat_lengkap' => $alamat]
-                    ];
-                    continue;
-                }
-                $wilayahId = $territoryMap[$wKey];
+            if (empty($wilayahRaw)) {
+                $previewList[] = [
+                    'action'    => 'ERROR',
+                    'error_msg' => "Wilayah / Rute kosong untuk toko '{$nama}' pada baris {$lineNo}. Kolom ini wajib diisi dengan wilayah terdaftar di sistem.",
+                    'data'      => ['kode_pelanggan' => $kode, 'nama_toko' => $nama, 'alamat_lengkap' => $alamat]
+                ];
+                continue;
             }
+
+            $wKey = strtolower(trim($wilayahRaw));
+            if (!isset($territoryMap[$wKey])) {
+                $previewList[] = [
+                    'action'    => 'ERROR',
+                    'error_msg' => "Wilayah / Rute '{$wilayahRaw}' pada baris {$lineNo} tidak terdaftar di sistem. Daftarkan wilayah di Master Wilayah (Fase 1) atau gunakan Kamus Pencarian Wilayah.",
+                    'data'      => ['kode_pelanggan' => $kode, 'nama_toko' => $nama, 'alamat_lengkap' => $alamat]
+                ];
+                continue;
+            }
+            $wilayahId = $territoryMap[$wKey];
 
             $salesId = null;
             if (!empty($salesRaw)) {
@@ -394,7 +410,10 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     || $tipeBayar !== $dbRow['tipe_pembayaran_default']
                     || ($grupId && $grupId !== $dbRow['grup_pelanggan_id'])
                     || ($wilayahId && $wilayahId !== $dbRow['wilayah_id'])
-                    || ($salesId && $salesId !== $dbRow['sales_driver_id']);
+                    || ($salesId && $salesId !== $dbRow['sales_driver_id'])
+                    || trim($bankNama) !== trim((string)($dbRow['nama_bank'] ?? ''))
+                    || trim($bankRek) !== trim((string)($dbRow['nomor_rekening'] ?? ''))
+                    || trim($bankAtasNama) !== trim((string)($dbRow['atas_nama_rekening'] ?? ''));
 
                 if ($isDiff) {
                     $previewList[] = [

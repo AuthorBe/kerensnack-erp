@@ -11,6 +11,7 @@ use App\Services\Import\ImportProcessor;
 use App\Services\Import\TemplateGenerator;
 use Database;
 use Exception;
+use PDO;
 
 class ImportDataController
 {
@@ -77,6 +78,14 @@ class ImportDataController
             'products'        => (int)$pdo->query("SELECT COUNT(*) FROM public.item WHERE tipe_item = 'barang_jadi'")->fetchColumn(),
             'customers'       => (int)$pdo->query("SELECT COUNT(*) FROM public.pelanggan")->fetchColumn(),
         ];
+
+        // Daftar master wilayah aktif untuk fitur Kamus / Pencarian Referensi Wilayah
+        $activeTerritories = $pdo->query("
+            SELECT id, kode_rute, nama_wilayah, provinsi, kota_kabupaten, COALESCE(sub_wilayah, '') as sub_wilayah
+            FROM public.wilayah
+            WHERE status_aktif = TRUE
+            ORDER BY kode_rute ASC, nama_wilayah ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
 
         $pageTitle    = 'Impor & Sinkronisasi Data';
         $pageSubtitle = 'Pusat Pembaruan Massal Data Master via Excel / CSV sebagai Sumber Kebenaran';

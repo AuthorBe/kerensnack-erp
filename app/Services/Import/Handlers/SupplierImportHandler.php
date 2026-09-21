@@ -27,6 +27,7 @@ class SupplierImportHandler implements EntityImportHandlerInterface
     {
         return [
             ['nama_pemasok', 'pemasok', 'nama_supplier', 'supplier', 'nama_vendor'],
+            ['wilayah', 'kota', 'wilayah_kota', 'nama_wilayah', 'rute']
         ];
     }
 
@@ -67,9 +68,9 @@ class SupplierImportHandler implements EntityImportHandlerInterface
     {
         return [
             'Kode Pemasok dapat dikosongkan untuk entri baru (otomatis di-generate sistem).',
-            'Nama Pemasok WAJIB diisi di setiap baris.',
+            'Nama Pemasok dan Wilayah/Kota WAJIB diisi di setiap baris.',
+            'Wilayah/Kota WAJIB diisi dengan Nama Wilayah, Kode Rute, atau Kecamatan yang sudah terdaftar di Master Wilayah.',
             'Termin Bayar: cash, tempo_7_hari, tempo_14_hari, tempo_30_hari, dll.',
-            'Wilayah/Kota dapat diisi Nama Wilayah yang sudah terdaftar di ERP.',
             'Status Aktif diisi "Aktif" atau "Nonaktif".'
         ];
     }
@@ -95,11 +96,20 @@ class SupplierImportHandler implements EntityImportHandlerInterface
 
     public function previewRows(array $rows, array $header, PDO $pdo, string $mode): array
     {
-        $territories = $pdo->query("SELECT id, kode_rute, nama_wilayah FROM public.wilayah")->fetchAll(PDO::FETCH_ASSOC);
+        $territories = $pdo->query("SELECT id, kode_rute, nama_wilayah, sub_wilayah FROM public.wilayah WHERE status_aktif = TRUE")->fetchAll(PDO::FETCH_ASSOC);
         $territoryMap = [];
         foreach ($territories as $t) {
-            $territoryMap[strtolower(trim($t['kode_rute']))] = $t['id'];
-            $territoryMap[strtolower(trim($t['nama_wilayah']))] = $t['id'];
+            $territoryMap[strtolower(trim((string)$t['kode_rute']))] = $t['id'];
+            $territoryMap[strtolower(trim((string)$t['nama_wilayah']))] = $t['id'];
+            if (!empty($t['sub_wilayah'])) {
+                $subs = explode(',', (string)$t['sub_wilayah']);
+                foreach ($subs as $sub) {
+                    $sTrim = strtolower(trim($sub));
+                    if ($sTrim !== '' && !isset($territoryMap[$sTrim])) {
+                        $territoryMap[$sTrim] = $t['id'];
+                    }
+                }
+            }
         }
 
         $dbSuppliers = $pdo->query("SELECT p.*, COALESCE(w.nama_wilayah, '') as nama_wilayah FROM public.pemasok p LEFT JOIN public.wilayah w ON w.id = p.wilayah_id")->fetchAll(PDO::FETCH_ASSOC);
@@ -120,15 +130,15 @@ class SupplierImportHandler implements EntityImportHandlerInterface
 
             $kode = (string)(SmartReader::getSmartValue($rowData, ['kode_pemasok', 'kode', 'kd_pemasok', 'kd_supplier']) ?? '');
             $nama = (string)(SmartReader::getSmartValue($rowData, ['nama_pemasok', 'pemasok', 'nama_supplier', 'supplier', 'nama']) ?? '');
-            $kontak = (string)(SmartReader::getSmartValue($rowData, ['nama_kontak', 'kontak', 'pic']) ?? '');
-            $wilayahRaw = (string)(SmartReader::getSmartValue($rowData, ['wilayah', 'kota', 'wilayah_kota']) ?? '');
+            $kontak = (string)(SmartReader::getSmartValue($rowData, ['nama_pic_kontak', 'nama_kontak', 'nama_pic', 'pic_kontak', 'kontak', 'pic']) ?? '');
+            $wilayahRaw = (string)(SmartReader::getSmartValue($rowData, ['wilayah_kota', 'wilayah', 'kota', 'nama_wilayah']) ?? '');
             $alamat = (string)(SmartReader::getSmartValue($rowData, ['alamat_lengkap', 'alamat']) ?? '');
-            $whatsapp = (string)(SmartReader::getSmartValue($rowData, ['nomor_whatsapp', 'whatsapp', 'wa', 'nomor_telepon', 'telepon', 'telp']) ?? '');
+            $whatsapp = (string)(SmartReader::getSmartValue($rowData, ['no_whatsapp', 'nomor_whatsapp', 'whatsapp', 'no_wa', 'wa', 'nomor_telepon', 'telepon', 'no_telp', 'telp', 'no_hp', 'hp']) ?? '');
             $email = (string)(SmartReader::getSmartValue($rowData, ['email', 'surel']) ?? '');
-            $termin = (string)(SmartReader::getSmartValue($rowData, ['termin_bayar', 'termin', 'syarat_bayar']) ?? 'cash');
+            $termin = (string)(SmartReader::getSmartValue($rowData, ['termin_bayar', 'termin', 'syarat_bayar', 'metode_bayar']) ?? 'cash');
             $bankNama = (string)(SmartReader::getSmartValue($rowData, ['nama_bank', 'bank']) ?? '');
-            $bankRek = (string)(SmartReader::getSmartValue($rowData, ['nomor_rekening', 'rekening', 'no_rek']) ?? '');
-            $bankAtasNama = (string)(SmartReader::getSmartValue($rowData, ['atas_nama_rekening', 'atas_nama']) ?? '');
+            $bankRek = (string)(SmartReader::getSmartValue($rowData, ['no_rekening', 'nomor_rekening', 'rekening', 'no_rek']) ?? '');
+            $bankAtasNama = (string)(SmartReader::getSmartValue($rowData, ['atas_nama_rekening', 'atas_nama', 'a_n_rekening', 'an_rekening', 'nama_rekening']) ?? '');
             $catatan = (string)(SmartReader::getSmartValue($rowData, ['catatan', 'keterangan']) ?? '');
             $statusAktifRaw = SmartReader::getSmartValue($rowData, ['status_aktif', 'status', 'aktif']);
 
@@ -145,6 +155,27 @@ class SupplierImportHandler implements EntityImportHandlerInterface
                 continue;
             }
 
+            // Validasi Wajib Wilayah
+            if (empty($wilayahRaw)) {
+                $previewList[] = [
+                    'action'    => 'ERROR',
+                    'error_msg' => "Wilayah / Kota kosong untuk pemasok '{$nama}' pada baris {$lineNo}. Kolom ini wajib diisi dengan wilayah terdaftar.",
+                    'data'      => ['kode_pemasok' => $kode, 'nama_pemasok' => $nama, 'display_wilayah' => '—']
+                ];
+                continue;
+            }
+
+            $wKey = strtolower(trim($wilayahRaw));
+            if (!isset($territoryMap[$wKey])) {
+                $previewList[] = [
+                    'action'    => 'ERROR',
+                    'error_msg' => "Wilayah / Kota '{$wilayahRaw}' pada baris {$lineNo} tidak terdaftar di Master Wilayah sistem. Daftarkan di Master Wilayah atau gunakan fitur Cari Wilayah.",
+                    'data'      => ['kode_pemasok' => $kode, 'nama_pemasok' => $nama, 'display_wilayah' => $wilayahRaw]
+                ];
+                continue;
+            }
+            $wilayahId = $territoryMap[$wKey];
+
             $statusAktif = SmartReader::normalizeBoolean($statusAktifRaw, true);
 
             if (!empty($kode)) {
@@ -158,14 +189,6 @@ class SupplierImportHandler implements EntityImportHandlerInterface
                     continue;
                 }
                 $seenCodes[$kKey] = true;
-            }
-
-            $wilayahId = null;
-            if (!empty($wilayahRaw)) {
-                $wKey = strtolower(trim($wilayahRaw));
-                if (isset($territoryMap[$wKey])) {
-                    $wilayahId = $territoryMap[$wKey];
-                }
             }
 
             $dbRow = null;
@@ -214,6 +237,10 @@ class SupplierImportHandler implements EntityImportHandlerInterface
                     || trim($email) !== trim((string)($dbRow['email'] ?? ''))
                     || trim($termin) !== trim((string)($dbRow['termin_bayar'] ?? 'cash'))
                     || ($wilayahId && $wilayahId !== $dbRow['wilayah_id'])
+                    || trim($bankNama) !== trim((string)($dbRow['nama_bank'] ?? ''))
+                    || trim($bankRek) !== trim((string)($dbRow['nomor_rekening'] ?? ''))
+                    || trim($bankAtasNama) !== trim((string)($dbRow['atas_nama_rekening'] ?? ''))
+                    || trim($catatan) !== trim((string)($dbRow['catatan'] ?? ''))
                     || $statusAktif !== (bool)$dbRow['status_aktif'];
 
                 if ($isDiff) {
