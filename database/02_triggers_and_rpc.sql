@@ -1489,3 +1489,93 @@ BEGIN
     );
 END;
 $$;
+
+-- Trigger Otomatis Pembuatan Baris Merek saat Grup Pelanggan Baru Dibuat
+CREATE OR REPLACE FUNCTION public.fn_trg_grup_pelanggan_after_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    INSERT INTO public.grup_pelanggan_level_merek (
+        grup_pelanggan_id,
+        merek_id,
+        level_harga,
+        diskon_persen,
+        diskon_nominal,
+        is_dijual,
+        dibuat_pada,
+        diubah_pada
+    )
+    SELECT 
+        NEW.id,
+        m.id,
+        COALESCE(NEW.default_level_harga, 1),
+        COALESCE(NEW.diskon_persen_default, 0.00),
+        COALESCE(NEW.diskon_nominal_default, 0.00),
+        TRUE,
+        NOW(),
+        NOW()
+    FROM public.merek m
+    WHERE m.status_aktif = TRUE
+    ON CONFLICT (grup_pelanggan_id, merek_id) DO NOTHING;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_grup_pelanggan_after_insert ON public.grup_pelanggan;
+CREATE TRIGGER trg_grup_pelanggan_after_insert
+AFTER INSERT ON public.grup_pelanggan
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_trg_grup_pelanggan_after_insert();
+
+-- Trigger Otomatis Inisialisasi Grup Eksisting saat Merek Baru Dibuat
+CREATE OR REPLACE FUNCTION public.fn_trg_merek_after_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF NEW.status_aktif = TRUE THEN
+        INSERT INTO public.grup_pelanggan_level_merek (
+            grup_pelanggan_id,
+            merek_id,
+            level_harga,
+            diskon_persen,
+            diskon_nominal,
+            is_dijual,
+            dibuat_pada,
+            diubah_pada
+        )
+        SELECT 
+            gp.id,
+            NEW.id,
+            COALESCE(gp.default_level_harga, 1),
+            COALESCE(gp.diskon_persen_default, 0.00),
+            COALESCE(gp.diskon_nominal_default, 0.00),
+            TRUE,
+            NOW(),
+            NOW()
+        FROM public.grup_pelanggan gp
+        ON CONFLICT (grup_pelanggan_id, merek_id) DO NOTHING;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_merek_after_insert ON public.merek;
+CREATE TRIGGER trg_merek_after_insert
+AFTER INSERT ON public.merek
+FOR EACH ROW
+EXECUTE FUNCTION public.fn_trg_merek_after_insert();
+
+-- Kunci hak akses eksekusi RPC untuk fungsi trigger
+REVOKE EXECUTE ON FUNCTION public.fn_trg_grup_pelanggan_after_insert() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_trg_merek_after_insert() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_trg_grup_pelanggan_after_insert() TO postgres, service_role;
+GRANT EXECUTE ON FUNCTION public.fn_trg_merek_after_insert() TO postgres, service_role;
+

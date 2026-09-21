@@ -14,38 +14,57 @@ class Database
     private static ?PDO $instance = null;
 
     /**
-     * Dapatkan koneksi PDO PostgreSQL tunggal (Singleton).
+     * Dapatkan koneksi PDO PostgreSQL tunggal (Singleton) dengan Auto-Retry & Resilient Connection.
      */
     public static function getConnection(): PDO
     {
-        if (self::$instance === null) {
-            $host     = $_ENV['DB_HOST']     ?? getenv('DB_HOST')     ?: '127.0.0.1';
-            $port     = $_ENV['DB_PORT']     ?? getenv('DB_PORT')     ?: '5432';
-            $dbname   = $_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: 'postgres';
-            $user     = $_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: 'postgres';
-            $password = $_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: '';
-            $sslmode  = $_ENV['DB_SSLMODE']  ?? getenv('DB_SSLMODE')  ?: 'prefer';
-
-            $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}";
-
-            $options = [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES   => false,
-                PDO::ATTR_TIMEOUT            => 10,
-            ];
-
+        // 1. Jika instance sudah ada, pastikan koneksi masih hidup (tidak diputus oleh Supabase Pooler)
+        if (self::$instance !== null) {
             try {
-                self::$instance = new PDO($dsn, $user, $password, $options);
-                self::$instance->exec("SET TIME ZONE 'Asia/Jakarta'");
-            } catch (PDOException $e) {
-                // Log pesan error dan lempar exception yang ramah
-                error_log("Database Connection Error: " . $e->getMessage());
-                throw new RuntimeException("Gagal terhubung ke Database Supabase: " . $e->getMessage());
+                self::$instance->query("SELECT 1");
+                return self::$instance;
+            } catch (Throwable $e) {
+                // Socket telah diputus oleh pooler/server, reset instance untuk menyambung ulang
+                self::$instance = null;
             }
         }
 
-        return self::$instance;
+        $host     = $_ENV['DB_HOST']     ?? getenv('DB_HOST')     ?: '127.0.0.1';
+        $port     = $_ENV['DB_PORT']     ?? getenv('DB_PORT')     ?: '5432';
+        $dbname   = $_ENV['DB_DATABASE'] ?? getenv('DB_DATABASE') ?: 'postgres';
+        $user     = $_ENV['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: 'postgres';
+        $password = $_ENV['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: '';
+        $sslmode  = $_ENV['DB_SSLMODE']  ?? getenv('DB_SSLMODE')  ?: 'prefer';
+
+        $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}";
+
+        $options = [
+            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_TIMEOUT            => 15,
+        ];
+
+        $maxRetries = 3;
+        $lastException = null;
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $pdo = new PDO($dsn, $user, $password, $options);
+                $pdo->exec("SET TIME ZONE 'Asia/Jakarta'");
+                self::$instance = $pdo;
+                return self::$instance;
+            } catch (PDOException $e) {
+                $lastException = $e;
+                error_log("Database Connection Attempt {$attempt}/{$maxRetries} Failed: " . $e->getMessage());
+                if ($attempt < $maxRetries) {
+                    usleep(300000); // 300ms pause sebelum mencoba kembali
+                }
+            }
+        }
+
+        // Jika seluruh retry gagal, lempar RuntimeException
+        throw new RuntimeException("Gagal terhubung ke Database Supabase: " . ($lastException ? $lastException->getMessage() : 'Unknown Error'));
     }
 
     /**

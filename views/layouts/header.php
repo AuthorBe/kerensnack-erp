@@ -5,6 +5,7 @@ use App\Helpers\Format;
 // Dynamic page title & subtitle with route fallbacks
 $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
 $headerTitle = $pageTitle ?? match(true) {
+    str_contains($uri, '/dashboard') || $uri === '/' => 'Dashboard Utama',
     str_contains($uri, '/pos')              => 'Kasir POS',
     str_contains($uri, '/customer-orders')  => 'Pesanan Pelanggan',
     str_contains($uri, '/sales-orders')     => 'Penjualan Toko',
@@ -32,6 +33,7 @@ $headerTitle = $pageTitle ?? match(true) {
 };
 
 $headerSub = $pageSubtitle ?? match(true) {
+    str_contains($uri, '/dashboard') || $uri === '/' => 'Pusat Kerja Harian & Navigasi Cepat',
     str_contains($uri, '/pos')              => 'Layar Transaksi Kasir POS',
     str_contains($uri, '/customer-orders')  => 'Faktur Penjualan Reguler',
     str_contains($uri, '/sales-orders')     => 'Faktur Penjualan Reguler',
@@ -78,19 +80,7 @@ $headerSub = $pageSubtitle ?? match(true) {
     </div>
 
     <div class="header-right">
-        <!-- Date Chip -->
-        <div class="header-chip hide-mobile" style="display:inline-flex;align-items:center;">
-            <i data-lucide="calendar" style="width:14px;height:14px;flex-shrink:0;"></i>
-            <span style="white-space:nowrap;line-height:1;"><?= Format::tanggal(date('Y-m-d'), false) ?></span>
-        </div>
-
-        <!-- Role Chip -->
-        <div class="header-chip is-role">
-            <i data-lucide="shield" style="width:14px;height:14px;flex-shrink:0;"></i>
-            <span style="white-space:nowrap;line-height:1;"><?= htmlspecialchars(ucfirst(str_replace('_', ' ', Auth::role() ?? 'guest'))) ?></span>
-        </div>
-
-        <!-- Theme Toggle -->
+        <!-- Theme Toggle Only -->
         <button type="button"
                 class="header-theme-btn"
                 @click="toggleTheme()"

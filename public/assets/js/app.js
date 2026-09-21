@@ -1690,18 +1690,286 @@
   }, true);
 
   /* =====================================================================
-     9. PROGRESSIVE WEB APP (PWA) SERVICE WORKER REGISTRATION
+     9. PROGRESSIVE WEB APP (PWA) & NETWORK GUARD ENGINE
      ===================================================================== */
   const PWAEngine = {
+    _deferredInstallPrompt: null,
+    _swRegistration: null,
+
     init() {
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          const swPath = (window.APP_BASE_PATH || '') + '/sw.js';
-          navigator.serviceWorker.register(swPath).then((reg) => {
-            // SW active
-          }).catch(() => {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
+      this.initNetworkGuard();
+      this.initInstallPrompt();
+      this.initServiceWorker();
+    },
+
+    // 9.1 Network Guard (Zero False-Positive Online/Offline Status)
+    initNetworkGuard() {
+      let offlineToastEl = null;
+
+      const showNetworkToast = (isOnline) => {
+        if (offlineToastEl) {
+          offlineToastEl.remove();
+          offlineToastEl = null;
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `pwa-network-toast ${isOnline ? 'is-online' : 'is-offline'}`;
+        toast.setAttribute('role', 'status');
+        toast.setAttribute('aria-live', 'polite');
+        
+        toast.innerHTML = `
+          <div class="pwa-toast-inner">
+            <div class="pwa-toast-icon-wrap ${isOnline ? 'online' : 'offline'}">
+              <span class="pwa-toast-dot ${isOnline ? 'online' : 'offline'}"></span>
+            </div>
+            <div class="pwa-toast-content">
+              <div class="pwa-toast-title">${isOnline ? 'Koneksi Kembali Pulih' : 'Koneksi Internet Terputus'}</div>
+              <div class="pwa-toast-msg">${isOnline ? 'Terhubung kembali ke server dengan lancar.' : 'Transaksi ditangguhkan sementara demi integritas data.'}</div>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(toast);
+        offlineToastEl = toast;
+
+        // Animate entrance
+        requestAnimationFrame(() => {
+          toast.classList.add('is-visible');
+        });
+
+        // NOTIFIKASI OFFLINE TETAP TAMPIL SAMPAI SINYAL KEMBALI
+        // Hanya auto-dismiss jika koneksi sudah online
+        if (isOnline) {
+          setTimeout(() => {
+            if (offlineToastEl === toast) {
+              toast.classList.remove('is-visible');
+              setTimeout(() => {
+                toast.remove();
+                if (offlineToastEl === toast) offlineToastEl = null;
+              }, 300);
+            }
+          }, 3500);
+        }
+      };
+
+      // Realtime listeners
+      window.addEventListener('offline', () => {
+        if (!navigator.onLine) {
+          showNetworkToast(false);
+        }
+      });
+
+      window.addEventListener('online', () => {
+        // Double check real connectivity before announcing online
+        const basePath = window.APP_BASE_PATH || '';
+        fetch(basePath + '/assets/favicon/favicon-96x96.png?_ping=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+          .then(() => {
+            showNetworkToast(true);
+          })
+          .catch(() => {
+            if (navigator.onLine) {
+              showNetworkToast(true);
+            }
           });
+      });
+
+      // Form submission guard: prevent data corruption when offline
+      document.addEventListener('submit', (e) => {
+        if (!navigator.onLine) {
+          const form = e.target;
+          if (form && form.tagName === 'FORM') {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Re-enable submit button if disabled
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.style.opacity = '1';
+              submitBtn.style.cursor = 'pointer';
+            }
+
+            // Show alert toast
+            showNetworkToast(false);
+            if (typeof window.showToast === 'function') {
+              window.showToast('Perangkat sedang offline. Mohon periksa koneksi internet sebelum mengirim formulir.', 'warning');
+            }
+          }
+        }
+      }, true);
+    },
+
+    // 9.2 Custom PWA Install Prompt & Dynamic Installation State Sync
+    initInstallPrompt() {
+      const isStandaloneMode = () => {
+        return window.matchMedia('(display-mode: standalone)').matches 
+          || window.matchMedia('(display-mode: fullscreen)').matches
+          || window.matchMedia('(display-mode: minimal-ui)').matches
+          || (window.navigator.standalone === true)
+          || (document.referrer && document.referrer.indexOf('android-app://') === 0);
+      };
+
+      const syncInstallButtons = async () => {
+        let isAppInstalled = isStandaloneMode();
+
+        // Check navigator.getInstalledRelatedApps() for Chrome Android & Desktop
+        if (!isAppInstalled && 'getInstalledRelatedApps' in navigator) {
+          try {
+            const relatedApps = await navigator.getInstalledRelatedApps();
+            if (Array.isArray(relatedApps) && relatedApps.length > 0) {
+              isAppInstalled = true;
+            }
+          } catch (e) {}
+        }
+
+        const installBtns = document.querySelectorAll('.pwa-install-trigger');
+        installBtns.forEach((btn) => {
+          if (isAppInstalled) {
+            btn.style.setProperty('display', 'none', 'important');
+            btn.setAttribute('aria-hidden', 'true');
+          } else {
+            btn.style.removeProperty('display');
+            btn.removeAttribute('aria-hidden');
+          }
+        });
+
+        if (isAppInstalled) {
+          document.documentElement.classList.add('is-pwa-standalone');
+        } else {
+          document.documentElement.classList.remove('is-pwa-standalone');
+        }
+      };
+
+      // Initial check
+      syncInstallButtons();
+
+      // Listen for browser install prompt readiness
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent default mini-infobar
+        e.preventDefault();
+        this._deferredInstallPrompt = e;
+        syncInstallButtons();
+      });
+
+      // Delegate click on any PWA install trigger
+      document.addEventListener('click', (e) => {
+        const trigger = e.target.closest('.pwa-install-trigger');
+        if (trigger) {
+          e.preventDefault();
+          if (this._deferredInstallPrompt) {
+            this._deferredInstallPrompt.prompt();
+            this._deferredInstallPrompt.userChoice.then((choiceResult) => {
+              if (choiceResult.outcome === 'accepted') {
+                console.log('[PWA] User accepted install prompt');
+                if (window.showToast) window.showToast('Aplikasi berhasil dipasang! 🎉', 'success');
+                syncInstallButtons();
+              }
+              this._deferredInstallPrompt = null;
+            });
+          } else {
+            // Open interactive installation guide modal for Android, iOS Safari, or Desktop
+            if (typeof window.openPwaInstallModal === 'function') {
+              window.openPwaInstallModal();
+            } else {
+              alert('Untuk memasang aplikasi: Pada Chrome Android tekan titik 3 lalu "Pasang Aplikasi", atau pada iPhone Safari tekan tombol Share lalu "Tambah ke Layar Utama".');
+            }
+          }
+        }
+      });
+
+      // When app is installed, immediately hide all install buttons
+      window.addEventListener('appinstalled', () => {
+        console.log('[PWA] App installed successfully');
+        this._deferredInstallPrompt = null;
+        syncInstallButtons();
+      });
+
+      // Listen for display mode media query changes (e.g. opened in standalone or resized)
+      try {
+        window.matchMedia('(display-mode: standalone)').addEventListener('change', () => {
+          syncInstallButtons();
+        });
+      } catch (e) {}
+    },
+
+    // 9.3 Service Worker Registration & Update Notification
+    initServiceWorker() {
+      if (!('serviceWorker' in navigator)) return;
+
+      window.addEventListener('load', () => {
+        const swPath = (window.APP_BASE_PATH || '') + '/sw.js';
+        
+        navigator.serviceWorker.register(swPath).then((reg) => {
+          this._swRegistration = reg;
+
+          // Check if new update is already waiting
+          if (reg.waiting) {
+            this.showUpdateBanner(reg.waiting);
+          }
+
+          // Check on update found
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  this.showUpdateBanner(newWorker);
+                }
+              });
+            }
+          });
+        }).catch(() => {
+          navigator.serviceWorker.register('./sw.js').catch(() => {});
+        });
+
+        // Reload window when worker activates after skipWaiting
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+      });
+    },
+
+    // 9.4 Update Notification Toast
+    showUpdateBanner(worker) {
+      if (document.getElementById('pwa-update-banner')) return;
+
+      const banner = document.createElement('div');
+      banner.id = 'pwa-update-banner';
+      banner.className = 'pwa-update-toast is-visible';
+      banner.innerHTML = `
+        <div class="pwa-update-content">
+          <div class="pwa-update-icon"><i data-lucide="sparkles"></i></div>
+          <div class="pwa-update-text">
+            <strong>Pembaruan Sistem Tersedia</strong>
+            <span>Muat ulang untuk menikmati pembaruan versi terbaru.</span>
+          </div>
+          <button type="button" class="pwa-update-btn" id="pwa-reload-btn">
+            Perbarui
+          </button>
+        </div>
+      `;
+
+      document.body.appendChild(banner);
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons({ root: banner });
+      }
+
+      const reloadBtn = banner.querySelector('#pwa-reload-btn');
+      if (reloadBtn) {
+        reloadBtn.addEventListener('click', () => {
+          reloadBtn.disabled = true;
+          reloadBtn.textContent = 'Memperbarui...';
+          if (worker) {
+            worker.postMessage({ action: 'skipWaiting' });
+          } else if (this._swRegistration && this._swRegistration.waiting) {
+            this._swRegistration.waiting.postMessage({ action: 'skipWaiting' });
+          } else {
+            window.location.reload();
+          }
         });
       }
     }

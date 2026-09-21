@@ -10,7 +10,7 @@ use App\Core\Router;
 $pageTitle = $title ?? 'Akses Dibatasi — KEREN SNACK ERP';
 $requestedUri = $_SERVER['REQUEST_URI'] ?? '';
 $cleanUri = htmlspecialchars(parse_url($requestedUri, PHP_URL_PATH) ?? $requestedUri, ENT_QUOTES, 'UTF-8');
-$fallbackHomeUrl = class_exists('\App\Core\Router') ? Router::url('/pos') : '/pos';
+$fallbackHomeUrl = class_exists('\App\Core\Router') ? Router::url('/dashboard') : '/dashboard';
 $faviconUrl = class_exists('\App\Core\Router') ? Router::asset('/favicon/favicon-96x96.png') : '';
 ?>
 <!DOCTYPE html>

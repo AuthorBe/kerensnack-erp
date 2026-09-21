@@ -101,7 +101,7 @@ class AuthController extends Controller
     public function showLogin(): void
     {
         if (Auth::check()) {
-            $this->redirect('/pos');
+            $this->redirect('/dashboard');
             return;
         }
 
@@ -272,25 +272,8 @@ class AuthController extends Controller
                     $userDb['peran'] ?? 'staff'
                 );
 
-                // Smart Redirect sesuai Role & Hak Akses
-                if ($userDb['peran'] === 'driver' || ($userDb['peran'] === 'sales' && ($userDb['posisi'] ?? '') === 'driver')) {
-                    $this->redirect('/deliveries');
-                    return;
-                }
-                if ($userDb['peran'] === 'sales') {
-                    $this->redirect('/consignment');
-                    return;
-                }
-                if ($userDb['peran'] === 'mandor') {
-                    $this->redirect('/inventory');
-                    return;
-                }
-                if ($userDb['peran'] === 'owner') {
-                    $this->redirect('/owner');
-                    return;
-                }
-
-                $this->redirect('/pos');
+                // Redirect ke Dashboard Utama (Tampilan adaptif otomatis sesuai peran pengguna)
+                $this->redirect('/dashboard');
                 return;
             }
 

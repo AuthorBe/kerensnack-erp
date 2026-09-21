@@ -937,6 +937,7 @@ ALTER TABLE public.draf_pengeluaran ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.arus_kas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pengaturan_sistem ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.log_aktivitas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.grup_pelanggan_level_merek ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY service_role_all ON public.peran FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_pel ON public.pelanggan FOR ALL TO service_role USING (true) WITH CHECK (true);
@@ -955,3 +956,4 @@ CREATE POLICY service_role_all_logs ON public.log_aktivitas FOR ALL TO service_r
 CREATE POLICY service_role_all_merek ON public.merek FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_opname_gudang ON public.opname_gudang FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_opname_gudang_item ON public.opname_gudang_item FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_role_all_gplm ON public.grup_pelanggan_level_merek FOR ALL TO service_role USING (true) WITH CHECK (true);

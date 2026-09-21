@@ -50,6 +50,14 @@ if (!function_exists('isActiveSection')) {
     <!-- Navigation -->
     <nav class="sidebar-nav no-scrollbar">
 
+        <!-- DASHBOARD UTAMA -->
+        <a href="<?= Router::url('/dashboard') ?>"
+           class="sidebar-link <?= (isActive('/dashboard', $currentPath, $base) || isActive('/', $currentPath, $base)) ? 'is-active' : '' ?>"
+           data-tooltip="Dashboard">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Dashboard</span>
+        </a>
+
         <!-- PENJUALAN & TRANSAKSI -->
         <?php if (Auth::can(['pos.pos', 'orders.po_view_all', 'orders.po_view_assigned', 'orders.view_all', 'orders.view_assigned', 'consignment.view_all', 'consignment.view_assigned'])): ?>
         <div class="sidebar-section-label">Penjualan &amp; Transaksi</div>
@@ -238,6 +246,15 @@ if (!function_exists('isActiveSection')) {
             <span>Pengaturan</span>
         </a>
         <?php endif; ?>
+
+        <!-- PWA INSTALL TRIGGER -->
+        <button type="button"
+                class="pwa-install-trigger sidebar-link"
+                data-tooltip="Pasang Aplikasi (PWA)"
+                aria-label="Pasang Aplikasi ERP">
+            <i data-lucide="download"></i>
+            <span>Pasang Aplikasi</span>
+        </button>
 
     </nav>
 

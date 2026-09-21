@@ -87,6 +87,17 @@ $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemt
                     document.documentElement.classList.add('has-pending-action');
                 }
             } catch (e) {}
+
+            // Zero-flash PWA Standalone Detection
+            try {
+                var isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+                    || window.matchMedia('(display-mode: fullscreen)').matches
+                    || (window.navigator.standalone === true)
+                    || (document.referrer && document.referrer.indexOf('android-app://') === 0);
+                if (isStandalone) {
+                    document.documentElement.classList.add('is-pwa-standalone');
+                }
+            } catch (e) {}
         })();
     </script>
 
@@ -355,6 +366,9 @@ $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemt
             }, { passive: true });
         })();
     </script>
+
+    <!-- PWA INSTALL MODAL GUIDE (Bottom of DOM) -->
+    <?php require __DIR__ . '/pwa_modal.php'; ?>
 
 </body>
 </html>

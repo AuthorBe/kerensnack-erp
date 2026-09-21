@@ -2,12 +2,12 @@
   "name": "KEREN SNACK ERP",
   "short_name": "Keren Snack",
   "description": "Sistem ERP & Manajemen Kasir POS Keren Snack",
-  "id": "/",
-  "start_url": "../../",
+  "id": "kerensnack-erp-app",
+  "start_url": "../../dashboard",
   "scope": "../../",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#111827",
+  "background_color": "#0f172a",
   "theme_color": "#e11d48",
   "icons": [
     {
@@ -31,6 +31,22 @@
       "src": "apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Kasir POS",
+      "short_name": "Kasir",
+      "description": "Buka Transaksi Kasir POS Langsung",
+      "url": "../../pos",
+      "icons": [{ "src": "web-app-manifest-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Pesanan Pelanggan",
+      "short_name": "Pesanan",
+      "description": "Buka Daftar Pesanan Pelanggan",
+      "url": "../../customer-orders",
+      "icons": [{ "src": "web-app-manifest-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

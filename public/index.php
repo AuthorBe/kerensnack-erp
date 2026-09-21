@@ -83,6 +83,7 @@ require_once ROOT_PATH . '/config/database.php';
 \App\Helpers\Upload::initDirectories();
 
 use App\Core\Router;
+use App\Controllers\DashboardController;
 use App\Controllers\AuthController;
 use App\Controllers\PosController;
 use App\Controllers\PricingController;
@@ -129,10 +130,15 @@ Router::get('/api/media/presigned', [MediaController::class, 'getPresignedUrl'])
 Router::get('/api/media/cache-stats', [MediaController::class, 'cacheStats']);
 Router::post('/api/media/clear-cache', [MediaController::class, 'clearCache']);
 
-// --- ROOT REDIRECT ---
+// --- ROOT REDIRECT & DASHBOARD UTAMA ---
 Router::get('/', function () {
+    if (\App\Core\Auth::check()) {
+        Router::redirect('/dashboard');
+    }
     Router::redirect('/login');
 });
+
+Router::get('/dashboard', [DashboardController::class, 'index']);
 
 // --- TRANSAKSI 1: POS KASIR (RITEL UMUM) ---
 Router::get('/pos', [PosController::class, 'index']);

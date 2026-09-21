@@ -83,6 +83,14 @@ class Format
     }
 
     /**
+     * Format tanggal dan waktu lengkap (misal: 21 Sep 2026 22:45)
+     */
+    public static function tanggalWaktu(string|null $datetime): string
+    {
+        return self::tanggal($datetime, true, true);
+    }
+
+    /**
      * Generate HTML Badge status dengan token Material Design 3
      */
     public static function badgeStatus(string $status): string
