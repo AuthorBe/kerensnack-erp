@@ -64,23 +64,18 @@ if (!$isCli) {
     }
     @file_put_contents($rateFile, json_encode($rateData));
 
-    // Disable web diagnostic console entirely in production environment
-    if (!$isCli && (($_ENV['APP_ENV'] ?? getenv('APP_ENV')) === 'production')) {
-        http_response_code(403);
-        die('Forbidden: Diagnostics disabled in production web environment.');
-    }
-
-    // Access Gate: Localhost / Active ERP Session / Secret PIN
+    // Access Gate: Authenticated ERP Developer Session / Localhost / Secret PIN
     $isLocalhost = in_array($clientIp, ['127.0.0.1', '::1', 'localhost']) || str_starts_with($clientIp, '192.168.');
-    $isUserLoggedIn = !empty($_SESSION['user']['id']);
+    $isDeveloperUser = (class_exists(\App\Core\Auth::class) && \App\Core\Auth::isDeveloper()) 
+        || (!empty($_SESSION['user']['id']) && (($_SESSION['user']['peran'] ?? '') === 'developer' || ($_SESSION['user']['role_nama'] ?? '') === 'Developer'));
     $defaultPin = getenv('DIAGNOSTIC_PIN') ?: ($_ENV['DIAGNOSTIC_PIN'] ?? '2026');
     $accessKey = $_GET['key'] ?? ($_POST['key'] ?? '');
 
-    if ($accessKey === $defaultPin) {
+    if (!empty($accessKey) && hash_equals((string)$defaultPin, (string)$accessKey)) {
         $_SESSION['healthcheck_authenticated'] = true;
     }
 
-    $isAccessAllowed = $isLocalhost || $isUserLoggedIn || !empty($_SESSION['healthcheck_authenticated']);
+    $isAccessAllowed = $isDeveloperUser || !empty($_SESSION['healthcheck_authenticated']) || ($isLocalhost && !empty($_SESSION['user']['id']));
 
     if (!$isAccessAllowed) {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pin_input'])) {
