@@ -89,7 +89,7 @@ function createConsignmentFixtures(PDO $pdo): array {
     }
     
     // Create sales user & karyawan
-    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, posisi, peran_id) VALUES ('Sales Test Konsin', 'sales_test_konsin', 'hash', 'sales', :rid) RETURNING id");
+    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, nik, posisi, peran_id) VALUES ('Sales Test Konsin', 'sales_test_konsin', 'hash', '3201019911223344', 'sales', :rid) RETURNING id");
     $usrStmt->execute(['rid' => $roleId]);
     $salesUserId = $usrStmt->fetchColumn();
 

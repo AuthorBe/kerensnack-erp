@@ -318,7 +318,7 @@ class TemplateGenerator
                     '3. PETUNJUK FORMAT ATRIBUT',
                     ['Nama Kolom', 'Aturan & Format Penulisan', 'Contoh Nilai Valid'],
                     [
-                        ['NIK Karyawan', 'Unik. Kosongkan untuk penomoran otomatis oleh sistem', 'NIK-001 / KRY-024'],
+                        ['NIK Karyawan', 'Wajib 16 digit angka KTP asli dan unik. Tidak boleh kosong.', '3201012345670001'],
                         ['No WhatsApp', 'Nomor WhatsApp aktif format Indonesia (diawali 08xxx)', '081234567890'],
                         ['Tanggal Bergabung', 'Format tanggal standar YYYY-MM-DD', '2023-01-15'],
                         ['Bank & Rekening', 'Nama bank nasional/daerah dan nomor rekening pekerja', 'BCA / 1234567890'],
@@ -360,7 +360,7 @@ class TemplateGenerator
                     $refSheet,
                     '3. DAFTAR SALES PEMBINA TOKO AKTIF DI SISTEM',
                     ['NIK Sales', 'Nama Lengkap Sales', 'Username Akun'],
-                    $dbSales ?: [['NIK-001', 'Budi Santoso', 'budi_sales']],
+                    $dbSales ?: [['3201012345670001', 'Budi Santoso', 'budi_sales']],
                     $currentRow,
                     [20, 32, 22]
                 );

@@ -94,7 +94,7 @@ function createDeliveryFixtures(PDO $pdo): array {
         $rStmt->execute();
         $roleId = $rStmt->fetchColumn();
     }
-    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, posisi, peran_id) VALUES ('Driver Test DLV', 'driver_test_dlv', 'hash', 'driver', :rid) RETURNING id");
+    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, nik, posisi, peran_id) VALUES ('Driver Test DLV', 'driver_test_dlv', 'hash', '3201018811223344', 'driver', :rid) RETURNING id");
     $usrStmt->execute(['rid' => $roleId]);
     $driverUserId = $usrStmt->fetchColumn();
 

@@ -294,8 +294,8 @@ class SupplierImportHandler implements EntityImportHandlerInterface
         $stmtDel = $pdo->prepare("DELETE FROM public.pemasok WHERE id = ?");
 
         $stmtCheckUsage = $pdo->prepare("SELECT 
-            (SELECT COUNT(*) FROM public.pembelian WHERE pemasok_id = ?) +
-            (SELECT COUNT(*) FROM public.item WHERE pemasok_utama_id = ?) AS total_usage");
+            COALESCE((SELECT COUNT(*) FROM public.pembelian WHERE pemasok_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.item WHERE pemasok_utama_id = ?), 0) AS total_usage");
 
         foreach ($previewList as $row) {
             $act = $row['action'];

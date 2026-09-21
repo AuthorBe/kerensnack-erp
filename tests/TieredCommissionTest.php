@@ -203,8 +203,8 @@ runTest("4. Business Rule: Kunjungan opname yang BELUM DITAGIHKAN (unbilled) = 0
 
         // Insert user & karyawan sales
         $pdo->exec("
-            INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
-            VALUES ('{$dummyUserId}', '{$roleId}', 'Sales Uji Coba', 'sales_uji_1', 'dummyhash', 'sales', TRUE)
+            INSERT INTO public.pengguna (id, peran_id, nik, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
+            VALUES ('{$dummyUserId}', '{$roleId}', '3201018888888881', 'Sales Uji Coba', 'sales_uji_1', 'dummyhash', 'sales', TRUE)
         ");
         $pdo->exec("
             INSERT INTO public.karyawan (id, pengguna_id, tipe_penggajian)
@@ -264,8 +264,8 @@ runTest("5. Business Rule: Tagihan terbit Rp 10 Jt dgn bayar Rp 6 Jt & sisa Rp 4
         $grupPelangganId = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1")['id'];
 
         $pdo->exec("
-            INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
-            VALUES ('{$dummyUserId}', '{$roleId}', 'Sales Uji Coba', 'sales_uji_1', 'dummyhash', 'sales', TRUE)
+            INSERT INTO public.pengguna (id, peran_id, nik, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
+            VALUES ('{$dummyUserId}', '{$roleId}', '3201018888888881', 'Sales Uji Coba', 'sales_uji_1', 'dummyhash', 'sales', TRUE)
         ");
         $pdo->exec("
             INSERT INTO public.karyawan (id, pengguna_id, tipe_penggajian)

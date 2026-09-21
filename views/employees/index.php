@@ -674,7 +674,12 @@ ob_start();
                             <td>
                                 <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);" x-text="e.nama_karyawan"></div>
                                 <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                    <span x-text="(e.nomor_whatsapp || e.nomor_telepon) ? ('WA: ' + (e.nomor_whatsapp || e.nomor_telepon)) : (e.nik ? ('NIK: ' + e.nik) : 'Belum ada kontak')"></span>
+                                    <template x-if="e.nik">
+                                        <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:var(--color-ink-secondary);border-color:var(--color-hairline);background:var(--color-canvas-soft);">
+                                            NIK: <span x-text="e.nik"></span>
+                                        </span>
+                                    </template>
+                                    <span x-text="(e.nomor_whatsapp || e.nomor_telepon) ? ('WA: ' + (e.nomor_whatsapp || e.nomor_telepon)) : ''"></span>
                                     <template x-if="e.nomor_polisi_kendaraan">
                                         <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:#0284c7;border-color:rgba(2,132,199,0.3);background:rgba(2,132,199,0.08);">
                                             &#x1F69A; <span x-text="e.nomor_polisi_kendaraan"></span>
@@ -824,16 +829,17 @@ ob_start();
                     </div>
                     <div>
                         <label class="form-label">Nomor WhatsApp *</label>
-                        <input type="text" name="nomor_whatsapp" x-model="form.nomor_whatsapp" class="form-input font-mono" placeholder="08123456789">
+                        <input type="text" name="nomor_whatsapp" x-model="form.nomor_whatsapp" required class="form-input font-mono" placeholder="08123456789">
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="form-label">NIK / No. KTP (Opsional)</label>
+                        <label class="form-label">Nomor Induk Kependudukan (NIK) *</label>
                         <input type="text" name="nik" x-model="form.nik" 
                                @input="form.nik = $event.target.value.replace(/[^0-9]/g, '').slice(0, 16)"
-                               maxlength="16" class="form-input font-mono" placeholder="3201xxxxxxxxxxxx (16 Digit)">
+                               maxlength="16" minlength="16" pattern="[0-9]{16}" required class="form-input font-mono" placeholder="3201012345670001 (16 Digit)">
+                        <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Wajib 16 digit angka sesuai KTP asli</div>
                     </div>
                     <div>
                         <label class="form-label">Alamat Domisili</label>

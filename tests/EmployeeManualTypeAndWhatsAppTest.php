@@ -130,7 +130,7 @@ it("4.1 - Menambahkan karyawan Sales dengan Tipe Penggajian MANUAL 'bulanan' dan
     $pdo->beginTransaction();
     try {
         $nama = 'Test Karyawan Bulanan ' . uniqid();
-        $nik = 'NIK-TEST-' . rand(100, 999);
+        $nik = '320101' . str_pad((string)rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT);
         $posisi = 'sales';
         $tipeGaji = 'bulanan'; // Pilihan manual user (2 opsi: borongan / bulanan)
         $whatsapp = '081299991111';
@@ -184,7 +184,7 @@ it("4.2 - Database CHECK constraint menolak tipe_penggajian di luar 'borongan' d
             INSERT INTO public.pengguna (
                 nama_lengkap, nik, posisi, nomor_telepon, nomor_whatsapp, status_aktif
             ) VALUES (
-                'Test Constraint Reject', 'NIK-REJECT-001', 'driver', '081299992222', '081299992222', TRUE
+                'Test Constraint Reject', '3201019988776655', 'driver', '081299992222', '081299992222', TRUE
             ) RETURNING id
         ");
         $stmt->execute();
@@ -213,7 +213,7 @@ it("4.2 - Database CHECK constraint menolak tipe_penggajian di luar 'borongan' d
 it("5.1 - EmployeeImportHandler membaca kolom No WhatsApp dan Tipe Penggajian manual dengan tepat", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
     $testRow = [
-        'NIK-999',
+        '3201019999888877',
         'Karyawan Import Test',
         'sales',
         'bulanan', // Tipe manual 2 opsi

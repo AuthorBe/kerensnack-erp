@@ -286,16 +286,22 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
     }
 
     /**
-     * Memeriksa apakah item memiliki riwayat mutasi stok, transaksi pesanan, atau pembelian
+     * Memeriksa apakah item memiliki riwayat transaksi, mutasi stok, BOM produksi, atau konsinyasi
      */
     public function hasTransactionHistory(string $id, PDO $pdo): bool
     {
         $stmt = $pdo->prepare("SELECT 
-            (SELECT COUNT(*) FROM public.item_pesanan WHERE item_id = ?) +
-            (SELECT COUNT(*) FROM public.stok_konsinyasi_toko WHERE item_id = ?) +
-            (SELECT COUNT(*) FROM public.riwayat_stok WHERE item_id = ?) +
-            (SELECT COUNT(*) FROM public.rincian_pembelian WHERE item_id = ?) AS total_usage");
-        $stmt->execute([$id, $id, $id, $id]);
+            COALESCE((SELECT COUNT(*) FROM public.item_pesanan WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.stok_konsinyasi_toko WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.riwayat_stok WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.rincian_pembelian WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.komposisi_item WHERE item_jadi_id = ? OR item_bahan_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.opname_gudang_item WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.pelanggan_item WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.penyesuaian_stok WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.produksi_harian WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.rincian_kunjungan_konsinyasi WHERE item_id = ?), 0) AS total_usage");
+        $stmt->execute([$id, $id, $id, $id, $id, $id, $id, $id, $id, $id, $id]);
         return ((int)($stmt->fetch(PDO::FETCH_ASSOC)['total_usage'] ?? 0)) > 0;
     }
 

@@ -91,7 +91,8 @@ class EmployeeController extends Controller
         Auth::requirePermission('master.employees_manage');
 
         $nama = trim((string)$this->input('nama_karyawan'));
-        $nik = trim((string)$this->input('nik')) ?: null;
+        $nikRaw = trim((string)$this->input('nik'));
+        $nik = preg_replace('/[^0-9]/', '', $nikRaw);
         $posisi = $this->input('posisi', 'pengemasan');
         $tipeGaji = strtolower(trim((string)$this->input('tipe_penggajian', 'borongan')));
         if (!in_array($tipeGaji, ['borongan', 'bulanan'], true)) {
@@ -111,6 +112,19 @@ class EmployeeController extends Controller
 
         if (empty($nama)) {
             $this->flashError('Nama karyawan wajib diisi.');
+            $this->redirect('/employees');
+            return;
+        }
+
+        if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
+            $this->flashError('NIK wajib diisi dengan tepat 16 digit angka KTP asli.');
+            $this->redirect('/employees');
+            return;
+        }
+
+        $existingNik = Database::fetchOne("SELECT id, nama_lengkap FROM public.pengguna WHERE nik = :nik LIMIT 1", ['nik' => $nik]);
+        if ($existingNik) {
+            $this->flashError("NIK '{$nik}' sudah terdaftar atas nama {$existingNik['nama_lengkap']}.");
             $this->redirect('/employees');
             return;
         }
@@ -175,12 +189,13 @@ class EmployeeController extends Controller
             \App\Helpers\ActivityLog::log(
                 'hr_payroll',
                 'CREATE',
-                "Mendaftarkan karyawan baru: {$nama} ({$posisi}, Tipe: {$tipeGaji})",
+                "Mendaftarkan karyawan baru: {$nama} ({$posisi}, Tipe: {$tipeGaji}, NIK: {$nik})",
                 'karyawan',
                 (string)$karyawanId,
                 null,
                 [
                     'nama_lengkap' => $nama,
+                    'nik' => $nik,
                     'posisi' => $posisi,
                     'tipe_penggajian' => $tipeGaji,
                     'gaji_pokok_bulanan' => $gajiPokok,
@@ -205,7 +220,8 @@ class EmployeeController extends Controller
 
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_karyawan'));
-        $nik = trim((string)$this->input('nik')) ?: null;
+        $nikRaw = trim((string)$this->input('nik'));
+        $nik = preg_replace('/[^0-9]/', '', $nikRaw);
         $posisi = $this->input('posisi', 'pengemasan');
         $tipeGaji = strtolower(trim((string)$this->input('tipe_penggajian', 'borongan')));
         if (!in_array($tipeGaji, ['borongan', 'bulanan'], true)) {
@@ -229,6 +245,12 @@ class EmployeeController extends Controller
             return;
         }
 
+        if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
+            $this->flashError('NIK wajib diisi dengan tepat 16 digit angka KTP asli.');
+            $this->redirect('/employees');
+            return;
+        }
+
         if (!empty($bankRek) && empty($bankAn)) {
             $this->flashError('Pemilik rekening wajib diisi jika nomor rekening diisi.');
             $this->redirect('/employees');
@@ -236,16 +258,25 @@ class EmployeeController extends Controller
         }
 
         try {
-            $pdo = Database::getConnection();
-            $pdo->beginTransaction();
-
             $karyawan = Database::fetchOne("SELECT pengguna_id FROM public.karyawan WHERE id = :id", ['id' => $id]);
             if (!$karyawan) {
-                $pdo->rollBack();
                 $this->flashError('Data karyawan tidak ditemukan.');
                 $this->redirect('/employees');
                 return;
             }
+
+            $existingNik = Database::fetchOne(
+                "SELECT id, nama_lengkap FROM public.pengguna WHERE nik = :nik AND id != :uid LIMIT 1",
+                ['nik' => $nik, 'uid' => $karyawan['pengguna_id']]
+            );
+            if ($existingNik) {
+                $this->flashError("NIK '{$nik}' sudah digunakan oleh karyawan lain ({$existingNik['nama_lengkap']}).");
+                $this->redirect('/employees');
+                return;
+            }
+
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
 
             if ($karyawan && $karyawan['pengguna_id']) {
                 $stmtP = $pdo->prepare("
@@ -298,7 +329,7 @@ class EmployeeController extends Controller
 
             $oldData = Database::fetchOne("
                 SELECT k.tipe_penggajian, k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
-                       p.nama_lengkap, p.posisi, p.nomor_telepon, p.bank_nama, p.bank_nomor_rekening, p.status_aktif
+                       p.nik, p.nama_lengkap, p.posisi, p.nomor_telepon, p.bank_nama, p.bank_nomor_rekening, p.status_aktif
                 FROM public.karyawan k
                 LEFT JOIN public.pengguna p ON k.pengguna_id = p.id
                 WHERE k.id = :id
@@ -309,12 +340,13 @@ class EmployeeController extends Controller
             \App\Helpers\ActivityLog::log(
                 'hr_payroll',
                 'UPDATE',
-                "Memperbarui data karyawan {$nama}",
+                "Memperbarui data karyawan {$nama} (NIK: {$nik})",
                 'karyawan',
                 (string)$id,
                 $oldData,
                 [
                     'nama_lengkap' => $nama,
+                    'nik' => $nik,
                     'posisi' => $posisi,
                     'tipe_penggajian' => $tipeGaji,
                     'gaji_pokok_bulanan' => $gajiPokok,

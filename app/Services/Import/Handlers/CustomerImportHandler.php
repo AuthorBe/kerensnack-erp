@@ -464,10 +464,11 @@ class CustomerImportHandler implements EntityImportHandlerInterface
     public function hasTransactionHistory(string $id, PDO $pdo): bool
     {
         $stmt = $pdo->prepare("SELECT 
-            (SELECT COUNT(*) FROM public.pesanan WHERE pelanggan_id = ?) +
-            (SELECT COUNT(*) FROM public.stok_konsinyasi_toko WHERE pelanggan_id = ?) +
-            (SELECT COUNT(*) FROM public.kunjungan_konsinyasi WHERE pelanggan_id = ?) AS total_tx");
-        $stmt->execute([$id, $id, $id]);
+            COALESCE((SELECT COUNT(*) FROM public.pesanan WHERE pelanggan_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.stok_konsinyasi_toko WHERE pelanggan_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.kunjungan_konsinyasi WHERE pelanggan_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.pelanggan_item WHERE pelanggan_id = ?), 0) AS total_tx");
+        $stmt->execute([$id, $id, $id, $id]);
         return ((int)($stmt->fetch(PDO::FETCH_ASSOC)['total_tx'] ?? 0)) > 0;
     }
 

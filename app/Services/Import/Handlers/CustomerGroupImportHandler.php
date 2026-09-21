@@ -261,6 +261,10 @@ class CustomerGroupImportHandler implements EntityImportHandlerInterface
                 $updateCount++;
             } elseif ($act === 'DELETE') {
                 $gid = $d['id'];
+                $gkode = strtoupper(trim((string)($d['kode_grup'] ?? '')));
+                if ($gkode === 'GRP-001') {
+                    continue; // Lindungi grup pelanggan default GRP-001
+                }
                 $stmtCheckUsage->execute([$gid]);
                 $count = (int)$stmtCheckUsage->fetchColumn();
                 if ($count > 0) {

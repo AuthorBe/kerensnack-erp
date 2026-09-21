@@ -135,8 +135,8 @@ runTest("3. Status Pengguna: Nonaktifkan akun memblokir akses pengguna", functio
         $dummyPass = password_hash('Pass123!', PASSWORD_BCRYPT);
 
         $stmt = $pdo->prepare("
-            INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, status_aktif, posisi)
-            VALUES ('User Toggle Test', :u, :p, TRUE, 'sales')
+            INSERT INTO public.pengguna (nik, nama_lengkap, nama_pengguna, kata_sandi, status_aktif, posisi)
+            VALUES ('3201019911223301', 'User Toggle Test', :u, :p, TRUE, 'sales')
             RETURNING id
         ");
         $stmt->execute(['u' => $dummyUser, 'p' => $dummyPass]);
@@ -171,8 +171,8 @@ runTest("4. Pembaruan Profil Pengguna: Ubah nama pengguna dan kata sandi baru", 
         $newPass = 'NewSecret456!';
 
         $stmt = $pdo->prepare("
-            INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, status_aktif, posisi)
-            VALUES ('Profile Test User', :u, :p, TRUE, 'admin')
+            INSERT INTO public.pengguna (nik, nama_lengkap, nama_pengguna, kata_sandi, status_aktif, posisi)
+            VALUES ('3201019911223302', 'Profile Test User', :u, :p, TRUE, 'admin')
             RETURNING id
         ");
         $stmt->execute(['u' => $oldUser, 'p' => password_hash($oldPass, PASSWORD_BCRYPT)]);
@@ -208,9 +208,9 @@ runTest("4. Pembaruan Profil Pengguna: Ubah nama pengguna dan kata sandi baru", 
 });
 
 // ------------------------------------------------------------------
-// 5. RBAC MATRIX & CUSTOM USER OVERRIDES
+// 5. USER SPECIFIC PERMISSION OVERRIDE
 // ------------------------------------------------------------------
-runTest("5. Matriks RBAC: User override (izin_pengguna) memiliki prioritas di atas izin peran (izin_peran)", function() use ($pdo) {
+runTest("5. Override Izin Pengguna: User specific permissions mengalahkan peran grup", function() use ($pdo) {
     $pdo->beginTransaction();
     try {
         // Ambil 1 izin acak
@@ -231,8 +231,8 @@ runTest("5. Matriks RBAC: User override (izin_pengguna) memiliki prioritas di at
 
         // Buat user dengan peran tersebut
         $stmtUser = $pdo->prepare("
-            INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, peran_id, status_aktif, posisi)
-            VALUES ('User Override Test', 'usr_ovr', :pid, TRUE, 'admin')
+            INSERT INTO public.pengguna (nik, nama_lengkap, nama_pengguna, peran_id, status_aktif, posisi)
+            VALUES ('3201019911223303', 'User Override Test', 'usr_ovr', :pid, TRUE, 'admin')
             RETURNING id
         ");
         $stmtUser->execute(['pid' => $peranId]);
@@ -293,7 +293,7 @@ runTest("7. Pengamanan Akun Karyawan: Karyawan dengan nama_pengguna / kata_sandi
         // Buat karyawan murni tanpa username dan tanpa kata_sandi (seperti hasil impor data)
         $stmt = $pdo->prepare("
             INSERT INTO public.pengguna (nama_lengkap, nik, posisi, status_aktif)
-            VALUES ('Karyawan Non-User Test', 'NIK-TST-999', 'pengemasan', TRUE)
+            VALUES ('Karyawan Non-User Test', '3201019911223304', 'pengemasan', TRUE)
             RETURNING id
         ");
         $stmt->execute();
@@ -311,7 +311,7 @@ runTest("7. Pengamanan Akun Karyawan: Karyawan dengan nama_pengguna / kata_sandi
               AND TRIM(p.kata_sandi) != ''
               AND LOWER(p.nama_pengguna) = LOWER(:username)
             LIMIT 1
-        ", ['username' => 'NIK-TST-999']);
+        ", ['username' => '3201019911223304']);
 
         if (!empty($queryResult)) {
             $pdo->rollBack();

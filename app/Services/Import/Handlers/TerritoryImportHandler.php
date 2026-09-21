@@ -210,8 +210,9 @@ class TerritoryImportHandler implements EntityImportHandlerInterface
         $stmtDel = $pdo->prepare("DELETE FROM public.wilayah WHERE id = ?");
 
         $stmtCheckUsage = $pdo->prepare("SELECT 
-            (SELECT COUNT(*) FROM public.pelanggan WHERE wilayah_id = ?) +
-            (SELECT COUNT(*) FROM public.pemasok WHERE wilayah_id = ?) AS total_usage");
+            COALESCE((SELECT COUNT(*) FROM public.pelanggan WHERE wilayah_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.pemasok WHERE wilayah_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.surat_jalan WHERE rute_wilayah_id = ?), 0) AS total_usage");
 
         foreach ($previewList as $row) {
             $act = $row['action'];
@@ -245,7 +246,7 @@ class TerritoryImportHandler implements EntityImportHandlerInterface
                 $updateCount++;
             } elseif ($act === 'DELETE') {
                 $tid = $d['id'];
-                $stmtCheckUsage->execute([$tid, $tid]);
+                $stmtCheckUsage->execute([$tid, $tid, $tid]);
                 $usage = (int)$stmtCheckUsage->fetchColumn();
 
                 if ($usage > 0) {

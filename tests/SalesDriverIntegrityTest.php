@@ -136,8 +136,8 @@ if (!$driverEmp) {
         ?? Database::fetchOne("SELECT id FROM public.peran LIMIT 1")['id'];
     
     $pdo->exec("
-        INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
-        VALUES ('{$driverUserId}', '{$roleDriverId}', 'TEST Driver Transien', 'test_driver_transient', 'hash', 'driver', TRUE)
+        INSERT INTO public.pengguna (id, peran_id, nik, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
+        VALUES ('{$driverUserId}', '{$roleDriverId}', '3201017111111111', 'TEST Driver Transien', 'test_driver_transient', 'hash', 'driver', TRUE)
         ON CONFLICT (id) DO NOTHING
     ");
     $pdo->exec("
@@ -170,8 +170,8 @@ if (!$salesEmp) {
         ?? Database::fetchOne("SELECT id FROM public.peran LIMIT 1")['id'];
     
     $pdo->exec("
-        INSERT INTO public.pengguna (id, peran_id, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
-        VALUES ('{$salesUserId}', '{$roleSalesId}', 'TEST Sales Transien', 'test_sales_transient', 'hash', 'sales', TRUE)
+        INSERT INTO public.pengguna (id, peran_id, nik, nama_lengkap, nama_pengguna, kata_sandi, posisi, status_aktif)
+        VALUES ('{$salesUserId}', '{$roleSalesId}', '3201017333333333', 'TEST Sales Transien', 'test_sales_transient', 'hash', 'sales', TRUE)
         ON CONFLICT (id) DO NOTHING
     ");
     $pdo->exec("
@@ -526,6 +526,7 @@ runTest("10. EmployeeController: Validasi backend store() mengunci komisi Driver
 
     $ctrl->mockInput = [
         'nama_karyawan' => $dummyNama,
+        'nik' => '320101' . str_pad((string)rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT),
         'posisi' => 'driver',
         'tipe_penggajian' => 'bulanan',
         'gaji_pokok_bulanan' => '2000000',
@@ -590,8 +591,8 @@ runTest("12. PostgreSQL Constraint chk_pengguna_posisi_valid: Menolak posisi 'sa
     $dummyId = null;
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO public.pengguna (nama_lengkap, posisi, status_aktif)
-            VALUES ('Hantu Sales Driver', 'sales_driver', TRUE)
+            INSERT INTO public.pengguna (nik, nama_lengkap, posisi, status_aktif)
+            VALUES ('3201019999000011', 'Hantu Sales Driver', 'sales_driver', TRUE)
             RETURNING id
         ");
         $stmt->execute();

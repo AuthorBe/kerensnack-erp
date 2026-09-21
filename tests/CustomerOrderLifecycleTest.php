@@ -100,7 +100,7 @@ function createCustomerOrderFixtures(PDO $pdo): array {
         $rStmt->execute();
         $roleId = $rStmt->fetchColumn();
     }
-    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, posisi, peran_id) VALUES ('Driver Test', 'driver_test', 'hash', 'driver', :rid) RETURNING id");
+    $usrStmt = $pdo->prepare("INSERT INTO public.pengguna (nama_lengkap, nama_pengguna, kata_sandi, nik, posisi, peran_id) VALUES ('Driver Test', 'driver_test', 'hash', '3201017711223344', 'driver', :rid) RETURNING id");
     $usrStmt->execute(['rid' => $roleId]);
     $driverUserId = $usrStmt->fetchColumn();
 

@@ -735,8 +735,8 @@ runTest("3.2.1 EmployeeController: delete() Melakukan Soft-Delete (status_aktif 
 
     // Insert pengguna aktif
     $pdo->prepare("
-        INSERT INTO public.pengguna (id, nama_lengkap, posisi, status_aktif, peran_id)
-        VALUES (:uid, 'Karyawan Test SoftDelete', 'sales', TRUE, :rid)
+        INSERT INTO public.pengguna (id, nik, nama_lengkap, posisi, status_aktif, peran_id)
+        VALUES (:uid, '3201019911223399', 'Karyawan Test SoftDelete', 'sales', TRUE, :rid)
     ")->execute(['uid' => $dummyUserId, 'rid' => $roleRow['id']]);
 
     // Insert karyawan

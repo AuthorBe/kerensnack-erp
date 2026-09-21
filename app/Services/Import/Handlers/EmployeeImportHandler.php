@@ -26,6 +26,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
     public function getRequiredHeaderGroups(): array
     {
         return [
+            ['nik', 'nik_karyawan', 'nomor_induk', 'ktp', 'nik_ktp'],
             ['nama_lengkap', 'nama', 'nama_karyawan'],
             ['posisi', 'jabatan']
         ];
@@ -34,7 +35,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
     public function getTemplateHeaders(): array
     {
         return [
-            'NIK Karyawan',
+            'NIK Karyawan (16 Digit KTP)',
             'Nama Lengkap',
             'Posisi / Tugas',
             'Tipe Penggajian',
@@ -54,22 +55,22 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
 
     public function getTemplateWidths(): array
     {
-        return [16, 26, 18, 18, 22, 20, 20, 18, 18, 30, 18, 14, 18, 22, 14];
+        return [22, 26, 18, 18, 22, 20, 20, 18, 18, 30, 18, 14, 18, 22, 14];
     }
 
     public function getTemplateExamples(): array
     {
         return [
-            ['NIK-001', 'Budi Santoso', 'sales', 'bulanan', 3500000, 25000, 500000, '081234567890', 'B 1234 ABC', 'Tangerang', '2023-01-15', 'BCA', '1122334455', 'Budi Santoso', 'Aktif'],
-            ['NIK-002', 'Ahmad Dani', 'driver', 'bulanan', 0, 120000, 0, '085678901234', 'B 5678 XYZ', 'Jakarta Barat', '2023-05-10', 'BRI', '5566778899', 'Ahmad Dani', 'Aktif'],
-            ['NIK-003', 'Siti Rohani', 'pengemasan', 'borongan', 0, 0, 0, '087812345678', '', 'Pasar Kemis', '2024-02-01', '', '', '', 'Aktif'],
+            ['3201012345670001', 'Budi Santoso', 'sales', 'bulanan', 3500000, 25000, 500000, '081234567890', 'B 1234 ABC', 'Tangerang', '2023-01-15', 'BCA', '1122334455', 'Budi Santoso', 'Aktif'],
+            ['3201012345670002', 'Ahmad Dani', 'driver', 'bulanan', 0, 120000, 0, '085678901234', 'B 5678 XYZ', 'Jakarta Barat', '2023-05-10', 'BRI', '5566778899', 'Ahmad Dani', 'Aktif'],
+            ['3201012345670003', 'Siti Rohani', 'pengemasan', 'borongan', 0, 0, 0, '087812345678', '', 'Pasar Kemis', '2024-02-01', '', '', '', 'Aktif'],
         ];
     }
 
     public function getTemplateNotes(): array
     {
         return [
-            'NIK Karyawan unik (contoh: NIK-001). Jika kosong, sistem membuat otomatis.',
+            'NIK Karyawan WAJIB diisi 16 digit angka KTP asli (contoh: 3201012345670001) dan harus unik.',
             'Nama Lengkap dan Posisi WAJIB diisi.',
             'Posisi yang valid: admin, mandor, pengemasan, sales, driver (developer/owner diatur khusus).',
             'Tipe Penggajian: borongan, bulanan.',
@@ -115,7 +116,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
         $dbByNik = [];
         $dbByName = [];
         foreach ($dbUsers as $u) {
-            if (!empty($u['nik'])) $dbByNik[strtolower(trim($u['nik']))] = $u;
+            if (!empty($u['nik'])) $dbByNik[trim((string)$u['nik'])] = $u;
             $dbByName[strtolower(trim($u['nama_lengkap']))] = $u;
         }
 
@@ -127,7 +128,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $lineNo = $idx + 2;
             $rowData = SmartReader::buildRowData($header, $row);
 
-            $nik = (string)(SmartReader::getSmartValue($rowData, ['nik_karyawan', 'nik', 'nomor_induk']) ?? '');
+            $nikRaw = (string)(SmartReader::getSmartValue($rowData, ['nik_karyawan', 'nik', 'nomor_induk', 'ktp', 'nik_ktp']) ?? '');
+            $nik = preg_replace('/[^0-9]/', '', $nikRaw);
             $nama = (string)(SmartReader::getSmartValue($rowData, ['nama_lengkap', 'nama', 'nama_karyawan']) ?? '');
             $posisiRaw = (string)(SmartReader::getSmartValue($rowData, ['posisi', 'jabatan', 'tugas']) ?? '');
             $tipeGajiRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_penggajian', 'sistem_gaji', 'tipe_gaji']) ?? 'borongan');
@@ -143,7 +145,25 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $bankAtasNama = (string)(SmartReader::getSmartValue($rowData, ['atas_nama_rekening', 'atas_nama']) ?? '');
             $statusAktifRaw = SmartReader::getSmartValue($rowData, ['status_aktif', 'status', 'aktif']);
 
-            if (empty($nik) && empty($nama)) {
+            if (empty($nikRaw) && empty($nama)) {
+                continue;
+            }
+
+            if (empty($nikRaw)) {
+                $previewList[] = [
+                    'action' => 'ERROR',
+                    'error_msg' => "NIK Karyawan kosong pada baris {$lineNo}. Wajib diisi dengan 16 digit angka KTP asli.",
+                    'data' => ['nik' => '—', 'nama_lengkap' => $nama ?: '—', 'posisi' => $posisiRaw]
+                ];
+                continue;
+            }
+
+            if (strlen($nik) !== 16 || !ctype_digit($nik)) {
+                $previewList[] = [
+                    'action' => 'ERROR',
+                    'error_msg' => "NIK '{$nikRaw}' pada baris {$lineNo} tidak valid. NIK wajib terdiri dari tepat 16 digit angka KTP asli.",
+                    'data' => ['nik' => $nikRaw, 'nama_lengkap' => $nama ?: '—', 'posisi' => $posisiRaw]
+                ];
                 continue;
             }
 
@@ -177,23 +197,20 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $tunjangan = SmartReader::normalizeNumeric($tunjanganRaw, 0.0);
             $statusAktif = SmartReader::normalizeBoolean($statusAktifRaw, true);
 
-            if (!empty($nik)) {
-                $nKey = strtolower(trim($nik));
-                if (isset($seenNiks[$nKey])) {
-                    $previewList[] = [
-                        'action' => 'ERROR',
-                        'error_msg' => "Duplikasi NIK '{$nik}' pada baris {$lineNo}.",
-                        'data' => ['nik' => $nik, 'nama_lengkap' => $nama, 'posisi' => $posisi]
-                    ];
-                    continue;
-                }
-                $seenNiks[$nKey] = true;
+            if (isset($seenNiks[$nik])) {
+                $previewList[] = [
+                    'action' => 'ERROR',
+                    'error_msg' => "Duplikasi NIK '{$nik}' pada baris {$lineNo}.",
+                    'data' => ['nik' => $nik, 'nama_lengkap' => $nama, 'posisi' => $posisi]
+                ];
+                continue;
             }
+            $seenNiks[$nik] = true;
 
             $dbRow = null;
-            if (!empty($nik) && isset($dbByNik[strtolower(trim($nik))])) {
-                $dbRow = $dbByNik[strtolower(trim($nik))];
-            } elseif (empty($nik) && isset($dbByName[strtolower(trim($nama))])) {
+            if (isset($dbByNik[$nik])) {
+                $dbRow = $dbByNik[$nik];
+            } elseif (isset($dbByName[strtolower(trim($nama))])) {
                 $dbRow = $dbByName[strtolower(trim($nama))];
             }
 
@@ -201,7 +218,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
 
             $itemData = [
                 'id'                     => $dbRow['id'] ?? null,
-                'nik'                    => !empty($nik) ? $nik : ($dbRow['nik'] ?? ''),
+                'nik'                    => $nik,
                 'nama_lengkap'           => $nama,
                 'nama_pengguna'          => $dbRow['nama_pengguna'] ?? null,
                 'posisi'                 => $posisi,
@@ -224,11 +241,22 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             if ($dbRow) {
                 $processedDbIds[] = $dbRow['id'];
 
-                if (!empty($nik) && !SmartReader::isSimilarName($dbRow['nama_lengkap'], $nama)) {
+                if (!empty($dbRow['nik']) && $dbRow['nik'] !== $nik) {
                     $previewList[] = [
                         'action'       => 'INSERT',
                         'is_fatal'     => true,
-                        'fatal_reason' => "NIK '{$nik}' di database terdaftar atas \"{$dbRow['nama_lengkap']}\", berbeda dengan \"{$nama}\". Dibuat sebagai karyawan baru dengan NIK otomatis.",
+                        'fatal_reason' => "Karyawan \"{$nama}\" di database sudah memiliki NIK '{$dbRow['nik']}', berbeda dengan NIK pada berkas '{$nik}'. Harap perbaiki data NIK pada berkas.",
+                        'data'         => $itemData,
+                        'old_data'     => $dbRow
+                    ];
+                    continue;
+                }
+
+                if (!SmartReader::isSimilarName($dbRow['nama_lengkap'], $nama)) {
+                    $previewList[] = [
+                        'action'       => 'INSERT',
+                        'is_fatal'     => true,
+                        'fatal_reason' => "NIK '{$nik}' di database terdaftar atas \"{$dbRow['nama_lengkap']}\", berbeda dengan \"{$nama}\".",
                         'data'         => $itemData,
                         'old_data'     => $dbRow
                     ];
@@ -286,9 +314,6 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
         $deleteCount = 0;
         $deactivateCount = 0;
 
-        $stmtMaxNik = $pdo->query("SELECT MAX(SUBSTRING(nik FROM 5)::int) as max_seq FROM public.pengguna WHERE nik ~ '^NIK-[0-9]+$'");
-        $nextSeq = ((int)($stmtMaxNik->fetch(PDO::FETCH_ASSOC)['max_seq'] ?? 0)) + 1;
-
         $stmtInsUser = $pdo->prepare("INSERT INTO public.pengguna 
             (nama_lengkap, nama_pengguna, kata_sandi, nik, posisi, peran_id, nomor_telepon, nomor_whatsapp, nomor_polisi_kendaraan, alamat, tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?) RETURNING id");
@@ -304,16 +329,33 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 diubah_pada = NOW()");
 
         $stmtUpdUser = $pdo->prepare("UPDATE public.pengguna SET 
-            nama_lengkap = ?, posisi = ?, peran_id = ?, nomor_telepon = ?, nomor_whatsapp = ?, nomor_polisi_kendaraan = ?, alamat = ?, bank_nama = ?, bank_nomor_rekening = ?, bank_atas_nama = ?, status_aktif = ?, diubah_pada = NOW()
+            nama_lengkap = ?, nik = ?, posisi = ?, peran_id = ?, nomor_telepon = ?, nomor_whatsapp = ?, nomor_polisi_kendaraan = ?, alamat = ?, bank_nama = ?, bank_nomor_rekening = ?, bank_atas_nama = ?, status_aktif = ?, diubah_pada = NOW()
             WHERE id = ?");
 
         $stmtDeactivate = $pdo->prepare("UPDATE public.pengguna SET status_aktif = FALSE, diubah_pada = NOW() WHERE id = ?");
+        $stmtDelKaryawan = $pdo->prepare("DELETE FROM public.karyawan WHERE pengguna_id = ?");
         $stmtDelUser = $pdo->prepare("DELETE FROM public.pengguna WHERE id = ?");
 
         $stmtCheckUsage = $pdo->prepare("SELECT 
-            (SELECT COUNT(*) FROM public.surat_jalan WHERE sales_driver_id = ?) +
-            (SELECT COUNT(*) FROM public.pelanggan WHERE sales_driver_id = ?) +
-            (SELECT COUNT(*) FROM public.pesanan WHERE dibuat_oleh = ?) AS total_usage");
+            COALESCE((SELECT COUNT(*) FROM public.surat_jalan WHERE sales_driver_id = k.id OR disetujui_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.pelanggan WHERE sales_driver_id = k.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.pesanan WHERE sales_driver_id = k.id OR dibuat_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.pembelian WHERE sales_driver_id = k.id OR dibuat_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.kunjungan_konsinyasi WHERE sales_driver_id = k.id OR dibuat_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.absensi WHERE karyawan_id = k.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.kasbon WHERE karyawan_id = k.id OR disetujui_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.penarikan_gaji WHERE karyawan_id = k.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.rincian_penggajian WHERE karyawan_id = k.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.transaksi_tabungan WHERE karyawan_id = k.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.produksi_harian WHERE karyawan_id = k.id OR dicatat_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.arus_kas WHERE dicatat_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.opname_gudang WHERE dibuat_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.penggajian WHERE disetujui_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.penyesuaian_stok WHERE dicatat_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.riwayat_stok WHERE dibuat_oleh = u.id), 0) AS total_usage
+        FROM public.pengguna u
+        LEFT JOIN public.karyawan k ON k.pengguna_id = u.id
+        WHERE u.id = ?");
 
         foreach ($previewList as $row) {
             $act = $row['action'];
@@ -321,9 +363,9 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $d = $row['data'];
 
             if ($act === 'INSERT' || $isFatal) {
-                $nik = $d['nik'];
-                if (empty($nik) || $isFatal) {
-                    $nik = 'NIK-' . str_pad((string)$nextSeq++, 3, '0', STR_PAD_LEFT);
+                $nik = $d['nik'] ?? '';
+                if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
+                    throw new \RuntimeException("Sinkronisasi ditolak: NIK untuk '{$d['nama_lengkap']}' wajib 16 digit angka KTP asli.");
                 }
 
                 $stmtInsUser->execute([
@@ -353,12 +395,23 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                         $d['uang_kehadiran_harian'] ?: 0,
                         $d['tunjangan_bulanan'] ?: 0
                     ]);
+
+                    // Inisialisasi tabungan karyawan jika belum ada
+                    $pdo->prepare("INSERT INTO public.tabungan (karyawan_id, saldo) 
+                                   SELECT id, 0.00 FROM public.karyawan WHERE pengguna_id = ? 
+                                   ON CONFLICT DO NOTHING")->execute([$newUserId]);
                 }
                 $insertCount++;
             } elseif ($act === 'UPDATE') {
                 $userId = $d['id'];
+                $nik = $d['nik'] ?? '';
+                if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
+                    throw new \RuntimeException("Sinkronisasi ditolak: NIK untuk '{$d['nama_lengkap']}' wajib 16 digit angka KTP asli.");
+                }
+
                 $stmtUpdUser->execute([
                     $d['nama_lengkap'],
+                    $nik,
                     $d['posisi'],
                     $d['peran_id'],
                     $d['nomor_whatsapp'] ?: null,
@@ -382,13 +435,19 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 $updateCount++;
             } elseif ($act === 'DELETE') {
                 $uid = $d['id'];
-                $stmtCheckUsage->execute([$uid, $uid, $uid]);
+                $uname = strtolower(trim((string)($d['nama_pengguna'] ?? '')));
+                if ($uname === 'developer') {
+                    continue; // Lindungi akun developer bawaan sistem
+                }
+
+                $stmtCheckUsage->execute([$uid]);
                 $usage = (int)$stmtCheckUsage->fetchColumn();
 
                 if ($usage > 0) {
                     $stmtDeactivate->execute([$uid]);
                     $deactivateCount++;
                 } else {
+                    $stmtDelKaryawan->execute([$uid]);
                     $stmtDelUser->execute([$uid]);
                     $deleteCount++;
                 }

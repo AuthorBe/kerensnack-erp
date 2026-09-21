@@ -204,6 +204,12 @@ class TestRunnerService
             'category'    => 'Master Data & HR',
             'description' => 'Verifikasi input manual tipe penggajian pada form karyawan, generator template excel string murni, dan unifikasi kontak ke nomor WhatsApp.'
         ],
+        'employee_nik_16_digit' => [
+            'file'        => 'EmployeeNik16DigitIntegrityTest.php',
+            'title'       => 'Employee Mandatory 16-Digit NIK & Sync Integrity',
+            'category'    => 'Master Data & HR',
+            'description' => 'Penegakan validasi NIK asli 16 digit wajib pada PostgreSQL CHECK constraint, master karyawan, template excel, dan modul sinkronisasi data.'
+        ],
         'access_denied_403' => [
             'file'        => 'AccessDenied403Test.php',
             'title'       => 'Access Denied 403 & CSRF Security Protection',
@@ -215,6 +221,12 @@ class TestRunnerService
             'title'       => 'Master Data Merek & Relasi Grup Produk',
             'category'    => 'Master Data & Produk',
             'description' => 'Validasi master merek dagang (Brand), relasi FK ke grup produk, CRUD, dan impor data merek.'
+        ],
+        'master_full_sync_safety' => [
+            'file'        => 'MasterFullSyncSafetyAuditTest.php',
+            'title'       => 'Master Data Full-Sync Sensor & Relational Safety Audit',
+            'category'    => 'Master Data & System',
+            'description' => 'Audit mendalam sensor relasi Foreign Key (100% FK coverage), proteksi master default (CUST-001, GRP-001, developer), dan verifikasi soft-deactivate vs hard-delete saat Full-Sync.'
         ],
     ];
 

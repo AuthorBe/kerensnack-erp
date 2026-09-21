@@ -540,8 +540,8 @@ runTest("7. Logistik Vendor: Driver ditugaskan mengambil belanjaan bahan baku", 
             // Buat driver transient jika belum ada
             $usrId = '99999999-9999-9999-9999-999999999999';
             $pdo->prepare("
-                INSERT INTO public.pengguna (id, peran_id, nama_pengguna, kata_sandi, nama_lengkap, posisi, status_aktif)
-                VALUES (:uid, :pid, 'driver_test_transient', 'hash', 'Driver Uji', 'driver', TRUE)
+                INSERT INTO public.pengguna (id, peran_id, nik, nama_pengguna, kata_sandi, nama_lengkap, posisi, status_aktif)
+                VALUES (:uid, :pid, '3201019999999999', 'driver_test_transient', 'hash', 'Driver Uji', 'driver', TRUE)
                 ON CONFLICT (id) DO NOTHING
             ")->execute(['uid' => $usrId, 'pid' => $peranId]);
 

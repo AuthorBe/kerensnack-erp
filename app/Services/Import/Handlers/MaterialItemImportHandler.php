@@ -256,9 +256,12 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
         $stmtDel = $pdo->prepare("DELETE FROM public.item WHERE id = ?");
 
         $stmtCheckUsage = $pdo->prepare("SELECT 
-            (SELECT COUNT(*) FROM public.komposisi_item WHERE item_bahan_id = ?) +
-            (SELECT COUNT(*) FROM public.rincian_pembelian WHERE item_id = ?) +
-            (SELECT COUNT(*) FROM public.riwayat_stok WHERE item_id = ?) AS total_usage");
+            COALESCE((SELECT COUNT(*) FROM public.komposisi_item WHERE item_bahan_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.rincian_pembelian WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.riwayat_stok WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.opname_gudang_item WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.penyesuaian_stok WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.produksi_harian WHERE item_id = ?), 0) AS total_usage");
 
         foreach ($previewList as $row) {
             $act = $row['action'];
@@ -296,7 +299,7 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
                 $updateCount++;
             } elseif ($act === 'DELETE') {
                 $mid = $d['id'];
-                $stmtCheckUsage->execute([$mid, $mid, $mid]);
+                $stmtCheckUsage->execute([$mid, $mid, $mid, $mid, $mid, $mid]);
                 $usage = (int)$stmtCheckUsage->fetchColumn();
 
                 if ($usage > 0) {

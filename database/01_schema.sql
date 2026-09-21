@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS public.pengguna (
     karyawan_legacy_id INT UNIQUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_pengguna_posisi_valid CHECK (posisi IN ('developer', 'owner', 'admin', 'mandor', 'pengemasan', 'sales', 'driver'))
+    CONSTRAINT chk_pengguna_posisi_valid CHECK (posisi IN ('developer', 'owner', 'admin', 'mandor', 'pengemasan', 'sales', 'driver')),
+    CONSTRAINT chk_pengguna_nik_16_digit CHECK (posisi = 'developer' OR (nik IS NOT NULL AND nik ~ '^[0-9]{16}$'))
 );
 
 CREATE TABLE IF NOT EXISTS public.izin_pengguna (
