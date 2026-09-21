@@ -10,6 +10,7 @@ function posApp() {
         items: <?= json_encode($items) ?>,
         customers: <?= json_encode($customers) ?>,
         customerItemsMap: <?= json_encode($customerItemsMap ?? []) ?>,
+        groupBrandLevelsMap: <?= json_encode($groupBrandLevelsMap ?? []) ?>,
         cashAccounts: <?= json_encode($cashAccounts ?? []) ?>,
         selectedCustomerId: '<?= $customers[0]['id'] ?? '' ?>',
         filterStoreOnly: true,
@@ -127,10 +128,18 @@ function posApp() {
         get filteredItems() {
             const assigned = this.customerItemsMap[this.selectedCustomerId];
             const isRestricted = this.filterStoreOnly && Array.isArray(assigned) && assigned.length > 0;
+            const currentCustomer = this.customers.find(c => String(c.id) === String(this.selectedCustomerId));
+            const currentGroupId = currentCustomer?.grup_pelanggan_id;
 
             return this.items.filter(item => {
                 if (isRestricted && !assigned.includes(item.id)) {
                     return false;
+                }
+                // Filter jika merek produk berstatus Tidak Dijual untuk grup pelanggan saat ini
+                if (currentGroupId && item.merek_id && this.groupBrandLevelsMap?.[currentGroupId]?.[item.merek_id]) {
+                    if (this.groupBrandLevelsMap[currentGroupId][item.merek_id].is_dijual === false) {
+                        return false;
+                    }
                 }
                 const matchGroup = (this.selectedGroup === 'all' || item.grup_id === this.selectedGroup);
                 const query = this.searchQuery.toLowerCase();
@@ -278,6 +287,19 @@ function posApp() {
                     const res = await fetch(url);
                     const json = await res.json();
                     if (json.success && json.data) {
+                        if (json.data.error) {
+                            if (window.AppAlert) {
+                                window.AppAlert({
+                                    title: 'Produk Tidak Diizinkan',
+                                    message: json.data.message || `Produk '${rawItem.nama_item}' tidak dapat dijual untuk grup pelanggan ini.`,
+                                    type: 'warning',
+                                    icon: 'shield-alert'
+                                });
+                            } else if (typeof toast !== 'undefined') {
+                                toast.warning(json.data.message || `Produk '${rawItem.nama_item}' tidak dapat dijual untuk grup pelanggan ini.`);
+                            }
+                            return;
+                        }
                         calculatedPrice = Number(json.data.harga_pcs_netto);
                         discountPercent = Number(json.data.diskon_persen);
                         discountNominal = Number(json.data.diskon_nominal);

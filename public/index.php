@@ -185,6 +185,7 @@ Router::post('/sales-orders/update-delivery-status', [CustomerOrderController::c
 // --- TRANSAKSI 2: MATRIKS HARGA 30 LEVEL & TIER PELANGGAN ---
 Router::get('/pricing', [PricingController::class, 'index']);
 Router::post('/pricing/update-level', [PricingController::class, 'updateLevelPrice']);
+Router::post('/pricing/update-master-level', [PricingController::class, 'updateMasterLevel']);
 Router::post('/pricing/delete-level', [PricingController::class, 'deleteLevelPrice']);
 
 // --- GUDANG 1: KATALOG & OPNAME STOK FISIK ---
@@ -293,6 +294,7 @@ Router::post('/customers/update-territory', [CustomerController::class, 'updateT
 Router::post('/customers/delete-territory', [CustomerController::class, 'deleteTerritory']);
 Router::post('/customers/store-group', [CustomerController::class, 'storeGroup']);
 Router::post('/customers/update-group', [CustomerController::class, 'updateGroup']);
+Router::post('/customers/duplicate-group', [CustomerController::class, 'duplicateGroup']);
 Router::post('/customers/delete-group', [CustomerController::class, 'deleteGroup']);
 
 // --- MASTER DATA 2: PEMASOK VENDOR ---

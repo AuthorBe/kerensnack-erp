@@ -351,13 +351,11 @@ $activeTab = $_GET['tab'] ?? 'customers';
                     <tr>
                         <th style="width:120px; min-width:100px;" class="cell-nowrap">Kode Grup</th>
                         <th style="min-width:180px;">Nama Grup Pelanggan</th>
-                        <th class="cell-center cell-nowrap" style="width:150px;">Default Level Harga</th>
-                        <th class="cell-right cell-nowrap" style="width:130px;">Diskon Persen</th>
-                        <th class="cell-right cell-nowrap" style="width:150px;">Diskon Nominal</th>
+                        <th style="min-width:240px;">Level Harga & Diskon per Merek</th>
                         <th class="cell-center cell-nowrap" style="width:120px;">Toko Terdaftar</th>
                         <th class="cell-center cell-nowrap" style="width:90px;">Status</th>
                         <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
-                        <th class="cell-center cell-nowrap" style="width:90px;">Aksi</th>
+                        <th class="cell-center cell-nowrap" style="width:110px;">Aksi</th>
                         <?php endif; ?>
                     </tr>
                 </thead>
@@ -370,11 +368,21 @@ $activeTab = $_GET['tab'] ?? 'customers';
                             <td>
                                 <strong style="font-size:13px;color:var(--color-ink);" x-text="cg.nama_grup"></strong>
                             </td>
-                            <td class="cell-center cell-nowrap">
-                                <span class="badge badge-success" style="font-weight:800;" x-text="'Level ' + cg.default_level_harga"></span>
+                            <td>
+                                <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+                                    <template x-for="bl in (cg.brand_levels || [])" :key="bl.merek_id">
+                                        <span :class="bl.is_dijual ? 'badge badge-success' : 'badge badge-danger'" 
+                                              style="font-size:11px;padding:3px 7px;font-weight:700;letter-spacing:0.02em;"
+                                              :title="bl.is_dijual ? (bl.nama_merek + ': Level ' + bl.level_harga + (bl.diskon_persen > 0 ? (' Diskon ' + bl.diskon_persen + '%') : '') + (bl.diskon_nominal > 0 ? (' Diskon Rp ' + formatRupiah(bl.diskon_nominal)) : '')) : (bl.nama_merek + ': Tidak Dijual')">
+                                            <span x-text="bl.kode_merek || bl.nama_merek"></span>: 
+                                            <span x-text="bl.is_dijual ? ('Lvl ' + bl.level_harga + (bl.diskon_persen > 0 ? (' (-' + bl.diskon_persen + '%)') : '') + (bl.diskon_nominal > 0 ? (' (-Rp' + formatRupiahNumber(bl.diskon_nominal) + ')') : '')) : 'Tidak Dijual'"></span>
+                                        </span>
+                                    </template>
+                                    <template x-if="!cg.brand_levels || cg.brand_levels.length === 0">
+                                        <span class="badge badge-success" style="font-weight:800;" x-text="'Level ' + cg.default_level_harga"></span>
+                                    </template>
+                                </div>
                             </td>
-                            <td class="cell-right cell-nowrap font-mono" x-text="cg.diskon_persen_default > 0 ? (cg.diskon_persen_default + ' %') : '0 %'"></td>
-                            <td class="cell-right cell-currency" x-text="formatRupiah(cg.diskon_nominal_default)"></td>
                             <td class="cell-center cell-nowrap">
                                 <span class="badge badge-secondary" x-text="(cg.total_pelanggan || 0) + ' Toko'"></span>
                             </td>
@@ -387,6 +395,9 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
                                     <button @click="openEditCustomerGroupModal(cg)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Grup">
                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                                    </button>
+                                    <button @click="duplicateCustomerGroup(cg.id, cg.nama_grup)" class="btn btn-ghost btn-sm" style="padding:6px;color:var(--color-primary);" title="Duplikasi Grup">
+                                        <i data-lucide="copy" style="width:14px;height:14px;"></i>
                                     </button>
                                     <template x-if="(Number(cg.total_pelanggan) || 0) > 0 || customerGroups.length <= 1">
                                         <button type="button" disabled class="btn btn-ghost btn-sm" style="padding:6px;opacity:0.35;cursor:not-allowed;color:var(--color-ink-mute);" :title="Number(cg.total_pelanggan) > 0 ? ('Grup terhubung dengan ' + cg.total_pelanggan + ' toko pelanggan (tidak dapat dihapus)') : 'Sistem wajib memiliki minimal 1 grup pelanggan'">
@@ -1123,12 +1134,11 @@ $activeTab = $_GET['tab'] ?? 'customers';
                     <input type="hidden" name="id" :value="customerGroupForm.id">
                 </template>
 
-                <div>
-                    <label class="form-label">Nama Grup Pelanggan *</label>
-                    <input type="text" name="nama_grup" x-model="customerGroupForm.nama_grup" required class="form-input" placeholder="Contoh: Grup Agen Distributor Grosir">
-                </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="form-label">Nama Grup Pelanggan *</label>
+                        <input type="text" name="nama_grup" x-model="customerGroupForm.nama_grup" required class="form-input" placeholder="Contoh: KS 14.800 | CQ 15.800 | CM -">
+                    </div>
                     <div>
                         <label class="form-label">Kode Grup (ID) *</label>
                         <div class="input-group-addon">
@@ -1138,37 +1148,80 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                    @input="customerGroupForm.kode_suffix = $event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 10)"
                                    maxlength="10" 
                                    class="form-input font-mono uppercase addon-input" 
-                                   placeholder="AGEN-01 / MITRA">
+                                   placeholder="G01 / MITRA">
                         </div>
                         <input type="hidden" name="kode_grup" :value="'GRP-' + (customerGroupForm.kode_suffix || '').trim()">
                         <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:3px;">Prefix <code>GRP-</code> otomatis. Maks. 10 huruf/angka.</div>
                     </div>
-                    <div>
-                        <label class="form-label">Default Level Harga (1–30) *</label>
-                        <select name="default_level_harga" x-model.number="customerGroupForm.default_level_harga" class="form-input">
-                            <?php if (!empty($masterLevels)): ?>
-                                <?php foreach ($masterLevels as $ml): ?>
-                                <option value="<?= $ml['level_nomor'] ?>"><?= htmlspecialchars($ml['nama_level']) ?></option>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <?php for ($i = 1; $i <= 30; $i++): ?>
-                                <option value="<?= $i ?>">Level <?= $i ?></option>
-                                <?php endfor; ?>
-                            <?php endif; ?>
-                        </select>
+                </div>
+
+                <!-- PENGATURAN LEVEL HARGA & DISKON PER MEREK -->
+                <div style="background-color:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:8px;padding:12px;">
+                    <div style="font-size:12px;font-weight:700;color:var(--color-ink);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+                        <i data-lucide="layers" style="width:15px;height:15px;color:var(--color-primary);"></i>
+                        <span>Konfigurasi Level Harga & Diskon per Merek Dagang</span>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        <?php if (!empty($brands)): ?>
+                            <?php foreach ($brands as $b): ?>
+                            <div style="background:var(--color-surface);border:1px solid var(--color-hairline);border-radius:6px;padding:10px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <span class="badge badge-mono font-bold"><?= htmlspecialchars($b['kode_merek']) ?></span>
+                                        <strong style="font-size:13px;color:var(--color-ink);"><?= htmlspecialchars($b['nama_merek']) ?></strong>
+                                    </div>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
+                                        <input type="checkbox" 
+                                               x-model="customerGroupForm.brand_levels['<?= $b['id'] ?>'].is_dijual"
+                                               style="width:15px;height:15px;accent-color:var(--color-primary);">
+                                        <span x-text="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? 'Dijual' : 'Tidak Dijual'"
+                                              :style="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? 'color:#16a34a;' : 'color:#dc2626;'"></span>
+                                    </label>
+                                </div>
+
+                                <div x-show="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual" class="grid grid-cols-1 sm:grid-cols-3 gap-2" style="margin-top:6px;">
+                                    <div>
+                                        <label class="form-label" style="font-size:11px;">Level Harga (1–30) *</label>
+                                        <select x-model.number="customerGroupForm.brand_levels['<?= $b['id'] ?>'].level_harga" class="form-input" style="height:34px;font-size:12px;">
+                                            <?php if (!empty($masterLevels)): ?>
+                                                <?php foreach ($masterLevels as $ml): ?>
+                                                <option value="<?= $ml['level_nomor'] ?>"><?= htmlspecialchars($ml['nama_level']) ?></option>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <?php for ($i = 1; $i <= 30; $i++): ?>
+                                                <option value="<?= $i ?>">Level <?= $i ?></option>
+                                                <?php endfor; ?>
+                                            <?php endif; ?>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size:11px;">Diskon Merek (%)</label>
+                                        <input type="number" step="0.01" min="0" max="100" 
+                                               x-model.number="customerGroupForm.brand_levels['<?= $b['id'] ?>'].diskon_persen" 
+                                               class="form-input font-mono" style="height:34px;font-size:12px;" placeholder="0">
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="font-size:11px;">Diskon Merek (Rp / Pcs)</label>
+                                        <input type="text" 
+                                               x-model="customerGroupForm.brand_levels['<?= $b['id'] ?>'].diskon_nominal" 
+                                               class="form-input font-mono input-rupiah" style="height:34px;font-size:12px;" placeholder="0">
+                                    </div>
+                                </div>
+
+                                <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][is_dijual]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? '1' : '0'">
+                                <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][level_harga]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.level_harga || '1'">
+                                <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][diskon_persen]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.diskon_persen || 0">
+                                <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][diskon_nominal]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.diskon_nominal || 0">
+                            </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Diskon Default (%)</label>
-                        <input type="number" step="0.1" name="diskon_persen_default" x-model.number="customerGroupForm.diskon_persen_default" class="form-input font-mono" placeholder="0">
-                    </div>
-                    <div>
-                        <label class="form-label">Diskon Default (Rp / Pcs)</label>
-                        <input type="text" name="diskon_nominal_default" x-model="customerGroupForm.diskon_nominal_default" class="form-input font-mono input-rupiah" placeholder="0">
-                    </div>
-                </div>
+                <input type="hidden" name="default_level_harga" :value="customerGroupForm.default_level_harga || 1">
+                <input type="hidden" name="diskon_persen_default" :value="customerGroupForm.diskon_persen_default || 0">
+                <input type="hidden" name="diskon_nominal_default" :value="customerGroupForm.diskon_nominal_default || 0">
 
                 <template x-if="isEditCustomerGroup">
                     <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
@@ -1181,7 +1234,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
                 <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
                     <button type="button" @click="showCustomerGroupModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" @click="handleGroupFormSubmit($event)">
                         <i data-lucide="save"></i>
                         <span x-text="isEditCustomerGroup ? 'Simpan Perubahan' : 'Tambah Grup'"></span>
                     </button>
@@ -1277,6 +1330,10 @@ $activeTab = $_GET['tab'] ?? 'customers';
         <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-group-id">
     </form>
+    <form id="duplicate-group-form" action="<?= Router::url('/customers/duplicate-group') ?>" method="POST" data-action-text="Menduplikasi grup pelanggan..." style="display:none;">
+        <?= \App\Helpers\CSRF::field() ?>
+        <input type="hidden" name="source_id" id="duplicate-group-source-id">
+    </form>
     <?php endif; ?>
     <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
     <form id="delete-territory-form" action="<?= Router::url('/customers/delete-territory') ?>" method="POST" data-action-text="Menghapus wilayah rute..." style="display:none;">
@@ -1294,6 +1351,7 @@ function customerApp(initialTab) {
         customers: <?= json_encode($customers) ?>,
         groups: <?= json_encode($groups) ?>,
         customerGroups: <?= json_encode($customerGroups) ?>,
+        brands: <?= json_encode($brands ?? []) ?>,
         territories: <?= json_encode($territories) ?>,
         finishedGoods: <?= json_encode($finishedGoods) ?>,
         customerItemsMap: <?= json_encode($customerItemsMap) ?>,
@@ -1350,7 +1408,9 @@ function customerApp(initialTab) {
             default_level_harga: 1,
             diskon_persen_default: 0,
             diskon_nominal_default: '0',
-            status_aktif: true
+            status_aktif: true,
+            total_pelanggan: 0,
+            brand_levels: {}
         },
 
         territoryForm: {
@@ -1725,6 +1785,15 @@ function customerApp(initialTab) {
             this.showItemsModal = false;
             this.showTerritoryModal = false;
             this.isEditCustomerGroup = false;
+            const blObj = {};
+            (this.brands || []).forEach(b => {
+                blObj[b.id] = {
+                    is_dijual: true,
+                    level_harga: 1,
+                    diskon_persen: 0,
+                    diskon_nominal: '0'
+                };
+            });
             this.customerGroupForm = {
                 id: '',
                 nama_grup: '',
@@ -1732,7 +1801,9 @@ function customerApp(initialTab) {
                 default_level_harga: 1,
                 diskon_persen_default: 0,
                 diskon_nominal_default: '0',
-                status_aktif: true
+                status_aktif: true,
+                total_pelanggan: 0,
+                brand_levels: blObj
             };
             this.showCustomerGroupModal = true;
             this.$nextTick(() => lucide.createIcons());
@@ -1743,6 +1814,29 @@ function customerApp(initialTab) {
             this.showItemsModal = false;
             this.showTerritoryModal = false;
             this.isEditCustomerGroup = true;
+            const blObj = {};
+            const existingMap = {};
+            (cg.brand_levels || []).forEach(bl => {
+                existingMap[bl.merek_id] = bl;
+            });
+            (this.brands || []).forEach(b => {
+                const found = existingMap[b.id];
+                if (found) {
+                    blObj[b.id] = {
+                        is_dijual: Boolean(found.is_dijual),
+                        level_harga: found.level_harga ? Number(found.level_harga) : 1,
+                        diskon_persen: Number(found.diskon_persen || 0),
+                        diskon_nominal: window.formatRupiahNumber ? window.formatRupiahNumber(found.diskon_nominal) : String(found.diskon_nominal || 0)
+                    };
+                } else {
+                    blObj[b.id] = {
+                        is_dijual: true,
+                        level_harga: Number(cg.default_level_harga || 1),
+                        diskon_persen: Number(cg.diskon_persen_default || 0),
+                        diskon_nominal: '0'
+                    };
+                }
+            });
             this.customerGroupForm = {
                 id: cg.id,
                 nama_grup: cg.nama_grup,
@@ -1750,10 +1844,43 @@ function customerApp(initialTab) {
                 default_level_harga: Number(cg.default_level_harga),
                 diskon_persen_default: Number(cg.diskon_persen_default || 0),
                 diskon_nominal_default: window.formatRupiahNumber ? window.formatRupiahNumber(cg.diskon_nominal_default) : String(cg.diskon_nominal_default || 0),
-                status_aktif: Boolean(cg.status_aktif)
+                status_aktif: Boolean(cg.status_aktif),
+                total_pelanggan: Number(cg.total_pelanggan || 0),
+                brand_levels: blObj
             };
             this.showCustomerGroupModal = true;
             this.$nextTick(() => lucide.createIcons());
+        },
+
+        async handleGroupFormSubmit(e) {
+            if (this.isEditCustomerGroup && this.customerGroupForm.total_pelanggan >= 2) {
+                e.preventDefault();
+                const totalStores = this.customerGroupForm.total_pelanggan;
+                const confirmed = window.AppConfirm ? await window.AppConfirm({
+                    title: 'Peringatan Edit Grup Multi-Toko',
+                    message: `Grup ini digunakan oleh ${totalStores} toko pelanggan. Perubahan aturan level harga & diskon merek akan langsung berlaku untuk seluruh toko tersebut. Lanjutkan?`,
+                    type: 'warning',
+                    confirmText: 'Ya, Terapkan ke Semua'
+                }) : confirm(`Grup ini digunakan oleh ${totalStores} toko pelanggan. Lanjutkan simpan?`);
+
+                if (confirmed) {
+                    e.target.closest('form').submit();
+                }
+            }
+        },
+
+        async duplicateCustomerGroup(id, name) {
+            const confirmed = window.AppConfirm ? await window.AppConfirm({
+                title: 'Duplikasi Grup Pelanggan',
+                message: `Buat salinan baru dari grup "${name}" beserta seluruh pengaturan level harga & diskon per mereknya?`,
+                type: 'info',
+                confirmText: 'Ya, Duplikasi'
+            }) : confirm(`Duplikasi grup pelanggan "${name}"?`);
+
+            if (confirmed) {
+                document.getElementById('duplicate-group-source-id').value = id;
+                document.getElementById('duplicate-group-form').submit();
+            }
         },
 
         async deleteCustomerGroup(id, name) {

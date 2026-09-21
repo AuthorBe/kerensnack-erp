@@ -222,6 +222,12 @@ class TestRunnerService
             'category'    => 'Master Data & Produk',
             'description' => 'Validasi master merek dagang (Brand), relasi FK ke grup produk, CRUD, dan impor data merek.'
         ],
+        'customer_group_brand_pricing' => [
+            'file'        => 'CustomerGroupBrandPricingTest.php',
+            'title'       => 'Dynamic Brand Price Levels & Discounts per Customer Group',
+            'category'    => 'Master Data & Pricing',
+            'description' => 'Verifikasi komprehensif relasi level harga & diskon per merek, trigger auto-sync, proteksi BRAND_NOT_ALLOWED, dan impor data multi-merek.'
+        ],
         'master_full_sync_safety' => [
             'file'        => 'MasterFullSyncSafetyAuditTest.php',
             'title'       => 'Master Data Full-Sync Sensor & Relational Safety Audit',

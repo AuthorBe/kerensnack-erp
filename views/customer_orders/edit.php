@@ -1019,6 +1019,7 @@ function editSalesOrderApp() {
         isSubmitting: false,
         products: <?= json_encode($products ?? [], JSON_UNESCAPED_UNICODE) ?>,
         priceMatrix: <?= json_encode($priceMatrix ?? [], JSON_UNESCAPED_UNICODE) ?>,
+        groupBrandLevelsMap: <?= json_encode($groupBrandLevelsMap ?? [], JSON_UNESCAPED_UNICODE) ?>,
         order: <?= json_encode($order ?? [], JSON_UNESCAPED_UNICODE) ?>,
         cashAccounts: <?= json_encode($cashAccounts ?? [], JSON_UNESCAPED_UNICODE) ?>,
         whitelistMap: <?= json_encode($whitelistMap ?? [], JSON_UNESCAPED_UNICODE) ?>,
@@ -1089,12 +1090,25 @@ function editSalesOrderApp() {
 
         get availableProducts() {
             const pelId = this.order.pelanggan_id;
-            if (!pelId || this.showAllProducts) return this.products;
+            const gpId = this.order.grup_pelanggan_id;
+            let list = this.products;
+
+            // Filter merek yang tidak dijual untuk grup pelanggan ini
+            if (gpId && this.groupBrandLevelsMap && this.groupBrandLevelsMap[gpId]) {
+                list = list.filter(p => {
+                    if (p.merek_id && this.groupBrandLevelsMap[gpId][p.merek_id]) {
+                        return this.groupBrandLevelsMap[gpId][p.merek_id].is_dijual !== false;
+                    }
+                    return true;
+                });
+            }
+
+            if (!pelId || this.showAllProducts) return list;
             const wl = this.whitelistMap[pelId];
             if (wl && wl.length > 0) {
-                return this.products.filter(p => wl.includes(p.id));
+                return list.filter(p => wl.includes(p.id));
             }
-            return this.products;
+            return list;
         },
 
         get filteredProductList() {
@@ -1362,21 +1376,57 @@ function editSalesOrderApp() {
         onProductSelect(row) {
             if (!row.item_id) {
                 row.harga = 0;
+                row.diskon = 0;
                 row.subtotal = 0;
                 this.validateDpLimit();
                 return;
             }
-            row.harga = this.getPriceForProduct(row.item_id);
-            this.calcRow(row);
+            const product = this.products.find(p => p.id === row.item_id);
+            if (product) {
+                const rawPrice = this.getPriceForProduct(product.id);
+                const bDisc = this.getBrandDiscountForProduct(product.id);
+
+                let itemDiskon = 0;
+                if (bDisc.persen > 0) {
+                    itemDiskon += (rawPrice * bDisc.persen / 100);
+                }
+                if (bDisc.nominal > 0) {
+                    itemDiskon += bDisc.nominal;
+                }
+
+                row.harga = rawPrice;
+                row.diskon = Math.round(itemDiskon);
+                this.calcRow(row);
+            }
         },
 
         getPriceForProduct(itemId) {
             if (!itemId) return 0;
             const product = this.products.find(p => p.id === itemId);
             if (!product) return 0;
-            const level = Number(this.order.level_harga) || 1;
+
+            let level = 1;
+            let isDijual = true;
+
+            const gpId = this.order.grup_pelanggan_id;
+            const merekId = product.merek_id;
+            if (gpId && this.groupBrandLevelsMap && this.groupBrandLevelsMap[gpId] && merekId && this.groupBrandLevelsMap[gpId][merekId]) {
+                const bConf = this.groupBrandLevelsMap[gpId][merekId];
+                level = bConf.level_harga || 1;
+                isDijual = bConf.is_dijual !== false;
+            } else {
+                level = Number(this.order.level_harga) || 1;
+            }
+
+            if (!isDijual) return 0;
+
             const groupPrices = this.priceMatrix[product.grup_id];
             if (!groupPrices) return 0;
+
+            // PILIHAN B (Strict Rejection): Level harga toko wajib terdaftar di /pricing
+            if (groupPrices[level] && Number(groupPrices[level].pcs) > 0) {
+                return Number(groupPrices[level].pcs);
+            }
 
             // Jika level belum diset atau nol, Coba Fallback ke Level 1
             if (groupPrices[1] && Number(groupPrices[1].pcs) > 0) {
@@ -1386,12 +1436,36 @@ function editSalesOrderApp() {
             return 0;
         },
 
+        getBrandDiscountForProduct(itemId) {
+            if (!itemId) return { persen: 0, nominal: 0 };
+            const product = this.products.find(p => p.id === itemId);
+            if (!product) return { persen: 0, nominal: 0 };
+            const gpId = this.order.grup_pelanggan_id;
+            const merekId = product.merek_id;
+            if (gpId && this.groupBrandLevelsMap && this.groupBrandLevelsMap[gpId] && merekId && this.groupBrandLevelsMap[gpId][merekId]) {
+                const bConf = this.groupBrandLevelsMap[gpId][merekId];
+                return { persen: Number(bConf.diskon_persen || 0), nominal: Number(bConf.diskon_nominal || 0) };
+            }
+            return {
+                persen: Number(this.order.grup_diskon_persen || 0),
+                nominal: Number(this.order.grup_diskon_nominal || 0)
+            };
+        },
+
         isPriceFallback(itemId) {
             if (!itemId || !this.order) return false;
             const product = this.products.find(p => p.id === itemId);
             if (!product) return false;
             
-            const level = Number(this.order.level_harga) || 1;
+            const gpId = this.order.grup_pelanggan_id;
+            const merekId = product.merek_id;
+            let level = 1;
+            if (gpId && this.groupBrandLevelsMap && this.groupBrandLevelsMap[gpId] && merekId && this.groupBrandLevelsMap[gpId][merekId]) {
+                level = this.groupBrandLevelsMap[gpId][merekId].level_harga || 1;
+            } else {
+                level = Number(this.order.level_harga) || 1;
+            }
+
             if (level === 1) return false; // Sudah level 1, bukan fallback
             
             const groupPrices = this.priceMatrix[product.grup_id];

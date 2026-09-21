@@ -493,13 +493,15 @@ class CustomerOrderController extends Controller
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
-            // 4. Ambil Katalog Barang Jadi (137 SKU)
+            // 4. Ambil Katalog Barang Jadi (137 SKU) dengan Relasi Merek
             $products = Database::fetchAll("
                 SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
                        i.satuan_dasar, i.stok_fisik_saat_ini,
-                       gp.nama_grup, gp.kode_grup, gp.barcode_universal
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal,
+                       gp.merek_id, m.nama_merek
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.merek m ON gp.merek_id = m.id
                 WHERE i.status_aktif = TRUE AND i.status_jual = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
@@ -513,6 +515,21 @@ class CustomerOrderController extends Controller
             foreach ($rawLevelPrices as $lp) {
                 $priceMatrix[$lp['grup_produk_id']][$lp['level_harga']] = [
                     'pcs' => (float)$lp['harga_jual_pcs']
+                ];
+            }
+
+            // 5b. Ambil Matriks Level Harga & Diskon per Merek untuk Grup Pelanggan
+            $rawGroupBrandLevels = Database::fetchAll("
+                SELECT grup_pelanggan_id, merek_id, level_harga, diskon_persen, diskon_nominal, is_dijual
+                FROM public.grup_pelanggan_level_merek
+            ");
+            $groupBrandLevelsMap = [];
+            foreach ($rawGroupBrandLevels as $gbl) {
+                $groupBrandLevelsMap[$gbl['grup_pelanggan_id']][$gbl['merek_id']] = [
+                    'level_harga' => (int)$gbl['level_harga'],
+                    'diskon_persen' => (float)$gbl['diskon_persen'],
+                    'diskon_nominal' => (float)$gbl['diskon_nominal'],
+                    'is_dijual' => (bool)$gbl['is_dijual']
                 ];
             }
 
@@ -534,6 +551,7 @@ class CustomerOrderController extends Controller
                 'cashAccounts' => $cashAccounts,
                 'products' => $products,
                 'priceMatrix' => $priceMatrix,
+                'groupBrandLevelsMap' => $groupBrandLevelsMap,
                 'whitelistMap' => $whitelistMap,
                 'autoNota' => $autoNota,
             ]);
@@ -947,13 +965,15 @@ class CustomerOrderController extends Controller
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
-            // Ambil Katalog Barang Jadi
+            // Ambil Katalog Barang Jadi dengan Relasi Merek
             $products = Database::fetchAll("
                 SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
                        i.satuan_dasar, i.stok_fisik_saat_ini,
-                       gp.nama_grup, gp.kode_grup, gp.barcode_universal
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal,
+                       gp.merek_id, m.nama_merek
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.merek m ON gp.merek_id = m.id
                 WHERE i.status_aktif = TRUE AND i.status_jual = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
@@ -967,6 +987,21 @@ class CustomerOrderController extends Controller
             foreach ($rawLevelPrices as $lp) {
                 $priceMatrix[$lp['grup_produk_id']][$lp['level_harga']] = [
                     'pcs' => (float)$lp['harga_jual_pcs']
+                ];
+            }
+
+            // Ambil Matriks Level Harga & Diskon per Merek untuk Grup Pelanggan
+            $rawGroupBrandLevels = Database::fetchAll("
+                SELECT grup_pelanggan_id, merek_id, level_harga, diskon_persen, diskon_nominal, is_dijual
+                FROM public.grup_pelanggan_level_merek
+            ");
+            $groupBrandLevelsMap = [];
+            foreach ($rawGroupBrandLevels as $gbl) {
+                $groupBrandLevelsMap[$gbl['grup_pelanggan_id']][$gbl['merek_id']] = [
+                    'level_harga' => (int)$gbl['level_harga'],
+                    'diskon_persen' => (float)$gbl['diskon_persen'],
+                    'diskon_nominal' => (float)$gbl['diskon_nominal'],
+                    'is_dijual' => (bool)$gbl['is_dijual']
                 ];
             }
 
@@ -985,6 +1020,7 @@ class CustomerOrderController extends Controller
                 'cashAccounts' => $cashAccounts,
                 'products' => $products,
                 'priceMatrix' => $priceMatrix,
+                'groupBrandLevelsMap' => $groupBrandLevelsMap,
                 'whitelistMap' => $whitelistMap,
                 'isRetryEdit' => $isRetryEdit,
             ]);

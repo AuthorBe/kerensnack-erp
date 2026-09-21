@@ -59,16 +59,19 @@ class PosController extends Controller
             $items = Database::fetchAll("
                 SELECT i.id, i.grup_id, i.kode_sku, i.nama_item,
                        i.satuan_dasar, i.stok_fisik_saat_ini, i.harga_pokok_pembelian,
-                       gp.nama_grup, gp.kode_grup, gp.barcode_universal,
+                       gp.nama_grup, gp.kode_grup, gp.barcode_universal, gp.merek_id,
+                       COALESCE(m.nama_merek, 'KEREN SNACK') as nama_merek,
+                       COALESCE(m.kode_merek, 'KRN') as kode_merek,
                        COALESCE(gphl.harga_jual_pcs, 15000) AS harga_jual_satuan
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.merek m ON gp.merek_id = m.id
                 LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 1
                 WHERE i.status_aktif = TRUE AND i.status_jual = TRUE AND i.tipe_item = 'barang_jadi'
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
 
-            // 3. Ambil pemetaan item khusus pelanggan
+            // 3. Ambil pemetaan item khusus pelanggan & status level merek grup pelanggan
             $rawCustomerItems = Database::fetchAll("
                 SELECT pelanggan_id, item_id 
                 FROM public.pelanggan_item
@@ -76,6 +79,20 @@ class PosController extends Controller
             $customerItemsMap = [];
             foreach ($rawCustomerItems as $ci) {
                 $customerItemsMap[$ci['pelanggan_id']][] = $ci['item_id'];
+            }
+
+            $rawBrandLevels = Database::fetchAll("
+                SELECT gplm.grup_pelanggan_id, gplm.merek_id, gplm.level_harga, gplm.diskon_persen, gplm.diskon_nominal, gplm.is_dijual
+                FROM public.grup_pelanggan_level_merek gplm
+            ");
+            $groupBrandLevelsMap = [];
+            foreach ($rawBrandLevels as $rbl) {
+                $groupBrandLevelsMap[$rbl['grup_pelanggan_id']][$rbl['merek_id']] = [
+                    'level_harga' => $rbl['level_harga'] !== null ? (int)$rbl['level_harga'] : null,
+                    'diskon_persen' => (float)$rbl['diskon_persen'],
+                    'diskon_nominal' => (float)$rbl['diskon_nominal'],
+                    'is_dijual' => (bool)$rbl['is_dijual']
+                ];
             }
 
             // 4. Ambil akun kas aktif (Default POS teratas)
@@ -93,6 +110,7 @@ class PosController extends Controller
                 'groups' => $groups,
                 'items' => $items,
                 'customerItemsMap' => $customerItemsMap,
+                'groupBrandLevelsMap' => $groupBrandLevelsMap,
                 'cashAccounts' => $cashAccounts,
             ]);
 
@@ -363,6 +381,22 @@ class PosController extends Controller
                 $discPersen = (float)($c['discount_percent'] ?? 0);
                 $discNom = (float)($c['discount_nominal'] ?? 0);
                 $itemSubtotal = (float)($c['subtotal'] ?? 0);
+
+                // Validasi harga & ketersediaan merek untuk pelanggan via RPC
+                $priceCheckRaw = Database::fetchOne("SELECT public.fn_hitung_harga_jual_item(:item_id, :cust_id) AS pricing", [
+                    'item_id' => $itemId,
+                    'cust_id' => $customerId
+                ]);
+                $priceData = json_decode((string)($priceCheckRaw['pricing'] ?? '{}'), true);
+                if (!empty($priceData['error'])) {
+                    $pdo->rollBack();
+                    $this->json([
+                        'success' => false,
+                        'code' => $priceData['code'] ?? 'INVALID_ITEM_PRICE',
+                        'message' => $priceData['message'] ?? 'Produk tidak dapat dijual untuk grup pelanggan ini.'
+                    ], 422);
+                    return;
+                }
 
                 // Ambil data item
                 $itemData = Database::fetchOne("

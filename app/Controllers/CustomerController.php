@@ -127,6 +127,32 @@ class CustomerController extends Controller
                 ORDER BY gp.nama_grup ASC
             ");
 
+            // Ambil seluruh merek aktif & relasi level harga per merek untuk grup pelanggan
+            $brands = Database::fetchAll("SELECT id, kode_merek, nama_merek FROM public.merek WHERE status_aktif = TRUE ORDER BY kode_merek ASC");
+            $brandLevelsRaw = Database::fetchAll("
+                SELECT gplm.grup_pelanggan_id, gplm.merek_id, gplm.level_harga, gplm.diskon_persen, gplm.diskon_nominal, gplm.is_dijual,
+                       m.nama_merek, m.kode_merek
+                FROM public.grup_pelanggan_level_merek gplm
+                JOIN public.merek m ON gplm.merek_id = m.id
+                ORDER BY m.kode_merek ASC
+            ");
+            $groupBrandLevelsMap = [];
+            foreach ($brandLevelsRaw as $blr) {
+                $groupBrandLevelsMap[$blr['grup_pelanggan_id']][] = [
+                    'merek_id' => $blr['merek_id'],
+                    'nama_merek' => $blr['nama_merek'],
+                    'kode_merek' => $blr['kode_merek'],
+                    'level_harga' => $blr['level_harga'] !== null ? (int)$blr['level_harga'] : null,
+                    'diskon_persen' => (float)$blr['diskon_persen'],
+                    'diskon_nominal' => (float)$blr['diskon_nominal'],
+                    'is_dijual' => (bool)$blr['is_dijual']
+                ];
+            }
+            foreach ($customerGroups as &$cg) {
+                $cg['brand_levels'] = $groupBrandLevelsMap[$cg['id']] ?? [];
+            }
+            unset($cg);
+
             $masterLevels = Database::fetchAll("
                 SELECT level_nomor, nama_level 
                 FROM public.master_level_harga 
@@ -208,6 +234,7 @@ class CustomerController extends Controller
                 'customers' => $customers,
                 'groups' => $customerGroups,
                 'customerGroups' => $customerGroups,
+                'brands' => $brands,
                 'masterLevels' => $masterLevels,
                 'territories' => $territories,
                 'finishedGoods' => $finishedGoods,
@@ -1168,7 +1195,7 @@ class CustomerController extends Controller
     }
 
     // ==========================================
-    // 4. MASTER GRUP PELANGGAN & TIER (STORE, UPDATE, DELETE)
+    // 4. MASTER GRUP PELANGGAN & TIER (STORE, UPDATE, DELETE, DUPLICATE)
     // ==========================================
     public function storeGroup(): void
     {
@@ -1179,6 +1206,10 @@ class CustomerController extends Controller
         $level = max(1, min(30, (int)$this->input('default_level_harga', 1)));
         $discPersen = max(0.0, (float)$this->input('diskon_persen_default', 0));
         $discNominal = max(0.0, (float)preg_replace('/[^0-9]/', '', (string)$this->input('diskon_nominal_default', '0')));
+        $brandLevelsInput = $this->input('brand_levels', []);
+        if (is_string($brandLevelsInput)) {
+            $brandLevelsInput = json_decode($brandLevelsInput, true) ?: [];
+        }
 
         if (empty($nama)) {
             $this->flashError('Nama grup pelanggan wajib diisi.');
@@ -1207,13 +1238,13 @@ class CustomerController extends Controller
         }
 
         try {
-            Database::execute("
+            $inserted = Database::fetchOne("
                 INSERT INTO public.grup_pelanggan (
                     kode_grup, nama_grup, default_level_harga,
                     diskon_persen_default, diskon_nominal_default, status_aktif
                 ) VALUES (
                     :kode, :nama, :level, :disc_p, :disc_n, TRUE
-                )
+                ) RETURNING id
             ", [
                 'kode' => $kode,
                 'nama' => $nama,
@@ -1222,11 +1253,52 @@ class CustomerController extends Controller
                 'disc_n' => $discNominal
             ]);
 
+            $groupId = $inserted['id'] ?? null;
+
+            if ($groupId && !empty($brandLevelsInput)) {
+                $activeBrands = Database::fetchAll("SELECT id FROM public.merek WHERE status_aktif = TRUE");
+                foreach ($activeBrands as $b) {
+                    $mId = $b['id'];
+                    $cfg = $brandLevelsInput[$mId] ?? null;
+                    if ($cfg !== null) {
+                        $isDijual = !empty($cfg['is_dijual']) && $cfg['is_dijual'] !== '0' && $cfg['is_dijual'] !== 'false';
+                        $lvl = (!empty($cfg['level_harga']) && (int)$cfg['level_harga'] >= 1) ? max(1, min(30, (int)$cfg['level_harga'])) : null;
+                        if (!$isDijual) {
+                            $lvl = null;
+                        }
+                        $dp = max(0.0, min(100.0, (float)($cfg['diskon_persen'] ?? 0)));
+                        $dn = max(0.0, (float)preg_replace('/[^0-9]/', '', (string)($cfg['diskon_nominal'] ?? '0')));
+
+                        Database::execute("
+                            INSERT INTO public.grup_pelanggan_level_merek (
+                                grup_pelanggan_id, merek_id, level_harga, diskon_persen, diskon_nominal, is_dijual, diubah_pada
+                            ) VALUES (
+                                :gid, :mid, :lvl, :dp, :dn, :idj, NOW()
+                            )
+                            ON CONFLICT (grup_pelanggan_id, merek_id) DO UPDATE SET
+                                level_harga = EXCLUDED.level_harga,
+                                diskon_persen = EXCLUDED.diskon_persen,
+                                diskon_nominal = EXCLUDED.diskon_nominal,
+                                is_dijual = EXCLUDED.is_dijual,
+                                diubah_pada = NOW()
+                        ", [
+                            'gid' => $groupId,
+                            'mid' => $mId,
+                            'lvl' => $lvl,
+                            'dp' => $dp,
+                            'dn' => $dn,
+                            'idj' => $isDijual ? 'true' : 'false'
+                        ]);
+                    }
+                }
+            }
+
             ActivityLog::log(
                 'master_data',
                 'TAMBAH_GRUP_PELANGGAN',
-                "Menambahkan grup pelanggan baru: {$nama} ({$kode}) level {$level}",
-                'grup_pelanggan'
+                "Menambahkan grup pelanggan baru: {$nama} ({$kode})",
+                'grup_pelanggan',
+                (string)$groupId
             );
 
             $this->flashSuccess("Grup pelanggan {$nama} berhasil ditambahkan!");
@@ -1254,6 +1326,10 @@ class CustomerController extends Controller
         $discPersen = max(0.0, (float)$this->input('diskon_persen_default', 0));
         $discNominal = max(0.0, (float)preg_replace('/[^0-9]/', '', (string)$this->input('diskon_nominal_default', '0')));
         $statusAktif = (bool)$this->input('status_aktif', true);
+        $brandLevelsInput = $this->input('brand_levels', []);
+        if (is_string($brandLevelsInput)) {
+            $brandLevelsInput = json_decode($brandLevelsInput, true) ?: [];
+        }
 
         if (empty($id) || empty($nama)) {
             $this->flashError('Parameter tidak lengkap.');
@@ -1297,10 +1373,48 @@ class CustomerController extends Controller
                 'aktif' => $statusAktif ? 'true' : 'false'
             ]);
 
+            if (!empty($brandLevelsInput)) {
+                $activeBrands = Database::fetchAll("SELECT id FROM public.merek WHERE status_aktif = TRUE");
+                foreach ($activeBrands as $b) {
+                    $mId = $b['id'];
+                    $cfg = $brandLevelsInput[$mId] ?? null;
+                    if ($cfg !== null) {
+                        $isDijual = !empty($cfg['is_dijual']) && $cfg['is_dijual'] !== '0' && $cfg['is_dijual'] !== 'false';
+                        $lvl = (!empty($cfg['level_harga']) && (int)$cfg['level_harga'] >= 1) ? max(1, min(30, (int)$cfg['level_harga'])) : null;
+                        if (!$isDijual) {
+                            $lvl = null;
+                        }
+                        $dp = max(0.0, min(100.0, (float)($cfg['diskon_persen'] ?? 0)));
+                        $dn = max(0.0, (float)preg_replace('/[^0-9]/', '', (string)($cfg['diskon_nominal'] ?? '0')));
+
+                        Database::execute("
+                            INSERT INTO public.grup_pelanggan_level_merek (
+                                grup_pelanggan_id, merek_id, level_harga, diskon_persen, diskon_nominal, is_dijual, diubah_pada
+                            ) VALUES (
+                                :gid, :mid, :lvl, :dp, :dn, :idj, NOW()
+                            )
+                            ON CONFLICT (grup_pelanggan_id, merek_id) DO UPDATE SET
+                                level_harga = EXCLUDED.level_harga,
+                                diskon_persen = EXCLUDED.diskon_persen,
+                                diskon_nominal = EXCLUDED.diskon_nominal,
+                                is_dijual = EXCLUDED.is_dijual,
+                                diubah_pada = NOW()
+                        ", [
+                            'gid' => $id,
+                            'mid' => $mId,
+                            'lvl' => $lvl,
+                            'dp' => $dp,
+                            'dn' => $dn,
+                            'idj' => $isDijual ? 'true' : 'false'
+                        ]);
+                    }
+                }
+            }
+
             ActivityLog::log(
                 'master_data',
                 'UBAH_GRUP_PELANGGAN',
-                "Memperbarui grup pelanggan: {$nama} ({$kode}) level {$level}",
+                "Memperbarui grup pelanggan: {$nama} ({$kode})",
                 'grup_pelanggan',
                 (string)$id
             );
@@ -1310,6 +1424,101 @@ class CustomerController extends Controller
 
         } catch (Throwable $e) {
             $this->flashError('Gagal memperbarui grup pelanggan: ' . $e->getMessage());
+            $this->redirect($redirectTarget);
+        }
+    }
+
+    public function duplicateGroup(): void
+    {
+        Auth::requirePermission('master.pricing_manage');
+
+        $redirectTarget = (string)$this->input('redirect_to', '/customers?tab=customer_groups');
+        if (!str_starts_with($redirectTarget, '/') || str_starts_with($redirectTarget, '//')) {
+            $redirectTarget = '/customers?tab=customer_groups';
+        }
+
+        $sourceId = $this->input('source_id');
+        if (empty($sourceId)) {
+            $this->flashError('Grup sumber duplikasi tidak valid.');
+            $this->redirect($redirectTarget);
+            return;
+        }
+
+        $sourceGroup = Database::fetchOne("SELECT * FROM public.grup_pelanggan WHERE id = :id", ['id' => $sourceId]);
+        if (!$sourceGroup) {
+            $this->flashError('Grup sumber tidak ditemukan.');
+            $this->redirect($redirectTarget);
+            return;
+        }
+
+        $baseName = $sourceGroup['nama_grup'] . ' (Salinan)';
+        $baseCode = $sourceGroup['kode_grup'] . '-CP';
+        if (strlen($baseCode) > 15) {
+            $baseCode = substr($baseCode, 0, 15);
+        }
+        $count = 1;
+        $newCode = $baseCode;
+        while (Database::fetchOne("SELECT id FROM public.grup_pelanggan WHERE kode_grup = :c", ['c' => $newCode])) {
+            $newCode = substr($baseCode, 0, 12) . '-' . $count;
+            $count++;
+        }
+
+        try {
+            $newGroup = Database::fetchOne("
+                INSERT INTO public.grup_pelanggan (
+                    kode_grup, nama_grup, default_level_harga,
+                    diskon_persen_default, diskon_nominal_default, status_aktif
+                ) VALUES (
+                    :kode, :nama, :level, :disc_p, :disc_n, TRUE
+                ) RETURNING id
+            ", [
+                'kode' => $newCode,
+                'nama' => $baseName,
+                'level' => $sourceGroup['default_level_harga'],
+                'disc_p' => $sourceGroup['diskon_persen_default'],
+                'disc_n' => $sourceGroup['diskon_nominal_default']
+            ]);
+
+            $newId = $newGroup['id'];
+
+            // Salin seluruh konfigurasi merek
+            $sourceBrandLevels = Database::fetchAll("SELECT * FROM public.grup_pelanggan_level_merek WHERE grup_pelanggan_id = :id", ['id' => $sourceId]);
+            foreach ($sourceBrandLevels as $sbl) {
+                Database::execute("
+                    INSERT INTO public.grup_pelanggan_level_merek (
+                        grup_pelanggan_id, merek_id, level_harga, diskon_persen, diskon_nominal, is_dijual, dibuat_pada, diubah_pada
+                    ) VALUES (
+                        :gid, :mid, :lvl, :dp, :dn, :idj, NOW(), NOW()
+                    )
+                    ON CONFLICT (grup_pelanggan_id, merek_id) DO UPDATE SET
+                        level_harga = EXCLUDED.level_harga,
+                        diskon_persen = EXCLUDED.diskon_persen,
+                        diskon_nominal = EXCLUDED.diskon_nominal,
+                        is_dijual = EXCLUDED.is_dijual,
+                        diubah_pada = NOW()
+                ", [
+                    'gid' => $newId,
+                    'mid' => $sbl['merek_id'],
+                    'lvl' => $sbl['level_harga'],
+                    'dp' => $sbl['diskon_persen'],
+                    'dn' => $sbl['diskon_nominal'],
+                    'idj' => $sbl['is_dijual'] ? 'true' : 'false'
+                ]);
+            }
+
+            ActivityLog::log(
+                'master_data',
+                'DUPLIKASI_GRUP_PELANGGAN',
+                "Menduplikasi grup pelanggan {$sourceGroup['nama_grup']} menjadi {$baseName} ({$newCode})",
+                'grup_pelanggan',
+                (string)$newId
+            );
+
+            $this->flashSuccess("Grup {$baseName} ({$newCode}) berhasil diduplikasi!");
+            $this->redirect($redirectTarget);
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal menduplikasi grup pelanggan: ' . $e->getMessage());
             $this->redirect($redirectTarget);
         }
     }

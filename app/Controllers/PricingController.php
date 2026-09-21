@@ -212,6 +212,62 @@ class PricingController extends Controller
         $this->storeLevel();
     }
 
+    /**
+     * Ubah Nama & Deskripsi Master Level Acuan Sistem (1 s/d 30)
+     */
+    public function updateMasterLevel(): void
+    {
+        Auth::requirePermission('master.pricing_manage');
+
+        $levelNomor = (int)$this->input('level_nomor', 0);
+        $namaLevel = trim((string)$this->input('nama_level', ''));
+        $deskripsi = trim((string)$this->input('deskripsi', ''));
+
+        if ($levelNomor < 1 || $levelNomor > 30) {
+            $this->flashError('Nomor level harus antara 1 sampai 30.');
+            $this->redirect('/pricing');
+            return;
+        }
+
+        if (empty($namaLevel)) {
+            $this->flashError('Nama level acuan tidak boleh kosong.');
+            $this->redirect('/pricing');
+            return;
+        }
+
+        try {
+            $old = Database::fetchOne("SELECT nama_level, deskripsi FROM public.master_level_harga WHERE level_nomor = :lvl", ['lvl' => $levelNomor]);
+
+            Database::execute("
+                UPDATE public.master_level_harga
+                SET nama_level = :nama,
+                    deskripsi = :deskripsi
+                WHERE level_nomor = :lvl
+            ", [
+                'nama' => $namaLevel,
+                'deskripsi' => $deskripsi,
+                'lvl' => $levelNomor
+            ]);
+
+            ActivityLog::log(
+                'master_data',
+                'UPDATE',
+                "Memperbarui Master Level Acuan #{$levelNomor}: '{$namaLevel}'",
+                'master_level_harga',
+                (string)$levelNomor,
+                $old,
+                ['nama_level' => $namaLevel, 'deskripsi' => $deskripsi]
+            );
+
+            $this->flashSuccess("Nama acuan Level {$levelNomor} berhasil diperbarui!");
+            $this->redirect('/pricing');
+
+        } catch (Throwable $e) {
+            $this->flashError('Gagal memperbarui master level acuan: ' . $e->getMessage());
+            $this->redirect('/pricing');
+        }
+    }
+
     public function deleteLevelPrice(): void
     {
         Auth::requirePermission('master.pricing_manage');

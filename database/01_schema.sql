@@ -246,6 +246,20 @@ CREATE TABLE IF NOT EXISTS public.grup_pelanggan (
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Pengaturan Level Harga & Diskon Dinamis per Merek untuk Grup Pelanggan
+CREATE TABLE IF NOT EXISTS public.grup_pelanggan_level_merek (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    grup_pelanggan_id UUID NOT NULL REFERENCES public.grup_pelanggan(id) ON DELETE CASCADE,
+    merek_id UUID NOT NULL REFERENCES public.merek(id) ON DELETE CASCADE,
+    level_harga INT NULL REFERENCES public.master_level_harga(level_nomor) ON UPDATE CASCADE ON DELETE RESTRICT,
+    diskon_persen NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (diskon_persen BETWEEN 0.00 AND 100.00),
+    diskon_nominal NUMERIC(15, 2) NOT NULL DEFAULT 0.00 CHECK (diskon_nominal >= 0.00),
+    is_dijual BOOLEAN NOT NULL DEFAULT TRUE,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_grup_merek UNIQUE (grup_pelanggan_id, merek_id)
+);
+
 -- Master Pelanggan (Toko Langganan & Toko Konsinyasi)
 CREATE TABLE IF NOT EXISTS public.pelanggan (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

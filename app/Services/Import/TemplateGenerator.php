@@ -553,6 +553,17 @@ class TemplateGenerator
                     $currentRow,
                     [20, 35, 55]
                 );
+
+                // 2. Master Merek Dagang
+                $dbBrands = $pdo->query("SELECT kode_merek, nama_merek FROM public.merek WHERE status_aktif = TRUE ORDER BY kode_merek ASC")->fetchAll(PDO::FETCH_NUM);
+                self::renderReferenceTable(
+                    $refSheet,
+                    '2. DAFTAR MEREK DAGANG AKTIF DI SISTEM',
+                    ['Kode Merek', 'Nama Merek Dagang'],
+                    $dbBrands ?: [['KRN', 'KEREN SNACK']],
+                    $currentRow,
+                    [20, 35]
+                );
                 break;
         }
 

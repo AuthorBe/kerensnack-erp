@@ -9,7 +9,7 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- PAGE HEADER                                                               -->
     <!-- ========================================================================= -->
-    <div class="page-header">
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
         <div class="page-header-body">
             <div class="page-header-icon is-amber">
                 <i data-lucide="layers"></i>
@@ -22,6 +22,12 @@ ob_start();
                 <h1 class="page-title"><?= $pageTitle ?? 'Matriks Level Harga Produk' ?></h1>
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Pengaturan 30 Tingkat Level Harga Jual Per Bungkus / Pcs' ?></p>
             </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button type="button" @click="openMasterLevelsModal()" class="btn btn-secondary flex items-center gap-2" style="border-radius:10px;height:38px;padding:0 14px;font-weight:700;font-size:12.5px;" title="Lihat & Ubah Nama Acuan 30 Level Harga">
+                <i data-lucide="list-tree" style="width:16px;height:16px;color:var(--color-primary);"></i>
+                <span>Daftar 30 Level Acuan</span>
+            </button>
         </div>
     </div>
 
@@ -363,6 +369,108 @@ ob_start();
     </div>
     </template>
 
+    <!-- MODAL: DAFTAR 30 MASTER LEVEL HARGA ACUAN -->
+    <template x-teleport="body">
+    <div x-show="showMasterLevelsModal" x-cloak class="modal-backdrop">
+        <div class="modal-box" style="max-width:720px;padding:24px;max-height:90vh;display:flex;flex-direction:column;">
+            <div class="modal-header" style="flex-shrink:0;">
+                <div>
+                    <div class="modal-title flex items-center gap-2">
+                        <i data-lucide="list-tree" style="width:20px;height:20px;color:var(--color-primary);"></i>
+                        <span>Daftar 30 Level Harga Acuan Sistem</span>
+                    </div>
+                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">
+                        Kustomisasi label nama dan deskripsi peruntukan untuk masing-masing Level 1 sampai 30
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search box for master levels -->
+            <div style="margin-bottom:12px;flex-shrink:0;">
+                <input type="text" x-model="masterLevelSearch" class="form-input" style="height:36px;font-size:12.5px;width:100%;" placeholder="Cari nomor level / nama acuan...">
+            </div>
+
+            <div class="overflow-y-auto custom-scrollbar flex-1" style="border:1px solid var(--color-hairline);border-radius:10px;">
+                <table class="data-table" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th style="width:80px;" class="cell-nowrap">Level</th>
+                            <th>Nama Acuan Level</th>
+                            <th>Deskripsi / Sasaran Mitra</th>
+                            <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
+                            <th class="cell-center cell-nowrap" style="width:90px;">Aksi</th>
+                            <?php endif; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="ml in filteredMasterLevels" :key="ml.level_nomor">
+                            <tr>
+                                <td class="cell-nowrap">
+                                    <span class="badge badge-mono" :class="Number(ml.level_nomor) === 1 ? 'badge-primary' : 'badge-secondary'" x-text="'Level ' + ml.level_nomor"></span>
+                                </td>
+                                <td>
+                                    <strong style="color:var(--color-ink);" x-text="ml.nama_level || ('Level ' + ml.level_nomor)"></strong>
+                                </td>
+                                <td style="font-size:12px;color:var(--color-ink-mute);" x-text="ml.deskripsi || '-'"></td>
+                                <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
+                                <td class="cell-center cell-nowrap">
+                                    <button type="button" @click="editMasterLevel(ml)" class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:11px;font-weight:700;">
+                                        <i data-lucide="edit-3" style="width:12px;height:12px;"></i>
+                                        <span>Ubah</span>
+                                    </button>
+                                </td>
+                                <?php endif; ?>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;margin-top:14px;flex-shrink:0;">
+                <button type="button" @click="showMasterLevelsModal = false" class="btn btn-secondary">Tutup</button>
+            </div>
+        </div>
+    </div>
+    </template>
+
+    <!-- MODAL: EDIT SINGLE MASTER LEVEL -->
+    <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
+    <template x-teleport="body">
+    <div x-show="showEditMasterModal" x-cloak class="modal-backdrop" style="z-index:99999;">
+        <div class="modal-box" style="max-width:480px;padding:24px;">
+            <div class="modal-header">
+                <div>
+                    <div class="modal-title" x-text="'Ubah Label Level ' + editingMasterLevel.level_nomor"></div>
+                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Kustomisasi nama acuan level yang tampil di sistem & Excel</div>
+                </div>
+            </div>
+
+            <form action="<?= Router::url('/pricing/update-master-level') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+                <input type="hidden" name="level_nomor" :value="editingMasterLevel.level_nomor">
+
+                <div>
+                    <label class="form-label">Nama / Label Level Acuan *</label>
+                    <input type="text" name="nama_level" x-model="editingMasterLevel.nama_level" required class="form-input" placeholder="Contoh: Level 8 - Grosir Mitra">
+                </div>
+
+                <div>
+                    <label class="form-label">Deskripsi / Peruntukan Sasaran Mitra</label>
+                    <textarea name="deskripsi" x-model="editingMasterLevel.deskripsi" rows="3" class="form-input" placeholder="Contoh: Khusus grosir mitra warung pembelian minimal 5 karton..."></textarea>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
+                    <button type="button" @click="showEditMasterModal = false" class="btn btn-secondary">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="save"></i>
+                        <span>Simpan Nama Acuan</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </template>
+    <?php endif; ?>
+
     <!-- FORM SUBMIT HIDDEN FOR DELETE -->
     <form id="delete-level-form" action="<?= Router::url('/pricing/delete-level') ?>" method="POST" data-action-text="Menghapus level harga..." style="display:none;">
         <input type="hidden" name="id" id="delete-level-id">
@@ -378,6 +486,43 @@ function pricingApp() {
         groups: <?= json_encode($groups) ?>,
         groupedPrices: <?= json_encode($groupedPrices) ?>,
         masterLevels: <?= json_encode($masterLevels) ?>,
+
+        // Master Levels Modal
+        showMasterLevelsModal: false,
+        showEditMasterModal: false,
+        masterLevelSearch: '',
+        editingMasterLevel: {
+            level_nomor: 1,
+            nama_level: '',
+            deskripsi: ''
+        },
+
+        get filteredMasterLevels() {
+            const q = (this.masterLevelSearch || '').toLowerCase().trim();
+            if (!q) return this.masterLevels;
+            return this.masterLevels.filter(ml => {
+                const name = (ml.nama_level || '').toLowerCase();
+                const desc = (ml.deskripsi || '').toLowerCase();
+                const num = String(ml.level_nomor);
+                return name.includes(q) || desc.includes(q) || num.includes(q);
+            });
+        },
+
+        openMasterLevelsModal() {
+            this.masterLevelSearch = '';
+            this.showMasterLevelsModal = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        editMasterLevel(ml) {
+            this.editingMasterLevel = {
+                level_nomor: ml.level_nomor,
+                nama_level: ml.nama_level || ('Level ' + ml.level_nomor),
+                deskripsi: ml.deskripsi || ''
+            };
+            this.showEditMasterModal = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
 
         // Tampilan & Accordion (Default SEMUA Grup Tertutup)
         viewMode: (function() {
