@@ -4447,6 +4447,14 @@ html.has-pending-action #app-page-loader {
 /* =============================================================================
    34. ACTION PROCESSING & KINETIC SUCCESS MORPH ENGINE (#app-action-loader)
    ============================================================================= */
+/* Background Freeze State when Action Modal is Active */
+html.action-loader-frozen,
+body.action-loader-frozen {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none !important;
+}
+
 #app-action-loader {
   position: fixed;
   inset: 0;
@@ -4461,6 +4469,9 @@ html.has-pending-action #app-page-loader {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
   transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
               visibility 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 16px;
@@ -4732,7 +4743,17 @@ html.has-pending-action #app-page-loader {
 
 #app-action-loader.is-success,
 #app-action-loader.is-error {
-  cursor: pointer;
+  cursor: default;
+}
+
+@keyframes actionCardNudge {
+  0%, 100% { transform: scale(1) translateY(0); }
+  25% { transform: scale(1.03) translateY(0); }
+  75% { transform: scale(0.98) translateY(0); }
+}
+
+.action-card-nudge {
+  animation: actionCardNudge 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
 
 /* Action Progress Bar */

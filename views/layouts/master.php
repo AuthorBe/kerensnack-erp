@@ -16,7 +16,7 @@ $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemt
     <title><?= htmlspecialchars($pageTitle ?? 'Studio') ?> — KEREN SNACK ERP</title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
-    <meta name="theme-color" content="#e11d48">
+    <meta name="theme-color" content="#881337">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

@@ -749,7 +749,7 @@
       confirmIcon: 'log-out',
       cancelIcon: null,
       showCloseBtn: false,
-      defaultFocus: 'cancel'
+      defaultFocus: 'confirm'
     });
 
     if (confirmed) {
@@ -874,8 +874,67 @@
       }
     },
 
+    _eventsInited: false,
+
+    _freeze() {
+      try {
+        document.documentElement.classList.add('action-loader-frozen');
+        document.body.classList.add('action-loader-frozen');
+        if (typeof PopupManager !== 'undefined' && typeof PopupManager.applyFreeze === 'function') {
+          PopupManager.applyFreeze();
+        }
+      } catch (e) {}
+    },
+
+    _unfreeze() {
+      try {
+        document.documentElement.classList.remove('action-loader-frozen');
+        document.body.classList.remove('action-loader-frozen');
+        if (typeof PopupManager !== 'undefined' && typeof PopupManager.removeFreeze === 'function' && (!PopupManager.activePopups || PopupManager.activePopups.size === 0)) {
+          PopupManager.removeFreeze();
+        }
+      } catch (e) {}
+    },
+
+    _initEvents() {
+      if (this._eventsInited) return;
+      const loader = document.getElementById('app-action-loader');
+      if (!loader) return;
+      this._eventsInited = true;
+
+      // Kunci scroll & touch pada background saat modal aktif
+      loader.addEventListener('wheel', (e) => {
+        if (loader.classList.contains('is-active')) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      loader.addEventListener('touchmove', (e) => {
+        if (loader.classList.contains('is-active')) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      // Pop up tidak boleh ditutup dengan mengklik ruang kosong / backdrop
+      loader.addEventListener('click', (e) => {
+        if (e.target === loader) {
+          e.preventDefault();
+          e.stopPropagation();
+          const card = loader.querySelector('.action-loader-card');
+          if (card) {
+            card.classList.remove('action-card-nudge');
+            void card.offsetWidth; // trigger reflow
+            card.classList.add('action-card-nudge');
+          }
+        }
+      });
+    },
+
     show(text = 'Menyimpan data...', subtext = '') {
       this._active = true;
+      this._freeze();
+      this._initEvents();
+
       try {
         sessionStorage.setItem('app_action_triggered', 'true');
       } catch (e) {}
@@ -920,6 +979,9 @@
       }
 
       this._active = false;
+      this._freeze();
+      this._initEvents();
+
       try {
         sessionStorage.removeItem('app_action_triggered');
       } catch (e) {}
@@ -929,6 +991,7 @@
         const textEl = document.getElementById('app-action-loader-text');
         const subtextEl = document.getElementById('app-action-loader-subtext');
         if (!loader) {
+          this._unfreeze();
           resolve();
           return;
         }
@@ -950,16 +1013,8 @@
 
         loader.classList.add('is-active', 'is-success');
 
-        // Tap/click to dismiss immediately
-        const clickDismiss = () => {
-          loader.removeEventListener('click', clickDismiss);
-          this.hide();
-          resolve();
-        };
-        loader.addEventListener('click', clickDismiss, { once: true });
-
+        // Pop up tidak ditutup dengan klik ruang kosong; hanya ditutup otomatis sesuai durasi
         setTimeout(() => {
-          loader.removeEventListener('click', clickDismiss);
           this.hide();
           resolve();
         }, duration);
@@ -978,6 +1033,9 @@
       const finalDuration = duration > 2200 ? duration : calculatedDuration;
 
       this._active = false;
+      this._freeze();
+      this._initEvents();
+
       try {
         sessionStorage.removeItem('app_action_triggered');
       } catch (e) {}
@@ -987,6 +1045,7 @@
         const textEl = document.getElementById('app-action-loader-text');
         const subtextEl = document.getElementById('app-action-loader-subtext');
         if (!loader) {
+          this._unfreeze();
           resolve();
           return;
         }
@@ -1008,16 +1067,8 @@
 
         loader.classList.add('is-active', 'is-error');
 
-        // Tap/click to dismiss immediately
-        const clickDismiss = () => {
-          loader.removeEventListener('click', clickDismiss);
-          this.hide();
-          resolve();
-        };
-        loader.addEventListener('click', clickDismiss, { once: true });
-
+        // Pop up tidak ditutup dengan klik ruang kosong; hanya ditutup otomatis sesuai durasi
         setTimeout(() => {
-          loader.removeEventListener('click', clickDismiss);
           this.hide();
           resolve();
         }, finalDuration);
@@ -1030,6 +1081,7 @@
 
     hide() {
       clearTimeout(this.safetyTimer);
+      this._unfreeze();
       const loader = document.getElementById('app-action-loader');
       if (loader) {
         loader.classList.remove('is-active');
@@ -1057,7 +1109,10 @@
       let title = 'Berhasil Diproses! ✨';
       let subtext = '';
 
-      if (lower.includes('toko') || lower.includes('pelanggan')) {
+      if (lower.includes('selamat datang') || lower.includes('login') || lower.includes('berhasil masuk')) {
+        title = 'Login Berhasil! 🎉';
+        subtext = msg;
+      } else if (lower.includes('toko') || lower.includes('pelanggan')) {
         if (lower.includes('beli putus') || (lower.includes('faktur') && lower.includes('konsinyasi'))) {
           title = 'Faktur Beli Putus Diterbitkan! 🧾';
           const notaMatch = msg.match(/(?:Faktur Beli Putus|Nota|Faktur)\s*#?([A-Z0-9\-_]+)/i);
@@ -1206,7 +1261,9 @@
     } else if (flash && flash.type === 'success') {
       AppSkeleton.hide();
       const feedback = formatSmartFeedback(flash.message, true);
-      AppAction.success(feedback.title, feedback.subtext, 1500);
+      const isLogin = feedback.title.toLowerCase().includes('login') || (flash.message && flash.message.toLowerCase().includes('selamat datang'));
+      const duration = isLogin ? 1800 : 1500;
+      AppAction.success(feedback.title, feedback.subtext, duration);
     } else if (flash && (flash.type === 'warning' || flash.type === 'info')) {
       AppSkeleton.hide();
       if (typeof window.showToast === 'function') {

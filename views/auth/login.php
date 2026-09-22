@@ -14,7 +14,7 @@ $flash = Flash::get();
     <title>Login — KEREN SNACK ERP</title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
-    <meta name="theme-color" content="#e11d48">
+    <meta name="theme-color" content="#881337">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -52,11 +52,29 @@ $flash = Flash::get();
             100% { background-position: 0% 50%; }
         }
 
+        @keyframes floatBlob1 {
+            0%   { transform: translate(0px, 0px) scale(1); opacity: 0.42; }
+            50%  { transform: translate(90px, 60px) scale(1.15); opacity: 0.22; }
+            100% { transform: translate(0px, 0px) scale(1); opacity: 0.42; }
+        }
+
+        @keyframes floatBlob2 {
+            0%   { transform: translate(0px, 0px) scale(1); opacity: 0.32; }
+            50%  { transform: translate(-80px, -70px) scale(1.12); opacity: 0.48; }
+            100% { transform: translate(0px, 0px) scale(1); opacity: 0.32; }
+        }
+
+        @keyframes floatBlob3 {
+            0%   { transform: translate(-50%, -50%) scale(0.95); opacity: 0.28; }
+            50%  { transform: translate(-40%, -55%) scale(1.15); opacity: 0.45; }
+            100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.28; }
+        }
+
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(-45deg, #fee2e2, #f8fafc, #f1f5f9, #ffe4e6);
-            background-size: 400% 400%;
-            animation: gradientBg 15s ease infinite;
+            background: linear-gradient(-45deg, #ffffff, #fecdd3, #ffffff, #ffe4e6, #ffffff, #fee2e2);
+            background-size: 350% 350%;
+            animation: gradientBg 10s ease-in-out infinite;
             min-height: 100vh;
             min-height: 100dvh;
             display: flex;
@@ -65,8 +83,53 @@ $flash = Flash::get();
             justify-content: center;
             padding: 2rem 1.25rem;
             margin: 0;
+            position: relative;
+            overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Animated Ambient Red Glow Orbs */
+        .login-bg-decorations {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .login-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            will-change: transform, opacity;
+        }
+
+        .login-blob-1 {
+            width: 460px;
+            height: 460px;
+            background: radial-gradient(circle, rgba(244, 63, 94, 0.28) 0%, rgba(225, 29, 72, 0.12) 50%, transparent 70%);
+            top: -100px;
+            left: -80px;
+            animation: floatBlob1 8s ease-in-out infinite;
+        }
+
+        .login-blob-2 {
+            width: 480px;
+            height: 480px;
+            background: radial-gradient(circle, rgba(251, 113, 133, 0.26) 0%, rgba(244, 63, 94, 0.1) 50%, transparent 70%);
+            bottom: -120px;
+            right: -100px;
+            animation: floatBlob2 9s ease-in-out infinite;
+        }
+
+        .login-blob-3 {
+            width: 380px;
+            height: 380px;
+            background: radial-gradient(circle, rgba(225, 29, 72, 0.2) 0%, rgba(253, 164, 175, 0.1) 50%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            animation: floatBlob3 7s ease-in-out infinite;
         }
 
         @keyframes fadeInUp {
@@ -321,6 +384,13 @@ $flash = Flash::get();
     </style>
 </head>
 <body class="login-body" x-data="{ showPass: false }">
+
+    <!-- Ambient Glowing Red Motion Background -->
+    <div class="login-bg-decorations" aria-hidden="true">
+        <div class="login-blob login-blob-1"></div>
+        <div class="login-blob login-blob-2"></div>
+        <div class="login-blob login-blob-3"></div>
+    </div>
 
     <div class="login-card-wrapper">
 

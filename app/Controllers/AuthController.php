@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\ActivityLog;
+use App\Helpers\Flash;
 use Database;
 
 /**
@@ -271,6 +272,9 @@ class AuthController extends Controller
                     $userDb['nama_lengkap'],
                     $userDb['peran'] ?? 'staff'
                 );
+
+                $displayName = !empty($userDb['nama_lengkap']) ? $userDb['nama_lengkap'] : $userDb['nama_pengguna'];
+                Flash::success("Selamat datang kembali, {$displayName}!", "Login Berhasil! 🎉");
 
                 // Redirect ke Dashboard Utama (Tampilan adaptif otomatis sesuai peran pengguna)
                 $this->redirect('/dashboard');
