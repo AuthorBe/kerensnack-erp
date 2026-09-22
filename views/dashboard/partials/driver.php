@@ -94,10 +94,7 @@ $stats = $roleData['stats'] ?? [];
                                 <i data-lucide="navigation" style="width:15px;height:15px;"></i>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <h3 class="truncate" style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">Daftar Rute Pengantaran Toko</h3>
-                                    <span class="inline-flex items-center justify-center flex-shrink-0 font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(6,182,212,0.12);color:#06b6d4;border:1px solid rgba(6,182,212,0.25);line-height:1.2;min-width:18px;"><?= count($deliveries) ?></span>
-                                </div>
+                                <h3 style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Daftar Rute Pengantaran <span style="white-space:nowrap;">Toko<span class="inline-flex items-center justify-center font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(6,182,212,0.12);color:#06b6d4;border:1px solid rgba(6,182,212,0.25);line-height:1.2;min-width:18px;vertical-align:middle;margin-left:4px;"><?= count($deliveries) ?></span></span></h3>
                                 <p class="truncate" style="font-size:10.5px;sm:font-size:11px;color:var(--color-ink-mute);margin-top:2px;line-height:1.25;">Surat jalan dan rute tujuan pengiriman hari ini</p>
                             </div>
                         </div>

@@ -22,12 +22,23 @@ $documentTitle = $documentTitle ?? 'Dokumen Cetak';
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= htmlspecialchars($documentTitle) ?></title>
+
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <meta name="theme-color" content="#881337">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Keren Snack">
+    <meta name="application-name" content="Keren Snack ERP">
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="<?= Router::asset('/favicon/favicon.ico') ?>">
     <link rel="icon" type="image/svg+xml" href="<?= Router::asset('/favicon/favicon.svg') ?>">
     <link rel="icon" type="image/png" sizes="96x96" href="<?= Router::asset('/favicon/favicon-96x96.png') ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?= Router::asset('/favicon/apple-touch-icon.png') ?>">
+    <link rel="manifest" href="<?= Router::asset('/favicon/site.webmanifest') ?>">
 
     <style>
         /* BASE RESET & DEFAULT PRINT SETUP */

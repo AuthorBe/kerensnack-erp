@@ -101,13 +101,7 @@ $isDev = (Auth::user()['peran'] ?? '') === 'developer';
                     <i data-lucide="activity" style="width:16px;height:16px;"></i>
                 </div>
                 <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-1.5 min-w-0">
-                        <h3 class="truncate" style="font-size:12.5px;sm:font-size:13.5px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">Pengguna Aktif Saat Ini</h3>
-                        <span class="badge badge-success font-mono text-[9px] flex-shrink-0" style="padding:1px 6px;">
-                            <span style="width:4px;height:4px;border-radius:50%;background:currentColor;display:inline-block;margin-right:2px;"></span>
-                            <?= count($activeUsers) ?> ONLINE
-                        </span>
-                    </div>
+                    <h3 style="font-size:12.5px;sm:font-size:13.5px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Pengguna Aktif Saat <span style="white-space:nowrap;">Ini<span class="badge badge-success font-mono text-[9px] flex-shrink-0 align-middle" style="padding:1px 6px;vertical-align:middle;margin-left:4px;"><span style="width:4px;height:4px;border-radius:50%;background:currentColor;display:inline-block;margin-right:2px;"></span><?= count($activeUsers) ?> ONLINE</span></span></h3>
                 </div>
             </div>
             <span style="font-size:10.5px;color:var(--color-ink-mute);">Sesi aktif dalam 5 menit terakhir</span>
@@ -201,10 +195,7 @@ $isDev = (Auth::user()['peran'] ?? '') === 'developer';
                         <i data-lucide="history" style="width:15px;height:15px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-1.5 min-w-0">
-                            <h3 class="truncate" style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">Log Aktivitas Sistem</h3>
-                            <span class="inline-flex items-center justify-center flex-shrink-0 font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(59,130,246,0.12);color:var(--color-primary);border:1px solid rgba(59,130,246,0.25);line-height:1.2;min-width:18px;"><?= count($recentLogs) ?></span>
-                        </div>
+                        <h3 style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Log Aktivitas <span style="white-space:nowrap;">Sistem<span class="inline-flex items-center justify-center font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(59,130,246,0.12);color:var(--color-primary);border:1px solid rgba(59,130,246,0.25);line-height:1.2;min-width:18px;vertical-align:middle;margin-left:4px;"><?= count($recentLogs) ?></span></span></h3>
                         <p class="truncate" style="font-size:10.5px;sm:font-size:11px;color:var(--color-ink-mute);margin-top:2px;line-height:1.25;">Aktivitas riil pengguna &amp; mutasi data terkini</p>
                     </div>
                 </div>

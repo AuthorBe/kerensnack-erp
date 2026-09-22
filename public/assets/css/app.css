@@ -3084,7 +3084,7 @@ pre.code-block {
 .z-70 { z-index: 70 !important; }
 .z-80 { z-index: 80 !important; }
 
-.text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text-truncate, .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .text-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* RESPONSIVE BREAKPOINTS (sm: >= 640px) */

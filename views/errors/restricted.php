@@ -17,13 +17,22 @@ $faviconUrl = class_exists('\App\Core\Router') ? Router::asset('/favicon/favicon
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></title>
     <meta name="robots" content="noindex, nofollow">
+
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <meta name="theme-color" content="#881337">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Keren Snack">
+    <meta name="application-name" content="Keren Snack ERP">
 
     <?php if ($faviconUrl): ?>
     <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
     <?php endif; ?>
+    <link rel="manifest" href="<?= class_exists('\App\Core\Router') ? Router::asset('/favicon/site.webmanifest') : '/assets/favicon/site.webmanifest' ?>">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

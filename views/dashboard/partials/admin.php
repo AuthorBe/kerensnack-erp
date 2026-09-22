@@ -138,10 +138,7 @@ $todayDeliveriesCount = (int)($roleData['todayDeliveriesCount'] ?? 0);
                                 <i data-lucide="clipboard-list" style="width:15px;height:15px;"></i>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <h3 class="truncate" style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">Pesanan Baru Perlu Diproses</h3>
-                                    <span class="inline-flex items-center justify-center flex-shrink-0 font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);line-height:1.2;min-width:18px;"><?= count($pendingOrders) ?></span>
-                                </div>
+                                <h3 style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Pesanan Baru Perlu <span style="white-space:nowrap;">Diproses<span class="inline-flex items-center justify-center font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);line-height:1.2;min-width:18px;vertical-align:middle;margin-left:4px;"><?= count($pendingOrders) ?></span></span></h3>
                                 <p style="font-size:10.5px;sm:font-size:11px;color:var(--color-ink-mute);margin-top:2px;line-height:1.25;" class="truncate">Pesanan siap proses</p>
                             </div>
                         </div>
@@ -234,10 +231,7 @@ $todayDeliveriesCount = (int)($roleData['todayDeliveriesCount'] ?? 0);
                                 <i data-lucide="landmark" style="width:15px;height:15px;"></i>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <h3 class="truncate" style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">Status Kas &amp; Bank</h3>
-                                    <span class="inline-flex items-center justify-center flex-shrink-0 font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.25);line-height:1.2;min-width:18px;"><?= count($cashAccounts) ?></span>
-                                </div>
+                                <h3 style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Status Kas &amp; <span style="white-space:nowrap;">Bank<span class="inline-flex items-center justify-center font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.25);line-height:1.2;min-width:18px;vertical-align:middle;margin-left:4px;"><?= count($cashAccounts) ?></span></span></h3>
                                 <p style="font-size:10.5px;sm:font-size:11px;color:var(--color-ink-mute);margin-top:2px;line-height:1.25;" class="truncate">Posisi likuiditas kas aktif</p>
                             </div>
                         </div>

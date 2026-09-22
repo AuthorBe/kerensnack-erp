@@ -7,7 +7,7 @@
  *   - Offline Fallback: High-Fidelity UI matching restricted.php (Zero False-Positive)
  */
 
-const CACHE_NAME = 'ksnack-erp-cache-v2';
+const CACHE_NAME = 'ksnack-erp-cache-v3';
 
 // Static assets to pre-cache on install
 const PRECACHE_ASSETS = [
@@ -30,10 +30,22 @@ const OFFLINE_HTML = `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Koneksi Terputus — KEREN SNACK ERP</title>
   <meta name="robots" content="noindex, nofollow">
+
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <meta name="theme-color" content="#881337">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Keren Snack">
+  <meta name="application-name" content="Keren Snack ERP">
+
+  <link rel="icon" type="image/x-icon" href="./assets/favicon/favicon.ico">
   <link rel="icon" type="image/png" href="./assets/favicon/favicon-96x96.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="./assets/favicon/site.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
@@ -49,8 +61,8 @@ const OFFLINE_HTML = `<!DOCTYPE html>
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --text-dim: #64748b;
-      --primary: #e11d48;
-      --primary-glow: rgba(225, 29, 72, 0.25);
+      --primary: #881337;
+      --primary-glow: rgba(136, 19, 55, 0.25);
       --accent-amber: #f59e0b;
       --accent-cyan: #38bdf8;
       --accent-indigo: #6366f1;
@@ -306,15 +318,15 @@ const OFFLINE_HTML = `<!DOCTYPE html>
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+      background: linear-gradient(135deg, #881337 0%, #4c0519 100%);
       color: #ffffff;
-      box-shadow: 0 4px 16px rgba(225, 29, 72, 0.35);
+      box-shadow: 0 4px 16px rgba(136, 19, 55, 0.35);
     }
 
     .btn-primary:hover {
-      background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      background: linear-gradient(135deg, #9f1239 0%, #881337 100%);
       transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(225, 29, 72, 0.5);
+      box-shadow: 0 6px 20px rgba(136, 19, 55, 0.5);
       color: #ffffff;
     }
 
@@ -418,7 +430,7 @@ const OFFLINE_HTML = `<!DOCTYPE html>
               <circle cx="107" cy="77" r="2.2" fill="#0f172a"/>
               <circle cx="106.2" cy="76.2" r="0.7" fill="#ffffff"/>
             </g>
-            <ellipse cx="100" cy="88" rx="2.5" ry="3" fill="#e11d48" opacity="0.8"/>
+            <ellipse cx="100" cy="88" rx="2.5" ry="3" fill="#881337" opacity="0.8"/>
           </g>
 
           <!-- Arm Holding Magnifying Glass -->

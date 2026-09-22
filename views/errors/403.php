@@ -17,9 +17,17 @@ $isPreview = (!empty($isPreview) || (isset($_GET['preview']) && $_GET['preview']
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></title>
     <meta name="robots" content="noindex, nofollow">
+
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <meta name="theme-color" content="#881337">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Keren Snack">
+    <meta name="application-name" content="Keren Snack ERP">
 
     <?php if (!$isPreview): ?>
     <!-- Auto-Logout Fallback jika JavaScript dinonaktifkan di browser pengguna lain -->
@@ -29,6 +37,7 @@ $isPreview = (!empty($isPreview) || (isset($_GET['preview']) && $_GET['preview']
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="<?= Router::asset('/favicon/favicon-96x96.png') ?>">
     <link rel="apple-touch-icon" sizes="180x180" href="<?= Router::asset('/favicon/apple-touch-icon.png') ?>">
+    <link rel="manifest" href="<?= Router::asset('/favicon/site.webmanifest') ?>">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

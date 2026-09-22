@@ -132,10 +132,7 @@ $stats = $roleData['stats'] ?? [];
                                 <i data-lucide="alert-triangle" style="width:15px;height:15px;"></i>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <h3 class="truncate" style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">Stok Kritis</h3>
-                                    <span class="inline-flex items-center justify-center flex-shrink-0 font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(239,68,68,0.12);color:var(--color-danger);border:1px solid rgba(239,68,68,0.25);line-height:1.2;min-width:18px;"><?= count($criticalStock) ?></span>
-                                </div>
+                                <h3 style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Peringatan Stok <span style="white-space:nowrap;">Kritis<span class="inline-flex items-center justify-center font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(239,68,68,0.12);color:var(--color-danger);border:1px solid rgba(239,68,68,0.25);line-height:1.2;min-width:18px;vertical-align:middle;margin-left:4px;"><?= count($criticalStock) ?></span></span></h3>
                                 <p style="font-size:10.5px;sm:font-size:11px;color:var(--color-ink-mute);margin-top:2px;line-height:1.25;" class="truncate">Item di bawah batas &le; 50 unit</p>
                             </div>
                         </div>
@@ -212,10 +209,7 @@ $stats = $roleData['stats'] ?? [];
                                 <i data-lucide="package-search" style="width:15px;height:15px;"></i>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <h3 class="truncate" style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">PO Vendor</h3>
-                                    <span class="inline-flex items-center justify-center flex-shrink-0 font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);line-height:1.2;min-width:18px;"><?= count($pendingPurchases) ?></span>
-                                </div>
+                                <h3 style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">PO <span style="white-space:nowrap;">Vendor<span class="inline-flex items-center justify-center font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);line-height:1.2;min-width:18px;vertical-align:middle;margin-left:4px;"><?= count($pendingPurchases) ?></span></span></h3>
                                 <p style="font-size:10.5px;sm:font-size:11px;color:var(--color-ink-mute);margin-top:2px;line-height:1.25;" class="truncate">Pesanan barang masuk menunggu terima</p>
                             </div>
                         </div>

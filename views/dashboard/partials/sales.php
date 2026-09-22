@@ -137,10 +137,7 @@ $stats = $roleData['stats'] ?? [];
                                 <i data-lucide="map-pinned" style="width:15px;height:15px;"></i>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <h3 class="truncate" style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">Toko Binaan &amp; Jadwal Opname</h3>
-                                    <span class="inline-flex items-center justify-center flex-shrink-0 font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(168,85,247,0.12);color:#a855f7;border:1px solid rgba(168,85,247,0.25);line-height:1.2;min-width:18px;"><?= count($assignedStores) ?></span>
-                                </div>
+                                <h3 style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Toko Binaan &amp; Jadwal <span style="white-space:nowrap;">Opname<span class="inline-flex items-center justify-center font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(168,85,247,0.12);color:#a855f7;border:1px solid rgba(168,85,247,0.25);line-height:1.2;min-width:18px;vertical-align:middle;margin-left:4px;"><?= count($assignedStores) ?></span></span></h3>
                                 <p class="truncate" style="font-size:10.5px;sm:font-size:11px;color:var(--color-ink-mute);margin-top:2px;line-height:1.25;">Jadwal opname rak dan saldo piutang berjalan</p>
                             </div>
                         </div>
@@ -231,10 +228,7 @@ $stats = $roleData['stats'] ?? [];
                                 <i data-lucide="file-check" style="width:15px;height:15px;"></i>
                             </div>
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-1.5 min-w-0">
-                                    <h3 class="truncate" style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;flex-shrink:1;">Laporan Laku &amp; Kunjungan</h3>
-                                    <span class="inline-flex items-center justify-center flex-shrink-0 font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(34,197,94,0.12);color:var(--color-success);border:1px solid rgba(34,197,94,0.25);line-height:1.2;min-width:18px;"><?= count($recentVisits) ?></span>
-                                </div>
+                                <h3 style="font-size:12px;sm:font-size:13px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Laporan Laku &amp; <span style="white-space:nowrap;">Kunjungan<span class="inline-flex items-center justify-center font-mono" style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:9999px;background:rgba(34,197,94,0.12);color:var(--color-success);border:1px solid rgba(34,197,94,0.25);line-height:1.2;min-width:18px;vertical-align:middle;margin-left:4px;"><?= count($recentVisits) ?></span></span></h3>
                                 <p class="truncate" style="font-size:10.5px;sm:font-size:11px;color:var(--color-ink-mute);margin-top:2px;line-height:1.25;">Riwayat kunjungan toko dan laporan barang laku</p>
                             </div>
                         </div>

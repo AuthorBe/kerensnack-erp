@@ -18,7 +18,22 @@ $totalNilaiRp = (float)($opname['total_nilai_selisih_rp'] ?? 0);
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Bukti Opname - <?= htmlspecialchars($nomorDokumen) ?></title>
+
+    <!-- PWA & Mobile Web App Meta Tags -->
+    <meta name="theme-color" content="#881337">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Keren Snack">
+    <meta name="application-name" content="Keren Snack ERP">
+
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/x-icon" href="<?= class_exists('\App\Core\Router') ? Router::asset('/favicon/favicon.ico') : '/assets/favicon/favicon.ico' ?>">
+    <link rel="icon" type="image/png" sizes="96x96" href="<?= class_exists('\App\Core\Router') ? Router::asset('/favicon/favicon-96x96.png') : '/assets/favicon/favicon-96x96.png' ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?= class_exists('\App\Core\Router') ? Router::asset('/favicon/apple-touch-icon.png') : '/assets/favicon/apple-touch-icon.png' ?>">
+    <link rel="manifest" href="<?= class_exists('\App\Core\Router') ? Router::asset('/favicon/site.webmanifest') : '/assets/favicon/site.webmanifest' ?>">
     <style>
         @page {
             margin: 8mm 10mm 10mm 10mm;

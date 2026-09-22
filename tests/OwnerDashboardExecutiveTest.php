@@ -12,10 +12,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Set session user Owner
 $_SESSION['user'] = [
-    'id' => '00000000-0000-0000-0000-000000000001',
+    'id' => '00000000-0000-0000-0000-000000000000',
     'peran_id' => '11111111-1111-1111-1111-111111111101',
-    'nama_lengkap' => 'Owner Utama',
-    'nama_pengguna' => 'owner',
+    'nama_lengkap' => 'AJSK.',
+    'nama_pengguna' => 'ajsk',
     'peran' => 'owner',
     'role_nama' => 'Owner'
 ];
