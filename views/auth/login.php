@@ -81,7 +81,7 @@ $flash = Flash::get();
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2rem 1.25rem;
+            padding: max(2rem, env(safe-area-inset-top, 0px)) max(1.25rem, env(safe-area-inset-right, 0px)) max(2rem, env(safe-area-inset-bottom, 0px)) max(1.25rem, env(safe-area-inset-left, 0px));
             margin: 0;
             position: relative;
             overflow-x: hidden;

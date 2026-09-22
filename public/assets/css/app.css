@@ -243,6 +243,15 @@ textarea:focus-visible {
   color: var(--color-on-primary);
 }
 
+/* iOS Safari Auto-Zoom Fix: Prevent automatic viewport zoom on input focus */
+@media screen and (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* =============================================================================
    4. SCROLLBAR & OVERFLOW UTILITIES
    ============================================================================= */
@@ -374,11 +383,16 @@ textarea:focus-visible {
     z-index: 35;
     flex-shrink: 0;
     width: 100%;
+    height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    box-sizing: border-box;
   }
   .app-content {
     flex: 1;
     height: auto;
-    padding: 10px 10px calc(85px + env(safe-area-inset-bottom)) 10px;
+    padding: 10px max(10px, env(safe-area-inset-right, 0px)) calc(85px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
     overflow-x: hidden;
     overflow-y: visible;
     width: 100%;
@@ -417,6 +431,10 @@ textarea:focus-visible {
     transform: translateX(-100%);
     z-index: 50;
     box-shadow: var(--shadow-3);
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    box-sizing: border-box;
   }
   .sidebar.is-open {
     transform: translateX(0);
@@ -598,7 +616,7 @@ textarea:focus-visible {
 }
 
 .sidebar-footer {
-  padding: 8px 7px;
+  padding: 8px 7px calc(8px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   background-color: var(--sidebar-bg-soft);
   flex-shrink: 0;
@@ -1176,11 +1194,11 @@ body.modal-open {
    7. HEADER
    ============================================================================= */
 .app-header {
-  height: var(--header-height);
+  height: calc(var(--header-height) + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-xl);
+  padding: env(safe-area-inset-top, 0px) max(var(--space-xl), env(safe-area-inset-right, 0px)) 0 max(var(--space-xl), env(safe-area-inset-left, 0px));
   background-color: var(--color-canvas);
   border-bottom: 1px solid var(--color-hairline);
   position: sticky;
@@ -1189,6 +1207,7 @@ body.modal-open {
   flex-shrink: 0;
   gap: var(--space-md);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  box-sizing: border-box;
 }
 
 .dark .app-header {
@@ -2210,7 +2229,7 @@ body.ksnack-popup-freeze .app-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
@@ -2777,10 +2796,11 @@ pre.code-block {
   right: 0;
   z-index: 40;
   display: none;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-md) max(var(--space-lg), env(safe-area-inset-right, 0px)) calc(var(--space-md) + env(safe-area-inset-bottom, 0px)) max(var(--space-lg), env(safe-area-inset-left, 0px));
   background-color: var(--color-canvas);
   border-top: 1px solid var(--color-hairline);
   box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+  box-sizing: border-box;
 }
 
 .dark .mobile-bottom-bar {
@@ -2802,12 +2822,14 @@ pre.code-block {
   background-color: var(--color-canvas);
   border-top: 1px solid var(--color-hairline);
   border-radius: var(--rounded-xl) var(--rounded-xl) 0 0;
-  padding: var(--space-xl);
+  padding: var(--space-xl) max(var(--space-xl), env(safe-area-inset-right, 0px)) calc(var(--space-xl) + env(safe-area-inset-bottom, 0px)) max(var(--space-xl), env(safe-area-inset-left, 0px));
   max-height: 85vh;
+  max-height: 85dvh;
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
   box-shadow: 0 -8px 32px rgba(0,0,0,0.15);
+  box-sizing: border-box;
 }
 
 .dark .cart-drawer {
@@ -4474,7 +4496,8 @@ body.action-loader-frozen {
   -webkit-user-select: none;
   transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
               visibility 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 16px;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  box-sizing: border-box;
 }
 
 .dark #app-action-loader {
