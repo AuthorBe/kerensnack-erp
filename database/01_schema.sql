@@ -492,7 +492,7 @@ CREATE TABLE IF NOT EXISTS public.pesanan (
     tipe_pembayaran VARCHAR(30) NOT NULL CHECK (tipe_pembayaran IN ('cash', 'qris', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi', 'sebagian', 'kredit')),
     tanggal_jatuh_tempo DATE,
     status_pembayaran VARCHAR(30) NOT NULL DEFAULT 'belum_lunas' CHECK (status_pembayaran IN ('belum_lunas', 'sebagian', 'tempo', 'lunas', 'dibatalkan')),
-    status_pemrosesan VARCHAR(30) NOT NULL DEFAULT 'menunggu_approval' CHECK (status_pemrosesan IN ('menunggu_approval', 'disetujui', 'siap_kirim', 'dalam_pengiriman', 'selesai', 'dibatalkan')),
+    status_pemrosesan VARCHAR(30) NOT NULL DEFAULT 'po' CHECK (status_pemrosesan IN ('po', 'siap_dikirim', 'siap_kirim', 'sedang_dikirim', 'selesai_dikirim', 'selesai_diterima', 'selesai', 'gagal_dikirim', 'dibatalkan')),
     catatan TEXT,
     dibuat_oleh UUID REFERENCES public.pengguna(id),
     akun_kas_id UUID REFERENCES public.akun_kas(id),
@@ -530,7 +530,7 @@ CREATE TABLE IF NOT EXISTS public.surat_jalan (
     sales_driver_id UUID REFERENCES public.pengguna(id), -- Driver / Kurir Logistik Pengantar (Bisa Driver atau Sales)
     rute_wilayah_id UUID REFERENCES public.wilayah(id),
     url_pdf_dokumen TEXT,
-    status_surat_jalan VARCHAR(30) NOT NULL DEFAULT 'draf_n8n' CHECK (status_surat_jalan IN ('draf_n8n', 'disetujui_owner', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'ditolak_owner')),
+    status_surat_jalan VARCHAR(30) NOT NULL DEFAULT 'siap_kirim' CHECK (status_surat_jalan IN ('siap_kirim', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'gagal_kirim')),
     bukti_terima_foto TEXT, -- Foto bukti terima toko yang diupload Pengemudi/Sales via Telegram
     nama_penerima_toko VARCHAR(100),
     waktu_berangkat TIMESTAMPTZ,

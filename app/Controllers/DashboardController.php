@@ -47,7 +47,7 @@ class DashboardController extends Controller
 
             // Ambil data spesifik sesuai peran aktif
             $data = [
-                'pageTitle'    => 'Dashboard — KEREN SNACK ERP',
+                'pageTitle'    => 'Dashboard Utama',
                 'user'         => $user,
                 'userRole'     => $userRole,
                 'activeRole'   => $activeRole,
@@ -61,7 +61,7 @@ class DashboardController extends Controller
         } catch (Throwable $e) {
             error_log("DashboardController error: " . $e->getMessage());
             $this->view('dashboard.index', [
-                'pageTitle'    => 'Dashboard — KEREN SNACK ERP',
+                'pageTitle'    => 'Dashboard Utama',
                 'user'         => Auth::user(),
                 'userRole'     => Auth::role() ?? 'admin',
                 'activeRole'   => Auth::role() ?? 'admin',
@@ -125,8 +125,8 @@ class DashboardController extends Controller
                   AND sj.tanggal_surat_jalan = CURRENT_DATE
                 ORDER BY CASE 
                     WHEN sj.status_surat_jalan = 'sedang_dikirim' THEN 1
-                    WHEN sj.status_surat_jalan = 'disetujui_owner' THEN 2
-                    WHEN sj.status_surat_jalan = 'draf_n8n' THEN 3
+                    WHEN sj.status_surat_jalan = 'siap_kirim' THEN 2
+                    WHEN sj.status_surat_jalan = 'selesai_diterima' THEN 3
                     ELSE 4
                 END, sj.dibuat_pada ASC
             ", ['uid' => $userId]);
@@ -143,7 +143,7 @@ class DashboardController extends Controller
                     JOIN public.pelanggan p ON p.id = pes.pelanggan_id
                     LEFT JOIN public.wilayah w ON w.id = sj.rute_wilayah_id OR w.id = p.wilayah_id
                     WHERE (sj.sales_driver_id = :uid OR :uid IS NULL)
-                      AND sj.status_surat_jalan IN ('sedang_dikirim', 'disetujui_owner', 'draf_n8n')
+                      AND sj.status_surat_jalan IN ('sedang_dikirim', 'siap_kirim')
                     ORDER BY sj.tanggal_surat_jalan DESC, sj.dibuat_pada DESC
                     LIMIT 10
                 ", ['uid' => $userId]);
@@ -153,7 +153,7 @@ class DashboardController extends Controller
             $stats = Database::fetchOne("
                 SELECT 
                     COUNT(*) as total_tugas,
-                    COUNT(*) FILTER (WHERE status_surat_jalan IN ('sedang_dikirim', 'disetujui_owner')) as pending_rute,
+                    COUNT(*) FILTER (WHERE status_surat_jalan IN ('sedang_dikirim', 'siap_kirim')) as pending_rute,
                     COUNT(*) FILTER (WHERE status_surat_jalan = 'selesai_diterima') as selesai_antar,
                     COUNT(*) FILTER (WHERE status_surat_jalan = 'gagal_kembali') as gagal_antar
                 FROM public.surat_jalan
@@ -329,7 +329,7 @@ class DashboardController extends Controller
                 FROM public.pesanan pes
                 JOIN public.pelanggan p ON p.id = pes.pelanggan_id
                 LEFT JOIN public.wilayah w ON w.id = p.wilayah_id
-                WHERE pes.status_pemrosesan IN ('menunggu_approval', 'disetujui', 'siap_kirim')
+                WHERE pes.status_pemrosesan IN ('po', 'siap_kirim', 'siap_dikirim')
                 ORDER BY pes.dibuat_pada DESC
                 LIMIT 8
             ");

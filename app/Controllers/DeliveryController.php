@@ -727,7 +727,7 @@ class DeliveryController extends Controller
             $sql .= " ORDER BY 
                 CASE 
                     WHEN sj.status_surat_jalan = 'sedang_dikirim' THEN 1
-                    WHEN sj.status_surat_jalan IN ('siap_kirim', 'disetujui_owner', 'menunggu_persetujuan', 'draf_n8n') THEN 2
+                    WHEN sj.status_surat_jalan = 'siap_kirim' THEN 2
                     WHEN sj.status_surat_jalan = 'selesai_diterima' THEN 3
                     WHEN sj.status_surat_jalan = 'gagal_kirim' THEN 4
                     ELSE 5
@@ -747,7 +747,7 @@ class DeliveryController extends Controller
 
             foreach ($allDeliveries as $d) {
                 $st = $d['status_surat_jalan'];
-                if (in_array($st, ['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'], true)) {
+                if ($st === 'siap_kirim') {
                     $countPending++;
                 } elseif ($st === 'sedang_dikirim') {
                     $countInTransit++;
@@ -765,7 +765,7 @@ class DeliveryController extends Controller
                 $deliveries = array_values(array_filter($allDeliveries, function($d) use ($statusFilter) {
                     $st = $d['status_surat_jalan'];
                     if ($statusFilter === 'pending') {
-                        return in_array($st, ['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'], true);
+                        return ($st === 'siap_kirim');
                     } elseif ($statusFilter === 'in_transit') {
                         return ($st === 'sedang_dikirim');
                     } elseif ($statusFilter === 'completed') {

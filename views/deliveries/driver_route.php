@@ -844,7 +844,7 @@ ob_start();
             $isInTransit = ($statusSj === 'sedang_dikirim');
             $isCompleted = ($statusSj === 'selesai_diterima');
             $isFailed = ($statusSj === 'gagal_kirim');
-            $isPending = in_array($statusSj, ['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'], true);
+            $isPending = ($statusSj === 'siap_kirim');
 
             $cardClass = $isInTransit ? 'is-in-transit' : ($isCompleted ? 'is-completed' : ($isFailed ? 'is-failed' : ''));
         ?>
@@ -1209,7 +1209,7 @@ ob_start();
                             <template x-if="activeDelivery?.status_surat_jalan === 'gagal_kirim'">
                                 <span class="badge" style="background: #ffe4e6; color: #9f1239; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Gagal Kirim</span>
                             </template>
-                            <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'].includes(activeDelivery?.status_surat_jalan)">
+                            <template x-if="activeDelivery?.status_surat_jalan === 'siap_kirim'">
                                 <span class="badge" style="background: #f1f5f9; color: #475569; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Siap Berangkat</span>
                             </template>
                         </div>
@@ -1717,7 +1717,7 @@ ob_start();
                                 <input type="hidden" name="filter_date" value="<?= htmlspecialchars($selectedDate ?? '') ?>">
                                 <input type="hidden" name="filter_driver_id" value="<?= htmlspecialchars($filterDriver ?? '') ?>">
                                 <input type="hidden" name="filter_status" value="<?= htmlspecialchars($statusFilter ?? '') ?>">
-                                <template x-if="['menunggu_persetujuan', 'draf_n8n', 'siap_kirim', 'disetujui_owner'].includes(activeDelivery?.status_surat_jalan)">
+                                <template x-if="activeDelivery?.status_surat_jalan === 'siap_kirim'">
                                     <button type="submit" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
                                             style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; display: inline-flex; align-items: center; gap: 7px; background: #2563eb; border-color: #2563eb; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
                                         <i data-lucide="send" style="width: 15px; height: 15px;"></i>

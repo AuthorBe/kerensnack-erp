@@ -6,6 +6,7 @@
  */
 
 use App\Core\Router;
+use App\Core\Auth;
 use App\Helpers\Format;
 
 ob_start();
@@ -35,7 +36,7 @@ $roleHeaderIcons = [
     'owner'     => ['icon' => 'crown',    'color' => 'is-amber',  'accent' => '#f59e0b', 'tag' => 'Executive Command Center'],
     'admin'     => ['icon' => 'shield-check', 'color' => 'is-blue','accent' => '#2563eb', 'tag' => 'Operational Store Hub'],
     'mandor'    => ['icon' => 'factory',  'color' => 'is-emerald','accent' => '#10b981', 'tag' => 'Factory & Inventory Hub'],
-    'sales'     => ['icon' => 'store',    'color' => 'is-purple', 'accent' => '#a855f7', 'tag' => 'Sales B2B & Consignment'],
+    'sales'     => ['icon' => 'store',    'color' => 'is-violet', 'accent' => '#8b5cf6', 'tag' => 'Sales B2B & Consignment'],
     'driver'    => ['icon' => 'truck',    'color' => 'is-cyan',   'accent' => '#06b6d4', 'tag' => 'Logistics Fleet & Delivery'],
 ];
 
@@ -78,12 +79,12 @@ $meta = $roleHeaderIcons[$activeRole] ?? [
                 <i data-lucide="user-cog" style="width:14px;height:14px;"></i>
                 <span>Profil Akun</span>
             </a>
-            <?php if ($activeRole === 'owner'): ?>
+            <?php if ($activeRole === 'owner' && Auth::can('owner.dashboard')): ?>
             <a href="<?= Router::url('/owner') ?>" class="btn btn-primary btn-sm" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:36px;">
                 <i data-lucide="crown" style="width:14px;height:14px;"></i>
                 <span>Owner Executive Hub</span>
             </a>
-            <?php elseif ($activeRole === 'developer'): ?>
+            <?php elseif ($activeRole === 'developer' && ($isDeveloper || Auth::can('system.blueprint'))): ?>
             <a href="<?= Router::url('/developer') ?>" class="btn btn-primary btn-sm" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:36px;">
                 <i data-lucide="terminal" style="width:14px;height:14px;"></i>
                 <span>Developer Portal</span>

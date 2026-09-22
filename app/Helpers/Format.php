@@ -109,9 +109,7 @@ class Format
 
             case 'belum_lunas':
             case 'menunggu':
-            case 'menunggu_approval':
             case 'draf':
-            case 'draf_n8n':
                 return '<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-950/80 text-amber-300 border border-amber-500/30">
                     <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span> ' . str_replace('_', ' ', ucfirst($status)) . '
                 </span>';
