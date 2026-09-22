@@ -91,6 +91,7 @@ class EmployeeController extends Controller
         Auth::requirePermission('master.employees_manage');
 
         $nama = trim((string)$this->input('nama_karyawan'));
+        $nikPending = (bool)$this->input('nik_pending', false);
         $nikRaw = trim((string)$this->input('nik'));
         $nik = preg_replace('/[^0-9]/', '', $nikRaw);
         $posisi = $this->input('posisi', 'pengemasan');
@@ -116,17 +117,23 @@ class EmployeeController extends Controller
             return;
         }
 
-        if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
-            $this->flashError('NIK wajib diisi dengan tepat 16 digit angka KTP asli.');
-            $this->redirect('/employees');
-            return;
-        }
+        if ($nikPending) {
+            // Karyawan belum punya NIK — simpan sebagai NULL dengan flag pending
+            $nik = null;
+        } else {
+            // NIK wajib 16 digit angka KTP asli
+            if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
+                $this->flashError('NIK wajib diisi dengan tepat 16 digit angka KTP asli, atau centang "Belum memiliki NIK".');
+                $this->redirect('/employees');
+                return;
+            }
 
-        $existingNik = Database::fetchOne("SELECT id, nama_lengkap FROM public.pengguna WHERE nik = :nik LIMIT 1", ['nik' => $nik]);
-        if ($existingNik) {
-            $this->flashError("NIK '{$nik}' sudah terdaftar atas nama {$existingNik['nama_lengkap']}.");
-            $this->redirect('/employees');
-            return;
+            $existingNik = Database::fetchOne("SELECT id, nama_lengkap FROM public.pengguna WHERE nik = :nik LIMIT 1", ['nik' => $nik]);
+            if ($existingNik) {
+                $this->flashError("NIK '{$nik}' sudah terdaftar atas nama {$existingNik['nama_lengkap']}.");
+                $this->redirect('/employees');
+                return;
+            }
         }
 
         if (!empty($bankRek) && empty($bankAn)) {
@@ -141,24 +148,25 @@ class EmployeeController extends Controller
 
             $stmt = $pdo->prepare("
                 INSERT INTO public.pengguna (
-                    nama_lengkap, nik, posisi, nomor_telepon, nomor_whatsapp, alamat, nomor_polisi_kendaraan,
+                    nama_lengkap, nik, nik_pending, posisi, nomor_telepon, nomor_whatsapp, alamat, nomor_polisi_kendaraan,
                     tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif
                 ) VALUES (
-                    :nama, :nik, :posisi, :wa, :wa, :alamat, :nopol, :tgl,
+                    :nama, :nik, :nik_pending, :posisi, :wa, :wa, :alamat, :nopol, :tgl,
                     :bank, :rek, :an, TRUE
                 ) RETURNING id
             ");
             $stmt->execute([
-                'nama' => $nama,
-                'nik' => $nik,
-                'posisi' => $posisi,
-                'wa' => $whatsapp ?: null,
-                'alamat' => $alamat,
-                'nopol' => $nopol ?: null,
-                'tgl' => $tglBergabung,
-                'bank' => $bankNama ?: 'Tunai',
-                'rek' => $bankRek ?: null,
-                'an' => $bankAn ?: null
+                'nama'        => $nama,
+                'nik'         => $nikPending ? null : $nik,
+                'nik_pending' => $nikPending ? 'true' : 'false',
+                'posisi'      => $posisi,
+                'wa'          => $whatsapp ?: null,
+                'alamat'      => $alamat,
+                'nopol'       => $nopol ?: null,
+                'tgl'         => $tglBergabung,
+                'bank'        => $bankNama ?: 'Tunai',
+                'rek'         => $bankRek ?: null,
+                'an'          => $bankAn ?: null
             ]);
             $penggunaId = $stmt->fetchColumn();
 
@@ -172,10 +180,10 @@ class EmployeeController extends Controller
             ");
             $stmt->execute([
                 'pengguna_id' => $penggunaId,
-                'tipe' => $tipeGaji,
-                'gapok' => $gajiPokok,
-                'hadir' => $uangHadir,
-                'tunjangan' => $tunjangan
+                'tipe'        => $tipeGaji,
+                'gapok'       => $gajiPokok,
+                'hadir'       => $uangHadir,
+                'tunjangan'   => $tunjangan
             ]);
             
             $karyawanId = $stmt->fetchColumn();
@@ -186,25 +194,28 @@ class EmployeeController extends Controller
 
             $pdo->commit();
 
+            $nikLabel = $nikPending ? 'NIK Pending (belum ada KTP)' : $nik;
             \App\Helpers\ActivityLog::log(
                 'hr_payroll',
                 'CREATE',
-                "Mendaftarkan karyawan baru: {$nama} ({$posisi}, Tipe: {$tipeGaji}, NIK: {$nik})",
+                "Mendaftarkan karyawan baru: {$nama} ({$posisi}, Tipe: {$tipeGaji}, NIK: {$nikLabel})",
                 'karyawan',
                 (string)$karyawanId,
                 null,
                 [
-                    'nama_lengkap' => $nama,
-                    'nik' => $nik,
-                    'posisi' => $posisi,
-                    'tipe_penggajian' => $tipeGaji,
-                    'gaji_pokok_bulanan' => $gajiPokok,
+                    'nama_lengkap'        => $nama,
+                    'nik'                 => $nikPending ? null : $nik,
+                    'nik_pending'         => $nikPending,
+                    'posisi'              => $posisi,
+                    'tipe_penggajian'     => $tipeGaji,
+                    'gaji_pokok_bulanan'  => $gajiPokok,
                     'uang_kehadiran_harian' => $uangHadir,
-                    'tunjangan_bulanan' => $tunjangan
+                    'tunjangan_bulanan'   => $tunjangan
                 ]
             );
 
-            $this->flashSuccess("Karyawan {$nama} berhasil ditambahkan!");
+            $pendingNote = $nikPending ? ' (NIK belum diisi — lengkapi setelah KTP tersedia)' : '';
+            $this->flashSuccess("Karyawan {$nama} berhasil ditambahkan!{$pendingNote}");
             $this->redirect('/employees');
 
         } catch (Throwable $e) {
@@ -220,6 +231,7 @@ class EmployeeController extends Controller
 
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_karyawan'));
+        $nikPending = (bool)$this->input('nik_pending', false);
         $nikRaw = trim((string)$this->input('nik'));
         $nik = preg_replace('/[^0-9]/', '', $nikRaw);
         $posisi = $this->input('posisi', 'pengemasan');
@@ -245,10 +257,16 @@ class EmployeeController extends Controller
             return;
         }
 
-        if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
-            $this->flashError('NIK wajib diisi dengan tepat 16 digit angka KTP asli.');
-            $this->redirect('/employees');
-            return;
+        if ($nikPending) {
+            // Masih pending — NIK tetap NULL
+            $nik = null;
+        } else {
+            // NIK harus valid 16 digit (bisa digunakan untuk mengisi NIK pending sebelumnya)
+            if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
+                $this->flashError('NIK wajib diisi dengan tepat 16 digit angka KTP asli, atau centang "Belum memiliki NIK".');
+                $this->redirect('/employees');
+                return;
+            }
         }
 
         if (!empty($bankRek) && empty($bankAn)) {
@@ -265,14 +283,16 @@ class EmployeeController extends Controller
                 return;
             }
 
-            $existingNik = Database::fetchOne(
-                "SELECT id, nama_lengkap FROM public.pengguna WHERE nik = :nik AND id != :uid LIMIT 1",
-                ['nik' => $nik, 'uid' => $karyawan['pengguna_id']]
-            );
-            if ($existingNik) {
-                $this->flashError("NIK '{$nik}' sudah digunakan oleh karyawan lain ({$existingNik['nama_lengkap']}).");
-                $this->redirect('/employees');
-                return;
+            if (!$nikPending && !empty($nik)) {
+                $existingNik = Database::fetchOne(
+                    "SELECT id, nama_lengkap FROM public.pengguna WHERE nik = :nik AND id != :uid LIMIT 1",
+                    ['nik' => $nik, 'uid' => $karyawan['pengguna_id']]
+                );
+                if ($existingNik) {
+                    $this->flashError("NIK '{$nik}' sudah digunakan oleh karyawan lain ({$existingNik['nama_lengkap']}).");
+                    $this->redirect('/employees');
+                    return;
+                }
             }
 
             $pdo = Database::getConnection();
@@ -282,6 +302,7 @@ class EmployeeController extends Controller
                 $stmtP = $pdo->prepare("
                     UPDATE public.pengguna SET
                         nik = :nik,
+                        nik_pending = :nik_pending,
                         nama_lengkap = :nama,
                         posisi = :posisi,
                         nomor_telepon = :wa,
@@ -297,16 +318,17 @@ class EmployeeController extends Controller
                 ");
                 $stmtP->execute([
                     'pengguna_id' => $karyawan['pengguna_id'],
-                    'nik' => $nik,
-                    'nama' => $nama,
-                    'posisi' => $posisi,
-                    'wa' => $whatsapp ?: null,
-                    'alamat' => $alamat,
-                    'nopol' => $nopol ?: null,
-                    'bank' => $bankNama ?: 'Tunai',
-                    'rek' => $bankRek ?: null,
-                    'an' => $bankAn ?: null,
-                    'aktif' => $statusAktif ? 'true' : 'false'
+                    'nik'         => $nikPending ? null : $nik,
+                    'nik_pending' => $nikPending ? 'true' : 'false',
+                    'nama'        => $nama,
+                    'posisi'      => $posisi,
+                    'wa'          => $whatsapp ?: null,
+                    'alamat'      => $alamat,
+                    'nopol'       => $nopol ?: null,
+                    'bank'        => $bankNama ?: 'Tunai',
+                    'rek'         => $bankRek ?: null,
+                    'an'          => $bankAn ?: null,
+                    'aktif'       => $statusAktif ? 'true' : 'false'
                 ]);
             }
 
@@ -320,16 +342,16 @@ class EmployeeController extends Controller
                 WHERE id = :id
             ");
             $stmtK->execute([
-                'id' => $id,
-                'tipe' => $tipeGaji,
-                'gapok' => $gajiPokok,
-                'hadir' => $uangHadir,
-                'tunjangan' => $tunjangan
+                'id'         => $id,
+                'tipe'       => $tipeGaji,
+                'gapok'      => $gajiPokok,
+                'hadir'      => $uangHadir,
+                'tunjangan'  => $tunjangan
             ]);
 
             $oldData = Database::fetchOne("
                 SELECT k.tipe_penggajian, k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
-                       p.nik, p.nama_lengkap, p.posisi, p.nomor_telepon, p.bank_nama, p.bank_nomor_rekening, p.status_aktif
+                       p.nik, p.nik_pending, p.nama_lengkap, p.posisi, p.nomor_telepon, p.bank_nama, p.bank_nomor_rekening, p.status_aktif
                 FROM public.karyawan k
                 LEFT JOIN public.pengguna p ON k.pengguna_id = p.id
                 WHERE k.id = :id
@@ -337,22 +359,24 @@ class EmployeeController extends Controller
 
             $pdo->commit();
 
+            $nikLabel = $nikPending ? 'NIK Pending' : $nik;
             \App\Helpers\ActivityLog::log(
                 'hr_payroll',
                 'UPDATE',
-                "Memperbarui data karyawan {$nama} (NIK: {$nik})",
+                "Memperbarui data karyawan {$nama} (NIK: {$nikLabel})",
                 'karyawan',
                 (string)$id,
                 $oldData,
                 [
-                    'nama_lengkap' => $nama,
-                    'nik' => $nik,
-                    'posisi' => $posisi,
-                    'tipe_penggajian' => $tipeGaji,
-                    'gaji_pokok_bulanan' => $gajiPokok,
+                    'nama_lengkap'          => $nama,
+                    'nik'                   => $nikPending ? null : $nik,
+                    'nik_pending'           => $nikPending,
+                    'posisi'                => $posisi,
+                    'tipe_penggajian'       => $tipeGaji,
+                    'gaji_pokok_bulanan'    => $gajiPokok,
                     'uang_kehadiran_harian' => $uangHadir,
-                    'tunjangan_bulanan' => $tunjangan,
-                    'status_aktif' => $statusAktif
+                    'tunjangan_bulanan'     => $tunjangan,
+                    'status_aktif'          => $statusAktif
                 ]
             );
 
@@ -364,6 +388,7 @@ class EmployeeController extends Controller
             $this->redirect('/employees');
         }
     }
+
 
     public function delete(): void
     {

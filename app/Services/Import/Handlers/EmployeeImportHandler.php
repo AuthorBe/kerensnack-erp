@@ -71,6 +71,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
     {
         return [
             'NIK Karyawan WAJIB diisi 16 digit angka KTP asli (contoh: 3201012345670001) dan harus unik.',
+            'Jika karyawan BELUM memiliki NIK/KTP, kosongkan kolom NIK, isi dengan "0", atau tulis "Belum". Sistem akan mendaftarkan sebagai NIK Pending dan NIK dapat dilengkapi kemudian via menu Edit Karyawan.',
             'Nama Lengkap dan Posisi WAJIB diisi.',
             'Posisi yang valid: admin, mandor, pengemasan, sales, driver (developer/owner diatur khusus).',
             'Tipe Penggajian: borongan, bulanan.',
@@ -145,33 +146,39 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $bankAtasNama = (string)(SmartReader::getSmartValue($rowData, ['atas_nama_rekening', 'atas_nama']) ?? '');
             $statusAktifRaw = SmartReader::getSmartValue($rowData, ['status_aktif', 'status', 'aktif']);
 
+            // Baris kosong total → lewati
             if (empty($nikRaw) && empty($nama)) {
                 continue;
             }
 
-            if (empty($nikRaw)) {
-                $previewList[] = [
-                    'action' => 'ERROR',
-                    'error_msg' => "NIK Karyawan kosong pada baris {$lineNo}. Wajib diisi dengan 16 digit angka KTP asli.",
-                    'data' => ['nik' => '—', 'nama_lengkap' => $nama ?: '—', 'posisi' => $posisiRaw]
-                ];
-                continue;
-            }
+            // Deteksi nilai NIK yang menandakan "belum ada NIK":
+            // - kosong / hanya spasi
+            // - '0' atau '00...'
+            // - kata kunci: 'belum', 'pending', '-', '—'
+            $nikRawNormalized = strtolower(trim($nikRaw));
+            $nikIsPending = empty($nikRaw)
+                || $nikRawNormalized === '0'
+                || $nikRawNormalized === '-'
+                || $nikRawNormalized === '—'
+                || $nikRawNormalized === 'belum'
+                || $nikRawNormalized === 'pending'
+                || $nikRawNormalized === 'belum ada'
+                || preg_match('/^0+$/', $nik); // semua digit nol
 
-            if (strlen($nik) !== 16 || !ctype_digit($nik)) {
+            if (!$nikIsPending && (strlen($nik) !== 16 || !ctype_digit($nik))) {
                 $previewList[] = [
-                    'action' => 'ERROR',
-                    'error_msg' => "NIK '{$nikRaw}' pada baris {$lineNo} tidak valid. NIK wajib terdiri dari tepat 16 digit angka KTP asli.",
-                    'data' => ['nik' => $nikRaw, 'nama_lengkap' => $nama ?: '—', 'posisi' => $posisiRaw]
+                    'action'    => 'ERROR',
+                    'error_msg' => "NIK '{$nikRaw}' pada baris {$lineNo} tidak valid. NIK wajib terdiri dari tepat 16 digit angka KTP asli, atau kosongkan / isi '0' / tulis 'Belum' jika NIK belum tersedia.",
+                    'data'      => ['nik' => $nikRaw, 'nama_lengkap' => $nama ?: '—', 'posisi' => $posisiRaw]
                 ];
                 continue;
             }
 
             if (empty($nama)) {
                 $previewList[] = [
-                    'action' => 'ERROR',
+                    'action'    => 'ERROR',
                     'error_msg' => "Nama Lengkap kosong pada baris {$lineNo}. Wajib diisi.",
-                    'data' => ['nik' => $nik, 'nama_lengkap' => '—', 'posisi' => $posisiRaw]
+                    'data'      => ['nik' => $nikIsPending ? '(Pending)' : $nik, 'nama_lengkap' => '—', 'posisi' => $posisiRaw]
                 ];
                 continue;
             }
@@ -180,9 +187,9 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $validPositions = ['admin', 'mandor', 'pengemasan', 'sales', 'driver', 'owner'];
             if (!in_array($posisi, $validPositions, true)) {
                 $previewList[] = [
-                    'action' => 'ERROR',
+                    'action'    => 'ERROR',
                     'error_msg' => "Posisi '{$posisiRaw}' pada baris {$lineNo} tidak valid. Harus salah satu dari: admin, mandor, pengemasan, sales, driver.",
-                    'data' => ['nik' => $nik, 'nama_lengkap' => $nama, 'posisi' => $posisiRaw]
+                    'data'      => ['nik' => $nikIsPending ? '(Pending)' : $nik, 'nama_lengkap' => $nama, 'posisi' => $posisiRaw]
                 ];
                 continue;
             }
@@ -197,18 +204,22 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $tunjangan = SmartReader::normalizeNumeric($tunjanganRaw, 0.0);
             $statusAktif = SmartReader::normalizeBoolean($statusAktifRaw, true);
 
-            if (isset($seenNiks[$nik])) {
-                $previewList[] = [
-                    'action' => 'ERROR',
-                    'error_msg' => "Duplikasi NIK '{$nik}' pada baris {$lineNo}.",
-                    'data' => ['nik' => $nik, 'nama_lengkap' => $nama, 'posisi' => $posisi]
-                ];
-                continue;
+            // Cek duplikasi NIK di dalam file (hanya untuk NIK non-pending)
+            if (!$nikIsPending) {
+                if (isset($seenNiks[$nik])) {
+                    $previewList[] = [
+                        'action'    => 'ERROR',
+                        'error_msg' => "Duplikasi NIK '{$nik}' pada baris {$lineNo}.",
+                        'data'      => ['nik' => $nik, 'nama_lengkap' => $nama, 'posisi' => $posisi]
+                    ];
+                    continue;
+                }
+                $seenNiks[$nik] = true;
             }
-            $seenNiks[$nik] = true;
 
+            // Temukan data di DB: untuk NIK pending → cari by nama saja
             $dbRow = null;
-            if (isset($dbByNik[$nik])) {
+            if (!$nikIsPending && isset($dbByNik[$nik])) {
                 $dbRow = $dbByNik[$nik];
             } elseif (isset($dbByName[strtolower(trim($nama))])) {
                 $dbRow = $dbByName[strtolower(trim($nama))];
@@ -218,7 +229,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
 
             $itemData = [
                 'id'                     => $dbRow['id'] ?? null,
-                'nik'                    => $nik,
+                'nik'                    => $nikIsPending ? null : $nik,
+                'nik_pending'            => $nikIsPending,
                 'nama_lengkap'           => $nama,
                 'nama_pengguna'          => $dbRow['nama_pengguna'] ?? null,
                 'posisi'                 => $posisi,
@@ -241,7 +253,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             if ($dbRow) {
                 $processedDbIds[] = $dbRow['id'];
 
-                if (!empty($dbRow['nik']) && $dbRow['nik'] !== $nik) {
+                // Jika karyawan di DB sudah punya NIK asli, tapi file memasukkan NIK berbeda (bukan pending) → FATAL
+                if (!$nikIsPending && !empty($dbRow['nik']) && $dbRow['nik'] !== $nik) {
                     $previewList[] = [
                         'action'       => 'INSERT',
                         'is_fatal'     => true,
@@ -252,7 +265,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                     continue;
                 }
 
-                if (!SmartReader::isSimilarName($dbRow['nama_lengkap'], $nama)) {
+                // Nama tidak cocok dengan NIK yang ada → FATAL (hanya untuk NIK non-pending)
+                if (!$nikIsPending && !SmartReader::isSimilarName($dbRow['nama_lengkap'], $nama)) {
                     $previewList[] = [
                         'action'       => 'INSERT',
                         'is_fatal'     => true,
@@ -307,6 +321,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
         return $previewList;
     }
 
+
     public function applySync(array $previewList, PDO $pdo): array
     {
         $insertCount = 0;
@@ -315,8 +330,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
         $deactivateCount = 0;
 
         $stmtInsUser = $pdo->prepare("INSERT INTO public.pengguna 
-            (nama_lengkap, nama_pengguna, kata_sandi, nik, posisi, peran_id, nomor_telepon, nomor_whatsapp, nomor_polisi_kendaraan, alamat, tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?) RETURNING id");
+            (nama_lengkap, nama_pengguna, kata_sandi, nik, nik_pending, posisi, peran_id, nomor_telepon, nomor_whatsapp, nomor_polisi_kendaraan, alamat, tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?) RETURNING id");
 
         $stmtInsKaryawan = $pdo->prepare("INSERT INTO public.karyawan 
             (pengguna_id, tipe_penggajian, gaji_pokok_bulanan, uang_kehadiran_harian, tunjangan_bulanan)
@@ -329,7 +344,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 diubah_pada = NOW()");
 
         $stmtUpdUser = $pdo->prepare("UPDATE public.pengguna SET 
-            nama_lengkap = ?, nik = ?, posisi = ?, peran_id = ?, nomor_telepon = ?, nomor_whatsapp = ?, nomor_polisi_kendaraan = ?, alamat = ?, bank_nama = ?, bank_nomor_rekening = ?, bank_atas_nama = ?, status_aktif = ?, diubah_pada = NOW()
+            nama_lengkap = ?, nik = ?, nik_pending = ?, posisi = ?, peran_id = ?, nomor_telepon = ?, nomor_whatsapp = ?, nomor_polisi_kendaraan = ?, alamat = ?, bank_nama = ?, bank_nomor_rekening = ?, bank_atas_nama = ?, status_aktif = ?, diubah_pada = NOW()
             WHERE id = ?");
 
         $stmtDeactivate = $pdo->prepare("UPDATE public.pengguna SET status_aktif = FALSE, diubah_pada = NOW() WHERE id = ?");
@@ -363,9 +378,12 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $d = $row['data'];
 
             if ($act === 'INSERT' || $isFatal) {
-                $nik = $d['nik'] ?? '';
-                if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
-                    throw new \RuntimeException("Sinkronisasi ditolak: NIK untuk '{$d['nama_lengkap']}' wajib 16 digit angka KTP asli.");
+                $nikPending = !empty($d['nik_pending']);
+                $nik = $nikPending ? null : ($d['nik'] ?? null);
+
+                // Validasi NIK hanya untuk karyawan yang bukan pending
+                if (!$nikPending && (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik))) {
+                    throw new \RuntimeException("Sinkronisasi ditolak: NIK untuk '{$d['nama_lengkap']}' wajib 16 digit angka KTP asli, atau tandai sebagai NIK Pending.");
                 }
 
                 $stmtInsUser->execute([
@@ -373,6 +391,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                     !empty($d['nama_pengguna']) ? $d['nama_pengguna'] : null,
                     null, // kata_sandi (akun login dibuat terpisah via /users)
                     $nik,
+                    $nikPending ? 'true' : 'false',
                     $d['posisi'],
                     $d['peran_id'],
                     $d['nomor_whatsapp'] ?: null,
@@ -404,14 +423,18 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 $insertCount++;
             } elseif ($act === 'UPDATE') {
                 $userId = $d['id'];
-                $nik = $d['nik'] ?? '';
-                if (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik)) {
-                    throw new \RuntimeException("Sinkronisasi ditolak: NIK untuk '{$d['nama_lengkap']}' wajib 16 digit angka KTP asli.");
+                $nikPending = !empty($d['nik_pending']);
+                $nik = $nikPending ? null : ($d['nik'] ?? null);
+
+                // Validasi NIK hanya untuk karyawan yang bukan pending
+                if (!$nikPending && (empty($nik) || strlen($nik) !== 16 || !ctype_digit($nik))) {
+                    throw new \RuntimeException("Sinkronisasi ditolak: NIK untuk '{$d['nama_lengkap']}' wajib 16 digit angka KTP asli, atau tandai sebagai NIK Pending.");
                 }
 
                 $stmtUpdUser->execute([
                     $d['nama_lengkap'],
                     $nik,
+                    $nikPending ? 'true' : 'false',
                     $d['posisi'],
                     $d['peran_id'],
                     $d['nomor_whatsapp'] ?: null,

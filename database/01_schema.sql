@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.pengguna (
     nomor_whatsapp VARCHAR(25),
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     nik VARCHAR(30) UNIQUE,
+    nik_pending BOOLEAN NOT NULL DEFAULT FALSE, -- TRUE jika NIK belum tersedia, diisi via form edit setelah KTP diperoleh
     posisi VARCHAR(50), -- 'pengemasan', 'admin', 'mandor', 'sales', 'driver', 'developer'
     nomor_telepon VARCHAR(25),
     nomor_polisi_kendaraan VARCHAR(20),
@@ -65,7 +66,11 @@ CREATE TABLE IF NOT EXISTS public.pengguna (
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_pengguna_posisi_valid CHECK (posisi IN ('developer', 'owner', 'admin', 'mandor', 'pengemasan', 'sales', 'driver')),
-    CONSTRAINT chk_pengguna_nik_16_digit CHECK (posisi = 'developer' OR (nik IS NOT NULL AND nik ~ '^[0-9]{16}$'))
+    CONSTRAINT chk_pengguna_nik_16_digit CHECK (
+        posisi = 'developer'
+        OR (nik_pending = TRUE AND nik IS NULL)
+        OR (nik IS NOT NULL AND nik ~ '^[0-9]{16}$')
+    )
 );
 
 CREATE TABLE IF NOT EXISTS public.izin_pengguna (
@@ -141,6 +146,7 @@ SELECT
     k.pengguna_id,
     p.nama_lengkap AS nama_karyawan,
     p.nik,
+    p.nik_pending,
     p.posisi,
     COALESCE(p.nomor_whatsapp, p.nomor_telepon) AS nomor_telepon,
     p.nomor_polisi_kendaraan,
@@ -162,6 +168,7 @@ SELECT
     p.karyawan_legacy_id AS id_legacy
 FROM public.karyawan k
 JOIN public.pengguna p ON p.id = k.pengguna_id;
+
 
 CREATE TABLE IF NOT EXISTS public.pemasok (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

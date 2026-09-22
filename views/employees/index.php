@@ -679,6 +679,11 @@ ob_start();
                                             NIK: <span x-text="e.nik"></span>
                                         </span>
                                     </template>
+                                    <template x-if="!e.nik && e.nik_pending">
+                                        <span class="badge" style="font-size:10px;padding:1px 7px;color:#b45309;border-color:rgba(180,83,9,0.35);background:rgba(251,191,36,0.12);font-weight:700;">
+                                            ⚠ NIK Belum Ada
+                                        </span>
+                                    </template>
                                     <span x-text="(e.nomor_whatsapp || e.nomor_telepon) ? ('WA: ' + (e.nomor_whatsapp || e.nomor_telepon)) : ''"></span>
                                     <template x-if="e.nomor_polisi_kendaraan">
                                         <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:#0284c7;border-color:rgba(2,132,199,0.3);background:rgba(2,132,199,0.08);">
@@ -835,11 +840,33 @@ ob_start();
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="form-label">Nomor Induk Kependudukan (NIK) *</label>
-                        <input type="text" name="nik" x-model="form.nik" 
-                               @input="form.nik = $event.target.value.replace(/[^0-9]/g, '').slice(0, 16)"
-                               maxlength="16" minlength="16" pattern="[0-9]{16}" required class="form-input font-mono" placeholder="3201012345670001 (16 Digit)">
-                        <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Wajib 16 digit angka sesuai KTP asli</div>
+                        <label class="form-label">Nomor Induk Kependudukan (NIK)</label>
+                        <!-- Checkbox: Belum Punya NIK -->
+                        <label style="display:flex;align-items:center;gap:7px;margin-bottom:6px;cursor:pointer;font-size:12px;color:var(--color-ink-secondary);">
+                            <input type="checkbox" name="nik_pending" value="1"
+                                   x-model="form.nik_pending"
+                                   @change="if(form.nik_pending) { form.nik = ''; }"
+                                   style="width:14px;height:14px;accent-color:#d97706;">
+                            <span>Karyawan <strong>belum memiliki NIK / KTP</strong></span>
+                        </label>
+                        <input type="text" name="nik"
+                               x-model="form.nik"
+                               :disabled="form.nik_pending"
+                               :required="!form.nik_pending"
+                               :class="form.nik_pending ? 'form-input font-mono' : 'form-input font-mono'"
+                               :style="form.nik_pending ? 'background:var(--color-canvas-soft);color:var(--color-ink-mute);cursor:not-allowed;' : ''"
+                               @input="if(!form.nik_pending) form.nik = $event.target.value.replace(/[^0-9]/g, '').slice(0, 16)"
+                               maxlength="16"
+                               :placeholder="form.nik_pending ? 'WAJIB diisi saat KTP tersedia' : '3201012345670001 (16 Digit)'"
+                               :value="form.nik_pending ? '' : form.nik">
+                        <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">
+                            <template x-if="!form.nik_pending">
+                                <span>Wajib 16 digit angka sesuai KTP asli</span>
+                            </template>
+                            <template x-if="form.nik_pending">
+                                <span style="color:#d97706;font-weight:600;">⚠ NIK pending — lengkapi via Edit setelah KTP diperoleh</span>
+                            </template>
+                        </div>
                     </div>
                     <div>
                         <label class="form-label">Alamat Domisili</label>
@@ -903,7 +930,7 @@ ob_start();
                                 <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Opsional / default 0</div>
                             </div>
                             <div>
-                                <label class="form-label">Uang Hadir Harian (Rp/hari) *</label>
+                                <label class="form-label">Uang Hadir Harian (Rp/hari)*</label>
                                 <input type="text" name="uang_kehadiran_harian" x-model="form.uang_kehadiran_harian" required class="form-input font-mono input-rupiah" placeholder="10.000">
                                 <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">Diberikan setiap hari masuk kerja</div>
                             </div>
@@ -1410,6 +1437,7 @@ function employeeApp() {
         form: {
             id: '',
             nik: '',
+            nik_pending: false,
             nama_karyawan: '',
             posisi: 'pengemasan',
             tipe_penggajian: 'borongan',
@@ -1717,6 +1745,7 @@ function employeeApp() {
             this.form = {
                 id: '',
                 nik: '',
+                nik_pending: false,
                 nama_karyawan: '',
                 posisi: 'pengemasan',
                 tipe_penggajian: 'borongan',
@@ -1740,6 +1769,7 @@ function employeeApp() {
             this.form = {
                 id: e.id,
                 nik: e.nik || '',
+                nik_pending: !!e.nik_pending,
                 nama_karyawan: e.nama_karyawan,
                 posisi: e.posisi || 'pengemasan',
                 tipe_penggajian: e.tipe_penggajian || 'borongan',

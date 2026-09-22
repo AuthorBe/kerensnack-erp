@@ -12,10 +12,14 @@ declare(strict_types=1);
  *    - Menerima NIK 16 digit numerik murni.
  *    - Menerima posisi 'developer' tanpa NIK.
  *    - Menolak duplikasi NIK (Unique constraint).
+ *    - Menerima NIK NULL + nik_pending = TRUE pada posisi operasional (fitur NIK Pending).
+ *    - Menolak NIK NULL + nik_pending = FALSE pada posisi operasional (constraint tetap tegak).
  * 2. Impor & Sinkronisasi Handler (EmployeeImportHandler):
  *    - Header NIK terdaftar sebagai header WAJIB (Required Header Group).
- *    - previewRows() memvalidasi baris tanpa NIK -> ERROR.
- *    - previewRows() memvalidasi baris NIK bukan 16 digit -> ERROR.
+ *    - previewRows() memvalidasi baris tanpa NIK -> BUKAN ERROR (di-treat sebagai NIK Pending).
+ *    - previewRows() memvalidasi baris NIK '0' -> BUKAN ERROR (di-treat sebagai NIK Pending).
+ *    - previewRows() memvalidasi baris NIK 'Belum' -> BUKAN ERROR (di-treat sebagai NIK Pending).
+ *    - previewRows() memvalidasi baris NIK 10 digit -> ERROR.
  *    - previewRows() memvalidasi baris duplikat NIK di file -> ERROR.
  *    - previewRows() memvalidasi konflik NIK beda nama di DB -> FATAL.
  *    - previewRows() & applySync() berhasil memasukkan dan memperbarui karyawan dengan NIK 16 digit.
@@ -220,7 +224,7 @@ it("2.1 - getRequiredHeaderGroups mewajibkan header NIK pada berkas Excel", func
     return $hasNikGroup;
 });
 
-it("2.2 - previewRows menandai ERROR jika NIK kosong", function() use ($handler, $pdo) {
+it("2.2 - previewRows memperlakukan NIK kosong sebagai NIK Pending (INSERT dengan nik_pending=true), bukan ERROR", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
     $row = ['', 'Budi Tanpa NIK', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
 
@@ -228,8 +232,18 @@ it("2.2 - previewRows menandai ERROR jika NIK kosong", function() use ($handler,
     if (empty($preview)) return "Pratinjau kosong";
 
     $p = $preview[0];
-    if ($p['action'] !== 'ERROR') return "Action bukan ERROR, melainkan: {$p['action']}";
-    if (!str_contains($p['error_msg'], 'NIK Karyawan kosong')) return "Pesan error tidak memuat 'NIK Karyawan kosong': {$p['error_msg']}";
+    if ($p['action'] === 'ERROR') {
+        return "Action seharusnya bukan ERROR (NIK kosong = NIK Pending), melainkan: {$p['action']} - " . ($p['error_msg'] ?? '');
+    }
+    if (!in_array($p['action'], ['INSERT', 'UPDATE'], true)) {
+        return "Action harus INSERT atau UPDATE, dapat: {$p['action']}";
+    }
+    if (empty($p['data']['nik_pending'])) {
+        return "nik_pending harus TRUE untuk baris NIK kosong";
+    }
+    if ($p['data']['nik'] !== null) {
+        return "NIK harus NULL saat nik_pending=TRUE, dapat: " . var_export($p['data']['nik'], true);
+    }
 
     return true;
 });
@@ -341,6 +355,118 @@ it("3.1 - TemplateGenerator mengekspor kolom NIK sebagai String murni", function
         return "Contoh NIK pada template bukan 16 digit angka: '{$exampleVal}'";
     }
 
+    return true;
+});
+
+// ==============================================================================
+// 4. NIK PENDING FEATURE TESTS (fitur baru: karyawan belum punya NIK/KTP)
+// ==============================================================================
+
+it("4.1 - Database mengizinkan INSERT nik=NULL + nik_pending=TRUE pada posisi non-developer", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        // INSERT karyawan tanpa NIK dengan flag nik_pending = TRUE → harus berhasil
+        $stmt = $pdo->prepare("
+            INSERT INTO public.pengguna (nama_lengkap, nik, nik_pending, posisi, status_aktif)
+            VALUES ('Test NIK Pending Valid', NULL, TRUE, 'pengemasan', TRUE)
+            RETURNING id
+        ");
+        $stmt->execute();
+        $id = $stmt->fetchColumn();
+
+        if (!$id) return "INSERT nik_pending=TRUE gagal: ID tidak dikembalikan.";
+
+        $saved = $pdo->query("SELECT nik, nik_pending, posisi FROM public.pengguna WHERE id = '{$id}'")->fetch(PDO::FETCH_ASSOC);
+        if ($saved['nik'] !== null) return "NIK harus NULL, dapat: {$saved['nik']}";
+        if ($saved['nik_pending'] !== true) return "nik_pending harus TRUE, dapat: " . var_export($saved['nik_pending'], true);
+
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+    }
+});
+
+it("4.2 - Database MENOLAK INSERT nik=NULL + nik_pending=FALSE pada posisi non-developer (constraint tetap tegak)", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        $caught = false;
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO public.pengguna (nama_lengkap, nik, nik_pending, posisi, status_aktif)
+                VALUES ('Test NIK Pending Palsu', NULL, FALSE, 'sales', TRUE)
+            ");
+            $stmt->execute();
+        } catch (PDOException $ex) {
+            // Harus kena CHECK constraint violation
+            $caught = str_contains($ex->getMessage(), 'chk_pengguna_nik_16_digit');
+        }
+        return $caught ? true : "Database seharusnya menolak nik=NULL + nik_pending=FALSE pada posisi sales!";
+    } finally {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+    }
+});
+
+it("4.3 - previewRows() memperlakukan baris dengan NIK KOSONG sebagai INSERT (nik_pending), bukan ERROR", function() use ($handler, $pdo) {
+    $header = $handler->getTemplateHeaders();
+    // Format: [nik, nama_lengkap, posisi, tipe_penggajian, gapok, uang_hadir, tunjangan, wa, nopol, alamat, tgl_gabung, bank, rek, atas_nama, status_aktif]
+    $row = ['', 'Karyawan Tanpa NIK Test', 'pengemasan', 'borongan', 0, 15000, 0, '081234567890', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $result = $handler->previewRows([$row], $header, $pdo, 'add_only');
+
+    if (empty($result)) return "previewRows mengembalikan array kosong";
+    $row0 = $result[0];
+    if ($row0['action'] === 'ERROR') {
+        return "Baris NIK kosong seharusnya bukan ERROR, dapat: " . ($row0['error_msg'] ?? 'unknown');
+    }
+    if (!in_array($row0['action'], ['INSERT', 'UPDATE'], true)) {
+        return "Baris NIK kosong harus INSERT atau UPDATE, dapat: {$row0['action']}";
+    }
+    if (empty($row0['data']['nik_pending'])) {
+        return "Flag nik_pending harus TRUE untuk baris dengan NIK kosong";
+    }
+    if ($row0['data']['nik'] !== null) {
+        return "NIK harus NULL untuk nik_pending=TRUE, dapat: " . var_export($row0['data']['nik'], true);
+    }
+    return true;
+});
+
+it("4.4 - previewRows() memperlakukan NIK='0' sebagai NIK Pending (bukan ERROR)", function() use ($handler, $pdo) {
+    $header = $handler->getTemplateHeaders();
+    $row = ['0', 'Karyawan NIK Nol Test', 'pengemasan', 'borongan', 0, 15000, 0, '', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $result = $handler->previewRows([$row], $header, $pdo, 'add_only');
+
+    if (empty($result)) return "previewRows mengembalikan array kosong";
+    $row0 = $result[0];
+    if ($row0['action'] === 'ERROR') {
+        return "NIK='0' seharusnya bukan ERROR, dapat: " . ($row0['error_msg'] ?? 'unknown');
+    }
+    if (empty($row0['data']['nik_pending'])) return "nik_pending harus TRUE untuk NIK='0'";
+    return true;
+});
+
+it("4.5 - previewRows() memperlakukan NIK='Belum' sebagai NIK Pending (bukan ERROR)", function() use ($handler, $pdo) {
+    $header = $handler->getTemplateHeaders();
+    $row = ['Belum', 'Karyawan NIK Belum Test', 'driver', 'bulanan', 3000000, 0, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $result = $handler->previewRows([$row], $header, $pdo, 'add_only');
+
+    if (empty($result)) return "previewRows mengembalikan array kosong";
+    $row0 = $result[0];
+    if ($row0['action'] === 'ERROR') {
+        return "NIK='Belum' seharusnya bukan ERROR, dapat: " . ($row0['error_msg'] ?? 'unknown');
+    }
+    if (empty($row0['data']['nik_pending'])) return "nik_pending harus TRUE untuk NIK='Belum'";
+    return true;
+});
+
+it("4.6 - previewRows() TETAP memunculkan ERROR untuk NIK 10 digit (non-valid, non-pending)", function() use ($handler, $pdo) {
+    $header = $handler->getTemplateHeaders();
+    $row = ['3201012345', 'Test NIK 10 Digit', 'admin', 'bulanan', 3000000, 0, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $result = $handler->previewRows([$row], $header, $pdo, 'add_only');
+
+    if (empty($result)) return "previewRows mengembalikan array kosong";
+    $row0 = $result[0];
+    if ($row0['action'] !== 'ERROR') {
+        return "NIK 10 digit seharusnya ERROR, dapat: {$row0['action']}";
+    }
     return true;
 });
 
