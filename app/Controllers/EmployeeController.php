@@ -46,7 +46,7 @@ class EmployeeController extends Controller
             $totalBorongan = count(array_filter($employees, fn($e) => $e['posisi'] === 'pengemasan'));
             $totalSales = count(array_filter($employees, fn($e) => $e['posisi'] === 'sales'));
             $totalDriver = count(array_filter($employees, fn($e) => $e['posisi'] === 'driver'));
-            $totalAdminGudang = count(array_filter($employees, fn($e) => in_array($e['posisi'], ['admin', 'gudang', 'mandor'], true)));
+            $totalAdminGudang = count(array_filter($employees, fn($e) => in_array($e['posisi'], ['admin', 'gudang', 'mandor', 'owner'], true)));
             $totalNikPending = count(array_filter($employees, fn($e) => empty($e['nik']) || !empty($e['nik_pending'])));
 
             $commissionTiers = Database::fetchAll("
@@ -57,7 +57,7 @@ class EmployeeController extends Controller
 
             $this->view('employees.index', [
                 'pageTitle' => 'Master Data Karyawan',
-                'pageSubtitle' => 'Kelola Data Pegawai Admin, Gudang, Pengemasan, Sales & Driver',
+                'pageSubtitle' => 'Kelola Data Pegawai Owner, Admin, Gudang, Pengemasan, Sales & Driver',
                 'employees' => $employees,
                 'commissionTiers' => $commissionTiers,
                 'metrics' => [
@@ -74,7 +74,7 @@ class EmployeeController extends Controller
             $this->flashError("Gagal memuat data karyawan: " . $e->getMessage());
             $this->view('employees.index', [
                 'pageTitle' => 'Master Data Karyawan',
-                'pageSubtitle' => 'Kelola Data Pegawai Admin, Gudang, Pengemasan, Sales & Driver',
+                'pageSubtitle' => 'Kelola Data Pegawai Owner, Admin, Gudang, Pengemasan, Sales & Driver',
                 'employees' => [],
                 'commissionTiers' => [],
                 'metrics' => [
@@ -98,9 +98,11 @@ class EmployeeController extends Controller
         $nikRaw = trim((string)$this->input('nik'));
         $nik = preg_replace('/[^0-9]/', '', $nikRaw);
         $posisi = $this->input('posisi', 'pengemasan');
-        $tipeGaji = strtolower(trim((string)$this->input('tipe_penggajian', 'borongan')));
+        $defaultTipeGaji = ($posisi === 'pengemasan') ? 'borongan' : 'bulanan';
+        $tipeGajiInput = $this->input('tipe_penggajian');
+        $tipeGaji = !empty($tipeGajiInput) ? strtolower(trim((string)$tipeGajiInput)) : $defaultTipeGaji;
         if (!in_array($tipeGaji, ['borongan', 'bulanan'], true)) {
-            $tipeGaji = ($posisi === 'pengemasan') ? 'borongan' : 'bulanan';
+            $tipeGaji = $defaultTipeGaji;
         }
         $gajiPokok = (float)preg_replace('/[^0-9]/', '', (string)$this->input('gaji_pokok_bulanan', '0'));
         $uangHadir = (float)preg_replace('/[^0-9]/', '', (string)$this->input('uang_kehadiran_harian', '0'));
@@ -238,9 +240,11 @@ class EmployeeController extends Controller
         $nikRaw = trim((string)$this->input('nik'));
         $nik = preg_replace('/[^0-9]/', '', $nikRaw);
         $posisi = $this->input('posisi', 'pengemasan');
-        $tipeGaji = strtolower(trim((string)$this->input('tipe_penggajian', 'borongan')));
+        $defaultTipeGaji = ($posisi === 'pengemasan') ? 'borongan' : 'bulanan';
+        $tipeGajiInput = $this->input('tipe_penggajian');
+        $tipeGaji = !empty($tipeGajiInput) ? strtolower(trim((string)$tipeGajiInput)) : $defaultTipeGaji;
         if (!in_array($tipeGaji, ['borongan', 'bulanan'], true)) {
-            $tipeGaji = ($posisi === 'pengemasan') ? 'borongan' : 'bulanan';
+            $tipeGaji = $defaultTipeGaji;
         }
         $gajiPokok = (float)preg_replace('/[^0-9]/', '', (string)$this->input('gaji_pokok_bulanan', '0'));
         $uangHadir = (float)preg_replace('/[^0-9]/', '', (string)$this->input('uang_kehadiran_harian', '0'));

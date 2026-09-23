@@ -158,7 +158,7 @@ INSERT INTO public.izin (kode_izin, nama_izin, grup_izin, deskripsi) VALUES
 ('inventory.view_all', 'Monitoring Stok Gudang', 'Gudang & Produksi', 'Melihat katalog persediaan bahan mentah & barang jadi realtime'),
 ('inventory.opname', 'Penyesuaian Stok Opname', 'Gudang & Produksi', 'Koreksi selisih stok fisik vs sistem di gudang pusat'),
 ('inventory.waste', 'Catat Susut & Waste Bahan', 'Gudang & Produksi', 'Input bahan rusak, plastik gagal segel, atau sampel operasional'),
-('production.view_all', 'Lihat Riwayat Produksi', 'Gudang & Produksi', 'Melihat rekapitulasi harian hasil kerja buruh borongan'),
+('production.view_all', 'Lihat Riwayat Produksi', 'Gudang & Produksi', 'Melihat rekapitulasi harian hasil kerja pengemasan borongan'),
 ('production.create', 'Input Hasil Produksi Borongan', 'Gudang & Produksi', 'Input kuantiti hasil packing snack dan assembling cuanki cup'),
 ('production.edit', 'Edit Catatan Produksi', 'Gudang & Produksi', 'Mengubah catatan kuantiti hasil produksi borongan'),
 

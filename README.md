@@ -11,7 +11,7 @@ Aplikasi ini mengintegrasikan seluruh lini bisnis end-to-end: mulai dari pengada
 ### Latar Belakang & Masalah Bisnis
 Industri distribusi makanan ringan berbasis konsinyasi memiliki dinamika operasional yang sangat kompleks:
 - **Toko Konsinyasi & Titip Jual:** Rekonsiliasi stok rak toko sering mengalami selisih, retur barang rusak (*BS*), barang hilang, serta tagihan yang tertunda.
-- **Produksi Repacking & Upah Borongan:** Bahan curah (*bal-balan*) dikemas ulang menjadi ratusan varian kemasan kecil dengan skema upah buruh borongan per bungkus.
+- **Produksi Repacking & Upah Borongan:** Bahan curah (*bal-balan*) dikemas ulang menjadi ratusan varian kemasan kecil dengan skema upah pengemasan borongan per bungkus.
 - **Logistik Lapangan:** Pengantaran barang oleh supir dan penagihan oleh sales memerlukan pemisahan wewenang (*separation of duty*) yang ketat serta bukti serah terima digital (*Proof of Delivery*).
 - **Integritas Keuangan & Multi-Tier Pricing:** Matriks harga yang dinamis antar tipe pelanggan (ritel, grosir, toko rak) menuntut kalkulasi harga otomatis di level database agar mencegah kesalahan kasir maupun manipulasi data.
 
@@ -51,7 +51,7 @@ Sistem dibangun dengan arsitektur modern berorientasi performa tinggi, keamanan 
 | 🛒 **POS Kasir & Penjualan Grosir** | Layar kasir ritel cepat dengan scanner barcode, kalkulator pembayaran & kembalian tunai/non-tunai, integrasi matriks level harga otomatis (Level 1 s/d 30), dan penerbitan nota kontan/tempo. |
 | 🚚 **Logistik & Pengiriman Armada** | Penerbitan surat jalan pengiriman, penugasan supir, rute harian, pencatatan *Proof of Delivery* (POD) foto serah terima toko, serta pencatatan alasan gagal kirim. |
 | 📦 **Gudang, Pembelian (PO) & Repacking** | Manajemen inventaris bahan baku curah & kemasan, alur PO pembelian vendor, penugasan belanja kurir, *Bill of Materials* (BOM) repacking, dan sesi bulk opname fisik gudang. |
-| 👥 **SDM & Penggajian (HR Payroll)** | Pencatatan upah borongan buruh packing per bungkus, absensi harian, potongan kasbon otomatis, tabungan karyawan, dan penutupan buku gaji mingguan/bulanan. |
+| 👥 **SDM & Penggajian (HR Payroll)** | Pencatatan upah borongan pengemasan per bungkus, absensi harian, potongan kasbon otomatis, tabungan karyawan, dan penutupan buku gaji mingguan/bulanan. |
 | 💰 **Keuangan & Rekening Kas** | Manajemen multi-rekening kas/bank, alur persetujuan (*approval*) draf pengeluaran operasional satu pintu, serta buku besar arus kas masuk/keluar otomatis. |
 | 👑 **Owner Command Center & RBAC** | Persetujuan pesanan dan nota tempo, dashboard omzet & profitabilitas, analisis piutang berjalan (*aging*), dan manajemen peran granular (Owner, Admin, Mandor, Sales, Driver). |
 

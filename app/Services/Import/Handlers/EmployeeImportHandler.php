@@ -73,7 +73,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             'NIK Karyawan WAJIB diisi 16 digit angka KTP asli (contoh: 3201012345670001) dan harus unik.',
             'Jika karyawan BELUM memiliki NIK/KTP, kosongkan kolom NIK, isi dengan "0", atau tulis "Belum". Sistem akan mendaftarkan sebagai NIK Pending. NIK dapat dilengkapi kemudian via menu Edit Karyawan maupun sinkronisasi Excel kembali.',
             'Nama Lengkap dan Posisi WAJIB diisi.',
-            'Posisi yang valid: admin, mandor, pengemasan, sales, driver (developer/owner diatur khusus).',
+            'Posisi yang valid: admin, mandor, pengemasan, sales, driver, owner, gudang.',
             'Tipe Penggajian: borongan, bulanan.',
             'No WhatsApp: Nomor WhatsApp aktif karyawan untuk koordinasi kerja (format 08xxx).',
             'Pembuatan akun login pengguna dikelola secara terpisah melalui menu Pengaturan Pengguna (/users).'
@@ -83,7 +83,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
     public function getCurrentDataRows(PDO $pdo): array
     {
         $sql = "SELECT COALESCE(p.nik, '') as nik, p.nama_lengkap,
-                       p.posisi, COALESCE(k.tipe_penggajian, 'borongan') as tipe_penggajian,
+                       p.posisi, COALESCE(k.tipe_penggajian, CASE WHEN p.posisi = 'pengemasan' THEN 'borongan' ELSE 'bulanan' END) as tipe_penggajian,
                        COALESCE(k.gaji_pokok_bulanan, 0) as gaji_pokok,
                        COALESCE(k.uang_kehadiran_harian, 0) as uang_hadir,
                        COALESCE(k.tunjangan_bulanan, 0) as tunjangan,
@@ -133,7 +133,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $nik = preg_replace('/[^0-9]/', '', $nikRaw);
             $nama = (string)(SmartReader::getSmartValue($rowData, ['nama_lengkap', 'nama', 'nama_karyawan']) ?? '');
             $posisiRaw = (string)(SmartReader::getSmartValue($rowData, ['posisi', 'jabatan', 'tugas']) ?? '');
-            $tipeGajiRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_penggajian', 'sistem_gaji', 'tipe_gaji']) ?? 'borongan');
+            $tipeGajiRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_penggajian', 'sistem_gaji', 'tipe_gaji']) ?? '');
             $gapokRaw = SmartReader::getSmartValue($rowData, ['gaji_pokok_bulanan', 'gaji_pokok', 'gapok']);
             $hadirRaw = SmartReader::getSmartValue($rowData, ['uang_hadir_harian', 'uang_kehadiran_harian', 'uang_hadir']);
             $tunjanganRaw = SmartReader::getSmartValue($rowData, ['tunjangan_bulanan', 'tunjangan']);
@@ -188,7 +188,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             if (!in_array($posisi, $validPositions, true)) {
                 $previewList[] = [
                     'action'    => 'ERROR',
-                    'error_msg' => "Posisi '{$posisiRaw}' pada baris {$lineNo} tidak valid. Harus salah satu dari: admin, mandor, pengemasan, sales, driver, gudang.",
+                    'error_msg' => "Posisi '{$posisiRaw}' pada baris {$lineNo} tidak valid. Harus salah satu dari: admin, mandor, pengemasan, sales, driver, owner, gudang.",
                     'data'      => ['nik' => $nikIsPending ? '(Pending)' : $nik, 'nama_lengkap' => $nama, 'posisi' => $posisiRaw]
                 ];
                 continue;
@@ -409,9 +409,10 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 $newUserId = $stmtInsUser->fetchColumn();
 
                 if ($newUserId) {
+                    $defaultTipe = ($d['posisi'] === 'pengemasan') ? 'borongan' : 'bulanan';
                     $stmtInsKaryawan->execute([
                         $newUserId,
-                        $d['tipe_penggajian'] ?: 'borongan',
+                        $d['tipe_penggajian'] ?: $defaultTipe,
                         $d['gaji_pokok_bulanan'] ?: 0,
                         $d['uang_kehadiran_harian'] ?: 0,
                         $d['tunjangan_bulanan'] ?: 0
@@ -450,9 +451,10 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                     $userId
                 ]);
 
+                $defaultTipe = ($d['posisi'] === 'pengemasan') ? 'borongan' : 'bulanan';
                 $stmtInsKaryawan->execute([
                     $userId,
-                    $d['tipe_penggajian'] ?: 'borongan',
+                    $d['tipe_penggajian'] ?: $defaultTipe,
                     $d['gaji_pokok_bulanan'] ?: 0,
                     $d['uang_kehadiran_harian'] ?: 0,
                     $d['tunjangan_bulanan'] ?: 0

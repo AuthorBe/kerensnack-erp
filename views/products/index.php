@@ -683,7 +683,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
                     <input type="text" x-model="searchBorongan" placeholder="Cari nama kelompok / tarif..." class="form-input" style="height:38px;font-size:13px;">
                 </div>
-                <div class="hidden sm:block" style="font-size:11.5px;color:var(--color-ink-mute);">Tarif upah borongan buruh packing per bungkus kemasan</div>
+                <div class="hidden sm:block" style="font-size:11.5px;color:var(--color-ink-mute);">Tarif upah borongan pengemasan per bungkus</div>
             </div>
 
             <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
