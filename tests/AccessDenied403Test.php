@@ -121,7 +121,7 @@ runTest("1. Berkas View 403.php ada dan berhasil di-render tanpa PHP error", fun
         return "File views/errors/403.php tidak ditemukan";
     }
 
-    $title = '403 – Akses Ditolak | KEREN SNACK ERP';
+    $title = '403 – Akses Ditolak | Keren One';
     $reason = 'test.permission_denied';
 
     ob_start();

@@ -13,15 +13,15 @@ $login_redirect = Router::url('/login') . ($is_auto_logout ? '?timeout=1' : '');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Keluar — KEREN SNACK ERP</title>
+    <title>Keluar — Keren One</title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
     <meta name="theme-color" content="#881337">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Keren Snack">
-    <meta name="application-name" content="Keren Snack ERP">
+    <meta name="apple-mobile-web-app-title" content="Keren One">
+    <meta name="application-name" content="Keren One">
     
     <!-- Favicon & Icons -->
     <link rel="icon" type="image/x-icon" href="<?= Router::asset('/favicon/favicon.ico') ?>">
@@ -257,10 +257,10 @@ $login_redirect = Router::url('/login') . ($is_auto_logout ? '?timeout=1' : '');
     <div class="header">
         <div class="header-top">
             <div class="logo-box">
-                <img src="<?= Router::asset('/favicon/apple-touch-icon.png') ?>" alt="Logo Keren Snack">
+                <img src="<?= Router::asset('/favicon/apple-touch-icon.png') ?>" alt="Logo Keren One">
             </div>
             <div>
-                <div class="app-name">KEREN SNACK ERP</div>
+                <div class="app-name">KEREN ONE</div>
                 <div style="font-size:11px;color:var(--text-muted);">Sistem Otentikasi Terpadu</div>
             </div>
         </div>

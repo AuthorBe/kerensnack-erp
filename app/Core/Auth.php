@@ -553,7 +553,7 @@ class Auth
         // 4. Render Halaman 403 Kado Kejutan
         $viewFile = ROOT_PATH . '/views/errors/403.php';
         if (file_exists($viewFile)) {
-            $title = '403 – Akses Ditolak | KEREN SNACK ERP';
+            $title = '403 – Akses Ditolak | Keren One';
             $reason = $reasonStr;
             require $viewFile;
             exit;

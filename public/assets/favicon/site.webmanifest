@@ -1,8 +1,8 @@
 {
-  "name": "KEREN SNACK ERP",
-  "short_name": "Keren Snack",
-  "description": "Sistem ERP & Manajemen Kasir POS Keren Snack",
-  "id": "kerensnack-erp-app",
+  "name": "Keren One",
+  "short_name": "Keren One",
+  "description": "Sistem Manajemen Bisnis & Kasir POS Keren One",
+  "id": "kerenone-app",
   "start_url": "../../dashboard",
   "scope": "../../",
   "display": "standalone",

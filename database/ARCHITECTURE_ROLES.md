@@ -1,6 +1,6 @@
 # Panduan Arsitektur & Aturan Baku: Pemisahan Sales vs Driver
 
-Dokumen ini merupakan **kontrak arsitektur resmi** bagi seluruh pengembang manusia dan asisten AI yang memodifikasi basis data, logika controller, serta modul antarmuka KEREN Snack ERP.
+Dokumen ini merupakan **kontrak arsitektur resmi** bagi seluruh pengembang manusia dan asisten AI yang memodifikasi basis data, logika controller, serta modul antarmuka KEREN ONE.
 
 ---
 

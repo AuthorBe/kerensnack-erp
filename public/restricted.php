@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * public/restricted.php
  * Standalone entrypoint for HTTP 403 / 404 ErrorDocument handlers
- * KEREN SNACK ERP
+ * Keren One
  */
 
 http_response_code(403);

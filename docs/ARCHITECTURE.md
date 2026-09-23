@@ -1,6 +1,6 @@
-# KEREN SNACK ERP — System Architecture & Module Reference Manual
+# KEREN ONE — System Architecture & Module Reference Manual
 
-Dokumen ini merupakan spesifikasi teknis dan panduan arsitektur sistem resmi untuk **KEREN SNACK ERP**. Dokumen ini dirancang sebagai *Single Source of Truth* bagi pengembang sistem, arsitek perangkat lunak, dan agen AI untuk memahami struktur modular, alur data, pengendali (*controller*), antarmuka (*view*), relasi basis data (*database*), serta matriks hak akses peran (*RBAC*).
+Dokumen ini merupakan spesifikasi teknis dan panduan arsitektur sistem resmi untuk **KEREN ONE**. Dokumen ini dirancang sebagai *Single Source of Truth* bagi pengembang sistem, arsitek perangkat lunak, dan agen AI untuk memahami struktur modular, alur data, pengendali (*controller*), antarmuka (*view*), relasi basis data (*database*), serta matriks hak akses peran (*RBAC*).
 
 ---
 
@@ -160,4 +160,4 @@ Tabel berikut adalah panduan pemetaan modul satu pintu: **URL Route $\leftrighta
 4. **Offline Resilience:** Antarmuka mobile didukung penyimpanan formulir sesi lokal untuk mencegah kehilangan input saat gangguan sinyal.
 
 ---
-*Dokumentasi Arsitektur Resmi — KEREN SNACK ERP System.*
+*Dokumentasi Arsitektur Resmi — KEREN ONE System.*

@@ -1,6 +1,6 @@
-# KEREN SNACK ERP — Enterprise Distribution & Manufacturing Management System
+# KEREN ONE — Enterprise Distribution & Manufacturing Management System
 
-Sistem Enterprise Resource Planning (ERP), Point of Sales (POS), Manajemen Distribusi Konsinyasi, dan Logistik Terpadu yang dirancang khusus untuk operasional manufaktur repacking dan rantai pasok distribusi makanan ringan **KEREN Snack**.
+Sistem Enterprise Resource Planning (ERP), Point of Sales (POS), Manajemen Distribusi Konsinyasi, dan Logistik Terpadu yang dirancang khusus untuk operasional manufaktur repacking dan rantai pasok distribusi makanan ringan **Keren One**.
 
 Aplikasi ini mengintegrasikan seluruh lini bisnis end-to-end: mulai dari pengadaan bahan mentah dari pemasok, pemrosesan repacking borongan, pencatatan stok multi-satuan, penjualan ritel POS, pengiriman armada logistik, hingga audit konsinyasi rak toko dan pembukuan arus kas keuangan.
 
@@ -15,7 +15,7 @@ Industri distribusi makanan ringan berbasis konsinyasi memiliki dinamika operasi
 - **Logistik Lapangan:** Pengantaran barang oleh supir dan penagihan oleh sales memerlukan pemisahan wewenang (*separation of duty*) yang ketat serta bukti serah terima digital (*Proof of Delivery*).
 - **Integritas Keuangan & Multi-Tier Pricing:** Matriks harga yang dinamis antar tipe pelanggan (ritel, grosir, toko rak) menuntut kalkulasi harga otomatis di level database agar mencegah kesalahan kasir maupun manipulasi data.
 
-KEREN SNACK ERP hadir sebagai solusi terpadu (*single source of truth*) yang menggabungkan seluruh modul operasional ke dalam satu ekosistem tersentralisasi, andal, dan berkecepatan tinggi.
+KEREN ONE hadir sebagai solusi terpadu (*single source of truth*) yang menggabungkan seluruh modul operasional ke dalam satu ekosistem tersentralisasi, andal, dan berkecepatan tinggi.
 
 ---
 

@@ -11,15 +11,15 @@ $flash = Flash::get();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Login — KEREN SNACK ERP</title>
+    <title>Login — Keren One</title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
     <meta name="theme-color" content="#881337">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Keren Snack">
-    <meta name="application-name" content="Keren Snack ERP">
+    <meta name="apple-mobile-web-app-title" content="Keren One">
+    <meta name="application-name" content="Keren One">
 
     <!-- Favicon & PWA Icons -->
     <link rel="icon" type="image/x-icon" href="<?= Router::asset('/favicon/favicon.ico') ?>">
@@ -394,10 +394,10 @@ $flash = Flash::get();
         <!-- Login Header -->
         <div class="login-header">
             <div class="login-logo">
-                <img src="<?= Router::asset('/favicon/apple-touch-icon.png') ?>" alt="Logo Keren Snack">
+                <img src="<?= Router::asset('/favicon/apple-touch-icon.png') ?>" alt="Logo Keren One">
             </div>
-            <h4 class="login-title">KEREN SNACK</h4>
-            <p class="login-subtitle">Sistem ERP &amp; Manajemen Kasir</p>
+            <h4 class="login-title">KEREN ONE</h4>
+            <p class="login-subtitle">Sistem Manajemen Bisnis &amp; Kasir</p>
         </div>
 
         <!-- Flash Error / Session Error -->

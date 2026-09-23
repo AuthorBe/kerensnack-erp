@@ -1248,7 +1248,7 @@ function devArchitectureApp() {
 
             this.generatedPrompt = `TARGET: ${taskHeader}
 
-INFORMASI MODUL KEREN SNACK ERP:
+INFORMASI MODUL KEREN ONE:
 - Nama Modul: ${m.title}
 - Controller Terkait: ${m.controller}
 - Views Terkait: ${m.views}
@@ -1275,10 +1275,10 @@ INSTRUKSI PENGERJAAN:
         },
 
         copyFullSystemMap() {
-            const fullMap = `# KEREN SNACK ERP — SYSTEM ARCHITECTURE BLUEPRINT & CODEBASE GUIDE
+            const fullMap = `# KEREN ONE — SYSTEM ARCHITECTURE BLUEPRINT & CODEBASE GUIDE
 
 ## 1. 📌 GAMBARAN UMUM & PROFIL PROYEK
-- **Nama Proyek**: KEREN SNACK ERP (Enterprise Resource Planning & POS System)
+- **Nama Proyek**: KEREN ONE (Enterprise Resource Planning & POS System)
 - **Domain Bisnis**: Manufaktur Snack/Makanan Ringan, Distribusi Multi-Channel, Konsinyasi Rak Toko Mitra, Driver Logistik, Kasir POS Ritel, Pesanan Grosir B2B, Manajemen Gudang & Resep BOM, Keuangan & Buku Kas, HR & Komisi Sales Berjenjang.
 - **Tipe Aplikasi**: Web Application Server-Side Rendered (SSR) dengan Interaktivitas Reaktif Mobile-First (Alpine.js).
 

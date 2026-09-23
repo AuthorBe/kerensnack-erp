@@ -13,15 +13,15 @@ $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemt
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="csrf-token" content="<?= htmlspecialchars(\App\Helpers\CSRF::token()) ?>">
-    <title><?= htmlspecialchars($pageTitle ?? 'Studio') ?> — KEREN SNACK ERP</title>
+    <title><?= htmlspecialchars($pageTitle ?? 'Studio') ?> — Keren One</title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
     <meta name="theme-color" content="#881337">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Keren Snack">
-    <meta name="application-name" content="Keren Snack ERP">
+    <meta name="apple-mobile-web-app-title" content="Keren One">
+    <meta name="application-name" content="Keren One">
 
     <!-- Favicon & PWA Icons -->
     <link rel="icon" type="image/x-icon" href="<?= Router::asset('/favicon/favicon.ico') ?>">

@@ -156,7 +156,7 @@ $waMessageLines[] = "*TOTAL TERJUAL (LAKU):* " . $totalQtyLaku . " pcs (" . Form
 $waMessageLines[] = "*TOTAL SISA RAK TOKO:* " . $totalSisaRak . " pcs";
 $waMessageLines[] = "";
 $waMessageLines[] = "Terima kasih atas kerja samanya!";
-$waMessageLines[] = "_Bukti hasil opname fisik resmi ERP Keren Snack_";
+$waMessageLines[] = "_Bukti hasil opname fisik resmi App Keren One_";
 
 $fullWaMessage = implode("\n", $waMessageLines);
 $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode($fullWaMessage) : "";
@@ -1539,7 +1539,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
     <!-- ========================================================================= -->
     <div id="printableReceipt" class="hidden">
         <div style="text-align:center;margin-bottom:8px;">
-            <strong style="font-size:13px;display:block;">KEREN SNACK ERP</strong>
+            <strong style="font-size:13px;display:block;">KEREN ONE</strong>
             <span style="font-size:10px;">Bukti Kunjungan &amp; Opname Rak Toko</span>
         </div>
 

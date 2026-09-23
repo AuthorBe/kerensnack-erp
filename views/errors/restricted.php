@@ -7,7 +7,7 @@
 
 use App\Core\Router;
 
-$pageTitle = $title ?? 'Akses Dibatasi — KEREN SNACK ERP';
+$pageTitle = $title ?? 'Akses Dibatasi — Keren One';
 $requestedUri = $_SERVER['REQUEST_URI'] ?? '';
 $cleanUri = htmlspecialchars(parse_url($requestedUri, PHP_URL_PATH) ?? $requestedUri, ENT_QUOTES, 'UTF-8');
 $fallbackHomeUrl = class_exists('\App\Core\Router') ? Router::url('/dashboard') : '/dashboard';
@@ -26,8 +26,8 @@ $faviconUrl = class_exists('\App\Core\Router') ? Router::asset('/favicon/favicon
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Keren Snack">
-    <meta name="application-name" content="Keren Snack ERP">
+    <meta name="apple-mobile-web-app-title" content="Keren One">
+    <meta name="application-name" content="Keren One">
 
     <?php if ($faviconUrl): ?>
     <link rel="icon" type="image/png" href="<?= $faviconUrl ?>">
@@ -493,7 +493,7 @@ $faviconUrl = class_exists('\App\Core\Router') ? Router::asset('/favicon/favicon
             <!-- Footer Compliance Note -->
             <div class="footer-note">
                 <i class="fa-solid fa-shield-check"></i>
-                <span>Sistem Keamanan Terpadu &bull; KEREN SNACK ERP</span>
+                <span>Sistem Keamanan Terpadu &bull; KEREN ONE</span>
             </div>
         </div>
     </div>

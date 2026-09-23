@@ -739,7 +739,7 @@
 
     const confirmed = await AppConfirm({
       title: 'Konfirmasi Keluar',
-      message: 'Apakah Anda yakin ingin keluar dari sistem KEREN SNACK ERP?',
+      message: 'Apakah Anda yakin ingin keluar dari sistem Keren One?',
       submessage: 'Seluruh sesi kerja aktif Anda pada perangkat ini akan diakhiri. Pastikan pekerjaan atau transaksi yang sedang berjalan telah selesai.',
       accountInfo: accountInfo,
       confirmText: 'Ya, Keluar',

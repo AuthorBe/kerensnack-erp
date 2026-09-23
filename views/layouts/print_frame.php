@@ -30,8 +30,8 @@ $documentTitle = $documentTitle ?? 'Dokumen Cetak';
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Keren Snack">
-    <meta name="application-name" content="Keren Snack ERP">
+    <meta name="apple-mobile-web-app-title" content="Keren One">
+    <meta name="application-name" content="Keren One">
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="<?= Router::asset('/favicon/favicon.ico') ?>">

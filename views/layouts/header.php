@@ -29,7 +29,7 @@ $headerTitle = $pageTitle ?? match(true) {
     str_contains($uri, '/settings/company')  => 'Informasi Perusahaan',
     str_contains($uri, '/settings')         => 'Pengaturan Sistem',
     str_contains($uri, '/profile')          => 'Profil Pengguna',
-    default                                 => 'Keren Snack ERP',
+    default                                 => 'Keren One',
 };
 
 $headerSub = $pageSubtitle ?? match(true) {

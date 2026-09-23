@@ -1,7 +1,7 @@
 # Engineering Guidelines & Agent Operational Protocols
 
 ## Overview
-Dokumen ini menetapkan standar rekayasa perangkat lunak (*software engineering standards*), protokol pengujian otomatis, tata kelola migrasi, dan pedoman integritas basis data yang **wajib dipatuhi tanpa pengecualian** oleh seluruh asisten pengembang berbasis AI (*Agentic AI*) dan kontributor teknis pada repositori **KEREN Snack ERP**.
+Dokumen ini menetapkan standar rekayasa perangkat lunak (*software engineering standards*), protokol pengujian otomatis, tata kelola migrasi, dan pedoman integritas basis data yang **wajib dipatuhi tanpa pengecualian** oleh seluruh asisten pengembang berbasis AI (*Agentic AI*) dan kontributor teknis pada repositori **KEREN ONE**.
 
 ---
 

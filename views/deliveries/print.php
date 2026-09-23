@@ -431,7 +431,7 @@ ob_start();
                     <em>* Mohon periksa fisik kemasan &amp; segel bersama driver saat serah terima di toko.</em>
                 </td>
                 <td style="vertical-align: top; width: 38%; text-align: right; font-size: 8pt;">
-                    Dokumen ERP Keren Snack<br>
+                    Dokumen App Keren One<br>
                     Cetak: <?= date('d/m/Y H:i:s') ?>
                 </td>
             </tr>

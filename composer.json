@@ -1,6 +1,6 @@
 {
     "name": "kerensnack/erp",
-    "description": "Keren Snack ERP - Enterprise Resource Planning System",
+    "description": "Keren One - Enterprise Resource Planning System",
     "type": "project",
     "require": {
         "php": ">=8.1",

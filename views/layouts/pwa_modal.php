@@ -86,7 +86,7 @@
                     <div class="flex items-start gap-2.5" style="padding-top:4px;border-top:1px dashed var(--color-hairline);">
                         <div class="font-mono" style="width:22px;height:22px;border-radius:6px;background:rgba(16,185,129,0.15);color:var(--color-success);font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✓</div>
                         <div style="font-size:12px;color:var(--color-ink);line-height:1.45;">
-                            Ikon <strong>KEREN SNACK ERP</strong> akan langsung terpasang di layar utama HP Anda.
+                            Ikon <strong>Keren One</strong> akan langsung terpasang di layar utama HP Anda.
                         </div>
                     </div>
                 </div>

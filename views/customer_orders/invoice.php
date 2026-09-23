@@ -416,7 +416,7 @@ ob_start();
                     <?php endif; ?>
                     <div style="font-size: 8pt; color: #333; margin-top: 4px;">
                         * Pembayaran sah apabila disertai kuitansi resmi atau transfer ke rekening resmi.<br>
-                        * Dokumen ERP Keren Snack &bull; Cetak: <?= date('d/m/Y H:i:s') ?>
+                        * Dokumen App Keren One &bull; Cetak: <?= date('d/m/Y H:i:s') ?>
                     </div>
                 </td>
                 <td style="vertical-align: top; width: 45%;">

@@ -1,13 +1,13 @@
 /**
- * KEREN SNACK ERP — Progressive Web App Service Worker
- * Version: 2.0.0 | 2026
+ * Keren One — Progressive Web App Service Worker
+ * Version: 2.1.0 | 2026
  * Strategy:
  *   - Static Assets (CSS, JS, Fonts, Icons, Favicon): Stale-While-Revalidate / Cache-First
  *   - ERP Dynamic Data & Transaksi (PHP / Navigation / API): Network-First (Online-Safe)
  *   - Offline Fallback: High-Fidelity UI matching restricted.php (Zero False-Positive)
  */
 
-const CACHE_NAME = 'ksnack-erp-cache-v3';
+const CACHE_NAME = 'kerenone-pwa-v1';
 
 // Static assets to pre-cache on install
 const PRECACHE_ASSETS = [
@@ -31,7 +31,7 @@ const OFFLINE_HTML = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Koneksi Terputus — KEREN SNACK ERP</title>
+  <title>Koneksi Terputus — Keren One</title>
   <meta name="robots" content="noindex, nofollow">
 
   <!-- PWA & Mobile Web App Meta Tags -->
@@ -39,8 +39,8 @@ const OFFLINE_HTML = `<!DOCTYPE html>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Keren Snack">
-  <meta name="application-name" content="Keren Snack ERP">
+  <meta name="apple-mobile-web-app-title" content="Keren One">
+  <meta name="application-name" content="Keren One">
 
   <link rel="icon" type="image/x-icon" href="./assets/favicon/favicon.ico">
   <link rel="icon" type="image/png" href="./assets/favicon/favicon-96x96.png">
@@ -473,7 +473,7 @@ const OFFLINE_HTML = `<!DOCTYPE html>
       <!-- Footer Compliance Note -->
       <div class="footer-note">
         <i class="fa-solid fa-shield-check"></i>
-        <span>Sistem Keamanan &amp; Integritas Data &bull; KEREN SNACK ERP</span>
+        <span>Sistem Keamanan &amp; Integritas Data &bull; KEREN ONE</span>
       </div>
     </div>
   </div>
