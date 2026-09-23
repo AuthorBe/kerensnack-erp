@@ -53,28 +53,25 @@ $flash = Flash::get();
         }
 
         @keyframes floatBlob1 {
-            0%   { transform: translate(0px, 0px) scale(1); opacity: 0.42; }
-            50%  { transform: translate(90px, 60px) scale(1.15); opacity: 0.22; }
-            100% { transform: translate(0px, 0px) scale(1); opacity: 0.42; }
+            0%, 100% { transform: translate(0px, 0px) scale(1); opacity: 0.28; }
+            50%      { transform: translate(90px, 60px) scale(1.12); opacity: 0.36; }
         }
 
         @keyframes floatBlob2 {
-            0%   { transform: translate(0px, 0px) scale(1); opacity: 0.32; }
-            50%  { transform: translate(-80px, -70px) scale(1.12); opacity: 0.48; }
-            100% { transform: translate(0px, 0px) scale(1); opacity: 0.32; }
+            0%, 100% { transform: translate(0px, 0px) scale(1); opacity: 0.22; }
+            50%      { transform: translate(-80px, -70px) scale(1.10); opacity: 0.32; }
         }
 
         @keyframes floatBlob3 {
-            0%   { transform: translate(-50%, -50%) scale(0.95); opacity: 0.28; }
-            50%  { transform: translate(-40%, -55%) scale(1.15); opacity: 0.45; }
-            100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.28; }
+            0%, 100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.18; }
+            50%      { transform: translate(-40%, -55%) scale(1.12); opacity: 0.28; }
         }
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(-45deg, #ffffff, #fecdd3, #ffffff, #ffe4e6, #ffffff, #fee2e2);
-            background-size: 350% 350%;
-            animation: gradientBg 10s ease-in-out infinite;
+            background: linear-gradient(-45deg, #ffe4e6, #ffffff, #fee2e2, #ffffff);
+            background-size: 400% 400%;
+            animation: gradientBg 15s ease infinite;
             min-height: 100vh;
             min-height: 100dvh;
             display: flex;

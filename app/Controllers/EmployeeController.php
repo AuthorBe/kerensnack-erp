@@ -23,7 +23,7 @@ class EmployeeController extends Controller
     {
         try {
             $employees = Database::fetchAll("
-                SELECT k.id, k.nik, k.nama_karyawan, k.posisi, k.tipe_penggajian,
+                SELECT k.id, k.nik, k.nik_pending, k.nama_karyawan, k.posisi, k.tipe_penggajian,
                        k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
                        k.nomor_telepon, k.nomor_whatsapp, k.alamat, k.tanggal_bergabung,
                        k.nomor_polisi_kendaraan,
@@ -47,6 +47,7 @@ class EmployeeController extends Controller
             $totalSales = count(array_filter($employees, fn($e) => $e['posisi'] === 'sales'));
             $totalDriver = count(array_filter($employees, fn($e) => $e['posisi'] === 'driver'));
             $totalAdminGudang = count(array_filter($employees, fn($e) => in_array($e['posisi'], ['admin', 'gudang', 'mandor'], true)));
+            $totalNikPending = count(array_filter($employees, fn($e) => empty($e['nik']) || !empty($e['nik_pending'])));
 
             $commissionTiers = Database::fetchAll("
                 SELECT id, urutan, nama_tier, omzet_min, omzet_maks, persentase, status_aktif
@@ -64,7 +65,8 @@ class EmployeeController extends Controller
                     'borongan' => $totalBorongan,
                     'sales' => $totalSales,
                     'driver' => $totalDriver,
-                    'admin_gudang' => $totalAdminGudang
+                    'admin_gudang' => $totalAdminGudang,
+                    'nik_pending' => $totalNikPending
                 ]
             ]);
 
@@ -80,7 +82,8 @@ class EmployeeController extends Controller
                     'borongan' => 0,
                     'sales' => 0,
                     'driver' => 0,
-                    'admin_gudang' => 0
+                    'admin_gudang' => 0,
+                    'nik_pending' => 0
                 ]
             ]);
         }

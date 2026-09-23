@@ -71,7 +71,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
     {
         return [
             'NIK Karyawan WAJIB diisi 16 digit angka KTP asli (contoh: 3201012345670001) dan harus unik.',
-            'Jika karyawan BELUM memiliki NIK/KTP, kosongkan kolom NIK, isi dengan "0", atau tulis "Belum". Sistem akan mendaftarkan sebagai NIK Pending dan NIK dapat dilengkapi kemudian via menu Edit Karyawan.',
+            'Jika karyawan BELUM memiliki NIK/KTP, kosongkan kolom NIK, isi dengan "0", atau tulis "Belum". Sistem akan mendaftarkan sebagai NIK Pending. NIK dapat dilengkapi kemudian via menu Edit Karyawan maupun sinkronisasi Excel kembali.',
             'Nama Lengkap dan Posisi WAJIB diisi.',
             'Posisi yang valid: admin, mandor, pengemasan, sales, driver (developer/owner diatur khusus).',
             'Tipe Penggajian: borongan, bulanan.',
@@ -277,7 +277,9 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                     continue;
                 }
 
-                $isDiff = trim($nama) !== trim((string)$dbRow['nama_lengkap'])
+                $isDiff = trim((string)($nik ?? '')) !== trim((string)($dbRow['nik'] ?? ''))
+                    || $nikIsPending !== (bool)($dbRow['nik_pending'] ?? false)
+                    || trim($nama) !== trim((string)$dbRow['nama_lengkap'])
                     || trim($posisi) !== trim((string)$dbRow['posisi'])
                     || trim($tipeGaji) !== trim((string)($dbRow['tipe_penggajian'] ?? ''))
                     || abs($gapok - (float)($dbRow['gaji_pokok_bulanan'] ?? 0)) > 0.01

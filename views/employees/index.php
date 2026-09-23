@@ -548,9 +548,9 @@ ob_start();
     </div>
 
     <!-- ========================================================================= -->
-    <!-- TOP STATS: 5 KEY EMPLOYEE METRIC CARDS                                    -->
+    <!-- TOP STATS: 6 KEY EMPLOYEE METRIC CARDS                                    -->
     <!-- ========================================================================= -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
         
         <div class="card p-3 sm:p-4" style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--rounded-lg);box-shadow:var(--shadow-1);">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
@@ -617,6 +617,23 @@ ob_start();
             <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">Kantor, Gudang &amp; Mandor</div>
         </div>
 
+        <div class="card p-3 sm:p-4 cursor-pointer hover:border-amber-400 transition-colors"
+             @click="filterNik = (filterNik === 'pending' ? 'all' : 'pending')"
+             :style="filterNik === 'pending' ? 'background:rgba(251,191,36,0.12);border:1.5px solid #d97706;border-radius:var(--rounded-lg);box-shadow:var(--shadow-1);' : 'background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--rounded-lg);box-shadow:var(--shadow-1);'">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                <span style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:<?= ($metrics['nik_pending'] ?? 0) > 0 ? '#b45309' : 'var(--color-ink-mute)' ?>;">NIK Belum Ada</span>
+                <div style="width:28px;height:28px;border-radius:6px;background:rgba(245,158,11,0.15);color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="alert-circle" style="width:14px;height:14px;"></i>
+                </div>
+            </div>
+            <div style="font-size:20px;font-weight:900;font-family:var(--font-mono);color:<?= ($metrics['nik_pending'] ?? 0) > 0 ? '#d97706' : 'var(--color-ink-mute)' ?>;line-height:1.2;">
+                <?= $metrics['nik_pending'] ?? 0 ?>
+            </div>
+            <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">
+                <span x-text="filterNik === 'pending' ? '✓ Filter Aktif' : 'Klik untuk filter'"></span>
+            </div>
+        </div>
+
     </div>
 
     <!-- ========================================================================= -->
@@ -641,6 +658,12 @@ ob_start();
                     <option value="gudang">📦 Staff Gudang &amp; Logistik</option>
                     <option value="admin">👩‍💼 Admin &amp; Keuangan</option>
                     <option value="mandor">👷 Mandor / Supervisor</option>
+                </select>
+
+                <select x-model="filterNik" class="form-input" style="height:38px;font-size:13px;max-width:210px;">
+                    <option value="all">Semua Status NIK</option>
+                    <option value="verified">✅ NIK Lengkap (16 Digit)</option>
+                    <option value="pending">⚠ NIK Belum Ada / Pending</option>
                 </select>
             </div>
 
@@ -1407,6 +1430,7 @@ function employeeApp() {
         employees: <?= json_encode($employees) ?>,
         searchQuery: '',
         filterPosition: 'all',
+        filterNik: 'all',
         showModal: false,
         isEdit: false,
 
@@ -1471,14 +1495,24 @@ function employeeApp() {
 
         get filteredEmployees() {
             return this.employees.filter(e => {
-                const q = this.searchQuery.toLowerCase();
+                const q = this.searchQuery.toLowerCase().trim();
+                const isPending = !e.nik || Boolean(e.nik_pending);
+                const isPendingKeyword = (q === 'pending' || q === 'belum' || q === 'belum ada' || q === 'ktp' || q === 'nik pending') && isPending;
+
                 const matchQuery = !q ||
-                    e.nama_karyawan.toLowerCase().includes(q) ||
+                    (e.nama_karyawan && e.nama_karyawan.toLowerCase().includes(q)) ||
                     (e.nik && e.nik.toLowerCase().includes(q)) ||
-                    (e.nomor_telepon && e.nomor_telepon.includes(q));
+                    (e.nomor_telepon && e.nomor_telepon.includes(q)) ||
+                    (e.nomor_whatsapp && e.nomor_whatsapp.includes(q)) ||
+                    isPendingKeyword;
 
                 const matchPos = this.filterPosition === 'all' || e.posisi === this.filterPosition;
-                return matchQuery && matchPos;
+
+                const matchNik = this.filterNik === 'all' ||
+                    (this.filterNik === 'pending' && isPending) ||
+                    (this.filterNik === 'verified' && !isPending && Boolean(e.nik));
+
+                return matchQuery && matchPos && matchNik;
             });
         },
 

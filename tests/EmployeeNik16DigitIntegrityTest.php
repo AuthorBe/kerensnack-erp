@@ -470,6 +470,72 @@ it("4.6 - previewRows() TETAP memunculkan ERROR untuk NIK 10 digit (non-valid, n
     return true;
 });
 
+it("4.7 - previewRows() dan applySync() berhasil mendeteksi dan memperbarui NIK Pending menjadi NIK 16 digit via Excel", function() use ($handler, $pdo) {
+    $pdo->beginTransaction();
+    try {
+        // Buat karyawan dengan NIK Pending di database
+        $uniqueName = 'Karyawan Pending Test ' . rand(1000, 9999);
+        $stmtIns = $pdo->prepare("
+            INSERT INTO public.pengguna (nama_lengkap, nik, nik_pending, posisi, status_aktif)
+            VALUES (:nama, NULL, TRUE, 'sales', TRUE)
+            RETURNING id
+        ");
+        $stmtIns->execute(['nama' => $uniqueName]);
+        $uid = $stmtIns->fetchColumn();
+
+        $pdo->prepare("
+            INSERT INTO public.karyawan (pengguna_id, tipe_penggajian, gaji_pokok_bulanan, uang_kehadiran_harian, tunjangan_bulanan)
+            VALUES (?, 'bulanan', 3000000, 20000, 0)
+        ")->execute([$uid]);
+
+        // Berkas Excel sekarang memasukkan 16 digit NIK baru untuk nama tersebut (kolom lain sama persis)
+        $header = $handler->getTemplateHeaders();
+        $newNik = '320101' . str_pad((string)rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT);
+        $row = [$newNik, $uniqueName, 'sales', 'bulanan', 3000000, 20000, 0, '', '', '', date('Y-m-d'), '', '', '', 'Aktif'];
+
+        $preview = $handler->previewRows([$row], $header, $pdo, 'update_insert');
+        if (empty($preview)) {
+            $pdo->rollBack();
+            return "Pratinjau kosong";
+        }
+
+        $p = $preview[0];
+        if ($p['action'] !== 'UPDATE') {
+            $pdo->rollBack();
+            return "Aksi preview seharusnya UPDATE saat NIK baru diisi untuk karyawan pending, dapat: " . ($p['action'] ?? 'null') . ($p['error_msg'] ?? '');
+        }
+
+        // Terapkan sinkronisasi
+        $stats = $handler->applySync($preview, $pdo);
+        if ($stats['update'] !== 1) {
+            $pdo->rollBack();
+            return "Stats update harus 1, dapat: " . json_encode($stats);
+        }
+
+        // Verifikasi di database
+        $updatedUser = $pdo->query("SELECT nik, nik_pending FROM public.pengguna WHERE id = '{$uid}'")->fetch(PDO::FETCH_ASSOC);
+        $pdo->rollBack(); // Bersihkan kembali sesuai Zero Persistent Mock Data
+
+        if (!$updatedUser) return "User tidak ditemukan di DB setelah update";
+        if ($updatedUser['nik'] !== $newNik) return "NIK tidak terupdate, masih: {$updatedUser['nik']}";
+        if ($updatedUser['nik_pending'] === true) return "nik_pending harus FALSE setelah NIK diisi";
+
+        return true;
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        throw $e;
+    }
+});
+
+it("4.8 - Kueri EmployeeController::index() dari v_karyawan_info memuat kolom nik_pending", function() use ($pdo) {
+    $row = Database::fetchOne("SELECT k.id, k.nik, k.nik_pending, k.nama_karyawan FROM public.v_karyawan_info k LIMIT 1");
+    if (!$row) return true; // Tidak ada data, tetap valid skema
+    if (!array_key_exists('nik_pending', $row)) {
+        return "Kueri v_karyawan_info tidak mengembalikan kunci 'nik_pending'";
+    }
+    return true;
+});
+
 echo "\n====================================================================\n";
 echo "SUMMARY: {$passed} / {$total} Tests Passed (" . round(($passed/$total)*100) . "%)\n";
 echo "====================================================================\n\n";
