@@ -234,6 +234,12 @@ class TestRunnerService
             'category'    => 'Master Data & System',
             'description' => 'Audit mendalam sensor relasi Foreign Key (100% FK coverage), proteksi master default (CUST-001, GRP-001, developer), dan verifikasi soft-deactivate vs hard-delete saat Full-Sync.'
         ],
+        'gudang_role_position' => [
+            'file'        => 'GudangRoleAndPositionIntegrityTest.php',
+            'title'       => 'Gudang Position & Permanent System Role Integrity',
+            'category'    => 'Security & RBAC',
+            'description' => 'Validasi posisi karyawan Gudang, pendaftaran role permanen sistem gudang, default permissions pergudangan, dan impor data.'
+        ],
     ];
 
     // -------------------------------------------------------------------------

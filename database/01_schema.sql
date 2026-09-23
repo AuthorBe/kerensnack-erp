@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS public.pengguna (
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     nik VARCHAR(30) UNIQUE,
     nik_pending BOOLEAN NOT NULL DEFAULT FALSE, -- TRUE jika NIK belum tersedia, diisi via form edit setelah KTP diperoleh
-    posisi VARCHAR(50), -- 'pengemasan', 'admin', 'mandor', 'sales', 'driver', 'developer'
+    posisi VARCHAR(50), -- 'pengemasan', 'admin', 'mandor', 'sales', 'driver', 'gudang', 'developer'
     nomor_telepon VARCHAR(25),
     nomor_polisi_kendaraan VARCHAR(20),
     alamat TEXT,
@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS public.pengguna (
     karyawan_legacy_id INT UNIQUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT chk_pengguna_posisi_valid CHECK (posisi IN ('developer', 'owner', 'admin', 'mandor', 'pengemasan', 'sales', 'driver')),
+    CONSTRAINT chk_pengguna_posisi_valid CHECK (posisi IN ('developer', 'owner', 'admin', 'mandor', 'pengemasan', 'sales', 'driver', 'gudang')),
     CONSTRAINT chk_pengguna_nik_16_digit CHECK (
         posisi = 'developer'
         OR (nik_pending = TRUE AND nik IS NULL)

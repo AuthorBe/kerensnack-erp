@@ -293,6 +293,7 @@ class TemplateGenerator
                         ['pengemasan', 'Tenaga Pengemasan', 'Pekerja borongan repacking / pengemasan produk keripik & snack'],
                         ['sales', 'Sales Distribusi', 'Kunjungan outlet mitra, pembinaan rute toko pelanggan, pencatatan pesanan'],
                         ['driver', 'Driver Pengiriman', 'Pengantaran pesanan toko, serah terima surat jalan & penagihan nota'],
+                        ['gudang', 'Staff Gudang & Logistik', 'Pengelolaan stok fisik, penerimaan barang vendor, dan penyiapan pesanan (packing PO)'],
                         ['owner', 'Owner / Pemilik', 'Monitoring ringkasan bisnis, kontrol finansial dan performa menyeluruh'],
                     ],
                     $currentRow,

@@ -4,7 +4,7 @@ use App\Core\Router;
 $totalRoles = count($rolesWithStats ?? $roles ?? []);
 $defaultRolesCount = 0;
 $customRolesCount = 0;
-$protectedList = $protectedRoles ?? ['developer', 'owner', 'admin', 'sales', 'driver', 'mandor'];
+$protectedList = $protectedRoles ?? ['developer', 'owner', 'admin', 'sales', 'driver', 'mandor', 'gudang'];
 
 foreach (($rolesWithStats ?? $roles ?? []) as $r) {
     if (in_array($r['nama_peran'], $protectedList, true)) {

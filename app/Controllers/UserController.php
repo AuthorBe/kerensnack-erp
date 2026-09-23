@@ -141,6 +141,8 @@ class UserController extends Controller
                 $posisiSync = 'sales';
             } elseif (($targetRole['nama_peran'] ?? '') === 'mandor') {
                 $posisiSync = 'mandor';
+            } elseif (($targetRole['nama_peran'] ?? '') === 'gudang') {
+                $posisiSync = 'gudang';
             }
 
             Database::execute("
@@ -287,6 +289,8 @@ class UserController extends Controller
                 $posisiSync = 'sales';
             } elseif (($newRole['nama_peran'] ?? '') === 'mandor') {
                 $posisiSync = 'mandor';
+            } elseif (($newRole['nama_peran'] ?? '') === 'gudang') {
+                $posisiSync = 'gudang';
             }
 
             if (!empty($password)) {

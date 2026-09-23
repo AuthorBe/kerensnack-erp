@@ -184,11 +184,11 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             }
 
             $posisi = strtolower(trim($posisiRaw));
-            $validPositions = ['admin', 'mandor', 'pengemasan', 'sales', 'driver', 'owner'];
+            $validPositions = ['admin', 'mandor', 'pengemasan', 'sales', 'driver', 'owner', 'gudang'];
             if (!in_array($posisi, $validPositions, true)) {
                 $previewList[] = [
                     'action'    => 'ERROR',
-                    'error_msg' => "Posisi '{$posisiRaw}' pada baris {$lineNo} tidak valid. Harus salah satu dari: admin, mandor, pengemasan, sales, driver.",
+                    'error_msg' => "Posisi '{$posisiRaw}' pada baris {$lineNo} tidak valid. Harus salah satu dari: admin, mandor, pengemasan, sales, driver, gudang.",
                     'data'      => ['nik' => $nikIsPending ? '(Pending)' : $nik, 'nama_lengkap' => $nama, 'posisi' => $posisiRaw]
                 ];
                 continue;

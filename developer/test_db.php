@@ -93,7 +93,13 @@ if (!$isCli) {
         <html lang="en">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+            <meta name="theme-color" content="#881337">
+            <meta name="mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="apple-mobile-web-app-status-bar-style" content="default">
+            <meta name="apple-mobile-web-app-title" content="Keren Snack">
+            <meta name="application-name" content="Keren Snack ERP">
             <title>AUTHENTICATION_REQUIRED // KEREN SNACK ERP</title>
             <style>
                 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -428,8 +434,17 @@ if ($isCli) {
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Dev Diagnostics &bull; Keren Snack ERP</title>
+
+    <!-- PWA & Mobile Web App Meta Tags (Maroon Notch / Status Bar) -->
+    <meta name="theme-color" content="#881337">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Keren Snack">
+    <meta name="application-name" content="Keren Snack ERP">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
