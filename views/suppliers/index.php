@@ -1,6 +1,6 @@
 <?php
 use App\Core\Router;
-use App\Middleware\Auth;
+use App\Core\Auth;
 ob_start();
 ?>
 
