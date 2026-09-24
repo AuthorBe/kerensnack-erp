@@ -205,6 +205,56 @@ $totalMasterRows = array_sum($entityStats ?? []);
     width: 100%;
     height: 100%;
 }
+
+/* ── Territory Lookup Help Banner ── */
+.import-territory-help {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: var(--rounded-xs, 6px);
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.2);
+    margin-bottom: 14px;
+}
+.import-territory-help-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--color-ink);
+    min-width: 0;
+    line-height: 1.4;
+}
+.import-territory-help-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.import-territory-help-btn {
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+@media (max-width: 640px) {
+    .import-territory-help {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+    }
+    .import-territory-help-btn {
+        width: 100% !important;
+        padding: 7px 12px !important;
+        font-size: 12px !important;
+    }
+}
 </style>
 
 <div id="importModuleApp">
@@ -387,13 +437,14 @@ $totalMasterRows = array_sum($entityStats ?? []);
                     </p>
 
                     <!-- Banner Pintas Kamus Wilayah (Khusus Toko & Pemasok) -->
-                    <div id="territoryLookupHelpBox" style="display: <?= in_array($selectedKey, ['customers', 'suppliers', 'territories'], true) ? 'flex' : 'none' ?>; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); margin-bottom: 14px;">
-                        <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-ink); min-width: 0;">
-                            <i data-lucide="map-pin" style="width: 16px; height: 16px; color: var(--color-primary); flex-shrink: 0;"></i>
+                    <div id="territoryLookupHelpBox" class="import-territory-help" style="display: <?= in_array($selectedKey, ['customers', 'suppliers', 'territories'], true) ? 'flex' : 'none' ?>;">
+                        <div class="import-territory-help-content">
+                            <i data-lucide="map-pin" class="import-territory-help-icon"></i>
                             <span style="line-height: 1.35;">Kolom <strong>Wilayah/Kota</strong> wajib terdaftar di Master Wilayah. Cari &amp; salin nama wilayah yang valid di sini.</span>
                         </div>
-                        <button type="button" onclick="openTerritoryLookupModal()" class="btn btn-primary btn-xs" style="font-weight: 700; white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;">
-                            <i data-lucide="search" style="width: 12px; height: 12px;"></i> Cari Wilayah
+                        <button type="button" onclick="openTerritoryLookupModal()" class="btn btn-primary btn-xs import-territory-help-btn">
+                            <i data-lucide="search" style="width: 12px; height: 12px;"></i>
+                            <span>Cari Wilayah</span>
                         </button>
                     </div>
 

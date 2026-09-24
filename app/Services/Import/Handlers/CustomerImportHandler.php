@@ -184,7 +184,10 @@ class CustomerImportHandler implements EntityImportHandlerInterface
 
         $salesStaff = $pdo->query("SELECT id, nama_karyawan, nik, nama_pengguna FROM public.v_karyawan_info WHERE status_aktif = TRUE")->fetchAll(PDO::FETCH_ASSOC);
         $salesMap = [];
+        $salesNameById = [];
         foreach ($salesStaff as $u) {
+            $name = !empty($u['nama_karyawan']) ? $u['nama_karyawan'] : ($u['nama_pengguna'] ?? '');
+            $salesNameById[$u['id']] = $name;
             if (!empty($u['nama_karyawan'])) {
                 $salesMap[strtolower(trim($u['nama_karyawan']))] = $u['id'];
             }
@@ -202,13 +205,16 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                                              p.alamat_lengkap, p.nomor_whatsapp,
                                              p.tipe_pembayaran_default, p.plafon_piutang, p.sales_driver_id,
                                              p.nama_bank, p.nomor_rekening, p.atas_nama_rekening, p.status_aktif,
-                                             g.nama_grup, w.nama_wilayah
+                                             g.nama_grup, w.nama_wilayah,
+                                             COALESCE(k.nama_karyawan, k.nama_pengguna, '') as nama_sales
                                       FROM public.pelanggan p
                                       LEFT JOIN public.grup_pelanggan g ON g.id = p.grup_pelanggan_id
-                                      LEFT JOIN public.wilayah w ON w.id = p.wilayah_id")->fetchAll(PDO::FETCH_ASSOC);
+                                      LEFT JOIN public.wilayah w ON w.id = p.wilayah_id
+                                      LEFT JOIN public.v_karyawan_info k ON k.id = p.sales_driver_id")->fetchAll(PDO::FETCH_ASSOC);
         $dbByCode = [];
         $dbByName = [];
-        foreach ($currentDbRows as $r) {
+        foreach ($currentDbRows as &$r) {
+            $r['display_sales'] = !empty($r['nama_sales']) ? $r['nama_sales'] : ($salesNameById[$r['sales_driver_id'] ?? ''] ?? '—');
             if (!empty($r['kode_pelanggan'])) {
                 $dbByCode[strtolower(trim($r['kode_pelanggan']))] = $r;
             }
@@ -216,6 +222,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 $dbByName[strtolower(trim($r['nama_toko']))] = $r;
             }
         }
+        unset($r);
 
         $previewList = [];
         $seenCodesInFile = [];
@@ -382,6 +389,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 // Label pembantu tampilan
                 'display_grup'            => $grupRaw ?: ($dbRow['nama_grup'] ?? '—'),
                 'display_wilayah'         => $wilayahRaw ?: ($dbRow['nama_wilayah'] ?? '—'),
+                'display_sales'           => $salesId ? ($salesNameById[$salesId] ?? ($salesRaw ?: '—')) : '—',
             ];
 
             if ($dbRow) {
@@ -449,6 +457,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                             'status_aktif'   => $c['status_aktif'],
                             'display_grup'   => $c['nama_grup'] ?? '—',
                             'display_wilayah'=> $c['nama_wilayah'] ?? '—',
+                            'display_sales'  => $c['display_sales'] ?? '—',
                         ]
                     ];
                 }

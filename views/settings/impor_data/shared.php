@@ -78,6 +78,10 @@ if (!function_exists('ks_format_diff_label')) {
             'kelompok_borongan_id'    => 'Relasi Upah Borongan',
             'pemasok_utama_id'        => 'Relasi Pemasok Utama',
             'sales_pembina_id'        => 'Sales Pembina',
+            'sales_driver_id'         => 'Sales Pembina',
+            'display_sales'           => 'Sales Pembina',
+            'nama_sales'              => 'Sales Pembina',
+            'sales_pembina'           => 'Sales Pembina',
             'telepon'                 => 'Nomor Telepon',
             'email'                   => 'Alamat Email',
             'keterangan'              => 'Keterangan Tambahan',
@@ -143,6 +147,7 @@ if (!function_exists('ks_get_row_val')) {
         // Dynamic aliases and relational field fallbacks
         if ($key === 'display_grup' && isset($arr['nama_grup'])) return $arr['nama_grup'];
         if ($key === 'display_wilayah' && isset($arr['nama_wilayah'])) return $arr['nama_wilayah'];
+        if ($key === 'display_sales' && (isset($arr['display_sales']) || isset($arr['nama_sales']))) return $arr['display_sales'] ?? $arr['nama_sales'];
         if ($key === 'display_pemasok' && isset($arr['nama_pemasok'])) return $arr['nama_pemasok'];
         if ($key === 'display_kelompok_borongan' && isset($arr['nama_kelompok'])) return $arr['nama_kelompok'];
         if ($key === 'display_merek' && (isset($arr['merek']) || isset($arr['nama_merek']))) return $arr['merek'] ?? $arr['nama_merek'];
@@ -173,6 +178,7 @@ $entityColumnsConfig = [
             ['key' => 'nama_pemilik', 'label' => 'Nama Pemilik'],
             ['key' => 'display_grup', 'label' => 'Grup Pelanggan'],
             ['key' => 'display_wilayah', 'label' => 'Wilayah / Rute'],
+            ['key' => 'display_sales', 'label' => 'Sales Pembina'],
             ['key' => 'is_konsinyasi', 'label' => 'Model Toko', 'type' => 'konsinyasi'],
             ['key' => 'plafon_piutang', 'label' => 'Plafon Piutang', 'type' => 'currency'],
             ['key' => 'tipe_pembayaran_default', 'label' => 'Tipe Bayar'],
