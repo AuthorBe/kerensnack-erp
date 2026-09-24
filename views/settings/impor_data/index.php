@@ -1090,16 +1090,27 @@ async function handleImportDownload(e, mode) {
             return;
         }
 
+        const cleanEntity = (currentSelectedEntity || '').replace(/[-_]+/g, ' ').trim();
         let filename = (mode === 'empty')
-            ? ('Template_Impor_' + currentSelectedEntity + '.xlsx')
-            : ('Data_Terkini_' + currentSelectedEntity + '.xlsx');
+            ? ('Template Impor ' + cleanEntity + '.xlsx')
+            : ('Data Terkini ' + cleanEntity + '.xlsx');
 
         const disposition = response.headers.get('Content-Disposition');
         if (disposition && disposition.includes('filename=')) {
             const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
             if (matches && matches[1]) {
-                filename = matches[1].replace(/['"]/g, '').trim();
+                let parsed = decodeURIComponent(matches[1].replace(/['"]/g, '').trim());
+                filename = parsed;
             }
+        }
+        // Pastikan nama berkas terbebas dari strip (-) dan underscore (_)
+        const dotIdx = filename.lastIndexOf('.');
+        if (dotIdx !== -1) {
+            const ext = filename.substring(dotIdx);
+            const base = filename.substring(0, dotIdx).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+            filename = base + ext;
+        } else {
+            filename = filename.replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
         }
 
         const blob = await response.blob();

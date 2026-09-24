@@ -127,16 +127,18 @@ class PrintDocumentHelper
     public static function downloadPdf(string $html, string $baseFilename, string $format = 'standard'): void
     {
         $config = self::getPaperConfig($format);
-        $cleanName = preg_replace('/[^A-Za-z0-9\-]/', '_', $baseFilename);
+        $cleanName = preg_replace('/[\-_]+/', ' ', $baseFilename);
+        $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+        $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
         $fmt = self::resolveFormat($format);
         
         $suffix = match ($fmt) {
-            self::FORMAT_DOTMATRIX => '-DotMatrix',
-            self::FORMAT_DOTMATRIX_HALF => '-DotMatrixHalf',
+            self::FORMAT_DOTMATRIX => ' DotMatrix',
+            self::FORMAT_DOTMATRIX_HALF => ' DotMatrixHalf',
             default => ''
         };
 
-        $filename = "{$cleanName}{$suffix}.pdf";
+        $filename = trim("{$cleanName}{$suffix}") . '.pdf';
         PdfExport::download($html, $filename, $config['paper'], $config['orientation']);
     }
 
@@ -146,16 +148,18 @@ class PrintDocumentHelper
     public static function streamPdf(string $html, string $baseFilename, string $format = 'standard'): void
     {
         $config = self::getPaperConfig($format);
-        $cleanName = preg_replace('/[^A-Za-z0-9\-]/', '_', $baseFilename);
+        $cleanName = preg_replace('/[\-_]+/', ' ', $baseFilename);
+        $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+        $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
         $fmt = self::resolveFormat($format);
 
         $suffix = match ($fmt) {
-            self::FORMAT_DOTMATRIX => '-DotMatrix',
-            self::FORMAT_DOTMATRIX_HALF => '-DotMatrixHalf',
+            self::FORMAT_DOTMATRIX => ' DotMatrix',
+            self::FORMAT_DOTMATRIX_HALF => ' DotMatrixHalf',
             default => ''
         };
 
-        $filename = "{$cleanName}{$suffix}.pdf";
+        $filename = trim("{$cleanName}{$suffix}") . '.pdf';
         PdfExport::stream($html, $filename, $config['paper'], $config['orientation']);
     }
 }

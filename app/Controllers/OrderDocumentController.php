@@ -146,8 +146,9 @@ class OrderDocumentController extends Controller
             require ROOT_PATH . '/views/customer_orders/invoice.php';
             $html = ob_get_clean();
 
-            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
-            PrintDocumentHelper::downloadPdf($html, "Faktur-{$cleanNota}", $format);
+            $cleanNota = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$order['nomor_nota']);
+            $cleanNota = trim(preg_replace('/\s+/', ' ', $cleanNota));
+            PrintDocumentHelper::downloadPdf($html, "Faktur {$cleanNota}", $format);
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF: ' . $e->getMessage());
             $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));
@@ -228,8 +229,9 @@ class OrderDocumentController extends Controller
             $rows[] = ['', '', '', '', '', '', 'Telah Dibayar (Rp):', (float)($order['total_dibayar'] ?? 0)];
             $rows[] = ['', '', '', '', '', '', 'Sisa Tagihan (Rp):', (float)($order['sisa_tagihan'] ?? 0)];
 
-            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
-            ExcelExport::download("Faktur-{$cleanNota}.xlsx", $headers, $rows, "Faktur {$cleanNota}");
+            $cleanNota = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$order['nomor_nota']);
+            $cleanNota = trim(preg_replace('/\s+/', ' ', $cleanNota));
+            ExcelExport::download("Faktur {$cleanNota}.xlsx", $headers, $rows, "Faktur {$cleanNota}");
         } catch (Throwable $e) {
             $this->flashError('Gagal export Excel: ' . $e->getMessage());
             $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));
@@ -319,7 +321,9 @@ class OrderDocumentController extends Controller
                 ];
             }
 
-            ExcelExport::download("Daftar-Pesanan-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Daftar Pesanan");
+            $cleanStart = str_replace('-', ' ', $startDate);
+            $cleanEnd = str_replace('-', ' ', $endDate);
+            ExcelExport::download("Daftar Pesanan {$cleanStart} sd {$cleanEnd}.xlsx", $headers, $rows, "Daftar Pesanan");
         } catch (Throwable $e) {
             $this->flashError('Gagal export data pesanan: ' . $e->getMessage());
             $this->redirect('/customer-orders');
@@ -385,8 +389,9 @@ class OrderDocumentController extends Controller
             require ROOT_PATH . '/views/customer_orders/picking_list.php';
             $html = ob_get_clean();
 
-            $cleanNota = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$order['nomor_nota']);
-            PdfExport::download($html, "PickingList-{$cleanNota}.pdf", 'A4', 'portrait');
+            $cleanNota = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$order['nomor_nota']);
+            $cleanNota = trim(preg_replace('/\s+/', ' ', $cleanNota));
+            PdfExport::download($html, "Picking List {$cleanNota}.pdf", 'A4', 'portrait');
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF Picking List: ' . $e->getMessage());
             $this->redirect('/customer-orders/picking-list?id=' . urlencode((string)$id));
@@ -521,9 +526,9 @@ class OrderDocumentController extends Controller
             require ROOT_PATH . '/views/customer_orders/batch_picking_list.php';
             $html = ob_get_clean();
 
-            $dateSuffix = date('Ymd_Hi');
+            $dateSuffix = date('Ymd Hi');
             $countSuffix = count($orders);
-            PdfExport::download($html, "Batch_PO_{$countSuffix}Nota_{$dateSuffix}.pdf", 'A4', 'portrait');
+            PdfExport::download($html, "Batch PO {$countSuffix} Nota {$dateSuffix}.pdf", 'A4', 'portrait');
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF Batch PO: ' . $e->getMessage());
             $this->redirect('/customer-orders/po-list');

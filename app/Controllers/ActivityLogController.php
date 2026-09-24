@@ -247,7 +247,7 @@ class ActivityLogController extends Controller
                 ];
             }
 
-            $filename = 'audit-trail-kerensnack-' . date('Ymd-His') . '.xlsx';
+            $filename = 'Audit Trail Kerensnack ' . date('Ymd His') . '.xlsx';
             ExcelExport::download($filename, $headers, $rows, 'Audit Trail');
             exit;
 

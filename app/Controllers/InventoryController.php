@@ -315,7 +315,7 @@ class InventoryController extends Controller
 
             $rows[] = ['', '', '', '', '', 'TOTAL PERSINGGAHAN STOK GUDANG:', $totalPcs, '', '', 'TOTAL VALUASI (HPP):', $totalValuation];
 
-            ExcelExport::download("Katalog-Stok-Gudang-" . date('Ymd') . ".xlsx", $headers, $rows, "Stok Gudang");
+            ExcelExport::download("Katalog Stok Gudang " . date('Ymd') . ".xlsx", $headers, $rows, "Stok Gudang");
         } catch (Throwable $e) {
             $this->flashError("Gagal export data stok gudang: " . $e->getMessage());
             $this->redirect('/inventory');
@@ -817,7 +817,8 @@ class InventoryController extends Controller
             require dirname(__DIR__, 2) . '/views/inventory/pdf_opname.php';
             $html = ob_get_clean();
 
-            $filename = "Opname-{$opname['nomor_dokumen']}.pdf";
+            $cleanNomor = preg_replace('/[^A-Za-z0-9]/', ' ', (string)($opname['nomor_dokumen'] ?? ''));
+            $filename = trim("Opname {$cleanNomor}") . ".pdf";
             PdfExport::download($html, $filename, 'A4', 'portrait');
         } catch (Throwable $e) {
             $this->flashError("Gagal mencetak PDF opname: " . $e->getMessage());

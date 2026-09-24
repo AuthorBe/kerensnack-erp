@@ -240,6 +240,12 @@ class TestRunnerService
             'category'    => 'Security & RBAC',
             'description' => 'Validasi posisi karyawan Gudang, pendaftaran role permanen sistem gudang, default permissions pergudangan, dan impor data.'
         ],
+        'download_sanitization' => [
+            'file'        => 'DownloadFilenameSanitizationTest.php',
+            'title'       => 'Download & Export Filename Cleanliness Audit',
+            'category'    => 'Security & RBAC',
+            'description' => 'Audit pembersihan nama berkas download dan ekspor dari tanda hubung (-) dan garis bawah (_) di seluruh sistem.'
+        ],
     ];
 
     // -------------------------------------------------------------------------

@@ -1465,8 +1465,8 @@ class DeliveryController extends Controller
             require ROOT_PATH . '/views/deliveries/print.php';
             $html = ob_get_clean();
 
-            $cleanSj = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$delivery['nomor_surat_jalan']);
-            PrintDocumentHelper::downloadPdf($html, "SuratJalan-{$cleanSj}", $format);
+            $cleanSj = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$delivery['nomor_surat_jalan']);
+            PrintDocumentHelper::downloadPdf($html, "Surat Jalan {$cleanSj}", $format);
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF Surat Jalan: ' . $e->getMessage());
             $this->redirect('/deliveries/print?id=' . urlencode((string)$id));
@@ -1530,7 +1530,9 @@ class DeliveryController extends Controller
                 ];
             }
 
-            ExcelExport::download("Daftar-Surat-Jalan-{$startDate}-sd-{$endDate}.xlsx", $headers, $rows, "Surat Jalan");
+            $cleanStart = str_replace('-', ' ', $startDate);
+            $cleanEnd = str_replace('-', ' ', $endDate);
+            ExcelExport::download("Daftar Surat Jalan {$cleanStart} sd {$cleanEnd}.xlsx", $headers, $rows, "Surat Jalan");
         } catch (Throwable $e) {
             $this->flashError('Gagal export data surat jalan: ' . $e->getMessage());
             $this->redirect('/deliveries');

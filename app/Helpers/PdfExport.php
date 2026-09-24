@@ -44,6 +44,7 @@ class PdfExport
      */
     public static function stream(string $html, string $filename = 'document.pdf', string $paper = 'A4', string $orientation = 'portrait'): void
     {
+        $cleanFilename = self::sanitizeFilename($filename);
         $dompdf = self::createInstance();
         $dompdf->loadHtml($html);
         $dompdf->setPaper($paper, $orientation);
@@ -51,7 +52,7 @@ class PdfExport
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
-        $dompdf->stream($filename, ['Attachment' => false]);
+        $dompdf->stream($cleanFilename, ['Attachment' => false]);
         exit;
     }
 
@@ -60,6 +61,7 @@ class PdfExport
      */
     public static function download(string $html, string $filename = 'document.pdf', string $paper = 'A4', string $orientation = 'portrait'): void
     {
+        $cleanFilename = self::sanitizeFilename($filename);
         $dompdf = self::createInstance();
         $dompdf->loadHtml($html);
         $dompdf->setPaper($paper, $orientation);
@@ -67,7 +69,20 @@ class PdfExport
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
-        $dompdf->stream($filename, ['Attachment' => true]);
+        $dompdf->stream($cleanFilename, ['Attachment' => true]);
         exit;
+    }
+
+    /**
+     * Bersihkan nama berkas dari tanda hubung (-) dan garis bawah (_)
+     */
+    private static function sanitizeFilename(string $filename): string
+    {
+        $rawName = str_replace(['/', '\\'], ' ', $filename);
+        $baseName = preg_replace('/\.pdf$/i', '', $rawName);
+        $cleanName = preg_replace('/[\-_]+/', ' ', $baseName);
+        $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+        $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
+        return ($cleanName !== '' ? $cleanName : 'Document') . '.pdf';
     }
 }

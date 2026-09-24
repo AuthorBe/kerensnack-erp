@@ -685,18 +685,21 @@ class TemplateGenerator
     {
         $spreadsheet = self::buildSpreadsheet($handler, $mode, $pdo);
         $title = $handler->getEntityLabel();
+        $cleanTitle = preg_replace('/[\-_]+/', ' ', $title);
+        $cleanTitle = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanTitle);
+        $cleanTitle = trim(preg_replace('/\s+/', ' ', $cleanTitle));
 
         // Output ke HTTP Response
         $filename = ($mode === 'current_data')
-            ? "Data_Terkini_" . str_replace(' ', '_', $title) . "_" . date('Ymd_His') . ".xlsx"
-            : "Template_Impor_" . str_replace(' ', '_', $title) . ".xlsx";
+            ? "Data Terkini " . $cleanTitle . " " . date('Ymd His') . ".xlsx"
+            : "Template Impor " . $cleanTitle . ".xlsx";
 
         if (ob_get_level()) {
             ob_end_clean();
         }
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Content-Disposition: attachment; filename="' . addcslashes($filename, '"\\') . '"');
         header('Cache-Control: max-age=0');
 
         $writer = new Xlsx($spreadsheet);

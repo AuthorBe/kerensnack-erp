@@ -1216,8 +1216,9 @@ class PurchaseController extends Controller
             require __DIR__ . '/../../views/purchases/po_pdf.php';
             $html = ob_get_clean();
 
-            $cleanNomor = preg_replace('/[^A-Za-z0-9\-]/', '_', (string)$purchase['nomor_faktur_pembelian']);
-            PrintDocumentHelper::downloadPdf($html, "SURAT_PESANAN_{$cleanNomor}", $format);
+            $cleanNomor = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$purchase['nomor_faktur_pembelian']);
+            $cleanNomor = trim(preg_replace('/\s+/', ' ', $cleanNomor));
+            PrintDocumentHelper::downloadPdf($html, "Surat Pesanan {$cleanNomor}", $format);
 
         } catch (Throwable $e) {
             $this->flashError("Gagal cetak PDF: " . $e->getMessage());

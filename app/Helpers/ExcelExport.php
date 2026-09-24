@@ -107,16 +107,19 @@ class ExcelExport
         }
 
         // 4. Output ke Browser untuk Download
-        if (!str_ends_with(strtolower($filename), '.xlsx')) {
-            $filename .= '.xlsx';
-        }
+        $rawName = str_replace(['/', '\\'], ' ', $filename);
+        $baseName = preg_replace('/\.xlsx$/i', '', $rawName);
+        $cleanName = preg_replace('/[\-_]+/', ' ', $baseName);
+        $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+        $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
+        $filename = ($cleanName !== '' ? $cleanName : 'Data Export') . '.xlsx';
 
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . rawurlencode($filename) . '"');
+        header('Content-Disposition: attachment; filename="' . addcslashes($filename, '"\\') . '"');
         header('Cache-Control: max-age=0');
 
         $writer = new Xlsx($spreadsheet);
@@ -389,13 +392,18 @@ class ExcelExport
         $sheet->getPageSetup()->setFitToHeight(0);
 
         // 10. DOWNLOAD OUTPUT
-        $filename = "Opname-{$opname['nomor_dokumen']}.xlsx";
+        $rawDoc = (string)($opname['nomor_dokumen'] ?? '');
+        $cleanDoc = preg_replace('/[\-_]+/', ' ', $rawDoc);
+        $cleanDoc = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanDoc);
+        $cleanDoc = trim(preg_replace('/\s+/', ' ', $cleanDoc));
+        $filename = ($cleanDoc !== '' ? "Opname {$cleanDoc}" : 'Opname') . '.xlsx';
+
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="' . rawurlencode($filename) . '"');
+        header('Content-Disposition: attachment; filename="' . addcslashes($filename, '"\\') . '"');
         header('Cache-Control: max-age=0');
 
         $writer = new Xlsx($spreadsheet);
