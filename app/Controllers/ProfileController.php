@@ -31,7 +31,7 @@ class ProfileController extends Controller
         $userDb = null;
         try {
             $userDb = Database::fetchOne("
-                SELECT p.id, p.nama_lengkap, p.nama_panggilan, p.nama_pengguna, p.kata_sandi, pr.nama_peran as peran, 
+                SELECT p.id, p.nama_lengkap, p.nama_panggilan, p.jenis_kelamin, p.tanggal_lahir, p.nama_pengguna, p.kata_sandi, pr.nama_peran as peran, 
                        p.status_aktif, p.dibuat_pada, p.diubah_pada,
                        p.nik, p.nik_pending, p.posisi, p.alamat, p.tanggal_bergabung,
                        p.bank_nama, p.bank_nomor_rekening, p.bank_atas_nama,

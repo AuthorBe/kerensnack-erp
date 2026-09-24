@@ -23,7 +23,9 @@ class EmployeeController extends Controller
     {
         try {
             $employees = Database::fetchAll("
-                SELECT k.id, k.nik, k.nik_pending, k.nama_karyawan, k.nama_panggilan, k.posisi, k.tipe_penggajian,
+                SELECT k.id, k.nik, k.nik_pending, k.nama_karyawan, k.nama_panggilan,
+                       k.jenis_kelamin, k.tanggal_lahir,
+                       k.posisi, k.tipe_penggajian,
                        k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
                        k.nomor_telepon, k.nomor_whatsapp, k.alamat, k.tanggal_bergabung,
                        k.nomor_polisi_kendaraan,
@@ -95,6 +97,10 @@ class EmployeeController extends Controller
 
         $nama = trim((string)$this->input('nama_karyawan'));
         $namaPanggilan = trim((string)$this->input('nama_panggilan', ''));
+        $jenisKelaminRaw = strtoupper(trim((string)$this->input('jenis_kelamin', 'L')));
+        $jenisKelamin = in_array($jenisKelaminRaw, ['P', 'PEREMPUAN', 'WANITA'], true) ? 'P' : 'L';
+        $tanggalLahirRaw = trim((string)$this->input('tanggal_lahir', ''));
+        $tanggalLahir = !empty($tanggalLahirRaw) ? $tanggalLahirRaw : null;
         $nikPending = (bool)$this->input('nik_pending', false);
         $nikRaw = trim((string)$this->input('nik'));
         $nik = preg_replace('/[^0-9]/', '', $nikRaw);
@@ -154,16 +160,18 @@ class EmployeeController extends Controller
 
             $stmt = $pdo->prepare("
                 INSERT INTO public.pengguna (
-                    nama_lengkap, nama_panggilan, nik, nik_pending, posisi, nomor_telepon, nomor_whatsapp, alamat, nomor_polisi_kendaraan,
+                    nama_lengkap, nama_panggilan, jenis_kelamin, tanggal_lahir, nik, nik_pending, posisi, nomor_telepon, nomor_whatsapp, alamat, nomor_polisi_kendaraan,
                     tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif
                 ) VALUES (
-                    :nama, :panggilan, :nik, :nik_pending, :posisi, :wa, :wa, :alamat, :nopol, :tgl,
+                    :nama, :panggilan, :jk, :tgl_lahir, :nik, :nik_pending, :posisi, :wa, :wa, :alamat, :nopol, :tgl,
                     :bank, :rek, :an, TRUE
                 ) RETURNING id
             ");
             $stmt->execute([
                 'nama'        => $nama,
                 'panggilan'   => $namaPanggilan ?: null,
+                'jk'          => $jenisKelamin,
+                'tgl_lahir'   => $tanggalLahir,
                 'nik'         => $nikPending ? null : $nik,
                 'nik_pending' => $nikPending ? 'true' : 'false',
                 'posisi'      => $posisi,
@@ -205,12 +213,14 @@ class EmployeeController extends Controller
             \App\Helpers\ActivityLog::log(
                 'hr_payroll',
                 'CREATE',
-                "Mendaftarkan karyawan baru: {$nama} ({$posisi}, Tipe: {$tipeGaji}, NIK: {$nikLabel})",
+                "Mendaftarkan karyawan baru: {$nama} ({$posisi}, Tipe: {$tipeGaji}, Gender: {$jenisKelamin}, NIK: {$nikLabel})",
                 'karyawan',
                 (string)$karyawanId,
                 null,
                 [
                     'nama_lengkap'        => $nama,
+                    'jenis_kelamin'       => $jenisKelamin,
+                    'tanggal_lahir'       => $tanggalLahir,
                     'nik'                 => $nikPending ? null : $nik,
                     'nik_pending'         => $nikPending,
                     'posisi'              => $posisi,
@@ -239,6 +249,10 @@ class EmployeeController extends Controller
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_karyawan'));
         $namaPanggilan = trim((string)$this->input('nama_panggilan', ''));
+        $jenisKelaminRaw = strtoupper(trim((string)$this->input('jenis_kelamin', 'L')));
+        $jenisKelamin = in_array($jenisKelaminRaw, ['P', 'PEREMPUAN', 'WANITA'], true) ? 'P' : 'L';
+        $tanggalLahirRaw = trim((string)$this->input('tanggal_lahir', ''));
+        $tanggalLahir = !empty($tanggalLahirRaw) ? $tanggalLahirRaw : null;
         $nikPending = (bool)$this->input('nik_pending', false);
         $nikRaw = trim((string)$this->input('nik'));
         $nik = preg_replace('/[^0-9]/', '', $nikRaw);
@@ -255,6 +269,7 @@ class EmployeeController extends Controller
 
         $whatsapp = trim((string)($this->input('nomor_whatsapp') ?: $this->input('nomor_telepon')));
         $alamat = trim((string)$this->input('alamat', '-'));
+        $tglBergabung = $this->input('tanggal_bergabung') ?: date('Y-m-d');
         $nopol = trim((string)$this->input('nomor_polisi_kendaraan', ''));
         $bankNama = trim((string)$this->input('bank_nama', 'Tunai'));
         $bankRek = trim((string)$this->input('bank_nomor_rekening', ''));
@@ -315,10 +330,13 @@ class EmployeeController extends Controller
                         nik_pending = :nik_pending,
                         nama_lengkap = :nama,
                         nama_panggilan = :panggilan,
+                        jenis_kelamin = :jk,
+                        tanggal_lahir = :tgl_lahir,
                         posisi = :posisi,
                         nomor_telepon = :wa,
                         nomor_whatsapp = :wa,
                         alamat = :alamat,
+                        tanggal_bergabung = :tgl,
                         nomor_polisi_kendaraan = :nopol,
                         bank_nama = :bank,
                         bank_nomor_rekening = :rek,
@@ -333,9 +351,12 @@ class EmployeeController extends Controller
                     'nik_pending' => $nikPending ? 'true' : 'false',
                     'nama'        => $nama,
                     'panggilan'   => $namaPanggilan ?: null,
+                    'jk'          => $jenisKelamin,
+                    'tgl_lahir'   => $tanggalLahir,
                     'posisi'      => $posisi,
                     'wa'          => $whatsapp ?: null,
                     'alamat'      => $alamat,
+                    'tgl'         => $tglBergabung,
                     'nopol'       => $nopol ?: null,
                     'bank'        => $bankNama ?: 'Tunai',
                     'rek'         => $bankRek ?: null,
@@ -363,7 +384,8 @@ class EmployeeController extends Controller
 
             $oldData = Database::fetchOne("
                 SELECT k.tipe_penggajian, k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
-                       p.nik, p.nik_pending, p.nama_lengkap, p.posisi, p.nomor_telepon, p.bank_nama, p.bank_nomor_rekening, p.status_aktif
+                       p.nik, p.nik_pending, p.nama_lengkap, p.nama_panggilan, p.jenis_kelamin, p.tanggal_lahir,
+                       p.posisi, p.nomor_telepon, p.tanggal_bergabung, p.bank_nama, p.bank_nomor_rekening, p.status_aktif
                 FROM public.karyawan k
                 LEFT JOIN public.pengguna p ON k.pengguna_id = p.id
                 WHERE k.id = :id
@@ -375,12 +397,14 @@ class EmployeeController extends Controller
             \App\Helpers\ActivityLog::log(
                 'hr_payroll',
                 'UPDATE',
-                "Memperbarui data karyawan {$nama} (NIK: {$nikLabel})",
+                "Memperbarui data karyawan {$nama} (Gender: {$jenisKelamin}, NIK: {$nikLabel})",
                 'karyawan',
                 (string)$id,
                 $oldData,
                 [
                     'nama_lengkap'          => $nama,
+                    'jenis_kelamin'         => $jenisKelamin,
+                    'tanggal_lahir'         => $tanggalLahir,
                     'nik'                   => $nikPending ? null : $nik,
                     'nik_pending'           => $nikPending,
                     'posisi'                => $posisi,
@@ -388,6 +412,7 @@ class EmployeeController extends Controller
                     'gaji_pokok_bulanan'    => $gajiPokok,
                     'uang_kehadiran_harian' => $uangHadir,
                     'tunjangan_bulanan'     => $tunjangan,
+                    'tanggal_bergabung'     => $tglBergabung,
                     'status_aktif'          => $statusAktif
                 ]
             );

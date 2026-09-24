@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS public.pengguna (
     peran_id UUID REFERENCES public.peran(id) ON DELETE SET NULL,
     nama_lengkap VARCHAR(150) NOT NULL,
     nama_panggilan VARCHAR(50) DEFAULT NULL,
+    jenis_kelamin VARCHAR(10) DEFAULT 'L',
+    tanggal_lahir DATE DEFAULT NULL,
     nama_pengguna VARCHAR(100) UNIQUE,
     kata_sandi VARCHAR(255),
     id_telegram BIGINT UNIQUE,
@@ -67,6 +69,7 @@ CREATE TABLE IF NOT EXISTS public.pengguna (
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_pengguna_posisi_valid CHECK (posisi IN ('developer', 'owner', 'admin', 'mandor', 'pengemasan', 'sales', 'driver', 'gudang')),
+    CONSTRAINT chk_pengguna_jenis_kelamin CHECK (jenis_kelamin IS NULL OR jenis_kelamin IN ('L', 'P', 'laki-laki', 'perempuan', 'Laki-laki', 'Perempuan', 'pria', 'wanita', 'Pria', 'Wanita')),
     CONSTRAINT chk_pengguna_nik_16_digit CHECK (
         posisi = 'developer'
         OR (nik_pending = TRUE AND nik IS NULL)
@@ -147,6 +150,8 @@ SELECT
     k.pengguna_id,
     p.nama_lengkap AS nama_karyawan,
     p.nama_panggilan,
+    p.jenis_kelamin,
+    p.tanggal_lahir,
     p.nik,
     p.nik_pending,
     p.posisi,

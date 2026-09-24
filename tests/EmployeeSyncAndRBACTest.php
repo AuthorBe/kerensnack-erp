@@ -101,6 +101,8 @@ it("3.1 - EmployeeImportHandler applySync menyimpan nama_lengkap dan nama_panggi
                     'nik_pending' => false,
                     'nama_lengkap' => 'Karyawan Uji Impor Lengkap',
                     'nama_panggilan' => 'Uji',
+                    'jenis_kelamin' => 'L',
+                    'tanggal_lahir' => '1995-01-01',
                     'posisi' => 'sales',
                     'peran_id' => null,
                     'tipe_penggajian' => 'bulanan',
@@ -122,10 +124,12 @@ it("3.1 - EmployeeImportHandler applySync menyimpan nama_lengkap dan nama_panggi
         $res = $handler->applySync($previewData, $pdo);
         if ($res['insert'] !== 1) return "Gagal insert: " . json_encode($res);
 
-        $check = $pdo->query("SELECT nama_lengkap, nama_panggilan, nomor_whatsapp FROM public.pengguna WHERE nik = '{$nik}'")->fetch(PDO::FETCH_ASSOC);
+        $check = $pdo->query("SELECT nama_lengkap, nama_panggilan, jenis_kelamin, tanggal_lahir, nomor_whatsapp FROM public.pengguna WHERE nik = '{$nik}'")->fetch(PDO::FETCH_ASSOC);
         if (!$check) return "Data tidak tersimpan di database!";
         if ($check['nama_lengkap'] !== 'Karyawan Uji Impor Lengkap') return "Nama lengkap salah: {$check['nama_lengkap']}";
         if ($check['nama_panggilan'] !== 'Uji') return "Nama panggilan salah: {$check['nama_panggilan']}";
+        if ($check['jenis_kelamin'] !== 'L') return "Jenis kelamin salah: {$check['jenis_kelamin']}";
+        if ($check['tanggal_lahir'] !== '1995-01-01') return "Tanggal lahir salah: {$check['tanggal_lahir']}";
         if ($check['nomor_whatsapp'] !== '081234567890') return "WhatsApp salah: {$check['nomor_whatsapp']}";
 
         // Uji update via handler
@@ -139,6 +143,8 @@ it("3.1 - EmployeeImportHandler applySync menyimpan nama_lengkap dan nama_panggi
                     'nik_pending' => false,
                     'nama_lengkap' => 'Karyawan Uji Impor Revisi',
                     'nama_panggilan' => 'Revisi',
+                    'jenis_kelamin' => 'P',
+                    'tanggal_lahir' => '1996-05-15',
                     'posisi' => 'sales',
                     'peran_id' => null,
                     'tipe_penggajian' => 'bulanan',
@@ -148,6 +154,7 @@ it("3.1 - EmployeeImportHandler applySync menyimpan nama_lengkap dan nama_panggi
                     'nomor_whatsapp' => '081234567890',
                     'nomor_polisi_kendaraan' => 'B 1234 TEST',
                     'alamat' => 'Jl. Uji Coba Revisi',
+                    'tanggal_bergabung' => date('Y-m-d'),
                     'bank_nama' => 'BCA',
                     'bank_nomor_rekening' => '123456',
                     'bank_atas_nama' => 'Revisi',
@@ -159,9 +166,11 @@ it("3.1 - EmployeeImportHandler applySync menyimpan nama_lengkap dan nama_panggi
         $resUpd = $handler->applySync($previewUpdate, $pdo);
         if ($resUpd['update'] !== 1) return "Gagal update: " . json_encode($resUpd);
 
-        $checkUpd = $pdo->query("SELECT nama_lengkap, nama_panggilan, alamat FROM public.pengguna WHERE id = '{$uid}'")->fetch(PDO::FETCH_ASSOC);
+        $checkUpd = $pdo->query("SELECT nama_lengkap, nama_panggilan, jenis_kelamin, tanggal_lahir, alamat FROM public.pengguna WHERE id = '{$uid}'")->fetch(PDO::FETCH_ASSOC);
         if ($checkUpd['nama_lengkap'] !== 'Karyawan Uji Impor Revisi') return "Nama lengkap update salah: {$checkUpd['nama_lengkap']}";
         if ($checkUpd['nama_panggilan'] !== 'Revisi') return "Nama panggilan update salah: {$checkUpd['nama_panggilan']}";
+        if ($checkUpd['jenis_kelamin'] !== 'P') return "Jenis kelamin update salah: {$checkUpd['jenis_kelamin']}";
+        if ($checkUpd['tanggal_lahir'] !== '1996-05-15') return "Tanggal lahir update salah: {$checkUpd['tanggal_lahir']}";
 
         $pdo->rollBack();
         return true;

@@ -16,12 +16,18 @@ if (!function_exists('ks_format_diff_val')) {
                 ? '<span class="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400"><i data-lucide="check" class="w-3.5 h-3.5"></i> Aktif</span>' 
                 : '<span class="inline-flex items-center gap-1 font-bold text-rose-600 dark:text-rose-400"><i data-lucide="x" class="w-3.5 h-3.5"></i> Nonaktif</span>';
         }
+        if ($key === 'jenis_kelamin') {
+            $g = strtoupper(trim((string)$val));
+            return (in_array($g, ['P', 'PEREMPUAN', 'WANITA'], true))
+                ? '<span class="inline-flex items-center gap-1 font-bold text-pink-600 dark:text-pink-400">🧕 Perempuan</span>'
+                : '<span class="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">👨‍💼 Laki-laki</span>';
+        }
         if (in_array(strtolower((string)$val), ['aktif', 'nonaktif'], true)) {
             return strtolower((string)$val) === 'aktif'
                 ? '<span class="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400"><i data-lucide="check" class="w-3.5 h-3.5"></i> Aktif</span>' 
                 : '<span class="inline-flex items-center gap-1 font-bold text-rose-600 dark:text-rose-400"><i data-lucide="x" class="w-3.5 h-3.5"></i> Nonaktif</span>';
         }
-        $currencyKeys = ['harga_pokok_pembelian', 'upah_per_bungkus', 'upah_manual', 'plafon_piutang', 'harga_jual_per_pcs', 'harga_jual', 'harga', 'hpp'];
+        $currencyKeys = ['harga_pokok_pembelian', 'upah_per_bungkus', 'upah_manual', 'plafon_piutang', 'harga_jual_per_pcs', 'harga_jual', 'harga', 'hpp', 'gaji_pokok_bulanan', 'uang_kehadiran_harian', 'tunjangan_bulanan'];
         if (in_array($key, $currencyKeys, true) && is_numeric($val)) {
             return 'Rp ' . number_format((float)$val, 0, ',', '.');
         }
@@ -73,6 +79,11 @@ if (!function_exists('ks_format_diff_label')) {
             'diskon_nominal_default'  => 'Diskon Nominal Default',
             'nik'                     => 'NIK Karyawan',
             'nama_lengkap'            => 'Nama Lengkap Karyawan',
+            'nama_panggilan'          => 'Nama Panggilan',
+            'jenis_kelamin'           => 'Jenis Kelamin',
+            'tanggal_lahir'           => 'Tanggal Lahir',
+            'tanggal_bergabung'       => 'Tanggal Bergabung',
+            'nomor_polisi_kendaraan'  => 'Plat Nomor Kendaraan',
             'grup_id'                 => 'Relasi Grup Produk',
             'wilayah_id'              => 'Relasi Wilayah',
             'kelompok_borongan_id'    => 'Relasi Upah Borongan',
@@ -127,6 +138,12 @@ if (!function_exists('rm_format_cell_value')) {
             return $b
                 ? '<span class="badge badge-success text-[11px] font-bold">Aktif</span>'
                 : '<span class="badge badge-danger text-[11px] font-bold">Nonaktif</span>';
+        }
+        if ($type === 'gender') {
+            $g = strtoupper(trim((string)$val));
+            return (in_array($g, ['P', 'PEREMPUAN', 'WANITA'], true))
+                ? '<span class="badge text-[11px] font-bold" style="color:#db2777;background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.3);">🧕 Perempuan</span>'
+                : '<span class="badge text-[11px] font-bold" style="color:#2563eb;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);">👨‍💼 Laki-laki</span>';
         }
         if ($type === 'konsinyasi') {
             $isKonsin = is_bool($val) ? $val : (str_contains(strtolower((string)$val), 'konsin') || $val == '1');
@@ -239,12 +256,16 @@ $entityColumnsConfig = [
         'name_key'   => 'nama_lengkap',
         'name_label' => 'Nama Karyawan',
         'columns'    => [
+            ['key' => 'nama_panggilan', 'label' => 'Panggilan'],
+            ['key' => 'jenis_kelamin', 'label' => 'Gender', 'type' => 'gender'],
+            ['key' => 'tanggal_lahir', 'label' => 'Tgl Lahir'],
             ['key' => 'posisi', 'label' => 'Posisi / Tugas'],
             ['key' => 'tipe_penggajian', 'label' => 'Sistem Gaji'],
             ['key' => 'gaji_pokok_bulanan', 'label' => 'Gaji Pokok', 'type' => 'currency'],
             ['key' => 'uang_kehadiran_harian', 'label' => 'Uang Hadir', 'type' => 'currency'],
             ['key' => 'tunjangan_bulanan', 'label' => 'Tunjangan', 'type' => 'currency'],
             ['key' => 'nomor_whatsapp', 'label' => 'WhatsApp'],
+            ['key' => 'tanggal_bergabung', 'label' => 'Tgl Gabung'],
             ['key' => 'bank_nama', 'label' => 'Bank'],
             ['key' => 'bank_nomor_rekening', 'label' => 'No. Rekening'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],

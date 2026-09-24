@@ -38,6 +38,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             'NIK Karyawan (16 Digit KTP)',
             'Nama Lengkap',
             'Nama Panggilan',
+            'Jenis Kelamin (L/P)',
+            'Tanggal Lahir (YYYY-MM-DD)',
             'Posisi / Tugas',
             'Tipe Penggajian',
             'Gaji Pokok Bulanan (Rp)',
@@ -56,15 +58,15 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
 
     public function getTemplateWidths(): array
     {
-        return [22, 26, 18, 18, 18, 22, 20, 20, 18, 18, 30, 18, 14, 18, 22, 14];
+        return [22, 26, 18, 16, 20, 18, 18, 22, 20, 20, 18, 18, 30, 20, 14, 18, 22, 14];
     }
 
     public function getTemplateExamples(): array
     {
         return [
-            ['3201012345670001', 'Budi Santoso', 'Budi', 'sales', 'bulanan', 3500000, 25000, 500000, '081234567890', 'B 1234 ABC', 'Tangerang', '2023-01-15', 'BCA', '1122334455', 'Budi Santoso', 'Aktif'],
-            ['3201012345670002', 'Ahmad Dani', 'Dani', 'driver', 'bulanan', 0, 120000, 0, '085678901234', 'B 5678 XYZ', 'Jakarta Barat', '2023-05-10', 'BRI', '5566778899', 'Ahmad Dani', 'Aktif'],
-            ['3201012345670003', 'Siti Rohani', 'Siti', 'pengemasan', 'borongan', 0, 0, 0, '087812345678', '', 'Pasar Kemis', '2024-02-01', '', '', '', 'Aktif'],
+            ['3201012345670001', 'Budi Santoso', 'Budi', 'L', '1992-05-14', 'sales', 'bulanan', 3500000, 25000, 500000, '081234567890', 'B 1234 ABC', 'Tangerang', '2023-01-15', 'BCA', '1122334455', 'Budi Santoso', 'Aktif'],
+            ['3201012345670002', 'Ahmad Dani', 'Dani', 'L', '1988-11-20', 'driver', 'bulanan', 0, 120000, 0, '085678901234', 'B 5678 XYZ', 'Jakarta Barat', '2023-05-10', 'BRI', '5566778899', 'Ahmad Dani', 'Aktif'],
+            ['3201012345670003', 'Siti Rohani', 'Siti', 'P', '1997-08-05', 'pengemasan', 'borongan', 0, 0, 0, '087812345678', '', 'Pasar Kemis', '2024-02-01', '', '', '', 'Aktif'],
         ];
     }
 
@@ -75,6 +77,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             'Jika karyawan BELUM memiliki NIK/KTP, kosongkan kolom NIK, isi dengan "0", atau tulis "Belum". Sistem akan mendaftarkan sebagai NIK Pending. NIK dapat dilengkapi kemudian via menu Edit Karyawan maupun sinkronisasi Excel kembali.',
             'Nama Lengkap dan Posisi WAJIB diisi.',
             'Nama Panggilan diisi nama singkat / panggilan akrab sehari-hari.',
+            'Jenis Kelamin: diisi L (Laki-laki) atau P (Perempuan).',
+            'Tanggal Lahir & Tanggal Bergabung: format YYYY-MM-DD (contoh: 1995-10-25).',
             'Posisi yang valid: admin, mandor, pengemasan, sales, driver, owner, gudang.',
             'Tipe Penggajian: borongan, bulanan.',
             'No WhatsApp: Nomor WhatsApp aktif karyawan untuk koordinasi kerja (format 08xxx).',
@@ -85,6 +89,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
     public function getCurrentDataRows(PDO $pdo): array
     {
         $sql = "SELECT COALESCE(p.nik, '') as nik, p.nama_lengkap, COALESCE(p.nama_panggilan, '') as nama_panggilan,
+                       COALESCE(p.jenis_kelamin, 'L') as jenis_kelamin,
+                       COALESCE(p.tanggal_lahir::text, '') as tgl_lahir,
                        p.posisi, COALESCE(k.tipe_penggajian, CASE WHEN p.posisi = 'pengemasan' THEN 'borongan' ELSE 'bulanan' END) as tipe_penggajian,
                        COALESCE(k.gaji_pokok_bulanan, 0) as gaji_pokok,
                        COALESCE(k.uang_kehadiran_harian, 0) as uang_hadir,
@@ -135,6 +141,26 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $nik = preg_replace('/[^0-9]/', '', $nikRaw);
             $nama = (string)(SmartReader::getSmartValue($rowData, ['nama_lengkap', 'nama', 'nama_karyawan']) ?? '');
             $namaPanggilan = (string)(SmartReader::getSmartValue($rowData, ['nama_panggilan', 'panggilan', 'nama_alias', 'alias']) ?? '');
+            
+            $jkRaw = (string)(SmartReader::getSmartValue($rowData, ['jenis_kelamin', 'gender', 'jk', 'sex', 'kelamin']) ?? '');
+            $jkClean = strtoupper(trim($jkRaw));
+            $femaleKeywords = ['P', 'PEREMPUAN', 'WANITA', 'CEWEK', 'CEWE', 'CW', 'FEMALE', 'GIRL', 'W'];
+            $maleKeywords = ['L', 'LAKI-LAKI', 'LAKILAKI', 'LAKI', 'PRIA', 'COWOK', 'COWO', 'CO', 'MALE', 'BOY', 'M', 'LK'];
+            if (in_array($jkClean, $femaleKeywords, true)) {
+                $jenisKelamin = 'P';
+            } elseif (in_array($jkClean, $maleKeywords, true)) {
+                $jenisKelamin = 'L';
+            } else {
+                $jenisKelamin = 'L'; // Default fallback
+            }
+
+            $tglLahirRaw = (string)(SmartReader::getSmartValue($rowData, ['tanggal_lahir', 'tgl_lahir', 'tgl_lahir_karyawan', 'birthdate', 'tgl_lahir_ktp']) ?? '');
+            $tanggalLahir = null;
+            if (!empty($tglLahirRaw) && $tglLahirRaw !== '-' && $tglLahirRaw !== '0') {
+                $parsedTime = strtotime($tglLahirRaw);
+                $tanggalLahir = $parsedTime ? date('Y-m-d', $parsedTime) : $tglLahirRaw;
+            }
+
             $posisiRaw = (string)(SmartReader::getSmartValue($rowData, ['posisi', 'jabatan', 'tugas']) ?? '');
             $tipeGajiRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_penggajian', 'sistem_gaji', 'tipe_gaji']) ?? '');
             $gapokRaw = SmartReader::getSmartValue($rowData, ['gaji_pokok_bulanan', 'gaji_pokok', 'gapok']);
@@ -236,6 +262,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 'nik_pending'            => $nikIsPending,
                 'nama_lengkap'           => $nama,
                 'nama_panggilan'         => $namaPanggilan ?: ($dbRow['nama_panggilan'] ?? null),
+                'jenis_kelamin'          => $jenisKelamin,
+                'tanggal_lahir'          => $tanggalLahir ?: ($dbRow['tanggal_lahir'] ?? null),
                 'nama_pengguna'          => $dbRow['nama_pengguna'] ?? null,
                 'posisi'                 => $posisi,
                 'peran_id'               => $peranId,
@@ -285,6 +313,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                     || $nikIsPending !== (bool)($dbRow['nik_pending'] ?? false)
                     || trim($nama) !== trim((string)$dbRow['nama_lengkap'])
                     || trim($namaPanggilan) !== trim((string)($dbRow['nama_panggilan'] ?? ''))
+                    || trim($jenisKelamin) !== trim((string)($dbRow['jenis_kelamin'] ?? 'L'))
+                    || (!empty($tanggalLahir) && trim($tanggalLahir) !== trim((string)($dbRow['tanggal_lahir'] ?? '')))
                     || trim($posisi) !== trim((string)$dbRow['posisi'])
                     || trim($tipeGaji) !== trim((string)($dbRow['tipe_penggajian'] ?? ''))
                     || abs($gapok - (float)($dbRow['gaji_pokok_bulanan'] ?? 0)) > 0.01
@@ -337,8 +367,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
         $deactivateCount = 0;
 
         $stmtInsUser = $pdo->prepare("INSERT INTO public.pengguna 
-            (nama_lengkap, nama_panggilan, nama_pengguna, kata_sandi, nik, nik_pending, posisi, peran_id, nomor_telepon, nomor_whatsapp, nomor_polisi_kendaraan, alamat, tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?) RETURNING id");
+            (nama_lengkap, nama_panggilan, jenis_kelamin, tanggal_lahir, nama_pengguna, kata_sandi, nik, nik_pending, posisi, peran_id, nomor_telepon, nomor_whatsapp, nomor_polisi_kendaraan, alamat, tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif)
+            VALUES (?, ?, ?, ?::date, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::date, ?, ?, ?, ?) RETURNING id");
 
         $stmtInsKaryawan = $pdo->prepare("INSERT INTO public.karyawan 
             (pengguna_id, tipe_penggajian, gaji_pokok_bulanan, uang_kehadiran_harian, tunjangan_bulanan)
@@ -351,7 +381,10 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 diubah_pada = NOW()");
 
         $stmtUpdUser = $pdo->prepare("UPDATE public.pengguna SET 
-            nama_lengkap = ?, nama_panggilan = ?, nik = ?, nik_pending = ?, posisi = ?, peran_id = ?, nomor_telepon = ?, nomor_whatsapp = ?, nomor_polisi_kendaraan = ?, alamat = ?, bank_nama = ?, bank_nomor_rekening = ?, bank_atas_nama = ?, status_aktif = ?, diubah_pada = NOW()
+            nama_lengkap = ?, nama_panggilan = ?, jenis_kelamin = ?, tanggal_lahir = ?::date,
+            nik = ?, nik_pending = ?, posisi = ?, peran_id = ?, nomor_telepon = ?, nomor_whatsapp = ?,
+            nomor_polisi_kendaraan = ?, alamat = ?, tanggal_bergabung = ?::date,
+            bank_nama = ?, bank_nomor_rekening = ?, bank_atas_nama = ?, status_aktif = ?, diubah_pada = NOW()
             WHERE id = ?");
 
         $stmtDeactivate = $pdo->prepare("UPDATE public.pengguna SET status_aktif = FALSE, diubah_pada = NOW() WHERE id = ?");
@@ -396,6 +429,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 $stmtInsUser->execute([
                     $d['nama_lengkap'],
                     $d['nama_panggilan'] ?: null,
+                    $d['jenis_kelamin'] ?: 'L',
+                    !empty($d['tanggal_lahir']) ? $d['tanggal_lahir'] : null,
                     !empty($d['nama_pengguna']) ? $d['nama_pengguna'] : null,
                     null, // kata_sandi (akun login dibuat terpisah via /users)
                     $nik,
@@ -443,6 +478,8 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                 $stmtUpdUser->execute([
                     $d['nama_lengkap'],
                     $d['nama_panggilan'] ?: null,
+                    $d['jenis_kelamin'] ?: 'L',
+                    !empty($d['tanggal_lahir']) ? $d['tanggal_lahir'] : null,
                     $nik,
                     $nikPending ? 'true' : 'false',
                     $d['posisi'],
@@ -451,6 +488,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
                     $d['nomor_whatsapp'] ?: null,
                     $d['nomor_polisi_kendaraan'] ?: null,
                     $d['alamat'] ?: null,
+                    $d['tanggal_bergabung'] ?: date('Y-m-d'),
                     $d['bank_nama'] ?: null,
                     $d['bank_nomor_rekening'] ?: null,
                     $d['bank_atas_nama'] ?: null,

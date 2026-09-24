@@ -48,6 +48,14 @@ $initialTab = $activeTab ?? 'karyawan';
                     <span>•</span>
                     <span class="badge badge-info" style="text-transform:capitalize;">Posisi: <?= htmlspecialchars($user['posisi']) ?></span>
                     <?php endif; ?>
+                    <?php if (!empty($user['jenis_kelamin'])): ?>
+                    <span>•</span>
+                    <?php if ($user['jenis_kelamin'] === 'P'): ?>
+                        <span class="badge" style="color:#db2777;background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.3);font-weight:700;">🧕 Perempuan</span>
+                    <?php else: ?>
+                        <span class="badge" style="color:#2563eb;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);font-weight:700;">👨‍💼 Laki-laki</span>
+                    <?php endif; ?>
+                    <?php endif; ?>
                     <span>•</span>
                     <span>Status: <strong style="color:var(--color-primary-deep);">Aktif</strong></span>
                 </div>
@@ -207,7 +215,7 @@ $initialTab = $activeTab ?? 'karyawan';
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         <!-- NIK -->
                         <div>
                             <label class="form-label" style="font-size:12px;">
@@ -217,6 +225,33 @@ $initialTab = $activeTab ?? 'karyawan';
                                 <i data-lucide="id-card" class="icon-left"></i>
                                 <input type="text"
                                        value="<?= htmlspecialchars($user['nik'] ?? ($user['nik_pending'] ? 'Menunggu KTP (Pending)' : 'Belum diisi')) ?>"
+                                       class="form-input font-mono"
+                                       disabled
+                                       style="background-color:var(--color-canvas-soft);color:var(--color-ink-mute);cursor:not-allowed;">
+                            </div>
+                        </div>
+
+                        <!-- Jenis Kelamin -->
+                        <div>
+                            <label class="form-label" style="font-size:12px;">
+                                <span>Jenis Kelamin</span>
+                            </label>
+                            <input type="text"
+                                   value="<?= ($user['jenis_kelamin'] ?? 'L') === 'P' ? '🧕 Perempuan' : '👨‍💼 Laki-laki' ?>"
+                                   class="form-input font-semibold"
+                                   disabled
+                                   style="background-color:var(--color-canvas-soft);color:var(--color-ink);cursor:not-allowed;">
+                        </div>
+
+                        <!-- Tanggal Lahir -->
+                        <div>
+                            <label class="form-label" style="font-size:12px;">
+                                <span>Tanggal Lahir</span>
+                            </label>
+                            <div class="form-input-icon">
+                                <i data-lucide="cake" class="icon-left"></i>
+                                <input type="text"
+                                       value="<?= !empty($user['tanggal_lahir']) ? Format::tanggal($user['tanggal_lahir'], false) : '-' ?>"
                                        class="form-input font-mono"
                                        disabled
                                        style="background-color:var(--color-canvas-soft);color:var(--color-ink-mute);cursor:not-allowed;">
@@ -262,7 +297,7 @@ $initialTab = $activeTab ?? 'karyawan';
                                 <i data-lucide="calendar" class="icon-left"></i>
                                 <input type="text"
                                        value="<?= !empty($user['tanggal_bergabung']) ? Format::tanggal($user['tanggal_bergabung'], false) : '-' ?>"
-                                       class="form-input"
+                                       class="form-input font-mono"
                                        disabled
                                        style="background-color:var(--color-canvas-soft);color:var(--color-ink-mute);cursor:not-allowed;">
                             </div>

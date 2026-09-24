@@ -511,6 +511,55 @@ ob_start();
         font-size: 12px;
     }
 }
+
+/* 7. M3 Segmented Button Group (Gender / Binary Choice) */
+.m3-segmented-control {
+    display: flex;
+    align-items: center;
+    background: var(--color-canvas-soft);
+    border: 1px solid var(--color-hairline);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+    min-height: 40px;
+    box-sizing: border-box;
+}
+.m3-segment-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    color: var(--color-ink-secondary);
+    position: relative;
+}
+.m3-segment-btn:hover:not(.is-active) {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--color-ink);
+}
+.m3-segment-btn.is-active-male {
+    background: #ffffff;
+    color: #1d4ed8;
+    font-weight: 700;
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.14), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.m3-segment-btn.is-active-female {
+    background: #ffffff;
+    color: #be185d;
+    font-weight: 700;
+    border-color: rgba(236, 72, 153, 0.3);
+    box-shadow: 0 1px 3px rgba(236, 72, 153, 0.14), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
 </style>
 
 <div x-data="employeeApp()" x-init="init()" class="space-y-5">
@@ -701,6 +750,22 @@ ob_start();
                                     <span x-show="e.nama_panggilan" style="font-size:12px;font-weight:500;color:var(--color-ink-mute);" x-text="'(' + e.nama_panggilan + ')'"></span>
                                 </div>
                                 <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                    <!-- Badge Gender -->
+                                    <template x-if="e.jenis_kelamin === 'P'">
+                                        <span class="badge" style="font-size:10px;padding:1px 6px;color:#db2777;background:rgba(219,39,119,0.1);border-color:rgba(219,39,119,0.3);font-weight:700;" title="Perempuan (Hijab)">
+                                            🧕 P
+                                        </span>
+                                    </template>
+                                    <template x-if="e.jenis_kelamin === 'L' || !e.jenis_kelamin">
+                                        <span class="badge" style="font-size:10px;padding:1px 6px;color:#2563eb;background:rgba(37,99,235,0.1);border-color:rgba(37,99,235,0.3);font-weight:700;" title="Laki-laki (Kemeja/Jas)">
+                                            👨‍💼 L
+                                        </span>
+                                    </template>
+                                    <template x-if="e.tanggal_lahir">
+                                        <span class="badge" style="font-size:10.5px;padding:1px 6px;color:var(--color-ink-secondary);border-color:var(--color-hairline);background:var(--color-canvas-soft);" :title="'Tanggal Lahir: ' + formatDateShort(e.tanggal_lahir)">
+                                            🎂 <span x-text="formatAge(e.tanggal_lahir)"></span>
+                                        </span>
+                                    </template>
                                     <template x-if="e.nik">
                                         <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:var(--color-ink-secondary);border-color:var(--color-hairline);background:var(--color-canvas-soft);">
                                             NIK: <span x-text="e.nik"></span>
@@ -712,6 +777,11 @@ ob_start();
                                         </span>
                                     </template>
                                     <span x-text="(e.nomor_whatsapp || e.nomor_telepon) ? ('WA: ' + (e.nomor_whatsapp || e.nomor_telepon)) : ''"></span>
+                                    <template x-if="e.tanggal_bergabung">
+                                        <span class="badge" style="font-size:10.5px;padding:1px 6px;color:var(--color-ink-secondary);border-color:var(--color-hairline);background:var(--color-canvas-soft);" :title="'Mulai bergabung: ' + e.tanggal_bergabung">
+                                            🗓 <span x-text="formatDateShort(e.tanggal_bergabung)"></span>
+                                        </span>
+                                    </template>
                                     <template x-if="e.nomor_polisi_kendaraan">
                                         <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:#0284c7;border-color:rgba(2,132,199,0.3);background:rgba(2,132,199,0.08);">
                                             &#x1F69A; <span x-text="e.nomor_polisi_kendaraan"></span>
@@ -839,7 +909,7 @@ ob_start();
     <?php if (\App\Core\Auth::can('master.employees_manage')): ?>
     <template x-teleport="body">
     <div x-show="showModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:580px;padding:24px;">
+        <div class="modal-box" style="max-width:640px;padding:24px;">
             <div class="modal-header">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <div style="width:32px;height:32px;border-radius:var(--rounded-md);background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;">
@@ -857,6 +927,41 @@ ob_start();
                     1. Identitas &amp; Kontak Pegawai
                 </div>
 
+                <!-- 1. NIK (URUTAN AWAL SEBELUM NAMA) -->
+                <div style="padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+                        <label class="form-label" style="margin-bottom:0;">Nomor Induk Kependudukan (NIK) *</label>
+                        <!-- Checkbox: Belum Punya NIK -->
+                        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:var(--color-ink-secondary);">
+                            <input type="checkbox" name="nik_pending" value="1"
+                                   x-model="form.nik_pending"
+                                   @change="if(form.nik_pending) { form.nik = ''; }"
+                                   style="width:13px;height:13px;accent-color:#d97706;">
+                            <span>Karyawan <strong>belum memiliki NIK / KTP</strong></span>
+                        </label>
+                    </div>
+                    <input type="text" name="nik"
+                           x-model="form.nik"
+                           :disabled="form.nik_pending"
+                           :required="!form.nik_pending"
+                           class="form-input font-mono"
+                           :style="form.nik_pending ? 'background:var(--color-canvas);color:var(--color-ink-mute);cursor:not-allowed;' : 'background:var(--color-canvas);'"
+                           @input="if(!form.nik_pending) form.nik = $event.target.value.replace(/[^0-9]/g, '').slice(0, 16)"
+                           maxlength="16"
+                           :placeholder="form.nik_pending ? 'WAJIB diisi saat KTP fisik diperoleh' : '3201012345670001 (16 Digit)'"
+                           :value="form.nik_pending ? '' : form.nik">
+                    <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:3px;display:flex;align-items:center;justify-content:space-between;">
+                        <template x-if="!form.nik_pending">
+                            <span>Wajib 16 digit angka sesuai KTP asli</span>
+                        </template>
+                        <template x-if="form.nik_pending">
+                            <span style="color:#d97706;font-weight:600;">⚠ NIK pending — lengkapi via Edit setelah KTP diperoleh</span>
+                        </template>
+                        <span style="font-family:var(--font-mono);font-size:10px;color:var(--color-ink-mute);" x-text="form.nik ? form.nik.length + '/16 digit' : ''"></span>
+                    </div>
+                </div>
+
+                <!-- 2. NAMA LENGKAP, PANGGILAN & WHATSAPP -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="form-label">Nama Lengkap Karyawan *</label>
@@ -872,39 +977,53 @@ ob_start();
                     </div>
                 </div>
 
+                <!-- 3. GENDER & TANGGAL (GRID 2 KOLOM SEIMBANG, ANTI-OVERFLOW) -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Kolom Kiri: M3 Segmented Button Gender (Clean Pill Tab) -->
                     <div>
-                        <label class="form-label">Nomor Induk Kependudukan (NIK)</label>
-                        <!-- Checkbox: Belum Punya NIK -->
-                        <label style="display:flex;align-items:center;gap:7px;margin-bottom:6px;cursor:pointer;font-size:12px;color:var(--color-ink-secondary);">
-                            <input type="checkbox" name="nik_pending" value="1"
-                                   x-model="form.nik_pending"
-                                   @change="if(form.nik_pending) { form.nik = ''; }"
-                                   style="width:14px;height:14px;accent-color:#d97706;">
-                            <span>Karyawan <strong>belum memiliki NIK / KTP</strong></span>
-                        </label>
-                        <input type="text" name="nik"
-                               x-model="form.nik"
-                               :disabled="form.nik_pending"
-                               :required="!form.nik_pending"
-                               :class="form.nik_pending ? 'form-input font-mono' : 'form-input font-mono'"
-                               :style="form.nik_pending ? 'background:var(--color-canvas-soft);color:var(--color-ink-mute);cursor:not-allowed;' : ''"
-                               @input="if(!form.nik_pending) form.nik = $event.target.value.replace(/[^0-9]/g, '').slice(0, 16)"
-                               maxlength="16"
-                               :placeholder="form.nik_pending ? 'WAJIB diisi saat KTP tersedia' : '3201012345670001 (16 Digit)'"
-                               :value="form.nik_pending ? '' : form.nik">
+                        <label class="form-label">Jenis Kelamin *</label>
+                        <div class="m3-segmented-control" style="margin-top:2px;">
+                            <label class="m3-segment-btn" :class="form.jenis_kelamin === 'L' ? 'is-active is-active-male' : ''">
+                                <input type="radio" name="jenis_kelamin" value="L" x-model="form.jenis_kelamin" style="position:absolute;opacity:0;pointer-events:none;">
+                                <span style="font-size:15px;line-height:1;">👨‍💼</span>
+                                <span>Laki-laki</span>
+                            </label>
+                            <label class="m3-segment-btn" :class="form.jenis_kelamin === 'P' ? 'is-active is-active-female' : ''">
+                                <input type="radio" name="jenis_kelamin" value="P" x-model="form.jenis_kelamin" style="position:absolute;opacity:0;pointer-events:none;">
+                                <span style="font-size:15px;line-height:1;">🧕</span>
+                                <span>Perempuan</span>
+                            </label>
+                        </div>
                         <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">
-                            <template x-if="!form.nik_pending">
-                                <span>Wajib 16 digit angka sesuai KTP asli</span>
-                            </template>
-                            <template x-if="form.nik_pending">
-                                <span style="color:#d97706;font-weight:600;">⚠ NIK pending — lengkapi via Edit setelah KTP diperoleh</span>
-                            </template>
+                            Pilihan gender karyawan
                         </div>
                     </div>
-                    <div>
-                        <label class="form-label">Alamat Domisili</label>
-                        <input type="text" name="alamat" x-model="form.alamat" class="form-input" placeholder="Alamat tinggal karyawan">
+
+                    <!-- Kolom Kanan: Tanggal Lahir & Tanggal Bergabung (Sub-grid 2 Kolom) -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="form-label">Tanggal Lahir</label>
+                            <input type="date" name="tanggal_lahir" x-model="form.tanggal_lahir" class="form-input font-mono" style="min-height:40px;margin-top:2px;">
+                            <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">
+                                Opsional / usia
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Tanggal Bergabung *</label>
+                            <input type="date" name="tanggal_bergabung" x-model="form.tanggal_bergabung" required class="form-input font-mono" style="min-height:40px;margin-top:2px;">
+                            <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">
+                                Mulai aktif bekerja
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. ALAMAT DOMISILI (SENDIRI DI AKHIR SECTION 1, LEBIH LELUASA) -->
+                <div>
+                    <label class="form-label">Alamat Domisili Lengkap</label>
+                    <input type="text" name="alamat" x-model="form.alamat" class="form-input" placeholder="Alamat tinggal / domisili lengkap karyawan (contoh: Jl. Melati No. 45 RT 02/04, Desa Sukamaju, Kec. Cibinong)">
+                    <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">
+                        Alamat domisili tempat tinggal karyawan saat ini
                     </div>
                 </div>
 
@@ -1498,14 +1617,16 @@ function employeeApp() {
             nik_pending: false,
             nama_karyawan: '',
             nama_panggilan: '',
+            jenis_kelamin: 'L',
+            tanggal_lahir: '',
             posisi: 'pengemasan',
             tipe_penggajian: 'borongan',
             gaji_pokok_bulanan: '0',
             uang_kehadiran_harian: '10.000',
             tunjangan_bulanan: '50.000',
             nomor_whatsapp: '',
-            nomor_telepon: '',
             alamat: '',
+            tanggal_bergabung: new Date().toISOString().split('T')[0],
             nomor_polisi_kendaraan: '',
             bank_nama: 'Tunai',
             bank_nomor_rekening: '',
@@ -1560,6 +1681,34 @@ function employeeApp() {
 
         formatRupiah(num) {
             return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+        },
+
+        formatDateShort(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const parts = String(dateStr).substring(0, 10).split('-');
+                if (parts.length === 3) {
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                    const monthIdx = parseInt(parts[1], 10) - 1;
+                    return `${parseInt(parts[2], 10)} ${months[monthIdx] || parts[1]} ${parts[0]}`;
+                }
+            } catch (err) {}
+            return dateStr;
+        },
+
+        formatAge(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const birth = new Date(dateStr);
+                const now = new Date();
+                let age = now.getFullYear() - birth.getFullYear();
+                const m = now.getMonth() - birth.getMonth();
+                if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) {
+                    age--;
+                }
+                return age > 0 ? (age + ' Thn') : this.formatDateShort(dateStr);
+            } catch (err) {}
+            return dateStr;
         },
 
         formatInputRupiah(val) {
@@ -1821,12 +1970,15 @@ function employeeApp() {
 
         openAddModal() {
             this.isEdit = false;
+            const today = new Date().toISOString().split('T')[0];
             this.form = {
                 id: '',
                 nik: '',
                 nik_pending: false,
                 nama_karyawan: '',
                 nama_panggilan: '',
+                jenis_kelamin: 'L',
+                tanggal_lahir: '',
                 posisi: 'pengemasan',
                 tipe_penggajian: 'borongan',
                 gaji_pokok_bulanan: '0',
@@ -1834,6 +1986,7 @@ function employeeApp() {
                 tunjangan_bulanan: '50.000',
                 nomor_whatsapp: '',
                 alamat: '',
+                tanggal_bergabung: today,
                 nomor_polisi_kendaraan: '',
                 bank_nama: 'Tunai',
                 bank_nomor_rekening: '',
@@ -1846,12 +1999,15 @@ function employeeApp() {
 
         openEditModal(e) {
             this.isEdit = true;
+            const today = new Date().toISOString().split('T')[0];
             this.form = {
                 id: e.id,
                 nik: e.nik || '',
                 nik_pending: !!e.nik_pending,
                 nama_karyawan: e.nama_karyawan,
                 nama_panggilan: e.nama_panggilan || '',
+                jenis_kelamin: e.jenis_kelamin || 'L',
+                tanggal_lahir: e.tanggal_lahir ? String(e.tanggal_lahir).substring(0, 10) : '',
                 posisi: e.posisi || 'pengemasan',
                 tipe_penggajian: e.tipe_penggajian || 'borongan',
                 gaji_pokok_bulanan: window.formatRupiahNumber ? window.formatRupiahNumber(e.gaji_pokok_bulanan) : String(e.gaji_pokok_bulanan || 0),
@@ -1859,6 +2015,7 @@ function employeeApp() {
                 tunjangan_bulanan: window.formatRupiahNumber ? window.formatRupiahNumber(e.tunjangan_bulanan) : String(e.tunjangan_bulanan || 0),
                 nomor_whatsapp: e.nomor_whatsapp || e.nomor_telepon || '',
                 alamat: e.alamat === '-' ? '' : (e.alamat || ''),
+                tanggal_bergabung: e.tanggal_bergabung ? String(e.tanggal_bergabung).substring(0, 10) : today,
                 nomor_polisi_kendaraan: e.nomor_polisi_kendaraan || '',
                 bank_nama: e.bank_nama || 'Tunai',
                 bank_nomor_rekening: e.bank_nomor_rekening || '',

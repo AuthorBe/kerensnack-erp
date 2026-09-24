@@ -226,7 +226,7 @@ it("2.1 - getRequiredHeaderGroups mewajibkan header NIK pada berkas Excel", func
 
 it("2.2 - previewRows memperlakukan NIK kosong sebagai NIK Pending (INSERT dengan nik_pending=true), bukan ERROR", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
-    $row = ['', 'Budi Tanpa NIK', 'Budi', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $row = ['', 'Budi Tanpa NIK', 'Budi', 'L', '1995-01-01', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'update_insert');
     if (empty($preview)) return "Pratinjau kosong";
@@ -250,8 +250,8 @@ it("2.2 - previewRows memperlakukan NIK kosong sebagai NIK Pending (INSERT denga
 
 it("2.3 - previewRows menandai ERROR jika NIK bukan 16 digit angka murni", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
-    $rowInvalidLen = ['320101', 'Budi NIK Pendek', 'Budi', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
-    $rowNonDigit = ['320101234567890A', 'Budi NIK Huruf', 'Budi', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $rowInvalidLen = ['320101', 'Budi NIK Pendek', 'Budi', 'L', '1995-01-01', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $rowNonDigit = ['320101234567890A', 'Budi NIK Huruf', 'Budi', 'L', '1995-01-01', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
 
     $preview = $handler->previewRows([$rowInvalidLen, $rowNonDigit], $header, $pdo, 'update_insert');
     if (count($preview) !== 2) return "Jumlah preview tidak 2: " . count($preview);
@@ -269,8 +269,8 @@ it("2.3 - previewRows menandai ERROR jika NIK bukan 16 digit angka murni", funct
 it("2.4 - previewRows mendeteksi duplikasi NIK di dalam baris Excel", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
     $sameNik = '3201012233445566';
-    $row1 = [$sameNik, 'Orang Pertama', 'Orang1', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
-    $row2 = [$sameNik, 'Orang Kedua Duplikat', 'Orang2', 'sales', 'bulanan', 3000000, 20000, 0, '08129999888', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $row1 = [$sameNik, 'Orang Pertama', 'Orang1', 'L', '1995-01-01', 'sales', 'bulanan', 3000000, 20000, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $row2 = [$sameNik, 'Orang Kedua Duplikat', 'Orang2', 'P', '1996-02-02', 'sales', 'bulanan', 3000000, 20000, 0, '08129999888', '', '', '2024-01-01', '', '', '', 'Aktif'];
 
     $preview = $handler->previewRows([$row1, $row2], $header, $pdo, 'update_insert');
     if (count($preview) !== 2) return "Jumlah preview tidak 2";
@@ -287,7 +287,7 @@ it("2.5 - previewRows & applySync berhasil melakukan INSERT & UPDATE dengan NIK 
     try {
         $header = $handler->getTemplateHeaders();
         $nik = '3201019988112233';
-        $rowInsert = [$nik, 'Karyawan Uji Sinkron', 'Uji', 'pengemasan', 'borongan', 0, 15000, 50000, '085711223344', '', 'Tangerang', '2024-05-01', 'BCA', '123456', 'Karyawan Uji', 'Aktif'];
+        $rowInsert = [$nik, 'Karyawan Uji Sinkron', 'Uji', 'L', '1995-01-01', 'pengemasan', 'borongan', 0, 15000, 50000, '085711223344', '', 'Tangerang', '2024-05-01', 'BCA', '123456', 'Karyawan Uji', 'Aktif'];
 
         $preview = $handler->previewRows([$rowInsert], $header, $pdo, 'update_insert');
         if (empty($preview) || $preview[0]['action'] !== 'INSERT') {
@@ -310,7 +310,7 @@ it("2.5 - previewRows & applySync berhasil melakukan INSERT & UPDATE dengan NIK 
         }
 
         // Uji sinkronisasi UPDATE data yang sudah ada
-        $rowUpdate = [$nik, 'Karyawan Uji Sinkron (Updated)', 'Uji Baru', 'sales', 'bulanan', 3500000, 25000, 100000, '085711223344', 'B 1111 TST', 'Jakarta Barat', '2024-05-01', 'BCA', '123456', 'Karyawan Uji', 'Aktif'];
+        $rowUpdate = [$nik, 'Karyawan Uji Sinkron (Updated)', 'Uji Baru', 'L', '1995-01-01', 'sales', 'bulanan', 3500000, 25000, 100000, '085711223344', 'B 1111 TST', 'Jakarta Barat', '2024-05-01', 'BCA', '123456', 'Karyawan Uji', 'Aktif'];
         $previewUpd = $handler->previewRows([$rowUpdate], $header, $pdo, 'update_insert');
         if (empty($previewUpd) || $previewUpd[0]['action'] !== 'UPDATE') {
             $pdo->rollBack();
@@ -408,8 +408,8 @@ it("4.2 - Database MENOLAK INSERT nik=NULL + nik_pending=FALSE pada posisi non-d
 
 it("4.3 - previewRows() memperlakukan baris dengan NIK KOSONG sebagai INSERT (nik_pending), bukan ERROR", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
-    // Format: [nik, nama_lengkap, nama_panggilan, posisi, tipe_penggajian, gapok, uang_hadir, tunjangan, wa, nopol, alamat, tgl_gabung, bank, rek, atas_nama, status_aktif]
-    $row = ['', 'Karyawan Tanpa NIK Test', 'Test', 'pengemasan', 'borongan', 0, 15000, 0, '081234567890', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    // Format: [nik, nama_lengkap, nama_panggilan, jenis_kelamin, tanggal_lahir, posisi, tipe_penggajian, gapok, uang_hadir, tunjangan, wa, nopol, alamat, tgl_gabung, bank, rek, atas_nama, status_aktif]
+    $row = ['', 'Karyawan Tanpa NIK Test', 'Test', 'L', '1995-01-01', 'pengemasan', 'borongan', 0, 15000, 0, '081234567890', '', '', '2024-01-01', '', '', '', 'Aktif'];
     $result = $handler->previewRows([$row], $header, $pdo, 'add_only');
 
     if (empty($result)) return "previewRows mengembalikan array kosong";
@@ -431,7 +431,7 @@ it("4.3 - previewRows() memperlakukan baris dengan NIK KOSONG sebagai INSERT (ni
 
 it("4.4 - previewRows() memperlakukan NIK='0' sebagai NIK Pending (bukan ERROR)", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
-    $row = ['0', 'Karyawan NIK Nol Test', 'Nol', 'pengemasan', 'borongan', 0, 15000, 0, '', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $row = ['0', 'Karyawan NIK Nol Test', 'Nol', 'L', '1995-01-01', 'pengemasan', 'borongan', 0, 15000, 0, '', '', '', '2024-01-01', '', '', '', 'Aktif'];
     $result = $handler->previewRows([$row], $header, $pdo, 'add_only');
 
     if (empty($result)) return "previewRows mengembalikan array kosong";
@@ -445,7 +445,7 @@ it("4.4 - previewRows() memperlakukan NIK='0' sebagai NIK Pending (bukan ERROR)"
 
 it("4.5 - previewRows() memperlakukan NIK='Belum' sebagai NIK Pending (bukan ERROR)", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
-    $row = ['Belum', 'Karyawan NIK Belum Test', 'Belum', 'driver', 'bulanan', 3000000, 0, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $row = ['Belum', 'Karyawan NIK Belum Test', 'Belum', 'L', '1995-01-01', 'driver', 'bulanan', 3000000, 0, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
     $result = $handler->previewRows([$row], $header, $pdo, 'add_only');
 
     if (empty($result)) return "previewRows mengembalikan array kosong";
@@ -459,7 +459,7 @@ it("4.5 - previewRows() memperlakukan NIK='Belum' sebagai NIK Pending (bukan ERR
 
 it("4.6 - previewRows() TETAP memunculkan ERROR untuk NIK 10 digit (non-valid, non-pending)", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
-    $row = ['3201012345', 'Test NIK 10 Digit', 'Test', 'admin', 'bulanan', 3000000, 0, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
+    $row = ['3201012345', 'Test NIK 10 Digit', 'Test', 'L', '1995-01-01', 'admin', 'bulanan', 3000000, 0, 0, '08123456789', '', '', '2024-01-01', '', '', '', 'Aktif'];
     $result = $handler->previewRows([$row], $header, $pdo, 'add_only');
 
     if (empty($result)) return "previewRows mengembalikan array kosong";
@@ -491,7 +491,7 @@ it("4.7 - previewRows() dan applySync() berhasil mendeteksi dan memperbarui NIK 
         // Berkas Excel sekarang memasukkan 16 digit NIK baru untuk nama tersebut (kolom lain sama persis)
         $header = $handler->getTemplateHeaders();
         $newNik = '320101' . str_pad((string)rand(1000000000, 9999999999), 10, '0', STR_PAD_LEFT);
-        $row = [$newNik, $uniqueName, 'Pending', 'sales', 'bulanan', 3000000, 20000, 0, '', '', '', date('Y-m-d'), '', '', '', 'Aktif'];
+        $row = [$newNik, $uniqueName, 'Pending', 'L', '1995-01-01', 'sales', 'bulanan', 3000000, 20000, 0, '', '', '', date('Y-m-d'), '', '', '', 'Aktif'];
 
         $preview = $handler->previewRows([$row], $header, $pdo, 'update_insert');
         if (empty($preview)) {
