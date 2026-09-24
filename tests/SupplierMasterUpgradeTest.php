@@ -47,41 +47,43 @@ runTest("1. Kolom baru ada di tabel public.pemasok", function() use ($pdo) {
 // 2. Insert Test Supplier with Google Maps, PIC, WhatsApp, Email, Payment Terms, Notes
 runTest("2. Insert Pemasok baru dengan data lokasi maps & kontak PIC lengkap", function() use ($pdo) {
     $kode = 'TEST-SUP-' . time();
-    $stmt = $pdo->prepare("
-        INSERT INTO public.pemasok (
-            kode_pemasok, nama_pemasok, nama_kontak, alamat_lengkap, link_google_maps,
-            nomor_whatsapp, email, termin_bayar, catatan,
-            nama_bank, nomor_rekening, atas_nama_rekening
-        ) VALUES (
-            :kode, 'PT Test Pemasok Plastik', 'Pak Hendra Sales', 'Jl. Industri No. 88, Cikarang', 'https://maps.app.goo.gl/example123',
-            '081299998888', 'sales@testpemasok.co.id', 'tempo_14_hari', 'Pengiriman sebelum jam 16:00',
-            'BCA', '1234567890', 'PT Test Pemasok Plastik'
-        ) RETURNING id
-    ");
-    $stmt->execute(['kode' => $kode]);
-    $id = $stmt->fetchColumn();
+    $id = null;
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO public.pemasok (
+                kode_pemasok, nama_pemasok, nama_kontak, alamat_lengkap, link_google_maps,
+                nomor_whatsapp, email, termin_bayar, catatan,
+                nama_bank, nomor_rekening, atas_nama_rekening
+            ) VALUES (
+                :kode, 'PT Test Pemasok Plastik', 'Pak Hendra Sales', 'Jl. Industri No. 88, Cikarang', 'https://maps.app.goo.gl/example123',
+                '081299998888', 'sales@testpemasok.co.id', 'tempo_14_hari', 'Pengiriman sebelum jam 16:00',
+                'BCA', '1234567890', 'PT Test Pemasok Plastik'
+            ) RETURNING id
+        ");
+        $stmt->execute(['kode' => $kode]);
+        $id = $stmt->fetchColumn();
 
-    if (!$id) return false;
+        if (!$id) return false;
 
-    // Verify data
-    $check = $pdo->prepare("SELECT * FROM public.pemasok WHERE id = :id");
-    $check->execute(['id' => $id]);
-    $row = $check->fetch(PDO::FETCH_ASSOC);
+        // Verify data
+        $check = $pdo->prepare("SELECT * FROM public.pemasok WHERE id = :id");
+        $check->execute(['id' => $id]);
+        $row = $check->fetch(PDO::FETCH_ASSOC);
 
-    $valid = (
-        $row['kode_pemasok'] === $kode &&
-        $row['link_google_maps'] === 'https://maps.app.goo.gl/example123' &&
-        $row['nama_kontak'] === 'Pak Hendra Sales' &&
-        $row['nomor_whatsapp'] === '081299998888' &&
-        $row['email'] === 'sales@testpemasok.co.id' &&
-        $row['termin_bayar'] === 'tempo_14_hari' &&
-        $row['catatan'] === 'Pengiriman sebelum jam 16:00'
-    );
-
-    // Clean up
-    $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $id]);
-
-    return $valid;
+        return (
+            $row['kode_pemasok'] === $kode &&
+            $row['link_google_maps'] === 'https://maps.app.goo.gl/example123' &&
+            $row['nama_kontak'] === 'Pak Hendra Sales' &&
+            $row['nomor_whatsapp'] === '081299998888' &&
+            $row['email'] === 'sales@testpemasok.co.id' &&
+            $row['termin_bayar'] === 'tempo_14_hari' &&
+            $row['catatan'] === 'Pengiriman sebelum jam 16:00'
+        );
+    } finally {
+        if ($id) {
+            $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $id]);
+        }
+    }
 });
 
 // 3. Verify SupplierController file contains new fields

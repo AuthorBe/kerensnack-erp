@@ -87,8 +87,8 @@ $transientFixtureIds = [
     'pelanggan' => [],
     'karyawan' => [],
     'item' => [],
-    'grup_produk' => [],
-    'grup_produk_harga_level' => []
+    'wilayah' => [],
+    'akun_kas' => []
 ];
 
 register_shutdown_function(function() use ($pdo, &$transientFixtureIds) {
@@ -101,24 +101,28 @@ register_shutdown_function(function() use ($pdo, &$transientFixtureIds) {
     if (!empty($transientFixtureIds['pelanggan'])) {
         $in = "'" . implode("','", $transientFixtureIds['pelanggan']) . "'";
         $pdo->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id IN ($in)");
+        $pdo->exec("DELETE FROM public.pelanggan_item WHERE pelanggan_id IN ($in)");
         $pdo->exec("DELETE FROM public.pelanggan WHERE id IN ($in)");
-    }
-    if (!empty($transientFixtureIds['karyawan'])) {
-        $in = "'" . implode("','", $transientFixtureIds['karyawan']) . "'";
-        $pdo->exec("DELETE FROM public.karyawan WHERE id IN ($in)");
     }
     if (!empty($transientFixtureIds['item'])) {
         $in = "'" . implode("','", $transientFixtureIds['item']) . "'";
+        $pdo->exec("DELETE FROM public.stok_konsinyasi_toko WHERE item_id IN ($in)");
+        $pdo->exec("DELETE FROM public.item_pesanan WHERE item_id IN ($in)");
         $pdo->exec("DELETE FROM public.item WHERE id IN ($in)");
     }
-    if (!empty($transientFixtureIds['grup_produk'])) {
-        $in = "'" . implode("','", $transientFixtureIds['grup_produk']) . "'";
-        $pdo->exec("DELETE FROM public.grup_produk_harga_level WHERE grup_produk_id IN ($in)");
-        $pdo->exec("DELETE FROM public.grup_produk WHERE id IN ($in)");
+    if (!empty($transientFixtureIds['karyawan'])) {
+        $in = "'" . implode("','", $transientFixtureIds['karyawan']) . "'";
+        $pdo->exec("DELETE FROM public.tabungan WHERE karyawan_id IN ($in)");
+        $pdo->exec("DELETE FROM public.karyawan WHERE id IN ($in)");
     }
-    if (!empty($transientFixtureIds['grup_produk_harga_level'])) {
-        $in = "'" . implode("','", $transientFixtureIds['grup_produk_harga_level']) . "'";
-        $pdo->exec("DELETE FROM public.grup_produk_harga_level WHERE id IN ($in)");
+    if (!empty($transientFixtureIds['wilayah'])) {
+        $in = "'" . implode("','", $transientFixtureIds['wilayah']) . "'";
+        $pdo->exec("DELETE FROM public.surat_jalan WHERE rute_wilayah_id IN ($in)");
+        $pdo->exec("DELETE FROM public.wilayah WHERE id IN ($in)");
+    }
+    if (!empty($transientFixtureIds['akun_kas'])) {
+        $in = "'" . implode("','", $transientFixtureIds['akun_kas']) . "'";
+        $pdo->exec("DELETE FROM public.akun_kas WHERE id IN ($in)");
     }
 });
 
@@ -128,50 +132,37 @@ function ks_get_or_create_test_item(PDO $pdo): array {
     if ($item) {
         return $item;
     }
+    $itemAny = Database::fetchOne("SELECT id, grup_id FROM public.item WHERE status_aktif = TRUE LIMIT 1");
+    if ($itemAny) {
+        return $itemAny;
+    }
 
-    $grupId = 'a0000000-0000-0000-0000-000000000020';
+    // Gunakan grup_produk eksisting yang sudah ada di database tanpa membuat grup dummy baru
+    $existingGroup = Database::fetchOne("SELECT id FROM public.grup_produk WHERE status_aktif = TRUE LIMIT 1");
+    if (!$existingGroup) {
+        throw new RuntimeException("Tidak ada master grup_produk aktif di database.");
+    }
+    $grupId = $existingGroup['id'];
     $itemId = 'a0000000-0000-0000-0000-000000000021';
-    $brand = Database::fetchOne("SELECT id FROM public.merek LIMIT 1");
-    
-    $pdo->prepare("
-        INSERT INTO public.grup_produk (id, kode_grup, nama_grup, satuan_dasar, status_aktif, merek_id)
-        VALUES (:id, 'GRP-FXTR-TMP2', 'Grup Fixture Transien 2', 'pcs', TRUE, :mid)
-        ON CONFLICT (id) DO NOTHING
-    ")->execute(['id' => $grupId, 'mid' => $brand['id'] ?? null]);
-    $transientFixtureIds['grup_produk'][] = $grupId;
 
     $pdo->prepare("
         INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, grup_id, satuan_dasar, status_aktif)
-        VALUES (:id, 'SUB-FXTR-TMP2', 'Item Fixture Transien 2', 'barang_jadi', :gid, 'pcs', TRUE)
+        VALUES (:id, 'SKU-FXTR-TMP', 'Item Fixture Transien', 'barang_jadi', :gid, 'pcs', TRUE)
         ON CONFLICT (id) DO NOTHING
     ")->execute(['id' => $itemId, 'gid' => $grupId]);
     $transientFixtureIds['item'][] = $itemId;
-
-    $pdo->prepare("
-        INSERT INTO public.grup_produk_harga_level (grup_produk_id, level_harga, harga_jual_pcs)
-        VALUES (:gid, 1, 10000.00)
-        ON CONFLICT (grup_produk_id, level_harga) DO NOTHING
-    ")->execute(['gid' => $grupId]);
 
     return ['id' => $itemId, 'grup_id' => $grupId];
 }
 
 function ks_get_or_create_test_sales(PDO $pdo): array {
-    global $transientFixtureIds;
     $sales = Database::fetchOne("SELECT id FROM public.v_karyawan_info WHERE status_aktif = TRUE LIMIT 1");
     if ($sales) return $sales;
 
-    $user = Database::fetchOne("SELECT id FROM public.pengguna WHERE status_aktif = TRUE LIMIT 1");
-    if ($user) {
-        $k = Database::fetchOne("SELECT id FROM public.karyawan WHERE pengguna_id = :uid", ['uid' => $user['id']]);
-        if ($k) return ['id' => $k['id']];
-        $stmtK = $pdo->prepare("INSERT INTO public.karyawan (pengguna_id, tipe_penggajian) VALUES (:uid, 'bulanan') RETURNING id");
-        $stmtK->execute(['uid' => $user['id']]);
-        $kId = $stmtK->fetchColumn();
-        $transientFixtureIds['karyawan'][] = $kId;
-        return ['id' => $kId];
-    }
-    return ['id' => '00000000-0000-0000-0000-000000000000'];
+    $k = Database::fetchOne("SELECT id FROM public.karyawan LIMIT 1");
+    if ($k) return $k;
+
+    throw new RuntimeException("Tidak ada master karyawan aktif di database riil.");
 }
 
 function ks_get_or_create_test_order(PDO $pdo): array {
@@ -179,13 +170,16 @@ function ks_get_or_create_test_order(PDO $pdo): array {
     $order = Database::fetchOne("SELECT id FROM public.pesanan LIMIT 1");
     if ($order) return $order;
 
-    $grup = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
-    $grupId = $grup['id'] ?? null;
+    $cust = Database::fetchOne("SELECT id FROM public.pelanggan WHERE status_aktif = TRUE LIMIT 1");
+    $custId = $cust['id'] ?? null;
 
-    $stmtC = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, nama_toko, alamat_lengkap, grup_pelanggan_id, status_aktif) VALUES ('CUST-FXTR-TMP', 'Toko Order Fixture Transien', 'Jl. Toko Fixture No. 1', :gid, TRUE) RETURNING id");
-    $stmtC->execute(['gid' => $grupId]);
-    $custId = $stmtC->fetchColumn();
-    $transientFixtureIds['pelanggan'][] = $custId;
+    if (!$custId) {
+        $grup = Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
+        $stmtC = $pdo->prepare("INSERT INTO public.pelanggan (kode_pelanggan, nama_toko, alamat_lengkap, grup_pelanggan_id, status_aktif) VALUES ('CUST-FXTR-TMP', 'Toko Order Fixture Transien', 'Jl. Toko Fixture No. 1', :gid, TRUE) RETURNING id");
+        $stmtC->execute(['gid' => $grup['id'] ?? null]);
+        $custId = $stmtC->fetchColumn();
+        $transientFixtureIds['pelanggan'][] = $custId;
+    }
 
     $stmtO = $pdo->prepare("INSERT INTO public.pesanan (nomor_nota, pelanggan_id, total_bruto, total_netto, tipe_pembayaran, status_pembayaran) VALUES ('NOTA-FXTR-TMP', :cid, 50000, 50000, 'cash', 'lunas') RETURNING id");
     $stmtO->execute(['cid' => $custId]);
