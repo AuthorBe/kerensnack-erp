@@ -23,7 +23,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 use App\Controllers\ProfileController;
 use App\Core\Auth;
-use App\Helpers\Csrf;
+use App\Helpers\CSRF;
 use App\Helpers\Flash;
 
 $pdo = Database::getConnection();
@@ -126,7 +126,7 @@ try {
     });
 
     it("1.2 - ProfileController: updateEmployee memperbarui nama lengkap, nama panggilan, alamat, whatsapp, bank, dan nopol", function() use ($testUserId) {
-        $_POST['csrf_token'] = Csrf::token();
+        $_POST['csrf_token'] = CSRF::token();
         $_POST['nama_lengkap'] = 'Budi Santoso Baru';
         $_POST['nama_panggilan'] = 'Santo';
         $_POST['alamat'] = 'Jl. Anggrek Baru No. 99, Jakarta';

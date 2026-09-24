@@ -73,6 +73,11 @@ spl_autoload_register(function (string $class) {
 
     if (file_exists($file)) {
         require_once $file;
+    } elseif (str_starts_with($relativeClass, 'Helpers\\')) {
+        $helperName = substr($relativeClass, 8);
+        if (strcasecmp($helperName, 'CSRF') === 0 && file_exists($baseDir . 'Helpers/CSRF.php')) {
+            require_once $baseDir . 'Helpers/CSRF.php';
+        }
     }
 });
 
@@ -83,8 +88,11 @@ if (!class_exists('Router', false)) {
 if (!class_exists('Auth', false)) {
     class_alias(\App\Core\Auth::class, 'Auth');
 }
+if (!class_exists('CSRF', false)) {
+    class_alias(\App\Helpers\CSRF::class, 'CSRF');
+}
 if (!class_exists('Csrf', false)) {
-    class_alias(\App\Helpers\Csrf::class, 'Csrf');
+    class_alias(\App\Helpers\CSRF::class, 'Csrf');
 }
 if (!class_exists('Flash', false)) {
     class_alias(\App\Helpers\Flash::class, 'Flash');

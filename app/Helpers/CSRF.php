@@ -77,3 +77,7 @@ class CSRF
         return self::validate($token);
     }
 }
+
+if (!class_exists('App\Helpers\Csrf', false)) {
+    class_alias(CSRF::class, 'App\Helpers\Csrf');
+}
