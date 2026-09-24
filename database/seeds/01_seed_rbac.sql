@@ -6,7 +6,7 @@
 -- 1. Insert Peran Standar
 INSERT INTO public.peran (id, nama_peran, deskripsi) VALUES
 ('11111111-1111-1111-1111-111111111101', 'owner',  'Owner & Pimpinan Bisnis'),
-('11111111-1111-1111-1111-111111111102', 'admin',  'Administrator Operasional & Kasir'),
+('11111111-1111-1111-1111-111111111102', 'admin',  'Admin Operasional & Administrasi Bisnis'),
 ('11111111-1111-1111-1111-111111111103', 'mandor', 'Mandor Produksi & Pengawas Pengemasan'),
 ('41676225-d31e-42b8-80d5-26d93762e014', 'sales',  'Sales Lapangan & Penjualan Rute Toko'),
 ('51676225-d31e-42b8-80d5-26d93762e015', 'driver', 'Driver Pengantaran Logistik Armada')

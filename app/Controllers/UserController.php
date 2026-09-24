@@ -43,7 +43,7 @@ class UserController extends Controller
                    p.posisi as posisi_karyawan
             FROM public.pengguna p
             JOIN public.peran pr ON p.peran_id = pr.id
-            WHERE 1=1
+            WHERE p.nama_pengguna IS NOT NULL
         ";
         $params = [];
 

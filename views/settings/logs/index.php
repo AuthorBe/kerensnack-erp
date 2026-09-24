@@ -842,18 +842,24 @@ $roleThemes = [
                 </div>
 
                 <!-- Konfirmasi Kata Sandi Developer -->
-                <div style="margin-bottom:20px;">
+                <div style="margin-bottom:20px;" x-data="{ showPrunePass: false }">
                     <label class="form-label" style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">
                         Konfirmasi Kata Sandi Developer: <span style="color:#e11d48;">*</span>
                     </label>
-                    <div class="relative">
+                    <div style="position:relative;display:flex;align-items:center;">
                         <i data-lucide="lock" style="width:14px;height:14px;color:var(--color-ink-mute);position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;"></i>
-                        <input type="password" 
+                        <input :type="showPrunePass ? 'text' : 'password'" 
                                name="developer_password" 
                                required 
                                placeholder="Masukkan kata sandi akun Developer..." 
+                               autocomplete="current-password"
                                class="form-input" 
-                               style="height:38px;padding-left:36px;font-size:12.5px;width:100%;border-radius:8px;">
+                               style="height:38px;padding-left:36px;padding-right:38px;font-size:12.5px;width:100%;border-radius:8px;">
+                        <button type="button" @click="showPrunePass = !showPrunePass" :title="showPrunePass ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
+                                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                            <span x-show="!showPrunePass" style="display:flex;align-items:center;"><i data-lucide="eye" style="width:15px;height:15px;"></i></span>
+                            <span x-show="showPrunePass" style="display:flex;align-items:center;" x-cloak><i data-lucide="eye-off" style="width:15px;height:15px;"></i></span>
+                        </button>
                     </div>
                     <span style="font-size:11px;color:var(--color-ink-mute);margin-top:5px;display:block;">
                         Kata sandi akan diverifikasi secara aman ke database sebelum perintah delete dieksekusi.

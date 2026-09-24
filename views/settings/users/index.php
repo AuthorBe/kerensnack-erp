@@ -40,7 +40,7 @@ ob_start();
         <div class="page-header-actions">
             <?php if ($canManage): ?>
                 <button type="button" 
-                        @click="addModalOpen = true" 
+                        @click="showAddPass = false; addModalOpen = true; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });" 
                         class="btn btn-primary btn-sm"
                         style="font-weight:700;font-size:12px;padding:7px 14px;border-radius:10px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(37,99,235,0.25);">
                     <i data-lucide="user-plus" style="width:14px;height:14px;"></i>
@@ -133,21 +133,21 @@ ob_start();
                                 <td style="padding:10px 14px;">
                                     <div style="display:flex;align-items:center;gap:10px;">
                                         <div style="width:32px;height:32px;border-radius:var(--rounded-full);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11.5px;flex-shrink:0;<?= $isDev ? 'background:rgba(139,92,246,0.14);color:#8b5cf6;' : 'background:rgba(59,130,246,0.12);color:#3b82f6;' ?>">
-                                            <?= strtoupper(substr($u['nama_lengkap'], 0, 2)) ?>
+                                            <?= strtoupper(substr((string)($u['nama_lengkap'] ?? ''), 0, 2)) ?>
                                         </div>
                                         <div>
                                             <div style="font-weight:700;font-size:13px;color:var(--color-ink);display:flex;align-items:center;gap:6px;">
-                                                <span><?= htmlspecialchars($u['nama_lengkap']) ?></span>
+                                                <span><?= htmlspecialchars((string)($u['nama_lengkap'] ?? '')) ?></span>
                                                 <?php if ($isSelf): ?>
                                                     <span class="badge badge-mono text-[9px]" style="background:rgba(59,130,246,0.12);color:#3b82f6;">Anda</span>
                                                 <?php endif; ?>
                                             </div>
                                             <div style="font-size:11px;color:var(--color-ink-mute);font-family:var(--font-mono);display:flex;align-items:center;gap:6px;">
-                                                <span>@<?= htmlspecialchars($u['nama_pengguna']) ?></span>
+                                                <span>@<?= htmlspecialchars((string)($u['nama_pengguna'] ?? '')) ?></span>
                                                 <?php if (!empty($u['id_telegram'])): ?>
-                                                    <span title="Telegram ID: <?= htmlspecialchars($u['id_telegram']) ?>" style="display:inline-flex;align-items:center;gap:3px;color:#0284c7;font-size:10px;background:rgba(2,132,199,0.08);padding:1px 5px;border-radius:4px;border:1px solid rgba(2,132,199,0.2);">
+                                                    <span title="Telegram ID: <?= htmlspecialchars((string)$u['id_telegram']) ?>" style="display:inline-flex;align-items:center;gap:3px;color:#0284c7;font-size:10px;background:rgba(2,132,199,0.08);padding:1px 5px;border-radius:4px;border:1px solid rgba(2,132,199,0.2);">
                                                         <i data-lucide="send" style="width:9px;height:9px;"></i>
-                                                        <span><?= htmlspecialchars($u['id_telegram']) ?></span>
+                                                        <span><?= htmlspecialchars((string)$u['id_telegram']) ?></span>
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
@@ -156,7 +156,7 @@ ob_start();
                                 </td>
 
                                 <td style="padding:10px 14px;">
-                                    <span class="badge" style="<?= match($u['peran']) {
+                                    <span class="badge" style="<?= match($u['peran'] ?? '') {
                                         'developer' => 'background:rgba(139,92,246,0.12);color:#8b5cf6;border:1px solid rgba(139,92,246,0.25);',
                                         'owner' => 'background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);',
                                         'admin' => 'background:rgba(59,130,246,0.12);color:#2563eb;border:1px solid rgba(59,130,246,0.25);',
@@ -165,7 +165,7 @@ ob_start();
                                         'driver' => 'background:rgba(2,132,199,0.12);color:#0284c7;border:1px solid rgba(2,132,199,0.25);',
                                         default => 'background:var(--color-canvas-soft);color:var(--color-ink-secondary);border:1px solid var(--color-hairline);',
                                     } ?>font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
-                                        <i data-lucide="<?= match($u['peran']) {
+                                        <i data-lucide="<?= match($u['peran'] ?? '') {
                                             'developer' => 'terminal',
                                             'owner' => 'crown',
                                             'admin' => 'briefcase',
@@ -174,14 +174,14 @@ ob_start();
                                             'driver' => 'truck',
                                             default => 'tag',
                                         } ?>" style="width:11px;height:11px;"></i>
-                                        <span><?= htmlspecialchars(ucfirst($u['peran'])) ?></span>
+                                        <span><?= htmlspecialchars(ucfirst((string)($u['peran'] ?? ''))) ?></span>
                                     </span>
                                 </td>
 
                                 <td style="padding:10px 14px;">
                                     <?php if (!empty($u['posisi_karyawan'])): ?>
                                         <div style="font-weight:600;font-size:12.5px;color:var(--color-ink);">
-                                            <?= htmlspecialchars($u['posisi_karyawan']) ?>
+                                            <?= htmlspecialchars((string)$u['posisi_karyawan']) ?>
                                         </div>
                                     <?php else: ?>
                                         <span style="color:var(--color-ink-mute);font-style:italic;font-size:11.5px;">-</span>
@@ -202,11 +202,11 @@ ob_start();
                                     <div style="display:inline-flex;align-items:center;gap:4px;">
                                         <!-- Link Loket Izin (Hanya untuk non-developer jika punya izin rbac.permissions_manage) -->
                                         <?php if (!$isDev && Auth::can('rbac.permissions_manage')): ?>
-                                            <a href="<?= Router::url('/permissions?tab=user&user_id=' . urlencode($u['id'])) ?>" 
-                                               data-loader="action"
-                                               data-action-text="Memuat izin pengguna..."
-                                               class="btn btn-ghost btn-sm" style="padding:5px;"
-                                               title="Atur Izin Kustom Pengguna">
+                                            <a href="<?= Router::url('/permissions?tab=user&user_id=' . urlencode((string)$u['id'])) ?>" 
+                                                data-loader="action"
+                                                data-action-text="Memuat izin pengguna..."
+                                                class="btn btn-ghost btn-sm" style="padding:5px;"
+                                                title="Atur Izin Kustom Pengguna">
                                                 <i data-lucide="shield-check" style="width:14px;height:14px;color:#f97316;"></i>
                                             </a>
                                         <?php endif; ?>
@@ -223,7 +223,7 @@ ob_start();
                                             <?php if (!$isSelf && !$isDev): ?>
                                                 <!-- Toggle Suspend (Akun developer dilindungi dari suspend) -->
                                                 <form action="<?= Router::url('/users/toggle-status') ?>" method="POST" data-action-text="<?= $isActive ? 'Menonaktifkan akun pengguna...' : 'Mengaktifkan akun pengguna...' ?>" style="display:inline;">
-                                                    <input type="hidden" name="id" value="<?= htmlspecialchars($u['id']) ?>">
+                                                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$u['id']) ?>">
                                                     <button type="submit" 
                                                             class="btn btn-ghost btn-sm" style="padding:5px;"
                                                             title="<?= $isActive ? 'Nonaktifkan Akun' : 'Aktifkan Akun' ?>">
@@ -234,11 +234,11 @@ ob_start();
                                                 <!-- Delete / Cabut Akses User (Akun developer dilindungi dari penghapusan) -->
                                                 <form action="<?= Router::url('/users/delete') ?>" method="POST" style="display:inline;"
                                                       data-action-text="Mencabut akses login pengguna..."
-                                                      data-confirm="Apakah Anda yakin ingin mencabut hak akses login @<?= htmlspecialchars($u['nama_pengguna']) ?> (<?= htmlspecialchars($u['nama_lengkap']) ?>)? Data profil dan riwayat karyawan tetap aman tersimpan."
+                                                      data-confirm="Apakah Anda yakin ingin mencabut hak akses login @<?= htmlspecialchars((string)($u['nama_pengguna'] ?? '')) ?> (<?= htmlspecialchars((string)($u['nama_lengkap'] ?? '')) ?>)? Data profil dan riwayat karyawan tetap aman tersimpan."
                                                       data-confirm-title="Cabut Akses Login"
                                                       data-confirm-type="danger"
                                                       data-confirm-btn="Ya, Cabut Akses">
-                                                    <input type="hidden" name="id" value="<?= htmlspecialchars($u['id']) ?>">
+                                                    <input type="hidden" name="id" value="<?= htmlspecialchars((string)$u['id']) ?>">
                                                     <button type="submit" class="btn btn-ghost btn-sm" style="padding:5px;" title="Cabut Akses Login">
                                                         <i data-lucide="user-minus" style="width:14px;height:14px;color:var(--color-danger);"></i>
                                                     </button>
@@ -315,8 +315,8 @@ ob_start();
                                     onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
                                 <option value="">-- Pilih Karyawan yang Ingin Diberi Akses Login --</option>
                                 <?php foreach ($availableEmployees as $emp): ?>
-                                    <option value="<?= htmlspecialchars($emp['id']) ?>">
-                                        <?= htmlspecialchars($emp['nama_lengkap']) ?><?= !empty($emp['posisi']) ? ' • ' . strtoupper(htmlspecialchars($emp['posisi'])) : '' ?>
+                                    <option value="<?= htmlspecialchars((string)$emp['id']) ?>">
+                                        <?= htmlspecialchars((string)($emp['nama_lengkap'] ?? '')) ?><?= !empty($emp['posisi']) ? ' • ' . strtoupper(htmlspecialchars((string)$emp['posisi'])) : '' ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -362,10 +362,22 @@ ob_start();
                                 <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
                                     Kata Sandi <span style="color:#e11d48;">*</span>
                                 </label>
-                                <input type="password" name="password" placeholder="Minimal 4 karakter" required 
-                                       style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                       onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                       onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
+                                <div style="position:relative;display:flex;align-items:center;">
+                                    <input :type="showAddPass ? 'text' : 'password'" name="password" placeholder="Minimal 4 karakter" required autocomplete="new-password" 
+                                           style="width:100%;height:44px;padding:0 42px 0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
+                                           onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
+                                           onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
+                                    <button type="button" @click="showAddPass = !showAddPass" :title="showAddPass ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
+                                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:color 0.15s;"
+                                            onmouseover="this.style.color='#0f172a';" onmouseout="this.style.color='#64748b';">
+                                        <span x-show="!showAddPass" style="display:flex;align-items:center;">
+                                            <i data-lucide="eye" style="width:18px;height:18px;"></i>
+                                        </span>
+                                        <span x-show="showAddPass" style="display:flex;align-items:center;" x-cloak>
+                                            <i data-lucide="eye-off" style="width:18px;height:18px;"></i>
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -494,10 +506,22 @@ ob_start();
                                 <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
                                     Ganti Kata Sandi <span style="font-size:0.76rem;color:#64748b;font-weight:400;">(Kosongkan jika tetap)</span>
                                 </label>
-                                <input type="password" name="password" placeholder="••••••••" 
-                                       style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                       onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                       onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
+                                <div style="position:relative;display:flex;align-items:center;">
+                                    <input :type="showEditPass ? 'text' : 'password'" name="password" placeholder="••••••••" autocomplete="new-password" 
+                                           style="width:100%;height:44px;padding:0 42px 0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
+                                           onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
+                                           onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
+                                    <button type="button" @click="showEditPass = !showEditPass" :title="showEditPass ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
+                                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:color 0.15s;"
+                                            onmouseover="this.style.color='#0f172a';" onmouseout="this.style.color='#64748b';">
+                                        <span x-show="!showEditPass" style="display:flex;align-items:center;">
+                                            <i data-lucide="eye" style="width:18px;height:18px;"></i>
+                                        </span>
+                                        <span x-show="showEditPass" style="display:flex;align-items:center;" x-cloak>
+                                            <i data-lucide="eye-off" style="width:18px;height:18px;"></i>
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div>
@@ -669,6 +693,8 @@ function userManagementApp() {
     return {
         addModalOpen: false,
         editModalOpen: false,
+        showAddPass: false,
+        showEditPass: false,
         availableEmployees: <?= json_encode($availableEmployees ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         users: <?= json_encode($users ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>,
         selectedEmployeeId: '',
@@ -701,6 +727,7 @@ function userManagementApp() {
                 status_aktif: (user.status_aktif === true || user.status_aktif === 1 || user.status_aktif === '1' || user.status_aktif === 't'),
                 is_developer: user.peran === 'developer'
             };
+            this.showEditPass = false;
             this.editModalOpen = true;
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();

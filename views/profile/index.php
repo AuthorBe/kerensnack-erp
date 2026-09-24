@@ -456,7 +456,7 @@ $initialTab = $activeTab ?? 'karyawan';
     <!-- TAB 2: AKUN & KEAMANAN                                                    -->
     <!-- ========================================================================= -->
     <div x-show="activeTab === 'keamanan'" x-cloak class="space-y-6">
-        <form id="form-account-security" action="<?= Router::url('/profile/update') ?>" method="POST" x-data="{ showOld: false, showNew: false }">
+        <form id="form-account-security" action="<?= Router::url('/profile/update') ?>" method="POST" x-data="{ showOld: false, showNew: false, showConfirm: false }">
             <?= \App\Helpers\CSRF::field() ?>
 
             <!-- MAIN TWO-COLUMN SECTION -->
@@ -544,14 +544,18 @@ $initialTab = $activeTab ?? 'karyawan';
                             <?php if (!empty($user['has_password']) && !$isDeveloper): ?>
                             <div>
                                 <label class="form-label" for="current_password">Kata Sandi Saat Ini</label>
-                                <div style="position:relative;">
+                                <div style="position:relative;display:flex;align-items:center;">
                                     <input :type="showOld ? 'text' : 'password'"
                                            id="current_password"
                                            name="current_password"
                                            class="form-input"
-                                           placeholder="Wajib jika ubah password">
-                                    <button type="button" @click="showOld = !showOld" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:4px;">
-                                        <i :data-lucide="showOld ? 'eye-off' : 'eye'" style="width:15px;height:15px;"></i>
+                                           placeholder="Wajib jika ubah password"
+                                           autocomplete="current-password"
+                                           style="padding-right:42px;">
+                                    <button type="button" @click="showOld = !showOld" :title="showOld ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
+                                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                        <span x-show="!showOld" style="display:flex;align-items:center;"><i data-lucide="eye" style="width:16px;height:16px;"></i></span>
+                                        <span x-show="showOld" style="display:flex;align-items:center;" x-cloak><i data-lucide="eye-off" style="width:16px;height:16px;"></i></span>
                                     </button>
                                 </div>
                             </div>
@@ -559,27 +563,40 @@ $initialTab = $activeTab ?? 'karyawan';
 
                             <div>
                                 <label class="form-label" for="new_password">Kata Sandi Baru</label>
-                                <div style="position:relative;">
+                                <div style="position:relative;display:flex;align-items:center;">
                                     <input :type="showNew ? 'text' : 'password'"
                                            id="new_password"
                                            name="new_password"
                                            class="form-input"
                                            placeholder="Kosongkan jika tidak diubah"
-                                           minlength="6">
-                                    <button type="button" @click="showNew = !showNew" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:4px;">
-                                        <i :data-lucide="showNew ? 'eye-off' : 'eye'" style="width:15px;height:15px;"></i>
+                                           autocomplete="new-password"
+                                           minlength="6"
+                                           style="padding-right:42px;">
+                                    <button type="button" @click="showNew = !showNew" :title="showNew ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
+                                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                        <span x-show="!showNew" style="display:flex;align-items:center;"><i data-lucide="eye" style="width:16px;height:16px;"></i></span>
+                                        <span x-show="showNew" style="display:flex;align-items:center;" x-cloak><i data-lucide="eye-off" style="width:16px;height:16px;"></i></span>
                                     </button>
                                 </div>
                             </div>
 
                             <div>
                                 <label class="form-label" for="confirm_password">Konfirmasi Kata Sandi Baru</label>
-                                <input type="password"
-                                       id="confirm_password"
-                                       name="confirm_password"
-                                       class="form-input"
-                                       placeholder="Ulangi kata sandi baru"
-                                       minlength="6">
+                                <div style="position:relative;display:flex;align-items:center;">
+                                    <input :type="showConfirm ? 'text' : 'password'"
+                                           id="confirm_password"
+                                           name="confirm_password"
+                                           class="form-input"
+                                           placeholder="Ulangi kata sandi baru"
+                                           autocomplete="new-password"
+                                           minlength="6"
+                                           style="padding-right:42px;">
+                                    <button type="button" @click="showConfirm = !showConfirm" :title="showConfirm ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
+                                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                        <span x-show="!showConfirm" style="display:flex;align-items:center;"><i data-lucide="eye" style="width:16px;height:16px;"></i></span>
+                                        <span x-show="showConfirm" style="display:flex;align-items:center;" x-cloak><i data-lucide="eye-off" style="width:16px;height:16px;"></i></span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
