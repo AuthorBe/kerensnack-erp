@@ -23,7 +23,7 @@ class EmployeeController extends Controller
     {
         try {
             $employees = Database::fetchAll("
-                SELECT k.id, k.nik, k.nik_pending, k.nama_karyawan, k.posisi, k.tipe_penggajian,
+                SELECT k.id, k.nik, k.nik_pending, k.nama_karyawan, k.nama_panggilan, k.posisi, k.tipe_penggajian,
                        k.gaji_pokok_bulanan, k.uang_kehadiran_harian, k.tunjangan_bulanan,
                        k.nomor_telepon, k.nomor_whatsapp, k.alamat, k.tanggal_bergabung,
                        k.nomor_polisi_kendaraan,
@@ -94,6 +94,7 @@ class EmployeeController extends Controller
         Auth::requirePermission('master.employees_manage');
 
         $nama = trim((string)$this->input('nama_karyawan'));
+        $namaPanggilan = trim((string)$this->input('nama_panggilan', ''));
         $nikPending = (bool)$this->input('nik_pending', false);
         $nikRaw = trim((string)$this->input('nik'));
         $nik = preg_replace('/[^0-9]/', '', $nikRaw);
@@ -153,15 +154,16 @@ class EmployeeController extends Controller
 
             $stmt = $pdo->prepare("
                 INSERT INTO public.pengguna (
-                    nama_lengkap, nik, nik_pending, posisi, nomor_telepon, nomor_whatsapp, alamat, nomor_polisi_kendaraan,
+                    nama_lengkap, nama_panggilan, nik, nik_pending, posisi, nomor_telepon, nomor_whatsapp, alamat, nomor_polisi_kendaraan,
                     tanggal_bergabung, bank_nama, bank_nomor_rekening, bank_atas_nama, status_aktif
                 ) VALUES (
-                    :nama, :nik, :nik_pending, :posisi, :wa, :wa, :alamat, :nopol, :tgl,
+                    :nama, :panggilan, :nik, :nik_pending, :posisi, :wa, :wa, :alamat, :nopol, :tgl,
                     :bank, :rek, :an, TRUE
                 ) RETURNING id
             ");
             $stmt->execute([
                 'nama'        => $nama,
+                'panggilan'   => $namaPanggilan ?: null,
                 'nik'         => $nikPending ? null : $nik,
                 'nik_pending' => $nikPending ? 'true' : 'false',
                 'posisi'      => $posisi,
@@ -236,6 +238,7 @@ class EmployeeController extends Controller
 
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_karyawan'));
+        $namaPanggilan = trim((string)$this->input('nama_panggilan', ''));
         $nikPending = (bool)$this->input('nik_pending', false);
         $nikRaw = trim((string)$this->input('nik'));
         $nik = preg_replace('/[^0-9]/', '', $nikRaw);
@@ -311,6 +314,7 @@ class EmployeeController extends Controller
                         nik = :nik,
                         nik_pending = :nik_pending,
                         nama_lengkap = :nama,
+                        nama_panggilan = :panggilan,
                         posisi = :posisi,
                         nomor_telepon = :wa,
                         nomor_whatsapp = :wa,
@@ -328,6 +332,7 @@ class EmployeeController extends Controller
                     'nik'         => $nikPending ? null : $nik,
                     'nik_pending' => $nikPending ? 'true' : 'false',
                     'nama'        => $nama,
+                    'panggilan'   => $namaPanggilan ?: null,
                     'posisi'      => $posisi,
                     'wa'          => $whatsapp ?: null,
                     'alamat'      => $alamat,

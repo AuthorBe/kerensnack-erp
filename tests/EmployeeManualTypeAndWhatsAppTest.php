@@ -52,9 +52,9 @@ echo "====================================================================\n\n";
 $handler = new EmployeeImportHandler();
 
 // 1. HEADER & STRUCTURE TESTS
-it("1.1 - Header template berjumlah tepat 15 kolom (tanpa kolom username)", function() use ($handler) {
+it("1.1 - Header template berjumlah tepat 16 kolom (termasuk Nama Panggilan)", function() use ($handler) {
     $headers = $handler->getTemplateHeaders();
-    return count($headers) === 15 && !in_array('Username / Nama Pengguna', $headers, true);
+    return count($headers) === 16 && !in_array('Username / Nama Pengguna', $headers, true) && in_array('Nama Panggilan', $headers, true);
 });
 
 it("1.2 - Header tidak memuat 'No Telepon' dan memuat 'No WhatsApp'", function() use ($handler) {
@@ -64,17 +64,17 @@ it("1.2 - Header tidak memuat 'No Telepon' dan memuat 'No WhatsApp'", function()
     return !$hasTelp && $hasWa;
 });
 
-it("1.3 - Header memuat 'Tipe Penggajian' pada kolom indeks 3 (kolom D)", function() use ($handler) {
+it("1.3 - Header memuat 'Tipe Penggajian' pada kolom indeks 4 (kolom E)", function() use ($handler) {
     $headers = $handler->getTemplateHeaders();
-    return ($headers[3] ?? '') === 'Tipe Penggajian';
+    return ($headers[4] ?? '') === 'Tipe Penggajian';
 });
 
-it("1.4 - Lebar kolom dan contoh data konsisten berjumlah 15 item", function() use ($handler) {
+it("1.4 - Lebar kolom dan contoh data konsisten berjumlah 16 item", function() use ($handler) {
     $widths = $handler->getTemplateWidths();
     $examples = $handler->getTemplateExamples();
-    if (count($widths) !== 15) return "Lebar kolom bukan 15: " . count($widths);
+    if (count($widths) !== 16) return "Lebar kolom bukan 16: " . count($widths);
     foreach ($examples as $idx => $row) {
-        if (count($row) !== 15) return "Contoh baris {$idx} bukan 15 kolom: " . count($row);
+        if (count($row) !== 16) return "Contoh baris {$idx} bukan 16 kolom: " . count($row);
     }
     return true;
 });
@@ -84,15 +84,15 @@ it("2.1 - TemplateGenerator mengekspor 'Tipe Penggajian' sebagai teks murni (buk
     $spreadsheet = TemplateGenerator::buildSpreadsheet($handler, 'current_data', $pdo);
     $sheet = $spreadsheet->getActiveSheet();
     
-    // Periksa baris 4 kolom D (header)
-    $headerVal = $sheet->getCell('D4')->getValue();
-    if ($headerVal !== 'Tipe Penggajian') return "Header D4 bukan Tipe Penggajian: {$headerVal}";
+    // Periksa baris 4 kolom E (header Tipe Penggajian)
+    $headerVal = $sheet->getCell('E4')->getValue();
+    if ($headerVal !== 'Tipe Penggajian') return "Header E4 bukan Tipe Penggajian: {$headerVal}";
     
     // Periksa baris 5+ data
     $highestRow = $sheet->getHighestRow();
     if ($highestRow >= 5) {
         for ($r = 5; $r <= min(15, $highestRow); $r++) {
-            $val = (string)$sheet->getCell("D{$r}")->getValue();
+            $val = (string)$sheet->getCell("E{$r}")->getValue();
             if ($val === '0' || $val === '0.00' || $val === '0.0') {
                 return "Baris {$r} bernilai angka 0!";
             }
@@ -108,9 +108,9 @@ it("2.2 - TemplateGenerator mengekspor 'No WhatsApp' dengan awalan nol tetap utu
     $spreadsheet = TemplateGenerator::buildSpreadsheet($handler, 'current_data', $pdo);
     $sheet = $spreadsheet->getActiveSheet();
     
-    // Kolom H4 adalah No WhatsApp (kolom ke-8 = H)
-    $headerH = $sheet->getCell('H4')->getValue();
-    if ($headerH !== 'No WhatsApp') return "Header H4 bukan No WhatsApp: {$headerH}";
+    // Kolom I4 adalah No WhatsApp (kolom ke-9 = I)
+    $headerI = $sheet->getCell('I4')->getValue();
+    if ($headerI !== 'No WhatsApp') return "Header I4 bukan No WhatsApp: {$headerI}";
     
     return true;
 });
@@ -210,11 +210,12 @@ it("4.2 - Database CHECK constraint menolak tipe_penggajian di luar 'borongan' d
 });
 
 // 5. IMPORT HANDLER PREVIEW & SYNC TEST
-it("5.1 - EmployeeImportHandler membaca kolom No WhatsApp dan Tipe Penggajian manual dengan tepat", function() use ($handler, $pdo) {
+it("5.1 - EmployeeImportHandler membaca kolom No WhatsApp, Nama Panggilan, dan Tipe Penggajian manual dengan tepat", function() use ($handler, $pdo) {
     $header = $handler->getTemplateHeaders();
     $testRow = [
         '3201019999888877',
         'Karyawan Import Test',
+        'Budi',
         'sales',
         'bulanan', // Tipe manual 2 opsi
         '2500000',
@@ -237,6 +238,7 @@ it("5.1 - EmployeeImportHandler membaca kolom No WhatsApp dan Tipe Penggajian ma
     if (($p['action'] ?? '') === 'ERROR') return "Preview error: " . ($p['error_msg'] ?? '');
     
     $data = $p['data'];
+    if ($data['nama_panggilan'] !== 'Budi') return "Nama panggilan bukan Budi: " . $data['nama_panggilan'];
     if ($data['tipe_penggajian'] !== 'bulanan') return "Tipe penggajian bukan bulanan: " . $data['tipe_penggajian'];
     if ($data['nomor_whatsapp'] !== '087766554433') return "Nomor WhatsApp tidak terbaca: " . $data['nomor_whatsapp'];
     

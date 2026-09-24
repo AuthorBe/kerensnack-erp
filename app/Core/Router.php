@@ -22,6 +22,11 @@ class Router
         self::$routes['POST'][$path] = $handler;
     }
 
+    public static function getRoutes(): array
+    {
+        return self::$routes;
+    }
+
     public static function getBasePath(): string
     {
         $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));

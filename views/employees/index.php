@@ -696,7 +696,10 @@ ob_start();
                             
                             <!-- Nama & Kontak -->
                             <td>
-                                <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);" x-text="e.nama_karyawan"></div>
+                                <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);">
+                                    <span x-text="e.nama_karyawan"></span>
+                                    <span x-show="e.nama_panggilan" style="font-size:12px;font-weight:500;color:var(--color-ink-mute);" x-text="'(' + e.nama_panggilan + ')'"></span>
+                                </div>
                                 <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                                     <template x-if="e.nik">
                                         <span class="badge badge-mono" style="font-size:10.5px;padding:1px 6px;color:var(--color-ink-secondary);border-color:var(--color-hairline);background:var(--color-canvas-soft);">
@@ -854,10 +857,14 @@ ob_start();
                     1. Identitas &amp; Kontak Pegawai
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                         <label class="form-label">Nama Lengkap Karyawan *</label>
-                        <input type="text" name="nama_karyawan" x-model="form.nama_karyawan" required class="form-input" placeholder="Contoh: Teh Ika">
+                        <input type="text" name="nama_karyawan" x-model="form.nama_karyawan" required class="form-input" placeholder="Contoh: Siti Rohani">
+                    </div>
+                    <div>
+                        <label class="form-label">Nama Panggilan *</label>
+                        <input type="text" name="nama_panggilan" x-model="form.nama_panggilan" class="form-input" placeholder="Contoh: Rohani / Teh Ika">
                     </div>
                     <div>
                         <label class="form-label">Nomor WhatsApp *</label>
@@ -1490,13 +1497,16 @@ function employeeApp() {
             nik: '',
             nik_pending: false,
             nama_karyawan: '',
+            nama_panggilan: '',
             posisi: 'pengemasan',
             tipe_penggajian: 'borongan',
             gaji_pokok_bulanan: '0',
             uang_kehadiran_harian: '10.000',
             tunjangan_bulanan: '50.000',
+            nomor_whatsapp: '',
             nomor_telepon: '',
             alamat: '',
+            nomor_polisi_kendaraan: '',
             bank_nama: 'Tunai',
             bank_nomor_rekening: '',
             bank_atas_nama: '',
@@ -1528,6 +1538,7 @@ function employeeApp() {
 
                 const matchQuery = !q ||
                     (e.nama_karyawan && e.nama_karyawan.toLowerCase().includes(q)) ||
+                    (e.nama_panggilan && e.nama_panggilan.toLowerCase().includes(q)) ||
                     (e.nik && e.nik.toLowerCase().includes(q)) ||
                     (e.nomor_telepon && e.nomor_telepon.includes(q)) ||
                     (e.nomor_whatsapp && e.nomor_whatsapp.includes(q)) ||
@@ -1815,6 +1826,7 @@ function employeeApp() {
                 nik: '',
                 nik_pending: false,
                 nama_karyawan: '',
+                nama_panggilan: '',
                 posisi: 'pengemasan',
                 tipe_penggajian: 'borongan',
                 gaji_pokok_bulanan: '0',
@@ -1839,6 +1851,7 @@ function employeeApp() {
                 nik: e.nik || '',
                 nik_pending: !!e.nik_pending,
                 nama_karyawan: e.nama_karyawan,
+                nama_panggilan: e.nama_panggilan || '',
                 posisi: e.posisi || 'pengemasan',
                 tipe_penggajian: e.tipe_penggajian || 'borongan',
                 gaji_pokok_bulanan: window.formatRupiahNumber ? window.formatRupiahNumber(e.gaji_pokok_bulanan) : String(e.gaji_pokok_bulanan || 0),

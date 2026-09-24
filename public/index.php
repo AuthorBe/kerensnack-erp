@@ -358,6 +358,7 @@ Router::get('/owner', [OwnerController::class, 'index']);
 // --- MANAJEMEN 2: PROFIL PENGGUNA & PENGATURAN AKUN ---
 Router::get('/profile', [ProfileController::class, 'index']);
 Router::post('/profile/update', [ProfileController::class, 'update']);
+Router::post('/profile/update-employee', [ProfileController::class, 'updateEmployee']);
 Router::post('/profile/update-username', [ProfileController::class, 'update']);
 Router::post('/profile/update-password', [ProfileController::class, 'update']);
 
