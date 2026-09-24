@@ -1142,7 +1142,17 @@ ob_start();
                                         <tr style="border-bottom:1px solid var(--color-hairline);">
                                             <td class="cell-center" style="font-size:12px;color:var(--color-ink-mute);font-weight:600;padding:14px 16px;" x-text="idx + 1"></td>
                                             <td style="padding:14px 16px;">
-                                                <div style="font-weight:700;font-size:13.5px;color:var(--color-ink);" x-text="it.nama_item"></div>
+                                                <div style="font-weight:700;font-size:13.5px;color:var(--color-ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                    <span x-text="it.nama_item"></span>
+                                                    <template x-if="it.is_bonus">
+                                                        <span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:10px;font-weight:800;padding:1px 6px;border-radius:4px;">
+                                                            🎁 BONUS
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                                <template x-if="it.is_bonus && it.catatan_bonus">
+                                                    <div style="font-size:11px;color:#059669;font-style:italic;margin-top:2px;" x-text="'Alasan: ' + it.catatan_bonus"></div>
+                                                </template>
                                                 <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:3px;display:flex;align-items:center;gap:6px;">
                                                     <span class="badge badge-mono" style="font-size:10px;padding:0 5px;" x-text="it.kode_sku"></span>
                                                     <template x-if="it.varian_rasa">
@@ -1153,11 +1163,25 @@ ob_start();
                                             <td class="cell-center cell-nowrap font-mono" style="font-size:12.5px;font-weight:700;padding:14px 16px;">
                                                 <span class="badge badge-mono" style="font-size:11.5px;padding:3px 8px;" x-text="it.kuantitas_satuan_dasar + ' ' + (it.satuan_dasar || 'pcs')"></span>
                                             </td>
-                                            <td class="cell-right cell-nowrap font-mono" style="font-size:12.5px;color:var(--color-ink-secondary);padding:14px 16px;" x-text="formatRupiah(it.harga_satuan_dasar)"></td>
-                                            <td class="cell-right cell-nowrap font-mono" style="font-size:12px;color:#059669;padding:14px 16px;">
-                                                <span x-text="Number(it.diskon_nominal || 0) > 0 ? '-' + formatRupiah(it.diskon_nominal) : '-'"></span>
+                                            <td class="cell-right cell-nowrap font-mono" style="font-size:12.5px;color:var(--color-ink-secondary);padding:14px 16px;">
+                                                <template x-if="it.is_bonus">
+                                                    <span style="color:#059669;font-weight:700;">Rp 0 (Bonus)</span>
+                                                </template>
+                                                <template x-if="!it.is_bonus">
+                                                    <span x-text="formatRupiah(it.harga_satuan_dasar)"></span>
+                                                </template>
                                             </td>
-                                            <td class="cell-right cell-nowrap font-mono font-black" style="font-size:14px;color:var(--color-ink);padding:14px 20px;" x-text="formatRupiah(it.subtotal)"></td>
+                                            <td class="cell-right cell-nowrap font-mono" style="font-size:12px;color:#059669;padding:14px 16px;">
+                                                <span x-text="!it.is_bonus && Number(it.diskon_nominal || 0) > 0 ? '-' + formatRupiah(it.diskon_nominal) : '-'"></span>
+                                            </td>
+                                            <td class="cell-right cell-nowrap font-mono font-black" style="font-size:14px;color:var(--color-ink);padding:14px 20px;">
+                                                <template x-if="it.is_bonus">
+                                                    <span style="color:#059669;">Rp 0</span>
+                                                </template>
+                                                <template x-if="!it.is_bonus">
+                                                    <span x-text="formatRupiah(it.subtotal)"></span>
+                                                </template>
+                                            </td>
                                         </tr>
                                     </template>
                                     <template x-if="orderItems.length === 0">
@@ -1181,7 +1205,17 @@ ob_start();
                                 <div style="padding:12px 0;border-bottom:1px solid var(--color-hairline);display:flex;flex-direction:column;gap:8px;">
                                     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
                                         <div style="min-width:0;flex:1;">
-                                            <div style="font-weight:700;font-size:13px;color:var(--color-ink);line-height:1.35;" x-text="it.nama_item"></div>
+                                            <div style="font-weight:700;font-size:13px;color:var(--color-ink);line-height:1.35;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                <span x-text="it.nama_item"></span>
+                                                <template x-if="it.is_bonus">
+                                                    <span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:4px;">
+                                                        🎁 BONUS
+                                                    </span>
+                                                </template>
+                                            </div>
+                                            <template x-if="it.is_bonus && it.catatan_bonus">
+                                                <div style="font-size:10.5px;color:#059669;font-style:italic;margin-top:2px;" x-text="'Alasan: ' + it.catatan_bonus"></div>
+                                            </template>
                                             <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">
                                                 <span class="font-mono font-semibold" x-text="it.kode_sku"></span>
                                                 <template x-if="it.varian_rasa">
@@ -1190,7 +1224,12 @@ ob_start();
                                             </div>
                                         </div>
                                         <div class="text-right flex-shrink-0">
-                                            <div class="font-mono font-black" style="font-size:14px;color:var(--color-ink);" x-text="formatRupiah(it.subtotal)"></div>
+                                            <template x-if="it.is_bonus">
+                                                <div class="font-mono font-black" style="font-size:13.5px;color:#059669;">Rp 0</div>
+                                            </template>
+                                            <template x-if="!it.is_bonus">
+                                                <div class="font-mono font-black" style="font-size:14px;color:var(--color-ink);" x-text="formatRupiah(it.subtotal)"></div>
+                                            </template>
                                         </div>
                                     </div>
                                     <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:11.5px;">
@@ -1199,8 +1238,13 @@ ob_start();
                                         </div>
 
                                         <div class="font-mono text-right" style="color:var(--color-ink-secondary);font-size:11px;">
-                                            <span x-text="'@ ' + formatRupiah(it.harga_satuan_dasar)"></span>
-                                            <template x-if="Number(it.diskon_nominal || 0) > 0">
+                                            <template x-if="it.is_bonus">
+                                                <span style="color:#059669;font-weight:700;">@ Rp 0 (Bonus)</span>
+                                            </template>
+                                            <template x-if="!it.is_bonus">
+                                                <span x-text="'@ ' + formatRupiah(it.harga_satuan_dasar)"></span>
+                                            </template>
+                                            <template x-if="!it.is_bonus && Number(it.diskon_nominal || 0) > 0">
                                                 <span style="color:#059669;margin-left:4px;font-weight:700;" x-text="'(-' + formatRupiah(it.diskon_nominal) + ')'"></span>
                                             </template>
                                         </div>

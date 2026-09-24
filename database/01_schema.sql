@@ -525,6 +525,7 @@ CREATE TABLE IF NOT EXISTS public.item_pesanan (
     diskon_item_persen NUMERIC(5, 2) DEFAULT 0.00,
     diskon_item_nominal NUMERIC(15, 2) DEFAULT 0.00,
     is_bonus BOOLEAN NOT NULL DEFAULT FALSE,
+    catatan_bonus VARCHAR(255) NULL,
     subtotal NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     harga_pokok_satuan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()

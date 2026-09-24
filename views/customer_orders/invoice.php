@@ -8,6 +8,9 @@ $comp = CompanySetting::getAll();
 $formatMode = $formatMode ?? PrintDocumentHelper::resolveFormat($_GET['format'] ?? 'standard');
 $isKonsinyasi = !empty($order['is_konsinyasi']) || (($order['tipe_pembayaran'] ?? '') === 'konsinyasi') || (isset($order['adalah_tagihan']) && ($order['adalah_tagihan'] === false || $order['adalah_tagihan'] === 'f' || $order['adalah_tagihan'] === 0 || $order['adalah_tagihan'] === 'false'));
 
+// Saring item bonus: Dokumen faktur/nota pelanggan murni hanya mencetak item pesanan PO reguler
+$items = array_values(array_filter($items ?? [], fn($it) => empty($it['is_bonus'])));
+
 $documentTitle = ($isKonsinyasi ? 'Bukti Titip Barang' : 'Faktur Penjualan') . ' - ' . htmlspecialchars($order['nomor_nota']);
 $backUrl = Router::url('/customer-orders');
 $pdfUrl = Router::url('/customer-orders/invoice/pdf?id=' . $order['id']);
@@ -138,15 +141,19 @@ ob_start();
                 <td class="text-center" style="color:#64748b;"><?= $idx + 1 ?></td>
                 <td>
                     <div class="font-bold"><?= htmlspecialchars($it['nama_item']) ?></div>
-                    <div style="font-size:10.5px; color:#64748b;">SKU: <?= htmlspecialchars($it['kode_sku']) ?></div>
+                    <div style="font-size:10.5px; color:#64748b; margin-top:1px;">SKU: <?= htmlspecialchars($it['kode_sku']) ?></div>
                 </td>
                 <td class="text-center"><?= htmlspecialchars($it['satuan_dasar'] ?: 'pcs') ?></td>
                 <td class="text-center font-bold font-mono"><?= number_format($it['kuantitas_satuan_dasar'], 0, ',', '.') ?></td>
-                <td class="text-right font-mono"><?= Format::rupiah($it['harga_satuan_deal']) ?></td>
+                <td class="text-right font-mono">
+                    <?= Format::rupiah($it['harga_satuan_deal']) ?>
+                </td>
                 <td class="text-right font-mono" style="color:#059669;">
                     <?= (float)$it['diskon_item_nominal'] > 0 ? '-' . Format::rupiah($it['diskon_item_nominal']) : '-' ?>
                 </td>
-                <td class="text-right font-bold font-mono"><?= Format::rupiah($it['subtotal']) ?></td>
+                <td class="text-right font-bold font-mono">
+                    <?= Format::rupiah($it['subtotal']) ?>
+                </td>
             </tr>
             <?php endforeach; ?>
         </tbody>
@@ -383,7 +390,9 @@ ob_start();
                 <tr>
                     <td style="text-align: center;"><?= $no++ ?></td>
                     <td><?= htmlspecialchars($it['kode_sku'] ?? '-') ?></td>
-                    <td><strong><?= htmlspecialchars($it['nama_item'] ?? '-') ?></strong></td>
+                    <td>
+                        <strong><?= htmlspecialchars($it['nama_item'] ?? '-') ?></strong>
+                    </td>
                     <td style="text-align: right;"><strong><?= number_format($qtyItem, 0, ',', '.') ?></strong></td>
                     <td style="text-align: center;"><?= htmlspecialchars($it['satuan_dasar'] ?: 'Pcs') ?></td>
                     <td style="text-align: right;"><?= number_format($hargaItem, 0, ',', '.') ?></td>

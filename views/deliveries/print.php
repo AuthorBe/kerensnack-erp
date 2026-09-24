@@ -6,6 +6,9 @@ use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
 
+// Saring item bonus: Lembar surat jalan cetak fisik untuk toko murni hanya mencetak item pesanan PO reguler
+$items = array_values(array_filter($items ?? [], fn($it) => empty($it['is_bonus'])));
+
 $totalQtyMuatan = (int)array_sum(array_column($items, 'kuantitas_satuan_dasar'));
 $statusSuratJalan = strtoupper(str_replace('_', ' ', $delivery['status_surat_jalan'] ?? 'SIAP KIRIM'));
 $skemaTransaksi = !empty($delivery['is_konsinyasi']) || (($delivery['tipe_pembayaran'] ?? '') === 'konsinyasi')

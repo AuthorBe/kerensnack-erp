@@ -1430,7 +1430,17 @@ ob_start();
                                                 <span class="badge badge-mono" style="font-size: 11px; padding: 2px 7px;" x-text="item.kode_sku"></span>
                                             </td>
                                             <td style="padding: 12px 16px;">
-                                                <div style="font-weight: 700; color: var(--color-ink);" x-text="item.nama_item"></div>
+                                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                                    <span style="font-weight: 700; color: var(--color-ink);" x-text="item.nama_item"></span>
+                                                    <template x-if="item.is_bonus">
+                                                        <span class="badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 4px;">
+                                                            🎁 BONUS
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                                <template x-if="item.is_bonus && item.catatan_bonus">
+                                                    <div style="font-size: 11px; color: #059669; font-style: italic; margin-top: 2px;" x-text="'Alasan: ' + item.catatan_bonus"></div>
+                                                </template>
                                                 <template x-if="item.varian_rasa">
                                                     <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 2px;" x-text="'Varian: ' + item.varian_rasa"></div>
                                                 </template>

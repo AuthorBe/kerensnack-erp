@@ -222,9 +222,21 @@ $comp = CompanySetting::getAll();
                 <td class="text-center" style="color: #64748b; font-weight: 600;"><?= $no++ ?></td>
                 <td class="text-center font-mono font-bold" style="color: #475569;"><?= htmlspecialchars($it['kode_sku'] ?? '-') ?></td>
                 <td>
-                    <div style="font-weight: 700; color: #0f172a; font-size: 13px;"><?= htmlspecialchars($it['nama_item']) ?></div>
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <span style="font-weight: 700; color: #0f172a; font-size: 13px;"><?= htmlspecialchars($it['nama_item']) ?></span>
+                        <?php if (!empty($it['is_bonus'])): ?>
+                        <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 4px; text-transform: uppercase;">
+                            🎁 BONUS
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (!empty($it['is_bonus']) && !empty($it['catatan_bonus'])): ?>
+                    <div style="font-size: 11px; color: #059669; font-style: italic; margin-top: 2px;">
+                        Alasan/Ket: <?= htmlspecialchars($it['catatan_bonus']) ?>
+                    </div>
+                    <?php endif; ?>
                     <?php if (!empty($it['barcode'])): ?>
-                    <div style="font-size: 10.5px; color: #64748b; font-family: monospace;">Barcode: <?= htmlspecialchars($it['barcode']) ?></div>
+                    <div style="font-size: 10.5px; color: #64748b; font-family: monospace; margin-top: 1px;">Barcode: <?= htmlspecialchars($it['barcode']) ?></div>
                     <?php endif; ?>
                 </td>
                 <td class="text-center font-bold" style="font-size: 13.5px; color: #1e3a8a;">

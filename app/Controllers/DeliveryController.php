@@ -790,6 +790,7 @@ class DeliveryController extends Controller
                     }
                     $rawItems = Database::fetchAll("
                         SELECT ip.pesanan_id, ip.item_id, ip.kuantitas_satuan_dasar, ip.harga_satuan_deal, ip.subtotal,
+                               ip.is_bonus, ip.catatan_bonus,
                                it.nama_item, it.kode_sku, it.satuan_dasar
                         FROM public.item_pesanan ip
                         JOIN public.item it ON ip.item_id = it.id

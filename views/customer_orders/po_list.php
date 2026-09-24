@@ -582,18 +582,13 @@ ob_start();
                     <!-- Tombol Aksi: Aksi Cepat + Rincian Item -->
                     <div class="flex items-center gap-2">
                         <?php if ($isPending && $po['is_stock_sufficient'] && Auth::can('orders.po_process')): ?>
-                        <form action="<?= Router::url('/customer-orders/process-po') ?>" method="POST"
-                              data-confirm="Pastikan seluruh barang fisik untuk <?= htmlspecialchars($po['nama_toko']) ?> telah selesai disiapkan di logistik. Lanjutkan?"
-                              data-confirm-title="Konfirmasi Penyiapan Barang"
-                              data-confirm-type="info"
-                              data-confirm-btn="Ya, Siap Dikirim"
-                              style="display: inline;">
-                            <input type="hidden" name="order_id" value="<?= htmlspecialchars($po['id']) ?>">
-                            <button type="submit" class="btn btn-primary btn-sm" style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 5px;">
-                                <i data-lucide="package-check" style="width: 15px; height: 15px;"></i>
-                                <span>Siap Dikirim</span>
-                            </button>
-                        </form>
+                        <button type="button" 
+                                class="btn btn-primary btn-sm" 
+                                style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 5px;"
+                                @click="openConfirmReadyModal(<?= htmlspecialchars(json_encode($po)) ?>)">
+                            <i data-lucide="package-check" style="width: 15px; height: 15px;"></i>
+                            <span>Siap Dikirim</span>
+                        </button>
                         <?php elseif ($isReady && empty($po['nomor_surat_jalan']) && Auth::can('deliveries.create')): ?>
                         <a href="<?= Router::url('/deliveries?create_for_order=' . urlencode($po['id'])) ?>" class="btn btn-primary btn-sm" style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 5px; background: #059669; border-color: #059669;">
                             <i data-lucide="truck" style="width: 15px; height: 15px;"></i>
@@ -622,9 +617,14 @@ ob_start();
     <!-- 5. MODAL DIALOG POP-UP: RINCIAN ITEM PRODUK (MATERIAL DESIGN 3)            -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showItemModal" x-cloak class="modal-backdrop" @keydown.escape.window="showItemModal = false" style="z-index: 9999;">
-        <div class="modal-box" style="max-width: 680px; padding: 24px; border-radius: 20px;">
+    <div x-show="showItemModal" x-cloak class="modal-backdrop" style="z-index: 9999;">
+        <div class="modal-box" style="max-width: 680px; padding: 24px; border-radius: 20px;" @click.stop>
             
+            <!-- MOBILE PULL HANDLE -->
+            <div class="sm:hidden w-full flex justify-center pt-1 pb-2 flex-shrink-0">
+                <div style="width: 40px; height: 4px; border-radius: 2px; background: var(--color-hairline-strong);"></div>
+            </div>
+
             <!-- MODAL HEADER -->
             <div class="modal-header" style="margin-bottom: 16px;">
                 <div class="flex items-center gap-3">
@@ -632,7 +632,7 @@ ob_start();
                         <i data-lucide="package" style="width: 22px; height: 22px;"></i>
                     </div>
                     <div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
                             <div class="modal-title" style="font-size: 16px; font-weight: 900; color: var(--color-ink);" x-text="activePo?.nama_toko"></div>
                             <template x-if="activePo?.catatan && activePo.catatan.includes('[Kirim Ulang]')">
                                 <span class="badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-weight:800;font-size:11px;padding:2px 8px;border-radius:6px;">
@@ -680,7 +680,17 @@ ob_start();
                                         <span class="badge badge-mono font-bold" style="font-size: 10.5px; padding: 1px 5px;" x-text="item.kode_sku"></span>
                                     </td>
                                     <td style="padding: 10px 12px;">
-                                        <div style="font-weight: 700; color: var(--color-ink);" x-text="item.nama_item"></div>
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span style="font-weight: 700; color: var(--color-ink);" x-text="item.nama_item"></span>
+                                            <template x-if="item.is_bonus">
+                                                <span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:10px; font-weight:800; padding:1px 6px; border-radius:4px;">
+                                                    🎁 BONUS
+                                                </span>
+                                            </template>
+                                        </div>
+                                        <template x-if="item.is_bonus && item.catatan_bonus">
+                                            <div style="font-size: 11px; color: #059669; font-style: italic; margin-top: 2px;" x-text="'Alasan: ' + item.catatan_bonus"></div>
+                                        </template>
                                     </td>
                                     <td class="cell-center font-mono font-bold text-ink" style="padding: 10px 12px;" x-text="item.kuantitas_satuan_dasar + ' ' + (item.satuan_dasar || 'Pcs')"></td>
                                     <td class="cell-center font-mono font-bold" style="padding: 10px 12px;" :style="Number(item.stok_fisik_saat_ini) >= Number(item.kuantitas_satuan_dasar) ? 'color: #16a34a;' : 'color: #dc2626;'" x-text="item.stok_fisik_saat_ini + ' ' + (item.satuan_dasar || 'Pcs')"></td>
@@ -728,18 +738,13 @@ ob_start();
                 <template x-if="activePo?.status_pemrosesan === 'po'">
                     <div>
                         <template x-if="activePo?.is_stock_sufficient">
-                            <form action="<?= Router::url('/customer-orders/process-po') ?>" method="POST"
-                                  data-confirm="Pastikan seluruh barang fisik telah selesai disiapkan di area logistik. Lanjutkan?"
-                                  data-confirm-title="Konfirmasi Penyiapan Barang"
-                                  data-confirm-type="info"
-                                  data-confirm-btn="Ya, Siap Dikirim"
-                                  style="display: inline;">
-                                <input type="hidden" name="order_id" :value="activePo?.id">
-                                <button type="submit" class="btn btn-primary" style="font-weight: 800; font-size: 13px; border-radius: 10px; padding: 8px 18px; display: inline-flex; align-items: center; gap: 6px;">
-                                    <i data-lucide="package-check" style="width: 15px; height: 15px;"></i>
-                                    <span>Siap Dikirim</span>
-                                </button>
-                            </form>
+                            <button type="button" 
+                                    class="btn btn-primary" 
+                                    style="font-weight: 800; font-size: 13px; border-radius: 10px; padding: 8px 18px; display: inline-flex; align-items: center; gap: 6px;"
+                                    @click="openConfirmReadyModal(activePo)">
+                                <i data-lucide="package-check" style="width: 15px; height: 15px;"></i>
+                                <span>Siap Dikirim</span>
+                            </button>
                         </template>
                         <template x-if="!activePo?.is_stock_sufficient">
                             <button type="button" disabled class="btn btn-secondary" style="font-weight: 700; font-size: 12px; border-radius: 10px; padding: 8px 16px; opacity: 0.55; cursor: not-allowed;">
@@ -769,7 +774,150 @@ ob_start();
     </template>
 
     <!-- ========================================================================= -->
-    <!-- 6. FLOATING BATCH ACTION BAR (KETIKA >= 1 PO DICENTANG)                   -->
+    <!-- 6. MODAL DIALOG POP-UP: KONFIRMASI SIAP DIKIRIM & INPUT BONUS GUDANG        -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="showConfirmReadyModal" x-cloak class="modal-backdrop" style="z-index: 9999;">
+        <div class="modal-box" style="max-width: 740px; padding: 24px; border-radius: 20px;" @click.stop>
+            
+            <!-- MOBILE PULL HANDLE -->
+            <div class="sm:hidden w-full flex justify-center pt-1 pb-2 flex-shrink-0">
+                <div style="width: 40px; height: 4px; border-radius: 2px; background: var(--color-hairline-strong);"></div>
+            </div>
+
+            <!-- MODAL HEADER -->
+            <div class="modal-header" style="margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i data-lucide="package-check" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" style="font-size: 16.5px; font-weight: 900; color: var(--color-ink);">Konfirmasi Penyiapan &amp; Bonus PO</div>
+                        <div style="font-size: 12.5px; color: var(--color-ink-mute); margin-top: 2px;">
+                            <span class="font-bold text-ink" x-text="targetPoForReady?.nama_toko"></span> &bull; 
+                            <span class="font-mono font-bold text-primary" x-text="targetPoForReady?.nomor_nota"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INFO PENYIAPAN BARANG -->
+            <div style="padding: 12px 16px; background: rgba(37, 99, 235, 0.06); border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 12px; font-size: 12.5px; color: var(--color-ink-secondary); margin-bottom: 18px; line-height: 1.45;">
+                <div class="flex items-center gap-2 font-bold text-primary" style="margin-bottom: 3px;">
+                    <i data-lucide="info" style="width: 15px; height: 15px;"></i>
+                    <span>Verifikasi Fisik Logistik Gudang</span>
+                </div>
+                <span>Pastikan seluruh <strong><span x-text="targetPoForReady?.total_pcs"></span> Pcs (<span x-text="targetPoForReady?.total_sku"></span> SKU)</strong> barang pesanan PO ini telah selesai disiapkan secara fisik. Stok fisik gudang akan otomatis terpotong saat dikonfirmasi.</span>
+            </div>
+
+            <!-- FORM INPUT BONUS GUDANG (OPSIONAL) -->
+            <div style="margin-bottom: 20px;">
+                <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                    <div>
+                        <div style="font-size: 13.5px; font-weight: 800; color: var(--color-ink); display: flex; align-items: center; gap: 6px;">
+                            <i data-lucide="gift" style="width: 16px; height: 16px; color: #059669;"></i>
+                            <span>Item Bonus Tambahan (Opsional)</span>
+                        </div>
+                        <p style="font-size: 11.5px; color: var(--color-ink-mute); margin: 2px 0 0 0;">Tambahkan produk bonus untuk toko jika ada kebijakan promo gudang, tester, atau kompensasi.</p>
+                    </div>
+                    <button type="button" @click="addBonusRow()" class="btn btn-secondary btn-sm" style="font-size: 12px; font-weight: 700; border-radius: 8px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 5px; color: #059669; border-color: #a7f3d0; background: #ecfdf5;">
+                        <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i>
+                        <span>+ Tambah Bonus</span>
+                    </button>
+                </div>
+
+                <!-- EMPTY STATE BONUS -->
+                <template x-if="bonusItems.length === 0">
+                    <div style="padding: 18px; background: var(--color-canvas-soft); border: 1px dashed var(--color-hairline); border-radius: 12px; text-align: center; color: var(--color-ink-mute); font-size: 12.5px; line-height: 1.4;">
+                        Tidak ada item bonus tambahan yang dipilih.<br>
+                        <span style="font-size: 11.5px; opacity: 0.8;">Klik tombol <strong>+ Tambah Bonus</strong> jika ingin menyertakan barang gratis ke toko ini.</span>
+                    </div>
+                </template>
+
+                <!-- DAFTAR BARIS BONUS -->
+                <template x-if="bonusItems.length > 0">
+                    <div class="space-y-3" style="max-height: 290px; overflow-y: auto; padding-right: 2px;">
+                        <template x-for="(row, bIdx) in bonusItems" :key="bIdx">
+                            <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 12px; padding: 12px 14px;">
+                                <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                                    
+                                    <!-- Pilih Produk -->
+                                    <div class="sm:col-span-5">
+                                        <label class="form-label text-xs font-bold mb-1" style="font-size: 11px;">Pilih Produk Bonus *</label>
+                                        <select x-model="row.item_id" @change="onBonusItemChange(row)" class="form-input text-xs font-medium" style="height: 38px; border-radius: 8px;" required>
+                                            <option value="">-- Pilih Barang Jadi --</option>
+                                            <template x-for="p in availableBonusItems" :key="p.id">
+                                                <option :value="p.id" :disabled="Number(p.stok_fisik_saat_ini) <= 0" x-text="'[' + p.kode_sku + '] ' + p.nama_item + ' (Stok: ' + p.stok_fisik_saat_ini + ' ' + (p.satuan_dasar || 'Pcs') + ')'"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+
+                                    <!-- Qty Bonus -->
+                                    <div class="sm:col-span-2">
+                                        <label class="form-label text-xs font-bold mb-1" style="font-size: 11px;">
+                                            Qty <span class="text-ink-mute font-normal">(Pcs)</span> *
+                                        </label>
+                                        <input type="number" x-model.number="row.qty" :min="1" :max="getAvailableStock(row.item_id)" class="form-input text-xs font-mono font-bold text-center" style="height: 38px; border-radius: 8px;" placeholder="1" required>
+                                    </div>
+
+                                    <!-- Alasan Dropdown -->
+                                    <div class="sm:col-span-4">
+                                        <label class="form-label text-xs font-bold mb-1" style="font-size: 11px;">Alasan Bonus *</label>
+                                        <select x-model="row.reason" class="form-input text-xs font-semibold" style="height: 38px; border-radius: 8px;">
+                                            <option value="Bonus Promo Gudang">Bonus Promo Gudang</option>
+                                            <option value="Tester Produk Baru">Tester Produk Baru</option>
+                                            <option value="Bonus Toko">Bonus Toko</option>
+                                            <option value="Pengganti / Kompensasi">Pengganti / Kompensasi</option>
+                                            <option value="Lainnya">Lainnya (Catatan Manual)</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Tombol Hapus Baris -->
+                                    <div class="sm:col-span-1 flex items-center justify-end sm:justify-center" style="margin-top: 22px;">
+                                        <button type="button" @click="removeBonusRow(bIdx)" class="btn btn-secondary btn-sm" style="width: 36px; height: 36px; padding: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #dc2626; border-color: #fca5a5; background: #fef2f2;" title="Hapus Baris Bonus">
+                                            <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Input Teks Catatan Kustom jika 'Lainnya' dipilih -->
+                                <template x-if="row.reason === 'Lainnya'">
+                                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--color-hairline);">
+                                        <input type="text" x-model="row.custom_reason" class="form-input text-xs font-medium" style="height: 34px; border-radius: 8px;" placeholder="Tuliskan keterangan / alasan khusus pemberian bonus toko ini..." required>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            <!-- MODAL FOOTER -->
+            <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; border-top: 1px solid var(--color-hairline); padding-top: 16px;">
+                <button type="button" @click="showConfirmReadyModal = false" class="btn btn-secondary" :disabled="isSubmitting" style="border-radius: 10px; font-weight: 600;">
+                    Batal
+                </button>
+                <form action="<?= Router::url('/customer-orders/process-po') ?>" method="POST" @submit="onSubmitReadyForm($event)">
+                    <input type="hidden" name="order_id" :value="targetPoForReady?.id">
+                    <input type="hidden" name="bonuses_json" :value="JSON.stringify(bonusItems)">
+                    <button type="submit" class="btn btn-primary" :disabled="isSubmitting" style="font-weight: 800; font-size: 13px; border-radius: 10px; padding: 9px 20px; display: inline-flex; align-items: center; gap: 7px;">
+                        <template x-if="!isSubmitting">
+                            <i data-lucide="package-check" style="width: 16px; height: 16px;"></i>
+                        </template>
+                        <template x-if="isSubmitting">
+                            <i data-lucide="loader-2" class="animate-spin" style="width: 16px; height: 16px;"></i>
+                        </template>
+                        <span x-text="isSubmitting ? 'Memproses...' : getSubmitButtonText()"></span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+    </template>
+
+    <!-- ========================================================================= -->
+    <!-- 7. FLOATING BATCH ACTION BAR (KETIKA >= 1 PO DICENTANG)                   -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="selectedPoIds.length > 0" x-cloak
@@ -807,7 +955,12 @@ ob_start();
 function poCompactApp() {
     return {
         showItemModal: false,
+        showConfirmReadyModal: false,
+        isSubmitting: false,
         activePo: null,
+        targetPoForReady: null,
+        bonusItems: [],
+        availableBonusItems: <?= json_encode($availableItems ?? []) ?>,
         selectedPoIds: [],
         allPoIds: <?= json_encode(array_column($poList, 'id')) ?>,
 
@@ -835,6 +988,96 @@ function poCompactApp() {
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             });
+        },
+
+        openConfirmReadyModal(po) {
+            this.targetPoForReady = po;
+            this.bonusItems = [];
+            this.isSubmitting = false;
+            this.showItemModal = false;
+            this.showConfirmReadyModal = true;
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        addBonusRow() {
+            this.bonusItems.push({
+                item_id: '',
+                qty: 1,
+                reason: 'Bonus Toko',
+                custom_reason: ''
+            });
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        removeBonusRow(index) {
+            this.bonusItems.splice(index, 1);
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        getAvailableStock(itemId) {
+            if (!itemId) return 9999;
+            const found = this.availableBonusItems.find(i => String(i.id) === String(itemId));
+            return found ? Number(found.stok_fisik_saat_ini) : 0;
+        },
+
+        onBonusItemChange(row) {
+            const maxStock = this.getAvailableStock(row.item_id);
+            if (row.qty > maxStock) {
+                row.qty = Math.max(1, maxStock);
+            }
+        },
+
+        getValidBonusCount() {
+            return this.bonusItems.filter(b => b.item_id && Number(b.qty) > 0).length;
+        },
+
+        getSubmitButtonText() {
+            const count = this.getValidBonusCount();
+            if (count > 0) {
+                return 'Konfirmasi Siap Dikirim + ' + count + ' Bonus';
+            }
+            return 'Konfirmasi Siap Dikirim';
+        },
+
+        onSubmitReadyForm(event) {
+            if (this.isSubmitting) {
+                event.preventDefault();
+                return false;
+            }
+
+            for (let i = 0; i < this.bonusItems.length; i++) {
+                const b = this.bonusItems[i];
+                if (!b.item_id) {
+                    alert('Harap pilih produk bonus pada baris ke-' + (i + 1) + ' atau hapus baris jika tidak jadi.');
+                    event.preventDefault();
+                    return false;
+                }
+                const maxStock = this.getAvailableStock(b.item_id);
+                if (Number(b.qty) <= 0) {
+                    alert('Kuantitas produk bonus harus minimal 1 pcs.');
+                    event.preventDefault();
+                    return false;
+                }
+                if (Number(b.qty) > maxStock) {
+                    alert('Kuantitas bonus melebihi sisa stok fisik di gudang (Maksimal: ' + maxStock + ' pcs).');
+                    event.preventDefault();
+                    return false;
+                }
+                if (b.reason === 'Lainnya' && (!b.custom_reason || b.custom_reason.trim() === '')) {
+                    alert('Harap tuliskan keterangan khusus bonus pada baris ke-' + (i + 1) + '.');
+                    event.preventDefault();
+                    return false;
+                }
+            }
+
+            this.isSubmitting = true;
+            return true;
         }
     };
 }

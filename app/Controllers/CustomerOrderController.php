@@ -347,7 +347,7 @@ class CustomerOrderController extends Controller
                        ip.harga_satuan_deal as harga_satuan_dasar, 
                        ip.diskon_item_persen as diskon_persen, 
                        ip.diskon_item_nominal as diskon_nominal, 
-                       ip.is_bonus, ip.subtotal,
+                       ip.is_bonus, ip.catatan_bonus, ip.subtotal,
                        i.kode_sku, i.nama_item, i.satuan_dasar,
                        gp.nama_grup as nama_grup_produk
                 FROM public.item_pesanan ip
@@ -2063,6 +2063,7 @@ class CustomerOrderController extends Controller
                 }
                 $rawItems = Database::fetchAll("
                     SELECT ip.pesanan_id, ip.item_id, ip.kuantitas_satuan_dasar, ip.harga_satuan_deal, ip.diskon_item_nominal, ip.subtotal,
+                           ip.is_bonus, ip.catatan_bonus,
                            it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar
                     FROM public.item_pesanan ip
                     JOIN public.item it ON ip.item_id = it.id
@@ -2137,6 +2138,12 @@ class CustomerOrderController extends Controller
 
             $customers = Database::fetchAll("SELECT id, kode_pelanggan, nama_toko FROM public.pelanggan WHERE status_aktif = TRUE ORDER BY nama_toko ASC");
             $drivers = Database::fetchAll("SELECT id, nama_karyawan, nomor_polisi_kendaraan, posisi FROM public.v_karyawan_info WHERE posisi IN ('sales', 'driver') AND status_aktif = TRUE ORDER BY (posisi = 'driver') DESC, nama_karyawan ASC");
+            $availableItems = Database::fetchAll("
+                SELECT id, kode_sku, nama_item, stok_fisik_saat_ini, satuan_dasar, harga_pokok_pembelian
+                FROM public.item
+                WHERE status_aktif = TRUE AND tipe_item = 'barang_jadi'
+                ORDER BY nama_item ASC
+            ");
 
             $this->view('customer_orders.po_list', [
                 'pageTitle' => 'Daftar PO Pelanggan',
@@ -2153,6 +2160,7 @@ class CustomerOrderController extends Controller
                 'countDeficit' => $countDeficit,
                 'customers' => $customers,
                 'drivers' => $drivers,
+                'availableItems' => $availableItems,
             ]);
 
         } catch (Throwable $e) {
@@ -2162,7 +2170,7 @@ class CustomerOrderController extends Controller
     }
 
     /**
-     * Proses PO menjadi Siap Kirim (Potong Stok Fisik Gudang)
+     * Proses PO menjadi Siap Kirim (Potong Stok Fisik Gudang & Tambah Item Bonus jika ada)
      */
     public function processPoToReady(): void
     {
@@ -2174,6 +2182,17 @@ class CustomerOrderController extends Controller
             $this->flashError('ID Pesanan tidak valid.');
             $this->redirect('/customer-orders/po-list');
             return;
+        }
+
+        // Parsing data bonus dari modal (JSON string atau array)
+        $bonusesRaw = $this->input('bonuses_json') ?: $this->input('bonuses');
+        $bonuses = [];
+        if (!empty($bonusesRaw)) {
+            if (is_string($bonusesRaw)) {
+                $bonuses = json_decode($bonusesRaw, true) ?: [];
+            } elseif (is_array($bonusesRaw)) {
+                $bonuses = $bonusesRaw;
+            }
         }
 
         try {
@@ -2197,7 +2216,7 @@ class CustomerOrderController extends Controller
                 throw new \Exception("PO ini sudah diproses sebelumnya (Status saat ini: {$order['status_pemrosesan']}).");
             }
 
-            // Ambil semua item dalam PO
+            // Ambil semua item reguler dalam PO
             $stmtItems = $pdo->prepare("
                 SELECT ip.*, it.nama_item 
                 FROM public.item_pesanan ip
@@ -2225,7 +2244,7 @@ class CustomerOrderController extends Controller
                 )
             ");
 
-            // Validasi & Potong Stok untuk setiap item
+            // 1. Validasi & Potong Stok untuk setiap item reguler PO
             foreach ($orderItems as $it) {
                 $itemId = $it['item_id'];
                 $qty = (int)$it['kuantitas_satuan_dasar'];
@@ -2253,6 +2272,83 @@ class CustomerOrderController extends Controller
                 ]);
             }
 
+            // 2. Validasi, Simpan, dan Potong Stok untuk Item Bonus Tambahan (jika ada)
+            $stmtInsertBonus = $pdo->prepare("
+                INSERT INTO public.item_pesanan (
+                    pesanan_id, item_id, kuantitas_satuan_dasar,
+                    harga_satuan_deal, diskon_item_persen, diskon_item_nominal,
+                    is_bonus, catatan_bonus, subtotal, harga_pokok_satuan, dibuat_pada
+                ) VALUES (
+                    :pesanan_id, :item_id, :qty,
+                    0.00, 0.00, 0.00,
+                    TRUE, :catatan_bonus, 0.00, :hpp, NOW()
+                )
+            ");
+
+            $validBonusCount = 0;
+            $bonusNames = [];
+
+            if (!empty($bonuses)) {
+                foreach ($bonuses as $b) {
+                    $bonusItemId = trim((string)($b['item_id'] ?? ''));
+                    $bonusQty = (int)($b['qty'] ?? 0);
+
+                    if (empty($bonusItemId) || $bonusQty <= 0) {
+                        continue;
+                    }
+
+                    // Tentukan alasan / catatan bonus
+                    $reasonDropdown = trim((string)($b['reason'] ?? 'Bonus Toko'));
+                    $customReason = trim((string)($b['custom_reason'] ?? ''));
+                    $finalBonusReason = ($reasonDropdown === 'Lainnya')
+                        ? ($customReason !== '' ? $customReason : 'Bonus Khusus')
+                        : ($reasonDropdown !== '' ? $reasonDropdown : 'Bonus Toko');
+
+                    // Lock item bonus & cek ketersediaan stok fisik terkini
+                    $stmtLockBonusItem = $pdo->prepare("SELECT id, nama_item, stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE id = :id FOR UPDATE");
+                    $stmtLockBonusItem->execute(['id' => $bonusItemId]);
+                    $bonusItemData = $stmtLockBonusItem->fetch(\PDO::FETCH_ASSOC);
+
+                    if (!$bonusItemData) {
+                        throw new \Exception("Produk bonus dengan ID '{$bonusItemId}' tidak ditemukan di sistem.");
+                    }
+
+                    $bonusStokSebelum = (float)$bonusItemData['stok_fisik_saat_ini'];
+                    if ($bonusStokSebelum < $bonusQty) {
+                        throw new \Exception("Stok bonus {$bonusItemData['nama_item']} tidak mencukupi. Tersedia di gudang: {$bonusStokSebelum}, Diminta Bonus: {$bonusQty}.");
+                    }
+
+                    $bonusStokSesudah = $bonusStokSebelum - $bonusQty;
+                    $hppBonus = (float)($bonusItemData['harga_pokok_pembelian'] ?? 0.00);
+
+                    // Insert ke item_pesanan sebagai bonus
+                    $stmtInsertBonus->execute([
+                        'pesanan_id' => $orderId,
+                        'item_id' => $bonusItemId,
+                        'qty' => $bonusQty,
+                        'catatan_bonus' => $finalBonusReason,
+                        'hpp' => $hppBonus
+                    ]);
+
+                    // Potong stok fisik gudang
+                    $stmtStok->execute(['qty' => $bonusQty, 'item_id' => $bonusItemId]);
+
+                    // Catat ke riwayat stok
+                    $stmtRiwayat->execute([
+                        'item_id' => $bonusItemId,
+                        'qty' => $bonusQty,
+                        'stok_sebelum' => $bonusStokSebelum,
+                        'stok_sesudah' => $bonusStokSesudah,
+                        'ref_id' => $orderId,
+                        'ket' => "Bonus Gudang ({$finalBonusReason}) - PO #{$order['nomor_nota']} ({$order['nama_toko']})",
+                        'user_id' => $userId
+                    ]);
+
+                    $validBonusCount++;
+                    $bonusNames[] = "{$bonusItemData['nama_item']} ({$bonusQty} pcs - {$finalBonusReason})";
+                }
+            }
+
             // Update status pesanan ke siap_dikirim (Surat Jalan dibuat terpisah di menu Deliveries)
             $stmtUpdateOrder = $pdo->prepare("
                 UPDATE public.pesanan 
@@ -2264,17 +2360,26 @@ class CustomerOrderController extends Controller
                 'id' => $orderId
             ]);
 
+            $auditMsg = "Petugas gudang menyelesaikan penyiapan barang PO #{$order['nomor_nota']} ({$order['nama_toko']}). Stok fisik gudang terpotong, status pesanan menjadi Siap Dikirim.";
+            if ($validBonusCount > 0) {
+                $auditMsg .= " Termasuk {$validBonusCount} item bonus tambahan: " . implode(', ', $bonusNames) . ".";
+            }
+
             ActivityLog::log(
                 'gudang',
                 'UPDATE',
-                "Petugas gudang menyelesaikan penyiapan barang PO #{$order['nomor_nota']} ({$order['nama_toko']}). Stok fisik gudang terpotong, status pesanan menjadi Siap Dikirim.",
+                $auditMsg,
                 'pesanan',
                 (string)$orderId
             );
 
             $pdo->commit();
 
-            $this->flashSuccess("PO #{$order['nomor_nota']} ({$order['nama_toko']}) berhasil disiapkan! Stok fisik gudang telah terpotong.");
+            if ($validBonusCount > 0) {
+                $this->flashSuccess("PO #{$order['nomor_nota']} ({$order['nama_toko']}) berhasil disiapkan bersama {$validBonusCount} item bonus tambahan! Stok fisik gudang telah terpotong.");
+            } else {
+                $this->flashSuccess("PO #{$order['nomor_nota']} ({$order['nama_toko']}) berhasil disiapkan! Stok fisik gudang telah terpotong.");
+            }
             $this->redirect('/customer-orders/po-list?tab=ready');
 
         } catch (\Exception $e) {

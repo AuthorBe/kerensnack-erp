@@ -202,6 +202,9 @@ class OrderDocumentController extends Controller
                 ORDER BY ip.dibuat_pada ASC
             ", ['id' => $id]);
 
+            // Filter out bonus items for customer-facing invoice Excel
+            $items = array_values(array_filter($items, fn($it) => empty($it['is_bonus'])));
+
             $headers = ['No', 'Kode SKU', 'Nama Produk Snack', 'Kategori Kemasan', 'Harga Satuan (Rp)', 'Qty (Pcs)', 'Diskon (Rp)', 'Subtotal (Rp)'];
             $rows = [];
             $no = 1;
