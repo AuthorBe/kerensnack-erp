@@ -86,7 +86,7 @@ $pdo = Database::getConnection();
 // ITEM 4.1: DATA HYGIENE - PEMBERSIHAN NAMA_TOKO & SEED
 // -------------------------------------------------------------
 runTest("4.1.1 Verifikasi Berkas Migrasi 29 & DDL", function() {
-    $m29Path = APP_ROOT . '/database/29_migration_fase4_master_polish.sql';
+    $m29Path = APP_ROOT . '/database/migrations/29_migration_fase4_master_polish.sql';
     if (file_exists($m29Path)) {
         $content = file_get_contents($m29Path);
         if (!str_contains($content, "DELETE FROM public.pengaturan_sistem WHERE kunci = 'nama_toko'")) {

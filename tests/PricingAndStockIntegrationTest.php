@@ -52,7 +52,7 @@ echo "============================================================\n";
 // ITEM 2.2: KONSOLIDASI BERKAS MIGRASI GIT & SKEMA KANONIKAL
 // -------------------------------------------------------------
 runTest("2.2.1 Verifikasi Berkas Migrasi 27 & Sinkronisasi 01_schema.sql", function() {
-    $migration27Path = APP_ROOT . '/database/27_consolidate_missing_master_schema.sql';
+    $migration27Path = APP_ROOT . '/database/migrations/27_consolidate_missing_master_schema.sql';
     if (file_exists($migration27Path)) {
         $m27Content = file_get_contents($migration27Path);
         if (!strpos($m27Content, 'CREATE TABLE IF NOT EXISTS public.pelanggan_item')) {

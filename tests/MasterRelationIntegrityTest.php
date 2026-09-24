@@ -199,7 +199,7 @@ function ks_get_or_create_test_order(PDO $pdo): array {
 // ITEM 3.1 & 3.5: BERKAS MIGRASI 28 & INTEGRITAS DATABASE
 // -------------------------------------------------------------
 runTest("3.1.1 Verifikasi Berkas Migrasi 28 & Sinkronisasi 01_schema.sql", function() {
-    $m28Path = APP_ROOT . '/database/28_migration_fase3_relasi_master.sql';
+    $m28Path = APP_ROOT . '/database/migrations/28_migration_fase3_relasi_master.sql';
     if (file_exists($m28Path)) {
         $m28Content = file_get_contents($m28Path);
         if (!strpos($m28Content, 'stok_konsinyasi_toko_pelanggan_id_fkey') || !strpos($m28Content, 'ON DELETE RESTRICT')) {

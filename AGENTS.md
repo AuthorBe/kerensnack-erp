@@ -47,7 +47,7 @@ Jika pengujian memerlukan proses yang tidak dapat dibungkus dalam *single transa
 ---
 
 ## 4. Manajemen Skema Basis Data (*Database Migration Standard*)
-1. Setiap modifikasi struktur tabel, indeks, view, fungsi RPC, atau kendala (*constraints*) wajib didokumentasikan dalam berkas migrasi SQL bernomor urut resmi pada direktori `database/` (format: `XX_deskripsi_migrasi.sql`).
+1. Setiap modifikasi struktur tabel, indeks, view, fungsi RPC, atau kendala (*constraints*) wajib didokumentasikan dalam berkas migrasi SQL bernomor urut resmi pada direktori `database/migrations/` (format: `XX_deskripsi_migrasi.sql`).
 2. Setiap berkas migrasi wajib menggunakan blok transaksi atomik (`BEGIN; ... COMMIT;`).
 3. Berkas skema kanonikal `database/01_schema.sql` (*Single Source of Truth*) wajib selalu disinkronkan sesuai kondisi riil skema termutakhir.
 
