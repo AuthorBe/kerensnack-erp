@@ -754,7 +754,7 @@ ob_start();
                     <?php else: ?>
                     <?php foreach ($orders as $idx => $o): 
                         $isBeliPutus = !empty($o['is_beli_putus']) || (stripos($o['catatan'] ?? '', 'beli putus') !== false);
-                        $isKonsinyasiOrder = !$isBeliPutus && (($o['tipe_pembayaran'] === 'konsinyasi') || !empty($o['is_konsinyasi']) || (isset($o['adalah_tagihan']) && ($o['adalah_tagihan'] === false || $o['adalah_tagihan'] === 'f' || $o['adalah_tagihan'] === 0 || $o['adalah_tagihan'] === 'false')));
+                        $isKonsinyasiOrder = !$isBeliPutus && (($o['tipe_pembayaran'] === 'konsinyasi') || !empty($o['is_konsinyasi']) || (isset($o['is_tagihan']) && ($o['is_tagihan'] === false || $o['is_tagihan'] === 'f' || $o['is_tagihan'] === 0 || $o['is_tagihan'] === 'false')));
                         $isLunas = ($o['status_pembayaran'] === 'lunas');
                         $sisa = $isKonsinyasiOrder ? 0 : max(0, (float)$o['total_netto'] - (float)$o['total_dibayar']);
                     ?>
@@ -868,6 +868,10 @@ ob_start();
                                 <span style="color:#6366f1;">🏦 Transfer Bank</span>
                                 <?php elseif ($o['tipe_pembayaran'] === 'sebagian'): ?>
                                 <span style="color:#8b5cf6;">💳 DP / Sebagian</span>
+                                <?php elseif ($o['tipe_pembayaran'] === 'tempo_faktur'): ?>
+                                <span style="color:#d97706;">⏱️ Tempo Faktur</span>
+                                <?php elseif ($o['tipe_pembayaran'] === 'tempo_tanggal'): ?>
+                                <span style="color:#d97706;">📅 Tempo Tanggal</span>
                                 <?php else: ?>
                                 <span style="color:#d97706;">⏱️ <?= str_replace('_', ' ', $o['tipe_pembayaran']) ?></span>
                                 <?php endif; ?>
@@ -875,6 +879,10 @@ ob_start();
                             <?php if ($isKonsinyasiOrder): ?>
                             <div style="font-size:11px;margin-top:2px;color:var(--color-ink-mute);">
                                 Non-Tagihan Langsung
+                            </div>
+                            <?php elseif ($o['tipe_pembayaran'] === 'tempo_faktur' && !$isLunas): ?>
+                            <div style="font-size:11px;margin-top:2px;color:#d97706;">
+                                Bayar di Kiriman Berikutnya
                             </div>
                             <?php elseif (!empty($o['tanggal_jatuh_tempo']) && !$isLunas): 
                                 $isOverdue = strtotime($o['tanggal_jatuh_tempo']) < strtotime(date('Y-m-d'));
@@ -987,12 +995,12 @@ ob_start();
                                     <i data-lucide="sparkles" style="width:10px;height:10px;color:#d97706;"></i> BELI PUTUS
                                 </span>
                             </template>
-                            <template x-if="!(orderDetail?.is_beli_putus || (orderDetail?.catatan && orderDetail?.catatan.toLowerCase().includes('beli putus'))) && (orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.adalah_tagihan === false || orderDetail?.adalah_tagihan === 'false')">
+                            <template x-if="!(orderDetail?.is_beli_putus || (orderDetail?.catatan && orderDetail?.catatan.toLowerCase().includes('beli putus'))) && (orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.is_tagihan === false || orderDetail?.is_tagihan === 'false')">
                                 <span class="badge" style="background:rgba(225,29,72,0.1);color:#e11d48;border:1px solid rgba(225,29,72,0.22);font-weight:800;font-size:10px;padding:2px 8px;border-radius:6px;text-transform:uppercase;">
                                     Titip Jual (Konsinyasi)
                                 </span>
                             </template>
-                            <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && (!orderDetail?.is_konsinyasi || orderDetail?.is_beli_putus) && orderDetail?.adalah_tagihan !== false && orderDetail?.adalah_tagihan !== 'false'">
+                            <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && (!orderDetail?.is_konsinyasi || orderDetail?.is_beli_putus) && orderDetail?.is_tagihan !== false && orderDetail?.is_tagihan !== 'false'">
                                 <span class="badge" 
                                       :class="orderDetail?.status_pembayaran === 'lunas' ? 'badge-success' : (orderDetail?.status_pembayaran === 'sebagian' ? 'badge-primary' : 'badge-warning')" 
                                       style="font-size:10px;font-weight:800;text-transform:uppercase;padding:2px 8px;border-radius:6px;" 
@@ -1494,7 +1502,7 @@ ob_start();
                 <!-- TAB 3: PEMBAYARAN & PELUNASAN -->
                 <div x-show="!loadingDetail && activeTab === 'payment'" style="display:flex;flex-direction:column;gap:16px;">
                     <!-- Template Khusus Toko Konsinyasi (Non-Tagihan) -->
-                    <template x-if="orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.adalah_tagihan === false || orderDetail?.adalah_tagihan === 'false'">
+                    <template x-if="orderDetail?.tipe_pembayaran === 'konsinyasi' || orderDetail?.is_konsinyasi || orderDetail?.is_tagihan === false || orderDetail?.is_tagihan === 'false' || orderDetail?.is_tagihan === 0 || orderDetail?.is_tagihan === '0'">
                         <div style="display:flex;flex-direction:column;gap:16px;">
                             <!-- 3 Kartu Metrik Konsinyasi yang Selaras & Elegan -->
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
@@ -1573,7 +1581,7 @@ ob_start();
                     </template>
 
                     <!-- Template Toko Reguler B2B (Faktur Tagihan) -->
-                    <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && !orderDetail?.is_konsinyasi && orderDetail?.adalah_tagihan !== false && orderDetail?.adalah_tagihan !== 'false'">
+                    <template x-if="orderDetail?.tipe_pembayaran !== 'konsinyasi' && !orderDetail?.is_konsinyasi && (orderDetail?.is_tagihan === true || orderDetail?.is_tagihan === 'true' || orderDetail?.is_tagihan === 1 || orderDetail?.is_tagihan === '1' || orderDetail?.is_tagihan === undefined)">
                         <div style="display:flex;flex-direction:column;gap:16px;">
                             <!-- 3 Financial Metrics (Clean 3-col Grid Symmetrical) -->
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
@@ -2791,7 +2799,7 @@ function salesOrderListApp() {
 
         calcSisaTagihan() {
             if (!this.orderDetail) return 0;
-            if (this.orderDetail.tipe_pembayaran === 'konsinyasi' || this.orderDetail.is_konsinyasi || this.orderDetail.adalah_tagihan === false || this.orderDetail.adalah_tagihan === 'false') {
+            if (this.orderDetail.tipe_pembayaran === 'konsinyasi' || this.orderDetail.is_konsinyasi || this.orderDetail.is_tagihan === false || this.orderDetail.is_tagihan === 'false' || this.orderDetail.is_tagihan === 0 || this.orderDetail.is_tagihan === '0') {
                 return 0;
             }
             const netto = Number(this.orderDetail.total_netto || 0);

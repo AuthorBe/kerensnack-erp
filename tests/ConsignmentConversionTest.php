@@ -349,7 +349,7 @@ runTest('Opsi 2B (Beli Putus Tempo): Zeroes shelf stock, creates pending pesanan
         'nama_toko' => 'Toko Beli Tempo Test',
         'grup_pelanggan_id' => $grupId,
         'wilayah_id' => $wilId,
-        'tipe_pembayaran_default' => 'tempo_14_hari',
+        'tipe_pembayaran_default' => 'tempo_tanggal',
         'is_konsinyasi' => false,
         'konversi_konsinyasi_opsi' => 'beli_putus',
         'metode_beli_putus' => 'tempo',

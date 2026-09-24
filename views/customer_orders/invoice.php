@@ -6,7 +6,7 @@ use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
 $formatMode = $formatMode ?? PrintDocumentHelper::resolveFormat($_GET['format'] ?? 'standard');
-$isKonsinyasi = !empty($order['is_konsinyasi']) || (($order['tipe_pembayaran'] ?? '') === 'konsinyasi') || (isset($order['adalah_tagihan']) && ($order['adalah_tagihan'] === false || $order['adalah_tagihan'] === 'f' || $order['adalah_tagihan'] === 0 || $order['adalah_tagihan'] === 'false'));
+$isKonsinyasi = !empty($order['is_konsinyasi']) || (($order['tipe_pembayaran'] ?? '') === 'konsinyasi') || (isset($order['is_tagihan']) && ($order['is_tagihan'] === false || $order['is_tagihan'] === 'f' || $order['is_tagihan'] === 0 || $order['is_tagihan'] === 'false'));
 
 // Saring item bonus: Dokumen faktur/nota pelanggan murni hanya mencetak item pesanan PO reguler
 $items = array_values(array_filter($items ?? [], fn($it) => empty($it['is_bonus'])));

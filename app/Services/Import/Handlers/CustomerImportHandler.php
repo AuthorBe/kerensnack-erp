@@ -61,7 +61,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
     public function getTemplateExamples(): array
     {
         return [
-            ['CUST-0001', 'Toko Sumber Rezeki', 'Ibu Hj. Aminah', 'Grup Ritel A', 'RUTE-TNG-BARAT', 'Reguler', 'Jl. Merdeka No. 12, Tangerang', '081234567890', 'Tempo 14 Hari', 5000000, 'Budi Santoso', 'BCA', '1234567890', 'Aminah', 'Aktif'],
+            ['CUST-0001', 'Toko Sumber Rezeki', 'Ibu Hj. Aminah', 'Grup Ritel A', 'RUTE-TNG-BARAT', 'Reguler', 'Jl. Merdeka No. 12, Tangerang', '081234567890', 'Tempo Faktur', 5000000, 'Budi Santoso', 'BCA', '1234567890', 'Aminah', 'Aktif'],
             ['CUST-0002', 'Warung Berkah Jaya', 'Pak Hendra', 'Grup Grosir Pasar', 'RUTE-JAKBAR-1', 'Konsinyasi', 'Pasar Laris Blok B No. 4, Cengkareng', '085678901234', 'Konsinyasi', 2000000, '', 'BRI', '9876543210', 'Hendra', 'Aktif'],
             ['', 'Toko Baru Makmur (Contoh Baru)', 'Bpk Slamet', 'Grup Ritel A', 'RUTE-TNG-TIMUR', 'Reguler', 'Jl. Raya Serpong No. 8', '081399887766', 'Cash', 0, '', '', '', '', 'Aktif'],
         ];
@@ -74,7 +74,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             'Pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak akan pernah terhapus atau dinonaktifkan pada proses sinkronisasi.',
             'Nama Toko, Wilayah/Rute, dan Alamat Lengkap WAJIB diisi di setiap baris.',
             'Model Kerjasama: isi "Konsinyasi" untuk toko titip jual rak, atau "Reguler" untuk jual putus / tempo.',
-            'Tipe Bayar Default: Cash, Transfer, QRIS, Tempo 7 Hari, Tempo 14 Hari, Tempo 30 Hari, atau Konsinyasi (dapat ditulis dengan spasi atau huruf kecil/besar).',
+            'Tipe Bayar Default: Cash, Transfer, QRIS, Tempo Faktur, Tempo Tanggal, atau Konsinyasi (dapat ditulis dengan spasi atau huruf kecil/besar).',
             'Grup Pelanggan, Wilayah/Rute, dan Sales Pembina dapat diisi Kode atau Nama yang sudah terdaftar di sistem.'
         ];
     }
@@ -88,9 +88,8 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                        p.alamat_lengkap,
                        COALESCE(p.nomor_whatsapp, '') as nomor_whatsapp,
                        CASE 
-                           WHEN p.tipe_pembayaran_default = 'tempo_7_hari' THEN 'Tempo 7 Hari'
-                           WHEN p.tipe_pembayaran_default = 'tempo_14_hari' THEN 'Tempo 14 Hari'
-                           WHEN p.tipe_pembayaran_default = 'tempo_30_hari' THEN 'Tempo 30 Hari'
+                           WHEN p.tipe_pembayaran_default = 'tempo_faktur' THEN 'Tempo Faktur'
+                           WHEN p.tipe_pembayaran_default = 'tempo_tanggal' THEN 'Tempo Tanggal'
                            WHEN p.tipe_pembayaran_default = 'konsinyasi' THEN 'Konsinyasi'
                            WHEN p.tipe_pembayaran_default = 'transfer' THEN 'Transfer'
                            WHEN p.tipe_pembayaran_default = 'qris' THEN 'QRIS'
@@ -125,17 +124,20 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             return $isKonsinyasi ? 'konsinyasi' : 'cash';
         }
 
-        if (str_contains($clean, '7')) {
-            return 'tempo_7_hari';
-        }
-        if (str_contains($clean, '14')) {
-            return 'tempo_14_hari';
-        }
-        if (str_contains($clean, '30')) {
-            return 'tempo_30_hari';
-        }
         if (str_contains($clean, 'konsin') || str_contains($clean, 'titip')) {
             return 'konsinyasi';
+        }
+        if (str_contains($clean, 'faktur') || str_contains($clean, 'rolling') || str_contains($clean, 'nota')) {
+            return 'tempo_faktur';
+        }
+        if (str_contains($clean, 'tanggal') || str_contains($clean, 'tgl') || str_contains($clean, 'date')) {
+            return 'tempo_tanggal';
+        }
+        if (str_contains($clean, '7') || str_contains($clean, '14') || str_contains($clean, '30')) {
+            return 'tempo_faktur';
+        }
+        if (str_contains($clean, 'tempo') || str_contains($clean, 'kredit') || str_contains($clean, 'hutang') || str_contains($clean, 'piutang')) {
+            return 'tempo_faktur';
         }
         if (str_contains($clean, 'trans') || str_contains($clean, 'trf') || str_contains($clean, 'bank')) {
             return 'transfer';
@@ -148,7 +150,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         }
 
         // Exact match fallback
-        if (in_array($clean, ['cash', 'transfer', 'qris', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi'], true)) {
+        if (in_array($clean, ['cash', 'transfer', 'qris', 'tempo_tanggal', 'tempo_faktur', 'konsinyasi'], true)) {
             return $clean;
         }
 
@@ -254,9 +256,12 @@ class CustomerImportHandler implements EntityImportHandlerInterface
 
             // Normalisasi
             $plafon = SmartReader::normalizeNumeric($plafonRaw, 0.0);
-            $isKonsinyasi = SmartReader::normalizeBoolean($modelRaw, false) || str_contains(strtolower($modelRaw), 'konsin');
+            $isKonsinyasiRaw = SmartReader::normalizeBoolean($modelRaw, false) || str_contains(strtolower($modelRaw), 'konsin');
             $statusAktif = SmartReader::normalizeBoolean($statusAktifRaw, true);
-            $tipeBayar = self::normalizePaymentType($tipeBayarRaw, $isKonsinyasi);
+            $tipeBayar = self::normalizePaymentType($tipeBayarRaw, $isKonsinyasiRaw);
+
+            // Auto-Sync: jika tipe bayar bukan konsinyasi, otomatis toko adalah Reguler
+            $isKonsinyasi = ($tipeBayar === 'konsinyasi');
 
             // Proteksi status_aktif untuk pelanggan default POS CUST-001
             if (strtoupper(trim((string)$kode)) === 'CUST-001') {

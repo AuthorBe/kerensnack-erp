@@ -567,7 +567,7 @@ BEGIN
         nomor_nota, pelanggan_id, sales_driver_id,
         tanggal_pesanan, total_bruto, total_diskon, total_netto,
         tipe_pembayaran, status_pembayaran, status_pemrosesan,
-        total_dibayar, sisa_tagihan, adalah_tagihan, catatan,
+        total_dibayar, sisa_tagihan, is_tagihan, catatan,
         dibuat_oleh, dibuat_pada, diubah_pada
     ) VALUES (
         v_nomor_nota, v_pelanggan_id, v_driver_id,
@@ -650,7 +650,7 @@ BEGIN
         RAISE EXCEPTION 'Pesanan % tidak ditemukan', p_pesanan_id;
     END IF;
 
-    IF v_pesanan.adalah_tagihan = FALSE THEN
+    IF v_pesanan.is_tagihan = FALSE THEN
         RAISE EXCEPTION 'Pesanan ini adalah dokumen pengiriman/titip, bukan tagihan. Tidak bisa dicatat pembayarannya.';
     END IF;
 
@@ -750,7 +750,7 @@ BEGIN
             SELECT SUM(pes.sisa_tagihan)
             FROM public.pesanan pes
             WHERE pes.pelanggan_id = p.id
-              AND pes.adalah_tagihan = TRUE
+              AND pes.is_tagihan = TRUE
               AND pes.status_pemrosesan IN ('selesai_dikirim', 'selesai', 'selesai_diterima')
               AND pes.status_pemrosesan != 'dibatalkan'
               AND pes.status_pembayaran != 'lunas'
@@ -777,7 +777,7 @@ BEGIN
             SELECT SUM(pes.sisa_tagihan)
             FROM public.pesanan pes
             WHERE pes.pelanggan_id = p.id
-              AND pes.adalah_tagihan = TRUE
+              AND pes.is_tagihan = TRUE
               AND pes.status_pemrosesan IN ('selesai_dikirim', 'selesai', 'selesai_diterima')
               AND pes.status_pemrosesan != 'dibatalkan'
               AND pes.status_pembayaran != 'lunas'
@@ -823,7 +823,7 @@ AS $function$
 
                 SELECT * INTO v_pesanan FROM public.pesanan WHERE id = NEW.pesanan_id;
 
-                IF v_pesanan.tipe_pembayaran = 'konsinyasi' AND v_pesanan.adalah_tagihan = FALSE THEN
+                IF v_pesanan.tipe_pembayaran = 'konsinyasi' AND v_pesanan.is_tagihan = FALSE THEN
                     v_user_id := v_pesanan.dibuat_oleh;
 
                     FOR r_item IN

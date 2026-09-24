@@ -144,10 +144,10 @@ runTest("2. Lifecycle Pesanan: Membuat pesanan B2B dengan status 'po' dan snapsh
         $stmtOrder = $pdo->prepare("
             INSERT INTO public.pesanan (
                 nomor_nota, pelanggan_id, tanggal_pesanan, total_bruto, total_diskon, total_netto,
-                tipe_pembayaran, status_pemrosesan, status_pembayaran, dibuat_pada
+                tipe_pembayaran, is_tagihan, status_pemrosesan, status_pembayaran, dibuat_pada
             ) VALUES (
                 :nota, :cid, CURRENT_DATE, :bruto, 0, :netto,
-                'tempo_14_hari', 'po', 'belum_lunas', NOW()
+                'tempo_faktur', TRUE, 'po', 'belum_lunas', NOW()
             ) RETURNING id, status_pemrosesan, status_pembayaran
         ");
         $stmtOrder->execute([

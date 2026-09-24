@@ -227,12 +227,11 @@ runTest("1.7 - SmartReader::extractSmartHeader & filterSmartDataRows menyaring h
 
 runTest("1.8 - CustomerImportHandler::normalizePaymentType menangani spasi, huruf besar-kecil, dan default", function() {
     $tests = [
-        'Tempo 7 Hari'   => 'tempo_7_hari',
-        'tempo 7 hari'   => 'tempo_7_hari',
-        'TEMPO_7_HARI'   => 'tempo_7_hari',
-        'Tempo 14 Hari'  => 'tempo_14_hari',
-        'Tempo 30 Hari'  => 'tempo_30_hari',
-        'tempo-30-hari'  => 'tempo_30_hari',
+        'Tempo Faktur'   => 'tempo_faktur',
+        'tempo faktur'   => 'tempo_faktur',
+        'TEMPO_FAKTUR'   => 'tempo_faktur',
+        'Tempo Tanggal'  => 'tempo_tanggal',
+        'tempo-tanggal'  => 'tempo_tanggal',
         'Konsinyasi'     => 'konsinyasi',
         'titip jual'     => 'konsinyasi',
         'Transfer'       => 'transfer',
@@ -378,7 +377,7 @@ runTest("4.1 - CustomerImportHandler: Resolusi foreign key grup, wilayah, dan sa
         'Reguler',
         'Jl. Pengujian No. 123',
         '081122334455',
-        'Tempo 14 Hari',
+        'Tempo Faktur',
         '1000000',
         '',
         '',
@@ -403,8 +402,8 @@ runTest("4.1 - CustomerImportHandler: Resolusi foreign key grup, wilayah, dan sa
     if ($wilayahRow && ($first['data']['wilayah_id'] ?? null) !== $wilayahRow['id']) {
         return "Failed to resolve wilayah_id";
     }
-    if (($first['data']['tipe_pembayaran_default'] ?? '') !== 'tempo_14_hari') {
-        return "Failed to normalize payment type 'Tempo 14 Hari' to 'tempo_14_hari'";
+    if (($first['data']['tipe_pembayaran_default'] ?? '') !== 'tempo_faktur') {
+        return "Failed to normalize payment type 'Tempo Faktur' to 'tempo_faktur'";
     }
 
     return true;

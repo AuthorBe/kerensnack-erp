@@ -23,7 +23,7 @@ use Throwable;
 class CustomerController extends Controller
 {
     public const ALLOWED_TIPE_BAYAR = [
-        'cash', 'qris', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi'
+        'cash', 'qris', 'transfer', 'konsinyasi', 'tempo_tanggal', 'tempo_faktur'
     ];
 
     public function __construct()
@@ -281,7 +281,7 @@ class CustomerController extends Controller
             $tipeBayar = 'cash';
         }
 
-        $isKonsinyasi = ($tipeBayar === 'konsinyasi') || (bool)$this->input('is_konsinyasi', false);
+        $isKonsinyasi = ($tipeBayar === 'konsinyasi');
         $plafon = (float)preg_replace('/[^0-9]/', '', (string)$this->input('plafon_piutang', '0'));
         $linkMaps = trim((string)$this->input('link_google_maps')) ?: null;
         $namaBank = trim((string)$this->input('nama_bank'));
@@ -385,7 +385,7 @@ class CustomerController extends Controller
             $tipeBayar = 'cash';
         }
 
-        $isKonsinyasi = ($tipeBayar === 'konsinyasi') || (bool)$this->input('is_konsinyasi', false);
+        $isKonsinyasi = ($tipeBayar === 'konsinyasi');
         $plafon = (float)preg_replace('/[^0-9]/', '', (string)$this->input('plafon_piutang', '0'));
         $linkMaps = trim((string)$this->input('link_google_maps')) ?: null;
         $statusAktif = (bool)$this->input('status_aktif', true);
@@ -598,15 +598,15 @@ class CustomerController extends Controller
                         $uangDiterima = 0.0;
                         $akunKasId = null;
 
-                        $hariTempo = 14;
-                        if ($tipeBayar === 'tempo_7_hari') {
-                            $hariTempo = 7;
-                        } elseif ($tipeBayar === 'tempo_30_hari') {
-                            $hariTempo = 30;
-                        }
-                        $tanggalJatuhTempo = date('Y-m-d', strtotime("+{$hariTempo} days"));
-                        if (!str_starts_with($tipeBayarPesanan, 'tempo')) {
-                            $tipeBayarPesanan = 'tempo_14_hari';
+                        if ($tipeBayar === 'tempo_faktur') {
+                            $tanggalJatuhTempo = null;
+                            $tipeBayarPesanan = 'tempo_faktur';
+                        } elseif ($tipeBayar === 'tempo_tanggal') {
+                            $tanggalJatuhTempo = date('Y-m-d', strtotime('+30 days'));
+                            $tipeBayarPesanan = 'tempo_tanggal';
+                        } else {
+                            $tanggalJatuhTempo = null;
+                            $tipeBayarPesanan = 'tempo_faktur';
                         }
                     }
 
@@ -622,7 +622,7 @@ class CustomerController extends Controller
                             total_bruto, total_diskon, total_netto, tipe_pembayaran,
                             tanggal_jatuh_tempo, status_pembayaran, status_pemrosesan,
                             catatan, dibuat_oleh, akun_kas_id, total_dibayar, sisa_tagihan,
-                            adalah_tagihan, uang_diterima, kembalian
+                            is_tagihan, uang_diterima, kembalian
                         ) VALUES (
                             :nomor_nota, :pelanggan_id, :sales_driver_id, CURRENT_DATE,
                             :total_bruto, 0, :total_netto, :tipe_pembayaran,

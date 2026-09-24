@@ -230,7 +230,7 @@ runTest("4. Business Rule: Kunjungan opname yang BELUM DITAGIHKAN (unbilled) = 0
             FROM public.pesanan pes
             JOIN public.pelanggan p ON pes.pelanggan_id = p.id
             WHERE p.sales_driver_id = '{$dummyEmpId}'
-              AND pes.adalah_tagihan = TRUE
+              AND pes.is_tagihan = TRUE
               AND pes.tipe_pembayaran = 'konsinyasi'
               AND pes.status_pemrosesan != 'dibatalkan'
               AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)
@@ -282,7 +282,7 @@ runTest("5. Business Rule: Tagihan terbit Rp 10 Jt dgn bayar Rp 6 Jt & sisa Rp 4
             INSERT INTO public.pesanan (
                 id, nomor_nota, pelanggan_id, sales_driver_id, tanggal_pesanan,
                 total_bruto, total_diskon, total_netto, tipe_pembayaran, status_pembayaran,
-                status_pemrosesan, total_dibayar, sisa_tagihan, adalah_tagihan, dibuat_oleh
+                status_pemrosesan, total_dibayar, sisa_tagihan, is_tagihan, dibuat_oleh
             ) VALUES (
                 '{$dummyOrderId}', 'INV-KONSIN-UJI-01', '{$dummyStoreId}', '{$dummyEmpId}', '{$curDate}',
                 10000000.00, 0.00, 10000000.00, 'konsinyasi', 'sebagian',
@@ -298,7 +298,7 @@ runTest("5. Business Rule: Tagihan terbit Rp 10 Jt dgn bayar Rp 6 Jt & sisa Rp 4
             FROM public.pesanan pes
             JOIN public.pelanggan p ON pes.pelanggan_id = p.id
             WHERE p.sales_driver_id = '{$dummyEmpId}'
-              AND pes.adalah_tagihan = TRUE
+              AND pes.is_tagihan = TRUE
               AND pes.tipe_pembayaran = 'konsinyasi'
               AND pes.status_pemrosesan != 'dibatalkan'
               AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)
@@ -332,7 +332,7 @@ runTest("5. Business Rule: Tagihan terbit Rp 10 Jt dgn bayar Rp 6 Jt & sisa Rp 4
             FROM public.pesanan pes
             JOIN public.pelanggan p ON pes.pelanggan_id = p.id
             WHERE p.sales_driver_id = '{$dummyEmpId}'
-              AND pes.adalah_tagihan = TRUE
+              AND pes.is_tagihan = TRUE
               AND pes.tipe_pembayaran = 'konsinyasi'
               AND pes.status_pemrosesan != 'dibatalkan'
               AND pes.tanggal_pesanan >= DATE_TRUNC('month', CURRENT_DATE)

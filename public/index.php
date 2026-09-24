@@ -76,6 +76,20 @@ spl_autoload_register(function (string $class) {
     }
 });
 
+// Global Class Aliases for Views & Helpers
+if (!class_exists('Router', false)) {
+    class_alias(\App\Core\Router::class, 'Router');
+}
+if (!class_exists('Auth', false)) {
+    class_alias(\App\Core\Auth::class, 'Auth');
+}
+if (!class_exists('Csrf', false)) {
+    class_alias(\App\Helpers\Csrf::class, 'Csrf');
+}
+if (!class_exists('Flash', false)) {
+    class_alias(\App\Helpers\Flash::class, 'Flash');
+}
+
 // 3. Database Connection
 require_once ROOT_PATH . '/config/database.php';
 

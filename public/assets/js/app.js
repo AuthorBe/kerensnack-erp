@@ -1754,6 +1754,7 @@
     _swRegistration: null,
 
     init() {
+      window.PWAEngine = this;
       this.initNetworkGuard();
       this.initInstallPrompt();
       this.initServiceWorker();
@@ -1913,23 +1914,11 @@
         const trigger = e.target.closest('.pwa-install-trigger');
         if (trigger) {
           e.preventDefault();
-          if (this._deferredInstallPrompt) {
+          // Always open interactive confirmation modal first
+          if (typeof window.openPwaInstallModal === 'function') {
+            window.openPwaInstallModal();
+          } else if (this._deferredInstallPrompt) {
             this._deferredInstallPrompt.prompt();
-            this._deferredInstallPrompt.userChoice.then((choiceResult) => {
-              if (choiceResult.outcome === 'accepted') {
-                console.log('[PWA] User accepted install prompt');
-                if (window.showToast) window.showToast('Aplikasi berhasil dipasang! 🎉', 'success');
-                syncInstallButtons();
-              }
-              this._deferredInstallPrompt = null;
-            });
-          } else {
-            // Open interactive installation guide modal for Android, iOS Safari, or Desktop
-            if (typeof window.openPwaInstallModal === 'function') {
-              window.openPwaInstallModal();
-            } else {
-              alert('Untuk memasang aplikasi: Pada Chrome Android tekan titik 3 lalu "Pasang Aplikasi", atau pada iPhone Safari tekan tombol Share lalu "Tambah ke Layar Utama".');
-            }
           }
         }
       });

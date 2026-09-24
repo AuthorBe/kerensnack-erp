@@ -464,7 +464,7 @@ runTest('Territory Duplicate Route Code Guard', function () use ($db) {
 // TEST 8: Payment Type Whitelist Constraint Adherence
 // ============================================================
 runTest('Payment Type Whitelist Validation', function () use ($db) {
-    $expectedTypes = ['cash', 'qris', 'transfer', 'tempo_7_hari', 'tempo_14_hari', 'tempo_30_hari', 'konsinyasi'];
+    $expectedTypes = ['cash', 'qris', 'transfer', 'konsinyasi', 'tempo_faktur', 'tempo_tanggal'];
 
     $constant = CustomerController::ALLOWED_TIPE_BAYAR;
 

@@ -52,7 +52,9 @@ class Router
     {
         $base = self::getBasePath();
         $cleanPath = '/' . ltrim($path, '/');
-        return $base . '/assets' . $cleanPath;
+        $fullPath = dirname(__DIR__, 2) . '/public/assets' . $cleanPath;
+        $version = file_exists($fullPath) ? (string) filemtime($fullPath) : '1.0';
+        return $base . '/assets' . $cleanPath . '?v=' . $version;
     }
 
     public static function redirect(string $path, int $statusCode = 302): void

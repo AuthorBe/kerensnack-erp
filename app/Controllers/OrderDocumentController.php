@@ -284,9 +284,9 @@ class OrderDocumentController extends Controller
                 if ($tipeTransaksi === 'beli_putus') {
                     $sql .= " AND p.catatan ILIKE '%Beli putus%'";
                 } elseif ($tipeTransaksi === 'reguler') {
-                    $sql .= " AND (p.catatan NOT ILIKE '%Beli putus%' OR p.catatan IS NULL) AND p.tipe_pembayaran != 'konsinyasi' AND (p.adalah_tagihan = TRUE OR p.adalah_tagihan IS NULL)";
+                    $sql .= " AND (p.catatan NOT ILIKE '%Beli putus%' OR p.catatan IS NULL) AND p.tipe_pembayaran != 'konsinyasi' AND (p.is_tagihan = TRUE OR p.is_tagihan IS NULL)";
                 } elseif ($tipeTransaksi === 'konsinyasi') {
-                    $sql .= " AND (p.tipe_pembayaran = 'konsinyasi' OR p.adalah_tagihan = FALSE)";
+                    $sql .= " AND (p.tipe_pembayaran = 'konsinyasi' OR p.is_tagihan = FALSE)";
                 }
             }
             if (!empty($q)) {

@@ -376,9 +376,10 @@ class TemplateGenerator
                         ['Model Toko', 'Konsinyasi', 'Titip jual rak toko mitra dengan rekonsiliasi berkala & sisa stok'],
                         ['Tipe Pembayaran', 'cash', 'Pembayaran tunai langsung saat barang diserahkan'],
                         ['Tipe Pembayaran', 'transfer', 'Pembayaran via transfer rekening bank'],
-                        ['Tipe Pembayaran', 'tempo_7_hari', 'Jatuh tempo pembayaran 7 hari setelah pengiriman'],
-                        ['Tipe Pembayaran', 'tempo_14_hari', 'Jatuh tempo pembayaran 14 hari setelah pengiriman'],
-                        ['Tipe Pembayaran', 'tempo_30_hari', 'Jatuh tempo pembayaran 30 hari setelah pengiriman'],
+                        ['Tipe Pembayaran', 'qris', 'Pembayaran digital via scan QRIS'],
+                        ['Tipe Pembayaran', 'tempo_faktur', 'Kirim hari ini, bayar pada saat jadwal kiriman faktur berikutnya tiba'],
+                        ['Tipe Pembayaran', 'tempo_tanggal', 'Jatuh tempo pembayaran pada tanggal kalender spesifik'],
+                        ['Tipe Pembayaran', 'konsinyasi', 'Titip jual barang dengan penyelesaian berkala saat kunjungan'],
                     ],
                     $currentRow,
                     [22, 25, 60]

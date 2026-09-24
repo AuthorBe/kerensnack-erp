@@ -1295,7 +1295,7 @@ class ConsignmentController extends Controller
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                 LEFT JOIN public.v_karyawan_info kar ON pes.sales_driver_id = kar.id
                 WHERE pes.tipe_pembayaran = 'konsinyasi'
-                  AND pes.adalah_tagihan = TRUE
+                  AND pes.is_tagihan = TRUE
                   AND pes.status_pembayaran != 'dibatalkan'
             ";
             $tagihanParams = [];
@@ -1532,7 +1532,7 @@ class ConsignmentController extends Controller
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                 LEFT JOIN public.v_karyawan_info kar ON pes.sales_driver_id = kar.id
                 WHERE pes.tipe_pembayaran = 'konsinyasi'
-                  AND pes.adalah_tagihan = TRUE
+                  AND pes.is_tagihan = TRUE
                   AND pes.status_pembayaran != 'dibatalkan'
             ";
             $params = [];
@@ -1867,7 +1867,7 @@ class ConsignmentController extends Controller
                     FROM public.pesanan pes
                     JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                     WHERE p.sales_driver_id = :sales_id
-                      AND pes.adalah_tagihan = TRUE
+                      AND pes.is_tagihan = TRUE
                       AND pes.tipe_pembayaran = 'konsinyasi'
                       AND pes.status_pemrosesan != 'dibatalkan'
                       AND pes.tanggal_pesanan >= :start_date AND pes.tanggal_pesanan <= :end_date
@@ -1887,7 +1887,7 @@ class ConsignmentController extends Controller
                     FROM public.pesanan pes
                     LEFT JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                     WHERE (pes.sales_driver_id = :sales_id OR (pes.sales_driver_id IS NULL AND p.sales_driver_id = :sales_id))
-                      AND pes.adalah_tagihan = TRUE
+                      AND pes.is_tagihan = TRUE
                       AND pes.tipe_pembayaran != 'konsinyasi'
                       AND pes.status_pemrosesan != 'dibatalkan'
                       AND pes.tanggal_pesanan >= :start_date AND pes.tanggal_pesanan <= :end_date
@@ -1950,11 +1950,11 @@ class ConsignmentController extends Controller
                     ) v_vis ON v_vis.pelanggan_id = p.id
                     LEFT JOIN (
                         SELECT pelanggan_id, 
-                               SUM(total_dibayar) as omzet_terbayar, 
-                               SUM(sisa_tagihan) as sisa_hutang,
-                               SUM(total_netto) as total_faktur
+                                SUM(total_dibayar) as omzet_terbayar, 
+                                SUM(sisa_tagihan) as sisa_hutang,
+                                SUM(total_netto) as total_faktur
                         FROM public.pesanan
-                        WHERE adalah_tagihan = TRUE 
+                        WHERE is_tagihan = TRUE 
                           AND tipe_pembayaran = 'konsinyasi'
                           AND status_pemrosesan != 'dibatalkan'
                           AND tanggal_pesanan >= :start_date AND tanggal_pesanan <= :end_date
@@ -1972,7 +1972,7 @@ class ConsignmentController extends Controller
                     FROM public.pesanan pes
                     JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                     WHERE p.sales_driver_id = :sales_id
-                      AND pes.adalah_tagihan = TRUE
+                      AND pes.is_tagihan = TRUE
                       AND pes.tipe_pembayaran = 'konsinyasi'
                       AND pes.status_pemrosesan != 'dibatalkan'
                       AND pes.tanggal_pesanan >= :start_date AND pes.tanggal_pesanan <= :end_date
@@ -1987,7 +1987,7 @@ class ConsignmentController extends Controller
                     FROM public.pesanan pes
                     LEFT JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                     WHERE (pes.sales_driver_id = :sales_id OR (pes.sales_driver_id IS NULL AND p.sales_driver_id = :sales_id))
-                      AND pes.adalah_tagihan = TRUE
+                      AND pes.is_tagihan = TRUE
                       AND pes.tipe_pembayaran != 'konsinyasi'
                       AND pes.status_pemrosesan != 'dibatalkan'
                       AND pes.tanggal_pesanan >= :start_date AND pes.tanggal_pesanan <= :end_date

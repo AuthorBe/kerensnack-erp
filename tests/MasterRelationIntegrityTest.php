@@ -386,8 +386,8 @@ runTest("3.1.4 CustomerController: Blokir Penghapusan Toko yang Memiliki Tagihan
 
     // Insert pesanan belum lunas
     $pdo->prepare("
-        INSERT INTO public.pesanan (id, nomor_nota, pelanggan_id, total_bruto, total_netto, total_dibayar, sisa_tagihan, tipe_pembayaran, status_pembayaran)
-        VALUES (:oid, 'NOTA-TEST-DEL-UNPAID', :cid, 100000.00, 100000.00, 0.00, 100000.00, 'tempo_14_hari', 'belum_lunas')
+        INSERT INTO public.pesanan (id, nomor_nota, pelanggan_id, total_bruto, total_netto, total_dibayar, sisa_tagihan, tipe_pembayaran, is_tagihan, status_pembayaran)
+        VALUES (:oid, 'NOTA-TEST-DEL-UNPAID', :cid, 100000.00, 100000.00, 0.00, 100000.00, 'tempo_faktur', TRUE, 'belum_lunas')
     ")->execute(['oid' => $orderDummyId, 'cid' => $custDummyId]);
 
     $ctrl = new class extends CustomerController {
@@ -583,7 +583,7 @@ runTest("3.4.1 CustomerController: store() & update() Menyimpan sales_driver_id 
         'alamat_lengkap' => 'Jl. Pahlawan Sales No. 8',
         'grup_pelanggan_id' => $grupRow['id'],
         'sales_driver_id' => $salesRow['id'],
-        'tipe_pembayaran_default' => 'tempo_14_hari',
+        'tipe_pembayaran_default' => 'tempo_faktur',
         'plafon_piutang' => '10.000.000'
     ];
 
@@ -619,7 +619,7 @@ runTest("3.4.1 CustomerController: store() & update() Menyimpan sales_driver_id 
         'alamat_lengkap' => 'Jl. Pahlawan Sales No. 8',
         'grup_pelanggan_id' => $grupRow['id'],
         'sales_driver_id' => $salesRow['id'],
-        'tipe_pembayaran_default' => 'tempo_30_hari',
+        'tipe_pembayaran_default' => 'tempo_tanggal',
         'plafon_piutang' => '15.000.000',
         'status_aktif' => true
     ];
@@ -688,7 +688,7 @@ runTest("3.4.2 CustomerOrderController: Order Mewarisi sales_driver_id dari Pela
         'nomor_nota' => $nomorNota,
         'pelanggan_id' => $dummyCustId,
         'tanggal_pesanan' => date('Y-m-d'),
-        'tipe_pembayaran' => 'tempo_14_hari',
+        'tipe_pembayaran' => 'tempo_faktur',
         'sales_driver_id' => '', // KOSONGKAN agar mewarisi dari pelanggan
         'items_json' => json_encode([
             ['item_id' => $itemRow['id'], 'satuan' => 'pcs', 'qty' => 2, 'harga' => 10000, 'diskon' => 0]

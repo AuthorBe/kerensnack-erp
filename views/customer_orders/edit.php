@@ -634,11 +634,21 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
                                         </div>
                                     </template>
 
-                                    <!-- Conditional: Tanggal Jatuh Tempo jika Tempo Murni -->
-                                    <template x-if="header.tipe_pembayaran === 'tempo_7_hari' || header.tipe_pembayaran === 'tempo_14_hari' || header.tipe_pembayaran === 'tempo_30_hari'">
+                                    <!-- Conditional: Tanggal Jatuh Tempo jika Tempo Tanggal -->
+                                    <template x-if="header.tipe_pembayaran === 'tempo_tanggal'">
                                         <div>
                                             <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;color:#dc2626;">Tanggal Jatuh Tempo *</label>
                                             <input type="date" name="tanggal_jatuh_tempo" x-model="header.tanggal_jatuh_tempo" required class="form-input font-mono" style="height:42px;border-radius:10px;border-color:#ef4444;color:#dc2626;font-weight:700;">
+                                        </div>
+                                    </template>
+
+                                    <!-- Conditional: Banner Info jika Tempo Faktur -->
+                                    <template x-if="header.tipe_pembayaran === 'tempo_faktur'">
+                                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;">
+                                            <i data-lucide="info" style="width:18px;height:18px;color:#16a34a;flex-shrink:0;"></i>
+                                            <span style="font-size:12px;color:#15803d;font-weight:600;">
+                                                <strong>Tempo Faktur:</strong> Ditagihkan saat jadwal kiriman berikutnya tiba.
+                                            </span>
                                         </div>
                                     </template>
                                 </div>
@@ -1485,65 +1495,69 @@ function editSalesOrderApp() {
         },
 
         get allowedPaymentOptions() {
-            if (this.isKonsinyasi) {
+            if (this.isKonsinyasi || (this.order && this.order.is_konsinyasi)) {
                 return [{ value: 'konsinyasi', label: 'Titip Jual (Konsinyasi)' }];
             }
             const def = this.order?.tipe_pembayaran_default || this.header?.tipe_pembayaran || 'cash';
-            if (def === 'cash' || def === 'qris' || def === 'transfer') {
+            if (def === 'tempo_faktur') {
                 return [
+                    { value: 'tempo_faktur', label: 'Tempo Faktur (Sesuai Default Toko)' },
+                    { value: 'cash', label: 'Tunai (Lunas 100%)' },
+                    { value: 'transfer', label: 'Transfer Bank (Lunas)' },
+                    { value: 'qris', label: 'QRIS (Non-Tunai Lunas)' },
+                    { value: 'tempo_tanggal', label: 'Tempo Tanggal' },
+                    { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' }
+                ];
+            }
+            if (def === 'tempo_tanggal') {
+                return [
+                    { value: 'tempo_tanggal', label: 'Tempo Tanggal (Sesuai Default Toko)' },
+                    { value: 'tempo_faktur', label: 'Tempo Faktur' },
+                    { value: 'cash', label: 'Tunai (Lunas 100%)' },
+                    { value: 'transfer', label: 'Transfer Bank (Lunas)' },
+                    { value: 'qris', label: 'QRIS (Non-Tunai Lunas)' },
+                    { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' }
+                ];
+            }
+            if (def === 'transfer') {
+                return [
+                    { value: 'transfer', label: 'Transfer Bank (Lunas)' },
                     { value: 'cash', label: 'Tunai (Lunas 100%)' },
                     { value: 'qris', label: 'QRIS (Non-Tunai Lunas)' },
-                    { value: 'transfer', label: 'Transfer Bank (Lunas)' },
+                    { value: 'tempo_faktur', label: 'Tempo Faktur' },
+                    { value: 'tempo_tanggal', label: 'Tempo Tanggal' },
                     { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' }
                 ];
             }
-            if (def === 'tempo_7_hari') {
+            if (def === 'qris') {
                 return [
-                    { value: 'tempo_7_hari', label: 'Tempo 7 Hari (Sesuai Toko)' },
-                    { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' }
-                ];
-            }
-            if (def === 'tempo_14_hari') {
-                return [
-                    { value: 'tempo_14_hari', label: 'Tempo 14 Hari (Sesuai Toko)' },
-                    { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' }
-                ];
-            }
-            if (def === 'tempo_30_hari') {
-                return [
-                    { value: 'tempo_30_hari', label: 'Tempo 30 Hari (Sesuai Toko)' },
-                    { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' }
-                ];
-            }
-            if (def === 'sebagian') {
-                return [
-                    { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' },
+                    { value: 'qris', label: 'QRIS (Non-Tunai Lunas)' },
                     { value: 'cash', label: 'Tunai (Lunas 100%)' },
-                    { value: 'transfer', label: 'Transfer Bank (Lunas)' }
+                    { value: 'transfer', label: 'Transfer Bank (Lunas)' },
+                    { value: 'tempo_faktur', label: 'Tempo Faktur' },
+                    { value: 'tempo_tanggal', label: 'Tempo Tanggal' },
+                    { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' }
                 ];
             }
             return [
                 { value: 'cash', label: 'Tunai (Lunas 100%)' },
-                { value: 'qris', label: 'QRIS (Non-Tunai Lunas)' },
                 { value: 'transfer', label: 'Transfer Bank (Lunas)' },
-                { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' },
-                { value: 'tempo_7_hari', label: 'Tempo 7 Hari' },
-                { value: 'tempo_14_hari', label: 'Tempo 14 Hari' },
-                { value: 'tempo_30_hari', label: 'Tempo 30 Hari' }
+                { value: 'qris', label: 'QRIS (Non-Tunai Lunas)' },
+                { value: 'tempo_faktur', label: 'Tempo Faktur' },
+                { value: 'tempo_tanggal', label: 'Tempo Tanggal' },
+                { value: 'sebagian', label: 'Kredit / Bayar Sebagian (DP)' }
             ];
         },
 
         onTipePembayaranChange() {
-            const tgl = new Date(this.header.tanggal_pesanan || new Date());
-            if (this.header.tipe_pembayaran === 'tempo_7_hari') {
-                tgl.setDate(tgl.getDate() + 7);
-                this.header.tanggal_jatuh_tempo = tgl.toISOString().split('T')[0];
-            } else if (this.header.tipe_pembayaran === 'tempo_14_hari' || this.header.tipe_pembayaran === 'sebagian') {
-                tgl.setDate(tgl.getDate() + 14);
-                this.header.tanggal_jatuh_tempo = tgl.toISOString().split('T')[0];
-            } else if (this.header.tipe_pembayaran === 'tempo_30_hari' || this.header.tipe_pembayaran === 'konsinyasi') {
-                tgl.setDate(tgl.getDate() + 30);
-                this.header.tanggal_jatuh_tempo = tgl.toISOString().split('T')[0];
+            if (this.header.tipe_pembayaran === 'tempo_tanggal' || this.header.tipe_pembayaran === 'sebagian') {
+                if (!this.header.tanggal_jatuh_tempo) {
+                    const tgl = new Date(this.header.tanggal_pesanan || new Date());
+                    tgl.setDate(tgl.getDate() + 14);
+                    this.header.tanggal_jatuh_tempo = tgl.toISOString().split('T')[0];
+                }
+            } else {
+                this.header.tanggal_jatuh_tempo = '';
             }
         },
 

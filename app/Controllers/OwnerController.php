@@ -91,7 +91,7 @@ class OwnerController extends Controller
                 WHERE tanggal_pesanan BETWEEN :start AND :end
                   AND status_pemrosesan != 'dibatalkan'
                   AND status_pembayaran != 'dibatalkan'
-                  AND adalah_tagihan = TRUE
+                  AND is_tagihan = TRUE
             ", ['start' => $startDate, 'end' => $endDate]) ?? [];
 
             $totalOmzet = (float)($salesSummary['total_omzet'] ?? 0);
@@ -108,7 +108,7 @@ class OwnerController extends Controller
                 WHERE p.tanggal_pesanan BETWEEN :start AND :end
                   AND p.status_pemrosesan != 'dibatalkan'
                   AND p.status_pembayaran != 'dibatalkan'
-                  AND p.adalah_tagihan = TRUE
+                  AND p.is_tagihan = TRUE
             ", ['start' => $startDate, 'end' => $endDate]) ?? [];
             $totalHpp = (float)($cogsRow['total_hpp'] ?? 0);
 
@@ -147,7 +147,7 @@ class OwnerController extends Controller
                 WHERE tanggal_pesanan = CURRENT_DATE 
                   AND status_pemrosesan != 'dibatalkan'
                   AND status_pembayaran != 'dibatalkan'
-                  AND adalah_tagihan = TRUE
+                  AND is_tagihan = TRUE
             ")['total'] ?? 0);
 
             // =========================================================================
@@ -185,7 +185,7 @@ class OwnerController extends Controller
                 FROM public.pesanan
                 WHERE status_pemrosesan != 'dibatalkan'
                   AND status_pembayaran != 'dibatalkan'
-                  AND adalah_tagihan = TRUE
+                  AND is_tagihan = TRUE
                   AND status_pembayaran != 'lunas'
             ") ?? [];
 
@@ -198,7 +198,7 @@ class OwnerController extends Controller
                 FROM public.pesanan pes
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                 LEFT JOIN public.v_karyawan_info k ON pes.sales_driver_id = k.id
-                WHERE pes.adalah_tagihan = TRUE 
+                WHERE pes.is_tagihan = TRUE 
                   AND pes.status_pembayaran != 'lunas' 
                   AND pes.status_pemrosesan != 'dibatalkan'
                   AND pes.status_pembayaran != 'dibatalkan'
@@ -277,7 +277,7 @@ class OwnerController extends Controller
                 WHERE pes.tanggal_pesanan BETWEEN :start AND :end
                   AND pes.status_pemrosesan != 'dibatalkan'
                   AND pes.status_pembayaran != 'dibatalkan'
-                  AND pes.adalah_tagihan = TRUE
+                  AND pes.is_tagihan = TRUE
             ", ['start' => $startDate, 'end' => $endDate]) ?? [];
 
             // Top 5 SKU Terlaris & Margin
@@ -292,7 +292,7 @@ class OwnerController extends Controller
                 WHERE p.tanggal_pesanan BETWEEN :start AND :end
                   AND p.status_pemrosesan != 'dibatalkan'
                   AND p.status_pembayaran != 'dibatalkan'
-                  AND p.adalah_tagihan = TRUE
+                  AND p.is_tagihan = TRUE
                 GROUP BY i.id, i.nama_item, i.kode_sku, i.satuan_dasar
                 ORDER BY total_omzet DESC
                 LIMIT 5
@@ -379,7 +379,7 @@ class OwnerController extends Controller
                     FROM public.pesanan pes
                     JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                     WHERE p.sales_driver_id = :sid
-                      AND pes.adalah_tagihan = TRUE
+                      AND pes.is_tagihan = TRUE
                       AND pes.status_pemrosesan != 'dibatalkan'
                       AND pes.status_pembayaran != 'dibatalkan'
                       AND pes.tanggal_pesanan BETWEEN :start AND :end

@@ -89,7 +89,7 @@ class CustomerOrderController extends Controller
             $sql = "
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
-                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
+                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.is_tagihan, p.dibuat_pada,
                        p.waktu_gagal_kirim, p.diubah_pada,
                        CASE WHEN p.catatan ILIKE '%Beli putus%' THEN TRUE ELSE FALSE END as is_beli_putus,
                        pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.is_konsinyasi,
@@ -160,9 +160,9 @@ class CustomerOrderController extends Controller
                 if ($tipeTransaksi === 'beli_putus') {
                     $sql .= " AND p.catatan ILIKE '%Beli putus%'";
                 } elseif ($tipeTransaksi === 'reguler') {
-                    $sql .= " AND (p.catatan NOT ILIKE '%Beli putus%' OR p.catatan IS NULL) AND p.tipe_pembayaran != 'konsinyasi' AND (p.adalah_tagihan = TRUE OR p.adalah_tagihan IS NULL)";
+                    $sql .= " AND (p.catatan NOT ILIKE '%Beli putus%' OR p.catatan IS NULL) AND p.tipe_pembayaran != 'konsinyasi' AND (p.is_tagihan = TRUE OR p.is_tagihan IS NULL)";
                 } elseif ($tipeTransaksi === 'konsinyasi') {
-                    $sql .= " AND (p.tipe_pembayaran = 'konsinyasi' OR p.adalah_tagihan = FALSE)";
+                    $sql .= " AND (p.tipe_pembayaran = 'konsinyasi' OR p.is_tagihan = FALSE)";
                 }
             }
 
@@ -271,7 +271,7 @@ class CustomerOrderController extends Controller
             $sqlOrder = "
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto,
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.tanggal_jatuh_tempo,
-                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.adalah_tagihan, p.dibuat_pada,
+                       p.status_pembayaran, p.status_pemrosesan, p.catatan, p.is_tagihan, p.dibuat_pada,
                        p.waktu_gagal_kirim, p.diubah_pada,
                        CASE WHEN p.catatan ILIKE '%Beli putus%' THEN TRUE ELSE FALSE END as is_beli_putus,
                        pel.id as pelanggan_id, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
@@ -574,6 +574,14 @@ class CustomerOrderController extends Controller
         $tanggalPesanan = $this->input('tanggal_pesanan', date('Y-m-d'));
         $tipePembayaran = $this->input('tipe_pembayaran', 'cash');
         $tanggalJatuhTempo = $this->input('tanggal_jatuh_tempo') ?: null;
+        if ($tipePembayaran === 'tempo_tanggal' && empty($tanggalJatuhTempo)) {
+            $this->flashError('Untuk tipe pembayaran Tempo Tanggal, Tanggal Jatuh Tempo wajib diisi.');
+            $this->redirect('/customer-orders/create');
+            return;
+        }
+        if ($tipePembayaran === 'tempo_faktur') {
+            $tanggalJatuhTempo = null;
+        }
         $akunKasId = $this->input('akun_kas_id') ?: null;
         $nominalDibayarInput = (float)preg_replace('/[^0-9]/', '', (string)$this->input('nominal_dibayar', '0'));
         $catatan = trim((string)$this->input('catatan', ''));
@@ -624,13 +632,14 @@ class CustomerOrderController extends Controller
             }
             
             // Atur atribut sesuai tipe pesanan
-            $adalahTagihan = true;
+            $isTagihan = true;
             $statusSuratJalanAwal = 'siap_kirim';
             
             if ($isKonsinyasi) {
                 $tipePembayaran = 'konsinyasi';
-                $adalahTagihan = false; // PRD: Kiriman konsinyasi bukan tagihan riil
-                $statusSuratJalanAwal = 'siap_kirim'; // Tanpa approval: langsung siap kirim
+                $isTagihan = false; // PRD: Kiriman konsinyasi bukan tagihan riil
+                $tanggalJatuhTempo = null;
+                $statusSuratJalanAwal = 'siap_kirim'; // Langsung siap kirim
             }
 
             $pdo->beginTransaction();
@@ -747,13 +756,13 @@ class CustomerOrderController extends Controller
                     nomor_nota, pelanggan_id, sales_driver_id, tanggal_pesanan,
                     total_bruto, total_diskon, total_netto, total_dibayar, sisa_tagihan,
                     tipe_pembayaran, tanggal_jatuh_tempo, akun_kas_id,
-                    status_pembayaran, status_pemrosesan, catatan, adalah_tagihan,
+                    status_pembayaran, status_pemrosesan, catatan, is_tagihan,
                     dibuat_pada
                 ) VALUES (
                     :nota, :pelanggan, :driver, :tgl,
                     :bruto, :diskon, :netto, :dibayar, :sisa,
                     :tipe, :tempo, :akun_kas,
-                    :status_bayar, 'po', :catatan, :adalah_tagihan,
+                    :status_bayar, 'po', :catatan, :is_tagihan,
                     NOW()
                 ) RETURNING id
             ");
@@ -772,7 +781,7 @@ class CustomerOrderController extends Controller
                 'akun_kas' => ($totalDibayar > 0) ? $akunKasId : null,
                 'status_bayar' => $statusBayar,
                 'catatan' => $catatan ?: 'Pesanan Toko Mitra (PO)',
-                'adalah_tagihan' => $adalahTagihan ? 'true' : 'false'
+                'is_tagihan' => $isTagihan ? 'true' : 'false'
             ]);
 
             $orderId = $stmt->fetchColumn();
@@ -1042,6 +1051,14 @@ class CustomerOrderController extends Controller
         $tanggalPesanan = $this->input('tanggal_pesanan', date('Y-m-d'));
         $tipePembayaran = $this->input('tipe_pembayaran', 'cash');
         $tanggalJatuhTempo = $this->input('tanggal_jatuh_tempo') ?: null;
+        if ($tipePembayaran === 'tempo_tanggal' && empty($tanggalJatuhTempo)) {
+            $this->flashError('Untuk tipe pembayaran Tempo Tanggal, Tanggal Jatuh Tempo wajib diisi.');
+            $this->redirect('/customer-orders/edit?id=' . urlencode($id));
+            return;
+        }
+        if ($tipePembayaran === 'tempo_faktur') {
+            $tanggalJatuhTempo = null;
+        }
         $catatan = trim((string)$this->input('catatan', ''));
         $driverId = $this->input('sales_driver_id') ?: null;
 
@@ -1279,7 +1296,7 @@ class CustomerOrderController extends Controller
 
             // Driver tetap dari pesanan / profil toko (tidak diubah di form PO edit)
             $driverId = $order['sales_driver_id'];
-            $adalahTagihan = $isKonsinyasi ? false : true;
+            $isTagihan = $isKonsinyasi ? false : true;
 
             $catatanFinal = $catatan ?: 'Pesanan Toko Mitra (Diperbarui)';
             if ($isRetryFromFailed && strpos($catatanFinal, '[Kirim Ulang]') === false) {
@@ -1300,7 +1317,7 @@ class CustomerOrderController extends Controller
                     tanggal_jatuh_tempo = :tempo,
                     sales_driver_id = :driver_id,
                     catatan = :catatan,
-                    adalah_tagihan = :adalah_tagihan,
+                    is_tagihan = :is_tagihan,
                     status_pemrosesan = 'po',
                     waktu_gagal_kirim = NULL,
                     diubah_pada = NOW()
@@ -1318,7 +1335,7 @@ class CustomerOrderController extends Controller
                 'tempo' => $tanggalJatuhTempo,
                 'driver_id' => $driverId,
                 'catatan' => $catatanFinal,
-                'adalah_tagihan' => $adalahTagihan ? 'true' : 'false',
+                'is_tagihan' => $isTagihan ? 'true' : 'false',
                 'id' => $id,
             ]);
 
@@ -1487,7 +1504,7 @@ class CustomerOrderController extends Controller
                 throw new \Exception("Faktur #{$order['nomor_nota']} sudah lunas sepenuhnya. Tidak ada tagihan tersisa.");
             }
 
-            if (($order['tipe_pembayaran'] ?? '') === 'konsinyasi' || !empty($order['is_konsinyasi']) || (isset($order['adalah_tagihan']) && ($order['adalah_tagihan'] === false || $order['adalah_tagihan'] === 'false'))) {
+            if (($order['tipe_pembayaran'] ?? '') === 'konsinyasi' || !empty($order['is_konsinyasi']) || (isset($order['is_tagihan']) && ($order['is_tagihan'] === false || $order['is_tagihan'] === 'false'))) {
                 throw new \Exception("Pesanan konsinyasi bukan merupakan faktur tagihan langsung. Pembayaran diproses melalui Form Opname Kunjungan Sales.");
             }
 

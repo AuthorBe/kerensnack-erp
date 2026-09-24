@@ -122,13 +122,13 @@ Tabel berikut adalah panduan pemetaan modul satu pintu: **URL Route $\leftrighta
 1. `public.pelanggan` — Menyimpan data toko mitra konsinyasi (`is_konsinyasi = TRUE`) dan relasi penanggung jawab sales tetap (`sales_driver_id` $\rightarrow$ `karyawan.id`).
 2. `public.stok_konsinyasi_toko` — Menyimpan saldo kuantitas snack yang saat ini sedang dititipkan di rak masing-masing toko mitra per varian SKU.
 3. `public.kunjungan_konsinyasi` & `public.rincian_kunjungan_konsinyasi` — Rekam audit kunjungan fisik sales, kuantitas sisa rak, barang laku, retur bagus, retur rusak, serta valuasi kerugian HPP rusak.
-4. `public.surat_jalan` & `public.pesanan` — Berkas legal pengiriman dan faktur piutang. Tagihan riil ditandai dengan `adalah_tagihan = TRUE`.
+4. `public.surat_jalan` & `public.pesanan` — Berkas legal pengiriman dan faktur piutang. Tagihan riil ditandai dengan `is_tagihan = TRUE`.
 5. `public.karyawan` & `public.skema_komisi_sales` — Master data personil dengan klasifikasi posisi (`sales`, `driver`, `pengemasan`, `mandor`, `admin`) dan konfigurasi komisi sales terpusat berbasis tier omzet bertingkat (`public.skema_komisi_sales`).
 6. `public.akun_kas` & `public.arus_kas` — Pencatatan saldo uang kasir/bank dan jurnal arus kas masuk/keluar otomatis.
 
 ### B. Otomasi Stored Procedures (RPC Engine):
 * **`fn_proses_kunjungan_konsinyasi(...)`**:
-  Memproses kunjungan opname sales di toko, menghitung laku terjual secara otomatis, mencatat kerugian HPP barang rusak, memperbarui saldo rak toko, mengembalikan barang retur bagus ke gudang pusat, serta menerbitkan faktur piutang riil (`adalah_tagihan = TRUE`).
+  Memproses kunjungan opname sales di toko, menghitung laku terjual secara otomatis, mencatat kerugian HPP barang rusak, memperbarui saldo rak toko, mengembalikan barang retur bagus ke gudang pusat, serta menerbitkan faktur piutang riil (`is_tagihan = TRUE`).
 * **`fn_catat_pembayaran_konsinyasi(...)`**:
   Mencatat pelunasan bertahap (*partial*) maupun lunas penuh atas faktur konsinyasi toko, menambah saldo kas/bank tujuan, dan mencatat transaksi di buku arus kas.
 * **`trg_proses_pengiriman_konsinyasi`**:

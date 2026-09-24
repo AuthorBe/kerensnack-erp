@@ -140,10 +140,13 @@ $activeTab = $_GET['tab'] ?? 'customers';
                 </select>
 
                 <!-- Filter Tipe Bayar -->
-                <select x-model="filterType" class="form-input" style="height:38px;font-size:13px;width:150px;">
+                <select x-model="filterType" class="form-input" style="height:38px;font-size:13px;width:170px;">
                     <option value="all">Semua Tipe Bayar</option>
                     <option value="cash">Tunai (Cash)</option>
-                    <option value="tempo">Tempo (Kredit)</option>
+                    <option value="transfer">Transfer Bank</option>
+                    <option value="qris">QRIS</option>
+                    <option value="tempo_faktur">Tempo Faktur</option>
+                    <option value="tempo_tanggal">Tempo Tanggal</option>
                     <option value="konsinyasi">Konsinyasi (Rak)</option>
                 </select>
             </div>
@@ -607,10 +610,11 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <label class="form-label">Tipe Pembayaran Default *</label>
                         <select name="tipe_pembayaran_default" x-model="form.tipe_pembayaran_default" class="form-input">
                             <option value="cash">Tunai (Cash)</option>
-                            <option value="tempo_7_hari">Tempo 7 Hari</option>
-                            <option value="tempo_14_hari">Tempo 14 Hari</option>
-                            <option value="tempo_30_hari">Tempo 30 Hari</option>
-                            <option value="konsinyasi">Konsinyasi</option>
+                            <option value="transfer">Transfer Bank</option>
+                            <option value="qris">QRIS</option>
+                            <option value="tempo_faktur">Tempo Faktur (Kirim Sekarang, Bayar di Kiriman Berikutnya)</option>
+                            <option value="tempo_tanggal">Tempo Tanggal (Jatuh Tempo Spesifik)</option>
+                            <option value="konsinyasi">Konsinyasi (Titip Jual Rak)</option>
                         </select>
                     </div>
                     <div>
@@ -1471,7 +1475,11 @@ function customerApp(initialTab) {
                 const matchType = this.filterType === 'all' ||
                     (this.filterType === 'konsinyasi' && c.is_konsinyasi) ||
                     (this.filterType === 'cash' && !c.is_konsinyasi && c.tipe_pembayaran_default === 'cash') ||
-                    (this.filterType === 'tempo' && !c.is_konsinyasi && c.tipe_pembayaran_default && c.tipe_pembayaran_default.startsWith('tempo'));
+                    (this.filterType === 'transfer' && !c.is_konsinyasi && c.tipe_pembayaran_default === 'transfer') ||
+                    (this.filterType === 'qris' && !c.is_konsinyasi && c.tipe_pembayaran_default === 'qris') ||
+                    (this.filterType === 'tempo' && !c.is_konsinyasi && c.tipe_pembayaran_default && c.tipe_pembayaran_default.startsWith('tempo')) ||
+                    (this.filterType === 'tempo_faktur' && !c.is_konsinyasi && c.tipe_pembayaran_default === 'tempo_faktur') ||
+                    (this.filterType === 'tempo_tanggal' && !c.is_konsinyasi && c.tipe_pembayaran_default === 'tempo_tanggal');
 
                 return matchQuery && matchTerritory && matchType;
             });

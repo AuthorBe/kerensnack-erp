@@ -249,6 +249,7 @@ if (!function_exists('isActiveSection')) {
 
         <!-- PWA INSTALL TRIGGER -->
         <button type="button"
+                onclick="window.openPwaInstallModal ? window.openPwaInstallModal() : null"
                 class="pwa-install-trigger sidebar-link"
                 data-tooltip="Pasang Aplikasi (PWA)"
                 aria-label="Pasang Aplikasi ERP">
