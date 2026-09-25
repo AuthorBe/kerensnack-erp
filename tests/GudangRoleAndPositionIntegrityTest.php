@@ -201,7 +201,7 @@ runTest('EmployeeImportHandler memvalidasi dan memproses baris posisi "gudang" t
     $handler = new EmployeeImportHandler();
     $headers = $handler->getTemplateHeaders();
     $rows = [
-        ['3201999988887703', 'TEST Karyawan Gudang Impor', 'Gudang', 'gudang', 'bulanan', 2750000, 20000, 150000, '081299887766', '', 'Gudang Pusat', '2024-03-01', 'Mandiri', '1234567890', 'TEST Karyawan Gudang Impor', 'Aktif']
+        ['3201999988887703', 'TEST Karyawan Gudang Impor', 'Gudang', 'L', '1995-05-15', 'gudang', 'bulanan', 2750000, 20000, 150000, '081299887766', '', 'Gudang Pusat', '2024-03-01', 'Mandiri', '1234567890', 'TEST Karyawan Gudang Impor', 'Aktif']
     ];
 
     $preview = $handler->previewRows($rows, $headers, $pdo, 'append');

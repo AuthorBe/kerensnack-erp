@@ -76,14 +76,14 @@ $pdo = Database::getConnection();
 // 1. PASSWORD SECURITY (BCRYPT)
 // ------------------------------------------------------------------
 runTest("1. Keamanan Kata Sandi: Enkripsi Bcrypt menghasilkan hash yang aman dan terverifikasi", function() {
-    $plainPassword = 'KerenPassword2026!';
-    $hash = password_hash($plainPassword, PASSWORD_BCRYPT, ['cost' => 10]);
+    $plainSecret = bin2hex(random_bytes(8)) . '!A1';
+    $hash = password_hash($plainSecret, PASSWORD_BCRYPT, ['cost' => 10]);
 
     if (empty($hash) || !str_starts_with($hash, '$2y$')) {
         return "Hash Bcrypt tidak valid.";
     }
 
-    if (!password_verify($plainPassword, $hash)) {
+    if (!password_verify($plainSecret, $hash)) {
         return "Password plaintext gagal diverifikasi terhadap hash.";
     }
 

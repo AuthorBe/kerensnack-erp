@@ -83,7 +83,7 @@ try {
     ", [
         'id' => $testUserId,
         'uname' => $testUsername,
-        'pwd' => password_hash('secret123', PASSWORD_BCRYPT)
+        'pwd' => password_hash(bin2hex(random_bytes(10)), PASSWORD_BCRYPT)
     ]);
 
     // Insert karyawan record

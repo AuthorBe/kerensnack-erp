@@ -3,10 +3,7 @@
 -- Tujuan: Memastikan tepat 1 akun developer tersedia setelah fresh clean.
 --         Jika sudah ada (dilindungi trigger dari migration 49),
 --         hanya update info dasarnya tanpa mengubah password yang ada.
---         Jika belum ada (kasus fresh install), buat baru dengan password default.
--- 
--- PENTING: Ganti password setelah pertama kali login!
---          Default password: developer123
+--         Jika belum ada (kasus fresh install), buat baru dengan password dinamis.
 -- ==============================================================================
 
 DO $$
@@ -14,6 +11,7 @@ DECLARE
     v_dev_role_id    UUID;
     v_dev_user_id    UUID;
     v_dev_count      INT;
+    v_temp_pass      TEXT;
     v_default_pass   TEXT;
 BEGIN
     -- Cari ID role developer
@@ -46,9 +44,10 @@ BEGIN
         RAISE NOTICE '    Password      : TIDAK DIUBAH (gunakan password lama atau reset manual via Supabase Auth jika diperlukan)';
 
     ELSE
-        -- Developer belum ada — buat baru dengan password default
-        -- Hash password menggunakan pgcrypto (sudah ter-install via extension di migration 01)
-        v_default_pass := crypt('developer123', gen_salt('bf', 10));
+        -- Developer belum ada — buat baru dengan password acak aman
+        -- Generate random temporary password menggunakan pgcrypto
+        v_temp_pass := encode(gen_random_bytes(16), 'hex');
+        v_default_pass := crypt(v_temp_pass, gen_salt('bf', 10));
 
         INSERT INTO public.pengguna (
             nama_lengkap,
@@ -75,8 +74,8 @@ BEGIN
         RAISE NOTICE 'AKUN DEVELOPER BARU DIBUAT:';
         RAISE NOTICE '  ID            : %', v_dev_user_id;
         RAISE NOTICE '  Username      : developer';
-        RAISE NOTICE '  Password      : developer123';
-        RAISE NOTICE '  *** WAJIB GANTI PASSWORD SETELAH LOGIN PERTAMA! ***';
+        RAISE NOTICE '  Password Baru : %', v_temp_pass;
+        RAISE NOTICE '  *** SIMPAN PASSWORD SEMENTARA INI DAN GANTI SETELAH LOGIN PERTAMA! ***';
         RAISE NOTICE '========================================';
     END IF;
 

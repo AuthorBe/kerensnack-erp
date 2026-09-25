@@ -203,16 +203,16 @@ it("3.1 - Master Karyawan store & update menyinkronkan WhatsApp ke nomor_telepon
     }
 });
 
-it("3.2 - EmployeeImportHandler template konsisten 16 kolom dengan header, widths, dan examples", function() {
+it("3.2 - EmployeeImportHandler template konsisten 18 kolom dengan header, widths, dan examples", function() {
     $handler = new EmployeeImportHandler();
     $h = $handler->getTemplateHeaders();
     $w = $handler->getTemplateWidths();
     $ex = $handler->getTemplateExamples();
 
-    if (count($h) !== 16) return "Jumlah header bukan 16: " . count($h);
-    if (count($w) !== 16) return "Jumlah lebar kolom bukan 16: " . count($w);
+    if (count($h) !== 18) return "Jumlah header bukan 18: " . count($h);
+    if (count($w) !== 18) return "Jumlah lebar kolom bukan 18: " . count($w);
     foreach ($ex as $i => $row) {
-        if (count($row) !== 16) return "Contoh baris {$i} bukan 16 kolom: " . count($row);
+        if (count($row) !== 18) return "Contoh baris {$i} bukan 18 kolom: " . count($row);
     }
     if (($h[1] ?? '') !== 'Nama Lengkap' || ($h[2] ?? '') !== 'Nama Panggilan') {
         return "Header nama lengkap atau nama panggilan tidak berada di posisi indeks 1 & 2";
