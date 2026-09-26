@@ -162,8 +162,8 @@ assertPortalTest(
     str_contains($renderedHtml, "SCROLLSPY & AUTO-SCROLL DEEP LINK SYNC") && str_contains($renderedHtml, "updateActiveState") && str_contains($renderedHtml, "initialHashScroll")
 );
 assertPortalTest(
-    "Guide page uses dedicated favicon from public/assets/favicon_guide",
-    str_contains($renderedHtml, "favicon_guide/favicon.ico") && str_contains($renderedHtml, "favicon_guide/favicon.svg") && str_contains($renderedHtml, "favicon_guide/favicon-96x96.png")
+    "Guide page uses dedicated favicon & logo from public/assets/favicon_guide.svg",
+    str_contains($renderedHtml, "favicon_guide.svg")
 );
 
 // -------------------------------------------------------------------------

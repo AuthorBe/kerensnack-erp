@@ -15,7 +15,7 @@ $companyName = $comp['nama'] ?? 'KEREN SNACK';
 $companyPhone = $comp['telepon'] ?? '';
 $cssV = file_exists(ROOT_PATH . '/public/assets/css/app.css') ? (string)filemtime(ROOT_PATH . '/public/assets/css/app.css') : '1';
 $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? (string)filemtime(ROOT_PATH . '/public/assets/js/app.js')  : '1';
-$favGuideFile = ROOT_PATH . '/public/assets/favicon_guide/favicon-96x96.png';
+$favGuideFile = ROOT_PATH . '/public/assets/favicon_guide.svg';
 $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (string)time();
 ?>
 <!DOCTYPE html>
@@ -33,15 +33,11 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
     <meta name="apple-touch-fullscreen" content="yes">
     <meta name="format-detection" content="telephone=no">
 
-    <!-- Dedicated Guide Favicon (Khusus Tab Guide: public/assets/favicon_guide) -->
-    <link rel="icon" type="image/x-icon" href="<?= Router::asset('/favicon_guide/favicon.ico') ?>?v=<?= $favGuideV ?>">
-    <link rel="icon" type="image/svg+xml" href="<?= Router::asset('/favicon_guide/favicon.svg') ?>?v=<?= $favGuideV ?>">
-    <link rel="icon" type="image/png" sizes="96x96" href="<?= Router::asset('/favicon_guide/favicon-96x96.png') ?>?v=<?= $favGuideV ?>">
-    <link rel="icon" type="image/png" sizes="192x192" href="<?= Router::asset('/favicon_guide/web-app-manifest-192x192.png') ?>?v=<?= $favGuideV ?>">
-    <link rel="icon" type="image/png" sizes="512x512" href="<?= Router::asset('/favicon_guide/web-app-manifest-512x512.png') ?>?v=<?= $favGuideV ?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?= Router::asset('/favicon_guide/apple-touch-icon.png') ?>?v=<?= $favGuideV ?>">
-    <link rel="shortcut icon" href="<?= Router::asset('/favicon_guide/favicon.ico') ?>?v=<?= $favGuideV ?>">
-    <link rel="manifest" href="<?= Router::asset('/favicon_guide/site.webmanifest') ?>?v=<?= $favGuideV ?>">
+    <!-- Dedicated Guide Favicon (Khusus Tab Guide: public/assets/favicon_guide.svg) -->
+    <link rel="icon" type="image/svg+xml" href="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
+    <link rel="alternate icon" href="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
+    <link rel="apple-touch-icon" href="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
+    <link rel="shortcut icon" href="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
 
     <!-- Google Fonts: Inter & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -188,15 +184,20 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             width: 34px;
             height: 34px;
             border-radius: 10px;
-            background: #e11d48;
-            color: #ffffff;
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-weight: 900;
-            font-size: 16px;
-            box-shadow: 0 2px 8px rgba(225, 29, 72, 0.3);
             flex-shrink: 0;
+            overflow: hidden;
+        }
+        .guide-brand-badge img,
+        .guide-brand-logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            border-radius: 10px;
         }
         .guide-brand-text {
             min-width: 0;
@@ -632,17 +633,21 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             width: 44px;
             height: 44px;
             border-radius: 12px;
-            background: #e11d48;
-            color: #ffffff;
+            background: transparent;
             display: flex;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
             margin-top: 2px;
+            overflow: hidden;
         }
-        .hero-brand-icon svg {
-            width: 22px;
-            height: 22px;
+        .hero-brand-icon img,
+        .hero-brand-logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            border-radius: 12px;
         }
         .hero-header-body {
             flex: 1;
@@ -998,9 +1003,9 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 height: 38px;
                 border-radius: 10px;
             }
-            .hero-brand-icon svg {
-                width: 20px;
-                height: 20px;
+            .hero-brand-icon img,
+            .hero-brand-logo-img {
+                border-radius: 10px;
             }
             .hero-tag-wrap {
                 font-size: 9.5px;
@@ -1196,7 +1201,9 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
 
             <!-- Brand Info (Main App Logo Badge) -->
             <div class="guide-brand-box">
-                <div class="guide-brand-badge">K</div>
+                <div class="guide-brand-badge">
+                    <img src="<?= Router::asset('/favicon/apple-touch-icon.png') ?>" alt="<?= htmlspecialchars($companyName) ?>" class="guide-brand-logo-img">
+                </div>
                 <div class="guide-brand-text">
                     <h1><?= htmlspecialchars($companyName) ?></h1>
                     <span class="guide-brand-sub">Portal Panduan &amp; SOP Operasional</span>
@@ -1328,7 +1335,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 <div class="guide-main-hero">
                     <div class="hero-header-flex">
                         <div class="hero-brand-icon">
-                            <i data-lucide="book-open"></i>
+                            <img src="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>" alt="<?= htmlspecialchars($companyName) ?>" class="hero-brand-logo-img">
                         </div>
                         <div class="hero-header-body">
                             <div class="hero-top-row">
