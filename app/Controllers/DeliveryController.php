@@ -68,6 +68,7 @@ class DeliveryController extends Controller
             // Ambil pesanan yang berstatus 'siap_dikirim' dan belum dibuatkan surat jalan aktif
             $pendingOrders = Database::fetchAll("
                 SELECT p.id, p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran,
+                       p.sales_driver_id,
                        cust.nama_toko, cust.wilayah_id, cust.is_konsinyasi, w.nama_wilayah
                 FROM public.pesanan p
                 JOIN public.pelanggan cust ON p.pelanggan_id = cust.id
@@ -555,7 +556,7 @@ class DeliveryController extends Controller
             if (!empty($orderId) && empty($id)) {
                 $sj = Database::fetchOne("SELECT id FROM public.surat_jalan WHERE pesanan_id = :order_id", ['order_id' => $orderId]);
                 if (!$sj) {
-                    // Auto create surat_jalan for this order if not existing
+                    // Cek status pesanan sebelum auto create
                     $pesanan = Database::fetchOne("
                         SELECT p.*, pel.wilayah_id 
                         FROM public.pesanan p 
@@ -564,6 +565,12 @@ class DeliveryController extends Controller
                     ", ['id' => $orderId]);
 
                     if ($pesanan) {
+                        if ($pesanan['status_pemrosesan'] === 'po') {
+                            $this->flashError('Surat Jalan belum dapat dicetak: Pesanan masih berstatus PO dan belum disiapkan oleh gudang.');
+                            $this->redirect('/deliveries');
+                            return;
+                        }
+
                         $pdo = Database::getConnection();
                         $pdo->beginTransaction();
                         try {
@@ -611,13 +618,29 @@ class DeliveryController extends Controller
                 return;
             }
 
+            // Validasi: Cegah cetak jika pesanan masih berstatus PO
+            $orderCheck = Database::fetchOne("
+                SELECT p.status_pemrosesan, p.nomor_nota 
+                FROM public.surat_jalan sj 
+                JOIN public.pesanan p ON sj.pesanan_id = p.id 
+                WHERE sj.id = :id
+            ", ['id' => $id]);
+            if ($orderCheck && $orderCheck['status_pemrosesan'] === 'po') {
+                $this->flashError("Surat Jalan #{$orderCheck['nomor_nota']} belum dapat dicetak: Pesanan masih berstatus PO dan belum disiapkan oleh gudang.");
+                $this->redirect('/deliveries');
+                return;
+            }
+
             $delivery = Database::fetchOne("
                 SELECT sj.*, 
-                       p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran, p.catatan as catatan_pesanan,
+                       p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto, p.total_dibayar, p.sisa_tagihan,
+                       p.tipe_pembayaran, p.status_pembayaran, p.tanggal_jatuh_tempo, p.catatan as catatan_pesanan,
                        cust.nama_toko, cust.kode_pelanggan, cust.alamat_lengkap as alamat_toko, cust.nomor_whatsapp, cust.nama_pemilik, cust.is_konsinyasi,
                        COALESCE(driver_sj.nama_karyawan, driver_p.nama_karyawan) as nama_driver,
                        COALESCE(driver_sj.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
                        COALESCE(driver_sj.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
+                       sales_p.nama_karyawan as nama_sales,
+                       ak.nama_akun as nama_akun_kas,
                        COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
                        COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
                 FROM public.surat_jalan sj
@@ -625,6 +648,8 @@ class DeliveryController extends Controller
                 JOIN public.pelanggan cust ON p.pelanggan_id = cust.id
                 LEFT JOIN public.v_karyawan_info driver_sj ON sj.sales_driver_id = driver_sj.id
                 LEFT JOIN public.v_karyawan_info driver_p ON p.sales_driver_id = driver_p.id
+                LEFT JOIN public.v_karyawan_info sales_p ON cust.sales_driver_id = sales_p.id
+                LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, cust.wilayah_id) = w.id
                 WHERE sj.id = :id
             ", ['id' => $id]);
@@ -678,13 +703,18 @@ class DeliveryController extends Controller
                 $driverId = !empty($filterDriver) ? $filterDriver : null;
             }
 
-            // Query Surat Jalan & Pesanan Aktif untuk Rute Pengiriman
+            // Query Surat Jalan & Pesanan Aktif untuk Rute Pengiriman (Termasuk PO yang ditugaskan ke driver)
             $sql = "
-                SELECT sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
-                       sj.tanggal_surat_jalan,
+                SELECT sj.id as surat_jalan_id, 
+                       COALESCE(sj.nomor_surat_jalan, 'DRAFT-PO') as nomor_surat_jalan,
+                       CASE 
+                           WHEN p.status_pemrosesan = 'po' THEN 'draft_po'
+                           ELSE COALESCE(sj.status_surat_jalan, 'siap_kirim')
+                       END as status_surat_jalan,
+                       COALESCE(sj.tanggal_surat_jalan, p.tanggal_pesanan) as tanggal_surat_jalan,
                        sj.waktu_berangkat, sj.waktu_sampai, sj.nama_penerima_toko, sj.bukti_terima_foto,
                        sj.foto_bukti_gagal, sj.alasan_gagal, sj.catatan_gagal,
-                       sj.dibuat_pada as waktu_terbit_sj,
+                       COALESCE(sj.dibuat_pada, p.dibuat_pada) as waktu_terbit_sj,
                        p.id as pesanan_id, p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_netto,
                        p.total_dibayar, p.sisa_tagihan, p.tipe_pembayaran, p.status_pembayaran, p.status_pemrosesan,
                        p.catatan as catatan_pesanan, p.waktu_gagal_kirim,
@@ -696,29 +726,37 @@ class DeliveryController extends Controller
                        k.nomor_telepon as telp_driver,
                        (SELECT COUNT(*) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_sku,
                        (SELECT COALESCE(SUM(kuantitas_satuan_dasar), 0) FROM public.item_pesanan ip WHERE ip.pesanan_id = p.id) as total_pcs
-                FROM public.surat_jalan sj
-                JOIN public.pesanan p ON sj.pesanan_id = p.id
+                FROM public.pesanan p
+                LEFT JOIN public.surat_jalan sj ON (p.id = sj.pesanan_id AND sj.status_surat_jalan NOT IN ('dibatalkan', 'gagal_kirim'))
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 LEFT JOIN public.v_karyawan_info k ON COALESCE(sj.sales_driver_id, p.sales_driver_id) = k.id
                 WHERE p.status_pembayaran != 'dibatalkan'
+                  AND (
+                      sj.id IS NOT NULL 
+                      OR (p.status_pemrosesan = 'po' AND p.sales_driver_id IS NOT NULL)
+                  )
             ";
 
             $params = [];
 
-            // Filter Tanggal Surat Jalan (Rencana Pengiriman yang diset di public/deliveries)
+            // Filter Tanggal Surat Jalan / Tanggal PO
             if (!empty($selectedDate)) {
                 if ($selectedDate === date('Y-m-d')) {
-                    // Untuk hari ini: sertakan jadwal hari ini ATAU pengiriman aktif yang sedang berjalan (in-transit)
-                    $sql .= " AND (COALESCE(sj.tanggal_surat_jalan, DATE(sj.dibuat_pada)) = :sel_date OR sj.status_surat_jalan IN ('sedang_dikirim', 'dalam_perjalanan'))";
+                    // Untuk hari ini: sertakan jadwal hari ini ATAU pengiriman aktif (in-transit) ATAU antrean PO aktif
+                    $sql .= " AND (
+                        COALESCE(sj.tanggal_surat_jalan, p.tanggal_pesanan) = :sel_date 
+                        OR sj.status_surat_jalan IN ('sedang_dikirim', 'dalam_perjalanan')
+                        OR (p.status_pemrosesan = 'po' AND p.tanggal_pesanan <= :sel_date)
+                    )";
                 } else {
-                    // Untuk tanggal spesifik lain (misal besok atau riwayat): tampilkan murni yang dijadwalkan pada tanggal tersebut
-                    $sql .= " AND COALESCE(sj.tanggal_surat_jalan, DATE(sj.dibuat_pada)) = :sel_date";
+                    // Untuk tanggal spesifik lain: tampilkan murni yang dijadwalkan pada tanggal tersebut
+                    $sql .= " AND COALESCE(sj.tanggal_surat_jalan, p.tanggal_pesanan) = :sel_date";
                 }
                 $params['sel_date'] = $selectedDate;
             }
 
-            // Scope Filter Driver: Prioritaskan driver yang ditugaskan di Surat Jalan
+            // Scope Filter Driver: Prioritaskan driver yang ditugaskan di Surat Jalan / PO
             if (!empty($driverId)) {
                 $sql .= " AND COALESCE(sj.sales_driver_id, p.sales_driver_id) = :driver_id";
                 $params['driver_id'] = $driverId;
@@ -728,11 +766,12 @@ class DeliveryController extends Controller
                 CASE 
                     WHEN sj.status_surat_jalan = 'sedang_dikirim' THEN 1
                     WHEN sj.status_surat_jalan = 'siap_kirim' THEN 2
-                    WHEN sj.status_surat_jalan = 'selesai_diterima' THEN 3
-                    WHEN sj.status_surat_jalan = 'gagal_kirim' THEN 4
-                    ELSE 5
+                    WHEN p.status_pemrosesan = 'po' THEN 3
+                    WHEN sj.status_surat_jalan = 'selesai_diterima' THEN 4
+                    WHEN sj.status_surat_jalan = 'gagal_kirim' THEN 5
+                    ELSE 6
                 END,
-                sj.dibuat_pada ASC
+                COALESCE(sj.dibuat_pada, p.dibuat_pada) ASC
             ";
 
             // 1. Ambil seluruh data untuk tanggal & armada ini guna kalkulasi Metrik Global yang presisi
@@ -743,11 +782,15 @@ class DeliveryController extends Controller
             $countInTransit = 0;
             $countCompleted = 0;
             $countFailed = 0;
+            $countDraftPo = 0;
             $totalPcs = 0;
 
             foreach ($allDeliveries as $d) {
                 $st = $d['status_surat_jalan'];
-                if ($st === 'siap_kirim') {
+                if ($d['status_pemrosesan'] === 'po' || $st === 'draft_po') {
+                    $countDraftPo++;
+                    $countPending++;
+                } elseif ($st === 'siap_kirim') {
                     $countPending++;
                 } elseif ($st === 'sedang_dikirim') {
                     $countInTransit++;
@@ -759,13 +802,16 @@ class DeliveryController extends Controller
                 $totalPcs += (int)$d['total_pcs'];
             }
 
-            // 2. Terapkan Filter Status Tab hanya pada daftar data yang dirender (tanpa mengacaukan metrik tab & kartu)
+            // 2. Terapkan Filter Status Tab hanya pada daftar data yang dirender
             $deliveries = $allDeliveries;
             if (!empty($statusFilter) && $statusFilter !== 'semua') {
                 $deliveries = array_values(array_filter($allDeliveries, function($d) use ($statusFilter) {
                     $st = $d['status_surat_jalan'];
+                    $isPo = ($d['status_pemrosesan'] === 'po' || $st === 'draft_po');
                     if ($statusFilter === 'pending') {
-                        return ($st === 'siap_kirim');
+                        return ($st === 'siap_kirim' || $isPo);
+                    } elseif ($statusFilter === 'po') {
+                        return $isPo;
                     } elseif ($statusFilter === 'in_transit') {
                         return ($st === 'sedang_dikirim');
                     } elseif ($statusFilter === 'completed') {
@@ -947,6 +993,7 @@ class DeliveryController extends Controller
                 'currentEmployeeId' => $myEmpId,
                 'metrics' => [
                     'count_total' => $countTotal,
+                    'count_draft_po' => $countDraftPo,
                     'count_pending' => $countPending,
                     'count_in_transit' => $countInTransit,
                     'count_completed' => $countCompleted,
@@ -1008,6 +1055,16 @@ class DeliveryController extends Controller
                 $this->flashError('Surat jalan tidak ditemukan.');
                 $this->redirectDriverDeliveries();
                 return;
+            }
+
+            // Validasi: Pesanan belum disiapkan oleh gudang
+            if (!empty($sj['pesanan_id'])) {
+                $orderCheck = Database::fetchOne("SELECT status_pemrosesan, nomor_nota FROM public.pesanan WHERE id = :id", ['id' => $sj['pesanan_id']]);
+                if ($orderCheck && $orderCheck['status_pemrosesan'] === 'po') {
+                    $this->flashError("Pengiriman #{$orderCheck['nomor_nota']} tidak dapat dimulai: Pesanan masih berstatus PO dan belum disiapkan oleh gudang.");
+                    $this->redirectDriverDeliveries();
+                    return;
+                }
             }
 
             // Scope check jika bukan admin/manajer
@@ -1429,12 +1486,15 @@ class DeliveryController extends Controller
 
             $delivery = Database::fetchOne("
                 SELECT sj.*,
-                       p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran, p.catatan as catatan_pesanan,
+                       p.nomor_nota, p.tanggal_pesanan, p.total_bruto, p.total_diskon, p.total_netto, p.total_dibayar, p.sisa_tagihan,
+                       p.tipe_pembayaran, p.status_pembayaran, p.tanggal_jatuh_tempo, p.catatan as catatan_pesanan,
                        pel.nama_toko, pel.kode_pelanggan, pel.nama_pemilik, pel.nomor_whatsapp, 
                        pel.alamat_lengkap, pel.alamat_lengkap as alamat_toko, pel.is_konsinyasi,
                        COALESCE(k.nama_karyawan, driver_p.nama_karyawan) as nama_driver,
                        COALESCE(k.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
                        COALESCE(k.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
+                       sales_p.nama_karyawan as nama_sales,
+                       ak.nama_akun as nama_akun_kas,
                        COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
                        COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
                 FROM public.surat_jalan sj
@@ -1442,6 +1502,8 @@ class DeliveryController extends Controller
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
                 LEFT JOIN public.v_karyawan_info k ON sj.sales_driver_id = k.id
                 LEFT JOIN public.v_karyawan_info driver_p ON p.sales_driver_id = driver_p.id
+                LEFT JOIN public.v_karyawan_info sales_p ON pel.sales_driver_id = sales_p.id
+                LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 WHERE sj.id = :id
             ", ['id' => $id]);

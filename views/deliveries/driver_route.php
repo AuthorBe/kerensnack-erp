@@ -73,6 +73,15 @@ ob_start();
     background: linear-gradient(180deg, rgba(30, 58, 138, 0.14) 0%, var(--color-surface) 100%);
 }
 
+.driver-compact-card.is-draft-po {
+    border-color: #fde68a;
+    background: linear-gradient(180deg, rgba(254, 243, 199, 0.45) 0%, var(--color-surface) 100%);
+}
+.dark .driver-compact-card.is-draft-po {
+    border-color: #78350f;
+    background: linear-gradient(180deg, rgba(120, 53, 15, 0.15) 0%, var(--color-surface) 100%);
+}
+
 .driver-compact-card.is-completed {
     border-color: #bbf7d0;
 }
@@ -841,12 +850,13 @@ ob_start();
         <?php else: ?>
         <?php foreach ($deliveries as $idx => $deliv): 
             $statusSj = $deliv['status_surat_jalan'];
+            $isDraftPo = ($deliv['status_pemrosesan'] === 'po' || $statusSj === 'draft_po');
             $isInTransit = ($statusSj === 'sedang_dikirim');
             $isCompleted = ($statusSj === 'selesai_diterima');
             $isFailed = ($statusSj === 'gagal_kirim');
-            $isPending = ($statusSj === 'siap_kirim');
+            $isPending = ($statusSj === 'siap_kirim' && !$isDraftPo);
 
-            $cardClass = $isInTransit ? 'is-in-transit' : ($isCompleted ? 'is-completed' : ($isFailed ? 'is-failed' : ''));
+            $cardClass = $isDraftPo ? 'is-draft-po' : ($isInTransit ? 'is-in-transit' : ($isCompleted ? 'is-completed' : ($isFailed ? 'is-failed' : '')));
         ?>
         <!-- CARD SIMPEL 2-BARIS (BERSIH & LAPANG TANPA GARIS PEMISAH DEMPET) -->
         <div class="driver-compact-card <?= $cardClass ?>" @click="openDetailModal(<?= htmlspecialchars(json_encode($deliv)) ?>)">
@@ -854,7 +864,7 @@ ob_start();
             <!-- BARIS 1: NOMOR STOP, NAMA TOKO, KODE & STATUS -->
             <div class="flex items-center justify-between gap-3 flex-wrap">
                 <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/70 dark:text-blue-400 font-black text-xs shrink-0" style="font-family: var(--font-sans), sans-serif;">
+                    <span class="inline-flex items-center justify-center w-7 h-7 rounded-lg <?= $isDraftPo ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/70 dark:text-amber-400' : 'bg-blue-50 text-blue-600 dark:bg-blue-950/70 dark:text-blue-400' ?> font-black text-xs shrink-0" style="font-family: var(--font-sans), sans-serif;">
                         #<?= $idx + 1 ?>
                     </span>
                     <span class="font-bold text-base sm:text-lg text-ink truncate">
@@ -877,7 +887,7 @@ ob_start();
                     ?>
                         <span class="badge text-[11px] inline-flex items-center gap-1 shrink-0 font-bold" 
                               style="<?= $isTomorrowDeliv ? 'background:rgba(245,158,11,0.1);color:#d97706;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(37,99,235,0.08);color:#2563eb;border:1px solid rgba(37,99,235,0.2);' ?>" 
-                              title="Tanggal Rencana Pengiriman: <?= date('d/m/Y', strtotime($tglKirimDeliv)) ?>">
+                              title="Tanggal <?= $isDraftPo ? 'PO' : 'Rencana Pengiriman' ?>: <?= date('d/m/Y', strtotime($tglKirimDeliv)) ?>">
                             <i data-lucide="calendar" style="width: 11px; height: 11px;"></i>
                             <span><?= $isTodayDeliv ? 'Hari Ini (' . date('d/m', strtotime($tglKirimDeliv)) . ')' : ($isTomorrowDeliv ? 'Besok (' . date('d/m', strtotime($tglKirimDeliv)) . ')' : date('d/m/Y', strtotime($tglKirimDeliv))) ?></span>
                         </span>
@@ -886,7 +896,12 @@ ob_start();
 
                 <!-- BADGE STATUS TAHAP -->
                 <div class="flex items-center gap-2 shrink-0">
-                    <?php if ($isInTransit): ?>
+                    <?php if ($isDraftPo): ?>
+                        <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 12px; border-radius: 11px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid #fde68a;">
+                            <i data-lucide="hourglass" style="width: 14px; height: 14px;"></i>
+                            <span>PO (Menunggu Gudang)</span>
+                        </span>
+                    <?php elseif ($isInTransit): ?>
                         <span class="badge" style="background: #dbeafe; color: #1e40af; font-weight: 800; font-size: 12px; border-radius: 11px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px;">
                             <i data-lucide="truck" style="width: 14px; height: 14px;"></i>
                             <span>Sedang Dikirim</span>
@@ -1200,6 +1215,11 @@ ob_start();
                             <span class="badge badge-mono text-xs font-bold" x-text="activeDelivery?.kode_pelanggan"></span>
                             
                             <!-- Status Badge -->
+                            <template x-if="activeDelivery?.status_surat_jalan === 'draft_po' || activeDelivery?.status_pemrosesan === 'po'">
+                                <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px; border: 1px solid #fde68a;">
+                                    PO (Menunggu Gudang)
+                                </span>
+                            </template>
                             <template x-if="activeDelivery?.status_surat_jalan === 'sedang_dikirim'">
                                 <span class="badge" style="background: #dbeafe; color: #1e40af; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Sedang Dikirim</span>
                             </template>
@@ -1209,7 +1229,7 @@ ob_start();
                             <template x-if="activeDelivery?.status_surat_jalan === 'gagal_kirim'">
                                 <span class="badge" style="background: #ffe4e6; color: #9f1239; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Gagal Kirim</span>
                             </template>
-                            <template x-if="activeDelivery?.status_surat_jalan === 'siap_kirim'">
+                            <template x-if="activeDelivery?.status_surat_jalan === 'siap_kirim' && activeDelivery?.status_pemrosesan !== 'po'">
                                 <span class="badge" style="background: #f1f5f9; color: #475569; font-weight: 800; font-size: 11.5px; border-radius: 9px; padding: 3px 9px;">Siap Berangkat</span>
                             </template>
                         </div>
@@ -1676,23 +1696,41 @@ ob_start();
                     <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
                         <!-- KIRI: Unduh Surat Jalan PDF & Cetak Dot Matrix -->
                         <div class="flex items-center gap-2">
-                            <a :href="'<?= Router::url('/deliveries/print?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
-                               class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
-                               style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#0284c7; border-color:#bae6fd; background:#f0f9ff;">
-                                <i data-lucide="printer" style="width: 15px; height: 15px;"></i>
-                                <span>Cetak Surat Jalan</span>
-                            </a>
-                            <a :href="'<?= Router::url('/deliveries/pdf?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
-                               target="_blank"
-                               class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
-                               style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#dc2626; border-color:#fca5a5; background:#fef2f2;">
-                                <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
-                                <span>PDF</span>
-                            </a>
+                            <template x-if="activeDelivery?.status_surat_jalan !== 'draft_po' && activeDelivery?.status_pemrosesan !== 'po'">
+                                <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                                    <a :href="'<?= Router::url('/deliveries/print?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
+                                       class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
+                                       style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#0284c7; border-color:#bae6fd; background:#f0f9ff;">
+                                        <i data-lucide="printer" style="width: 15px; height: 15px;"></i>
+                                        <span>Cetak Surat Jalan</span>
+                                    </a>
+                                    <a :href="'<?= Router::url('/deliveries/pdf?id=') ?>' + encodeURIComponent(activeDelivery?.surat_jalan_id || '')"
+                                       target="_blank"
+                                       class="btn btn-secondary btn-sm w-full sm:w-auto justify-center"
+                                       style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; display: inline-flex; align-items: center; gap: 7px; color:#dc2626; border-color:#fca5a5; background:#fef2f2;">
+                                        <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
+                                        <span>PDF</span>
+                                    </a>
+                                </div>
+                            </template>
+                            <template x-if="activeDelivery?.status_surat_jalan === 'draft_po' || activeDelivery?.status_pemrosesan === 'po'">
+                                <div class="text-xs font-bold text-ink-mute flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-canvas-soft border border-hairline">
+                                    <i data-lucide="info" style="width: 13px; height: 13px;"></i>
+                                    <span>Surat Jalan belum diterbitkan</span>
+                                </div>
+                            </template>
                         </div>
 
                         <!-- KANAN: Tombol Aksi Operasional -->
                         <div class="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+                            <!-- Pesan Khusus Jika Masih Draft PO -->
+                            <template x-if="activeDelivery?.status_surat_jalan === 'draft_po' || activeDelivery?.status_pemrosesan === 'po'">
+                                <span class="text-xs text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-3.5 py-2 rounded-xl flex items-center gap-2">
+                                    <i data-lucide="lock" style="width: 14px; height: 14px; color: #d97706;"></i>
+                                    <span>Menunggu Penyiapan Gudang &amp; Terbit Surat Jalan</span>
+                                </span>
+                            </template>
+
                             <!-- Tombol Lihat Foto Bukti Selesai (Jika Selesai) -->
                             <template x-if="activeDelivery?.status_surat_jalan === 'selesai_diterima' && activeDelivery?.bukti_terima_foto">
                                 <button type="button" 
@@ -1715,7 +1753,7 @@ ob_start();
                                 </button>
                             </template>
 
-                            <!-- Form Mulai Kirim (Jika Masih Status Siap Berangkat) -->
+                            <!-- Form Mulai Kirim (Jika Masih Status Siap Berangkat & Bukan Draft PO) -->
                             <form action="<?= Router::url('/driver-deliveries/start') ?>" method="POST"
                                   style="display: contents;"
                                   :data-confirm="'Mulai perjalanan pengiriman ke ' + (activeDelivery?.nama_toko || '') + '?'"
@@ -1727,7 +1765,7 @@ ob_start();
                                 <input type="hidden" name="filter_date" value="<?= htmlspecialchars($selectedDate ?? '') ?>">
                                 <input type="hidden" name="filter_driver_id" value="<?= htmlspecialchars($filterDriver ?? '') ?>">
                                 <input type="hidden" name="filter_status" value="<?= htmlspecialchars($statusFilter ?? '') ?>">
-                                <template x-if="activeDelivery?.status_surat_jalan === 'siap_kirim'">
+                                <template x-if="activeDelivery?.status_surat_jalan === 'siap_kirim' && activeDelivery?.status_pemrosesan !== 'po'">
                                     <button type="submit" class="btn btn-primary btn-sm flex-1 sm:flex-none justify-center"
                                             style="font-weight: 800; font-size: 13px; border-radius: 12px; padding: 9px 22px; display: inline-flex; align-items: center; gap: 7px; background: #2563eb; border-color: #2563eb; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
                                         <i data-lucide="send" style="width: 15px; height: 15px;"></i>

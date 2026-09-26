@@ -202,48 +202,23 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     transform: scale(0.95);
 }
 .opname-btn-guide {
-    width: 38px;
     height: 38px;
+    padding: 0 12px;
     border-radius: 12px;
     border: 1px solid var(--color-hairline);
     background: var(--color-canvas-soft);
     color: var(--color-ink-mute);
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     transition: all 0.15s ease;
+    text-decoration: none;
 }
-.opname-btn-guide.is-active {
+.opname-btn-guide:hover {
     background: rgba(2, 132, 199, 0.1);
     color: #0284c7;
     border-color: rgba(2, 132, 199, 0.3);
-}
-
-/* Collapsible Guide Banner */
-.opname-guide-box {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--color-hairline);
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    background: rgba(2, 132, 199, 0.06);
-    border-radius: 14px;
-    padding: 12px 14px;
-}
-.opname-guide-content {
-    font-size: 12px;
-    line-height: 1.5;
-}
-.opname-guide-title {
-    font-weight: 800;
-    color: #0284c7;
-    margin-bottom: 3px;
-}
-.opname-guide-body {
-    font-size: 11.5px;
-    color: var(--color-ink-secondary);
 }
 
 /* 2. KPI Metrics Grid */
@@ -1452,74 +1427,17 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                 </a>
                 <?php endif; ?>
 
-                <button type="button" 
-                        @click="showGuide = !showGuide"
-                        class="opname-btn-guide"
-                        :class="showGuide ? 'is-active' : ''"
-                        title="Panduan Rumus & Bantuan">
-                    <i data-lucide="help-circle" style="width:18px;height:18px;"></i>
-                </button>
+                <a href="<?= Router::url('/guide#bab-5-konsinyasi-rolling') ?>"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="opname-btn-guide"
+                   style="text-decoration:none; display:inline-flex; align-items:center;"
+                   title="Buka Panduan Opname Rolling Konsinyasi di Tab Baru">
+                    <i data-lucide="book-open" style="width:16px;height:16px;"></i>
+                    <span class="hide-mobile" style="font-size:12px;font-weight:700;margin-left:4px;">Panduan SOP</span>
+                </a>
             </div>
 
-        </div>
-
-        <!-- COLLAPSIBLE PANDUAN RINGKAS -->
-        <div x-show="showGuide" x-cloak class="opname-guide-box" style="margin-top:14px;background:rgba(2,132,199,0.06);border:1px solid rgba(2,132,199,0.2);border-radius:16px;padding:14px 16px;">
-            <div style="display:flex;align-items:flex-start;gap:12px;width:100%;">
-                <div style="width:32px;height:32px;border-radius:10px;background:rgba(2,132,199,0.15);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i data-lucide="calculator" style="width:18px;height:18px;stroke:#0284c7;stroke-width:2.2;"></i>
-                </div>
-                <div class="opname-guide-content" style="flex:1;min-width:0;">
-                    <div class="opname-guide-title" style="font-size:13px;font-weight:900;color:#0284c7;margin-bottom:6px;">
-                        Panduan Sistem Opname &amp; Alur Rolling Nota Konsinyasi (8 Kolom)
-                    </div>
-                    <div class="opname-guide-body" style="font-size:12px;line-height:1.6;color:var(--color-ink-secondary);">
-                        <p style="margin-bottom:8px;">
-                            Sistem konsinyasi KEREN ONE menerapkan <strong>Alur Rolling Antar-Nota</strong>: data SKU dan jumlah kiriman otomatis ditarik dari PO/Nota kiriman terkait, dan saldo rak fisik dihitung berkesinambungan.
-                        </p>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 my-2.5">
-                            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <strong class="text-sky-700 dark:text-sky-300">1. Sisa Stok Lalu:</strong>
-                                <span class="text-slate-600 dark:text-slate-300 ml-1">Sisa fisik di rak dari nota sebelumnya.</span>
-                            </div>
-                            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <strong class="text-emerald-700 dark:text-emerald-300">2. Kirim Hari Ini:</strong>
-                                <span class="text-slate-600 dark:text-slate-300 ml-1">Kuantitas otomatis dari PO kiriman terpilih.</span>
-                            </div>
-                            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <strong class="text-indigo-700 dark:text-indigo-300">3. Jumlah Titip:</strong>
-                                <span class="text-slate-600 dark:text-slate-300 ml-1">Total modal rak = <em>Sisa Lalu + Kirim Baru</em>.</span>
-                            </div>
-                            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <strong class="text-rose-700 dark:text-rose-300">4. Retur Rusak (BS):</strong>
-                                <span class="text-slate-600 dark:text-slate-300 ml-1">Barang bocor/BS (tidak ditagih ke toko).</span>
-                            </div>
-                            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <strong class="text-slate-800 dark:text-slate-200">5. Sisa di Rak:</strong>
-                                <span class="text-slate-600 dark:text-slate-300 ml-1">Fisik aktual saat ini di toko mitra.</span>
-                            </div>
-                            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <strong class="text-emerald-600 dark:text-emerald-400">6. Laku Terjual:</strong>
-                                <span class="text-slate-600 dark:text-slate-300 ml-1">Rumus = <em>Titip &minus; (Retur Rusak + Sisa Rak)</em>.</span>
-                            </div>
-                            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <strong class="text-sky-600 dark:text-sky-400">7. Retur Bagus:</strong>
-                                <span class="text-slate-600 dark:text-slate-300 ml-1">Produk ditarik kembali ke gudang pusat.</span>
-                            </div>
-                            <div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
-                                <strong class="text-amber-700 dark:text-amber-300">8. Selisih Rak:</strong>
-                                <span class="text-slate-600 dark:text-slate-300 ml-1">Minus = hilang (gantung); Plus = surplus.</span>
-                            </div>
-                        </div>
-                        <div class="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/20 text-xs mt-2">
-                            <div class="font-bold text-sky-800 dark:text-sky-200 mb-1">Rumus Tagihan Penjualan:</div>
-                            <div class="font-mono font-bold text-[11.5px] text-slate-800 dark:text-slate-100 break-words leading-relaxed">
-                                Tagihan = [ (Sisa Lalu + Kirim Hari Ini) &minus; (Retur Rusak + Sisa Rak) ] &times; Harga Satuan
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -2625,7 +2543,6 @@ function opnameApp() {
         tipeKonsinyasi: '<?= htmlspecialchars($tipeKonsinyasi) ?>',
         searchQuery: '',
         activeTab: 'all',
-        showGuide: false,
         showConfirmModal: false,
         photoPreview: null,
         photoName: '',

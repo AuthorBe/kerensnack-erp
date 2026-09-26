@@ -364,6 +364,13 @@ $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemt
                     }
                 }
             }, { passive: true });
+            // Global Keyboard Shortcut: Shift + ? or F1 to open Documentation Portal in new tab
+            document.addEventListener('keydown', function(e) {
+                if ((e.key === '?' && e.shiftKey && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) || (e.key === 'F1')) {
+                    e.preventDefault();
+                    window.open('<?= Router::url('/guide') ?>', '_blank');
+                }
+            });
         })();
     </script>
 

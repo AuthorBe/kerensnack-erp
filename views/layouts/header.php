@@ -1,5 +1,6 @@
 <?php
 use App\Core\Auth;
+use App\Core\Router;
 use App\Helpers\Format;
 
 // Dynamic page title & subtitle with route fallbacks
@@ -80,6 +81,19 @@ $headerSub = $pageSubtitle ?? match(true) {
     </div>
 
     <div class="header-right">
+        <!-- Panduan SOP & Alur Kerja Lapangan (Buka di Tab Baru) -->
+        <a href="<?= \App\Core\Router::url('/guide') ?>"
+           target="_blank"
+           rel="noopener noreferrer"
+           class="header-theme-btn header-guide-btn"
+           title="Buka Buku Panduan Operasional & SOP di Tab Baru (Shift + ?)"
+           aria-label="Buka Panduan SOP">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+            </svg>
+        </a>
+
         <!-- Theme Toggle Only -->
         <button type="button"
                 class="header-theme-btn"

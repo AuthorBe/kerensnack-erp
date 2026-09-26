@@ -349,24 +349,6 @@ $entityMeta = [
         'desc'      => 'Master merek dagang produk (Brand) yang menaungi grup kemasan.',
         'url'       => '/products'
     ],
-    'customers' => [
-        'icon'      => 'store',
-        'badge'     => 'Pelanggan',
-        'category'  => 'Mitra & Penjualan',
-        'color'     => '#10b981',
-        'bg'        => 'rgba(16, 185, 129, 0.12)',
-        'desc'      => 'Katalog toko mitra konsinyasi & ritel reguler, plafon piutang, dan rute pembina.',
-        'url'       => '/customers'
-    ],
-    'customer_groups' => [
-        'icon'      => 'users',
-        'badge'     => 'Grup Pelanggan',
-        'category'  => 'Mitra & Penjualan',
-        'color'     => '#3b82f6',
-        'bg'        => 'rgba(59, 130, 246, 0.12)',
-        'desc'      => 'Segmentasi tier pelanggan (Grosir, Ritel, Semi-Grosir) dan default level harga.',
-        'url'       => '/customers?tab=customer_groups'
-    ],
     'territories' => [
         'icon'      => 'map-pin',
         'badge'     => 'Wilayah & Rute',
@@ -376,14 +358,23 @@ $entityMeta = [
         'desc'      => 'Zona operasional pengiriman sales driver dan rute distribusi toko.',
         'url'       => '/customers?tab=territories'
     ],
-    'suppliers' => [
-        'icon'      => 'truck',
-        'badge'     => 'Pemasok (Vendor)',
-        'category'  => 'Pengadaan & Stok',
-        'color'     => '#f59e0b',
-        'bg'        => 'rgba(245, 158, 11, 0.12)',
-        'desc'      => 'Vendor bahan mentah curah, kemasan plastik, karton box, dan rekening bank.',
-        'url'       => '/suppliers'
+    'product_groups' => [
+        'icon'      => 'package',
+        'badge'     => 'Grup Kemasan',
+        'category'  => 'Produk & BOM',
+        'color'     => '#ec4899',
+        'bg'        => 'rgba(236, 72, 153, 0.12)',
+        'desc'      => 'Kategori kemasan universal, barcode universal grup, dan satuan dasar produk.',
+        'url'       => '/products'
+    ],
+    'piece_rates' => [
+        'icon'      => 'coins',
+        'badge'     => 'Upah Borongan',
+        'category'  => 'Produksi & Payroll',
+        'color'     => '#0d9488',
+        'bg'        => 'rgba(139, 92, 246, 0.12)',
+        'desc'      => 'Kelompok tarif upah borongan kemas repacking per bungkus/pcs.',
+        'url'       => '/products'
     ],
     'employees' => [
         'icon'      => 'user-check',
@@ -394,13 +385,40 @@ $entityMeta = [
         'desc'      => 'Master data profil karyawan, posisi/tugas operasional, dan skema penggajian.',
         'url'       => '/employees'
     ],
-    'product_groups' => [
-        'icon'      => 'package',
-        'badge'     => 'Grup Kemasan',
+    'suppliers' => [
+        'icon'      => 'truck',
+        'badge'     => 'Pemasok (Vendor)',
+        'category'  => 'Pengadaan & Stok',
+        'color'     => '#f59e0b',
+        'bg'        => 'rgba(245, 158, 11, 0.12)',
+        'desc'      => 'Vendor bahan mentah curah, kemasan plastik, karton box, dan rekening bank.',
+        'url'       => '/suppliers'
+    ],
+    'pricing_matrix' => [
+        'icon'      => 'table-properties',
+        'badge'     => 'Matriks 30 Level',
+        'category'  => 'Penjualan & Pricing',
+        'color'     => '#2563eb',
+        'bg'        => 'rgba(37, 99, 235, 0.12)',
+        'desc'      => 'Konfigurasi harga jual bertingkat 30 level harga per grup kemasan produk.',
+        'url'       => '/pricing-matrix'
+    ],
+    'customer_groups' => [
+        'icon'      => 'users',
+        'badge'     => 'Grup Pelanggan',
+        'category'  => 'Mitra & Penjualan',
+        'color'     => '#3b82f6',
+        'bg'        => 'rgba(59, 130, 246, 0.12)',
+        'desc'      => 'Segmentasi tier pelanggan (Grosir, Ritel, Semi-Grosir) dan default level harga.',
+        'url'       => '/customers?tab=customer_groups'
+    ],
+    'materials' => [
+        'icon'      => 'layers',
+        'badge'     => 'Bahan Baku & Kemas',
         'category'  => 'Produk & BOM',
-        'color'     => '#ec4899',
-        'bg'        => 'rgba(236, 72, 153, 0.12)',
-        'desc'      => 'Kategori kemasan universal, barcode universal grup, dan satuan dasar produk.',
+        'color'     => '#ea580c',
+        'bg'        => 'rgba(234, 88, 12, 0.12)',
+        'desc'      => 'Bahan mentah curah repacking, kemasan plastik, bumbu, dan karton vendor.',
         'url'       => '/products'
     ],
     'products' => [
@@ -412,31 +430,13 @@ $entityMeta = [
         'desc'      => 'Katalog snack siap jual, SKU barcode, HPP pokok, dan tarif upah borongan.',
         'url'       => '/products'
     ],
-    'materials' => [
-        'icon'      => 'layers',
-        'badge'     => 'Bahan Baku & Kemas',
-        'category'  => 'Produk & BOM',
-        'color'     => '#ea580c',
-        'bg'        => 'rgba(234, 88, 12, 0.12)',
-        'desc'      => 'Bahan mentah curah repacking, kemasan plastik, bumbu, dan karton vendor.',
-        'url'       => '/products'
-    ],
-    'pricing_matrix' => [
-        'icon'      => 'table-properties',
-        'badge'     => 'Matriks 30 Level',
-        'category'  => 'Penjualan & Pricing',
-        'color'     => '#2563eb',
-        'bg'        => 'rgba(37, 99, 235, 0.12)',
-        'desc'      => 'Konfigurasi harga jual bertingkat 30 level harga per grup kemasan produk.',
-        'url'       => '/pricing-matrix'
-    ],
-    'piece_rates' => [
-        'icon'      => 'coins',
-        'badge'     => 'Upah Borongan',
-        'category'  => 'Produksi & Payroll',
-        'color'     => '#0d9488',
-        'bg'        => 'rgba(13, 148, 136, 0.12)',
-        'desc'      => 'Kelompok tarif upah borongan kemas repacking per bungkus/pcs.',
-        'url'       => '/products'
+    'customers' => [
+        'icon'      => 'store',
+        'badge'     => 'Pelanggan',
+        'category'  => 'Mitra & Penjualan',
+        'color'     => '#10b981',
+        'bg'        => 'rgba(16, 185, 129, 0.12)',
+        'desc'      => 'Katalog toko mitra konsinyasi & ritel reguler, plafon piutang, dan rute pembina.',
+        'url'       => '/customers'
     ],
 ];

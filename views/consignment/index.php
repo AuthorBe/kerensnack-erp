@@ -24,6 +24,16 @@ ob_start();
                 <p class="page-subtitle text-xs sm:text-sm"><?= $pageSubtitle ?? 'Pusat Manajemen Titip Jual Rak, Opname Lapangan &amp; Settlement Faktur Mitra' ?></p>
             </div>
         </div>
+        <div class="page-header-actions">
+            <a href="<?= Router::url('/guide#bab-5-konsinyasi-rolling') ?>" 
+               target="_blank"
+               rel="noopener noreferrer"
+               class="btn btn-secondary flex items-center gap-2"
+               style="border-radius:12px; font-weight:700; text-decoration:none;">
+                <i data-lucide="book-open" class="w-4 h-4 text-rose-500"></i>
+                <span>Panduan SOP Konsinyasi</span>
+            </a>
+        </div>
     </div>
 
 

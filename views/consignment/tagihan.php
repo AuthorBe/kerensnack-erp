@@ -867,27 +867,6 @@ document.addEventListener('alpine:init', () => {
                 currency: 'IDR',
                 minimumFractionDigits: 0
             }).format(num || 0);
-        },
-
-        // Modal Panduan & Ketentuan State
-        guideModalOpen: false,
-
-        openGuideModal() {
-            this.guideModalOpen = true;
-            document.body.style.overflow = 'hidden';
-            this.$nextTick(() => {
-                if (window.lucide) lucide.createIcons();
-            });
-        },
-
-        closeGuideModal() {
-            this.guideModalOpen = false;
-            document.body.style.overflow = '';
-        },
-
-        startFromGuide() {
-            this.closeGuideModal();
-            this.setTab('buat');
         }
     }));
 });
@@ -914,14 +893,15 @@ document.addEventListener('alpine:init', () => {
         </div>
         
         <div class="page-header-actions" style="display:flex; gap:8px; align-items:center;">
-            <button type="button" 
-                    @click="openGuideModal()" 
-                    class="btn btn-secondary"
-                    style="height:38px; display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:12px;"
-                    title="Buka Panduan & Ketentuan Tagihan">
-                <i data-lucide="help-circle" class="w-4 h-4 text-sky-500"></i>
-                <span class="tagihan-guide-btn-text">Panduan &amp; Ketentuan</span>
-            </button>
+            <a href="<?= Router::url('/guide#bab-6-konsinyasi-tagihan') ?>" 
+               target="_blank"
+               rel="noopener noreferrer"
+               class="btn btn-secondary"
+               style="height:38px; display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:12px; text-decoration:none;"
+               title="Buka Buku Panduan SOP & Alur Kolektif Tagihan di Tab Baru">
+                <i data-lucide="book-open" class="w-4 h-4 text-amber-500"></i>
+                <span class="tagihan-guide-btn-text">Panduan SOP Tagihan</span>
+            </a>
             <a href="<?= Router::url('/consignment/tagihan/export-excel') ?>?status=<?= urlencode($filterStatus ?? '') ?>&tipe_konsinyasi=<?= urlencode($filterTipeKonsinyasi ?? '') ?>" 
                class="btn btn-secondary"
                style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:6px; border-radius:12px;"
@@ -1763,213 +1743,6 @@ document.addEventListener('alpine:init', () => {
                     </button>
                 </div>
             </form>
-
-        </div>
-    </div>
-    </template>
-
-    <!-- ========================================================================= -->
-    <!-- 6. MODAL PANDUAN & KETENTUAN OPERASIONAL TAGIHAN (3-Layer Teleported)      -->
-    <!-- ========================================================================= -->
-    <template x-teleport="body">
-    <div x-show="guideModalOpen" 
-         x-cloak 
-         class="tagihan-modal-backdrop" 
-         
-         @keydown.escape.window="closeGuideModal()">
-        
-        <div class="tagihan-modal-guide-shell" @click.stop>
-            
-            <!-- LAYER 1: MODAL HEADER (STICKY) -->
-            <div class="tagihan-modal-header">
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(2,132,199,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="book-open" style="width:20px;height:20px;"></i>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2">
-                            <h3 class="truncate" style="font-size:15px;font-weight:900;color:var(--color-ink);margin:0;">Panduan &amp; Ketentuan Tagihan</h3>
-                            <span class="badge" style="font-size:10px;font-weight:800;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:1px 7px;border-radius:6px;flex-shrink:0;">SOP ERP</span>
-                        </div>
-                        <p class="text-xs truncate" style="color:var(--color-ink-mute);margin:2px 0 0;">
-                            Standard Operating Procedure &amp; aturan sistem konsinyasi
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- LAYER 2: MODAL BODY (SCROLLABLE) -->
-            <div class="tagihan-modal-body" style="display:flex;flex-direction:column;gap:20px;">
-                
-                <!-- 1. ALUR KERJA 4 TAHAP (STEP-BY-STEP WORKFLOW) -->
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <i data-lucide="git-commit" class="w-4 h-4 text-sky-500"></i>
-                        <h4 style="font-size:13px;font-weight:800;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.04em;margin:0;">
-                            Alur Penagihan Konsinyasi (4 Langkah)
-                        </h4>
-                    </div>
-
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:12px;">
-                        <!-- Step 1 -->
-                        <div style="background-color:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px;display:flex;gap:12px;">
-                            <div style="width:28px;height:28px;border-radius:50%;background:#0284c7;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
-                            <div>
-                                <div style="font-size:12.5px;font-weight:700;color:var(--color-ink);margin-bottom:3px;">Kunjungan &amp; Opname</div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.45;">
-                                    Sales mengunjungi toko mitra, menghitung sisa stok fisik rak, retur, &amp; barang terjual tanpa menagih uang tunai di tempat.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 2 -->
-                        <div style="background-color:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px;display:flex;gap:12px;">
-                            <div style="width:28px;height:28px;border-radius:50%;background:#0284c7;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
-                            <div>
-                                <div style="font-size:12.5px;font-weight:700;color:var(--color-ink);margin-bottom:3px;">Batch Invoicing</div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.45;">
-                                    Admin memilih 1 atau lebih kunjungan dari toko yang sama di tab <strong>Buat Tagihan</strong> untuk diterbitkan 1 faktur resmi.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3 -->
-                        <div style="background-color:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px;display:flex;gap:12px;">
-                            <div style="width:28px;height:28px;border-radius:50%;background:#0284c7;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
-                            <div>
-                                <div style="font-size:12.5px;font-weight:700;color:var(--color-ink);margin-bottom:3px;">Kirim Nota &amp; Piutang</div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.45;">
-                                    Faktur dicetak atau dikirim via WhatsApp. Nilai faktur otomatis tercatat menambah <em>Piutang Berjalan</em> toko mitra.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 4 -->
-                        <div style="background-color:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px;display:flex;gap:12px;">
-                            <div style="width:28px;height:28px;border-radius:50%;background:#10b981;color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
-                            <div>
-                                <div style="font-size:12.5px;font-weight:700;color:var(--color-ink);margin-bottom:3px;">Catat Pembayaran</div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.45;">
-                                    Saat toko membayar via transfer/tunai, catat di tab <strong>Daftar Tagihan</strong>. Kas bertambah dan piutang toko berkurang.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. KETENTUAN VALIDASI PEMBUATAN FAKTUR (DATABASE LEVEL) -->
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <i data-lucide="shield-check" class="w-4 h-4 text-emerald-500"></i>
-                        <h4 style="font-size:13px;font-weight:800;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.04em;margin:0;">
-                            Ketentuan Mutlak Pembuatan Tagihan (Sistem Database)
-                        </h4>
-                    </div>
-
-                    <div style="background-color:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:14px;overflow:hidden;">
-                        
-                        <div style="padding:12px 16px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:flex-start;gap:10px;">
-                            <i data-lucide="store" class="w-4 h-4 text-sky-500 flex-shrink-0" style="margin-top:2px;"></i>
-                            <div>
-                                <div style="font-size:12px;font-weight:700;color:var(--color-ink);">1. Satu Toko Mitra per Faktur (Single-Partner Rule)</div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.4;margin-top:2px;">
-                                    Seluruh kunjungan yang digabungkan dalam 1 faktur <strong>wajib berasal dari 1 toko yang sama</strong>. Sistem akan otomatis memblokir pembuatan tagihan jika Anda memilih kunjungan dari toko berbeda.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="padding:12px 16px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:flex-start;gap:10px;">
-                            <i data-lucide="lock" class="w-4 h-4 text-amber-500 flex-shrink-0" style="margin-top:2px;"></i>
-                            <div>
-                                <div style="font-size:12px;font-weight:700;color:var(--color-ink);">2. Anti Double-Billing (Bebas Tagihan Ganda)</div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.4;margin-top:2px;">
-                                    Kunjungan yang sudah pernah dibuatkan tagihan dikunci secara permanen di database. Kunjungan tersebut otomatis hilang dari daftar antrean agar tidak terjadi penagihan berulang.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="padding:12px 16px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:flex-start;gap:10px;">
-                            <i data-lucide="banknote" class="w-4 h-4 text-emerald-500 flex-shrink-0" style="margin-top:2px;"></i>
-                            <div>
-                                <div style="font-size:12px;font-weight:700;color:var(--color-ink);">3. Syarat Penjualan Riil (&gt; Rp 0)</div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.4;margin-top:2px;">
-                                    Kunjungan dengan nilai penjualan Rp 0 (misal toko tutup atau tidak ada barang laku) ditolak oleh database dan tidak dapat dijadikan faktur piutang.
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="padding:12px 16px;display:flex;align-items:flex-start;gap:10px;">
-                            <i data-lucide="layers" class="w-4 h-4 text-indigo-500 flex-shrink-0" style="margin-top:2px;"></i>
-                            <div>
-                                <div style="font-size:12px;font-weight:700;color:var(--color-ink);">4. Format Nomor Nota &amp; Agregasi Produk Otomatis</div>
-                                <div style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.4;margin-top:2px;">
-                                    Faktur otomatis diberi nomor resmi berformat <code>INV-KONSIN-YYYYMMDD-HHMMSS</code>. Item barang dari seluruh kunjungan terpilih otomatis dirangkum per SKU dengan kuantitas terakumulasi dan harga satuan kesepakatan toko.
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- 3. KETENTUAN PEMBAYARAN & ARUS KAS -->
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <i data-lucide="wallet" class="w-4 h-4 text-sky-500"></i>
-                        <h4 style="font-size:13px;font-weight:800;color:var(--color-ink);text-transform:uppercase;letter-spacing:0.04em;margin:0;">
-                            Ketentuan Pembayaran &amp; Arus Kas
-                        </h4>
-                    </div>
-
-                    <div style="background-color:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;">
-                        <div class="flex items-start gap-2.5">
-                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0" style="margin-top:2px;"></i>
-                            <div style="font-size:11.5px;color:var(--color-ink);line-height:1.45;">
-                                <strong>Pelunasan Penuh atau Bertahap (Cicil):</strong> Pembayaran dapat dilakukan langsung 100% lunas atau dicicil sebagian. Sistem menyediakan shortcut tombol <em>50%</em> dan <em>Bayar Full</em> untuk percepatan pengisian nominal.
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-2.5">
-                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0" style="margin-top:2px;"></i>
-                            <div style="font-size:11.5px;color:var(--color-ink);line-height:1.45;">
-                                <strong>Batas Maksimal Nominal:</strong> Database menolak pencatatan pembayaran yang melebihi sisa piutang faktur untuk mencegah kesalahan pembukuan (overpayment).
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-2.5">
-                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-500 flex-shrink-0" style="margin-top:2px;"></i>
-                            <div style="font-size:11.5px;color:var(--color-ink);line-height:1.45;">
-                                <strong>Integrasi Otomatis Arus Kas:</strong> Uang pembayaran langsung menambah saldo akun kas terpilih, tercatat di laporan arus kas kategori <em>penjualan</em>, dan memotong saldo piutang berjalan toko mitra secara real-time.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 4. HAK AKSES & OTORITAS -->
-                <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;">
-                    <div style="width:32px;height:32px;border-radius:10px;background:rgba(245,158,11,0.15);color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="user-check" class="w-4 h-4"></i>
-                    </div>
-                    <div style="font-size:11.5px;color:var(--color-ink);line-height:1.4;">
-                        <strong>Hak Akses &amp; Otoritas:</strong> Pembuatan tagihan manual dan pencatatan kas pembayaran dibatasi untuk role <strong>Admin</strong> dan <strong>Owner</strong> yang memiliki izin <code>consignment.piutang</code> guna menjamin akurasi dan ketertiban pembukuan keuangan.
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- LAYER 3: MODAL FOOTER (STICKY) -->
-            <div class="tagihan-modal-footer">
-                <button type="button" 
-                        @click="closeGuideModal()" 
-                        class="btn btn-secondary btn-sm flex-1 sm:flex-initial justify-center" 
-                        style="font-weight:700;font-size:12px;">
-                    <span>Tutup</span>
-                </button>
-                <button type="button" 
-                        @click="startFromGuide()" 
-                        class="btn btn-primary btn-sm flex-1 sm:flex-initial justify-center" 
-                        style="font-weight:800;font-size:12px;gap:6px;">
-                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
-                    <span>Mulai Buat Tagihan</span>
-                </button>
-            </div>
 
         </div>
     </div>

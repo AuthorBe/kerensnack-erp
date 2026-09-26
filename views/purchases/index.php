@@ -25,10 +25,10 @@ ob_start();
             </div>
         </div>
         <div class="page-header-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <button type="button" @click="showGuideModal = true; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });" class="btn btn-ghost" style="font-weight:700;color:var(--color-primary);background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);" title="Lihat Panduan Alur Pembelian &amp; PO">
+            <a href="<?= Router::url('/guide#bab-7-pembelian-vendor') ?>" target="_blank" class="btn btn-ghost" style="font-weight:700;color:var(--color-primary);background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.25);display:inline-flex;align-items:center;gap:6px;text-decoration:none;" title="Buka Panduan Alur Pengadaan Bahan & PO Vendor di Tab Baru">
                 <i data-lucide="book-open" style="width:15px;height:15px;"></i>
                 <span class="hidden sm:inline">Panduan Alur</span>
-            </button>
+            </a>
             <?php if (Auth::can('purchases.create')): ?>
             <button @click="openAddModal('faktur')" class="btn btn-secondary" style="font-weight:700;">
                 <i data-lucide="receipt"></i>
@@ -2119,141 +2119,6 @@ ob_start();
     <?php endif; ?>
 
     <!-- ========================================================================= -->
-    <!-- MODAL PANDUAN ALUR PEMBELIAN & PO (UNTUK ADMIN TOKO / OPERASIONAL AWAM)    -->
-    <!-- ========================================================================= -->
-    <template x-teleport="body">
-    <div x-show="showGuideModal" x-cloak class="modal-backdrop">
-        <div class="modal-box purchase-modal-box custom-scrollbar" style="max-width:680px;max-height:90vh;overflow-y:auto;" @click.stop>
-            <!-- Header Modal -->
-            <div class="flex items-start justify-between pb-3 mb-3 border-b border-hairline">
-                <div class="flex items-center gap-3">
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(59,130,246,0.12);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="book-open" style="width:20px;height:20px;"></i>
-                    </div>
-                    <div>
-                        <h3 class="modal-title" style="font-size:16px;font-weight:800;color:var(--color-ink);">Panduan Alur Pembelian &amp; PO</h3>
-                        <p style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;">Ringkasan praktis agar stok gudang &amp; uang kas tercatat dengan akurat</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Isi Panduan -->
-            <div class="space-y-4 text-xs" style="color:var(--color-ink);line-height:1.5;">
-
-                <!-- 1. Perbedaan Mode Input -->
-                <div style="padding:12px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:12px;">
-                    <div class="flex items-center gap-2 font-bold mb-2.5" style="font-size:13px;color:var(--color-ink);">
-                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[11px]">1</span>
-                        <span>Pilih Tombol Input Sesuai Kebutuhan</span>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div style="padding:10px 12px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;">
-                            <div class="font-bold flex items-center gap-1.5 text-blue-600 mb-1" style="font-size:12px;">
-                                <i data-lucide="receipt" style="width:14px;height:14px;"></i>
-                                <span>+ Catat Faktur Langsung</span>
-                            </div>
-                            <div style="font-size:11px;color:var(--color-ink-secondary);margin-bottom:6px;">
-                                Digunakan jika <strong>barang sudah dibeli &amp; tiba di toko</strong> saat ini juga.
-                            </div>
-                            <div style="font-size:10.5px;color:#059669;background:#ecfdf5;padding:4px 8px;border-radius:6px;font-weight:600;">
-                                &#10003; Stok gudang langsung bertambah<br>
-                                &#10003; Kas langsung dipotong (jika lunas)
-                            </div>
-                        </div>
-
-                        <div style="padding:10px 12px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;">
-                            <div class="font-bold flex items-center gap-1.5 text-emerald-600 mb-1" style="font-size:12px;">
-                                <i data-lucide="shopping-cart" style="width:14px;height:14px;"></i>
-                                <span>+ Buat PO Pembelian</span>
-                            </div>
-                            <div style="font-size:11px;color:var(--color-ink-secondary);margin-bottom:6px;">
-                                Digunakan untuk <strong>pesan ke supplier</strong> atau tugas belanja driver besok/nanti.
-                            </div>
-                            <div style="font-size:10.5px;color:#2563eb;background:#eff6ff;padding:4px 8px;border-radius:6px;font-weight:600;">
-                                &#9201; Stok &amp; kas BELUM berubah<br>
-                                &#9201; Berubah saat fisik barang diterima
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. Dua Opsi Logistik PO -->
-                <div style="padding:12px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:12px;">
-                    <div class="flex items-center gap-2 font-bold mb-2.5" style="font-size:13px;color:var(--color-ink);">
-                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[11px]">2</span>
-                        <span>Dua Metode Logistik pada PO</span>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        <div style="padding:10px 12px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;">
-                            <div class="font-bold text-amber-600 mb-1 flex items-center gap-1.5" style="font-size:12px;">
-                                <span>&#x1F69A; Diambil Driver Toko</span>
-                            </div>
-                            <div style="font-size:11px;color:var(--color-ink-secondary);">
-                                Tugas otomatis muncul di aplikasi HP Driver (<em>Pengiriman Driver</em>) pada jadwal belanja. Driver belanja di vendor &rarr; klik selesai di HP &rarr; upload foto struk &rarr; bawa barang ke toko.
-                            </div>
-                        </div>
-
-                        <div style="padding:10px 12px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;">
-                            <div class="font-bold text-indigo-600 mb-1 flex items-center gap-1.5" style="font-size:12px;">
-                                <span>&#x1F3E2; Diantar oleh Supplier</span>
-                            </div>
-                            <div style="font-size:11px;color:var(--color-ink-secondary);">
-                                Pihak vendor/ekspedisi yang mengantarkan barang langsung ke gudang kita sesuai tanggal perkiraan tiba.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. Konfirmasi Barang Tiba di Gudang -->
-                <div style="padding:12px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:12px;">
-                    <div class="flex items-center gap-2 font-bold mb-1.5" style="font-size:13px;color:#065f46;">
-                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px]">3</span>
-                        <span>Saat Barang Sampai di Toko / Gudang (Wajib Verifikasi!)</span>
-                    </div>
-                    <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">
-                        Setiap barang PO yang tiba <strong>wajib dikonfirmasi penerimaannya</strong> agar stok gudang resmi bertambah:
-                    </p>
-                    <div style="padding:10px 12px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;display:flex;flex-direction:column;gap:6px;">
-                        <div class="flex items-center gap-2">
-                            <span class="badge" style="background:#059669;color:#fff;font-weight:700;font-size:10px;">CARA CEPAT</span>
-                            <span style="font-weight:700;color:#065f46;font-size:11.5px;">Klik tombol hijau [&#x1F4E6; Terima] di baris tabel pembelian</span>
-                        </div>
-                        <ul style="margin:0;padding-left:18px;font-size:11px;color:#047857;display:flex;flex-direction:column;gap:3px;">
-                            <li>Hitung kuantitas riil barang yang diterima (bisa disesuaikan jika ada selisih/rusak).</li>
-                            <li>Jika belanjaan driver, admin bisa langsung klik <strong>"Lihat Foto Struk"</strong> untuk mencocokkan bon fisik.</li>
-                            <li>Klik <strong>"Konfirmasi Terima &amp; Tambah Stok"</strong> &rarr; Stok resmi masuk gudang dan harga modal (HPP) terhitung otomatis.</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- 4. Kendala Driver -->
-                <div style="padding:10px 14px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.25);border-radius:12px;">
-                    <div class="flex items-center gap-2 font-bold mb-1" style="font-size:12px;color:#991b1b;">
-                        <i data-lucide="alert-circle" style="width:15px;height:15px;"></i>
-                        <span>Jika Driver Melaporkan Kendala (Toko Tutup / Stok Habis)</span>
-                    </div>
-                    <p style="font-size:11px;color:var(--color-ink-secondary);margin:0;">
-                        Status PO akan otomatis menjadi <span class="badge badge-danger" style="font-size:9.5px;padding:1px 5px;">KENDALA / BATAL</span>. Tombol terima barang terkunci demi keamanan. Admin cukup buka <strong>Detail PO</strong> untuk klik tombol <strong>[Jadwalkan Ulang / Ganti Driver]</strong> atau <strong>[Batalkan PO]</strong>.
-                    </p>
-                </div>
-
-            </div>
-
-            <!-- Footer Modal -->
-            <div class="flex items-center justify-between gap-3 pt-3 mt-4 border-t border-hairline flex-wrap">
-                <span style="font-size:11px;color:var(--color-ink-mute);display:flex;align-items:center;gap:4px;">
-                    <i data-lucide="info" style="width:14px;height:14px;color:var(--color-primary);"></i>
-                    <span>Semua nomor dokumen pengadaan berawalan <strong>PB-</strong></span>
-                </span>
-                <button type="button" @click="showGuideModal = false" class="btn btn-primary w-full sm:w-auto" style="font-weight:700;padding:6px 20px;">
-                    <span>Mengerti &amp; Tutup</span>
-                </button>
-            </div>
-        </div>
-    </div>
-    </template>
-
-    <!-- ========================================================================= -->
     <!-- STYLES KHUSUS RECEIPT PHOTO VIEWER (MOBILE-FIRST & GESTURES)              -->
     <!-- ========================================================================= -->
     <style>
@@ -2929,7 +2794,6 @@ function purchaseApp() {
         showReceiptModal: false,
         showEditPoModal: false,
         showReceiveModal: false,
-        showGuideModal: false,
 
         activeDetailTab: 'items',
         receiptModalUrl: '',

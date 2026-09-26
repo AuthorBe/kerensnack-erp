@@ -33,10 +33,10 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
             </div>
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-            <button type="button" @click="showGuideModal = true" class="btn btn-secondary btn-sm flex items-center gap-2" style="border-radius:10px;height:38px;padding:0 14px;font-weight:700;font-size:12.5px;" title="Petunjuk Alur Operasional Pesanan">
+            <a href="<?= Router::url('/guide#bab-4-b2b-hybrid') ?>" target="_blank" class="btn btn-secondary btn-sm flex items-center gap-2" style="border-radius:10px;height:38px;padding:0 14px;font-weight:700;font-size:12.5px;" title="Buka Panduan Operasional Pesanan & Konsinyasi di Tab Baru">
                 <i data-lucide="book-open" style="width:16px;height:16px;color:var(--color-primary);"></i>
-                <span>Petunjuk Alur</span>
-            </button>
+                <span>Panduan Alur</span>
+            </a>
             <button type="button" @click="submitOrder()" :disabled="isSubmitting || items.length === 0" class="btn btn-primary btn-sm flex items-center gap-2" style="border-radius:10px;height:38px;padding:0 16px;font-weight:700;font-size:12.5px;<?= $isRetryEdit ? 'background:#1e3a8a;border-color:#1e3a8a;' : '' ?>">
                 <i data-lucide="<?= $isRetryEdit ? 'rotate-cw' : 'save' ?>" style="width:15px;height:15px;"></i>
                 <span x-text="isSubmitting ? 'Menyimpan...' : 'Simpan'"></span>
@@ -145,8 +145,26 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
                         </div>
                     </div>
 
-                    <!-- BARIS 2 KANAN: Catatan / Keterangan Nota Opsional -->
+                    <!-- BARIS 2 KANAN: Petugas Pengantar / Driver (Opsional) -->
                     <div>
+                        <label class="form-label flex items-center justify-between" style="font-size:12px;font-weight:700;margin-bottom:6px;">
+                            <span>Petugas Pengantar / Driver <span class="font-normal text-xs" style="color:var(--color-ink-mute);">(Opsional)</span></span>
+                            <span class="badge badge-mono" style="font-size:10px;font-weight:600;">Driver / Sales</span>
+                        </label>
+                        <select name="sales_driver_id" x-model="header.sales_driver_id"
+                                class="form-select font-medium"
+                                style="height:42px;border-radius:10px;font-size:13px;width:100%;background:var(--color-canvas);">
+                            <option value="">-- Pilih Nanti (Saat Barang Siap) --</option>
+                            <?php foreach ($drivers as $drv): ?>
+                                <option value="<?= htmlspecialchars($drv['id']) ?>" <?= (!empty($order['sales_driver_id']) && $order['sales_driver_id'] === $drv['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($drv['nama_karyawan']) ?> (<?= ucfirst(htmlspecialchars($drv['posisi'] ?? 'Driver')) ?><?= !empty($drv['nomor_polisi_kendaraan']) ? ' • ' . htmlspecialchars($drv['nomor_polisi_kendaraan']) : '' ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <!-- BARIS 3: Catatan / Keterangan Nota Opsional (Full Width) -->
+                    <div class="md:col-span-2">
                         <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;">Catatan / Keterangan Nota <span class="font-normal text-xs" style="color:var(--color-ink-mute);">(Opsional)</span></label>
                         <input type="text" name="catatan" x-model="header.catatan"
                                @keydown.enter.prevent="focusFirstProduct()"
@@ -833,139 +851,6 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
     </form>
 
     <!-- ========================================================================= -->
-    <!-- MODAL POP-UP PETUNJUK ALUR OPERASIONAL (ENTERPRISE WORKFLOW STEPPER)       -->
-    <!-- ========================================================================= -->
-    <template x-teleport="body">
-        <div x-show="showGuideModal" x-cloak class="modal-backdrop"
-             style="position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;">
-            <div 
-                 x-data="{ activeGuideTab: (isKonsinyasi ? 'konsinyasi' : 'reguler') }"
-                 class="card shadow-2xl bg-card border border-hairline animate-scale-in"
-                 style="width:100%;max-width:620px;max-height:calc(100vh - 48px);overflow-y:auto;border-radius:24px;padding:28px 30px;box-sizing:border-box;">
-                
-                <!-- Modal Header -->
-                <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid var(--color-hairline);margin-bottom:20px;">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:44px;height:44px;min-width:44px;border-radius:12px;background:rgba(99,102,241,0.12);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="book-open" style="width:22px;height:22px;"></i>
-                        </div>
-                        <div>
-                            <div class="font-extrabold text-ink" style="font-size:16.5px;line-height:1.3;">Petunjuk Alur Operasional Pesanan</div>
-                            <div class="text-xs text-ink-mute" style="margin-top:3px;">Alur transaksi penerbitan PO hingga barang diterima di toko</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modern Segmented Pill Switcher -->
-                <div style="display:flex;flex-wrap:wrap;gap:6px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:6px;margin-bottom:28px;">
-                    <div @click="activeGuideTab = 'reguler'"
-                         :style="`cursor:pointer;flex:1;min-width:130px;padding:12px 10px;border-radius:10px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;text-align:center;` + (activeGuideTab === 'reguler' ? 'background:var(--color-canvas);color:#2563eb;box-shadow:0 2px 6px rgba(0,0,0,0.08);border:1px solid rgba(37,99,235,0.25);' : 'color:var(--color-ink-mute);background:transparent;border:1px solid transparent;')">
-                        <i data-lucide="shopping-bag" style="width:16px;height:16px;flex-shrink:0;"></i>
-                        <span style="line-height:1.2;">Penjualan Reguler</span>
-                    </div>
-                    <div @click="activeGuideTab = 'konsinyasi'"
-                         :style="`cursor:pointer;flex:1;min-width:130px;padding:12px 10px;border-radius:10px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;text-align:center;` + (activeGuideTab === 'konsinyasi' ? 'background:var(--color-canvas);color:#e11d48;box-shadow:0 2px 6px rgba(0,0,0,0.08);border:1px solid rgba(225,29,72,0.25);' : 'color:var(--color-ink-mute);background:transparent;border:1px solid transparent;')">
-                        <i data-lucide="store" style="width:16px;height:16px;flex-shrink:0;"></i>
-                        <span style="line-height:1.2;">Titip Jual (Konsinyasi)</span>
-                    </div>
-                </div>
-
-                <!-- Tab 1: Penjualan Reguler -->
-                <div x-show="activeGuideTab === 'reguler'" style="position:relative;padding-left:24px;margin-left:4px;">
-                    <!-- Timeline Vertical Line -->
-                    <div style="position:absolute;left:4px;top:20px;bottom:20px;width:2px;background:var(--color-hairline);border-radius:2px;"></div>
-                    
-                    <!-- Step 1 -->
-                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;margin-bottom:22px;">
-                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#f59e0b;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">1. Penerbitan Purchase Order (PO)</span>
-                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">DRAF ANTREAN</span>
-                        </div>
-                        <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Pesanan pelanggan disimpan dengan status awal PO. Pada fase ini, <strong style="color:var(--color-ink);">stok fisik gudang belum terpotong</strong>, sehingga rincian pesanan masih bebas untuk diedit atau dibatalkan.
-                        </p>
-                    </div>
-
-                    <!-- Step 2 -->
-                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;margin-bottom:22px;">
-                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#3b82f6;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">2. Proses Gudang &amp; Surat Jalan</span>
-                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(59,130,246,0.12);color:#2563eb;border:1px solid rgba(59,130,246,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">STOK TERPOTONG</span>
-                        </div>
-                        <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Tim logistik menyiapkan barang dan menekan tombol <strong style="color:var(--color-ink);">Siap Kirim</strong>. Sistem akan otomatis <strong style="color:var(--color-ink);">memotong stok gudang</strong> dan mencetak lembar Surat Jalan resmi untuk dibawa supir.
-                        </p>
-                    </div>
-
-                    <!-- Step 3 (Final) -->
-                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;">
-                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#10b981;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">3. Pengiriman &amp; Pencatatan Finansial</span>
-                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">SELESAI TRANSAKSI</span>
-                        </div>
-                        <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Barang diserahkan ke pelanggan. Setelah status diubah menjadi <strong style="color:var(--color-ink);">Selesai</strong>, sistem otomatis membukukan pembayaran ke <strong style="color:var(--color-ink);">Buku Kas</strong> dan merekap sisa piutang (jika ada).
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Tab 2: Titip Jual Konsinyasi -->
-                <div x-show="activeGuideTab === 'konsinyasi'" style="position:relative;padding-left:24px;margin-left:4px;" x-cloak>
-                    <!-- Timeline Vertical Line -->
-                    <div style="position:absolute;left:4px;top:20px;bottom:20px;width:2px;background:var(--color-hairline);border-radius:2px;"></div>
-
-                    <!-- Step 1 -->
-                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;margin-bottom:22px;">
-                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#e11d48;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">1. Distribusi Barang Titipan (Rp 0)</span>
-                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(225,29,72,0.12);color:#e11d48;border:1px solid rgba(225,29,72,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">NON-TAGIHAN</span>
-                        </div>
-                        <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Barang dikirim ke rak toko mitra murni sebagai barang titipan. <strong style="color:var(--color-ink);">Tidak ada kewajiban pembayaran tunai</strong> maupun pencatatan piutang di awal transaksi pengiriman.
-                        </p>
-                    </div>
-                    
-                    <!-- Step 2 -->
-                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;margin-bottom:22px;">
-                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#0ea5e9;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">2. Mutasi ke Stok Rak Toko</span>
-                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(14,165,233,0.12);color:#0369a1;border:1px solid rgba(14,165,233,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">STOK BERPINDAH</span>
-                        </div>
-                        <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Setelah barang dikonfirmasi sampai, kuantiti fisik barang akan otomatis dipindahkan dari Gudang Utama menuju saldo <strong style="color:var(--color-ink);">Stok Rak Toko Mitra</strong> secara sistem.
-                        </p>
-                    </div>
-
-                    <!-- Step 3 (Final) -->
-                    <div style="position:relative;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:16px;transition:all 0.2s;">
-                        <div style="position:absolute;left:-26px;top:18px;width:14px;height:14px;border-radius:50%;background:#8b5cf6;border:3px solid var(--color-card);box-shadow:0 0 0 1px var(--color-hairline);"></div>
-                        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
-                            <span style="font-weight:800;font-size:13.5px;color:var(--color-ink);line-height:1.4;flex:1;min-width:150px;">3. Penagihan Opname (Kunjungan Rutin)</span>
-                            <span style="font-size:9.5px;font-weight:800;padding:4px 8px;border-radius:6px;background:rgba(139,92,246,0.12);color:#6d28d9;border:1px solid rgba(139,92,246,0.25);letter-spacing:0.3px;white-space:nowrap;margin-top:2px;">OPNAME FISIK</span>
-                        </div>
-                        <p style="font-size:12.5px;line-height:1.55;color:var(--color-ink-secondary);margin:0;">
-                            Saat sales kembali berkunjung untuk opname/restock, sistem akan otomatis menghitung barang laku dan menerbitkan <strong style="color:var(--color-ink);">Faktur Tagihan Finansial</strong> hanya dari selisih barang yang terjual.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Modal Footer -->
-                <div style="display:flex;justify-content:flex-end;padding-top:20px;margin-top:22px;border-top:1px solid var(--color-hairline);">
-                    <button type="button" @click="showGuideModal = false" class="btn btn-primary font-bold text-xs flex items-center justify-center gap-2 shadow-sm" style="border-radius:10px;height:42px;padding:0 28px;">
-                        <i data-lucide="check-circle-2" style="width:16px;height:16px;"></i>
-                        <span>Saya Mengerti</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </template>
-
-    <!-- ========================================================================= -->
     <!-- MODAL KONFIRMASI REFUND DANA KELEBIHAN BAYAR                              -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
@@ -1034,7 +919,6 @@ function editSalesOrderApp() {
         cashAccounts: <?= json_encode($cashAccounts ?? [], JSON_UNESCAPED_UNICODE) ?>,
         whitelistMap: <?= json_encode($whitelistMap ?? [], JSON_UNESCAPED_UNICODE) ?>,
         isRetryEdit: <?= json_encode((bool)$isRetryEdit) ?>,
-        showGuideModal: false,
         showRefundModal: false,
         refundForm: {
             akun_kas_id: '<?= !empty($cashAccounts) ? $cashAccounts[0]['id'] : '' ?>',

@@ -24,6 +24,17 @@ ob_start();
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Manifest Rute Pengiriman &amp; Status Antar Toko' ?></p>
             </div>
         </div>
+        <div class="page-header-actions">
+            <a href="<?= Router::url('/guide#bab-8-logistik-pengiriman') ?>" 
+               target="_blank"
+               rel="noopener noreferrer"
+               class="btn btn-secondary flex items-center gap-2"
+               style="border-radius:12px; font-weight:700; text-decoration:none;"
+               title="Buka Buku Panduan SOP Logistik & Surat Jalan di Tab Baru">
+                <i data-lucide="book-open" class="w-4 h-4 text-blue-500"></i>
+                <span>Panduan SOP Logistik</span>
+            </a>
+        </div>
     </div>
 
     <!-- STATS -->
@@ -234,7 +245,7 @@ ob_start();
             <form action="<?= Router::url('/deliveries/store') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
                 <div>
                     <label class="form-label">Pilih Nota Pesanan Toko *</label>
-                    <select name="pesanan_id" required class="form-input searchable-select">
+                    <select name="pesanan_id" x-model="addSelectedPesananId" @change="onPesananChange()" required class="form-input searchable-select">
                         <option value="">-- Pilih Pesanan Menunggu Kirim --</option>
                         <?php foreach ($pendingOrders as $po): 
                             $isKonsinyasiPo = ($po['tipe_pembayaran'] === 'konsinyasi') || !empty($po['is_konsinyasi']);
@@ -253,7 +264,7 @@ ob_start();
                     </div>
                     <div>
                         <label class="form-label font-bold">Driver / Petugas Pengantar *</label>
-                        <select name="sales_driver_id" required class="form-input" style="height:40px;">
+                        <select name="sales_driver_id" x-model="addSelectedDriverId" required class="form-input" style="height:40px;">
                             <option value="">-- Pilih Driver / Petugas Pengantar --</option>
                             <?php foreach ($drivers as $d): ?>
                             <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?><?= !empty($d['nomor_polisi_kendaraan']) ? ' (' . htmlspecialchars($d['nomor_polisi_kendaraan']) . ')' : '' ?></option>
@@ -359,6 +370,8 @@ function deliveryApp() {
         filterStatus: 'all',
         showAddModal: false,
         showEditModal: false,
+        addSelectedPesananId: '',
+        addSelectedDriverId: '',
         defaultDeliveryDate: <?= json_encode($defaultDeliveryDate ?? date('Y-m-d')) ?>,
         isAfternoon: <?= json_encode($isAfternoon ?? false) ?>,
         editData: {
@@ -371,16 +384,24 @@ function deliveryApp() {
             tanggal_surat_jalan: ''
         },
 
+        onPesananChange() {
+            const po = this.pendingOrders.find(o => o.id === this.addSelectedPesananId);
+            if (po && po.sales_driver_id) {
+                this.addSelectedDriverId = po.sales_driver_id;
+            }
+        },
+
         init() {
             const urlParams = new URLSearchParams(window.location.search);
             const autoOrderId = urlParams.get('create_for_order');
             if (autoOrderId) {
                 this.showAddModal = true;
+                this.addSelectedPesananId = autoOrderId;
+                this.onPesananChange();
                 this.$nextTick(() => {
                     const select = document.querySelector('select[name="pesanan_id"]');
                     if (select) {
                         select.value = autoOrderId;
-                        select.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                     if (typeof window.initSearchableSelects === 'function') {
                         window.initSearchableSelects();

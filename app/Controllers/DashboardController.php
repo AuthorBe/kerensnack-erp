@@ -111,6 +111,8 @@ class DashboardController extends Controller
     private function getDriverData(?string $userId): array
     {
         try {
+            $driverId = Auth::employeeId() ?: $userId;
+
             // Surat Jalan Hari Ini yang ditugaskan ke driver
             $todayDeliveries = Database::fetchAll("
                 SELECT sj.id, sj.nomor_surat_jalan, sj.status_surat_jalan, sj.tanggal_surat_jalan,
@@ -121,7 +123,7 @@ class DashboardController extends Controller
                 JOIN public.pesanan pes ON pes.id = sj.pesanan_id
                 JOIN public.pelanggan p ON p.id = pes.pelanggan_id
                 LEFT JOIN public.wilayah w ON w.id = sj.rute_wilayah_id OR w.id = p.wilayah_id
-                WHERE (sj.sales_driver_id = :uid OR :uid IS NULL)
+                WHERE (sj.sales_driver_id = :uid OR pes.sales_driver_id = :uid OR :uid IS NULL)
                   AND sj.tanggal_surat_jalan = CURRENT_DATE
                 ORDER BY CASE 
                     WHEN sj.status_surat_jalan = 'sedang_dikirim' THEN 1
@@ -129,7 +131,7 @@ class DashboardController extends Controller
                     WHEN sj.status_surat_jalan = 'selesai_diterima' THEN 3
                     ELSE 4
                 END, sj.dibuat_pada ASC
-            ", ['uid' => $userId]);
+            ", ['uid' => $driverId]);
 
             // Jika hari ini kosong, ambil pengiriman aktif terakhir sebagai fallback
             if (empty($todayDeliveries)) {
@@ -142,11 +144,11 @@ class DashboardController extends Controller
                     JOIN public.pesanan pes ON pes.id = sj.pesanan_id
                     JOIN public.pelanggan p ON p.id = pes.pelanggan_id
                     LEFT JOIN public.wilayah w ON w.id = sj.rute_wilayah_id OR w.id = p.wilayah_id
-                    WHERE (sj.sales_driver_id = :uid OR :uid IS NULL)
+                    WHERE (sj.sales_driver_id = :uid OR pes.sales_driver_id = :uid OR :uid IS NULL)
                       AND sj.status_surat_jalan IN ('sedang_dikirim', 'siap_kirim')
                     ORDER BY sj.tanggal_surat_jalan DESC, sj.dibuat_pada DESC
                     LIMIT 10
-                ", ['uid' => $userId]);
+                ", ['uid' => $driverId]);
             }
 
             // Metrik Driver
@@ -159,7 +161,7 @@ class DashboardController extends Controller
                 FROM public.surat_jalan
                 WHERE (sales_driver_id = :uid OR :uid IS NULL)
                   AND tanggal_surat_jalan >= CURRENT_DATE - INTERVAL '7 days'
-            ", ['uid' => $userId]) ?? ['total_tugas' => 0, 'pending_rute' => 0, 'selesai_antar' => 0, 'gagal_antar' => 0];
+            ", ['uid' => $driverId]) ?? ['total_tugas' => 0, 'pending_rute' => 0, 'selesai_antar' => 0, 'gagal_antar' => 0];
 
             return [
                 'deliveries' => $todayDeliveries,

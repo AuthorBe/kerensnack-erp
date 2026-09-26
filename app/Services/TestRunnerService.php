@@ -246,6 +246,24 @@ class TestRunnerService
             'category'    => 'Security & RBAC',
             'description' => 'Audit pembersihan nama berkas download dan ekspor dari tanda hubung (-) dan garis bawah (_) di seluruh sistem.'
         ],
+        'driver_assignment_po' => [
+            'file'        => 'DriverAssignmentAtPoIntegrationTest.php',
+            'title'       => 'Driver Assignment at PO Creation & Logistics Workflow',
+            'category'    => 'Logistics & PO',
+            'description' => 'Validasi pemilihan driver di awal PO, status draft PO di rute driver, dan penerbitan Surat Jalan.'
+        ],
+        'hybrid_document_lifecycle' => [
+            'file'        => 'HybridDocumentLifecycleTest.php',
+            'title'       => 'Hybrid Document (Faktur & Surat Jalan) & PO Print Guard',
+            'category'    => 'Printing & Documents',
+            'description' => 'Validasi format Faktur & Surat Jalan Gabungan, 3 tanda tangan, dan penguncian tombol cetak pada status PO.'
+        ],
+        'guide_portal' => [
+            'file'        => 'GuidePortalTest.php',
+            'title'       => 'Standalone Documentation & SOP Portal (/guide)',
+            'category'    => 'Documentation & SOP',
+            'description' => 'Validasi portal buku panduan mandiri (/guide), 10 bab operasional, Table of Contents sticky, deep links, dan eliminasi modal lama.'
+        ],
     ];
 
     // -------------------------------------------------------------------------

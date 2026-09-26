@@ -31,23 +31,23 @@ class ImportProcessor
     public static function getHandlers(): array
     {
         return [
-            // Fase 1: Master Pondasi Independen (Zero Dependency)
+            // Fase 1: Master Pondasi Independen & Kemasan Produk
             'brands'          => new BrandImportHandler(),
             'territories'     => new TerritoryImportHandler(),
-            'customer_groups' => new CustomerGroupImportHandler(),
             'product_groups'  => new ProductGroupImportHandler(),
             'piece_rates'     => new PieceRateImportHandler(),
 
-            // Fase 2: Sumber Daya, Vendor & Matriks Harga
+            // Fase 2: Sumber Daya, Vendor, Matriks Harga & Grup Pelanggan
             'employees'       => new EmployeeImportHandler(),
             'suppliers'       => new SupplierImportHandler(),
             'pricing_matrix'  => new PricingMatrixImportHandler(),
+            'customer_groups' => new CustomerGroupImportHandler(),
 
             // Fase 3: Katalog Inventori & Produksi
             'materials'       => new MaterialItemImportHandler(),
             'products'        => new ProductItemImportHandler(),
 
-            // Fase 4: Jaringan Mitra & Toko
+            // Fase 4: Jaringan Mitra & Toko Pelanggan
             'customers'       => new CustomerImportHandler(),
         ];
     }

@@ -559,7 +559,16 @@ ob_start();
                 <p class="page-subtitle"><?= $pageSubtitle ?? 'Daftar Transaksi & Faktur Penjualan Toko Mitra' ?></p>
             </div>
         </div>
-        <div class="page-header-actions" style="display:flex; gap:8px;">
+        <div class="page-header-actions" style="display:flex; gap:8px; align-items:center;">
+            <a href="<?= Router::url('/guide#bab-4-b2b-hybrid') ?>" 
+               target="_blank"
+               rel="noopener noreferrer"
+               class="btn btn-secondary" 
+               style="font-weight:700; text-decoration:none;"
+               title="Buka Buku Panduan SOP Pesanan B2B & Faktur Hybrid di Tab Baru">
+                <i data-lucide="book-open" class="text-blue-500"></i>
+                <span class="hide-mobile">Panduan SOP B2B</span>
+            </a>
             <a href="<?= Router::url('/customer-orders/export/excel?' . http_build_query($filter)) ?>" class="btn btn-secondary" style="font-weight:700; background:#10b981; color:#fff; border-color:#059669;">
                 <i data-lucide="file-spreadsheet"></i>
                 <span>Export Excel</span>
@@ -1793,51 +1802,72 @@ ob_start();
                 <!-- TAB 4: DOKUMEN & AKSI OPERASIONAL -->
                 <div x-show="!loadingDetail && activeTab === 'actions'" style="padding-top:4px;padding-bottom:10px;">
                     
-                    <!-- GRUP 1: CETAK & SALINAN DOKUMEN FAKTUR -->
+                    <!-- GRUP 1: CETAK & SALINAN DOKUMEN FAKTUR & SURAT JALAN -->
                     <?php if (Auth::can('orders.print_invoice')): ?>
                     <div>
                         <div style="font-size:11px;font-weight:800;color:var(--color-ink-secondary);text-transform:uppercase;letter-spacing:0.05em;display:flex;align-items:center;gap:7px;padding:0 2px;margin-bottom:12px;">
                             <i data-lucide="printer" style="width:14px;height:14px;color:var(--color-ink-mute);"></i>
-                            <span>Cetak &amp; Salinan Dokumen Faktur</span>
+                            <span>Cetak &amp; Salinan Dokumen Faktur &amp; Surat Jalan</span>
                         </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-3" style="gap:12px;">
-                            <!-- 1. CETAK FAKTUR PENJUALAN (TERPUSAT: A4 / DOT MATRIX) -->
-                            <a :href="'<?= Router::url('/customer-orders/invoice?id=') ?>' + orderDetail?.id"
-                               class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(2,132,199,0.25);border-radius:14px;background:#f0f9ff;">
-                                <div style="width:42px;height:42px;border-radius:12px;background:rgba(2,132,199,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                    <i data-lucide="printer" style="width:22px;height:22px;"></i>
+                        <!-- JIKA MASIH STATUS PO: TAMPILKAN KOTAK TERKUNCI -->
+                        <template x-if="orderDetail?.status_pemrosesan === 'po'">
+                            <div style="padding:16px 18px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:14px;display:flex;align-items:center;gap:14px;">
+                                <div style="width:42px;height:42px;border-radius:12px;background:#e2e8f0;color:#64748b;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                    <i data-lucide="lock" style="width:22px;height:22px;"></i>
                                 </div>
-                                <div style="min-width:0;flex:1;">
-                                    <div style="font-weight:800;font-size:13.5px;color:#0369a1;">Cetak Faktur</div>
-                                    <div style="font-size:11.5px;color:#0284c7;margin-top:2px;line-height:1.4;">Pratinjau &amp; cetak (Standar A4 / Dot Matrix)</div>
+                                <div style="flex:1;">
+                                    <div style="font-size:13.5px;font-weight:800;color:#334155;display:flex;align-items:center;gap:8px;">
+                                        <span>Dokumen Cetak Belum Dapat Diterbitkan</span>
+                                        <span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10.5px;font-weight:800;">STATUS PO</span>
+                                    </div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:3px;line-height:1.45;">
+                                        Pesanan ini masih menunggu penyiapan fisik barang oleh gudang di <strong>Daftar PO</strong>. Dokumen <em>Faktur &amp; Surat Jalan Gabungan</em> resmi akan aktif setelah barang siap dan Surat Jalan diterbitkan.
+                                    </div>
                                 </div>
-                            </a>
+                            </div>
+                        </template>
 
-                            <!-- 2. UNDUH PDF FAKTUR -->
-                            <a :href="'<?= Router::url('/customer-orders/invoice/pdf?id=') ?>' + orderDetail?.id"
-                               class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(220,38,38,0.22);border-radius:14px;background:#fef2f2;">
-                                <div style="width:42px;height:42px;border-radius:12px;background:rgba(220,38,38,0.1);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                    <i data-lucide="file-text" style="width:20px;height:20px;"></i>
-                                </div>
-                                <div style="min-width:0;flex:1;">
-                                    <div style="font-weight:800;font-size:13.5px;color:#991b1b;">Unduh PDF</div>
-                                    <div style="font-size:11.5px;color:#dc2626;margin-top:2px;line-height:1.4;">Salinan berkas dokumen PDF resmi</div>
-                                </div>
-                            </a>
+                        <!-- JIKA STATUS SUDAH SIAP KIRIM / SELESAI: TAMPILKAN TOMBOL CETAK HYBRID -->
+                        <template x-if="orderDetail?.status_pemrosesan !== 'po'">
+                            <div class="grid grid-cols-1 sm:grid-cols-3" style="gap:12px;">
+                                <!-- 1. CETAK FAKTUR & SURAT JALAN (TERPUSAT: A4 / DOT MATRIX) -->
+                                <a :href="'<?= Router::url('/customer-orders/invoice?id=') ?>' + orderDetail?.id"
+                                   class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(2,132,199,0.25);border-radius:14px;background:#f0f9ff;">
+                                    <div style="width:42px;height:42px;border-radius:12px;background:rgba(2,132,199,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="printer" style="width:22px;height:22px;"></i>
+                                    </div>
+                                    <div style="min-width:0;flex:1;">
+                                        <div style="font-weight:800;font-size:13.5px;color:#0369a1;">Cetak Faktur &amp; SJ</div>
+                                        <div style="font-size:11.5px;color:#0284c7;margin-top:2px;line-height:1.4;">Dokumen gabungan (A4 / Dot Matrix)</div>
+                                    </div>
+                                </a>
 
-                            <!-- 3. UNDUH EXCEL RINCIAN FAKTUR -->
-                            <a :href="'<?= Router::url('/customer-orders/invoice/excel?id=') ?>' + orderDetail?.id"
-                               class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(16,185,129,0.22);border-radius:14px;background:#ecfdf5;">
-                                <div style="width:42px;height:42px;border-radius:12px;background:rgba(16,185,129,0.1);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                    <i data-lucide="file-spreadsheet" style="width:20px;height:20px;"></i>
-                                </div>
-                                <div style="min-width:0;flex:1;">
-                                    <div style="font-weight:800;font-size:13.5px;color:#065f46;">Unduh Excel</div>
-                                    <div style="font-size:11.5px;color:#059669;margin-top:2px;line-height:1.4;">Spreadsheet rincian pesanan &amp; produk</div>
-                                </div>
-                            </a>
-                        </div>
+                                <!-- 2. UNDUH PDF HYBRID -->
+                                <a :href="'<?= Router::url('/customer-orders/invoice/pdf?id=') ?>' + orderDetail?.id"
+                                   class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(220,38,38,0.22);border-radius:14px;background:#fef2f2;">
+                                    <div style="width:42px;height:42px;border-radius:12px;background:rgba(220,38,38,0.1);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="file-text" style="width:20px;height:20px;"></i>
+                                    </div>
+                                    <div style="min-width:0;flex:1;">
+                                        <div style="font-weight:800;font-size:13.5px;color:#991b1b;">Unduh PDF</div>
+                                        <div style="font-size:11.5px;color:#dc2626;margin-top:2px;line-height:1.4;">Salinan PDF resmi Faktur &amp; SJ</div>
+                                    </div>
+                                </a>
+
+                                <!-- 3. UNDUH EXCEL RINCIAN FAKTUR -->
+                                <a :href="'<?= Router::url('/customer-orders/invoice/excel?id=') ?>' + orderDetail?.id"
+                                   class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(16,185,129,0.22);border-radius:14px;background:#ecfdf5;">
+                                    <div style="width:42px;height:42px;border-radius:12px;background:rgba(16,185,129,0.1);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="file-spreadsheet" style="width:20px;height:20px;"></i>
+                                    </div>
+                                    <div style="min-width:0;flex:1;">
+                                        <div style="font-weight:800;font-size:13.5px;color:#065f46;">Unduh Excel</div>
+                                        <div style="font-size:11.5px;color:#059669;margin-top:2px;line-height:1.4;">Spreadsheet rincian pesanan &amp; produk</div>
+                                    </div>
+                                </a>
+                            </div>
+                        </template>
                     </div>
                     <?php endif; ?>
 

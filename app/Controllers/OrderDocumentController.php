@@ -109,16 +109,31 @@ class OrderDocumentController extends Controller
                 SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
                        pel.sales_driver_id as pelanggan_sales_id,
                        k.nama_karyawan as nama_sales,
-                       ak.nama_akun as nama_akun_kas
+                       ak.nama_akun as nama_akun_kas,
+                       sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
+                       COALESCE(k_sj.nama_karyawan, k.nama_karyawan) as nama_driver,
+                       COALESCE(k_sj.nomor_polisi_kendaraan, k.nomor_polisi_kendaraan) as nopol_driver,
+                       COALESCE(k_sj.nomor_telepon, k.nomor_telepon) as telp_driver,
+                       COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
+                       COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                LEFT JOIN public.surat_jalan sj ON (sj.pesanan_id = p.id AND sj.status_surat_jalan != 'gagal_kirim')
                 LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 WHERE p.id = :id
             ", ['id' => $id]);
 
             if (!$order) {
                 $this->flashError('Faktur pesanan tidak ditemukan.');
+                $this->redirect('/customer-orders');
+                return;
+            }
+
+            if (($order['status_pemrosesan'] ?? '') === 'po') {
+                $this->flashError("Dokumen Faktur & Surat Jalan belum dapat diunduh: Pesanan #{$order['nomor_nota']} masih berstatus PO dan belum disiapkan oleh gudang.");
                 $this->redirect('/customer-orders');
                 return;
             }
@@ -172,15 +187,30 @@ class OrderDocumentController extends Controller
             $order = Database::fetchOne("
                 SELECT p.*, pel.kode_pelanggan, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, pel.alamat_lengkap, pel.is_konsinyasi,
                        pel.sales_driver_id as pelanggan_sales_id,
-                       k.nama_karyawan as nama_sales
+                       k.nama_karyawan as nama_sales,
+                       sj.id as surat_jalan_id, sj.nomor_surat_jalan, sj.status_surat_jalan,
+                       COALESCE(k_sj.nama_karyawan, k.nama_karyawan) as nama_driver,
+                       COALESCE(k_sj.nomor_polisi_kendaraan, k.nomor_polisi_kendaraan) as nopol_driver,
+                       COALESCE(k_sj.nomor_telepon, k.nomor_telepon) as telp_driver,
+                       COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
+                       COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
                 FROM public.pesanan p
                 JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+                LEFT JOIN public.surat_jalan sj ON (sj.pesanan_id = p.id AND sj.status_surat_jalan != 'gagal_kirim')
                 LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
+                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 WHERE p.id = :id
             ", ['id' => $id]);
 
             if (!$order) {
                 $this->flashError('Faktur pesanan tidak ditemukan.');
+                $this->redirect('/customer-orders');
+                return;
+            }
+
+            if (($order['status_pemrosesan'] ?? '') === 'po') {
+                $this->flashError("Dokumen Faktur & Surat Jalan belum dapat diunduh: Pesanan #{$order['nomor_nota']} masih berstatus PO dan belum disiapkan oleh gudang.");
                 $this->redirect('/customer-orders');
                 return;
             }

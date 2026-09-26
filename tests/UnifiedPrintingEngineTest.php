@@ -265,6 +265,12 @@ $viewsToCheck = [
 foreach ($viewsToCheck as $name => $path) {
     assertTest("View file exists: {$name}", file_exists($path));
     $code = (string)file_get_contents($path);
+    if (preg_match('/require\s+(?:ROOT_PATH\s*\.\s*[\'"]|__DIR__\s*\.\s*[\'"])([^\'"]+)/', $code, $m)) {
+        $delegatedPath = str_starts_with($m[1], '/') ? APP_ROOT . $m[1] : dirname($path) . '/' . $m[1];
+        if (file_exists($delegatedPath)) {
+            $code .= "\n" . (string)file_get_contents($delegatedPath);
+        }
+    }
     assertTest(
         "View {$name} uses PrintDocumentHelper",
         str_contains($code, 'PrintDocumentHelper')

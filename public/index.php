@@ -162,6 +162,10 @@ Router::get('/', function () {
 
 Router::get('/dashboard', [DashboardController::class, 'index']);
 
+// --- DOKUMENTASI & BUKU PANDUAN OPERASIONAL STANDALONE ---
+Router::get('/guide', [\App\Controllers\GuideController::class, 'index']);
+Router::get('/panduan', [\App\Controllers\GuideController::class, 'index']);
+
 // --- TRANSAKSI 1: POS KASIR (RITEL UMUM) ---
 Router::get('/pos', [PosController::class, 'index']);
 Router::get('/api/pos/calculate-price', [PosController::class, 'calculatePrice']);
