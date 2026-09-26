@@ -286,9 +286,10 @@ CREATE TABLE IF NOT EXISTS public.pelanggan (
     alamat_lengkap TEXT NOT NULL,
     nomor_whatsapp VARCHAR(25),
     tipe_pembayaran_default VARCHAR(30) NOT NULL DEFAULT 'cash' CHECK (tipe_pembayaran_default IN ('cash', 'qris', 'transfer', 'konsinyasi', 'tempo_tanggal', 'tempo_faktur')),
+    tipe_konsinyasi VARCHAR(30) NOT NULL DEFAULT 'rolling_nota' CHECK (tipe_konsinyasi IN ('rolling_nota', 'kolektif_tagihan')),
     plafon_piutang NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     total_piutang_berjalan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
-    sales_driver_id UUID REFERENCES public.pengguna(id), -- Sales Pembina / Penanggung Jawab Toko (Khusus Posisi Sales, dikunci oleh trg_guard_pelanggan_sales_driver)
+    sales_driver_id UUID REFERENCES public.karyawan(id), -- Sales Pembina / Penanggung Jawab Toko (Khusus Posisi Sales, dikunci oleh trg_guard_pelanggan_sales_driver)
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     nama_bank VARCHAR(50) DEFAULT NULL,
     nomor_rekening VARCHAR(50) DEFAULT NULL,
@@ -351,12 +352,9 @@ CREATE TABLE IF NOT EXISTS public.kelompok_upah_borongan (
 -- Item Tunggal (Varian Rasa / Bahan Mentah / Bahan Kemasan / SKU Fisik)
 CREATE TABLE IF NOT EXISTS public.item (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy_produk INT UNIQUE,
     grup_id UUID REFERENCES public.grup_produk(id),
     kode_sku VARCHAR(50) NOT NULL UNIQUE, -- 'KS-SK-ASIN-250', 'KS-SK-MNS-250'
-    barcode VARCHAR(100), -- Barcode spesifik (atau sama dengan barcode_universal grup)
     nama_item VARCHAR(200) NOT NULL,
-    varian_rasa VARCHAR(100), -- 'Asin', 'Manis', 'Opak', 'Balado'
     tipe_item VARCHAR(30) NOT NULL CHECK (tipe_item IN ('barang_jadi', 'bahan_mentah', 'bahan_kemas')),
     satuan_dasar VARCHAR(30) NOT NULL,
     kelompok_borongan_id UUID REFERENCES public.kelompok_upah_borongan(id),
@@ -581,7 +579,8 @@ CREATE TABLE IF NOT EXISTS public.kunjungan_konsinyasi (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nomor_kunjungan VARCHAR(100) NOT NULL UNIQUE,
     pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id),
-    sales_driver_id UUID NOT NULL REFERENCES public.pengguna(id), -- Petugas yang melakukan opname fisik rak (Sales, atau Driver jika diberi tiket izin RBAC oleh Owner)
+    sales_driver_id UUID NOT NULL REFERENCES public.karyawan(id), -- Sales Pembina Toko (Penerima Komisi)
+    driver_pengirim_id UUID REFERENCES public.karyawan(id) ON DELETE SET NULL, -- Driver Pengirim Fisik Barang
     tanggal_kunjungan DATE NOT NULL DEFAULT CURRENT_DATE,
     pesanan_id UUID REFERENCES public.pesanan(id) ON DELETE SET NULL, -- Invoice laku yang otomatis terbit (Komisi tetap dialokasikan ke Sales Pembina Toko)
     total_laku_nominal NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
@@ -602,7 +601,7 @@ CREATE TABLE IF NOT EXISTS public.rincian_kunjungan_konsinyasi (
     sisa_fisik_di_rak INT NOT NULL, -- Hasil hitung fisik di rak toko
     retur_bagus INT NOT NULL DEFAULT 0, -- Sisa bagus yang ditarik balik ke gudang
     retur_rusak INT NOT NULL DEFAULT 0, -- Bungkus rusak/bocor yang ditarik balik
-    jumlah_laku_terjual INT NOT NULL, -- stok_titip_awal - (sisa_fisik_di_rak + retur_bagus + retur_rusak)
+    jumlah_laku_terjual INT NOT NULL, -- (stok_titip_awal + tambah_titip_baru) - (sisa_fisik_di_rak + retur_bagus + retur_rusak) + selisih_qty
     selisih_qty INT NOT NULL DEFAULT 0,
     harga_satuan_deal NUMERIC(15, 2) NOT NULL,
     subtotal_laku NUMERIC(15, 2) NOT NULL,

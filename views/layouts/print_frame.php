@@ -647,10 +647,12 @@ $documentTitle = $documentTitle ?? 'Dokumen Cetak';
     });
 
     function goBackOrUrl(fallbackUrl) {
-        if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
+        if (fallbackUrl && fallbackUrl !== '' && fallbackUrl !== '#') {
+            window.location.href = fallbackUrl;
+        } else if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host) && !document.referrer.includes('/opname') && !document.referrer.includes('/create')) {
             window.history.back();
         } else {
-            window.location.href = fallbackUrl;
+            window.location.href = '<?= Router::url('/') ?>';
         }
     }
     </script>

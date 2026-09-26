@@ -15,6 +15,7 @@ $totalQtyRusak = (int)array_sum(array_column($details, 'retur_rusak'));
 $totalQtyBagus = (int)array_sum(array_column($details, 'retur_bagus'));
 $totalSisaRak = (int)array_sum(array_column($details, 'sisa_fisik_di_rak'));
 $totalStokAwal = (int)array_sum(array_column($details, 'stok_titip_awal'));
+$totalDropBaru = (int)array_sum(array_column($details, 'tambah_titip_baru'));
 $totalKerugianRusak = (float)array_sum(array_column($details, 'nilai_kerugian_rusak'));
 $skuCount = count($details);
 
@@ -117,6 +118,10 @@ $waMessageLines = [
     "Petugas Sales: " . ($visit['sales_name'] ?? 'Petugas'),
 ];
 
+if (!empty($visit['driver_name']) && $visit['driver_name'] !== '-') {
+    $waMessageLines[] = "Driver Pengirim: " . $visit['driver_name'];
+}
+
 if ($hasInvoice) {
     $waMessageLines[] = "No. Faktur Terbit: " . ($visit['nomor_nota'] ?? '-');
 }
@@ -134,7 +139,9 @@ foreach ($details as $d) {
     $selisih = (int)($d['selisih_qty'] ?? 0);
     $nama = $d['nama_item'] ?? 'Produk';
     
+    $drop = (int)($d['tambah_titip_baru'] ?? 0);
     $itemLine = "• {$nama}: Laku {$laku} pcs (Sisa rak: {$sisa} pcs)";
+    if ($drop > 0) $itemLine .= " [+Drop: {$drop} pcs]";
     if ($rusak > 0) $itemLine .= " [BS: {$rusak} pcs]";
     if ($bagus > 0) $itemLine .= " [Retur: {$bagus} pcs]";
     if ($selisih < 0) {
@@ -153,6 +160,9 @@ if ($totalSelisihVisit < 0) {
 
 $waMessageLines[] = "----------------------------------------";
 $waMessageLines[] = "*TOTAL TERJUAL (LAKU):* " . $totalQtyLaku . " pcs (" . Format::rupiah($totalLakuRp) . ")";
+if ($totalDropBaru > 0) {
+    $waMessageLines[] = "*TOTAL TITIP BARU (+DROP):* +" . $totalDropBaru . " pcs";
+}
 $waMessageLines[] = "*TOTAL SISA RAK TOKO:* " . $totalSisaRak . " pcs";
 $waMessageLines[] = "";
 $waMessageLines[] = "Terima kasih atas kerja samanya!";
@@ -1051,6 +1061,13 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                                 <span>Opname Mandiri</span>
                             </div>
                         <?php endif; ?>
+
+                        <?php if (!empty($visit['driver_name']) && $visit['driver_name'] !== '-'): ?>
+                            <div class="oh-auditor-meta" style="margin-top: 3px;" title="Driver Pengirim Fisik / Armada: <?= htmlspecialchars($visit['driver_name']) ?>">
+                                <i data-lucide="truck" style="width:11px;height:11px;color:#0284c7;flex-shrink:0;"></i>
+                                <span class="truncate">Driver: <strong><?= htmlspecialchars($visit['driver_name']) ?></strong></span>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -1151,7 +1168,13 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                 <div class="oh-kpi-value text-sky-600 dark:text-sky-400">
                     <?= number_format($totalSisaRak, 0, ',', '.') ?><span class="oh-kpi-unit">pcs</span>
                 </div>
-                <div class="oh-kpi-subtitle">Saldo fisik aktual terpajang di toko</div>
+                <div class="oh-kpi-subtitle">
+                    <?php if ($totalDropBaru > 0): ?>
+                        Termasuk <strong class="text-emerald-600 dark:text-emerald-400">+<?= number_format($totalDropBaru, 0, ',', '.') ?> pcs</strong> titip baru
+                    <?php else: ?>
+                        Saldo fisik aktual terpajang di toko
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
 
@@ -1299,7 +1322,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
 
                     <div class="oh-flow-pills">
                         <div class="oh-flow-cell">
-                            <span>Titip</span>
+                            <span>Sisa Lalu</span>
                             <strong x-text="item.stok_titip_awal"></strong>
                         </div>
                         <div class="oh-flow-cell">
@@ -1321,9 +1344,15 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                         </div>
                     </div>
 
-                    <!-- Detail Pecahan Retur (Jika ada) -->
-                    <template x-if="item.retur_rusak > 0 || item.retur_bagus > 0">
+                    <!-- Detail Pecahan Retur & Drop Baru (Jika ada) -->
+                    <template x-if="item.retur_rusak > 0 || item.retur_bagus > 0 || item.tambah_titip_baru > 0">
                         <div class="mb-2 flex flex-wrap items-center gap-1.5 text-[10.5px]">
+                            <template x-if="item.tambah_titip_baru > 0">
+                                <span class="inline-flex items-center gap-1 font-mono font-bold px-2 py-0.5 rounded-md" style="background:rgba(16,185,129,0.1);color:#059669;">
+                                    <i data-lucide="plus-circle" class="w-3 h-3"></i>
+                                    <span>Drop: <strong x-text="`+${item.tambah_titip_baru}`"></strong></span>
+                                </span>
+                            </template>
                             <template x-if="item.retur_rusak > 0">
                                 <span class="inline-flex items-center gap-1 font-mono font-bold px-2 py-0.5 rounded-md" style="background:rgba(244,63,94,0.1);color:#e11d48;">
                                     <i data-lucide="alert-octagon" class="w-3 h-3"></i>
@@ -1367,7 +1396,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                 <thead>
                     <tr>
                         <th>Item Produk</th>
-                        <th style="text-align:center;">Titip Awal</th>
+                        <th style="text-align:center;">Sisa Stok Lalu</th>
                         <th style="text-align:center;color:#10b981;">Laku Terjual</th>
                         <th style="text-align:center;color:#f43f5e;">Retur Rusak (BS)</th>
                         <th style="text-align:center;color:#f59e0b;">Retur Bagus</th>
@@ -1415,6 +1444,9 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                             </td>
                             <td style="text-align:center;font-weight:900;color:#0284c7;" class="font-mono">
                                 <span x-text="`${item.sisa_fisik_di_rak} ${item.satuan_dasar || 'pcs'}`"></span>
+                                <template x-if="item.tambah_titip_baru > 0">
+                                    <div class="text-[10px] text-emerald-600 font-bold" x-text="`(+${item.tambah_titip_baru} titip baru)`"></div>
+                                </template>
                             </td>
                             <td style="text-align:right;color:var(--color-ink-mute);" class="font-mono">
                                 <span x-text="formatRupiah(item.harga_satuan_deal)"></span>
@@ -1449,7 +1481,12 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                             }
                             ?>
                         </td>
-                        <td style="text-align:center;color:#0284c7;font-weight:900;" class="font-mono"><?= $totalSisaRak ?> pcs</td>
+                        <td style="text-align:center;color:#0284c7;font-weight:900;" class="font-mono">
+                            <?= $totalSisaRak ?> pcs
+                            <?php if ($totalDropBaru > 0): ?>
+                                <div class="text-[10px] text-emerald-600 font-bold">(+<?= $totalDropBaru ?> titip baru)</div>
+                            <?php endif; ?>
+                        </td>
                         <td style="text-align:right;font-weight:800;white-space:nowrap;">GRAND TOTAL:</td>
                         <td style="text-align:right;color:#10b981;font-size:14px;font-weight:900;font-family:var(--font-mono);white-space:nowrap;">
                             <div><?= Format::rupiah($totalLakuRp) ?></div>
@@ -1570,7 +1607,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                 <tr>
                     <td style="padding:2px 0;">
                         <?= htmlspecialchars($d['nama_item']) ?><br>
-                        <span style="font-size:9px;">(Sisa: <?= $d['sisa_fisik_di_rak'] ?><?= ($d['retur_rusak'] > 0 ? ', BS:' . $d['retur_rusak'] : '') ?><?= ($d['retur_bagus'] > 0 ? ', Retur:' . $d['retur_bagus'] : '') ?>)</span>
+                        <span style="font-size:9px;">(Sisa: <?= $d['sisa_fisik_di_rak'] ?><?= ($d['tambah_titip_baru'] > 0 ? ', +Drop:' . $d['tambah_titip_baru'] : '') ?><?= ($d['retur_rusak'] > 0 ? ', BS:' . $d['retur_rusak'] : '') ?><?= ($d['retur_bagus'] > 0 ? ', Retur:' . $d['retur_bagus'] : '') ?>)</span>
                     </td>
                     <td style="text-align:center;vertical-align:top;padding:2px 0;"><?= $d['jumlah_laku_terjual'] ?></td>
                     <td style="text-align:right;vertical-align:top;padding:2px 0;"><?= Format::rupiah((float)$d['subtotal_laku']) ?></td>
@@ -1585,6 +1622,13 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
             <span>TOTAL PENJUALAN:</span>
             <span><?= Format::rupiah($totalLakuRp) ?></span>
         </div>
+
+        <?php if ($totalDropBaru > 0): ?>
+        <div style="font-size:10px;display:flex;justify-content:space-between;margin-top:2px;">
+            <span>Total Titip Baru (+Drop):</span>
+            <span>+<?= $totalDropBaru ?> pcs</span>
+        </div>
+        <?php endif; ?>
 
         <div style="font-size:10px;display:flex;justify-content:space-between;margin-top:2px;">
             <span>Status Audit Fisik:</span>
@@ -1621,6 +1665,7 @@ document.addEventListener('alpine:init', () => {
             'retur_bagus' => (int)$d['retur_bagus'],
             'selisih_qty' => (int)($d['selisih_qty'] ?? 0),
             'sisa_fisik_di_rak' => (int)$d['sisa_fisik_di_rak'],
+            'tambah_titip_baru' => (int)($d['tambah_titip_baru'] ?? 0),
             'harga_satuan_deal' => (float)$d['harga_satuan_deal'],
             'subtotal_laku' => (float)$d['subtotal_laku'],
         ], $details)) ?>,

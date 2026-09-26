@@ -143,7 +143,7 @@ class OrderDocumentController extends Controller
 
             ob_start();
             extract(['order' => $order, 'items' => $items, 'isPdf' => true, 'formatMode' => $format]);
-            require ROOT_PATH . '/views/customer_orders/invoice.php';
+            require ROOT_PATH . '/views/customer_orders/nota_reguler.php';
             $html = ob_get_clean();
 
             $cleanNota = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$order['nomor_nota']);

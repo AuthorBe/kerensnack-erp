@@ -97,7 +97,7 @@ class CustomerController extends Controller
 
             // 1. Ambil data toko pelanggan beserta relasi & jumlah item khusus (dengan limit & offset)
             $customers = Database::fetchAll("
-                SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.is_konsinyasi,
+                SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.is_konsinyasi, p.tipe_konsinyasi,
                        p.alamat_lengkap, p.link_google_maps, p.nomor_whatsapp, p.tipe_pembayaran_default,
                        p.nama_bank, p.nomor_rekening, p.atas_nama_rekening,
                        p.plafon_piutang, p.total_piutang_berjalan, p.status_aktif,
@@ -282,6 +282,10 @@ class CustomerController extends Controller
         }
 
         $isKonsinyasi = ($tipeBayar === 'konsinyasi');
+        $tipeKonsinyasi = (string)$this->input('tipe_konsinyasi', 'rolling_nota');
+        if (!in_array($tipeKonsinyasi, ['rolling_nota', 'kolektif_tagihan'], true)) {
+            $tipeKonsinyasi = 'rolling_nota';
+        }
         $plafon = (float)preg_replace('/[^0-9]/', '', (string)$this->input('plafon_piutang', '0'));
         $linkMaps = trim((string)$this->input('link_google_maps')) ?: null;
         $namaBank = trim((string)$this->input('nama_bank'));
@@ -321,12 +325,12 @@ class CustomerController extends Controller
 
             Database::execute("
                 INSERT INTO public.pelanggan (
-                    kode_pelanggan, nama_toko, nama_pemilik, grup_pelanggan_id, is_konsinyasi,
+                    kode_pelanggan, nama_toko, nama_pemilik, grup_pelanggan_id, is_konsinyasi, tipe_konsinyasi,
                     wilayah_id, sales_driver_id, alamat_lengkap, link_google_maps, nomor_whatsapp,
                     tipe_pembayaran_default, plafon_piutang,
                     nama_bank, nomor_rekening, atas_nama_rekening, status_aktif
                 ) VALUES (
-                    :kode, :nama, :pemilik, :grup, :konsinyasi,
+                    :kode, :nama, :pemilik, :grup, :konsinyasi, :tipe_konsinyasi,
                     :wilayah, :sales_driver_id, :alamat, :link_maps, :wa,
                     :bayar, :plafon,
                     :nama_bank, :nomor_rek, :atas_nama, TRUE
@@ -337,6 +341,7 @@ class CustomerController extends Controller
                 'pemilik' => $namaPemilik ?: null,
                 'grup' => $grupId,
                 'konsinyasi' => $isKonsinyasi ? 'true' : 'false',
+                'tipe_konsinyasi' => $tipeKonsinyasi,
                 'wilayah' => $wilayahId,
                 'sales_driver_id' => $salesDriverId,
                 'alamat' => $alamat,
@@ -386,6 +391,10 @@ class CustomerController extends Controller
         }
 
         $isKonsinyasi = ($tipeBayar === 'konsinyasi');
+        $tipeKonsinyasi = (string)$this->input('tipe_konsinyasi', 'rolling_nota');
+        if (!in_array($tipeKonsinyasi, ['rolling_nota', 'kolektif_tagihan'], true)) {
+            $tipeKonsinyasi = 'rolling_nota';
+        }
         $plafon = (float)preg_replace('/[^0-9]/', '', (string)$this->input('plafon_piutang', '0'));
         $linkMaps = trim((string)$this->input('link_google_maps')) ?: null;
         $statusAktif = (bool)$this->input('status_aktif', true);
@@ -755,6 +764,7 @@ class CustomerController extends Controller
                     nama_pemilik = :pemilik,
                     grup_pelanggan_id = :grup,
                     is_konsinyasi = :konsinyasi,
+                    tipe_konsinyasi = :tipe_konsinyasi,
                     wilayah_id = :wilayah,
                     sales_driver_id = :sales_driver_id,
                     alamat_lengkap = :alamat,
@@ -775,6 +785,7 @@ class CustomerController extends Controller
                 'pemilik' => $namaPemilik ?: null,
                 'grup' => $grupId,
                 'konsinyasi' => $isKonsinyasi ? 'true' : 'false',
+                'tipe_konsinyasi' => $tipeKonsinyasi,
                 'wilayah' => $wilayahId,
                 'sales_driver_id' => $salesDriverId,
                 'alamat' => $alamat,

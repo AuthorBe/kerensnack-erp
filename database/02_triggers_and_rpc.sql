@@ -214,60 +214,59 @@ $$;
 -- Fungsi: fn_cari_item_by_barcode
 -- Mencari semua SKU varian rasa yang menggunakan barcode kemasan bersama
 CREATE OR REPLACE FUNCTION public.fn_cari_item_by_barcode(p_barcode character varying)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path = public, pg_temp
-AS $function$
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
 DECLARE
     v_items JSONB;
 BEGIN
-    -- Cari item yang cocok dengan barcode spesifik atau barcode_universal dari grup produknya
     SELECT jsonb_agg(
         jsonb_build_object(
             'item_id', i.id,
             'kode_sku', i.kode_sku,
             'nama_item', i.nama_item,
-            'varian_rasa', i.varian_rasa,
             'grup_nama', gp.nama_grup,
             'stok_fisik', i.stok_fisik_saat_ini,
             'satuan_dasar', i.satuan_dasar
         )
     ) INTO v_items
     FROM public.item i
-    LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
-    WHERE (i.barcode = p_barcode OR gp.barcode_universal = p_barcode)
+    JOIN public.grup_produk gp ON i.grup_id = gp.id
+    WHERE gp.barcode_universal = p_barcode
       AND i.status_aktif = TRUE;
 
     IF v_items IS NULL THEN
-        RETURN jsonb_build_object('ditemukan', false, 'total_varian', 0, 'items', '[]'::jsonb);
+        RETURN jsonb_build_object('ditemukan', false, 'pesan', 'Barcode produk tidak ditemukan');
     END IF;
 
-    RETURN jsonb_build_object(
-        'ditemukan', true,
-        'total_varian', jsonb_array_length(v_items),
-        'items', v_items
-    );
+    RETURN jsonb_build_object('ditemukan', true, 'total_varian', jsonb_array_length(v_items), 'data', v_items);
 END;
-$function$;
+$$;
 
 -- ==============================================================================
 -- 3. MESIN DISTRIBUSI KONSINYASI & AUDIT RAK TOKO
 -- ==============================================================================
 -- Fungsi: fn_proses_kunjungan_konsinyasi
 -- Menangani opname fisik rak toko, menghitung barang laku, mutasi stok, dan valuasi kerugian
-CREATE OR REPLACE FUNCTION public.fn_proses_kunjungan_konsinyasi(p_pelanggan_id uuid, p_sales_driver_id uuid, p_rincian jsonb, p_keterangan text DEFAULT NULL::text, p_foto_kunjungan text DEFAULT NULL::text, p_pengguna_id uuid DEFAULT NULL::uuid)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path = public, pg_temp
+CREATE OR REPLACE FUNCTION public.fn_proses_kunjungan_konsinyasi(
+    p_pelanggan_id uuid, 
+    p_sales_driver_id uuid, 
+    p_rincian jsonb, 
+    p_keterangan text DEFAULT NULL::text, 
+    p_foto_kunjungan text DEFAULT NULL::text, 
+    p_pengguna_id uuid DEFAULT NULL::uuid,
+    p_driver_pengirim_id uuid DEFAULT NULL::uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
 AS $function$
 DECLARE
     v_kunjungan_id UUID;
     v_nomor_kunjungan VARCHAR(50);
     v_pengguna_id UUID := p_pengguna_id;
-    v_driver_id UUID := p_sales_driver_id;
+    v_sales_id UUID := p_sales_driver_id;
+    v_driver_id UUID := p_driver_pengirim_id;
     v_stok_titip_lama INT;
+    v_sisa_rak_hitung INT;
     v_stok_rak_baru INT;
     v_stok_gudang_lama INT;
     v_stok_gudang_baru INT;
@@ -295,27 +294,28 @@ BEGIN
         SELECT id INTO v_pengguna_id FROM public.pengguna WHERE status_aktif = TRUE ORDER BY dibuat_pada ASC LIMIT 1;
     END IF;
 
-    -- Validasi sales_driver_id
-    IF v_driver_id IS NOT NULL THEN
-        IF NOT EXISTS (SELECT 1 FROM public.karyawan WHERE id = v_driver_id) THEN
-            SELECT id INTO v_driver_id FROM public.karyawan WHERE pengguna_id = v_pengguna_id LIMIT 1;
-            IF v_driver_id IS NULL THEN
-                SELECT id INTO v_driver_id FROM public.karyawan WHERE pengguna_id IS NOT NULL ORDER BY id ASC LIMIT 1;
-            END IF;
+    -- Validasi sales pembina: jika tidak disediakan, otomatis ambil dari toko
+    IF v_sales_id IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM public.karyawan WHERE id = v_sales_id) THEN
+            SELECT sales_driver_id INTO v_sales_id FROM public.pelanggan WHERE id = p_pelanggan_id;
         END IF;
     ELSE
-        SELECT id INTO v_driver_id FROM public.karyawan WHERE pengguna_id = v_pengguna_id LIMIT 1;
-        IF v_driver_id IS NULL THEN
-            SELECT id INTO v_driver_id FROM public.karyawan WHERE pengguna_id IS NOT NULL ORDER BY id ASC LIMIT 1;
+        SELECT sales_driver_id INTO v_sales_id FROM public.pelanggan WHERE id = p_pelanggan_id;
+    END IF;
+
+    -- Validasi driver pengirim fisik (jika ada)
+    IF v_driver_id IS NOT NULL THEN
+        IF NOT EXISTS (SELECT 1 FROM public.karyawan WHERE id = v_driver_id) THEN
+            v_driver_id := NULL;
         END IF;
     END IF;
 
     -- 1. Insert Header Kunjungan
     INSERT INTO public.kunjungan_konsinyasi (
-        nomor_kunjungan, pelanggan_id, sales_driver_id, tanggal_kunjungan,
+        nomor_kunjungan, pelanggan_id, sales_driver_id, driver_pengirim_id, tanggal_kunjungan,
         catatan, foto_kunjungan, dibuat_oleh, dibuat_pada
     ) VALUES (
-        v_nomor_kunjungan, p_pelanggan_id, v_driver_id, CURRENT_DATE,
+        v_nomor_kunjungan, p_pelanggan_id, v_sales_id, v_driver_id, CURRENT_DATE,
         p_keterangan, p_foto_kunjungan, v_pengguna_id, NOW()
     ) RETURNING id INTO v_kunjungan_id;
 
@@ -335,6 +335,7 @@ BEGIN
                 THEN GREATEST(0, (elem->>'sisa_fisik')::INT) 
                 ELSE NULL 
             END AS sisa_fisik_param,
+            GREATEST(0, COALESCE((elem->>'tambah_titip_baru')::INT, (elem->>'kiriman_hari_ini')::INT, 0)) AS tambah_titip_baru,
             GREATEST(0, COALESCE((elem->>'retur_bagus')::INT, 0)) AS retur_bagus,
             GREATEST(0, COALESCE((elem->>'retur_rusak')::INT, 0)) AS retur_rusak,
             CASE 
@@ -402,13 +403,13 @@ BEGIN
             );
         END IF;
 
-        -- C. Hitung Saldo Fisik Rak Baru & Laku Terjual
+        -- C. Hitung Saldo Sisa Fisik & Laku Terjual
         v_selisih := r_item.selisih_qty;
 
         IF r_item.sisa_fisik_param IS NOT NULL THEN
-            v_stok_rak_baru := GREATEST(0, r_item.sisa_fisik_param);
+            v_sisa_rak_hitung := GREATEST(0, r_item.sisa_fisik_param);
         ELSE
-            v_stok_rak_baru := v_stok_titip_lama;
+            v_sisa_rak_hitung := v_stok_titip_lama;
         END IF;
 
         -- Jika jumlah laku diinput eksplisit oleh sales, gunakan itu secara murni
@@ -416,12 +417,10 @@ BEGIN
         IF r_item.jumlah_laku_param IS NOT NULL THEN
             v_laku := r_item.jumlah_laku_param;
         ELSE
-            v_laku := GREATEST(0, v_stok_titip_lama - (v_stok_rak_baru + r_item.retur_bagus + r_item.retur_rusak) + v_selisih);
+            v_laku := GREATEST(0, (v_stok_titip_lama + r_item.tambah_titip_baru) - (v_sisa_rak_hitung + r_item.retur_bagus + r_item.retur_rusak) + v_selisih);
         END IF;
 
         -- D. Kelola Akumulasi Pending Barang Hilang di Toko
-        -- Jika selisih < 0 (ada barang hilang hari ini): tambahkan ke pending hilang
-        -- Jika selisih > 0 (barang lama ketemu kembali): kurangi dari pending hilang
         IF v_selisih < 0 THEN
             v_pending_hilang_baru := v_pending_hilang_lama + ABS(v_selisih);
         ELSIF v_selisih > 0 THEN
@@ -430,7 +429,33 @@ BEGIN
             v_pending_hilang_baru := v_pending_hilang_lama;
         END IF;
 
-        -- E. Hitung Harga Deal & Subtotal Laku
+        -- E. Hitung Stok Rak Baru Pasca Kunjungan: Sisa Fisik Aktual di Rak (untuk Sisa Stok Lalu berikutnya)
+        v_stok_rak_baru := v_sisa_rak_hitung;
+
+        -- F. Jika ada Tambah Titip Baru (Drop Baru Hari Ini > 0): Potong stok gudang / muatan
+        IF r_item.tambah_titip_baru > 0 THEN
+            SELECT COALESCE(stok_fisik_saat_ini, 0) INTO v_stok_gudang_lama 
+            FROM public.item 
+            WHERE id = r_item.item_id 
+            FOR UPDATE;
+
+            v_stok_gudang_baru := GREATEST(0, v_stok_gudang_lama - r_item.tambah_titip_baru);
+
+            UPDATE public.item 
+            SET stok_fisik_saat_ini = v_stok_gudang_baru, diubah_pada = NOW()
+            WHERE id = r_item.item_id;
+
+            INSERT INTO public.riwayat_stok (
+                item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
+                referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
+            ) VALUES (
+                r_item.item_id, 'konsinyasi_keluar', -r_item.tambah_titip_baru,
+                v_stok_gudang_lama, v_stok_gudang_baru, 'kunjungan_konsinyasi', v_kunjungan_id,
+                'Drop titipan baru konsinyasi ke rak toko saat kunjungan', v_pengguna_id, NOW()
+            );
+        END IF;
+
+        -- G. Hitung Harga Deal & Subtotal Laku
         SELECT public.fn_hitung_harga_jual_item(r_item.item_id, p_pelanggan_id) INTO v_harga_info;
         v_harga_deal := COALESCE((v_harga_info->>'harga_pcs_netto')::NUMERIC(15,2), 0.00);
 
@@ -444,7 +469,7 @@ BEGIN
         v_subtotal := v_laku * v_harga_deal;
         v_total_laku_netto := v_total_laku_netto + v_subtotal;
 
-        -- F. Update Saldo Rak Toko = Sisa Fisik Aktual & Pending Hilang
+        -- H. Update Saldo Rak Toko = Sisa Fisik Aktual + Tambah Titip Baru
         INSERT INTO public.stok_konsinyasi_toko (
             pelanggan_id, item_id, stok_titip_saat_ini, stok_hilang_pending, terakhir_opname_pada, dibuat_pada, diubah_pada
         ) VALUES (
@@ -456,15 +481,15 @@ BEGIN
             terakhir_opname_pada = NOW(),
             diubah_pada = NOW();
 
-        -- G. Catat Rincian Kunjungan Konsinyasi
+        -- I. Catat Rincian Kunjungan Konsinyasi
         INSERT INTO public.rincian_kunjungan_konsinyasi (
             kunjungan_id, item_id, stok_titip_awal, tambah_titip_baru,
             sisa_fisik_di_rak, retur_bagus, retur_rusak, jumlah_laku_terjual,
             selisih_qty, harga_satuan_deal, subtotal_laku,
             harga_pokok_satuan, nilai_kerugian_rusak, dibuat_pada
         ) VALUES (
-            v_kunjungan_id, r_item.item_id, v_stok_titip_lama, 0,
-            v_stok_rak_baru, r_item.retur_bagus, r_item.retur_rusak, v_laku,
+            v_kunjungan_id, r_item.item_id, v_stok_titip_lama, r_item.tambah_titip_baru,
+            v_sisa_rak_hitung, r_item.retur_bagus, r_item.retur_rusak, v_laku,
             v_selisih, v_harga_deal, v_subtotal,
             v_harga_pokok, v_nilai_kerugian, NOW()
         );

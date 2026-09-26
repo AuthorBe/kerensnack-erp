@@ -228,6 +228,7 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                 <template x-if="c.is_konsinyasi">
                                     <div style="display:inline-flex;flex-direction:column;align-items:center;gap:3px;">
                                         <span class="badge badge-info">Konsinyasi Rak</span>
+                                        <span class="badge" style="font-size:9px;padding:1px 5px;background:rgba(37,99,235,0.08);color:#2563eb;border:1px solid rgba(37,99,235,0.2);" x-text="c.tipe_konsinyasi === 'kolektif_tagihan' ? 'Kolektif' : 'Rolling Nota'"></span>
                                         <template x-if="Number(c.stok_titip_aktif || 0) > 0">
                                             <span class="badge badge-amber" style="font-size:10px;padding:1px 6px;font-weight:700;" :title="'Ada ' + Number(c.stok_titip_aktif).toLocaleString('id-ID') + ' pcs snack titip di rak toko'" x-text="Number(c.stok_titip_aktif).toLocaleString('id-ID') + ' pcs di rak'"></span>
                                         </template>
@@ -623,6 +624,118 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Batas kredit maksimal (berlaku untuk transaksi Tempo)</div>
                     </div>
                 </div>
+
+                <!-- PILIHAN TIPE OPERASIONAL & NOTA KONSINYASI -->
+                <template x-if="form.tipe_pembayaran_default === 'konsinyasi'">
+                    <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Header Label -->
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <label class="form-label" style="font-size: 12px; font-weight: 700; color: var(--color-ink); margin-bottom: 0; display: flex; align-items: center; gap: 6px;">
+                                <svg style="width: 15px; height: 15px; color: #0284c7;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                    <polyline points="2 17 12 22 22 17"></polyline>
+                                    <polyline points="2 12 12 17 22 12"></polyline>
+                                </svg>
+                                <span>Tipe Operasional Konsinyasi *</span>
+                            </label>
+                            <span style="font-size: 11px; font-weight: 700; color: #0284c7; background: #e0f2fe; padding: 2px 9px; border-radius: 9999px;">
+                                Wajib Dipilih
+                            </span>
+                        </div>
+
+                        <!-- M3 Segmented Button Group (Clean Pill Tab) -->
+                        <div class="m3-segmented-control" style="margin-bottom: 4px;">
+                            <!-- Option 1: Rolling Nota (Tipe 2) -->
+                            <label class="m3-segment-btn" :class="form.tipe_konsinyasi === 'rolling_nota' ? 'is-active is-active-tipe2' : ''">
+                                <input type="radio" name="tipe_konsinyasi" value="rolling_nota" x-model="form.tipe_konsinyasi" style="position:absolute;opacity:0;pointer-events:none;">
+                                <svg style="width: 15px; height: 15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                                </svg>
+                                <span>Rolling Nota</span>
+                            </label>
+
+                            <!-- Option 2: Kolektif Tagihan (Tipe 1) -->
+                            <label class="m3-segment-btn" :class="form.tipe_konsinyasi === 'kolektif_tagihan' ? 'is-active is-active-tipe1' : ''">
+                                <input type="radio" name="tipe_konsinyasi" value="kolektif_tagihan" x-model="form.tipe_konsinyasi" style="position:absolute;opacity:0;pointer-events:none;">
+                                <svg style="width: 15px; height: 15px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="4" y="2" width="16" height="20" rx="2"></rect>
+                                    <line x1="8" y1="6" x2="16" y2="6"></line>
+                                    <line x1="8" y1="10" x2="16" y2="10"></line>
+                                    <line x1="8" y1="14" x2="12" y2="14"></line>
+                                </svg>
+                                <span>Kolektif Tagihan</span>
+                            </label>
+                        </div>
+
+                        <!-- Informative Reactive Detail Card -->
+                        <div :style="form.tipe_konsinyasi === 'rolling_nota' 
+                                ? 'background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #bae6fd; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.08); border-radius: 14px; padding: 14px 16px; transition: all 0.25s ease;' 
+                                : 'background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border: 1.5px solid #ddd6fe; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.08); border-radius: 14px; padding: 14px 16px; transition: all 0.25s ease;'">
+                            
+                            <!-- Content for Rolling Nota -->
+                            <template x-if="form.tipe_konsinyasi === 'rolling_nota'">
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                                        <span style="font-size: 11px; font-weight: 800; color: #0284c7; background: #ffffff; padding: 3px 10px; border-radius: 9999px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #bae6fd;">
+                                            Tipe 2 &bull; Standar Lapangan
+                                        </span>
+                                        <span style="font-size: 11px; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 4px;">
+                                            <svg style="width: 14px; height: 14px; color: #0284c7;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                                <polyline points="22 4 12 14.01 9 11.01"/>
+                                            </svg>
+                                            <span>Siklus Bergulir Otomatis</span>
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 11.5px; color: #1e293b; line-height: 1.5; font-weight: 500;">
+                                        Siklus 2-nota bergulir per kunjungan fisik. Nota lama dihitung terjual &amp; dibayar langsung di toko, sisa di rak digulirkan ke nota baru.
+                                    </div>
+                                    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 2px; font-size: 11px; color: #0369a1; font-weight: 700;">
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg style="width: 12px; height: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                                            Opname per Nota
+                                        </span>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg style="width: 12px; height: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                                            Hitung Laku di Tempat
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Content for Kolektif Tagihan -->
+                            <template x-if="form.tipe_konsinyasi === 'kolektif_tagihan'">
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                                        <span style="font-size: 11px; font-weight: 800; color: #6366f1; background: #ffffff; padding: 3px 10px; border-radius: 9999px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #ddd6fe;">
+                                            Tipe 1 &bull; Akumulasi Rekap
+                                        </span>
+                                        <span style="font-size: 11px; font-weight: 700; color: #4338ca; display: flex; align-items: center; gap: 4px;">
+                                            <svg style="width: 14px; height: 14px; color: #6366f1;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                                <polyline points="22 4 12 14.01 9 11.01"/>
+                                            </svg>
+                                            <span>Sistem Ritel Modern</span>
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 11.5px; color: #1e293b; line-height: 1.5; font-weight: 500;">
+                                        Untuk toko modern atau ritel berjaringan dengan sistem tagihan rekap berkala atau faktur tempo gabungan.
+                                    </div>
+                                    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 2px; font-size: 11px; color: #4338ca; font-weight: 700;">
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg style="width: 12px; height: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                                            Opname per Toko
+                                        </span>
+                                        <span style="display: flex; align-items: center; gap: 4px;">
+                                            <svg style="width: 12px; height: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                                            Tagihan Rekap Berkala
+                                        </span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
 
                 <!-- KOTAK RESOLUSI PERPINDAHAN TIPE KONSINYASI (RADIO BUTTON) -->
                 <template x-if="isChangingFromConsignment">
@@ -1393,6 +1506,7 @@ function customerApp(initialTab) {
             link_google_maps: '',
             nomor_whatsapp: '',
             tipe_pembayaran_default: 'cash',
+            tipe_konsinyasi: 'rolling_nota',
             plafon_piutang: '5.000.000',
             is_konsinyasi: false,
             nama_bank: '',
@@ -1680,6 +1794,7 @@ function customerApp(initialTab) {
                 link_google_maps: '',
                 nomor_whatsapp: '',
                 tipe_pembayaran_default: 'cash',
+                tipe_konsinyasi: 'rolling_nota',
                 plafon_piutang: window.formatRupiahNumber ? window.formatRupiahNumber(5000000) : '5.000.000',
                 is_konsinyasi: false,
                 nama_bank: '',
@@ -1714,6 +1829,7 @@ function customerApp(initialTab) {
                 link_google_maps: c.link_google_maps || '',
                 nomor_whatsapp: c.nomor_whatsapp || '',
                 tipe_pembayaran_default: Boolean(c.is_konsinyasi) ? 'konsinyasi' : (c.tipe_pembayaran_default || 'cash'),
+                tipe_konsinyasi: c.tipe_konsinyasi || 'rolling_nota',
                 plafon_piutang: window.formatRupiahNumber ? window.formatRupiahNumber(c.plafon_piutang) : String(c.plafon_piutang || 0),
                 nama_bank: c.nama_bank || '',
                 nomor_rekening: c.nomor_rekening || '',
@@ -2011,6 +2127,55 @@ function customerApp(initialTab) {
 </script>
 
 <style>
+/* M3 Segmented Button Group */
+.m3-segmented-control {
+    display: flex;
+    align-items: center;
+    background: var(--color-canvas-soft);
+    border: 1px solid var(--color-hairline);
+    border-radius: 10px;
+    padding: 3px;
+    gap: 3px;
+    min-height: 40px;
+    box-sizing: border-box;
+}
+.m3-segment-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 12px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    color: var(--color-ink-secondary);
+    position: relative;
+}
+.m3-segment-btn:hover:not(.is-active) {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--color-ink);
+}
+.m3-segment-btn.is-active-tipe1 {
+    background: #ffffff;
+    color: #4338ca;
+    font-weight: 700;
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 1px 3px rgba(99, 102, 241, 0.14), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.m3-segment-btn.is-active-tipe2 {
+    background: #ffffff;
+    color: #0369a1;
+    font-weight: 700;
+    border-color: rgba(2, 132, 199, 0.3);
+    box-shadow: 0 1px 3px rgba(2, 132, 199, 0.14), 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
 .payment-choice-card {
     position: relative;
     display: flex;

@@ -1448,7 +1448,7 @@ class CustomerOrderController extends Controller
                 ORDER BY ip.dibuat_pada ASC
             ", ['id' => $id]);
 
-            $this->view('customer_orders.invoice', [
+            $this->view('customer_orders.nota_reguler', [
                 'order' => $order,
                 'items' => $items,
             ]);

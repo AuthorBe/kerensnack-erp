@@ -790,6 +790,7 @@ document.addEventListener('alpine:init', () => {
             pesanan_id: '',
             nama_toko: '',
             nomor_nota: '',
+            tipe_konsinyasi: 'kolektif_toko',
             sisa_tagihan: 0,
             sisa_formatted: '',
             nominal: '',
@@ -797,10 +798,11 @@ document.addEventListener('alpine:init', () => {
             keterangan: ''
         },
 
-        openBayarModal(id, toko, nota, sisa) {
+        openBayarModal(id, toko, nota, sisa, tipe = 'kolektif_toko') {
             this.bayarData.pesanan_id = id;
             this.bayarData.nama_toko = toko;
             this.bayarData.nomor_nota = nota;
+            this.bayarData.tipe_konsinyasi = tipe || 'kolektif_toko';
             this.bayarData.sisa_tagihan = parseFloat(sisa) || 0;
             this.bayarData.sisa_formatted = this.formatRupiah(this.bayarData.sisa_tagihan);
             this.bayarData.nominal = '';
@@ -920,7 +922,7 @@ document.addEventListener('alpine:init', () => {
                 <i data-lucide="help-circle" class="w-4 h-4 text-sky-500"></i>
                 <span class="tagihan-guide-btn-text">Panduan &amp; Ketentuan</span>
             </button>
-            <a href="<?= Router::url('/consignment/tagihan/export-excel') ?>?status=<?= urlencode($filterStatus) ?>" 
+            <a href="<?= Router::url('/consignment/tagihan/export-excel') ?>?status=<?= urlencode($filterStatus ?? '') ?>&tipe_konsinyasi=<?= urlencode($filterTipeKonsinyasi ?? '') ?>" 
                class="btn btn-secondary"
                style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:6px; border-radius:12px;"
                x-show="activeTab === 'daftar'" 
@@ -1306,36 +1308,54 @@ document.addEventListener('alpine:init', () => {
             </div>
         </div>
 
-        <!-- Filter Status Chips & Search Input Bar -->
+        <!-- Filter Status & Tipe Chips & Search Input Bar -->
         <div class="tagihan-card">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <!-- Status Filter Chips -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+                <!-- Status & Tipe Filter Chips -->
                 <div class="flex flex-wrap items-center gap-2">
                     <span class="text-xs font-bold mr-1" style="color:var(--color-ink-mute);">Status:</span>
-                    <a href="?tab=daftar" 
+                    <a href="?tab=daftar<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
                        class="tagihan-filter-status-chip <?= $filterStatus === '' ? 'btn-primary' : 'btn-secondary' ?>">
                         Semua
                     </a>
-                    <a href="?tab=daftar&status=belum_lunas" 
+                    <a href="?tab=daftar&status=belum_lunas<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
                        class="tagihan-filter-status-chip <?= $filterStatus === 'belum_lunas' ? 'btn-danger' : 'btn-secondary' ?>">
                         Belum Lunas
                     </a>
-                    <a href="?tab=daftar&status=sebagian" 
+                    <a href="?tab=daftar&status=sebagian<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
                        class="tagihan-filter-status-chip <?= $filterStatus === 'sebagian' ? 'btn-warning' : 'btn-secondary' ?>">
                         Sebagian
                     </a>
-                    <a href="?tab=daftar&status=lunas" 
+                    <a href="?tab=daftar&status=lunas<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
                        class="tagihan-filter-status-chip <?= $filterStatus === 'lunas' ? 'btn-success' : 'btn-secondary' ?>">
                         Lunas
+                    </a>
+
+                    <span class="text-xs font-bold ml-1.5 mr-1" style="color:var(--color-ink-mute);border-left:1px solid var(--color-hairline);padding-left:8px;">Tipe:</span>
+                    <a href="?tab=daftar<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
+                       class="tagihan-filter-status-chip <?= $filterTipeKonsinyasi === '' ? 'btn-primary' : 'btn-secondary' ?>">
+                        Semua Tipe
+                    </a>
+                    <a href="?tab=daftar&tipe_konsinyasi=rolling_nota<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
+                       class="tagihan-filter-status-chip <?= $filterTipeKonsinyasi === 'rolling_nota' ? 'btn-primary' : 'btn-secondary' ?>"
+                       style="<?= $filterTipeKonsinyasi === 'rolling_nota' ? 'background:#7c3aed;border-color:#6d28d9;color:#fff;' : '' ?>">
+                        <i data-lucide="repeat" class="w-3.5 h-3.5 mr-1 inline"></i>
+                        Rolling Nota
+                    </a>
+                    <a href="?tab=daftar&tipe_konsinyasi=kolektif_toko<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
+                       class="tagihan-filter-status-chip <?= $filterTipeKonsinyasi === 'kolektif_toko' ? 'btn-primary' : 'btn-secondary' ?>"
+                       style="<?= $filterTipeKonsinyasi === 'kolektif_toko' ? 'background:#0284c7;border-color:#0369a1;color:#fff;' : '' ?>">
+                        <i data-lucide="layers" class="w-3.5 h-3.5 mr-1 inline"></i>
+                        Kolektif Toko
                     </a>
                 </div>
 
                 <!-- Instant Search Input -->
-                <div class="form-input-icon w-full sm:w-auto" style="min-width:260px;">
+                <div class="form-input-icon w-full lg:w-auto" style="min-width:280px;">
                     <i data-lucide="search" class="icon-left"></i>
                     <input type="text" 
                            x-model="searchQuery" 
-                           placeholder="Cari toko, nota, sales..." 
+                           placeholder="Cari toko, nota, tipe, sales..." 
                            class="form-input" 
                            style="height:36px;font-size:12.5px;border-radius:10px;width:100%;">
                 </div>
@@ -1350,7 +1370,7 @@ document.addEventListener('alpine:init', () => {
                 </div>
                 <h3 class="tagihan-empty-state-title">Belum Ada Nota Tagihan</h3>
                 <p class="tagihan-empty-state-desc">
-                    <?= !empty($filterStatus) ? 'Tidak ditemukan faktur tagihan dengan status yang dipilih.' : 'Belum ada faktur tagihan konsinyasi yang diterbitkan.' ?>
+                    <?= !empty($filterStatus) || !empty($filterTipeKonsinyasi) ? 'Tidak ditemukan faktur tagihan dengan kriteria filter yang dipilih.' : 'Belum ada faktur tagihan konsinyasi yang diterbitkan.' ?>
                 </p>
                 <div>
                     <button type="button" @click="setTab('buat')" class="btn btn-primary btn-sm" style="font-weight:700; font-size:12px; height:36px; padding:0 18px; border-radius:10px; display:inline-flex; align-items:center; gap:6px;">
@@ -1374,10 +1394,10 @@ document.addEventListener('alpine:init', () => {
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th style="min-width:210px;">Toko Mitra &amp; Kode</th>
+                                <th style="min-width:230px;">Toko Mitra &amp; Tipe</th>
                                 <th style="min-width:180px;">No. Tagihan &amp; Tgl</th>
-                                <th style="min-width:125px;">Sales PIC</th>
-                                <th class="cell-center" style="width:105px;">Kunjungan</th>
+                                <th style="min-width:130px;">Sales &amp; Driver</th>
+                                <th class="cell-center" style="width:110px;">Kunjungan / Ref</th>
                                 <th class="cell-right" style="width:135px;">Total Nilai</th>
                                 <th class="cell-right" style="width:135px;">Terbayar</th>
                                 <th class="cell-right" style="width:135px;">Sisa Piutang</th>
@@ -1389,20 +1409,33 @@ document.addEventListener('alpine:init', () => {
                             <?php foreach ($tagihan as $t): 
                                 $isLunas = $t['status_pembayaran'] === 'lunas';
                                 $isSebagian = $t['status_pembayaran'] === 'sebagian';
-                                $searchKey = strtolower($t['nama_toko'] . ' ' . ($t['kode_pelanggan'] ?? '') . ' ' . $t['nomor_nota'] . ' ' . ($t['nama_sales'] ?? ''));
+                                $isRolling = ($t['tipe_konsinyasi'] ?? '') === 'rolling_nota';
+                                $tipeLabel = $isRolling ? 'rolling nota' : 'kolektif toko';
+                                $searchKey = strtolower($t['nama_toko'] . ' ' . ($t['kode_pelanggan'] ?? '') . ' ' . $t['nomor_nota'] . ' ' . ($t['nama_sales'] ?? '') . ' ' . ($t['driver_name'] ?? '') . ' ' . $tipeLabel);
                             ?>
                             <tr x-show="!searchQuery || '<?= addslashes($searchKey) ?>'.includes(searchQuery.toLowerCase())">
                                 
-                                <!-- Toko Mitra & Kode (2-Line) -->
+                                <!-- Toko Mitra, Kode & Tipe Konsinyasi -->
                                 <td>
                                     <div style="display:flex;flex-direction:column;gap:3px;">
                                         <strong style="color:var(--color-ink);font-size:13px;">
                                             <?= htmlspecialchars($t['nama_toko']) ?>
                                         </strong>
-                                        <div class="flex items-center gap-1.5">
+                                        <div class="flex items-center flex-wrap gap-1.5">
                                             <span style="font-size:10px;font-weight:800;color:#0284c7;background:rgba(2,132,199,0.08);padding:1px 6px;border-radius:4px;border:1px solid rgba(2,132,199,0.18);font-family:var(--font-mono);">
                                                 <?= htmlspecialchars($t['kode_pelanggan'] ?: 'TOKO') ?>
                                             </span>
+                                            <?php if ($isRolling): ?>
+                                                <span style="font-size:10px;font-weight:800;color:#7c3aed;background:rgba(124,58,237,0.1);padding:1px 6px;border-radius:4px;border:1px solid rgba(124,58,237,0.25);display:inline-flex;align-items:center;gap:3px;">
+                                                    <i data-lucide="repeat" style="width:10px;height:10px;"></i>
+                                                    Rolling Nota
+                                                </span>
+                                            <?php else: ?>
+                                                <span style="font-size:10px;font-weight:800;color:#0284c7;background:rgba(2,132,199,0.08);padding:1px 6px;border-radius:4px;border:1px solid rgba(2,132,199,0.18);display:inline-flex;align-items:center;gap:3px;">
+                                                    <i data-lucide="layers" style="width:10px;height:10px;"></i>
+                                                    Kolektif Toko
+                                                </span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </td>
@@ -1420,18 +1453,26 @@ document.addEventListener('alpine:init', () => {
                                     </div>
                                 </td>
 
-                                <!-- Sales PIC -->
+                                <!-- Sales PIC & Driver -->
                                 <td style="color:var(--color-ink-secondary);font-size:12px;font-weight:600;">
-                                    <div class="flex items-center gap-1.5">
-                                        <i data-lucide="user" class="w-3.5 h-3.5 flex-shrink-0" style="color:var(--color-ink-mute);"></i>
-                                        <span class="truncate"><?= htmlspecialchars($t['nama_sales']) ?></span>
+                                    <div style="display:flex;flex-direction:column;gap:2px;">
+                                        <div class="flex items-center gap-1.5" title="Sales Penanggung Jawab">
+                                            <i data-lucide="user-check" class="w-3.5 h-3.5 flex-shrink-0 text-sky-500"></i>
+                                            <span class="truncate"><?= htmlspecialchars($t['nama_sales']) ?></span>
+                                        </div>
+                                        <?php if (!empty($t['driver_name']) && $t['driver_name'] !== '-'): ?>
+                                        <div class="flex items-center gap-1.5 text-xs text-slate-500" title="Driver Pengirim">
+                                            <i data-lucide="truck" class="w-3 h-3 flex-shrink-0 text-amber-500"></i>
+                                            <span class="truncate text-[11px]"><?= htmlspecialchars($t['driver_name']) ?></span>
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
 
-                                <!-- Kunjungan -->
+                                <!-- Kunjungan / Ref -->
                                 <td class="cell-center">
-                                    <span class="badge badge-mono">
-                                        <?= $t['jumlah_kunjungan'] ?>x visit
+                                    <span class="badge badge-mono font-bold">
+                                        <?= $t['jumlah_kunjungan'] > 0 ? $t['jumlah_kunjungan'] . 'x visit' : ($isRolling ? '1x Nota PO' : '1x visit') ?>
                                     </span>
                                 </td>
 
@@ -1464,7 +1505,7 @@ document.addEventListener('alpine:init', () => {
                                 <!-- Aksi -->
                                 <td class="cell-center">
                                     <div class="flex items-center justify-center gap-1.5">
-                                        <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $t['pesanan_id']) ?>" 
+                                        <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $t['pesanan_id'] . '&ref=tagihan') ?>" 
                                            class="btn btn-secondary btn-sm" 
                                            style="padding:5px 8px;border-radius:8px;" 
                                            title="Cetak Faktur (Dot Matrix & A4)">
@@ -1473,9 +1514,10 @@ document.addEventListener('alpine:init', () => {
 
                                         <?php if (!$isLunas && ($isAdmin || $isOwner)): ?>
                                             <button type="button" 
-                                                    @click="openBayarModal('<?= $t['pesanan_id'] ?>', '<?= htmlspecialchars(addslashes($t['nama_toko'])) ?>', '<?= htmlspecialchars(addslashes($t['nomor_nota'])) ?>', <?= $t['sisa_tagihan'] ?>)" 
+                                                    @click="openBayarModal('<?= $t['pesanan_id'] ?>', '<?= htmlspecialchars(addslashes($t['nama_toko'])) ?>', '<?= htmlspecialchars(addslashes($t['nomor_nota'])) ?>', <?= $t['sisa_tagihan'] ?>, '<?= $t['tipe_konsinyasi'] ?>')" 
                                                     class="btn btn-primary btn-sm"
-                                                    style="padding:5px 10px;font-size:11px;font-weight:700;border-radius:8px;gap:4px;display:inline-flex;align-items:center;">
+                                                    style="padding:5px 10px;font-size:11px;font-weight:700;border-radius:8px;gap:4px;display:inline-flex;align-items:center;"
+                                                    title="Catat Pembayaran Sisa Piutang">
                                                 <i data-lucide="wallet" style="width:13px;height:13px;"></i>
                                                 <span>Bayar</span>
                                             </button>
@@ -1512,7 +1554,7 @@ document.addEventListener('alpine:init', () => {
                     <div class="min-w-0 flex-1">
                         <h3 class="truncate" style="font-size:15px;font-weight:900;color:var(--color-ink);margin:0;">Catat Pembayaran Tagihan</h3>
                         <div class="text-xs truncate" style="color:var(--color-ink-mute);margin-top:2px;">
-                            Pelunasan faktur piutang konsinyasi
+                            Pelunasan faktur piutang konsinyasi (Rolling Nota &amp; Kolektif)
                         </div>
                     </div>
                 </div>
@@ -1541,7 +1583,15 @@ document.addEventListener('alpine:init', () => {
                                 <i data-lucide="store" style="width:13px;height:13px;color:#0284c7;"></i>
                                 Toko Mitra
                             </span>
-                            <span class="badge badge-mono font-mono" style="font-size:10.5px;padding:3px 8px;border-radius:6px;" x-text="bayarData.nomor_nota"></span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="badge badge-mono font-mono" style="font-size:10.5px;padding:3px 8px;border-radius:6px;" x-text="bayarData.nomor_nota"></span>
+                                <template x-if="bayarData.tipe_konsinyasi === 'rolling_nota'">
+                                    <span class="badge" style="font-size:10px;font-weight:800;color:#7c3aed;background:rgba(124,58,237,0.12);padding:2px 6px;border-radius:5px;">Rolling Nota</span>
+                                </template>
+                                <template x-if="bayarData.tipe_konsinyasi !== 'rolling_nota'">
+                                    <span class="badge" style="font-size:10px;font-weight:800;color:#0284c7;background:rgba(2,132,199,0.12);padding:2px 6px;border-radius:5px;">Kolektif Toko</span>
+                                </template>
+                            </div>
                         </div>
                         <div class="text-base font-black truncate" style="color:var(--color-ink);" x-text="bayarData.nama_toko"></div>
                         

@@ -914,10 +914,15 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                                         <i data-lucide="user" style="width:12px;height:12px;"></i>
                                     </div>
                                     <div class="min-w-0">
-                                        <span class="block truncate max-w-[150px] font-semibold text-xs" style="color:var(--color-ink);" title="Sales Lapangan: <?= htmlspecialchars($v['nama_sales']) ?>">
+                                        <span class="block truncate max-w-[150px] font-semibold text-xs" style="color:var(--color-ink);" title="Sales Pembina: <?= htmlspecialchars($v['nama_sales']) ?>">
                                             <?= htmlspecialchars($v['nama_sales']) ?>
                                         </span>
-                                        <?php if (!empty($v['auditor_name']) && strcasecmp(trim($v['auditor_name']), trim($v['nama_sales'])) !== 0): ?>
+                                        <?php if (!empty($v['nama_driver']) && strcasecmp(trim($v['nama_driver']), trim($v['nama_sales'])) !== 0): ?>
+                                            <span class="block text-[10px] truncate max-w-[150px] text-sky-600 dark:text-sky-400 font-medium" style="margin-top:1px;" title="Driver Pengirim: <?= htmlspecialchars($v['nama_driver']) ?>">
+                                                driver: <?= htmlspecialchars($v['nama_driver']) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($v['auditor_name']) && strcasecmp(trim($v['auditor_name']), trim($v['nama_sales'])) !== 0 && (empty($v['nama_driver']) || strcasecmp(trim($v['auditor_name']), trim($v['nama_driver'])) !== 0)): ?>
                                             <span class="block text-[10.5px] truncate max-w-[150px]" style="color:var(--color-ink-mute);margin-top:1px;" title="Diopname oleh: <?= htmlspecialchars($v['auditor_name']) ?>">
                                                 opname: <?= htmlspecialchars($v['auditor_name']) ?>
                                             </span>
@@ -1108,9 +1113,12 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                             <i data-lucide="external-link" style="width:11px;height:11px;"></i>
                             <span><?= htmlspecialchars($v['nomor_kunjungan']) ?></span>
                         </a>
-                        <div class="flex items-center gap-1.5 text-[11px] truncate max-w-[160px]" style="color:var(--color-ink-secondary);" title="Sales Lapangan: <?= htmlspecialchars($v['nama_sales']) ?>">
+                        <div class="flex items-center gap-1.5 text-[11px] truncate max-w-[180px]" style="color:var(--color-ink-secondary);" title="Sales Pembina: <?= htmlspecialchars($v['nama_sales']) ?><?= !empty($v['nama_driver']) ? ' | Driver: ' . htmlspecialchars($v['nama_driver']) : '' ?>">
                             <i data-lucide="user" style="width:11px;height:11px;flex-shrink:0;"></i>
                             <span class="truncate font-semibold"><?= htmlspecialchars($v['nama_sales']) ?></span>
+                            <?php if (!empty($v['nama_driver']) && strcasecmp(trim($v['nama_driver']), trim($v['nama_sales'])) !== 0): ?>
+                                <span class="text-[10px] text-sky-600 dark:text-sky-400 font-medium truncate" title="Driver Pengirim">(<?= htmlspecialchars($v['nama_driver']) ?>)</span>
+                            <?php endif; ?>
                         </div>
                     </div>
 

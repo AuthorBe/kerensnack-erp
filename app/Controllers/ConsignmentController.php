@@ -98,7 +98,7 @@ class ConsignmentController extends Controller
             // Query daftar toko konsinyasi
             $queryStores = "
                 SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.alamat_lengkap,
-                       p.sales_driver_id, k.nama_karyawan as nama_sales,
+                       p.sales_driver_id, p.tipe_konsinyasi, k.nama_karyawan as nama_sales,
                        (SELECT MAX(skt.terakhir_opname_pada) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id) as terakhir_opname,
                        (SELECT COUNT(*) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id AND skt.stok_titip_saat_ini > 0) as total_sku_titip,
                        (SELECT COALESCE(SUM(skt.stok_titip_saat_ini), 0) FROM public.stok_konsinyasi_toko skt WHERE skt.pelanggan_id = p.id) as total_pcs_titip
@@ -116,7 +116,7 @@ class ConsignmentController extends Controller
             $stores = Database::fetchAll($queryStores, $params);
 
             // Ambil rincian seluruh item rak untuk drill-down
-            $shelfItems = Database::fetchAll("
+            $shelfSql = "
                 SELECT skt.id, skt.pelanggan_id, skt.item_id, skt.stok_titip_saat_ini, skt.terakhir_opname_pada,
                        i.nama_item, i.kode_sku, i.satuan_dasar, i.harga_pokok_pembelian as hpp,
                        p.nama_toko
@@ -124,12 +124,55 @@ class ConsignmentController extends Controller
                 JOIN public.item i ON skt.item_id = i.id
                 JOIN public.pelanggan p ON skt.pelanggan_id = p.id
                 WHERE p.is_konsinyasi = TRUE AND p.status_aktif = TRUE
-                ORDER BY p.nama_toko ASC, i.nama_item ASC
-            ");
+            ";
+            $shelfParams = [];
+            if ($isSales && $driverId) {
+                $shelfSql .= " AND p.sales_driver_id = :driver_id";
+                $shelfParams['driver_id'] = $driverId;
+            }
+            $shelfSql .= " ORDER BY p.nama_toko ASC, i.nama_item ASC";
+            $shelfItems = Database::fetchAll($shelfSql, $shelfParams);
 
             $itemsByStore = [];
             foreach ($shelfItems as $item) {
                 $itemsByStore[$item['pelanggan_id']][] = $item;
+            }
+
+            // Ambil daftar PO/Nota kiriman konsinyasi yang belum ada nilai tagihannya (is_tagihan = FALSE)
+            $unbilledPosSql = "
+                SELECT 
+                    pes.id as pesanan_id,
+                    pes.nomor_nota,
+                    pes.pelanggan_id,
+                    pes.tanggal_pesanan,
+                    pes.status_pemrosesan,
+                    pes.status_pembayaran,
+                    pes.catatan,
+                    COALESCE(SUM(ip.kuantitas_satuan_dasar), 0) as total_qty_kirim,
+                    COUNT(DISTINCT ip.item_id) as total_sku,
+                    string_agg(DISTINCT CONCAT(COALESCE(gp.nama_grup, i.nama_item), ' (', ip.kuantitas_satuan_dasar, ' ', COALESCE(i.satuan_dasar, 'pcs'), ')'), ', ') as rincian_barang
+                FROM public.pesanan pes
+                JOIN public.pelanggan p ON pes.pelanggan_id = p.id
+                LEFT JOIN public.item_pesanan ip ON ip.pesanan_id = pes.id
+                LEFT JOIN public.item i ON ip.item_id = i.id
+                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                WHERE pes.tipe_pembayaran = 'konsinyasi'
+                  AND pes.is_tagihan = FALSE
+                  AND pes.status_pembayaran != 'dibatalkan'
+                  AND p.is_konsinyasi = TRUE
+            ";
+            $unbilledPosParams = [];
+            if ($isSales && $driverId) {
+                $unbilledPosSql .= " AND p.sales_driver_id = :driver_id";
+                $unbilledPosParams['driver_id'] = $driverId;
+            }
+            $unbilledPosSql .= " GROUP BY pes.id, pes.nomor_nota, pes.pelanggan_id, pes.tanggal_pesanan, pes.status_pemrosesan, pes.status_pembayaran, pes.catatan";
+            $unbilledPosSql .= " ORDER BY pes.tanggal_pesanan ASC, pes.dibuat_pada ASC";
+            $unbilledPos = Database::fetchAll($unbilledPosSql, $unbilledPosParams);
+
+            $unbilledOrdersByStore = [];
+            foreach ($unbilledPos as $upo) {
+                $unbilledOrdersByStore[$upo['pelanggan_id']][] = $upo;
             }
 
             $this->view('consignment.stok_rak', [
@@ -137,6 +180,7 @@ class ConsignmentController extends Controller
                 'pageSubtitle' => 'Monitoring Saldo Titipan Rak di Setiap Mitra',
                 'stores' => $stores,
                 'itemsByStore' => $itemsByStore,
+                'unbilledOrdersByStore' => $unbilledOrdersByStore,
                 'isAdminOrOwner' => $isAdminOrOwner,
             ]);
         } catch (Throwable $e) {
@@ -186,80 +230,260 @@ class ConsignmentController extends Controller
                 return;
             }
 
-            // Ambil semua item yang ada di rak toko ini (termasuk yang 0 pcs)
-            $shelfItems = Database::fetchAll("
-                SELECT skt.item_id, skt.stok_titip_saat_ini, skt.stok_hilang_pending, skt.terakhir_opname_pada,
-                       i.nama_item, i.kode_sku, i.satuan_dasar, COALESCE(gphl.harga_jual_pcs, 15000) as harga_jual_satuan
+            $tipeKonsinyasi = $customer['tipe_konsinyasi'] ?? 'rolling_nota';
+
+            // Ambil semua PO konsinyasi belum tertagih milik toko ini untuk pemilih PO di layar opname
+            $storeUnbilledOrders = Database::fetchAll("
+                SELECT pes.id, pes.nomor_nota, pes.tanggal_pesanan, pes.status_pemrosesan,
+                       COALESCE(SUM(ip.kuantitas_satuan_dasar), 0) as total_qty_kirim,
+                       COUNT(DISTINCT ip.item_id) as total_sku
+                FROM public.pesanan pes
+                LEFT JOIN public.item_pesanan ip ON ip.pesanan_id = pes.id
+                WHERE pes.pelanggan_id = :pelanggan_id
+                  AND pes.tipe_pembayaran = 'konsinyasi'
+                  AND pes.is_tagihan = FALSE
+                  AND pes.status_pembayaran != 'dibatalkan'
+                GROUP BY pes.id, pes.nomor_nota, pes.tanggal_pesanan, pes.status_pemrosesan
+                ORDER BY pes.tanggal_pesanan ASC, pes.dibuat_pada ASC
+            ", ['pelanggan_id' => $storeId]);
+
+            $pesananId = trim((string)$this->input('pesanan_id', ''));
+
+            // Untuk Toko Tipe 2 (Rolling Nota): Wajib mengunci ke PO kiriman tertentu
+            if ($tipeKonsinyasi === 'rolling_nota' && empty($pesananId)) {
+                if (!empty($storeUnbilledOrders)) {
+                    // Otomatis pilih PO unbilled terlama yang belum ditagih
+                    $pesananId = $storeUnbilledOrders[0]['id'];
+                } else {
+                    $this->flashError('Toko konsinyasi Tipe 2 (Saldo Berjalan) belum memiliki PO kiriman baru yang menunggu opname. Buat pesanan kiriman terlebih dahulu.');
+                    $this->redirect('/consignment/stok-rak');
+                    return;
+                }
+            }
+
+            $selectedOrder = null;
+            $orderQtyByGroup = [];
+            $orderQtyByItem = [];
+            $orderItems = [];
+
+            if (!empty($pesananId) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $pesananId)) {
+                $selectedOrder = Database::fetchOne("
+                    SELECT pes.id, pes.nomor_nota, pes.tanggal_pesanan, pes.total_netto, pes.status_pemrosesan, pes.is_tagihan,
+                           COALESCE(sj.sales_driver_id, pes.sales_driver_id) as sales_driver_id,
+                           COALESCE(k_sj.nama_karyawan, k.nama_karyawan) as nama_driver
+                    FROM public.pesanan pes
+                    LEFT JOIN public.v_karyawan_info k ON pes.sales_driver_id = k.id
+                    LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = pes.id
+                    LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
+                    WHERE pes.id = :id AND pes.pelanggan_id = :pelanggan_id AND pes.tipe_pembayaran = 'konsinyasi'
+                ", ['id' => $pesananId, 'pelanggan_id' => $storeId]);
+
+                if ($selectedOrder) {
+                    $orderItems = Database::fetchAll("
+                        SELECT ip.item_id, ip.kuantitas_satuan_dasar, i.nama_item, i.grup_id
+                        FROM public.item_pesanan ip
+                        JOIN public.item i ON ip.item_id = i.id
+                        WHERE ip.pesanan_id = :pesanan_id
+                    ", ['pesanan_id' => $pesananId]);
+
+                    foreach ($orderItems as $oi) {
+                        $orderQtyByItem[$oi['item_id']] = (int)$oi['kuantitas_satuan_dasar'];
+                        if (!empty($oi['grup_id'])) {
+                            $orderQtyByGroup[$oi['grup_id']] = ($orderQtyByGroup[$oi['grup_id']] ?? 0) + (int)$oi['kuantitas_satuan_dasar'];
+                        }
+                    }
+                }
+            }
+
+            // Ambil semua grup produk yang ada saldo atau pernah memiliki riwayat titip di toko ini
+            $shelfGroups = Database::fetchAll("
+                SELECT gp.id as grup_id, gp.nama_grup, gp.barcode_universal, gp.satuan_dasar,
+                       COALESCE(gphl.harga_jual_pcs, 15000) as harga_jual_satuan,
+                       COALESCE(SUM(skt.stok_titip_saat_ini), 0) as stok_titip_saat_ini,
+                       COALESCE(SUM(skt.stok_hilang_pending), 0) as stok_hilang_pending,
+                       MAX(skt.terakhir_opname_pada) as terakhir_opname_pada,
+                       array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_text,
+                       MIN(i.id::text)::uuid as primary_item_id
                 FROM public.stok_konsinyasi_toko skt
                 JOIN public.item i ON skt.item_id = i.id
-                LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = i.grup_id AND gphl.level_harga = 5
+                JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = gp.id AND gphl.level_harga = 5
                 WHERE skt.pelanggan_id = :pelanggan_id
-                ORDER BY (skt.stok_titip_saat_ini > 0) DESC, i.nama_item ASC
+                GROUP BY gp.id, gp.nama_grup, gp.barcode_universal, gp.satuan_dasar, gphl.harga_jual_pcs
+                HAVING COALESCE(SUM(skt.stok_titip_saat_ini), 0) > 0 
+                   OR EXISTS (
+                       SELECT 1 
+                       FROM public.rincian_kunjungan_konsinyasi rkk
+                       JOIN public.kunjungan_konsinyasi kk ON rkk.kunjungan_id = kk.id
+                       JOIN public.item i2 ON rkk.item_id = i2.id
+                       WHERE kk.pelanggan_id = :pelanggan_id AND i2.grup_id = gp.id
+                   )
+                ORDER BY gp.nama_grup ASC
             ", ['pelanggan_id' => $storeId]);
 
             $savedInput = $_SESSION['_old_opname_input'][$storeId] ?? null;
 
             $items = [];
-            if (!empty($shelfItems)) {
-                $itemIds = array_column($shelfItems, 'item_id');
-                $inClause = implode(',', array_fill(0, count($itemIds), '?'));
-                $params = array_merge([$storeId], $itemIds);
-                
-                $priceRows = Database::fetchAll("
-                    SELECT id as item_id, public.fn_hitung_harga_jual_item(id, ?) AS json_res
-                    FROM public.item
-                    WHERE id IN ($inClause)
-                ", $params);
-                
-                $priceMap = [];
-                foreach ($priceRows as $row) {
-                    $priceMap[$row['item_id']] = json_decode($row['json_res'] ?? '{}', true);
+            foreach ($shelfGroups as $sg) {
+                $priceRow = Database::fetchOne("
+                    SELECT public.fn_hitung_harga_jual_item(:item_id, :store_id) AS json_res
+                ", ['item_id' => $sg['primary_item_id'], 'store_id' => $storeId]);
+                $priceJson = json_decode($priceRow['json_res'] ?? '{}', true);
+                $dealPrice = (float)($priceJson['harga_pcs_netto'] ?? $sg['harga_jual_satuan']);
+
+                $sisaFisik = 0;
+                $rBagus = 0;
+                $rRusak = 0;
+                $laku = 0;
+                $selisih = 0;
+                $tambahTitip = 0;
+                $isTouched = false;
+
+                if ($selectedOrder) {
+                    // Nilai kiriman baru otomatis mengikuti PO/NOTA yang dipilih
+                    $tambahTitip = (int)($orderQtyByGroup[$sg['grup_id']] ?? $orderQtyByItem[$sg['primary_item_id']] ?? 0);
+                    // PENTING: Sisa stok lalu adalah sisa kiriman lalu (baseline).
+                    // Sisa di rak tergantung fisik di toko yang dihitung saat kiriman, bukan ditambahkan otomatis!
+                    $sisaFisik = 0;
+                    $laku = (int)$sg['stok_titip_saat_ini'] + $tambahTitip;
+                    $isTouched = false;
+                } else {
+                    $laku = (int)$sg['stok_titip_saat_ini'];
                 }
 
-                foreach ($shelfItems as $si) {
-                    $priceJson = $priceMap[$si['item_id']] ?? [];
-                    $dealPrice = (float)($priceJson['harga_pcs_netto'] ?? $si['harga_jual_satuan']);
-
-                    $sisaFisik = (int)$si['stok_titip_saat_ini'];
-                    $rBagus = 0;
-                    $rRusak = 0;
-                    $laku = 0;
-                    $selisih = 0;
-                    $isTouched = false;
-
-                    if ($savedInput && isset($savedInput[$si['item_id']])) {
-                        $sisaFisik = (int)($savedInput[$si['item_id']]['sisa_fisik_di_rak'] ?? $sisaFisik);
-                        $laku = (int)($savedInput[$si['item_id']]['jumlah_laku'] ?? 0);
-                        $rBagus = (int)($savedInput[$si['item_id']]['retur_bagus'] ?? 0);
-                        $rRusak = (int)($savedInput[$si['item_id']]['retur_rusak'] ?? 0);
-                        $selisih = (int)($savedInput[$si['item_id']]['selisih_qty'] ?? $savedInput[$si['item_id']]['selisih'] ?? 0);
-                        $isTouched = true;
+                if ($savedInput && isset($savedInput[$sg['primary_item_id']])) {
+                    $sisaFisik = (int)($savedInput[$sg['primary_item_id']]['sisa_fisik_di_rak'] ?? $sisaFisik);
+                    $laku = (int)($savedInput[$sg['primary_item_id']]['jumlah_laku'] ?? 0);
+                    $rBagus = (int)($savedInput[$sg['primary_item_id']]['retur_bagus'] ?? 0);
+                    $rRusak = (int)($savedInput[$sg['primary_item_id']]['retur_rusak'] ?? 0);
+                    $selisih = (int)($savedInput[$sg['primary_item_id']]['selisih_qty'] ?? $savedInput[$sg['primary_item_id']]['selisih'] ?? 0);
+                    if (!$selectedOrder) {
+                        $tambahTitip = (int)($savedInput[$sg['primary_item_id']]['tambah_titip_baru'] ?? $savedInput[$sg['primary_item_id']]['kiriman_hari_ini'] ?? 0);
                     }
+                    $isTouched = true;
+                }
 
-                    $items[] = [
-                        'item_id' => $si['item_id'],
-                        'nama_item' => $si['nama_item'],
-                        'kode_sku' => $si['kode_sku'],
-                        'satuan_dasar' => $si['satuan_dasar'] ?? 'pcs',
-                        'stok_titip_saat_ini' => (int)$si['stok_titip_saat_ini'],
-                        'stok_hilang_pending' => (int)($si['stok_hilang_pending'] ?? 0),
-                        'harga_deal' => $dealPrice,
-                        'sisa_fisik_di_rak' => $sisaFisik,
-                        'jumlah_laku' => $laku,
-                        'retur_bagus' => $rBagus,
-                        'retur_rusak' => $rRusak,
-                        'selisih_qty' => $selisih,
-                        'is_touched' => $isTouched
-                    ];
+                $items[] = [
+                    'grup_id' => $sg['grup_id'],
+                    'item_id' => $sg['primary_item_id'],
+                    'nama_grup' => $sg['nama_grup'],
+                    'nama_item' => $sg['nama_grup'],
+                    'kode_sku' => $sg['barcode_universal'] ?: 'SKU',
+                    'barcode_universal' => $sg['barcode_universal'] ?: '-',
+                    'varian_text' => $sg['varian_text'] ?: '',
+                    'satuan_dasar' => $sg['satuan_dasar'] ?? 'pcs',
+                    'stok_titip_saat_ini' => (int)$sg['stok_titip_saat_ini'],
+                    'stok_hilang_pending' => (int)$sg['stok_hilang_pending'],
+                    'harga_deal' => $dealPrice,
+                    'sisa_fisik_di_rak' => $sisaFisik,
+                    'tambah_titip_baru' => $tambahTitip,
+                    'jumlah_laku' => $laku,
+                    'retur_bagus' => $rBagus,
+                    'retur_rusak' => $rRusak,
+                    'selisih_qty' => $selisih,
+                    'is_touched' => $isTouched
+                ];
+            }
+
+            // Pastikan jika ada item dalam PO yang belum ada di shelfGroups (kiriman pertama), ditambahkan ke list
+            if ($selectedOrder && !empty($orderItems)) {
+                $existingGrupIds = array_column($shelfGroups, 'grup_id');
+                foreach ($orderItems as $oi) {
+                    if (!empty($oi['grup_id']) && !in_array($oi['grup_id'], $existingGrupIds)) {
+                        $newGrp = Database::fetchOne("
+                            SELECT gp.id as grup_id, gp.nama_grup, gp.barcode_universal, gp.satuan_dasar,
+                                   COALESCE(gphl.harga_jual_pcs, 15000) as harga_jual_satuan,
+                                   array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_text,
+                                   MIN(i.id::text)::uuid as primary_item_id
+                            FROM public.grup_produk gp
+                            JOIN public.item i ON i.grup_id = gp.id AND i.status_aktif = TRUE
+                            LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = gp.id AND gphl.level_harga = 5
+                            WHERE gp.id = :gid
+                            GROUP BY gp.id, gp.nama_grup, gp.barcode_universal, gp.satuan_dasar, gphl.harga_jual_pcs
+                        ", ['gid' => $oi['grup_id']]);
+
+                        if ($newGrp) {
+                            $dropQty = (int)$oi['kuantitas_satuan_dasar'];
+                            $items[] = [
+                                'grup_id' => $newGrp['grup_id'],
+                                'item_id' => $newGrp['primary_item_id'],
+                                'nama_grup' => $newGrp['nama_grup'],
+                                'nama_item' => $newGrp['nama_grup'],
+                                'kode_sku' => $newGrp['barcode_universal'] ?: 'SKU',
+                                'barcode_universal' => $newGrp['barcode_universal'] ?: '-',
+                                'varian_text' => $newGrp['varian_text'] ?: '',
+                                'satuan_dasar' => $newGrp['satuan_dasar'] ?? 'pcs',
+                                'stok_titip_saat_ini' => 0,
+                                'stok_hilang_pending' => 0,
+                                'harga_deal' => (float)$newGrp['harga_jual_satuan'],
+                                'sisa_fisik_di_rak' => 0,
+                                'tambah_titip_baru' => $dropQty,
+                                'jumlah_laku' => $dropQty,
+                                'retur_bagus' => 0,
+                                'retur_rusak' => 0,
+                                'selisih_qty' => 0,
+                                'is_touched' => false
+                            ];
+                            $existingGrupIds[] = $newGrp['grup_id'];
+                        }
+                    }
                 }
             }
 
+            // Ambil daftar karyawan berposisi Driver untuk pilihan Admin
+            $drivers = Database::fetchAll("
+                SELECT k.id, k.nama_karyawan, k.posisi 
+                FROM public.v_karyawan_info k 
+                WHERE (k.posisi ILIKE '%driver%' OR k.posisi ILIKE '%supir%' OR k.posisi ILIKE '%pengemudi%')
+                  AND k.status_aktif = TRUE
+                ORDER BY k.nama_karyawan ASC
+            ");
+            if (empty($drivers)) {
+                $drivers = Database::fetchAll("
+                    SELECT k.id, k.nama_karyawan, k.posisi 
+                    FROM public.v_karyawan_info k 
+                    WHERE k.status_aktif = TRUE 
+                    ORDER BY k.nama_karyawan ASC
+                ");
+            }
+
+            // Ambil akun kas aktif untuk pembayaran kasir langsung di layar opname
+            $cashAccounts = Database::fetchAll("
+                SELECT id, nama_akun, tipe_akun 
+                FROM public.akun_kas 
+                WHERE status_aktif = TRUE 
+                ORDER BY (tipe_akun = 'kas') DESC, nama_akun ASC
+            ");
+
+            // Ambil katalog grup produk barang jadi aktif untuk fitur '+ Tambah Produk Baru' ke rak
+            $catalogGroups = Database::fetchAll("
+                SELECT gp.id as grup_id, gp.nama_grup, gp.barcode_universal, gp.satuan_dasar,
+                       COALESCE(gphl.harga_jual_pcs, 15000) as harga_jual_satuan,
+                       array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_text,
+                       MIN(i.id::text)::uuid as primary_item_id,
+                       MIN(i.id::text)::uuid as id,
+                       gp.nama_grup as nama_item,
+                       COALESCE(gp.barcode_universal, 'SKU') as kode_sku
+                FROM public.grup_produk gp
+                JOIN public.item i ON i.grup_id = gp.id AND i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
+                LEFT JOIN public.grup_produk_harga_level gphl ON gphl.grup_produk_id = gp.id AND gphl.level_harga = 5
+                WHERE gp.status_aktif = TRUE
+                GROUP BY gp.id, gp.nama_grup, gp.barcode_universal, gp.satuan_dasar, gphl.harga_jual_pcs
+                ORDER BY gp.nama_grup ASC
+            ");
+
             $this->view('consignment.opname', [
-                'pageTitle' => 'Form Opname Rak Toko',
-                'pageSubtitle' => 'Hitung Sisa Fisik & Retur Kunjungan: ' . $customer['nama_toko'],
+                'pageTitle' => 'Kunjungan & Nota Konsinyasi',
+                'pageSubtitle' => 'Audit Sisa, Drop Baru, & Penagihan: ' . $customer['nama_toko'],
                 'step' => 2,
                 'customer' => $customer,
                 'items' => $items,
+                'drivers' => $drivers,
+                'cashAccounts' => $cashAccounts,
+                'catalogGroups' => $catalogGroups,
+                'catalogItems' => $catalogGroups,
+                'selectedOrder' => $selectedOrder,
+                'storeUnbilledOrders' => $storeUnbilledOrders,
             ]);
 
         } catch (Throwable $e) {
@@ -282,12 +506,38 @@ class ConsignmentController extends Controller
         }
 
         $customerId = (string)$this->input('pelanggan_id');
+        $targetPesananId = trim((string)$this->input('pesanan_id', ''));
         $itemsJson = (string)$this->input('items_json');
-        $catatan = trim((string)$this->input('catatan', 'Opname Kunjungan Sales'));
+        $catatan = trim((string)$this->input('catatan', 'Kunjungan & Nota Konsinyasi'));
+        $rawNominalBayar = $this->input('nominal_bayar') ?? $this->input('nominal', '0');
+        $nominalBayar = (float)preg_replace('/[^0-9]/', '', (string)$rawNominalBayar);
+        $akunKasId = trim((string)$this->input('akun_kas_id', ''));
+        $catatanBayar = trim((string)$this->input('catatan_bayar', ''));
 
         $currentUserId = Auth::id();
         $currentUser = Auth::user();
         $driverId = $currentUser['karyawan_id'] ?? null;
+        if (empty($driverId) && !empty($customerId)) {
+            $custRow = Database::fetchOne("SELECT sales_driver_id FROM public.pelanggan WHERE id = :id", ['id' => $customerId]);
+            $driverId = $custRow['sales_driver_id'] ?? null;
+        }
+        $rawDriverPengirim = trim((string)$this->input('driver_pengirim_id', ''));
+        $driverPengirimId = (!empty($rawDriverPengirim) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $rawDriverPengirim))
+            ? $rawDriverPengirim
+            : null;
+
+        // Jika toko rolling nota atau terikat pesanan_id dan driver kosong, otomatis ambil dari nota/PO (atau surat jalan)
+        if (empty($driverPengirimId) && !empty($targetPesananId) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $targetPesananId)) {
+            $poDriverRow = Database::fetchOne("
+                SELECT COALESCE(sj.sales_driver_id, pes.sales_driver_id) as po_driver_id
+                FROM public.pesanan pes
+                LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = pes.id
+                WHERE pes.id = :id
+            ", ['id' => $targetPesananId]);
+            if (!empty($poDriverRow['po_driver_id'])) {
+                $driverPengirimId = $poDriverRow['po_driver_id'];
+            }
+        }
 
         if (empty($customerId)) {
             $this->flashError('Pilih toko konsinyasi terlebih dahulu.');
@@ -332,7 +582,8 @@ class ConsignmentController extends Controller
                 $itemId = $it['item_id'] ?? null;
                 if (!$itemId) continue;
 
-                $sisaFisik = max(0, (int)($it['sisa_fisik_di_rak'] ?? 0));
+                $sisaFisik = max(0, (int)($it['sisa_fisik_di_rak'] ?? $it['sisa_fisik'] ?? 0));
+                $tambahTitip = max(0, (int)($it['tambah_titip_baru'] ?? $it['kiriman_hari_ini'] ?? 0));
                 $laku = isset($it['jumlah_laku']) ? max(0, (int)$it['jumlah_laku']) : null;
                 $returBagus = max(0, (int)($it['retur_bagus'] ?? 0));
                 $returRusak = max(0, (int)($it['retur_rusak'] ?? 0));
@@ -341,6 +592,8 @@ class ConsignmentController extends Controller
                 $rincianFormatted[] = [
                     'item_id' => $itemId,
                     'sisa_fisik_di_rak' => $sisaFisik,
+                    'tambah_titip_baru' => $tambahTitip,
+                    'kiriman_hari_ini' => $tambahTitip,
                     'jumlah_laku' => $laku,
                     'retur_bagus' => $returBagus,
                     'retur_rusak' => $returRusak,
@@ -349,14 +602,15 @@ class ConsignmentController extends Controller
             }
 
             $res = Database::fetchOne("
-                SELECT public.fn_proses_kunjungan_konsinyasi(:cust_id, :driver_id, :rincian::jsonb, :catatan, :foto, :user_id) AS json_res
+                SELECT public.fn_proses_kunjungan_konsinyasi(:cust_id, :driver_id, :rincian::jsonb, :catatan, :foto, :user_id, :driver_pengirim_id) AS json_res
             ", [
                 'cust_id' => $customerId,
                 'driver_id' => $driverId,
                 'rincian' => json_encode($rincianFormatted),
                 'catatan' => $catatan,
                 'foto' => $fotoUrl,
-                'user_id' => $currentUserId
+                'user_id' => $currentUserId,
+                'driver_pengirim_id' => $driverPengirimId
             ]);
 
             $jsonResult = json_decode($res['json_res'] ?? '{}', true);
@@ -369,6 +623,8 @@ class ConsignmentController extends Controller
             unset($_SESSION['_old_opname_input'][$customerId]);
 
             $kunjunganId = $jsonResult['kunjungan_id'] ?? null;
+            $totalLakuNetto = (float)($jsonResult['total_laku_netto'] ?? 0);
+            $custName = Database::fetchOne("SELECT nama_toko FROM public.pelanggan WHERE id = :id", ['id' => $customerId])['nama_toko'] ?? 'Toko';
 
             // Simpan catatan jika ada
             if (!empty($catatan) && !empty($kunjunganId)) {
@@ -379,16 +635,131 @@ class ConsignmentController extends Controller
                 ", ['catatan' => $catatan, 'id' => $kunjunganId]);
             }
 
-            $custName = Database::fetchOne("SELECT nama_toko FROM public.pelanggan WHERE id = :id", ['id' => $customerId])['nama_toko'] ?? 'Toko';
             ActivityLog::log(
                 'logistik',
                 'INSERT',
-                "Sales menyelesaikan kunjungan opname di {$custName} ({$jsonResult['nomor_kunjungan']}).",
+                "Sales menyelesaikan kunjungan konsinyasi di {$custName} ({$jsonResult['nomor_kunjungan']}).",
                 'kunjungan_konsinyasi',
                 $kunjunganId
             );
 
-            $this->redirect('/consignment/opname/hasil?kunjungan_id=' . urlencode((string)$kunjunganId));
+            // Ambil tipe konsinyasi pelanggan
+            $custRow = Database::fetchOne("SELECT nama_toko, tipe_konsinyasi FROM public.pelanggan WHERE id = :id", ['id' => $customerId]);
+            $tipeKonsinyasi = $custRow['tipe_konsinyasi'] ?? 'rolling_nota';
+
+            // Auto-Generate / Update Tagihan Konsinyasi
+            $pesananId = null;
+            $nomorNota = null;
+
+            // Jika mode Rolling Nota dan opname dilakukan atas dasar PO / Nota kiriman spesifik, konversi PO tersebut menjadi tagihan riil
+            if ($tipeKonsinyasi === 'rolling_nota' && !empty($targetPesananId) && !empty($kunjunganId)) {
+                $targetOrder = Database::fetchOne("
+                    SELECT id, nomor_nota, pelanggan_id, is_tagihan 
+                    FROM public.pesanan 
+                    WHERE id = :id AND pelanggan_id = :pid
+                ", ['id' => $targetPesananId, 'pid' => $customerId]);
+
+                if ($targetOrder) {
+                    $pesananId = $targetOrder['id'];
+                    $nomorNota = $targetOrder['nomor_nota'];
+
+                    Database::execute("
+                        UPDATE public.pesanan
+                        SET is_tagihan = TRUE,
+                            total_bruto = :total_bruto,
+                            total_netto = :total_netto,
+                            total_dibayar = 0.00,
+                            sisa_tagihan = :sisa_tagihan,
+                            status_pembayaran = 'belum_lunas',
+                            status_pemrosesan = 'selesai',
+                            diubah_pada = NOW()
+                        WHERE id = :id
+                    ", [
+                        'id' => $pesananId,
+                        'total_bruto' => $totalLakuNetto,
+                        'total_netto' => $totalLakuNetto,
+                        'sisa_tagihan' => $totalLakuNetto
+                    ]);
+
+                    Database::execute("
+                        UPDATE public.kunjungan_konsinyasi
+                        SET pesanan_id = :pesanan_id
+                        WHERE id = :kunjungan_id
+                    ", [
+                        'pesanan_id' => $pesananId,
+                        'kunjungan_id' => $kunjunganId
+                    ]);
+
+                    Database::execute("
+                        INSERT INTO public.tagihan_kunjungan (pesanan_id, kunjungan_id, dibuat_pada)
+                        VALUES (:pesanan_id, :kunjungan_id, NOW())
+                        ON CONFLICT DO NOTHING
+                    ", [
+                        'pesanan_id' => $pesananId,
+                        'kunjungan_id' => $kunjunganId
+                    ]);
+
+                    if ($totalLakuNetto > 0) {
+                        Database::execute("
+                            UPDATE public.pelanggan
+                            SET total_piutang_berjalan = COALESCE(total_piutang_berjalan, 0) + :tagihan,
+                                diubah_pada = NOW()
+                            WHERE id = :pid
+                        ", [
+                            'tagihan' => $totalLakuNetto,
+                            'pid' => $customerId
+                        ]);
+                    }
+                }
+            }
+
+            // Auto-Payment Kasir Langsung di Toko (khusus mode rolling nota jika ada pembayaran & pesanan sudah terbit)
+            if ($tipeKonsinyasi === 'rolling_nota' && $nominalBayar > 0 && !empty($pesananId) && !empty($akunKasId)) {
+                if ($nominalBayar > $totalLakuNetto) {
+                    $nominalBayar = $totalLakuNetto;
+                }
+                try {
+                    $keteranganBayar = !empty($catatanBayar) 
+                        ? $catatanBayar 
+                        : "Pembayaran kasir saat kunjungan di {$custName}";
+
+                    $payRes = Database::fetchOne("
+                        SELECT public.fn_catat_pembayaran_konsinyasi(:p, :a, :nom, :user_id, :ket, :tgl) as json_res
+                    ", [
+                        'p'       => $pesananId,
+                        'a'       => $akunKasId,
+                        'nom'     => $nominalBayar,
+                        'user_id' => $currentUserId,
+                        'ket'     => $keteranganBayar,
+                        'tgl'     => date('Y-m-d'),
+                    ]);
+                    $payJson = json_decode($payRes['json_res'] ?? '{}', true);
+                    if (!empty($payJson['success'])) {
+                        $stBayar = ($payJson['status_pembayaran'] ?? '') === 'lunas' ? 'LUNAS' : 'SEBAGIAN';
+                        ActivityLog::log(
+                            'keuangan',
+                            'INSERT',
+                            "Pembayaran langsung di toko: " . Format::rupiah($nominalBayar) . " dicatat untuk faktur {$nomorNota} ({$custName}). Status: {$stBayar}.",
+                            'pesanan',
+                            $pesananId
+                        );
+                    }
+                } catch (Throwable $ePay) {
+                    error_log("Auto payment konsinyasi error: " . $ePay->getMessage());
+                }
+            }
+
+            if ($tipeKonsinyasi === 'kolektif_tagihan') {
+                $this->flashSuccess("Opname fisik rak di {$custName} berhasil disimpan. Rincian stok rak telah diperbarui.");
+                $this->redirect('/consignment/opname/hasil?kunjungan_id=' . urlencode((string)$kunjunganId));
+            } else {
+                $this->flashSuccess("Kunjungan konsinyasi di {$custName} berhasil diproses! Nota siap dicetak.");
+                $redirectTarget = !empty($pesananId)
+                    ? '/consignment/nota-print?pesanan_id=' . urlencode((string)$pesananId) . '&kunjungan_id=' . urlencode((string)$kunjunganId) . '&ref=hasil'
+                    : '/consignment/nota-print?kunjungan_id=' . urlencode((string)$kunjunganId) . '&ref=hasil';
+
+                $this->redirect($redirectTarget);
+            }
 
         } catch (Throwable $e) {
             $this->flashError('Gagal memproses opname: ' . $e->getMessage() . ' (Data formulir Anda tetap tersimpan)');
@@ -416,6 +787,7 @@ class ConsignmentController extends Controller
                 SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
                        COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
                        COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
+                       COALESCE(k_drv.nama_karyawan, k_sj.nama_karyawan, k_pes.nama_karyawan, '-') as driver_name,
                        peng.nama_lengkap as auditor_name,
                        COALESCE(peng.posisi, 'Auditor') as auditor_role,
                        COALESCE(pes.id, tk.pesanan_id) as pesanan_id,
@@ -424,8 +796,12 @@ class ConsignmentController extends Controller
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                 LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
                 LEFT JOIN public.v_karyawan_info k ON COALESCE(kk.sales_driver_id, p.sales_driver_id) = k.id
+                LEFT JOIN public.v_karyawan_info k_drv ON kk.driver_pengirim_id = k_drv.id
                 LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                 LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
+                LEFT JOIN public.surat_jalan sj ON sj.pesanan_id = pes.id
+                LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.v_karyawan_info k_pes ON pes.sales_driver_id = k_pes.id
                 WHERE kk.id = :id
             ", ['id' => $kunjunganId]);
 
@@ -626,8 +1002,10 @@ class ConsignmentController extends Controller
                            pes.catatan,
                            p.id as pelanggan_id, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, 
                            p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
+                           p.tipe_konsinyasi,
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
+                           COALESCE(k_driver.nama_karyawan, '-') as driver_name,
                            peng.nama_lengkap as auditor_name,
                            COALESCE(peng.posisi, 'Auditor') as auditor_role,
                            (SELECT kk.nomor_kunjungan FROM public.tagihan_kunjungan tk JOIN public.kunjungan_konsinyasi kk ON tk.kunjungan_id = kk.id WHERE tk.pesanan_id = pes.id ORDER BY kk.tanggal_kunjungan DESC LIMIT 1) as nomor_kunjungan,
@@ -635,6 +1013,14 @@ class ConsignmentController extends Controller
                     FROM public.pesanan pes
                     JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                     LEFT JOIN public.v_karyawan_info k ON COALESCE(pes.sales_driver_id, p.sales_driver_id) = k.id
+                    LEFT JOIN LATERAL (
+                        SELECT kk2.driver_pengirim_id 
+                        FROM public.tagihan_kunjungan tk2 
+                        JOIN public.kunjungan_konsinyasi kk2 ON tk2.kunjungan_id = kk2.id 
+                        WHERE tk2.pesanan_id = pes.id AND kk2.driver_pengirim_id IS NOT NULL 
+                        LIMIT 1
+                    ) l_driver ON TRUE
+                    LEFT JOIN public.v_karyawan_info k_driver ON l_driver.driver_pengirim_id = k_driver.id
                     LEFT JOIN public.pengguna peng ON pes.dibuat_oleh = peng.id
                     WHERE pes.id = :id
                 ", ['id' => $pesananId]);
@@ -646,22 +1032,74 @@ class ConsignmentController extends Controller
                 $isInvoiced = true;
 
                 $details = Database::fetchAll("
-                    SELECT ip.id, ip.item_id, ip.kuantitas_satuan_dasar as jumlah_laku_terjual,
-                           ip.harga_satuan_deal, ip.subtotal as subtotal_laku,
-                           i.nama_item, i.kode_sku, i.satuan_dasar,
-                           0 as retur_rusak, 0 as retur_bagus, 0 as sisa_fisik_di_rak, 0 as stok_titip_awal, 0 as selisih_qty
-                    FROM public.item_pesanan ip
-                    JOIN public.item i ON ip.item_id = i.id
-                    WHERE ip.pesanan_id = :id
-                    ORDER BY ip.subtotal DESC, i.nama_item ASC
+                    SELECT COALESCE(gp.id, i.id) as grup_id,
+                           COALESCE(gp.nama_grup, i.nama_item) as nama_item,
+                           COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
+                           COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
+                           COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                           COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
+                           array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
+                           SUM(rkk.stok_titip_awal) as stok_titip_awal,
+                           SUM(rkk.tambah_titip_baru) as tambah_titip_baru,
+                           SUM(rkk.sisa_fisik_di_rak) as sisa_fisik_di_rak,
+                           SUM(rkk.jumlah_laku_terjual) as jumlah_laku_terjual,
+                           SUM(rkk.retur_rusak) as retur_rusak,
+                           SUM(rkk.retur_bagus) as retur_bagus,
+                           SUM(rkk.selisih_qty) as selisih_qty,
+                           MAX(rkk.harga_satuan_deal) as harga_satuan_deal,
+                           SUM(rkk.subtotal_laku) as subtotal_laku
+                    FROM public.rincian_kunjungan_konsinyasi rkk
+                    JOIN public.tagihan_kunjungan tk ON rkk.kunjungan_id = tk.kunjungan_id
+                    JOIN public.item i ON rkk.item_id = i.id
+                    LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                    WHERE tk.pesanan_id = :id
+                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                    HAVING (
+                        SUM(rkk.stok_titip_awal) > 0 
+                        OR SUM(rkk.tambah_titip_baru) > 0 
+                        OR SUM(rkk.sisa_fisik_di_rak) > 0 
+                        OR SUM(rkk.jumlah_laku_terjual) > 0 
+                        OR SUM(rkk.retur_rusak) > 0 
+                        OR SUM(rkk.retur_bagus) > 0
+                    )
+                    ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
                 ", ['id' => $pesananId]);
+
+                if (empty($details)) {
+                    $details = Database::fetchAll("
+                        SELECT COALESCE(gp.id, i.id) as grup_id,
+                               COALESCE(gp.nama_grup, i.nama_item) as nama_item,
+                               COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
+                               COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
+                               COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                               COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
+                               array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
+                               0 as stok_titip_awal,
+                               0 as tambah_titip_baru,
+                               0 as sisa_fisik_di_rak,
+                               SUM(ip.kuantitas_satuan_dasar) as jumlah_laku_terjual,
+                               0 as retur_rusak,
+                               0 as retur_bagus,
+                               0 as selisih_qty,
+                               MAX(ip.harga_satuan_deal) as harga_satuan_deal,
+                               SUM(ip.subtotal) as subtotal_laku
+                        FROM public.item_pesanan ip
+                        JOIN public.item i ON ip.item_id = i.id
+                        LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                        WHERE ip.pesanan_id = :id
+                        GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                        ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
+                    ", ['id' => $pesananId]);
+                }
 
             } else {
                 // Kasus 2: Diberikan kunjungan_id (Dari Halaman Hasil Opname)
                 $sql = "
                     SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
+                           p.tipe_konsinyasi,
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
+                           COALESCE(k_driver.nama_karyawan, '-') as driver_name,
                            peng.nama_lengkap as auditor_name,
                            COALESCE(peng.posisi, 'Auditor') as auditor_role,
                            COALESCE(pes.id, tk.pesanan_id) as pesanan_id,
@@ -670,6 +1108,7 @@ class ConsignmentController extends Controller
                     JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                     LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
                     LEFT JOIN public.v_karyawan_info k ON COALESCE(kk.sales_driver_id, p.sales_driver_id) = k.id
+                    LEFT JOIN public.v_karyawan_info k_driver ON kk.driver_pengirim_id = k_driver.id
                     LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                     LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
                     WHERE kk.id = :id
@@ -683,11 +1122,36 @@ class ConsignmentController extends Controller
                 $isInvoiced = !empty($visit['pesanan_id']) && !empty($visit['nomor_nota']);
 
                 $details = Database::fetchAll("
-                    SELECT rkk.*, i.nama_item, i.kode_sku, i.satuan_dasar
+                    SELECT COALESCE(gp.id, i.id) as grup_id,
+                           COALESCE(gp.nama_grup, i.nama_item) as nama_item,
+                           COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
+                           COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
+                           COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                           COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
+                           array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
+                           SUM(rkk.stok_titip_awal) as stok_titip_awal,
+                           SUM(rkk.tambah_titip_baru) as tambah_titip_baru,
+                           SUM(rkk.sisa_fisik_di_rak) as sisa_fisik_di_rak,
+                           SUM(rkk.jumlah_laku_terjual) as jumlah_laku_terjual,
+                           SUM(rkk.retur_rusak) as retur_rusak,
+                           SUM(rkk.retur_bagus) as retur_bagus,
+                           SUM(rkk.selisih_qty) as selisih_qty,
+                           MAX(rkk.harga_satuan_deal) as harga_satuan_deal,
+                           SUM(rkk.subtotal_laku) as subtotal_laku
                     FROM public.rincian_kunjungan_konsinyasi rkk
                     JOIN public.item i ON rkk.item_id = i.id
+                    LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                     WHERE rkk.kunjungan_id = :id
-                    ORDER BY rkk.subtotal_laku DESC, i.nama_item ASC
+                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                    HAVING (
+                        SUM(rkk.stok_titip_awal) > 0 
+                        OR SUM(rkk.tambah_titip_baru) > 0 
+                        OR SUM(rkk.sisa_fisik_di_rak) > 0 
+                        OR SUM(rkk.jumlah_laku_terjual) > 0 
+                        OR SUM(rkk.retur_rusak) > 0 
+                        OR SUM(rkk.retur_bagus) > 0
+                    )
+                    ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
                 ", ['id' => $visit['id']]);
             }
 
@@ -709,7 +1173,7 @@ class ConsignmentController extends Controller
                 LIMIT 1
             ");
 
-            $this->view('consignment.nota_pdf', [
+            $this->view('consignment.nota_konsinyasi', [
                 'visit' => $visit,
                 'details' => $details,
                 'bankAccount' => $bankAccount,
@@ -754,8 +1218,10 @@ class ConsignmentController extends Controller
                            pes.catatan,
                            p.id as pelanggan_id, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, 
                            p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
+                           p.tipe_konsinyasi,
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
+                           COALESCE(k_driver.nama_karyawan, '-') as driver_name,
                            peng.nama_lengkap as auditor_name,
                            COALESCE(peng.posisi, 'Auditor') as auditor_role,
                            (SELECT kk.nomor_kunjungan FROM public.tagihan_kunjungan tk JOIN public.kunjungan_konsinyasi kk ON tk.kunjungan_id = kk.id WHERE tk.pesanan_id = pes.id ORDER BY kk.tanggal_kunjungan DESC LIMIT 1) as nomor_kunjungan,
@@ -763,6 +1229,14 @@ class ConsignmentController extends Controller
                     FROM public.pesanan pes
                     JOIN public.pelanggan p ON pes.pelanggan_id = p.id
                     LEFT JOIN public.v_karyawan_info k ON COALESCE(pes.sales_driver_id, p.sales_driver_id) = k.id
+                    LEFT JOIN LATERAL (
+                        SELECT kk2.driver_pengirim_id 
+                        FROM public.tagihan_kunjungan tk2 
+                        JOIN public.kunjungan_konsinyasi kk2 ON tk2.kunjungan_id = kk2.id 
+                        WHERE tk2.pesanan_id = pes.id AND kk2.driver_pengirim_id IS NOT NULL 
+                        LIMIT 1
+                    ) l_driver ON TRUE
+                    LEFT JOIN public.v_karyawan_info k_driver ON l_driver.driver_pengirim_id = k_driver.id
                     LEFT JOIN public.pengguna peng ON pes.dibuat_oleh = peng.id
                     WHERE pes.id = :id
                 ", ['id' => $pesananId]);
@@ -773,24 +1247,53 @@ class ConsignmentController extends Controller
 
                 $isInvoiced = true;
 
-                // Ambil agregasi item pesanan resmi
+                // Ambil agregasi grup produk resmi
                 $details = Database::fetchAll("
-                    SELECT ip.id, ip.item_id, ip.kuantitas_satuan_dasar as jumlah_laku_terjual,
-                           ip.harga_satuan_deal, ip.subtotal as subtotal_laku,
-                           i.nama_item, i.kode_sku, i.satuan_dasar,
-                           0 as retur_rusak, 0 as retur_bagus, 0 as sisa_fisik_di_rak, 0 as stok_titip_awal, 0 as selisih_qty
+                    SELECT COALESCE(gp.id, i.id) as grup_id,
+                           COALESCE(gp.nama_grup, i.nama_item) as nama_item,
+                           COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
+                           COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
+                           COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                           COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
+                           array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
+                           SUM(COALESCE(rkk.stok_titip_awal, 0)) as stok_titip_awal,
+                           SUM(COALESCE(rkk.tambah_titip_baru, 0)) as tambah_titip_baru,
+                           SUM(COALESCE(rkk.sisa_fisik_di_rak, 0)) as sisa_fisik_di_rak,
+                           SUM(ip.kuantitas_satuan_dasar) as jumlah_laku_terjual,
+                           SUM(COALESCE(rkk.retur_rusak, 0)) as retur_rusak,
+                           SUM(COALESCE(rkk.retur_bagus, 0)) as retur_bagus,
+                           SUM(COALESCE(rkk.selisih_qty, 0)) as selisih_qty,
+                           MAX(ip.harga_satuan_deal) as harga_satuan_deal,
+                           SUM(ip.subtotal) as subtotal_laku
                     FROM public.item_pesanan ip
                     JOIN public.item i ON ip.item_id = i.id
+                    LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                    LEFT JOIN (
+                        SELECT r.item_id,
+                               SUM(r.stok_titip_awal) as stok_titip_awal,
+                               SUM(r.tambah_titip_baru) as tambah_titip_baru,
+                               SUM(r.sisa_fisik_di_rak) as sisa_fisik_di_rak,
+                               SUM(r.retur_rusak) as retur_rusak,
+                               SUM(r.retur_bagus) as retur_bagus,
+                               SUM(r.selisih_qty) as selisih_qty
+                        FROM public.rincian_kunjungan_konsinyasi r
+                        JOIN public.tagihan_kunjungan tk ON r.kunjungan_id = tk.kunjungan_id
+                        WHERE tk.pesanan_id = :id
+                        GROUP BY r.item_id
+                    ) rkk ON rkk.item_id = ip.item_id
                     WHERE ip.pesanan_id = :id
-                    ORDER BY ip.subtotal DESC, i.nama_item ASC
+                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                    ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
                 ", ['id' => $pesananId]);
 
             } else {
                 // Kasus 2: Diberikan kunjungan_id (Dari Halaman Hasil Opname)
                 $sql = "
                     SELECT kk.*, p.nama_toko, p.kode_pelanggan, p.alamat_lengkap, p.nomor_whatsapp, p.nomor_whatsapp as nomor_telepon, p.nama_pemilik,
+                           p.tipe_konsinyasi,
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
+                           COALESCE(k_driver.nama_karyawan, '-') as driver_name,
                            peng.nama_lengkap as auditor_name,
                            COALESCE(peng.posisi, 'Auditor') as auditor_role,
                            COALESCE(pes.id, tk.pesanan_id) as pesanan_id,
@@ -799,6 +1302,7 @@ class ConsignmentController extends Controller
                     JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                     LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
                     LEFT JOIN public.v_karyawan_info k ON COALESCE(kk.sales_driver_id, p.sales_driver_id) = k.id
+                    LEFT JOIN public.v_karyawan_info k_driver ON kk.driver_pengirim_id = k_driver.id
                     LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                     LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
                     WHERE kk.id = :id
@@ -812,11 +1316,36 @@ class ConsignmentController extends Controller
                 $isInvoiced = !empty($visit['pesanan_id']) && !empty($visit['nomor_nota']);
 
                 $details = Database::fetchAll("
-                    SELECT rkk.*, i.nama_item, i.kode_sku, i.satuan_dasar
+                    SELECT COALESCE(gp.id, i.id) as grup_id,
+                           COALESCE(gp.nama_grup, i.nama_item) as nama_item,
+                           COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
+                           COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
+                           COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                           COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
+                           array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
+                           SUM(rkk.stok_titip_awal) as stok_titip_awal,
+                           SUM(rkk.tambah_titip_baru) as tambah_titip_baru,
+                           SUM(rkk.sisa_fisik_di_rak) as sisa_fisik_di_rak,
+                           SUM(rkk.jumlah_laku_terjual) as jumlah_laku_terjual,
+                           SUM(rkk.retur_rusak) as retur_rusak,
+                           SUM(rkk.retur_bagus) as retur_bagus,
+                           SUM(rkk.selisih_qty) as selisih_qty,
+                           MAX(rkk.harga_satuan_deal) as harga_satuan_deal,
+                           SUM(rkk.subtotal_laku) as subtotal_laku
                     FROM public.rincian_kunjungan_konsinyasi rkk
                     JOIN public.item i ON rkk.item_id = i.id
+                    LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                     WHERE rkk.kunjungan_id = :id
-                    ORDER BY rkk.subtotal_laku DESC, i.nama_item ASC
+                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                    HAVING (
+                        SUM(rkk.stok_titip_awal) > 0 
+                        OR SUM(rkk.tambah_titip_baru) > 0 
+                        OR SUM(rkk.sisa_fisik_di_rak) > 0 
+                        OR SUM(rkk.jumlah_laku_terjual) > 0 
+                        OR SUM(rkk.retur_rusak) > 0 
+                        OR SUM(rkk.retur_bagus) > 0
+                    )
+                    ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
                 ", ['id' => $visit['id']]);
             }
 
@@ -849,7 +1378,7 @@ class ConsignmentController extends Controller
                 'isPdf' => true,
                 'formatMode' => $format
             ]);
-            require ROOT_PATH . '/views/consignment/nota_pdf.php';
+            require ROOT_PATH . '/views/consignment/nota_konsinyasi.php';
             $html = ob_get_clean();
 
             if ($isInvoiced) {
@@ -894,26 +1423,41 @@ class ConsignmentController extends Controller
         }
 
         try {
-            $res = Database::fetchOne("
-                SELECT public.fn_konfirmasi_terima_pengiriman(:sj_id, :user_id) AS json_res
-            ", [
-                'sj_id' => $suratJalanId,
-                'user_id' => Auth::id()
-            ]);
-
-            $jsonResult = json_decode($res['json_res'] ?? '{}', true);
-
-            if (empty($jsonResult['success'])) {
-                throw new \Exception($jsonResult['message'] ?? 'Konfirmasi pengiriman ditolak database.');
-            }
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
 
             $sj = Database::fetchOne("
-                SELECT sj.nomor_surat_jalan, p.nama_toko 
+                SELECT sj.id, sj.nomor_surat_jalan, sj.pesanan_id, sj.status_surat_jalan,
+                       p.id as pelanggan_id, p.nama_toko, p.is_konsinyasi
                 FROM public.surat_jalan sj
                 JOIN public.pesanan pes ON sj.pesanan_id = pes.id
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-                WHERE sj.id = :id
+                WHERE sj.id = :id FOR UPDATE
             ", ['id' => $suratJalanId]);
+
+            if (!$sj) {
+                $pdo->rollBack();
+                throw new \Exception('Surat jalan tidak ditemukan.');
+            }
+
+            if ($sj['status_surat_jalan'] !== 'selesai_diterima') {
+                Database::execute("
+                    UPDATE public.surat_jalan
+                    SET status_surat_jalan = 'selesai_diterima',
+                        waktu_sampai = COALESCE(waktu_sampai, NOW()),
+                        diubah_pada = NOW()
+                    WHERE id = :id
+                ", ['id' => $suratJalanId]);
+
+                Database::execute("
+                    UPDATE public.pesanan
+                    SET status_pemrosesan = 'selesai_dikirim',
+                        diubah_pada = NOW()
+                    WHERE id = :id
+                ", ['id' => $sj['pesanan_id']]);
+            }
+
+            $pdo->commit();
 
             ActivityLog::log(
                 'logistik',
@@ -923,10 +1467,13 @@ class ConsignmentController extends Controller
                 $suratJalanId
             );
 
-            $this->flashSuccess("Pengiriman {$sj['nomor_surat_jalan']} berhasil dikonfirmasi! Stok rak toko {$sj['nama_toko']} sudah diperbarui.");
+            $this->flashSuccess("Pengiriman {$sj['nomor_surat_jalan']} berhasil dikonfirmasi! Pengiriman toko {$sj['nama_toko']} sudah selesai.");
             $this->redirect($redirectUrl);
 
         } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $this->flashError('Gagal mengonfirmasi pengiriman: ' . $e->getMessage());
             $this->redirect($redirectUrl);
         }
@@ -1247,11 +1794,12 @@ class ConsignmentController extends Controller
             $filterEnd      = (string)$this->input('end_date', date('Y-m-d'));
 
             // Filter untuk tab Daftar Tagihan
-            $filterStatus   = (string)$this->input('status', '');
+            $filterStatus           = (string)$this->input('status', '');
+            $filterTipeKonsinyasi   = (string)$this->input('tipe_konsinyasi', '');
 
             // Daftar toko untuk filter dropdown
             $stores = Database::fetchAll("
-                SELECT id, nama_toko, kode_pelanggan 
+                SELECT id, nama_toko, kode_pelanggan, tipe_konsinyasi 
                 FROM public.pelanggan 
                 WHERE is_konsinyasi = TRUE AND status_aktif = TRUE
                 ORDER BY nama_toko ASC
@@ -1262,6 +1810,7 @@ class ConsignmentController extends Controller
                 SELECT 
                     kk.id, kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal,
                     p.nama_toko, p.kode_pelanggan, p.id as pelanggan_id,
+                    COALESCE(p.tipe_konsinyasi, 'kolektif_toko') as tipe_konsinyasi,
                     COALESCE(kar.nama_karyawan, 'N/A') as nama_sales,
                     (SELECT COUNT(*) FROM public.rincian_kunjungan_konsinyasi rkk WHERE rkk.kunjungan_id = kk.id) as total_sku
                 FROM public.kunjungan_konsinyasi kk
@@ -1283,26 +1832,47 @@ class ConsignmentController extends Controller
             $sqlUnbilled .= " ORDER BY kk.tanggal_kunjungan DESC, p.nama_toko ASC";
             $unbilledVisits = Database::fetchAll($sqlUnbilled, $unbilledParams);
 
-            // TAB 2: Semua tagihan konsinyasi (aktif + lunas + history)
+            // TAB 2: Semua tagihan konsinyasi (Rolling Nota + Kolektif Toko; aktif + lunas + history)
             $sqlTagihan = "
                 SELECT 
                     pes.id as pesanan_id, pes.nomor_nota, pes.tanggal_pesanan, pes.total_netto,
                     pes.total_dibayar, pes.sisa_tagihan, pes.status_pembayaran, pes.catatan,
                     p.id as pelanggan_id, p.nama_toko, p.kode_pelanggan, p.nomor_whatsapp,
+                    COALESCE(p.tipe_konsinyasi, 'kolektif_toko') as tipe_konsinyasi,
                     COALESCE(kar.nama_karyawan, 'N/A') as nama_sales,
+                    COALESCE(k_driver.nama_karyawan, '-') as driver_name,
                     (SELECT COUNT(*) FROM public.tagihan_kunjungan tk WHERE tk.pesanan_id = pes.id) as jumlah_kunjungan
                 FROM public.pesanan pes
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-                LEFT JOIN public.v_karyawan_info kar ON pes.sales_driver_id = kar.id
-                WHERE pes.tipe_pembayaran = 'konsinyasi'
-                  AND pes.is_tagihan = TRUE
-                  AND pes.status_pembayaran != 'dibatalkan'
+                LEFT JOIN public.v_karyawan_info kar ON COALESCE(pes.sales_driver_id, p.sales_driver_id) = kar.id
+                LEFT JOIN LATERAL (
+                    SELECT kk2.driver_pengirim_id 
+                    FROM public.tagihan_kunjungan tk2 
+                    JOIN public.kunjungan_konsinyasi kk2 ON tk2.kunjungan_id = kk2.id 
+                    WHERE tk2.pesanan_id = pes.id AND kk2.driver_pengirim_id IS NOT NULL 
+                    LIMIT 1
+                ) l_driver ON TRUE
+                LEFT JOIN public.v_karyawan_info k_driver ON l_driver.driver_pengirim_id = k_driver.id
+                WHERE (
+                    (pes.tipe_pembayaran = 'konsinyasi' AND pes.is_tagihan = TRUE)
+                    OR (p.is_konsinyasi = TRUE AND pes.is_tagihan = TRUE)
+                    OR EXISTS (SELECT 1 FROM public.tagihan_kunjungan tk WHERE tk.pesanan_id = pes.id)
+                )
+                AND pes.status_pembayaran != 'dibatalkan'
             ";
             $tagihanParams = [];
 
             if (!empty($filterStatus)) {
                 $sqlTagihan .= " AND pes.status_pembayaran = :status";
                 $tagihanParams['status'] = $filterStatus;
+            }
+            if (!empty($filterTipeKonsinyasi)) {
+                $sqlTagihan .= " AND p.tipe_konsinyasi = :tipe_konsinyasi";
+                $tagihanParams['tipe_konsinyasi'] = $filterTipeKonsinyasi;
+            }
+            if (!empty($filterStoreId) && $activeTab === 'daftar') {
+                $sqlTagihan .= " AND p.id = :pelanggan_id";
+                $tagihanParams['pelanggan_id'] = $filterStoreId;
             }
             $sqlTagihan .= " ORDER BY pes.tanggal_pesanan DESC, pes.dibuat_pada DESC";
             $tagihan = Database::fetchAll($sqlTagihan, $tagihanParams);
@@ -1321,21 +1891,22 @@ class ConsignmentController extends Controller
             ));
 
             $this->view('consignment.tagihan', [
-                'pageTitle'       => 'Tagihan Konsinyasi',
-                'pageSubtitle'    => 'Buat & Kelola Tagihan Penjualan Toko Konsinyasi',
-                'csrfToken'       => \App\Helpers\CSRF::token(),
-                'unbilledVisits'  => $unbilledVisits,
-                'tagihan'         => $tagihan,
-                'stores'          => $stores,
-                'cashAccounts'    => $cashAccounts,
-                'totalOutstanding'=> $totalOutstanding,
-                'filterStoreId'   => $filterStoreId,
-                'filterStart'     => $filterStart,
-                'filterEnd'       => $filterEnd,
-                'filterStatus'    => $filterStatus,
-                'activeTab'       => $activeTab,
-                'isOwner'         => $isOwner,
-                'isAdmin'         => $isAdmin,
+                'pageTitle'           => 'Tagihan Konsinyasi',
+                'pageSubtitle'        => 'Buat & Kelola Tagihan Penjualan Toko Konsinyasi (Rolling Nota & Kolektif)',
+                'csrfToken'           => \App\Helpers\CSRF::token(),
+                'unbilledVisits'      => $unbilledVisits,
+                'tagihan'             => $tagihan,
+                'stores'              => $stores,
+                'cashAccounts'        => $cashAccounts,
+                'totalOutstanding'    => $totalOutstanding,
+                'filterStoreId'       => $filterStoreId,
+                'filterStart'         => $filterStart,
+                'filterEnd'           => $filterEnd,
+                'filterStatus'        => $filterStatus,
+                'filterTipeKonsinyasi'=> $filterTipeKonsinyasi,
+                'activeTab'           => $activeTab,
+                'isOwner'             => $isOwner,
+                'isAdmin'             => $isAdmin,
             ]);
 
         } catch (Throwable $e) {
@@ -1520,20 +2091,25 @@ class ConsignmentController extends Controller
 
         try {
             $filterStatus = (string)$this->input('status', '');
+            $filterTipeKonsinyasi = (string)$this->input('tipe_konsinyasi', '');
 
             $sql = "
                 SELECT 
                     pes.nomor_nota, pes.tanggal_pesanan, pes.total_netto,
                     pes.total_dibayar, pes.sisa_tagihan, pes.status_pembayaran,
                     p.nama_toko, p.kode_pelanggan, p.nomor_whatsapp,
+                    COALESCE(p.tipe_konsinyasi, 'kolektif_toko') as tipe_konsinyasi,
                     COALESCE(kar.nama_karyawan, 'N/A') as nama_sales,
                     (SELECT COUNT(*) FROM public.tagihan_kunjungan tk WHERE tk.pesanan_id = pes.id) as jumlah_kunjungan
                 FROM public.pesanan pes
                 JOIN public.pelanggan p ON pes.pelanggan_id = p.id
-                LEFT JOIN public.v_karyawan_info kar ON pes.sales_driver_id = kar.id
-                WHERE pes.tipe_pembayaran = 'konsinyasi'
-                  AND pes.is_tagihan = TRUE
-                  AND pes.status_pembayaran != 'dibatalkan'
+                LEFT JOIN public.v_karyawan_info kar ON COALESCE(pes.sales_driver_id, p.sales_driver_id) = kar.id
+                WHERE (
+                    (pes.tipe_pembayaran = 'konsinyasi' AND pes.is_tagihan = TRUE)
+                    OR (p.is_konsinyasi = TRUE AND pes.is_tagihan = TRUE)
+                    OR EXISTS (SELECT 1 FROM public.tagihan_kunjungan tk WHERE tk.pesanan_id = pes.id)
+                )
+                AND pes.status_pembayaran != 'dibatalkan'
             ";
             $params = [];
 
@@ -1541,10 +2117,14 @@ class ConsignmentController extends Controller
                 $sql .= " AND pes.status_pembayaran = :status";
                 $params['status'] = $filterStatus;
             }
+            if (!empty($filterTipeKonsinyasi)) {
+                $sql .= " AND p.tipe_konsinyasi = :tipe_konsinyasi";
+                $params['tipe_konsinyasi'] = $filterTipeKonsinyasi;
+            }
             $sql .= " ORDER BY pes.tanggal_pesanan DESC";
             $rows_data = Database::fetchAll($sql, $params);
 
-            $headers = ['No', 'No. Tagihan', 'Tanggal', 'Nama Toko', 'Kode Toko', 'Sales PIC', 'Jml Kunjungan', 'Total Tagihan (Rp)', 'Terbayar (Rp)', 'Sisa (Rp)', 'Status'];
+            $headers = ['No', 'No. Tagihan', 'Tanggal', 'Nama Toko', 'Kode Toko', 'Tipe Toko', 'Sales PIC', 'Jml Kunjungan', 'Total Tagihan (Rp)', 'Terbayar (Rp)', 'Sisa (Rp)', 'Status'];
             $rows    = [];
             $no      = 1;
             $totTotal = $totBayar = $totSisa = 0;
@@ -1555,12 +2135,15 @@ class ConsignmentController extends Controller
                 $sisa  = (float)$r['sisa_tagihan'];
                 $totTotal += $tot; $totBayar += $bayar; $totSisa += $sisa;
 
+                $tipeLabel = ($r['tipe_konsinyasi'] ?? '') === 'rolling_nota' ? 'Rolling Nota' : 'Kolektif Toko';
+
                 $rows[] = [
                     $no++,
                     $r['nomor_nota'] ?? '-',
                     date('d/m/Y', strtotime($r['tanggal_pesanan'])),
                     $r['nama_toko'],
                     $r['kode_pelanggan'] ?? '-',
+                    $tipeLabel,
                     $r['nama_sales'],
                     (int)$r['jumlah_kunjungan'],
                     $tot, $bayar, $sisa,
@@ -1568,7 +2151,7 @@ class ConsignmentController extends Controller
                 ];
             }
 
-            $rows[] = ['', '', '', '', '', '', 'GRAND TOTAL:', $totTotal, $totBayar, $totSisa, ''];
+            $rows[] = ['', '', '', '', '', '', '', 'GRAND TOTAL:', $totTotal, $totBayar, $totSisa, ''];
 
             ExcelExport::download("Tagihan Konsinyasi " . date('Ymd') . ".xlsx", $headers, $rows, "Tagihan Konsinyasi");
         } catch (Throwable $e) {
@@ -2517,6 +3100,7 @@ class ConsignmentController extends Controller
                 SELECT kk.id, kk.nomor_kunjungan, kk.tanggal_kunjungan, kk.total_laku_nominal, kk.catatan,
                        p.nama_toko, p.kode_pelanggan,
                        COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as nama_sales,
+                       k_driver.nama_karyawan as nama_driver,
                        peng.nama_lengkap as auditor_name,
                        pes.id as pesanan_id, pes.nomor_nota, pes.status_pembayaran, pes.total_netto, pes.total_dibayar, pes.sisa_tagihan,
                        COALESCE(rkk_agg.total_sku, 0) as total_sku,
@@ -2528,6 +3112,7 @@ class ConsignmentController extends Controller
                 JOIN public.pelanggan p ON kk.pelanggan_id = p.id
                 LEFT JOIN public.pengguna peng ON kk.dibuat_oleh = peng.id
                 LEFT JOIN public.v_karyawan_info k ON COALESCE(kk.sales_driver_id, p.sales_driver_id) = k.id
+                LEFT JOIN public.v_karyawan_info k_driver ON kk.driver_pengirim_id = k_driver.id
                 LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                 LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
                 LEFT JOIN (

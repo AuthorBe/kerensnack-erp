@@ -256,10 +256,10 @@ assertTest(
 // -------------------------------------------------------------------------
 echo "\n7. Testing Document Views & Frame Layout Integration...\n";
 $viewsToCheck = [
-    'Deliveries Print'    => APP_ROOT . '/views/deliveries/print.php',
-    'Customer Invoice'   => APP_ROOT . '/views/customer_orders/invoice.php',
-    'Purchase PO PDF'    => APP_ROOT . '/views/purchases/po_pdf.php',
-    'Consignment Nota'   => APP_ROOT . '/views/consignment/nota_pdf.php',
+    'Deliveries Print'       => APP_ROOT . '/views/deliveries/print.php',
+    'Customer Nota Reguler'  => APP_ROOT . '/views/customer_orders/nota_reguler.php',
+    'Purchase PO PDF'        => APP_ROOT . '/views/purchases/po_pdf.php',
+    'Consignment Nota'       => APP_ROOT . '/views/consignment/nota_konsinyasi.php',
 ];
 
 foreach ($viewsToCheck as $name => $path) {
