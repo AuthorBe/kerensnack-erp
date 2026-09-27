@@ -335,7 +335,7 @@ ob_start();
                                     <div>
                                         <div style="font-weight:700;font-size:0.92rem;color:#0f172a;" x-text="selectedEmployee.nama_lengkap"></div>
                                         <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:#64748b;margin-top:2px;">
-                                            <span class="badge" style="background:#e0e7ff;color:#3730a3;padding:2px 7px;border-radius:6px;font-weight:600;" x-text="selectedEmployee.posisi ? selectedEmployee.posisi.toUpperCase() : 'KARYAWAN'"></span>
+                                            <span class="badge" style="background:#e0e7ff;color:#3730a3;padding:2px 7px;border-radius:6px;font-weight:600;" x-text="'Jabatan: ' + (selectedEmployee.posisi ? selectedEmployee.posisi.toUpperCase() : 'KARYAWAN')"></span>
                                             <span style="font-family:monospace;font-size:0.75rem;" x-text="selectedEmployee.nomor_whatsapp ? ('WA: ' + selectedEmployee.nomor_whatsapp) : 'WA: -'"></span>
                                         </div>
                                     </div>
@@ -384,13 +384,13 @@ ob_start();
                         <!-- Step 3: Peran Akses Sistem (Role) -->
                         <div>
                             <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
-                                Peran Jabatan (Role) <span style="color:#e11d48;">*</span>
+                                Peran Hak Akses (Role) <span style="color:#e11d48;">*</span>
                             </label>
                             <select name="peran_id" required 
                                     style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
                                     onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
                                     onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
-                                <option value="">-- Pilih Peran Akses --</option>
+                                <option value="">-- Pilih Peran Hak Akses --</option>
                                 <?php foreach ($roles as $r): 
                                     if ($r['nama_peran'] === 'developer') continue; // Proteksi: Developer tunggal
                                 ?>
@@ -400,7 +400,7 @@ ob_start();
                                 <?php endforeach; ?>
                             </select>
                             <p style="font-size:0.75rem;color:#64748b;margin:5px 0 0 0;">
-                                Menentukan modul dan hak akses operasional pengguna di dalam sistem.
+                                Menentukan modul dan hak akses operasional pengguna di dalam sistem. Tidak mengubah jabatan kerja karyawan di master data.
                             </p>
                         </div>
 
@@ -529,7 +529,7 @@ ob_start();
                                 <template x-if="editUser.is_developer">
                                     <div>
                                         <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
-                                            Peran Jabatan (Role)
+                                            Peran Hak Akses (Role)
                                         </label>
                                         <div style="height:44px;padding:0 14px;border:1.5px solid #ddd6fe;border-radius:12px;background:#f5f3ff;color:#7c3aed;font-size:0.86rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
                                             <i data-lucide="shield" style="width:16px;height:16px;flex-shrink:0;"></i>
@@ -543,13 +543,13 @@ ob_start();
                                 <template x-if="!editUser.is_developer">
                                     <div>
                                         <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
-                                            Peran Jabatan (Role) <span style="color:#e11d48;">*</span>
+                                            Peran Hak Akses (Role) <span style="color:#e11d48;">*</span>
                                         </label>
                                         <select name="peran_id" x-model="editUser.peran_id" required 
                                                 style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
                                                 onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
                                                 onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
-                                            <option value="">-- Pilih Peran --</option>
+                                            <option value="">-- Pilih Peran Hak Akses --</option>
                                             <?php foreach ($roles as $r): 
                                                 if ($r['nama_peran'] === 'developer') continue; // Proteksi: User biasa tidak bisa diubah jadi developer
                                             ?>
@@ -558,6 +558,9 @@ ob_start();
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <p style="font-size:0.75rem;color:#64748b;margin:5px 0 0 0;">
+                                            Menentukan modul dan tingkat wewenang akses di aplikasi. Tidak mengubah posisi jabatan karyawan.
+                                        </p>
                                     </div>
                                 </template>
                             </div>

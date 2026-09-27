@@ -67,7 +67,10 @@ $meta = $roleHeaderIcons[$activeRole] ?? [
                         ONLINE
                     </span>
                 </div>
-                <h1 class="page-title"><?= $greeting ?>, <?= htmlspecialchars($user['nama_lengkap'] ?? 'Pengguna') ?> 👋</h1>
+                <?php 
+                    $dashboardDisplayName = !empty($user['nama_panggilan']) ? $user['nama_panggilan'] : (!empty($user['nama_lengkap']) ? $user['nama_lengkap'] : ($user['nama_pengguna'] ?? 'Pengguna'));
+                ?>
+                <h1 class="page-title"><?= $greeting ?>, <?= htmlspecialchars($dashboardDisplayName) ?> 👋</h1>
                 <p class="page-subtitle">
                     Bertugas sebagai <strong style="color:var(--color-ink);"><?= htmlspecialchars($activeRoleLabels[$activeRole] ?? ucfirst($activeRole)) ?></strong> &bull; <?= Format::tanggal(date('Y-m-d')) ?>
                 </p>

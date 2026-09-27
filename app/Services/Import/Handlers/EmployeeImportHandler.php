@@ -82,6 +82,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             'Posisi yang valid: admin, mandor, pengemasan, sales, driver, owner, gudang.',
             'Tipe Penggajian: borongan, bulanan.',
             'No WhatsApp: Nomor WhatsApp aktif karyawan untuk koordinasi kerja (format 08xxx).',
+            'Nama Bank & Rekening: Bebas diisi nama bank (seperti BCA, Mandiri, BRI, BNI, BSI, CIMB Niaga, Permata, Danamon, Seabank, Bank Jago, dll.) atau kosongkan / tulis "Tunai". Jika nomor rekening diisi, pemilik rekening wajib diisi.',
             'Pembuatan akun login pengguna dikelola secara terpisah melalui menu Pengaturan Pengguna (/users).'
         ];
     }
@@ -170,9 +171,9 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             $nopol = (string)(SmartReader::getSmartValue($rowData, ['nomor_polisi_kendaraan', 'no_polisi', 'nopol']) ?? '');
             $alamat = (string)(SmartReader::getSmartValue($rowData, ['alamat', 'alamat_lengkap']) ?? '');
             $tglGabung = (string)(SmartReader::getSmartValue($rowData, ['tanggal_bergabung', 'tgl_gabung']) ?? '');
-            $bankNama = (string)(SmartReader::getSmartValue($rowData, ['nama_bank', 'bank']) ?? '');
-            $bankRek = (string)(SmartReader::getSmartValue($rowData, ['no_rekening', 'nomor_rekening']) ?? '');
-            $bankAtasNama = (string)(SmartReader::getSmartValue($rowData, ['atas_nama_rekening', 'atas_nama']) ?? '');
+            $bankNama = (string)(SmartReader::getSmartValue($rowData, ['nama_bank', 'bank', 'metode_bayar', 'metode_pembayaran', 'metode_bank', 'bank_nama', 'rekening_bank', 'nama_bank_pembayaran']) ?? '');
+            $bankRek = (string)(SmartReader::getSmartValue($rowData, ['no_rekening', 'nomor_rekening', 'bank_rekening', 'no_rek', 'rekening']) ?? '');
+            $bankAtasNama = (string)(SmartReader::getSmartValue($rowData, ['atas_nama_rekening', 'atas_nama', 'bank_atas_nama', 'an_rekening', 'nama_pemilik_rekening', 'an', 'atas_nama_rek']) ?? '');
             $statusAktifRaw = SmartReader::getSmartValue($rowData, ['status_aktif', 'status', 'aktif']);
 
             // Baris kosong total → lewati

@@ -159,7 +159,7 @@ class AuthController extends Controller
         try {
             // 1. Cari pengguna dari Database PostgreSQL (Hanya yang memiliki username & kata sandi sah)
             $userDb = Database::fetchOne("
-                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.kata_sandi,
+                SELECT p.id, p.nama_lengkap, p.nama_panggilan, p.nama_pengguna, p.kata_sandi,
                        p.posisi, p.peran_id, pr.nama_peran as peran, p.status_aktif,
                        k.id as karyawan_id
                 FROM public.pengguna p
@@ -273,7 +273,7 @@ class AuthController extends Controller
                     $userDb['peran'] ?? 'staff'
                 );
 
-                $displayName = !empty($userDb['nama_lengkap']) ? $userDb['nama_lengkap'] : $userDb['nama_pengguna'];
+                $displayName = !empty($userDb['nama_panggilan']) ? $userDb['nama_panggilan'] : (!empty($userDb['nama_lengkap']) ? $userDb['nama_lengkap'] : $userDb['nama_pengguna']);
                 Flash::success("Selamat datang kembali, {$displayName}!", "Login Berhasil! 🎉");
 
                 // Redirect ke Dashboard Utama (Tampilan adaptif otomatis sesuai peran pengguna)

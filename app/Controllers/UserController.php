@@ -96,7 +96,7 @@ class UserController extends Controller
         $idTelegram = trim((string)$this->input('id_telegram')) ?: null;
 
         if (empty($penggunaId) || empty($username) || empty($password) || empty($peranId)) {
-            Flash::danger('Mohon pilih Karyawan, lengkapi Username, Kata Sandi, dan Peran Jabatan.');
+            Flash::danger('Mohon pilih Karyawan, lengkapi Username, Kata Sandi, dan Peran Hak Akses.');
             $this->redirect('/users');
             return;
         }
@@ -134,23 +134,11 @@ class UserController extends Controller
         try {
             $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
-            $posisiSync = null;
-            if (($targetRole['nama_peran'] ?? '') === 'driver') {
-                $posisiSync = 'driver';
-            } elseif (($targetRole['nama_peran'] ?? '') === 'sales') {
-                $posisiSync = 'sales';
-            } elseif (($targetRole['nama_peran'] ?? '') === 'mandor') {
-                $posisiSync = 'mandor';
-            } elseif (($targetRole['nama_peran'] ?? '') === 'gudang') {
-                $posisiSync = 'gudang';
-            }
-
             Database::execute("
                 UPDATE public.pengguna 
                 SET nama_pengguna = :username,
                     kata_sandi = :pass,
                     peran_id = :peran_id,
-                    posisi = COALESCE(:posisi, posisi),
                     nomor_whatsapp = COALESCE(:wa, nomor_whatsapp),
                     id_telegram = COALESCE(:telegram, id_telegram),
                     status_aktif = TRUE,
@@ -161,7 +149,6 @@ class UserController extends Controller
                 'username' => $username,
                 'pass' => $hashedPassword,
                 'peran_id' => $peranId,
-                'posisi' => $posisiSync,
                 'wa' => $nomorWa,
                 'telegram' => $idTelegram ? (int)$idTelegram : null,
             ]);
@@ -242,7 +229,7 @@ class UserController extends Controller
         } else {
             // Proteksi 4: User biasa tidak dapat diubah rolenya menjadi developer
             if (empty($peranId)) {
-                Flash::danger('Peran pengguna wajib dipilih.');
+                Flash::danger('Peran hak akses pengguna wajib dipilih.');
                 $this->redirect('/users');
                 return;
             }
@@ -282,17 +269,6 @@ class UserController extends Controller
         }
 
         try {
-            $posisiSync = null;
-            if (($newRole['nama_peran'] ?? '') === 'driver') {
-                $posisiSync = 'driver';
-            } elseif (($newRole['nama_peran'] ?? '') === 'sales') {
-                $posisiSync = 'sales';
-            } elseif (($newRole['nama_peran'] ?? '') === 'mandor') {
-                $posisiSync = 'mandor';
-            } elseif (($newRole['nama_peran'] ?? '') === 'gudang') {
-                $posisiSync = 'gudang';
-            }
-
             if (!empty($password)) {
                 $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
                 Database::execute("
@@ -301,7 +277,6 @@ class UserController extends Controller
                         nama_pengguna = :username,
                         kata_sandi = :pass,
                         peran_id = :peran_id,
-                        posisi = COALESCE(:posisi, posisi),
                         id_telegram = :telegram,
                         status_aktif = :status,
                         diubah_pada = NOW()
@@ -312,7 +287,6 @@ class UserController extends Controller
                     'username' => $username,
                     'pass' => $hashedPassword,
                     'peran_id' => $peranId,
-                    'posisi' => $posisiSync,
                     'telegram' => $idTelegram,
                     'status' => $statusAktif,
                 ]);
@@ -322,7 +296,6 @@ class UserController extends Controller
                     SET nama_lengkap = :nama,
                         nama_pengguna = :username,
                         peran_id = :peran_id,
-                        posisi = COALESCE(:posisi, posisi),
                         id_telegram = :telegram,
                         status_aktif = :status,
                         diubah_pada = NOW()
@@ -332,7 +305,6 @@ class UserController extends Controller
                     'nama' => $namaLengkap,
                     'username' => $username,
                     'peran_id' => $peranId,
-                    'posisi' => $posisiSync,
                     'telegram' => $idTelegram,
                     'status' => $statusAktif,
                 ]);

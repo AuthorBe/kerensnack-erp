@@ -173,7 +173,7 @@ class ProfileController extends Controller
 
         try {
             $userDb = Database::fetchOne("
-                SELECT id, nama_lengkap, nama_panggilan, nama_pengguna, alamat, 
+                SELECT id, nama_lengkap, nama_panggilan, nama_pengguna, jenis_kelamin, tanggal_lahir, alamat, 
                        COALESCE(nomor_whatsapp, nomor_telepon) AS nomor_whatsapp, id_telegram,
                        bank_nama, bank_nomor_rekening, bank_atas_nama, nomor_polisi_kendaraan
                 FROM public.pengguna 
@@ -195,6 +195,10 @@ class ProfileController extends Controller
             // Sanitasi input form karyawan
             $namaLengkap = trim((string)$this->input('nama_lengkap', ''));
             $namaPanggilan = trim((string)$this->input('nama_panggilan', ''));
+            $jenisKelaminRaw = strtoupper(trim((string)$this->input('jenis_kelamin', 'L')));
+            $jenisKelamin = in_array($jenisKelaminRaw, ['P', 'PEREMPUAN', 'WANITA'], true) ? 'P' : 'L';
+            $tanggalLahirRaw = trim((string)$this->input('tanggal_lahir', ''));
+            $tanggalLahir = !empty($tanggalLahirRaw) ? $tanggalLahirRaw : null;
             $alamat = trim((string)$this->input('alamat', ''));
             $nomorWhatsapp = trim((string)$this->input('nomor_whatsapp', ''));
             $idTelegramRaw = trim((string)$this->input('id_telegram', ''));
@@ -246,6 +250,9 @@ class ProfileController extends Controller
             }
 
             // Cek perubahan data lainnya
+            $oldJenisKelamin = trim((string)($userDb['jenis_kelamin'] ?? 'L'));
+            $oldTanggalLahir = !empty($userDb['tanggal_lahir']) ? substr((string)$userDb['tanggal_lahir'], 0, 10) : '';
+            $newTanggalLahir = $tanggalLahir ? substr($tanggalLahir, 0, 10) : '';
             $oldAlamat = trim((string)($userDb['alamat'] ?? ''));
             $oldWhatsapp = trim((string)($userDb['nomor_whatsapp'] ?? ''));
             $oldTelegram = !empty($userDb['id_telegram']) ? (int)$userDb['id_telegram'] : null;
@@ -254,7 +261,9 @@ class ProfileController extends Controller
             $oldBankAn = trim((string)($userDb['bank_atas_nama'] ?? ''));
             $oldNopol = trim((string)($userDb['nomor_polisi_kendaraan'] ?? ''));
 
-            $isDataChanged = ($alamat !== $oldAlamat)
+            $isDataChanged = ($jenisKelamin !== $oldJenisKelamin)
+                || ($newTanggalLahir !== $oldTanggalLahir)
+                || ($alamat !== $oldAlamat)
                 || ($nomorWhatsapp !== $oldWhatsapp)
                 || ($idTelegram !== $oldTelegram)
                 || ($bankNama !== $oldBankNama)
@@ -273,6 +282,8 @@ class ProfileController extends Controller
                 UPDATE public.pengguna 
                 SET nama_lengkap = :nama_lengkap,
                     nama_panggilan = :nama_panggilan,
+                    jenis_kelamin = :jenis_kelamin,
+                    tanggal_lahir = :tanggal_lahir,
                     alamat = :alamat,
                     nomor_whatsapp = :nomor_whatsapp,
                     nomor_telepon = :nomor_whatsapp,
@@ -286,6 +297,8 @@ class ProfileController extends Controller
             ", [
                 'nama_lengkap' => $namaLengkap,
                 'nama_panggilan' => $namaPanggilan,
+                'jenis_kelamin' => $jenisKelamin,
+                'tanggal_lahir' => $tanggalLahir,
                 'alamat' => $alamat ?: null,
                 'nomor_whatsapp' => $nomorWhatsapp ?: null,
                 'id_telegram' => $idTelegram,
@@ -313,15 +326,19 @@ class ProfileController extends Controller
                 );
             }
 
-            // Catat Log Aktivitas Audit jika data kontak/rekening/alamat/nopol berubah
+            // Catat Log Aktivitas Audit jika data kontak/rekening/alamat/nopol/gender/lahir berubah
             if ($isDataChanged) {
                 $oldData = [
+                    'jenis_kelamin' => $oldJenisKelamin,
+                    'tanggal_lahir' => $oldTanggalLahir,
                     'alamat' => $oldAlamat,
                     'nomor_whatsapp' => $oldWhatsapp,
                     'bank_nomor_rekening' => $oldBankRek,
                     'nomor_polisi_kendaraan' => $oldNopol
                 ];
                 $newData = [
+                    'jenis_kelamin' => $jenisKelamin,
+                    'tanggal_lahir' => $newTanggalLahir,
                     'alamat' => $alamat,
                     'nomor_whatsapp' => $nomorWhatsapp,
                     'bank_nomor_rekening' => $bankNomorRekening,

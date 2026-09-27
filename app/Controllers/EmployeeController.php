@@ -119,9 +119,13 @@ class EmployeeController extends Controller
         $alamat = trim((string)$this->input('alamat', '-'));
         $nopol = trim((string)$this->input('nomor_polisi_kendaraan', ''));
         $tglBergabung = $this->input('tanggal_bergabung') ?: date('Y-m-d');
-        $bankNama = trim((string)$this->input('bank_nama', 'Tunai'));
+        $bankNama = trim((string)$this->input('bank_nama', ''));
         $bankRek = trim((string)$this->input('bank_nomor_rekening', ''));
         $bankAn = trim((string)$this->input('bank_atas_nama', ''));
+
+        if (empty($bankNama)) {
+            $bankNama = !empty($bankRek) ? 'Transfer Bank' : 'Tunai';
+        }
 
         if (empty($nama)) {
             $this->flashError('Nama karyawan wajib diisi.');
@@ -271,9 +275,13 @@ class EmployeeController extends Controller
         $alamat = trim((string)$this->input('alamat', '-'));
         $tglBergabung = $this->input('tanggal_bergabung') ?: date('Y-m-d');
         $nopol = trim((string)$this->input('nomor_polisi_kendaraan', ''));
-        $bankNama = trim((string)$this->input('bank_nama', 'Tunai'));
+        $bankNama = trim((string)$this->input('bank_nama', ''));
         $bankRek = trim((string)$this->input('bank_nomor_rekening', ''));
         $bankAn = trim((string)$this->input('bank_atas_nama', ''));
+
+        if (empty($bankNama)) {
+            $bankNama = !empty($bankRek) ? 'Transfer Bank' : 'Tunai';
+        }
         $statusAktif = (bool)$this->input('status_aktif', true);
 
         if (empty($id) || empty($nama)) {

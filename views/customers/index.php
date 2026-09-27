@@ -1288,7 +1288,19 @@ $activeTab = $_GET['tab'] ?? 'customers';
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div>
                             <label class="form-label" style="font-size:11px;">Nama Bank</label>
-                            <input type="text" name="nama_bank" x-model="form.nama_bank" class="form-input" placeholder="BCA / Mandiri / BRI">
+                            <input type="text" name="nama_bank" x-model="form.nama_bank" list="list-bank-customer" class="form-input" placeholder="BCA / Mandiri / BRI / BSI">
+                            <datalist id="list-bank-customer">
+                                <option value="BCA">
+                                <option value="BRI">
+                                <option value="Mandiri">
+                                <option value="BNI">
+                                <option value="BSI">
+                                <option value="CIMB Niaga">
+                                <option value="Permata">
+                                <option value="Danamon">
+                                <option value="Bank Jago">
+                                <option value="SeaBank">
+                            </datalist>
                         </div>
                         <div>
                             <label class="form-label" style="font-size:11px;">Nomor Rekening</label>

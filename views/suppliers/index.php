@@ -487,7 +487,19 @@ ob_start();
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
                         <div>
                             <label class="form-label" style="font-size:11px;">Nama Bank</label>
-                            <input type="text" name="bank_nama" x-model="form.bank_nama" class="form-input" placeholder="BCA / Mandiri / BRI">
+                            <input type="text" name="bank_nama" x-model="form.bank_nama" list="list-bank-supplier" class="form-input" placeholder="BCA / Mandiri / BRI / BSI">
+                            <datalist id="list-bank-supplier">
+                                <option value="BCA">
+                                <option value="BRI">
+                                <option value="Mandiri">
+                                <option value="BNI">
+                                <option value="BSI">
+                                <option value="CIMB Niaga">
+                                <option value="Permata">
+                                <option value="Danamon">
+                                <option value="Bank Jago">
+                                <option value="SeaBank">
+                            </datalist>
                         </div>
                         <div>
                             <label class="form-label" style="font-size:11px;">No. Rekening</label>

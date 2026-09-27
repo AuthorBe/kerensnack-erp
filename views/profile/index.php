@@ -5,7 +5,7 @@ ob_start();
 $initialTab = $activeTab ?? 'karyawan';
 ?>
 
-<div class="space-y-6 max-w-4xl mx-auto" x-data="{ activeTab: '<?= htmlspecialchars($initialTab) ?>' }">
+<div class="space-y-6 max-w-4xl mx-auto" x-data="{ activeTab: '<?= htmlspecialchars($initialTab) ?>', jenisKelamin: '<?= htmlspecialchars($user['jenis_kelamin'] ?? 'L') ?>' }">
 
     <!-- ========================================================================= -->
     <!-- PAGE HEADER                                                               -->
@@ -115,6 +115,65 @@ $initialTab = $activeTab ?? 'karyawan';
             color: var(--color-ink) !important;
             background-color: var(--color-canvas-soft) !important;
         }
+
+        /* M3 Segmented Button Group (Gender / Binary Choice) */
+        .m3-segmented-control {
+            display: flex;
+            align-items: center;
+            background: var(--color-canvas-soft);
+            border: 1px solid var(--color-hairline);
+            border-radius: 10px;
+            padding: 3px;
+            gap: 3px;
+            min-height: 40px;
+            box-sizing: border-box;
+        }
+        .m3-segment-btn {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 12px;
+            border-radius: 7px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+            color: var(--color-ink-secondary);
+            position: relative;
+        }
+        .m3-segment-btn:hover:not(.is-active) {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--color-ink);
+        }
+        .m3-segment-btn.is-active-male {
+            background: #ffffff;
+            color: #1d4ed8;
+            font-weight: 700;
+            border-color: rgba(59, 130, 246, 0.3);
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.14), 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        .m3-segment-btn.is-active-female {
+            background: #ffffff;
+            color: #be185d;
+            font-weight: 700;
+            border-color: rgba(236, 72, 153, 0.3);
+            box-shadow: 0 1px 3px rgba(236, 72, 153, 0.14), 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        .dark .m3-segment-btn.is-active-male {
+            background: #1e293b;
+            color: #60a5fa;
+            border-color: rgba(96, 165, 250, 0.4);
+        }
+        .dark .m3-segment-btn.is-active-female {
+            background: #1e293b;
+            color: #f472b6;
+            border-color: rgba(244, 114, 182, 0.4);
+        }
     </style>
 
     <!-- ========================================================================= -->
@@ -200,6 +259,43 @@ $initialTab = $activeTab ?? 'karyawan';
                             </div>
                             <span style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;display:block;">Nama akrab yang digunakan dalam komunikasi harian tim operasional.</span>
                         </div>
+
+                        <!-- Jenis Kelamin (Editable - M3 Segmented Radio Button) -->
+                        <div>
+                            <label class="form-label" style="display:block;margin-bottom:6px;">
+                                <span>Jenis Kelamin <span style="color:var(--color-danger);">*</span></span>
+                            </label>
+                            <div class="m3-segmented-control">
+                                <label class="m3-segment-btn" :class="jenisKelamin === 'L' ? 'is-active is-active-male' : ''">
+                                    <input type="radio" name="jenis_kelamin" value="L" x-model="jenisKelamin" style="position:absolute;opacity:0;pointer-events:none;">
+                                    <span style="font-size:15px;line-height:1;">👨‍💼</span>
+                                    <span>Laki-laki</span>
+                                </label>
+                                <label class="m3-segment-btn" :class="jenisKelamin === 'P' ? 'is-active is-active-female' : ''">
+                                    <input type="radio" name="jenis_kelamin" value="P" x-model="jenisKelamin" style="position:absolute;opacity:0;pointer-events:none;">
+                                    <span style="font-size:15px;line-height:1;">🧕</span>
+                                    <span>Perempuan</span>
+                                </label>
+                            </div>
+                            <span style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;display:block;">Identitas gender karyawan.</span>
+                        </div>
+
+                        <!-- Tanggal Lahir (Editable) -->
+                        <div>
+                            <label class="form-label" for="tanggal_lahir" style="display:block;margin-bottom:6px;">
+                                <span>Tanggal Lahir</span>
+                            </label>
+                            <div class="form-input-icon">
+                                <i data-lucide="cake" class="icon-left"></i>
+                                <input type="date"
+                                       id="tanggal_lahir"
+                                       name="tanggal_lahir"
+                                       value="<?= !empty($user['tanggal_lahir']) ? substr((string)$user['tanggal_lahir'], 0, 10) : '' ?>"
+                                       class="form-input font-mono font-semibold"
+                                       style="min-height:40px;">
+                            </div>
+                            <span style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;display:block;">Tanggal lahir untuk arsip profil dan HRD.</span>
+                        </div>
                     </div>
                 </div>
 
@@ -215,7 +311,7 @@ $initialTab = $activeTab ?? 'karyawan';
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <!-- NIK -->
                         <div>
                             <label class="form-label" style="font-size:12px;">
@@ -225,33 +321,6 @@ $initialTab = $activeTab ?? 'karyawan';
                                 <i data-lucide="id-card" class="icon-left"></i>
                                 <input type="text"
                                        value="<?= htmlspecialchars($user['nik'] ?? ($user['nik_pending'] ? 'Menunggu KTP (Pending)' : 'Belum diisi')) ?>"
-                                       class="form-input font-mono"
-                                       disabled
-                                       style="background-color:var(--color-canvas-soft);color:var(--color-ink-mute);cursor:not-allowed;">
-                            </div>
-                        </div>
-
-                        <!-- Jenis Kelamin -->
-                        <div>
-                            <label class="form-label" style="font-size:12px;">
-                                <span>Jenis Kelamin</span>
-                            </label>
-                            <input type="text"
-                                   value="<?= ($user['jenis_kelamin'] ?? 'L') === 'P' ? '🧕 Perempuan' : '👨‍💼 Laki-laki' ?>"
-                                   class="form-input font-semibold"
-                                   disabled
-                                   style="background-color:var(--color-canvas-soft);color:var(--color-ink);cursor:not-allowed;">
-                        </div>
-
-                        <!-- Tanggal Lahir -->
-                        <div>
-                            <label class="form-label" style="font-size:12px;">
-                                <span>Tanggal Lahir</span>
-                            </label>
-                            <div class="form-input-icon">
-                                <i data-lucide="cake" class="icon-left"></i>
-                                <input type="text"
-                                       value="<?= !empty($user['tanggal_lahir']) ? Format::tanggal($user['tanggal_lahir'], false) : '-' ?>"
                                        class="form-input font-mono"
                                        disabled
                                        style="background-color:var(--color-canvas-soft);color:var(--color-ink-mute);cursor:not-allowed;">
@@ -397,9 +466,23 @@ $initialTab = $activeTab ?? 'karyawan';
                                         <input type="text"
                                                id="bank_nama"
                                                name="bank_nama"
+                                               list="list-bank-profile"
                                                value="<?= htmlspecialchars($user['bank_nama'] ?? '') ?>"
                                                class="form-input font-semibold"
-                                               placeholder="BCA, Mandiri, BRI, BNI, BSI, dll.">
+                                               placeholder="BCA / BRI / Mandiri / BSI / Tunai">
+                                        <datalist id="list-bank-profile">
+                                            <option value="Tunai">
+                                            <option value="BCA">
+                                            <option value="BRI">
+                                            <option value="Mandiri">
+                                            <option value="BNI">
+                                            <option value="BSI">
+                                            <option value="CIMB Niaga">
+                                            <option value="Permata">
+                                            <option value="Danamon">
+                                            <option value="Bank Jago">
+                                            <option value="SeaBank">
+                                        </datalist>
                                     </div>
                                 </div>
 

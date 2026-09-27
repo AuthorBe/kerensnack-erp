@@ -1314,14 +1314,21 @@ ob_start();
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                        <label class="form-label">Metode / Bank</label>
-                        <select name="bank_nama" x-model="form.bank_nama" class="form-input">
-                            <option value="Tunai">Tunai (Cash)</option>
-                            <option value="BCA">Bank BCA</option>
-                            <option value="BRI">Bank BRI</option>
-                            <option value="Mandiri">Bank Mandiri</option>
-                            <option value="BNI">Bank BNI</option>
-                        </select>
+                        <label class="form-label">Nama Bank / Metode</label>
+                        <input type="text" name="bank_nama" x-model="form.bank_nama" list="list-bank-karyawan" class="form-input" placeholder="BCA / BRI / Mandiri / BSI / Tunai">
+                        <datalist id="list-bank-karyawan">
+                            <option value="Tunai">
+                            <option value="BCA">
+                            <option value="BRI">
+                            <option value="Mandiri">
+                            <option value="BNI">
+                            <option value="BSI">
+                            <option value="CIMB Niaga">
+                            <option value="Permata">
+                            <option value="Danamon">
+                            <option value="Bank Jago">
+                            <option value="SeaBank">
+                        </datalist>
                     </div>
 
                     <div>
@@ -1338,7 +1345,7 @@ ob_start();
                                class="form-input" placeholder="Nama pemilik rek">
                     </div>
                 </div>
-                <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:4px;">Opsional. Jika nomor rekening diisi, pemilik rekening wajib diisi.</div>
+                <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:4px;">Opsional. Jika nomor rekening diisi, pemilik rekening wajib diisi. Masukkan nama bank bebas (misal: BCA, BRI, Seabank, Jago) atau 'Tunai'.</div>
 
                 <template x-if="isEdit">
                     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;margin-top:4px;">
@@ -1697,7 +1704,7 @@ function employeeApp() {
             alamat: '',
             tanggal_bergabung: new Date().toISOString().split('T')[0],
             nomor_polisi_kendaraan: '',
-            bank_nama: 'Tunai',
+            bank_nama: '',
             bank_nomor_rekening: '',
             bank_atas_nama: '',
             status_aktif: true
@@ -2061,7 +2068,7 @@ function employeeApp() {
                 alamat: '',
                 tanggal_bergabung: today,
                 nomor_polisi_kendaraan: '',
-                bank_nama: 'Tunai',
+                bank_nama: '',
                 bank_nomor_rekening: '',
                 bank_atas_nama: '',
                 status_aktif: true
@@ -2090,7 +2097,7 @@ function employeeApp() {
                 alamat: e.alamat === '-' ? '' : (e.alamat || ''),
                 tanggal_bergabung: e.tanggal_bergabung ? String(e.tanggal_bergabung).substring(0, 10) : today,
                 nomor_polisi_kendaraan: e.nomor_polisi_kendaraan || '',
-                bank_nama: e.bank_nama || 'Tunai',
+                bank_nama: e.bank_nama || '',
                 bank_nomor_rekening: e.bank_nomor_rekening || '',
                 bank_atas_nama: e.bank_atas_nama || '',
                 status_aktif: Boolean(e.status_aktif)

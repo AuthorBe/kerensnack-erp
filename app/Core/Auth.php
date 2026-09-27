@@ -88,6 +88,20 @@ class Auth
         return self::user()['nama_lengkap'] ?? 'Pengguna';
     }
 
+    public static function nickname(): string
+    {
+        $user = self::user();
+        if (!empty($user['nama_panggilan'])) {
+            return (string)$user['nama_panggilan'];
+        }
+        return (string)($user['nama_lengkap'] ?? 'Pengguna');
+    }
+
+    public static function displayName(): string
+    {
+        return self::nickname();
+    }
+
     public static function username(): string
     {
         return self::user()['nama_pengguna'] ?? '';
@@ -254,7 +268,7 @@ class Auth
         try {
             // 1. Verifikasi status akun aktif & ambil data profil terbaru langsung dari Database
             $userDb = Database::fetchOne("
-                SELECT p.id, p.nama_lengkap, p.nama_pengguna, p.posisi, p.status_aktif, p.peran_id, pr.nama_peran as peran
+                SELECT p.id, p.nama_lengkap, p.nama_panggilan, p.nama_pengguna, p.posisi, p.status_aktif, p.peran_id, pr.nama_peran as peran
                 FROM public.pengguna p
                 LEFT JOIN public.peran pr ON p.peran_id = pr.id
                 WHERE p.id = :id OR LOWER(p.nama_pengguna) = LOWER(:username)
@@ -276,6 +290,7 @@ class Auth
                 if (!empty($userDb['nama_lengkap'])) {
                     $_SESSION['user']['nama_lengkap'] = $userDb['nama_lengkap'];
                 }
+                $_SESSION['user']['nama_panggilan'] = $userDb['nama_panggilan'] ?? null;
                 if (!empty($userDb['nama_pengguna'])) {
                     $_SESSION['user']['nama_pengguna'] = $userDb['nama_pengguna'];
                 }
