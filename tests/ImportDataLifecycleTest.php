@@ -375,6 +375,7 @@ runTest("4.1 - CustomerImportHandler: Resolusi foreign key grup, wilayah, dan sa
         $grupRow ? $grupRow['nama_grup'] : '',
         $wilayahRow ? $wilayahRow['nama_wilayah'] : '',
         'Reguler',
+        '', // Tipe Konsinyasi (kosong untuk Reguler)
         'Jl. Pengujian No. 123',
         '081122334455',
         'Tempo Faktur',
@@ -420,6 +421,7 @@ runTest("4.2 - CustomerImportHandler: FK yang tidak ada di database menghasilkan
         'GRUP_YANG_TIDAK_PERNAH_ADA_DI_DATABASE_12345',
         '',
         'Reguler',
+        '', // Tipe Konsinyasi (kosong untuk Reguler)
         'Jl. Hantu No. 404',
         '081111111',
         'Cash',
@@ -473,6 +475,34 @@ runTest("4.3 - ProductItemImportHandler: Resolusi relasi grup produk & upah boro
            ($first['data']['grup_id'] ?? null) === $grupProduk['id'];
 });
 
+runTest("4.4 - CustomerImportHandler: Validasi eksklusif Tipe Konsinyasi (hanya boleh jika Model Konsinyasi)", function() use ($pdo) {
+    $handler = new CustomerImportHandler();
+    $header = $handler->getTemplateHeaders();
+    $wilayah = $pdo->query("SELECT nama_wilayah FROM public.wilayah WHERE status_aktif = TRUE LIMIT 1")->fetchColumn() ?: 'Kota Tangerang';
+
+    // 1. Kasus Salah: Toko Reguler tapi kolom Tipe Konsinyasi diisi -> Wajib ERROR
+    $invalidRow = [
+        'CUST-ERR-TIPE', 'Toko Reguler Salah Tipe', 'Bpk Reguler', '', $wilayah,
+        'Reguler', 'Rolling Nota', 'Jl. Uji No. 1', '08123', 'Cash', 0, '', '', '', '', 'Aktif'
+    ];
+    $prev1 = $handler->previewRows([$invalidRow], $header, $pdo, 'append');
+    if (empty($prev1) || $prev1[0]['action'] !== 'ERROR' || !str_contains($prev1[0]['error_msg'], 'Tipe Konsinyasi')) {
+        return "Reguler store with Consignment Type was not rejected with ERROR";
+    }
+
+    // 2. Kasus Benar: Toko Konsinyasi dengan Tipe Konsinyasi 'Kolektif Tagihan' -> Wajib Valid
+    $validRow = [
+        'CUST-OK-KONSIN-' . time(), 'Toko Konsinyasi Sah', 'Ibu Konsin', '', $wilayah,
+        'Konsinyasi', 'Kolektif Tagihan', 'Jl. Uji No. 2', '08124', 'konsinyasi', 0, '', '', '', '', 'Aktif'
+    ];
+    $prev2 = $handler->previewRows([$validRow], $header, $pdo, 'append');
+    if (empty($prev2) || $prev2[0]['action'] !== 'INSERT' || $prev2[0]['data']['tipe_konsinyasi'] !== 'kolektif_tagihan') {
+        return "Valid consignment store with Kolektif Tagihan was not parsed correctly";
+    }
+
+    return true;
+});
+
 // ==================================================================
 // 5. DIFFING ENGINE STATE CLASSIFICATION
 // ==================================================================
@@ -487,7 +517,7 @@ runTest("5.1 - Diffing Engine: Baris dengan kode baru menghasilkan status INSERT
         'CUST-NONEXISTENT-' . time(),
         'Toko Baru Lahir',
         'Owner Baru',
-        '', $wilayah, 'Reguler', 'Jl. Baru No. 1', '0812345', 'Tempo 7 Hari', 0, '', '', '', '', 'Aktif'
+        '', $wilayah, 'Reguler', '', 'Jl. Baru No. 1', '0812345', 'Tempo 7 Hari', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
@@ -508,7 +538,7 @@ runTest("5.2 - Diffing Engine: Baris dengan kode sama tetapi field diubah mengha
     $row = [
         $existing['kode_pelanggan'],
         $existing['nama_toko'],
-        '', '', $existing['nama_wilayah'], 'Reguler', $updatedAlamat, '', 'Cash', 0, '', '', '', '', 'Aktif'
+        '', '', $existing['nama_wilayah'], 'Reguler', '', $updatedAlamat, '', 'Cash', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
@@ -554,7 +584,7 @@ runTest("5.4 - Diffing Engine: Baris tanpa field wajib (nama kosong) menghasilka
     $row = [
         'CUST-NO-NAME',
         '', // NAMA TOKO KOSONG (Wajib)
-        'Owner', '', 'Kota Tangerang', 'Reguler', 'Jl. Ada', '', 'Cash', 0, '', '', '', '', 'Aktif'
+        'Owner', '', 'Kota Tangerang', 'Reguler', '', 'Jl. Ada', '', 'Cash', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');

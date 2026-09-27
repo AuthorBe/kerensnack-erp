@@ -366,7 +366,7 @@ class TemplateGenerator
                     [20, 32, 22]
                 );
 
-                // 4. Model Toko & Tipe Bayar
+                // 4. Model Toko, Tipe Konsinyasi & Tipe Bayar
                 self::renderReferenceTable(
                     $refSheet,
                     '4. ATRIBUT STANDAR TRANSAKSI TOKO',
@@ -374,6 +374,9 @@ class TemplateGenerator
                     [
                         ['Model Toko', 'Reguler', 'Jual beli standar / putus (tunai atau kredit piutang)'],
                         ['Model Toko', 'Konsinyasi', 'Titip jual rak toko mitra dengan rekonsiliasi berkala & sisa stok'],
+                        ['Tipe Konsinyasi', 'Rolling Nota', 'HANYA untuk Konsinyasi: Pelunasan/penagihan bergulir di nota berikutnya'],
+                        ['Tipe Konsinyasi', 'Kolektif Tagihan', 'HANYA untuk Konsinyasi: Rekapitulasi beberapa nota tagihan sekaligus secara periodik'],
+                        ['Tipe Konsinyasi', '(Dikosongkan)', 'Wajib KOSONG jika Model Toko adalah Reguler'],
                         ['Tipe Pembayaran', 'cash', 'Pembayaran tunai langsung saat barang diserahkan'],
                         ['Tipe Pembayaran', 'transfer', 'Pembayaran via transfer rekening bank'],
                         ['Tipe Pembayaran', 'qris', 'Pembayaran digital via scan QRIS'],
@@ -484,6 +487,7 @@ class TemplateGenerator
                         ['roll', 'Roll / Gulungan — untuk plastik roll sablon, stiker rol, lakban'],
                         ['lembar', 'Lembar — untuk stiker label lembaran, karton sheet'],
                         ['liter', 'Liter — untuk minyak goreng curah / cair'],
+                        ['bal', 'Ball / Bal — untuk bahan mentah kemasan bal / karung (singkong bal, makaroni bal)'],
                     ],
                     $currentRow,
                     [20, 65]

@@ -1562,7 +1562,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         </div>
                     </div>
                     <p class="step-desc">
-                        Sistem konsinyasi KEREN ONE menerapkan <strong>Alur Rolling Antar-Nota</strong> di menu <strong>Konsinyasi</strong> (Sidebar: <em>Penjualan &amp; Transaksi &rarr; Konsinyasi &rarr; Tab Form Opname</em>):
+                        Sistem konsinyasi KEREN ONE menerapkan <strong>Alur Rolling Antar-Nota</strong> (ditetapkan pada Master Toko Pelanggan dengan <em>Model: Konsinyasi</em> dan <em>Tipe Konsinyasi: Rolling Nota</em>) di menu <strong>Konsinyasi</strong> (Sidebar: <em>Penjualan &amp; Transaksi &rarr; Konsinyasi &rarr; Tab Form Opname</em>):
                     </p>
                     
                     <div class="step-timeline">
@@ -1620,7 +1620,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         </div>
                     </div>
                     <p class="step-desc">
-                        SOP penagihan konsolidasi untuk jaringan minimarket atau toko mitra tempo melalui menu <strong>Konsinyasi</strong> (Sidebar: <em>Penjualan &amp; Transaksi &rarr; Konsinyasi &rarr; Tab Kolektif Tagihan</em>):
+                        SOP penagihan konsolidasi untuk jaringan minimarket atau toko mitra tempo (ditetapkan pada Master Toko Pelanggan dengan <em>Model: Konsinyasi</em> dan <em>Tipe Konsinyasi: Kolektif Tagihan</em>) melalui menu <strong>Konsinyasi</strong> (Sidebar: <em>Penjualan &amp; Transaksi &rarr; Konsinyasi &rarr; Tab Kolektif Tagihan</em>):
                     </p>
                     <div class="step-timeline">
                         <div class="step-item">
@@ -1855,7 +1855,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                             <div class="step-circle">1</div>
                             <div class="step-content">
                                 <h4 class="step-title">Fase 1: Master Pondasi Independen &amp; Kemasan Produk</h4>
-                                <p class="step-desc">Wajib diimpor pertama kali: <strong>1. Merek Produk</strong> (Brand), <strong>2. Wilayah &amp; Rute Distribusi</strong>, <strong>3. Grup Kemasan Produk</strong> (Gramasi, Bal to Pcs), dan <strong>4. Kelompok Upah Borongan</strong>.</p>
+                                <p class="step-desc">Wajib diimpor pertama kali: <strong>1. Merek Produk</strong> (Brand), <strong>2. Wilayah &amp; Rute Distribusi</strong> (kunci utama pemetaan toko), <strong>3. Grup Kemasan Produk</strong> (Gramasi, Bal to Pcs), dan <strong>4. Kelompok Upah Borongan</strong>.</p>
                             </div>
                         </div>
                         <div class="step-item">
@@ -1869,14 +1869,24 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                             <div class="step-circle">3</div>
                             <div class="step-content">
                                 <h4 class="step-title">Fase 3: Katalog Inventori &amp; Produksi</h4>
-                                <p class="step-desc">Langkah ketiga: <strong>9. Bahan Baku &amp; Kemas</strong> (singkong, bumbu, plastik vendor), dan <strong>10. Barang Jadi Siap Jual</strong> (SKU produk jadi yang mengikat Merek, Grup Kemasan, dan Upah Borongan).</p>
+                                <p class="step-desc">Langkah ketiga: <strong>9. Bahan Baku &amp; Kemas</strong> (singkong, bumbu, minyak, plastik dengan satuan standar: <code>kg</code>, <code>pcs</code>, <code>roll</code>, <code>lembar</code>, <code>liter</code>, serta <strong><code>bal</code></strong> untuk karung/kemasan bal mentah), dan <strong>10. Barang Jadi Siap Jual</strong> (SKU produk jadi yang mengikat Merek, Grup Kemasan, dan Upah Borongan).</p>
                             </div>
                         </div>
                         <div class="step-item">
                             <div class="step-circle">4</div>
                             <div class="step-content">
                                 <h4 class="step-title">Fase 4: Jaringan Toko Pelanggan (Puncak Relasi)</h4>
-                                <p class="step-desc">Langkah puncak: <strong>11. Toko Pelanggan</strong> (diimpor paling akhir karena mengikat Wilayah, Grup Pelanggan, dan Sales Pembina sekaligus).</p>
+                                <p class="step-desc">Langkah puncak: <strong>11. Toko Pelanggan</strong> (mengikat Wilayah, Grup Pelanggan, dan Sales Pembina sekaligus). Perhatikan aturan standar pengisian:</p>
+                                <ul style="padding-left:18px; margin:6px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                    <li><strong>Wilayah / Rute (Wajib):</strong> Wajib diisi dan harus terdaftar di master wilayah aktif (lihat Sheet 2).</li>
+                                    <li><strong>Alamat Lengkap (Opsional):</strong> Dapat dikosongkan jika belum lengkap (sistem otomatis mengisi tanda <code>-</code>).</li>
+                                    <li><strong>Model Kerjasama &amp; Tipe Konsinyasi:</strong>
+                                        <br>&bull; Toko <strong>Reguler</strong>: Kolom <em>Tipe Konsinyasi</em> <strong>wajib dikosongkan</strong> (sistem akan menolak bila diisi).
+                                        <br>&bull; Toko <strong>Konsinyasi</strong>: Kolom <em>Tipe Konsinyasi</em> diisi <code>Rolling Nota</code> (opname bergulir per nota) atau <code>Kolektif Tagihan</code> (rekapitulasi faktur periodik/tempo).
+                                    </li>
+                                    <li><strong>Status Toko Baru:</strong> Otomatis berstatus <strong>Aktif</strong> secara default saat diimpor, dan pelanggan default kasir (<code>CUST-001</code>) selalu diproteksi aktif.</li>
+                                    <li><strong>Grup Pelanggan:</strong> Bila dikosongkan di Excel, sistem otomatis menetapkan ke Grup Pelanggan default sistem.</li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -1884,9 +1894,11 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                     <div class="guide-box box-info">
                         <i data-lucide="shield-alert"></i>
                         <div>
-                            <strong>Dua Kebijakan Impor &amp; Mesin SmartReader:</strong><br>
-                            • <em>Mode Aman (Upsert):</em> Menambah data baru &amp; menimpa data yang berubah. Data database lain dijamin aman.<br>
-                            • <em>Sinkronisasi Penuh (Single Truth):</em> Berkas Excel menjadi acuan mutlak; entri lama yang tidak terdaftar akan otomatis di-soft delete atau dinonaktifkan bila memiliki riwayat transaksi agar integritas finansial tetap utuh.
+                            <strong>Fitur Unggulan Mesin Sinkronisasi &amp; SmartReader:</strong><br>
+                            • <em>Sheet 2 (Kamus &amp; Referensi Data):</em> Setiap template Excel yang diunduh dilengkapi Sheet 2 berisi referensi kode wilayah, grup, sales, dan opsi termin bayar sah tanpa perlu bolak-balik membuka aplikasi.<br>
+                            • <em>Pratinjau Data &amp; Diffing Engine:</em> Sebelum data dieksekusi ke database, sistem menampilkan tabel perbandingan mutasi (INSERT, UPDATE, DELETE, ERROR, FATAL) serta lencana status tipe konsinyasi untuk menjamin integritas data.<br>
+                            • <em>Mode Aman (Upsert):</em> Menambah data baru &amp; menimpa data yang berubah tanpa mengganggu data lain.<br>
+                            • <em>Sinkronisasi Penuh (Single Truth):</em> Berkas Excel menjadi acuan mutlak; entri lama yang tidak terdaftar akan otomatis dinonaktifkan / disoft-delete bila memiliki riwayat transaksi agar laporan finansial tetap utuh.
                         </div>
                     </div>
                 </section>

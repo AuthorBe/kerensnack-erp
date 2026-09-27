@@ -9,6 +9,7 @@ $flash = Flash::get();
 <script>
     window.__FLASH__ = <?= $flash ? json_encode([
         'type' => $flash['type'],
+        'title' => $flash['title'] ?? null,
         'message' => strip_tags($flash['message']),
         'raw_message' => $flash['message']
     ]) : 'null' ?>;

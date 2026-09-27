@@ -747,7 +747,10 @@ class ProductController extends Controller
 
         $namaItem = trim((string)$this->input('nama_item'));
         $tipeItem = in_array($this->input('tipe_item'), ['bahan_mentah', 'bahan_kemas'], true) ? $this->input('tipe_item') : 'bahan_mentah';
-        $satuanDasar = trim((string)$this->input('satuan_dasar', 'kg'));
+        $satuanDasar = strtolower(trim((string)$this->input('satuan_dasar', 'kg')));
+        if ($satuanDasar === 'ball') {
+            $satuanDasar = 'bal';
+        }
         $pemasokId = $this->input('pemasok_utama_id') ?: null;
         $hpp = (float)preg_replace('/[^0-9]/', '', (string)$this->input('harga_pokok_pembelian', '0'));
         $stokMin = (float)$this->input('stok_minimum_peringatan', 10);
@@ -839,7 +842,10 @@ class ProductController extends Controller
         $id = $this->input('id');
         $namaItem = trim((string)$this->input('nama_item'));
         $tipeItem = in_array($this->input('tipe_item'), ['bahan_mentah', 'bahan_kemas'], true) ? $this->input('tipe_item') : 'bahan_mentah';
-        $satuanDasar = trim((string)$this->input('satuan_dasar', 'kg'));
+        $satuanDasar = strtolower(trim((string)$this->input('satuan_dasar', 'kg')));
+        if ($satuanDasar === 'ball') {
+            $satuanDasar = 'bal';
+        }
         $pemasokId = $this->input('pemasok_utama_id') ?: null;
         $hpp = (float)preg_replace('/[^0-9]/', '', (string)$this->input('harga_pokok_pembelian', '0'));
         $stokMin = (float)$this->input('stok_minimum_peringatan', 10);

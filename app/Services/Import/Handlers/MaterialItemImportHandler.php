@@ -37,7 +37,7 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
             'Kode Bahan',
             'Nama Bahan Baku / Kemas',
             'Tipe Bahan (bahan_mentah / bahan_kemas)',
-            'Satuan Dasar (kg / pcs / lembar / roll)',
+            'Satuan Dasar (kg / pcs / lembar / roll / bal / liter)',
             'Pemasok Utama',
             'Harga Beli Pokok (Rp)',
             'Stok Minimum Warning',
@@ -47,13 +47,14 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
 
     public function getTemplateWidths(): array
     {
-        return [18, 32, 28, 24, 24, 20, 20, 14];
+        return [18, 32, 28, 26, 24, 20, 20, 14];
     }
 
     public function getTemplateExamples(): array
     {
         return [
             ['BAHAN-SINGKONG-CURAH', 'Singkong Basah Kupas Grade A', 'bahan_mentah', 'kg', 'Sentra Singkong Subang', 3500, 500, 'Aktif'],
+            ['BAHAN-MAKARONI-BAL', 'Makaroni Mentah Curah Bal 25kg', 'bahan_mentah', 'bal', 'PT Makaroni Jaya Abadi', 320000, 10, 'Aktif'],
             ['BAHAN-BUMBU-BALADO', 'Bumbu Tabur Balado Super 1kg', 'bahan_mentah', 'kg', 'PT Sumber Rasa Sejahtera', 45000, 20, 'Aktif'],
             ['KEMAS-PLASTIK-250', 'Plastik Kemasan Sablon 250gr', 'bahan_kemas', 'lembar', 'UD Plastik Prima Abadi', 650, 2000, 'Aktif'],
         ];
@@ -63,7 +64,7 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
     {
         return [
             'Kode Bahan bersifat unik (contoh: BAHAN-SINGKONG-CURAH). Kosongkan jika ingin auto-code.',
-            'Nama Bahan dan Satuan Dasar WAJIB diisi.',
+            'Nama Bahan dan Satuan Dasar WAJIB diisi (contoh satuan: kg, pcs, lembar, roll, bal, liter).',
             'Tipe Bahan: isi "bahan_mentah" (singkong, bumbu, minyak) atau "bahan_kemas" (plastik, kardus, lakban).',
             'Pemasok Utama dapat diisi Nama atau Kode Pemasok terdaftar.'
         ];
@@ -113,7 +114,13 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
             $kode = (string)(SmartReader::getSmartValue($rowData, ['kode_bahan', 'kode_sku', 'kode', 'kd_bahan']) ?? '');
             $nama = (string)(SmartReader::getSmartValue($rowData, ['nama_bahan_baku_kemas', 'nama_bahan', 'nama_item', 'nama']) ?? '');
             $tipeRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_bahan', 'tipe', 'jenis_bahan']) ?? 'bahan_mentah');
-            $satuan = (string)(SmartReader::getSmartValue($rowData, ['satuan_dasar', 'satuan']) ?? 'kg');
+            $satuanRaw = (string)(SmartReader::getSmartValue($rowData, ['satuan_dasar', 'satuan']) ?? 'kg');
+            $satuan = strtolower(trim($satuanRaw));
+            if (in_array($satuan, ['ball', 'bal'], true)) {
+                $satuan = 'bal';
+            } elseif ($satuan === '') {
+                $satuan = 'kg';
+            }
             $pemasokRaw = (string)(SmartReader::getSmartValue($rowData, ['pemasok_utama', 'pemasok', 'supplier']) ?? '');
             $hargaRaw = SmartReader::getSmartValue($rowData, ['harga_beli_pokok', 'harga_pokok_pembelian', 'harga_beli']);
             $stokMinRaw = SmartReader::getSmartValue($rowData, ['stok_minimum_warning', 'stok_minimum_peringatan', 'stok_min']);

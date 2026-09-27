@@ -57,6 +57,8 @@ if (!function_exists('ks_format_diff_label')) {
             'nama_kontak'             => 'Kontak PIC',
             'plafon_piutang'          => 'Plafon Piutang',
             'is_konsinyasi'           => 'Tipe Toko',
+            'tipe_konsinyasi'         => 'Tipe Konsinyasi',
+            'display_tipe_konsinyasi' => 'Tipe Konsinyasi',
             'tipe_pembayaran_default' => 'Metode Bayar Default',
             'harga_jual_per_pcs'      => 'Harga Jual / Pcs',
             'harga_jual_pcs'          => 'Harga Jual / Pcs',
@@ -133,11 +135,20 @@ if (!function_exists('rm_format_cell_value')) {
         if ($val === null || $val === '' || $val === '—') {
             return '<span class="text-slate-400 dark:text-slate-500 italic text-xs">—</span>';
         }
-        if ($type === 'boolean' || is_bool($val)) {
-            $b = is_bool($val) ? $val : (in_array(strtolower((string)$val), ['1', 'true', 'aktif', 'ya'], true));
-            return $b
-                ? '<span class="badge badge-success text-[11px] font-bold">Aktif</span>'
-                : '<span class="badge badge-danger text-[11px] font-bold">Nonaktif</span>';
+        if ($type === 'konsinyasi') {
+            $isKonsin = is_bool($val) ? $val : (str_contains(strtolower((string)$val), 'konsin') || $val == '1');
+            return $isKonsin
+                ? '<span class="badge badge-primary text-[11px] font-bold">Konsinyasi</span>'
+                : '<span class="badge badge-secondary text-[11px] font-bold">Reguler</span>';
+        }
+        if ($type === 'tipe_konsinyasi') {
+            $s = strtolower(trim((string)$val));
+            if ($s === 'rolling_nota' || str_contains($s, 'rolling')) {
+                return '<span class="badge text-[11px] font-bold" style="color:#881337;background:rgba(136,19,55,0.08);border:1px solid rgba(136,19,55,0.25);">📜 Rolling Nota</span>';
+            } elseif ($s === 'kolektif_tagihan' || str_contains($s, 'kolektif')) {
+                return '<span class="badge text-[11px] font-bold" style="color:#d97706;background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.25);">📑 Kolektif Tagihan</span>';
+            }
+            return '<span class="text-slate-400 dark:text-slate-500 italic text-xs">—</span>';
         }
         if ($type === 'gender') {
             $g = strtoupper(trim((string)$val));
@@ -145,14 +156,14 @@ if (!function_exists('rm_format_cell_value')) {
                 ? '<span class="badge text-[11px] font-bold" style="color:#db2777;background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.3);">🧕 Perempuan</span>'
                 : '<span class="badge text-[11px] font-bold" style="color:#2563eb;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);">👨‍💼 Laki-laki</span>';
         }
-        if ($type === 'konsinyasi') {
-            $isKonsin = is_bool($val) ? $val : (str_contains(strtolower((string)$val), 'konsin') || $val == '1');
-            return $isKonsin
-                ? '<span class="badge badge-primary text-[11px] font-bold">Konsinyasi</span>'
-                : '<span class="badge badge-secondary text-[11px] font-bold">Reguler</span>';
-        }
         if ($type === 'currency' && is_numeric($val)) {
             return '<span class="font-mono font-semibold text-slate-800 dark:text-slate-200">Rp ' . number_format((float)$val, 0, ',', '.') . '</span>';
+        }
+        if ($type === 'boolean' || is_bool($val)) {
+            $b = is_bool($val) ? $val : (in_array(strtolower((string)$val), ['1', 'true', 'aktif', 'ya'], true));
+            return $b
+                ? '<span class="badge badge-success text-[11px] font-bold">Aktif</span>'
+                : '<span class="badge badge-danger text-[11px] font-bold">Nonaktif</span>';
         }
         return htmlspecialchars((string)$val);
     }
@@ -181,6 +192,9 @@ if (!function_exists('ks_get_row_val')) {
         if ($key === 'nama_bank' && isset($arr['bank_nama'])) return $arr['bank_nama'];
         if ($key === 'nomor_rekening' && isset($arr['bank_nomor_rekening'])) return $arr['bank_nomor_rekening'];
         if ($key === 'atas_nama_rekening' && isset($arr['bank_atas_nama'])) return $arr['bank_atas_nama'];
+        if ($key === 'display_tipe_konsinyasi') {
+            return $arr['display_tipe_konsinyasi'] ?? $arr['tipe_konsinyasi_label'] ?? (!empty($arr['tipe_konsinyasi']) ? ($arr['tipe_konsinyasi'] === 'kolektif_tagihan' ? 'Kolektif Tagihan' : 'Rolling Nota') : '—');
+        }
         return null;
     }
 }
@@ -197,6 +211,7 @@ $entityColumnsConfig = [
             ['key' => 'display_wilayah', 'label' => 'Wilayah / Rute'],
             ['key' => 'display_sales', 'label' => 'Sales Pembina'],
             ['key' => 'is_konsinyasi', 'label' => 'Model Toko', 'type' => 'konsinyasi'],
+            ['key' => 'display_tipe_konsinyasi', 'label' => 'Tipe Konsinyasi', 'type' => 'tipe_konsinyasi'],
             ['key' => 'plafon_piutang', 'label' => 'Plafon Piutang', 'type' => 'currency'],
             ['key' => 'tipe_pembayaran_default', 'label' => 'Tipe Bayar'],
             ['key' => 'nomor_whatsapp', 'label' => 'WhatsApp'],

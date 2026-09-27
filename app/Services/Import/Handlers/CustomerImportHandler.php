@@ -27,7 +27,6 @@ class CustomerImportHandler implements EntityImportHandlerInterface
     {
         return [
             ['nama_toko', 'toko', 'nama_pelanggan', 'nama'],
-            ['alamat', 'alamat_lengkap'],
             ['wilayah', 'rute', 'wilayah_rute', 'nama_wilayah']
         ];
     }
@@ -41,6 +40,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             'Grup Pelanggan',
             'Wilayah / Rute',
             'Model Kerjasama',
+            'Tipe Konsinyasi',
             'Alamat Lengkap',
             'No WhatsApp',
             'Tipe Bayar Default',
@@ -55,15 +55,15 @@ class CustomerImportHandler implements EntityImportHandlerInterface
 
     public function getTemplateWidths(): array
     {
-        return [18, 28, 22, 22, 22, 18, 35, 18, 20, 18, 22, 14, 18, 22, 14];
+        return [18, 28, 22, 22, 22, 18, 20, 35, 18, 20, 18, 22, 14, 18, 22, 14];
     }
 
     public function getTemplateExamples(): array
     {
         return [
-            ['CUST-0001', 'Toko Sumber Rezeki', 'Ibu Hj. Aminah', 'Grup Ritel A', 'RUTE-TNG-BARAT', 'Reguler', 'Jl. Merdeka No. 12, Tangerang', '081234567890', 'Tempo Faktur', 5000000, 'Budi Santoso', 'BCA', '1234567890', 'Aminah', 'Aktif'],
-            ['CUST-0002', 'Warung Berkah Jaya', 'Pak Hendra', 'Grup Grosir Pasar', 'RUTE-JAKBAR-1', 'Konsinyasi', 'Pasar Laris Blok B No. 4, Cengkareng', '085678901234', 'Konsinyasi', 2000000, '', 'BRI', '9876543210', 'Hendra', 'Aktif'],
-            ['', 'Toko Baru Makmur (Contoh Baru)', 'Bpk Slamet', 'Grup Ritel A', 'RUTE-TNG-TIMUR', 'Reguler', 'Jl. Raya Serpong No. 8', '081399887766', 'Cash', 0, '', '', '', '', 'Aktif'],
+            ['CUST-0001', 'Toko Sumber Rezeki', 'Ibu Hj. Aminah', 'Grup Ritel A', 'RUTE-TNG-BARAT', 'Reguler', '', 'Jl. Merdeka No. 12, Tangerang', '081234567890', 'Tempo Faktur', 5000000, 'Budi Santoso', 'BCA', '1234567890', 'Aminah', 'Aktif'],
+            ['CUST-0002', 'Warung Berkah Jaya', 'Pak Hendra', 'Grup Grosir Pasar', 'RUTE-JAKBAR-1', 'Konsinyasi', 'Rolling Nota', 'Pasar Laris Blok B No. 4, Cengkareng', '085678901234', 'Konsinyasi', 2000000, '', 'BRI', '9876543210', 'Hendra', 'Aktif'],
+            ['', 'Toko Baru Makmur (Contoh Baru)', 'Bpk Slamet', 'Grup Ritel A', 'RUTE-TNG-TIMUR', 'Reguler', '', '', '081399887766', 'Cash', 0, '', '', '', '', 'Aktif'],
         ];
     }
 
@@ -72,8 +72,9 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         return [
             'Kolom Kode Pelanggan dapat dikosongkan untuk entri baru (akan dibuatkan otomatis oleh sistem: CUST-0002, dst).',
             'Pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak akan pernah terhapus atau dinonaktifkan pada proses sinkronisasi.',
-            'Nama Toko, Wilayah/Rute, dan Alamat Lengkap WAJIB diisi di setiap baris.',
+            'Nama Toko dan Wilayah/Rute WAJIB diisi. Alamat Lengkap bersifat opsional (dapat dikosongkan jika belum ada).',
             'Model Kerjasama: isi "Konsinyasi" untuk toko titip jual rak, atau "Reguler" untuk jual putus / tempo.',
+            'Tipe Konsinyasi: isi "Rolling Nota" atau "Kolektif Tagihan". HANYA boleh diisi jika Model Kerjasama adalah Konsinyasi (wajib kosongkan jika Reguler).',
             'Tipe Bayar Default: Cash, Transfer, QRIS, Tempo Faktur, Tempo Tanggal, atau Konsinyasi (dapat ditulis dengan spasi atau huruf kecil/besar).',
             'Grup Pelanggan, Wilayah/Rute, dan Sales Pembina dapat diisi Kode atau Nama yang sudah terdaftar di sistem.'
         ];
@@ -85,6 +86,11 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                        COALESCE(g.nama_grup, '') as nama_grup,
                        COALESCE(w.nama_wilayah, '') as nama_wilayah,
                        CASE WHEN p.is_konsinyasi THEN 'Konsinyasi' ELSE 'Reguler' END as model_kerjasama,
+                       CASE 
+                           WHEN NOT p.is_konsinyasi THEN ''
+                           WHEN p.tipe_konsinyasi = 'kolektif_tagihan' THEN 'Kolektif Tagihan'
+                           ELSE 'Rolling Nota'
+                       END as tipe_konsinyasi_label,
                        p.alamat_lengkap,
                        COALESCE(p.nomor_whatsapp, '') as nomor_whatsapp,
                        CASE 
@@ -112,6 +118,18 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             $rows[] = $r;
         }
         return $rows;
+    }
+
+    /**
+     * Normalisasi Tipe Konsinyasi (Rolling Nota / Kolektif Tagihan)
+     */
+    public static function normalizeConsignmentType(string $raw): string
+    {
+        $clean = strtolower(trim($raw));
+        if (str_contains($clean, 'kolektif') || str_contains($clean, 'tagihan') || str_contains($clean, 'bulan') || str_contains($clean, 'periodik')) {
+            return 'kolektif_tagihan';
+        }
+        return 'rolling_nota';
     }
 
     /**
@@ -203,7 +221,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
 
         // Data database saat ini untuk diffing
         $currentDbRows = $pdo->query("SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik,
-                                             p.grup_pelanggan_id, p.is_konsinyasi, p.wilayah_id,
+                                             p.grup_pelanggan_id, p.is_konsinyasi, p.tipe_konsinyasi, p.wilayah_id,
                                              p.alamat_lengkap, p.nomor_whatsapp,
                                              p.tipe_pembayaran_default, p.plafon_piutang, p.sales_driver_id,
                                              p.nama_bank, p.nomor_rekening, p.atas_nama_rekening, p.status_aktif,
@@ -240,7 +258,11 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             $grupRaw = (string)(SmartReader::getSmartValue($rowData, ['grup_pelanggan', 'grup', 'kategori']) ?? '');
             $wilayahRaw = (string)(SmartReader::getSmartValue($rowData, ['wilayah', 'rute', 'wilayah_rute']) ?? '');
             $modelRaw = (string)(SmartReader::getSmartValue($rowData, ['model_kerjasama', 'konsinyasi', 'tipe_toko']) ?? '');
-            $alamat = (string)(SmartReader::getSmartValue($rowData, ['alamat_lengkap', 'alamat']) ?? '');
+            $tipeKonsinyasiRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_konsinyasi', 'skema_konsinyasi', 'jenis_konsinyasi', 'konsinyasi_tipe']) ?? '');
+            $alamat = trim((string)(SmartReader::getSmartValue($rowData, ['alamat_lengkap', 'alamat']) ?? ''));
+            if ($alamat === '') {
+                $alamat = '-';
+            }
             $whatsapp = (string)(SmartReader::getSmartValue($rowData, ['nomor_whatsapp', 'whatsapp', 'no_wa', 'wa', 'no_hp', 'hp', 'nomor_telepon', 'telepon', 'no_telp', 'telp']) ?? '');
             $tipeBayarRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_pembayaran_default', 'tipe_bayar', 'pembayaran', 'cara_bayar', 'metode_bayar']) ?? '');
             $plafonRaw = SmartReader::getSmartValue($rowData, ['plafon_piutang', 'plafon', 'limit_piutang']);
@@ -263,6 +285,18 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             // Auto-Sync: jika tipe bayar bukan konsinyasi, otomatis toko adalah Reguler
             $isKonsinyasi = ($tipeBayar === 'konsinyasi');
 
+            // Validasi Tipe Konsinyasi: HANYA boleh diisi jika Model Kerjasama adalah Konsinyasi
+            if (!$isKonsinyasi && !empty(trim($tipeKonsinyasiRaw))) {
+                $previewList[] = [
+                    'action'    => 'ERROR',
+                    'error_msg' => "Kolom Tipe Konsinyasi ('{$tipeKonsinyasiRaw}') pada baris {$lineNo} hanya boleh diisi jika Model Kerjasama adalah 'Konsinyasi'. Untuk toko Reguler, harap kosongkan kolom ini.",
+                    'data'      => ['kode_pelanggan' => $kode, 'nama_toko' => $nama, 'alamat_lengkap' => $alamat]
+                ];
+                continue;
+            }
+
+            $tipeKonsinyasi = $isKonsinyasi ? self::normalizeConsignmentType($tipeKonsinyasiRaw) : 'rolling_nota';
+
             // Proteksi status_aktif untuk pelanggan default POS CUST-001
             if (strtoupper(trim((string)$kode)) === 'CUST-001') {
                 $statusAktif = true;
@@ -274,14 +308,6 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     'action' => 'ERROR',
                     'error_msg' => "Nama Toko kosong pada baris {$lineNo}. Kolom ini wajib diisi.",
                     'data' => ['kode_pelanggan' => $kode, 'nama_toko' => '—', 'alamat_lengkap' => $alamat]
-                ];
-                continue;
-            }
-            if (empty($alamat)) {
-                $previewList[] = [
-                    'action' => 'ERROR',
-                    'error_msg' => "Alamat Lengkap kosong untuk toko '{$nama}' pada baris {$lineNo}. Wajib diisi.",
-                    'data' => ['kode_pelanggan' => $kode, 'nama_toko' => $nama, 'alamat_lengkap' => '—']
                 ];
                 continue;
             }
@@ -381,6 +407,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 'nama_pemilik'            => $pemilik,
                 'grup_pelanggan_id'       => $grupId,
                 'is_konsinyasi'           => $isKonsinyasi,
+                'tipe_konsinyasi'         => $tipeKonsinyasi,
                 'wilayah_id'              => $wilayahId,
                 'alamat_lengkap'          => $alamat,
                 'nomor_whatsapp'          => $whatsapp,
@@ -395,6 +422,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 'display_grup'            => $grupRaw ?: ($dbRow['nama_grup'] ?? '—'),
                 'display_wilayah'         => $wilayahRaw ?: ($dbRow['nama_wilayah'] ?? '—'),
                 'display_sales'           => $salesId ? ($salesNameById[$salesId] ?? ($salesRaw ?: '—')) : '—',
+                'display_tipe_konsinyasi' => $isKonsinyasi ? ($tipeKonsinyasi === 'kolektif_tagihan' ? 'Kolektif Tagihan' : 'Rolling Nota') : '—',
             ];
 
             if ($dbRow) {
@@ -418,6 +446,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     || trim($alamat) !== trim((string)$dbRow['alamat_lengkap'])
                     || trim($whatsapp) !== trim((string)($dbRow['nomor_whatsapp'] ?? ''))
                     || $isKonsinyasi !== (bool)$dbRow['is_konsinyasi']
+                    || ($isKonsinyasi && $tipeKonsinyasi !== ($dbRow['tipe_konsinyasi'] ?? 'rolling_nota'))
                     || $statusAktif !== (bool)$dbRow['status_aktif']
                     || abs($plafon - (float)$dbRow['plafon_piutang']) > 0.01
                     || $tipeBayar !== $dbRow['tipe_pembayaran_default']
@@ -501,13 +530,13 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         }
 
         $stmtIns = $pdo->prepare("INSERT INTO public.pelanggan 
-            (kode_pelanggan, nama_toko, nama_pemilik, grup_pelanggan_id, is_konsinyasi, wilayah_id, 
+            (kode_pelanggan, nama_toko, nama_pemilik, grup_pelanggan_id, is_konsinyasi, tipe_konsinyasi, wilayah_id, 
              alamat_lengkap, nomor_whatsapp, tipe_pembayaran_default, plafon_piutang, 
              sales_driver_id, nama_bank, nomor_rekening, atas_nama_rekening, status_aktif)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmtUpd = $pdo->prepare("UPDATE public.pelanggan SET 
-            nama_toko = ?, nama_pemilik = ?, grup_pelanggan_id = ?, is_konsinyasi = ?, wilayah_id = ?, 
+            nama_toko = ?, nama_pemilik = ?, grup_pelanggan_id = ?, is_konsinyasi = ?, tipe_konsinyasi = ?, wilayah_id = ?, 
             alamat_lengkap = ?, nomor_whatsapp = ?, tipe_pembayaran_default = ?, 
             plafon_piutang = ?, sales_driver_id = ?, nama_bank = ?, nomor_rekening = ?, atas_nama_rekening = ?, 
             status_aktif = ?, diubah_pada = NOW()
@@ -535,8 +564,9 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     $d['nama_pemilik'] ?? null,
                     $d['grup_pelanggan_id'] ?? $defaultGroupId,
                     !empty($d['is_konsinyasi']) ? 1 : 0,
+                    $d['tipe_konsinyasi'] ?? 'rolling_nota',
                     $d['wilayah_id'] ?? null,
-                    $d['alamat_lengkap'] ?? '',
+                    !empty($d['alamat_lengkap']) ? $d['alamat_lengkap'] : '-',
                     $d['nomor_whatsapp'] ?? null,
                     $d['tipe_pembayaran_default'] ?? 'cash',
                     $d['plafon_piutang'] ?? 0,
@@ -556,8 +586,9 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     $d['nama_pemilik'] ?? null,
                     $d['grup_pelanggan_id'] ?? $defaultGroupId,
                     !empty($d['is_konsinyasi']) ? 1 : 0,
+                    $d['tipe_konsinyasi'] ?? 'rolling_nota',
                     $d['wilayah_id'] ?? null,
-                    $d['alamat_lengkap'] ?? '',
+                    !empty($d['alamat_lengkap']) ? $d['alamat_lengkap'] : '-',
                     $d['nomor_whatsapp'] ?? null,
                     $d['tipe_pembayaran_default'] ?? 'cash',
                     $d['plafon_piutang'] ?? 0,

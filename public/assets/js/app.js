@@ -1112,10 +1112,10 @@
   };
 
   // Smart Parser: Mengubah pesan server mentah menjadi Judul Elegan + Subtitle Kartu Tengah
-  function formatSmartFeedback(rawMsg, isSuccess = true) {
+  function formatSmartFeedback(rawMsg, isSuccess = true, customTitle = null) {
     if (!rawMsg) {
       return {
-        title: isSuccess ? 'Berhasil Disimpan! ✨' : 'Terjadi Kesalahan!',
+        title: (customTitle && customTitle !== 'Berhasil' && customTitle !== 'Gagal / Kesalahan' && customTitle !== 'Notifikasi') ? customTitle : (isSuccess ? 'Berhasil Disimpan! ✨' : 'Terjadi Kesalahan!'),
         subtext: ''
       };
     }
@@ -1123,10 +1123,17 @@
     const lower = msg.toLowerCase();
 
     if (isSuccess) {
-      let title = 'Berhasil Diproses! ✨';
+      let title = (customTitle && customTitle !== 'Berhasil' && customTitle !== 'Notifikasi') ? customTitle : 'Berhasil Diproses! ✨';
+      if (!title.includes('✨') && !title.includes('🎉') && !title.includes('🧾') && !title.includes('📦') && !title.includes('🚚') && !title.includes('🗑️')) {
+        title += ' ✨';
+      }
       let subtext = '';
 
-      if (lower.includes('selamat datang') || lower.includes('login') || lower.includes('berhasil masuk')) {
+      if (lower.includes('sinkronisasi') || lower.includes('impor') || lower.includes('import')) {
+        title = 'Sinkronisasi Berhasil! ✨';
+        const cleanSubtext = msg.replace(/^Sinkronisasi\s+.*?\s+berhasil diterapkan!\s*/i, '').trim();
+        subtext = cleanSubtext || msg;
+      } else if (lower.includes('selamat datang') || lower.includes('login') || lower.includes('berhasil masuk')) {
         title = 'Login Berhasil! 🎉';
         subtext = msg;
       } else if (lower.includes('toko') || lower.includes('pelanggan')) {
@@ -1212,17 +1219,19 @@
         }
       }
 
-      if (subtext && subtext.length > 95) {
-        subtext = subtext.substring(0, 92) + '...';
+      if (subtext && subtext.length > 130) {
+        subtext = subtext.substring(0, 127) + '...';
       }
 
       return { title, subtext };
     } else {
       // Gagal / Error
-      let title = 'Gagal Memproses Data!';
+      let title = (customTitle && customTitle !== 'Berhasil' && customTitle !== 'Gagal / Kesalahan' && customTitle !== 'Notifikasi') ? customTitle : 'Gagal Memproses Data!';
       let subtext = msg;
 
-      if (lower.includes('stok') && (lower.includes('kurang') || lower.includes('tidak cukup') || lower.includes('mencukupi') || lower.includes('defisit'))) {
+      if (lower.includes('sinkronisasi') || lower.includes('impor') || lower.includes('import')) {
+        title = 'Sinkronisasi Gagal!';
+      } else if (lower.includes('stok') && (lower.includes('kurang') || lower.includes('tidak cukup') || lower.includes('mencukupi') || lower.includes('defisit'))) {
         title = 'Stok Gudang Tidak Cukup!';
       } else if (lower.includes('ditolak') || lower.includes('melebihi')) {
         title = 'Transaksi Ditolak Sistem!';
@@ -1234,8 +1243,8 @@
         title = 'Akses Dibatasi!';
       }
 
-      if (subtext.length > 85) {
-        subtext = subtext.substring(0, 82) + '...';
+      if (subtext.length > 130) {
+        subtext = subtext.substring(0, 127) + '...';
       }
 
       return { title, subtext };
@@ -1273,13 +1282,14 @@
     // Tampilkan Animasi di Tengah Layar (Gaya Kasir POS) untuk Seluruh Notifikasi Server
     if (flash && (flash.type === 'error' || flash.type === 'danger')) {
       AppSkeleton.hide();
-      const feedback = formatSmartFeedback(flash.message, false);
+      const feedback = formatSmartFeedback(flash.message, false, flash.title);
       AppAction.error(feedback.title, feedback.subtext, 2200);
     } else if (flash && flash.type === 'success') {
       AppSkeleton.hide();
-      const feedback = formatSmartFeedback(flash.message, true);
+      const feedback = formatSmartFeedback(flash.message, true, flash.title);
       const isLogin = feedback.title.toLowerCase().includes('login') || (flash.message && flash.message.toLowerCase().includes('selamat datang'));
-      const duration = isLogin ? 1800 : 1500;
+      const isSync = feedback.title.toLowerCase().includes('sinkronisasi') || (flash.message && (flash.message.toLowerCase().includes('sinkronisasi') || flash.message.toLowerCase().includes('impor')));
+      const duration = isSync ? 2800 : (isLogin ? 1800 : 1500);
       AppAction.success(feedback.title, feedback.subtext, duration);
     } else if (flash && (flash.type === 'warning' || flash.type === 'info')) {
       AppSkeleton.hide();
