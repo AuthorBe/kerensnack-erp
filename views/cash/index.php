@@ -154,7 +154,7 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- GRID AKUN KAS / BANK CARDS                                                -->
     <!-- ========================================================================= -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
         <?php foreach ($accounts as $acc): 
             $isBank = $acc['tipe_akun'] === 'bank';
             $isQris = $acc['tipe_akun'] === 'qris';
@@ -176,27 +176,27 @@ ob_start();
             $tabCategory = $isTunai ? 'kas_tunai' : ($isBank ? 'bank' : 'digital');
         ?>
         <div x-show="tabFilter === 'all' || tabFilter === '<?= $tabCategory ?>'" 
-             class="card p-5" 
-             style="display:flex;flex-direction:column;justify-content:space-between;gap:14px;background:var(--color-canvas);border:1px solid <?= $acc['is_default_pos'] ? 'rgba(16,185,129,0.5)' : 'var(--color-hairline)' ?>;border-radius:var(--rounded-lg);box-shadow:var(--shadow-1);<?= !$acc['status_aktif'] ? 'opacity:0.65;' : '' ?>">
+             class="card p-5 sm:p-6" 
+             style="display:flex;flex-direction:column;justify-content:space-between;background:var(--color-canvas);border:1px solid <?= $acc['is_default_pos'] ? 'rgba(16,185,129,0.5)' : 'var(--color-hairline)' ?>;border-radius:16px;box-shadow:var(--shadow-1);<?= !$acc['status_aktif'] ? 'opacity:0.65;' : '' ?>">
             
             <!-- Header Kartu -->
-            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-                    <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:<?= $badgeBg ?>;color:<?= $badgeColor ?>;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px;">
+                <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                    <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:<?= $badgeBg ?>;color:<?= $badgeColor ?>;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
                         <i data-lucide="<?= $iconName ?>" style="width:20px;height:20px;"></i>
                     </div>
-                    <div style="min-width:0;">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="font-weight:800;font-size:14px;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($acc['nama_akun']) ?>">
+                    <div style="min-width:0;flex:1;">
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <span style="font-weight:800;font-size:15px;color:var(--color-ink);line-height:1.3;" title="<?= htmlspecialchars($acc['nama_akun']) ?>">
                                 <?= htmlspecialchars($acc['nama_akun']) ?>
                             </span>
                             <?php if (!$acc['status_aktif']): ?>
-                                <span class="badge badge-danger" style="font-size:9.5px; padding:1px 5px;">Nonaktif</span>
+                                <span class="badge badge-danger" style="font-size:9.5px;padding:1px 6px;">Nonaktif</span>
                             <?php endif; ?>
                         </div>
-                        <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;">
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:3px;line-height:1.3;">
                             <?php if ($isBank): ?>
-                                <span class="font-mono"><?= htmlspecialchars($acc['nomor_rekening'] ?: '-') ?></span> (a.n. <?= htmlspecialchars($acc['atas_nama'] ?: '-') ?>)
+                                <span class="font-mono" style="font-weight:600;"><?= htmlspecialchars($acc['nomor_rekening'] ?: '-') ?></span> (a.n. <?= htmlspecialchars($acc['atas_nama'] ?: '-') ?>)
                             <?php else: ?>
                                 <?= htmlspecialchars($tipeLabel) ?>
                             <?php endif; ?>
@@ -205,16 +205,16 @@ ob_start();
                 </div>
 
                 <!-- Default POS Status / Action -->
-                <div>
+                <div style="flex-shrink:0;">
                     <?php if ($acc['is_default_pos']): ?>
-                        <span class="badge badge-success" style="font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;padding:3px 8px;">
-                            <i data-lucide="check-circle-2" style="width:12px;height:12px;"></i>
+                        <span class="badge badge-success" style="font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;">
+                            <i data-lucide="check-circle-2" style="width:13px;height:13px;"></i>
                             <span>Default POS</span>
                         </span>
                     <?php elseif ($acc['status_aktif'] && Auth::can('cash.manage_accounts')): ?>
                         <form action="<?= Router::url('/cash/set-default-pos') ?>" method="POST" style="margin:0;">
                             <input type="hidden" name="id" value="<?= $acc['id'] ?>">
-                            <button type="submit" class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--color-ink-mute);padding:3px 8px;border-radius:12px;border:1px dashed var(--color-hairline);" title="Jadikan akun ini sebagai penerima kasir POS">
+                            <button type="submit" class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--color-ink-mute);padding:4px 10px;border-radius:8px;border:1px dashed var(--color-hairline);display:inline-flex;align-items:center;gap:4px;" title="Jadikan akun ini sebagai penerima kasir POS">
                                 <i data-lucide="star" style="width:12px;height:12px;"></i>
                                 <span>Set Default POS</span>
                             </button>
@@ -224,47 +224,47 @@ ob_start();
             </div>
 
             <!-- Saldo Saat Ini & Rekonsiliasi Mini Badge -->
-            <div style="padding:12px 14px;background:var(--color-canvas-soft);border-radius:var(--rounded-md);border:1px solid var(--color-hairline);">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:11px;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Saldo Kas Saat Ini</span>
+            <div style="margin-bottom:18px;padding:14px 16px;background:var(--color-canvas-soft);border-radius:12px;border:1px solid var(--color-hairline);">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <span style="font-size:10.5px;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.06em;font-weight:800;">Saldo Kas Saat Ini</span>
                     <?php if ($acc['is_reconciled']): ?>
-                        <span style="font-size:10.5px; font-weight:700; color:#10b981; display:inline-flex; align-items:center; gap:3px;">
-                            <i data-lucide="check" style="width:11px; height:11px;"></i> Rekonsil
+                        <span style="font-size:11px;font-weight:700;color:#10b981;display:inline-flex;align-items:center;gap:3.5px;">
+                            <i data-lucide="check" style="width:12px;height:12px;"></i> Rekonsil
                         </span>
                     <?php else: ?>
-                        <span style="font-size:10.5px; font-weight:700; color:#ef4444; display:inline-flex; align-items:center; gap:3px;" title="Selisih dengan Buku Besar: Rp <?= number_format($acc['selisih_rekonsiliasi'], 2) ?>">
-                            <i data-lucide="alert-circle" style="width:11px; height:11px;"></i> Selisih Rp <?= number_format($acc['selisih_rekonsiliasi'], 0, ',', '.') ?>
+                        <span style="font-size:11px;font-weight:700;color:#ef4444;display:inline-flex;align-items:center;gap:3.5px;" title="Selisih dengan Buku Besar: Rp <?= number_format($acc['selisih_rekonsiliasi'], 2) ?>">
+                            <i data-lucide="alert-circle" style="width:12px;height:12px;"></i> Selisih Rp <?= number_format($acc['selisih_rekonsiliasi'], 0, ',', '.') ?>
                         </span>
                     <?php endif; ?>
                 </div>
-                <div style="font-size:22px;font-weight:900;font-family:var(--font-mono);color:<?= (float)$acc['saldo_saat_ini'] >= 0 ? 'var(--color-ink)' : '#ef4444' ?>;margin-top:2px;white-space:nowrap;">
+                <div style="font-size:24px;font-weight:900;font-family:var(--font-mono);color:<?= (float)$acc['saldo_saat_ini'] >= 0 ? 'var(--color-ink)' : '#ef4444' ?>;margin-top:6px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                     <?= Format::rupiah((float)$acc['saldo_saat_ini']) ?>
                 </div>
             </div>
 
             <!-- Footer Kartu & Aksi Lengkap -->
-            <div style="display:flex;align-items:center;justify-content:space-between;padding-top:6px;border-top:1px solid var(--color-hairline);">
-                <span style="font-size:11.5px;color:var(--color-ink-mute);">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--color-hairline);">
+                <span style="font-size:12px;font-weight:600;color:var(--color-ink-mute);">
                     <?= (int)$acc['total_transaksi'] ?> Transaksi
                 </span>
 
-                <div style="display:flex;gap:4px;align-items:center;">
+                <div style="display:flex;gap:5px;align-items:center;">
                     <!-- Mutasi Link -->
-                    <a href="<?= Router::url('/cash/transactions?account_id=' . $acc['id']) ?>" class="btn btn-secondary btn-sm" style="padding:4px 8px;font-size:11.5px;" title="Lihat Mutasi Buku Kas Akun Ini">
+                    <a href="<?= Router::url('/cash/transactions?account_id=' . $acc['id']) ?>" class="btn btn-secondary btn-sm" style="padding:5px 10px;font-size:12px;font-weight:700;border-radius:8px;display:inline-flex;align-items:center;gap:5px;" title="Lihat Mutasi Buku Kas Akun Ini">
                         <i data-lucide="history" style="width:13px;height:13px;"></i>
                         <span>Mutasi</span>
                     </a>
 
                     <?php if (Auth::can('cash.manage_accounts')): ?>
                     <!-- Edit Button -->
-                    <button type="button" @click="openEditAccountModal(<?= htmlspecialchars(json_encode($acc)) ?>)" class="btn btn-ghost btn-sm" style="padding:4px 8px;" title="Edit Akun Kas">
-                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
+                    <button type="button" @click="openEditAccountModal(<?= htmlspecialchars(json_encode($acc)) ?>)" class="btn btn-ghost btn-sm" style="padding:6px 8px;border-radius:8px;" title="Edit Akun Kas">
+                        <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                     </button>
 
                     <!-- Delete Button (Hanya jika belum ada transaksi dan bukan default POS) -->
                     <?php if ((int)$acc['total_transaksi'] === 0 && !$acc['is_default_pos']): ?>
-                        <button type="button" @click="openDeleteAccountModal(<?= htmlspecialchars(json_encode($acc)) ?>)" class="btn btn-ghost btn-sm text-danger" style="padding:4px 8px; color:#ef4444;" title="Hapus Akun Kosong">
-                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                        <button type="button" @click="openDeleteAccountModal(<?= htmlspecialchars(json_encode($acc)) ?>)" class="btn btn-ghost btn-sm text-danger" style="padding:6px 8px;border-radius:8px;color:#ef4444;" title="Hapus Akun Kosong">
+                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                         </button>
                     <?php endif; ?>
                     <?php endif; ?>

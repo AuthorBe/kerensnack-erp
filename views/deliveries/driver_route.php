@@ -480,6 +480,69 @@ ob_start();
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35) !important;
 }
 
+/* Badge Armada Terkunci (Driver Portal Header) */
+.driver-locked-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    height: 42px;
+    padding: 0 13px 0 7px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-hairline);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-sizing: border-box;
+    flex-shrink: 0;
+    user-select: none;
+}
+.dark .driver-locked-badge {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.driver-locked-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.dark .driver-locked-avatar {
+    background: rgba(59, 130, 246, 0.18);
+    color: #93c5fd;
+}
+.driver-locked-meta {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    line-height: 1.15;
+}
+.driver-locked-label {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-ink-mute);
+    display: flex;
+    align-items: center;
+    gap: 3.5px;
+    margin-bottom: 1px;
+}
+.driver-locked-name {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--color-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 190px;
+}
+
 /* Konfirmasi Gagal Kirim Action Button */
 .btn-driver-fail-confirm {
     background: #e11d48 !important;
@@ -708,10 +771,31 @@ ob_start();
                    title="Pilih Tanggal Pengiriman Kalender">
 
             <?php if (!empty($isRestricted)): ?>
+                <?php 
+                $drNameOnly = $myDriverName ?? 'Driver Saya';
+                $drPlateOnly = '';
+                if (preg_match('/^(.*?)\s*\((.*?)\)$/', $drNameOnly, $m)) {
+                    $drNameOnly = trim($m[1]);
+                    $drPlateOnly = trim($m[2]);
+                }
+                ?>
                 <!-- TERKUNCI UNTUK ROLE SALES & DRIVER -->
-                <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-canvas-soft border border-hairline text-xs font-semibold text-ink-secondary shadow-xs" style="height: 42px;" title="Armada terkunci pada akun Anda">
-                    <i data-lucide="lock" style="width: 14px; height: 14px; color: var(--color-ink-mute);"></i>
-                    <span>Armada: <strong class="text-ink"><?= htmlspecialchars($myDriverName ?? 'Driver Saya') ?></strong></span>
+                <div class="driver-locked-badge" title="Tugas pengiriman armada terkunci pada akun: <?= htmlspecialchars($myDriverName ?? 'Driver Saya') ?>">
+                    <div class="driver-locked-avatar">
+                        <i data-lucide="truck" style="width: 15px; height: 15px;"></i>
+                    </div>
+                    <div class="driver-locked-meta">
+                        <div class="driver-locked-label">
+                            <span>Armada Driver</span>
+                            <i data-lucide="lock" style="width: 9.5px; height: 9.5px; color: var(--color-ink-mute);"></i>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <span class="driver-locked-name"><?= htmlspecialchars($drNameOnly) ?></span>
+                            <?php if (!empty($drPlateOnly)): ?>
+                                <span class="badge badge-mono text-[9px] px-1 py-0 font-bold" style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 4px; line-height: 1.3;"><?= htmlspecialchars($drPlateOnly) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
                 <input type="hidden" name="driver_id" value="<?= htmlspecialchars($currentEmployeeId ?? '') ?>">
             <?php else: ?>
