@@ -14,5 +14,5 @@ if (!isset($order) && isset($delivery)) {
     }
 }
 
-$backUrl = $backUrl ?? \App\Core\Router::url('/deliveries');
+$backUrl = $backUrl ?? (\App\Core\Auth::can('deliveries.view_all') ? \App\Core\Router::url('/deliveries') : \App\Core\Router::url('/driver-deliveries'));
 require ROOT_PATH . '/views/customer_orders/nota_reguler.php';

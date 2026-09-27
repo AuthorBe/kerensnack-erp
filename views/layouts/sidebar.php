@@ -104,19 +104,23 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
         <?php if (Auth::can(['deliveries.view_all', 'deliveries.view_assigned'])): ?>
         <div class="sidebar-section-label">Delivery</div>
 
+        <?php if (Auth::can('deliveries.view_all')): ?>
         <a href="<?= Router::url('/deliveries') ?>"
            class="sidebar-link <?= (isActiveSection('/deliveries', $currentPath, $base) && !isActiveSection('/driver-deliveries', $currentPath, $base)) ? 'is-active' : '' ?>"
            data-tooltip="Surat Jalan">
             <i data-lucide="clipboard-check"></i>
             <span>Surat Jalan</span>
         </a>
+        <?php endif; ?>
 
+        <?php if (Auth::can(['deliveries.view_assigned', 'deliveries.view_all'])): ?>
         <a href="<?= Router::url('/driver-deliveries') ?>"
            class="sidebar-link <?= isActiveSection('/driver-deliveries', $currentPath, $base) ? 'is-active' : '' ?>"
            data-tooltip="Pengiriman">
             <i data-lucide="truck"></i>
             <span>Pengiriman</span>
         </a>
+        <?php endif; ?>
         <?php endif; ?>
 
         <!-- GUDANG & PEMBELIAN -->

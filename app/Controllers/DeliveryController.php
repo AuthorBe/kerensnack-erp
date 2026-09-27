@@ -29,12 +29,12 @@ class DeliveryController extends Controller
 
     public function index(): void
     {
-        Auth::requirePermission(['deliveries.view_all', 'deliveries.view_assigned']);
+        Auth::requirePermission('deliveries.view_all');
 
         try {
             $currentUser = Auth::user();
             $driverId = $currentUser['karyawan_id'] ?? null;
-            $canViewAll = Auth::can('deliveries.view_all');
+            $canViewAll = true;
 
             $sqlDeliveries = "
                 SELECT sj.id, sj.nomor_surat_jalan, sj.tanggal_surat_jalan, sj.sales_driver_id, sj.status_surat_jalan, sj.bukti_terima_foto,
@@ -55,13 +55,6 @@ class DeliveryController extends Controller
             ";
 
             $paramsDeliv = [];
-            if (!$canViewAll && $driverId) {
-                $sqlDeliveries .= " WHERE (sj.sales_driver_id = :driver_id OR p.sales_driver_id = :driver_id)";
-                $paramsDeliv['driver_id'] = $driverId;
-            } elseif (!$canViewAll && !$driverId) {
-                $sqlDeliveries .= " WHERE 1=0";
-            }
-
             $sqlDeliveries .= " ORDER BY COALESCE(sj.tanggal_surat_jalan, sj.dibuat_pada::date) DESC, sj.dibuat_pada DESC";
             $deliveries = Database::fetchAll($sqlDeliveries, $paramsDeliv);
 
@@ -1540,7 +1533,7 @@ class DeliveryController extends Controller
      */
     public function exportExcel(): void
     {
-        Auth::requirePermission(['deliveries.view_all', 'deliveries.view_assigned']);
+        Auth::requirePermission('deliveries.view_all');
 
         try {
             $startDate = $this->input('start_date', date('Y-m-01'));
