@@ -75,13 +75,13 @@ class SettingsController extends Controller
         Auth::requirePermission('settings.company_manage');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            \App\Core\Router::redirect('/settings/company');
+            $this->redirect('/settings/company');
             return;
         }
 
         if (!\App\Helpers\CSRF::validate($_POST['csrf_token'] ?? null)) {
             \App\Helpers\Flash::error('Sesi formulir telah kadaluarsa. Silakan coba kembali.');
-            \App\Core\Router::redirect('/settings/company');
+            $this->redirect('/settings/company');
             return;
         }
 
@@ -90,7 +90,7 @@ class SettingsController extends Controller
         $nama = trim((string)($_POST['nama'] ?? ''));
         if ($nama === '') {
             \App\Helpers\Flash::error('Nama resmi usaha / perusahaan tidak boleh kosong.');
-            \App\Core\Router::redirect('/settings/company');
+            $this->redirect('/settings/company');
             return;
         }
 
@@ -106,9 +106,16 @@ class SettingsController extends Controller
 
         // Handle logo
         $logoUrl = $oldData['logo_url'] ?? '';
+        $oldLogoToDelete = null;
+
         if (!empty($_POST['hapus_logo']) && $_POST['hapus_logo'] === '1') {
+            if (!empty($oldData['logo_url'])) {
+                $oldLogoToDelete = $oldData['logo_url'];
+            }
             $logoUrl = '';
         }
+
+        $newUploadedFile = null;
 
         if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['logo'];
@@ -119,13 +126,13 @@ class SettingsController extends Controller
 
             if (!in_array($mimeType, $allowedTypes, true)) {
                 \App\Helpers\Flash::error('Format logo tidak didukung. Harap unggah gambar PNG, JPG, WEBP, atau SVG.');
-                \App\Core\Router::redirect('/settings/company');
+                $this->redirect('/settings/company');
                 return;
             }
 
             if ($file['size'] > 2 * 1024 * 1024) {
                 \App\Helpers\Flash::error('Ukuran berkas logo maksimal 2MB.');
-                \App\Core\Router::redirect('/settings/company');
+                $this->redirect('/settings/company');
                 return;
             }
 
@@ -145,10 +152,14 @@ class SettingsController extends Controller
             $targetPath = $targetDir . '/' . $fileName;
 
             if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                if (!empty($oldData['logo_url']) && $oldData['logo_url'] !== ('/assets/img/logo/' . $fileName)) {
+                    $oldLogoToDelete = $oldData['logo_url'];
+                }
+                $newUploadedFile = $targetPath;
                 $logoUrl = '/assets/img/logo/' . $fileName;
             } else {
                 \App\Helpers\Flash::error('Gagal menyimpan berkas logo ke server.');
-                \App\Core\Router::redirect('/settings/company');
+                $this->redirect('/settings/company');
                 return;
             }
         }
@@ -170,6 +181,11 @@ class SettingsController extends Controller
         $success = \App\Helpers\CompanySetting::save($newData);
 
         if ($success) {
+            // Hapus berkas logo lama secara permanen dari server
+            if (!empty($oldLogoToDelete)) {
+                self::deleteLogoFile($oldLogoToDelete);
+            }
+
             \App\Helpers\ActivityLog::log(
                 'master_data',
                 'UPDATE',
@@ -182,9 +198,45 @@ class SettingsController extends Controller
 
             \App\Helpers\Flash::success('Profil dan informasi perusahaan berhasil diperbarui.');
         } else {
+            // Rollback berkas baru jika penyimpanan database gagal
+            if ($newUploadedFile !== null && is_file($newUploadedFile)) {
+                @unlink($newUploadedFile);
+            }
             \App\Helpers\Flash::error('Terjadi kesalahan saat menyimpan pengaturan perusahaan.');
         }
 
-        \App\Core\Router::redirect('/settings/company');
+        $this->redirect('/settings/company');
+    }
+
+    /**
+     * Hapus berkas logo dari direktori public/assets/img/logo secara aman (Anti Path Traversal)
+     */
+    private static function deleteLogoFile(string $logoUrl): void
+    {
+        $rawPath = trim($logoUrl);
+        if ($rawPath === '') {
+            return;
+        }
+
+        $parsedPath = parse_url($rawPath, PHP_URL_PATH);
+        if (!$parsedPath) {
+            return;
+        }
+
+        $cleanPath = ltrim(str_replace('\\', '/', $parsedPath), '/');
+
+        // Pastikan path berada di dalam assets/img/logo/
+        if (str_starts_with($cleanPath, 'assets/img/logo/')) {
+            $fullPath = ROOT_PATH . '/public/' . $cleanPath;
+            $logoDir = realpath(ROOT_PATH . '/public/assets/img/logo');
+            $realTarget = realpath($fullPath);
+
+            // Validasi path traversal (harus benar-benar ada di dalam direktori logo)
+            if ($realTarget && $logoDir && str_starts_with($realTarget, $logoDir) && is_file($realTarget)) {
+                @unlink($realTarget);
+            } elseif (is_file($fullPath)) {
+                @unlink($fullPath);
+            }
+        }
     }
 }

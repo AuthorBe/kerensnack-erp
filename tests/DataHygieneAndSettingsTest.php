@@ -152,6 +152,64 @@ runTest("4.1.4 Berkas Seed 01_seed_rbac.sql Bersih dari Kunci 'nama_toko' dan Me
     return true;
 });
 
+runTest("4.1.5 SettingsController: updateCompany() Menghapus Berkas Logo Fisik dari Server Saat hapus_logo='1'", function() {
+    // 1. Setup mock logo file in public/assets/img/logo
+    $logoDir = APP_ROOT . '/public/assets/img/logo';
+    if (!is_dir($logoDir)) {
+        @mkdir($logoDir, 0755, true);
+    }
+    $testFileName = 'logo_test_' . time() . '_' . bin2hex(random_bytes(4)) . '.png';
+    $testFilePath = $logoDir . '/' . $testFileName;
+    file_put_contents($testFilePath, 'mock_logo_image_bytes');
+
+    // 2. Set DB logo_url to this test logo
+    $oldSettings = CompanySetting::getAll();
+    $testLogoUrl = '/assets/img/logo/' . $testFileName;
+    CompanySetting::save(array_merge($oldSettings, ['logo_url' => $testLogoUrl]));
+
+    // 3. Setup mock Auth session and POST request
+    $_SESSION['user_id'] = '00000000-0000-0000-0000-000000000001';
+    $_SESSION['role'] = 'developer';
+    $_SESSION['permissions'] = ['settings.company_manage'];
+    $_SERVER['REQUEST_METHOD'] = 'POST';
+    $_POST = [
+        'csrf_token' => \App\Helpers\CSRF::token(),
+        'nama' => $oldSettings['nama'] ?? 'KEREN SNACK INDONESIA',
+        'hapus_logo' => '1',
+    ];
+
+    $controller = new class extends \App\Controllers\SettingsController {
+        public function __construct() {} // Bypass constructor login guard
+        protected function redirect(string $path): void {} // Intercept redirect
+    };
+
+    try {
+        $controller->updateCompany();
+
+        // 4. Verify physical file is truly deleted from server disk
+        if (file_exists($testFilePath)) {
+            @unlink($testFilePath);
+            return "Berkas logo fisik '{$testFilePath}' masih tertinggal di server setelah hapus_logo='1'.";
+        }
+
+        // 5. Verify database logo_url is reset to empty
+        CompanySetting::clearCache();
+        $currentSettings = CompanySetting::getAll();
+        if (!empty($currentSettings['logo_url'])) {
+            return "Database logo_url belum dikosongkan setelah hapus_logo='1': '{$currentSettings['logo_url']}'";
+        }
+    } finally {
+        // Safe guaranteed teardown
+        if (file_exists($testFilePath)) {
+            @unlink($testFilePath);
+        }
+        CompanySetting::save($oldSettings);
+        $_POST = [];
+    }
+
+    return true;
+});
+
 // -------------------------------------------------------------
 // ITEM 4.2: STANDARISASI KOLOM BANK PEMASOK & PERSISTENSI
 // -------------------------------------------------------------

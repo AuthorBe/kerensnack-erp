@@ -376,66 +376,77 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
 
     </div>
 
-    <!-- Instant Fast Floating Tooltip (Outside sidebar, 0ms delay, follows fast cursor) -->
-    <div id="sidebar-floating-tooltip" class="sidebar-floating-tooltip" aria-hidden="true"></div>
-
-    <script>
-        (function() {
-            var tip = document.getElementById('sidebar-floating-tooltip');
-            var sidebar = document.getElementById('app-sidebar');
-            if (!tip || !sidebar) return;
-
-            function isCollapsed() {
-                return sidebar.classList.contains('sidebar-collapsed') ||
-                       document.documentElement.classList.contains('sidebar-is-collapsed');
-            }
-
-            function getTooltipTarget(el) {
-                if (!el || !sidebar.contains(el)) return null;
-                return el.closest('.sidebar-link[data-tooltip], .sidebar-toggle-btn[data-tooltip]');
-            }
-
-            document.addEventListener('mouseover', function(e) {
-                if (!isCollapsed()) return;
-                var target = getTooltipTarget(e.target);
-                if (!target) return;
-
-                var text = target.getAttribute('data-tooltip');
-                if (!text) return;
-
-                tip.textContent = text;
-                var r = target.getBoundingClientRect();
-                var sbRight = sidebar.getBoundingClientRect().right;
-                tip.style.top = (r.top + r.height / 2) + 'px';
-                tip.style.left = (sbRight + 12) + 'px';
-                tip.classList.add('is-visible');
-            });
-
-            document.addEventListener('mouseout', function(e) {
-                var current = getTooltipTarget(e.target);
-                if (!current) return;
-                var next = getTooltipTarget(e.relatedTarget);
-                // Only hide if mouse actually left the target element
-                if (current !== next) {
-                    tip.classList.remove('is-visible');
-                }
-            });
-
-            window.addEventListener('scroll', function() {
-                tip.classList.remove('is-visible');
-            }, true);
-
-            window.addEventListener('resize', function() {
-                tip.classList.remove('is-visible');
-            }, { passive: true });
-
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('#app-sidebar')) {
-                    tip.classList.remove('is-visible');
-                }
-            });
-        })();
-    </script>
-
 </aside>
+
+<!-- Instant Fast Floating Tooltip (Outside sidebar DOM, desktop collapsed only) -->
+<div id="sidebar-floating-tooltip" class="sidebar-floating-tooltip" aria-hidden="true"></div>
+
+<script>
+    (function() {
+        var tip = document.getElementById('sidebar-floating-tooltip');
+        var sidebar = document.getElementById('app-sidebar');
+        if (!tip || !sidebar) return;
+
+        function isDesktopCollapsed() {
+            if (window.innerWidth < 1024) return false;
+            return sidebar.classList.contains('sidebar-collapsed') ||
+                   document.documentElement.classList.contains('sidebar-is-collapsed');
+        }
+
+        function getTooltipTarget(el) {
+            if (!el || !sidebar.contains(el)) return null;
+            return el.closest('.sidebar-link[data-tooltip], .sidebar-toggle-btn[data-tooltip]');
+        }
+
+        function hideTip() {
+            if (tip) {
+                tip.classList.remove('is-visible');
+                tip.textContent = '';
+            }
+        }
+
+        document.addEventListener('mouseover', function(e) {
+            if (!isDesktopCollapsed()) {
+                hideTip();
+                return;
+            }
+            var target = getTooltipTarget(e.target);
+            if (!target) {
+                hideTip();
+                return;
+            }
+
+            var text = target.getAttribute('data-tooltip');
+            if (!text) {
+                hideTip();
+                return;
+            }
+
+            tip.textContent = text;
+            var r = target.getBoundingClientRect();
+            var sbRight = sidebar.getBoundingClientRect().right;
+            tip.style.top = (r.top + r.height / 2) + 'px';
+            tip.style.left = (sbRight + 12) + 'px';
+            tip.classList.add('is-visible');
+        });
+
+        document.addEventListener('mouseout', function(e) {
+            var current = getTooltipTarget(e.target);
+            if (!current) return;
+            var next = getTooltipTarget(e.relatedTarget);
+            if (current !== next) {
+                hideTip();
+            }
+        });
+
+        window.addEventListener('scroll', hideTip, true);
+        window.addEventListener('resize', hideTip, { passive: true });
+        document.addEventListener('touchstart', hideTip, { passive: true });
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('#app-sidebar')) {
+                hideTip();
+            }
+        });
+    })();
+</script>
 

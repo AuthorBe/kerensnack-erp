@@ -425,6 +425,8 @@ textarea:focus-visible {
 
 @media (max-width: 1023px) {
   .sidebar {
+    width: min(260px, 85vw);
+    max-width: 280px;
     position: fixed;
     top: 0;
     left: 0;
@@ -433,7 +435,7 @@ textarea:focus-visible {
     box-shadow: var(--shadow-3);
     padding-top: env(safe-area-inset-top, 0px);
     padding-left: env(safe-area-inset-left, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: 0;
     box-sizing: border-box;
   }
   .sidebar.is-open {
@@ -621,18 +623,23 @@ textarea:focus-visible {
   background-color: var(--sidebar-bg-soft);
   flex-shrink: 0;
   transition: padding 0.42s cubic-bezier(0.25, 1, 0.4, 1);
+  box-sizing: border-box;
+  position: relative;
+  z-index: 2;
 }
 
 /* ---- EXPANDED profile row ---- */
 .sidebar-profile-expanded {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   border-radius: 10px;
-  padding: 6px 7px;
+  padding: 6px 8px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.07);
   transition: background 0.15s, border-color 0.15s;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .sidebar-profile-expanded:hover {
@@ -643,15 +650,21 @@ textarea:focus-visible {
 .sidebar-profile-link {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
   flex: 1;
   text-decoration: none;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sidebar-profile-info {
   min-width: 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
 }
 
 /* ---- COLLAPSED profile (hidden in expanded, shown when collapsed) ---- */
@@ -709,11 +722,12 @@ textarea:focus-visible {
   text-transform: capitalize;
   margin-top: 1px;
   font-weight: 500;
+  line-height: 1.2;
 }
 
 .sidebar-logout-btn {
-  width: 27px;
-  height: 27px;
+  width: 28px;
+  height: 28px;
   border-radius: 7px;
   border: 1px solid rgba(239, 68, 68, 0.22);
   background: rgba(239, 68, 68, 0.07);
@@ -725,6 +739,7 @@ textarea:focus-visible {
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
   text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .sidebar-logout-btn svg {
@@ -874,6 +889,41 @@ textarea:focus-visible {
 
 .sidebar-popup-action-logout:hover svg {
   color: #fca5a5;
+}
+
+/* =============================================================================
+   6.05 INSTANT FAST FLOATING TOOLTIP (Base: fixed & hidden outside desktop)
+   ============================================================================= */
+.sidebar-floating-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 999999;
+  background: #141b27;
+  color: #f8fafc;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  transform: translateY(-50%) translateX(0);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.05s ease, transform 0.05s ease;
+}
+
+.sidebar-floating-tooltip::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-right: 5px solid #141b27;
 }
 
 /* =============================================================================
@@ -1045,44 +1095,16 @@ html.sidebar-is-collapsed .sidebar .sidebar-toggle-btn .sidebar-icon-open {
   }
 
   /* =============================================================================
-     INSTANT FAST FLOATING TOOLTIP (0ms delay, follows fast cursor, never clipped)
+     INSTANT FAST FLOATING TOOLTIP (Desktop activation)
      ============================================================================= */
   .sidebar-floating-tooltip {
-    position: fixed;
-    z-index: 999999;
-    background: #141b27;
-    color: #f8fafc;
-    font-size: 12.5px;
-    font-weight: 600;
-    font-family: var(--font-sans);
-    white-space: nowrap;
-    padding: 6px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.35);
-    pointer-events: none;
-    transform: translateY(-50%) translateX(0);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.05s ease, transform 0.05s ease;
+    display: block;
   }
 
   .sidebar-floating-tooltip.is-visible {
     opacity: 1;
     visibility: visible;
     transform: translateY(-50%) translateX(3px);
-  }
-
-  /* Tooltip arrow */
-  .sidebar-floating-tooltip::before {
-    content: '';
-    position: absolute;
-    left: -5px;
-    top: 50%;
-    transform: translateY(-50%);
-    border-top: 5px solid transparent;
-    border-bottom: 5px solid transparent;
-    border-right: 5px solid #141b27;
   }
 
   /* Footer: center avatar when collapsed — hide expanded row, show collapsed */
@@ -6301,6 +6323,10 @@ body.action-loader-frozen {
 
 /* Hide PWA Install Triggers Automatically in Installed App Mode */
 html.is-pwa-standalone .pwa-install-trigger,
+html.is-pwa-standalone .sidebar-link.pwa-install-trigger {
+  display: none !important;
+}
+
 @media all and (display-mode: standalone) {
   .pwa-install-trigger,
   .sidebar-link.pwa-install-trigger {
