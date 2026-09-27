@@ -5,6 +5,65 @@ ob_start();
 $activeTab = $_GET['tab'] ?? 'finished_goods';
 ?>
 
+<style>
+.search-info-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.search-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-ink-mute);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.search-info-btn:hover, .search-info-btn.is-active {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: rgba(136, 19, 55, 0.08);
+}
+.search-info-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    animation: searchPopIn 0.15s ease-out forwards;
+}
+@keyframes searchPopIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.table-loading-bar {
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, #881337 0%, #fb7185 50%, #881337 100%);
+    background-size: 200% 100%;
+    animation: tableLoadingShimmer 1.1s infinite linear;
+}
+@keyframes tableLoadingShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+</style>
+
 <div x-data="productApp('<?= htmlspecialchars($activeTab) ?>', '<?= htmlspecialchars($selectedRecipeItemId ?? '') ?>')" x-init="init()" class="space-y-5">
 
     <!-- ========================================================================= -->
@@ -120,53 +179,80 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- TAB 1: KATALOG BARANG JADI (FINISHED GOODS)                               -->
     <!-- ========================================================================= -->
     <div x-show="activeTab === 'finished_goods'" class="card" style="padding:0;overflow:hidden;">
-        <!-- ACTION & FILTER BAR (Server-Synchronized) -->
-        <form method="GET" action="<?= Router::url('/products') ?>" class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
-            <input type="hidden" name="tab" value="finished_goods">
-            <div class="flex items-center flex-wrap gap-2 w-full sm:w-auto flex-1">
-                <div class="form-input-icon flex-1 sm:max-w-xs">
+        <!-- ACTION & FILTER BAR (Live Debounce & AJAX Table Powered) -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
+            <div class="flex items-center gap-1.5 flex-1 sm:max-w-md w-full">
+                <div class="form-input-icon flex-1 relative">
                     <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                    <input type="text" name="q_fg" value="<?= htmlspecialchars($paginationFg['q'] ?? '') ?>" placeholder="Cari snack / varian / barcode..." class="form-input" style="height:38px;font-size:13px;">
+                    <input type="search" x-model="searchFg"
+                           name="q"
+                           id="productSearchInput"
+                           @input.debounce.350ms="fetchFinishedGoods(1)"
+                           @keydown.enter.prevent="fetchFinishedGoods(1)"
+                           placeholder="Cari snack, SKU, barcode, merek, vendor..."
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-lpignore="true"
+                           data-1p-ignore="true"
+                           data-bwignore="true"
+                           data-form-type="other"
+                           inputmode="search"
+                           class="form-input" style="height:38px;font-size:13px;padding-right:32px;">
+
+                    <!-- Clear Button (✕) -->
+                    <button type="button" x-cloak x-show="searchFg" @click="clearSearchFg()" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan Pencarian">
+                        <i data-lucide="x" style="width:14px;height:14px;"></i>
+                    </button>
                 </div>
 
-                <select name="group_id" onchange="this.form.submit()" class="form-input" style="height:38px;font-size:13px;max-width:240px;">
-                    <option value="all">Semua Grup Kemasan</option>
-                    <?php foreach ($groups as $g): ?>
-                    <option value="<?= $g['id'] ?>" <?= ($selectedGroupId ?? '') === $g['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($g['nama_grup']) ?> (<?= $g['total_sku'] ?> SKU)
-                    </option>
-                    <?php endforeach; ?>
-                </select>
+                <!-- Info Popover Button -->
+                <div class="search-info-wrapper" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                    <button type="button" @click="open = !open" class="search-info-btn" :class="open ? 'is-active' : ''" title="Informasi Atribut Pencarian Barang Jadi">
+                        <i data-lucide="info" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div x-show="open" x-cloak @click.away="open = false" class="search-info-popover">
+                        <div style="font-weight:800;font-size:12.5px;color:var(--color-primary);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i data-lucide="boxes" style="width:14px;height:14px;"></i>
+                            <span>Panduan Pencarian Barang Jadi</span>
+                        </div>
+                        <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">Pencarian otomatis langsung (*live debounce*) mencakup <b>seluruh database</b>:</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
+                            <div>• <b>Nama Barang Jadi &amp; Varian Rasa</b></div>
+                            <div>• <b>Kode SKU</b> (<code>FG-xxxx</code>)</div>
+                            <div>• <b>Barcode Universal EAN-13</b></div>
+                            <div>• <b>Nama Merek &amp; Kode Merek</b></div>
+                            <div>• <b>Nama Grup Kemasan Luar</b></div>
+                            <div>• <b>Vendor Pemasok Utama</b></div>
+                            <div>• <b>Kelompok Upah Borongan Packing</b></div>
+                        </div>
+                        <div style="font-size:10.5px;color:var(--color-primary);margin-top:8px;padding-top:6px;border-top:1px dashed var(--color-hairline);font-weight:600;">
+                            ⚡ Tips: Hasil muncul otomatis saat Anda mengetik (jeda 0.3 dtk) tanpa reload halaman.
+                        </div>
+                    </div>
+                </div>
 
-                <button type="submit" class="btn btn-secondary btn-sm" style="height:38px;padding:0 12px;">
-                    <i data-lucide="filter" style="width:14px;height:14px;"></i>
-                    <span>Cari</span>
-                </button>
-
-                <?php if (!empty($paginationFg['q']) || (!empty($selectedGroupId) && $selectedGroupId !== 'all')): ?>
-                <a href="<?= Router::url('/products?tab=finished_goods') ?>" class="btn btn-ghost btn-sm" style="height:38px;padding:0 10px;color:var(--color-ink-mute);" title="Reset Filter">
-                    <i data-lucide="x-circle" style="width:14px;height:14px;"></i>
-                    <span>Reset</span>
-                </a>
-                <?php endif; ?>
             </div>
 
             <?php if (\App\Core\Auth::can('master.products_manage')): ?>
-            <div class="flex items-center gap-2">
-                <button type="button" @click="openManageGroupsModal()" class="btn btn-secondary" style="height:38px;" title="Kelola / Edit Grup Kemasan">
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" @click="openManageGroupsModal()" class="btn btn-secondary flex-1 sm:flex-none" style="height:38px;justify-content:center;" title="Kelola / Edit Grup Kemasan">
                     <i data-lucide="folder-cog" style="width:14px;height:14px;"></i>
                     <span>Kelola Grup</span>
                 </button>
-                <button type="button" @click="openAddItemModal()" class="btn btn-primary" style="height:38px;">
+                <button type="button" @click="openAddItemModal()" class="btn btn-primary flex-1 sm:flex-none" style="height:38px;justify-content:center;">
                     <i data-lucide="plus" style="width:14px;height:14px;"></i>
                     <span>Tambah Barang Jadi</span>
                 </button>
             </div>
             <?php endif; ?>
-        </form>
+        </div>
 
         <!-- TABLE LIST BARANG JADI (Hierarki Jelas & Anti-Duplikasi) -->
-        <div class="overflow-x-auto custom-scrollbar">
+        <div class="relative overflow-x-auto custom-scrollbar">
+            <!-- Shimmer Loading Bar on top of Table -->
+            <div x-show="isSearchingFg" class="table-loading-bar" style="display:none;"></div>
             <table class="data-table" style="min-width: 960px;">
                 <thead>
                     <tr>
@@ -182,7 +268,32 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                         <?php endif; ?>
                     </tr>
                 </thead>
-                <tbody>
+
+                <!-- Skeleton Rows (Tampil saat isSearchingFg aktif) -->
+                <tbody x-show="isSearchingFg" style="display:none;">
+                    <?php for ($sk = 0; $sk < 6; $sk++): ?>
+                    <tr>
+                        <td class="cell-nowrap">
+                            <div class="skeleton-shimmer skeleton-pill" style="width:65px;height:20px;"></div>
+                        </td>
+                        <td>
+                            <div class="skeleton-shimmer skeleton-line" style="width:65%;height:14px;margin-bottom:6px;"></div>
+                            <div class="skeleton-shimmer skeleton-line" style="width:40%;height:11px;"></div>
+                        </td>
+                        <td><div class="skeleton-shimmer skeleton-line" style="width:85px;height:13px;"></div></td>
+                        <td class="cell-center"><div class="skeleton-shimmer skeleton-pill" style="width:60px;height:18px;margin:0 auto;"></div></td>
+                        <td class="cell-right"><div class="skeleton-shimmer skeleton-line" style="width:75px;height:13px;margin-left:auto;"></div></td>
+                        <td class="cell-right"><div class="skeleton-shimmer skeleton-line" style="width:75px;height:13px;margin-left:auto;"></div></td>
+                        <td class="cell-center"><div class="skeleton-shimmer skeleton-pill" style="width:70px;height:18px;margin:0 auto;"></div></td>
+                        <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                        <td class="cell-center"><div class="skeleton-shimmer skeleton-box" style="width:55px;height:26px;border-radius:6px;margin:0 auto;"></div></td>
+                        <?php endif; ?>
+                    </tr>
+                    <?php endfor; ?>
+                </tbody>
+
+                <!-- Real Data Rows -->
+                <tbody x-show="!isSearchingFg">
                     <template x-for="item in finishedGoods" :key="item.id">
                         <tr :style="!item.status_aktif ? 'opacity:0.5;' : ''">
                             <td class="cell-nowrap">
@@ -297,26 +408,22 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             </table>
         </div>
 
-        <!-- PAGINATION BAR FINISHED GOODS -->
-        <?php if (!empty($paginationFg) && $paginationFg['totalPages'] > 1): ?>
-        <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <div style="font-size:12px;color:var(--color-ink-mute);">
-                Menampilkan Halaman <strong><?= $paginationFg['page'] ?></strong> dari <strong><?= $paginationFg['totalPages'] ?></strong> (Total <?= number_format($paginationFg['total'], 0, ',', '.') ?> barang jadi)
+        <!-- PAGINATION BAR FINISHED GOODS (Reactive & AJAX Powered) -->
+        <template x-if="serverPaginationFg && serverPaginationFg.totalPages > 1">
+            <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div style="font-size:12px;color:var(--color-ink-mute);">
+                    Menampilkan Halaman <strong x-text="serverPaginationFg.page"></strong> dari <strong x-text="serverPaginationFg.totalPages"></strong> (Total <span x-text="Number(serverPaginationFg.total).toLocaleString('id-ID')"></span> barang jadi)
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <button type="button" x-show="serverPaginationFg.page > 1" @click="fetchFinishedGoods(serverPaginationFg.page - 1)" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                        &laquo; Sebelumnya
+                    </button>
+                    <button type="button" x-show="serverPaginationFg.page < serverPaginationFg.totalPages" @click="fetchFinishedGoods(serverPaginationFg.page + 1)" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                        Selanjutnya &raquo;
+                    </button>
+                </div>
             </div>
-            <div style="display:flex;gap:6px;">
-                <?php if ($paginationFg['page'] > 1): ?>
-                <a href="<?= Router::url('/products?' . http_build_query(array_merge($_GET, ['page_fg' => $paginationFg['page'] - 1, 'tab' => 'finished_goods']))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
-                    &laquo; Sebelumnya
-                </a>
-                <?php endif; ?>
-                <?php if ($paginationFg['page'] < $paginationFg['totalPages']): ?>
-                <a href="<?= Router::url('/products?' . http_build_query(array_merge($_GET, ['page_fg' => $paginationFg['page'] + 1, 'tab' => 'finished_goods']))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
-                    Selanjutnya &raquo;
-                </a>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+        </template>
     </div>
 
     <!-- ========================================================================= -->
@@ -324,18 +431,50 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- ========================================================================= -->
     <div x-show="activeTab === 'materials'" class="card" style="padding:0;overflow:hidden;">
         <!-- ACTION & FILTER BAR -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
-            <div class="flex items-center gap-3 w-full sm:w-auto flex-1">
-                <div class="form-input-icon flex-1 sm:max-w-xs">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
+            <div class="flex items-center gap-1.5 flex-1 sm:max-w-md w-full">
+                <div class="form-input-icon flex-1 relative">
                     <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                    <input type="text" x-model="searchMat" placeholder="Cari nama bahan mentah / kemasan..." class="form-input" style="height:38px;font-size:13px;">
+                    <input type="search" x-model="searchMat"
+                           placeholder="Cari bahan, SKU, vendor, satuan, tipe..."
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-lpignore="true"
+                           data-1p-ignore="true"
+                           data-bwignore="true"
+                           data-form-type="other"
+                           inputmode="search"
+                           class="form-input" style="height:38px;font-size:13px;padding-right:32px;">
+                    <button type="button" x-cloak x-show="searchMat" @click="searchMat = ''" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan">
+                        <i data-lucide="x" style="width:13px;height:13px;"></i>
+                    </button>
                 </div>
 
-                <select x-model="materialTypeFilter" class="form-input" style="height:38px;font-size:13px;max-width:200px;">
-                    <option value="all">Semua Kategori Bahan</option>
-                    <option value="bahan_mentah">Bahan Mentah Curah (Bal/Kg)</option>
-                    <option value="bahan_kemas">Bahan Kemasan (Plastik/Label/Cup)</option>
-                </select>
+                <!-- Info Popover Button -->
+                <div class="search-info-wrapper" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                    <button type="button" @click="open = !open" class="search-info-btn" :class="open ? 'is-active' : ''" title="Informasi Atribut Pencarian Bahan">
+                        <i data-lucide="info" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div x-show="open" x-cloak @click.away="open = false" class="search-info-popover">
+                        <div style="font-weight:800;font-size:12.5px;color:var(--color-primary);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i data-lucide="package" style="width:14px;height:14px;"></i>
+                            <span>Pencarian Bahan &amp; Kemasan</span>
+                        </div>
+                        <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">Pencarian otomatis langsung mencakup seluruh bahan &amp; kemasan:</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
+                            <div>• <b>Nama Bahan Mentah / Kemasan</b></div>
+                            <div>• <b>Kode SKU Bahan</b> (<code>RM-xxx</code>, <code>PKG-xxx</code>)</div>
+                            <div>• <b>Vendor Pemasok Utama</b></div>
+                            <div>• <b>Satuan Dasar</b> (Kg, Bal, Roll, Pcs)</div>
+                            <div>• <b>Tipe Bahan</b> (Ketik <code>mentah</code> atau <code>kemas</code>)</div>
+                        </div>
+                        <div style="font-size:10.5px;color:var(--color-primary);margin-top:8px;padding-top:6px;border-top:1px dashed var(--color-hairline);font-weight:600;">
+                            ⚡ Tips: Ketik <code>mentah</code> untuk bahan baku curah atau <code>kemas</code> / <code>plastik</code> untuk bahan kemasan.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
@@ -1634,8 +1773,10 @@ function productApp(initialTab, initialRecipeItemId) {
         recipesByFinishedGood: <?= json_encode($recipesByFinishedGood) ?>,
         wageGroups: <?= json_encode($wageGroups) ?>,
 
-        searchFg: '',
-        selectedGroupFilter: 'all',
+        searchFg: <?= json_encode($paginationFg['q'] ?? '') ?>,
+        isSearchingFg: false,
+        serverPaginationFg: <?= json_encode($paginationFg ?? ['page' => 1, 'totalPages' => 1, 'total' => count($finishedGoods), 'perPage' => 50, 'q' => '', 'groupId' => 'all']) ?>,
+        selectedGroupFilter: <?= json_encode($selectedGroupId ?? 'all') ?>,
         searchMat: '',
         materialTypeFilter: 'all',
         selectedRecipeProductId: initialRecipeItemId || '',
@@ -1727,6 +1868,50 @@ function productApp(initialTab, initialRecipeItemId) {
             });
         },
 
+        async fetchFinishedGoods(page = 1) {
+            this.isSearchingFg = true;
+            try {
+                const q = (this.searchFg || '').trim();
+                const gid = this.selectedGroupFilter || 'all';
+                const params = new URLSearchParams({
+                    ajax_search: '1',
+                    tab: 'finished_goods',
+                    q_fg: q,
+                    group_id: gid,
+                    page_fg: String(page),
+                    per_page_fg: '50'
+                });
+                const res = await fetch('<?= Router::url("/products") ?>?' + params.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        this.finishedGoods = data.finishedGoods || [];
+                        this.serverPaginationFg = data.paginationFg;
+                        // Update URL bar secara silent tanpa refresh halaman
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('tab', 'finished_goods');
+                        if (q) url.searchParams.set('q_fg', q); else url.searchParams.delete('q_fg');
+                        if (gid && gid !== 'all') url.searchParams.set('group_id', gid); else url.searchParams.delete('group_id');
+                        if (page > 1) url.searchParams.set('page_fg', String(page)); else url.searchParams.delete('page_fg');
+                        window.history.replaceState(null, '', url.toString());
+                    }
+                }
+            } catch (err) {
+                console.error('Gagal memuat live search barang jadi:', err);
+            } finally {
+                this.isSearchingFg = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        clearSearchFg() {
+            this.searchFg = '';
+            this.selectedGroupFilter = 'all';
+            this.fetchFinishedGoods(1);
+        },
+
         get filteredFinishedGoods() {
             return this.finishedGoods.filter(i => {
                 const q = this.searchFg.toLowerCase();
@@ -1743,14 +1928,20 @@ function productApp(initialTab, initialRecipeItemId) {
 
         get filteredMaterials() {
             return this.materials.filter(m => {
-                const q = this.searchMat.toLowerCase();
+                const q = (this.searchMat || '').toLowerCase().trim();
                 const matchQuery = !q ||
-                    m.nama_item.toLowerCase().includes(q) ||
-                    m.kode_sku.toLowerCase().includes(q) ||
-                    (m.nama_pemasok && m.nama_pemasok.toLowerCase().includes(q));
+                    (m.nama_item && m.nama_item.toLowerCase().includes(q)) ||
+                    (m.kode_sku && m.kode_sku.toLowerCase().includes(q)) ||
+                    (m.nama_pemasok && m.nama_pemasok.toLowerCase().includes(q)) ||
+                    (m.kode_pemasok && m.kode_pemasok.toLowerCase().includes(q)) ||
+                    (m.satuan_dasar && m.satuan_dasar.toLowerCase().includes(q)) ||
+                    (m.tipe_item && (
+                        m.tipe_item.toLowerCase().includes(q) ||
+                        (m.tipe_item === 'bahan_mentah' && ('mentah curah'.includes(q) || 'bahan mentah'.includes(q) || 'curah'.includes(q) || 'mentah'.includes(q))) ||
+                        (m.tipe_item === 'bahan_kemas' && ('kemasan'.includes(q) || 'kemas'.includes(q) || 'plastik'.includes(q) || 'label'.includes(q) || 'cup'.includes(q)))
+                    ));
 
-                const matchType = this.materialTypeFilter === 'all' || m.tipe_item === this.materialTypeFilter;
-                return matchQuery && matchType;
+                return matchQuery;
             });
         },
 

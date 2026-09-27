@@ -58,7 +58,18 @@ class ProductController extends Controller
             $whereFg = "WHERE i.tipe_item = 'barang_jadi'";
             $paramsFg = [];
             if (!empty($qFg)) {
-                $whereFg .= " AND (i.nama_item ILIKE :q OR i.kode_sku ILIKE :q OR gp.barcode_universal ILIKE :q OR gp.nama_grup ILIKE :q OR m.nama_merek ILIKE :q OR m.kode_merek ILIKE :q)";
+                $whereFg .= " AND (
+                    i.nama_item ILIKE :q 
+                    OR i.kode_sku ILIKE :q 
+                    OR gp.barcode_universal ILIKE :q 
+                    OR gp.nama_grup ILIKE :q 
+                    OR gp.kode_grup ILIKE :q 
+                    OR m.nama_merek ILIKE :q 
+                    OR m.kode_merek ILIKE :q 
+                    OR sup.nama_pemasok ILIKE :q 
+                    OR sup.kode_pemasok ILIKE :q 
+                    OR kub.nama_kelompok ILIKE :q
+                )";
                 $paramsFg['q'] = "%{$qFg}%";
             }
             if (!empty($groupIdFg) && $groupIdFg !== 'all') {
@@ -71,6 +82,8 @@ class ProductController extends Controller
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 LEFT JOIN public.merek m ON gp.merek_id = m.id
+                LEFT JOIN public.pemasok sup ON i.pemasok_utama_id = sup.id
+                LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
                 {$whereFg}
             ", $paramsFg)['total'] ?? 0);
             $totalPagesFg = max(1, (int)ceil($countFg / $perPageFg));
@@ -107,6 +120,23 @@ class ProductController extends Controller
                 ORDER BY i.status_aktif DESC, gp.kode_grup ASC, i.nama_item ASC
                 LIMIT {$perPageFg} OFFSET {$offsetFg}
             ", $paramsFg);
+
+            // Respon cepat untuk live search AJAX Barang Jadi (Tab 1)
+            if ($this->isAjax() || $this->input('ajax_search') === '1') {
+                $this->json([
+                    'status' => 'success',
+                    'finishedGoods' => $finishedGoods,
+                    'paginationFg' => [
+                        'page' => $pageFg,
+                        'perPage' => $perPageFg,
+                        'total' => $countFg,
+                        'totalPages' => $totalPagesFg,
+                        'q' => $qFg,
+                        'groupId' => $groupIdFg
+                    ]
+                ]);
+                return;
+            }
 
             // Daftar lengkap seluruh barang jadi aktif (untuk dropdown seleksi Resep BOM Tab 3 agar tidak terpotong paginasi)
             $allFinishedGoodsList = Database::fetchAll("

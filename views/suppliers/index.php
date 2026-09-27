@@ -4,6 +4,65 @@ use App\Core\Auth;
 ob_start();
 ?>
 
+<style>
+.search-info-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.search-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-ink-mute);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.search-info-btn:hover, .search-info-btn.is-active {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: rgba(136, 19, 55, 0.08);
+}
+.search-info-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    animation: searchPopIn 0.15s ease-out forwards;
+}
+@keyframes searchPopIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.table-loading-bar {
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, #881337 0%, #fb7185 50%, #881337 100%);
+    background-size: 200% 100%;
+    animation: tableLoadingShimmer 1.1s infinite linear;
+}
+@keyframes tableLoadingShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+</style>
+
 <div x-data="supplierApp()" x-init="init()" class="space-y-5">
 
     <!-- ========================================================================= -->
@@ -78,18 +137,68 @@ ob_start();
 
         <!-- FILTER & ACTION BAR -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
-            <div class="form-input-icon flex-1 sm:max-w-md">
-                <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                <input type="text" x-model="searchQuery" placeholder="Cari nama, PIC, nomor WhatsApp, email, alamat..." class="form-input" style="height:38px;font-size:13px;">
+            <div class="flex items-center gap-1.5 flex-1 sm:max-w-md w-full">
+                <div class="form-input-icon flex-1 relative">
+                    <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+                    <input type="search" x-model="searchQuery"
+                           name="q"
+                           id="supplierSearchInput"
+                           @input.debounce.350ms="fetchSuppliers(1)"
+                           @keydown.enter.prevent="fetchSuppliers(1)"
+                           placeholder="Cari vendor, kode VND, PIC, WA, email, alamat, rek..."
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-lpignore="true"
+                           data-1p-ignore="true"
+                           data-bwignore="true"
+                           data-form-type="other"
+                           inputmode="search"
+                           class="form-input" style="height:38px;font-size:13px;padding-right:32px;">
+
+                    <!-- Clear Button (✕) -->
+                    <button type="button" x-cloak x-show="searchQuery" @click="clearSearch()" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan Pencarian">
+                        <i data-lucide="x" style="width:14px;height:14px;"></i>
+                    </button>
+                </div>
+
+                <!-- Info Popover Button -->
+                <div class="search-info-wrapper" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                    <button type="button" @click="open = !open" class="search-info-btn" :class="open ? 'is-active' : ''" title="Informasi Atribut Pencarian Vendor">
+                        <i data-lucide="info" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div x-show="open" x-cloak @click.away="open = false" class="search-info-popover">
+                        <div style="font-weight:800;font-size:12.5px;color:var(--color-primary);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i data-lucide="building-2" style="width:14px;height:14px;"></i>
+                            <span>Panduan Pencarian Vendor</span>
+                        </div>
+                        <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">Pencarian otomatis langsung (*live debounce*) mencakup <b>seluruh database vendor</b>:</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
+                            <div>• <b>Nama Pemasok &amp; Kode</b> (<code>VND-xxxx</code>)</div>
+                            <div>• <b>Kontak PIC &amp; No. WhatsApp / Telepon</b></div>
+                            <div>• <b>Email &amp; Alamat Lengkap / Maps</b></div>
+                            <div>• <b>Wilayah / Rute Pengadaan Bahan</b></div>
+                            <div>• <b>Nomor Rekening, Bank &amp; Atas Nama</b></div>
+                            <div>• <b>Termin Pembayaran &amp; Catatan PO</b></div>
+                        </div>
+                        <div style="font-size:10.5px;color:var(--color-primary);margin-top:8px;padding-top:6px;border-top:1px dashed var(--color-hairline);font-weight:600;">
+                            ⚡ Tips: Hasil muncul otomatis saat Anda mengetik (jeda 0.3 dtk) tanpa reload halaman.
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <div class="text-xs" style="color:var(--color-ink-mute);font-weight:600;white-space:nowrap;">
-                Menampilkan <span class="font-mono" style="font-weight:800;color:var(--color-primary);" x-text="filteredSuppliers.length"></span> dari <span class="font-mono" style="font-weight:700;color:var(--color-ink);" x-text="suppliers.length"></span> pemasok
+                Menampilkan <span class="font-mono" style="font-weight:800;color:var(--color-primary);" x-text="filteredSuppliers.length"></span> dari <span class="font-mono" style="font-weight:700;color:var(--color-ink);" x-text="serverPagination ? serverPagination.total : suppliers.length"></span> pemasok
             </div>
         </div>
 
         <!-- TABLE LIST -->
-        <div class="overflow-x-auto custom-scrollbar">
+        <div class="relative overflow-x-auto custom-scrollbar">
+            <!-- Shimmer Loading Bar on top of Table -->
+            <div x-show="isSearching" class="table-loading-bar" style="display:none;"></div>
             <table class="data-table" style="min-width: 980px;">
                 <thead>
                     <tr>
@@ -103,7 +212,41 @@ ob_start();
                         <?php endif; ?>
                     </tr>
                 </thead>
-                <tbody>
+
+                <!-- Skeleton Rows (Tampil saat isSearching aktif) -->
+                <tbody x-show="isSearching" style="display:none;">
+                    <?php for ($sk = 0; $sk < 5; $sk++): ?>
+                    <tr>
+                        <td class="cell-nowrap">
+                            <div class="skeleton-shimmer skeleton-pill" style="width:75px;height:20px;"></div>
+                        </td>
+                        <td>
+                            <div class="skeleton-shimmer skeleton-line" style="width:60%;height:14px;margin-bottom:6px;"></div>
+                            <div class="skeleton-shimmer skeleton-line" style="width:40%;height:11px;"></div>
+                        </td>
+                        <td>
+                            <div class="skeleton-shimmer skeleton-line" style="width:80px;height:13px;margin-bottom:4px;"></div>
+                            <div class="skeleton-shimmer skeleton-line" style="width:95px;height:11px;"></div>
+                        </td>
+                        <td>
+                            <div class="skeleton-shimmer skeleton-line" style="width:75px;height:13px;margin-bottom:4px;"></div>
+                            <div class="skeleton-shimmer skeleton-line" style="width:110px;height:11px;"></div>
+                        </td>
+                        <td>
+                            <div class="skeleton-shimmer skeleton-pill" style="width:80px;height:18px;margin-bottom:4px;"></div>
+                            <div class="skeleton-shimmer skeleton-line" style="width:100px;height:11px;"></div>
+                        </td>
+                        <?php if (Auth::can('master.suppliers_manage')): ?>
+                        <td class="cell-center cell-nowrap">
+                            <div class="skeleton-shimmer skeleton-box" style="width:55px;height:26px;border-radius:6px;margin:0 auto;"></div>
+                        </td>
+                        <?php endif; ?>
+                    </tr>
+                    <?php endfor; ?>
+                </tbody>
+
+                <!-- Real Data Rows -->
+                <tbody x-show="!isSearching">
                     <template x-for="s in filteredSuppliers" :key="s.id">
                         <tr :style="!s.status_aktif ? 'opacity:0.55;' : ''">
                             <td class="cell-nowrap">
@@ -204,26 +347,22 @@ ob_start();
             </table>
         </div>
 
-        <!-- PAGINATION BAR -->
-        <?php if (!empty($pagination) && $pagination['totalPages'] > 1): ?>
-        <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <div style="font-size:12px;color:var(--color-ink-mute);">
-                Menampilkan Halaman <strong><?= $pagination['page'] ?></strong> dari <strong><?= $pagination['totalPages'] ?></strong> (Total <?= number_format($pagination['total'], 0, ',', '.') ?> pemasok)
+        <!-- PAGINATION BAR (Reactive & AJAX Powered) -->
+        <template x-if="serverPagination && serverPagination.totalPages > 1">
+            <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div style="font-size:12px;color:var(--color-ink-mute);">
+                    Menampilkan Halaman <strong x-text="serverPagination.page"></strong> dari <strong x-text="serverPagination.totalPages"></strong> (Total <span x-text="Number(serverPagination.total).toLocaleString('id-ID')"></span> pemasok)
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <button type="button" x-show="serverPagination.page > 1" @click="fetchSuppliers(serverPagination.page - 1)" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                        &laquo; Sebelumnya
+                    </button>
+                    <button type="button" x-show="serverPagination.page < serverPagination.totalPages" @click="fetchSuppliers(serverPagination.page + 1)" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                        Selanjutnya &raquo;
+                    </button>
+                </div>
             </div>
-            <div style="display:flex;gap:6px;">
-                <?php if ($pagination['page'] > 1): ?>
-                <a href="<?= Router::url('/suppliers?' . http_build_query(array_merge($_GET, ['page' => $pagination['page'] - 1]))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
-                    &laquo; Sebelumnya
-                </a>
-                <?php endif; ?>
-                <?php if ($pagination['page'] < $pagination['totalPages']): ?>
-                <a href="<?= Router::url('/suppliers?' . http_build_query(array_merge($_GET, ['page' => $pagination['page'] + 1]))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
-                    Selanjutnya &raquo;
-                </a>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+        </template>
     </div>
 
     <!-- ========================================================================= -->
@@ -409,7 +548,9 @@ ob_start();
 function supplierApp() {
     return {
         suppliers: <?= json_encode($suppliers) ?>,
-        searchQuery: '',
+        searchQuery: <?= json_encode($pagination['q'] ?? '') ?>,
+        isSearching: false,
+        serverPagination: <?= json_encode($pagination ?? ['page' => 1, 'totalPages' => 1, 'total' => count($suppliers), 'perPage' => 50, 'q' => '']) ?>,
         showModal: false,
         isEdit: false,
         form: {
@@ -453,9 +594,47 @@ function supplierApp() {
             return map[termin] || 'Tunai / COD';
         },
 
+        async fetchSuppliers(page = 1) {
+            this.isSearching = true;
+            try {
+                const q = (this.searchQuery || '').trim();
+                const params = new URLSearchParams({
+                    ajax_search: '1',
+                    q: q,
+                    page: String(page),
+                    per_page: '50'
+                });
+                const res = await fetch('<?= Router::url("/suppliers") ?>?' + params.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        this.suppliers = data.suppliers || [];
+                        this.serverPagination = data.pagination;
+                        // Update URL bar secara silent tanpa refresh halaman
+                        const url = new URL(window.location.href);
+                        if (q) url.searchParams.set('q', q); else url.searchParams.delete('q');
+                        if (page > 1) url.searchParams.set('page', String(page)); else url.searchParams.delete('page');
+                        window.history.replaceState(null, '', url.toString());
+                    }
+                }
+            } catch (err) {
+                console.error('Gagal memuat live search pemasok:', err);
+            } finally {
+                this.isSearching = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        clearSearch() {
+            this.searchQuery = '';
+            this.fetchSuppliers(1);
+        },
+
         get filteredSuppliers() {
             return this.suppliers.filter(s => {
-                const q = this.searchQuery.toLowerCase();
+                const q = (this.searchQuery || '').toLowerCase().trim();
                 if (!q) return true;
                 return (s.nama_pemasok && s.nama_pemasok.toLowerCase().includes(q)) ||
                     (s.kode_pemasok && s.kode_pemasok.toLowerCase().includes(q)) ||

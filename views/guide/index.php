@@ -1410,27 +1410,111 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 <!-- ========================================================= -->
                 <!-- BAB 2: MASTER PRODUK & MATRIKS HARGA                      -->
                 <!-- ========================================================= -->
+                <!-- ========================================================= -->
+                <!-- BAB 2: MASTER DATA & FITUR PENCARIAN PINTAR                -->
+                <!-- ========================================================= -->
                 <section id="bab-2-master-harga" class="guide-chapter theme-emerald">
                     <div class="chapter-header">
-                        <div class="chapter-icon-badge"><i data-lucide="tag"></i></div>
+                        <div class="chapter-icon-badge"><i data-lucide="database"></i></div>
                         <div class="chapter-title-wrap">
                             <span class="chapter-number">Bab 2</span>
-                            <h3 class="chapter-title">Master Data Produk, Resep BOM &amp; Matriks Harga</h3>
+                            <h3 class="chapter-title">Master Data &amp; Fitur Pencarian Pintar (Universal Global Search)</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Admin</span>
                                 <span class="role-pill">Sales</span>
+                                <span class="role-pill">Logistik</span>
+                                <span class="role-pill">Owner</span>
                             </div>
                         </div>
                     </div>
-                    <p class="step-desc">
-                        Penetapan harga jual di sistem dikelola melalui menu <strong>Matriks Level Harga</strong> (Sidebar: <em>Master Data &rarr; Matriks Level Harga</em>) menggunakan <strong>Matriks Level Harga Multi-Tier (Level 1 s/d Level 30)</strong> dan diskon dinamis berbasis grup mitra toko:
-                    </p>
-                    <div class="guide-box box-info">
-                        <i data-lucide="info"></i>
-                        <div>
-                            <strong>Level 1 (Default Ritel):</strong> Digunakan untuk penjualan umum di menu Kasir POS.<br>
-                            <strong>Level 2 - 30 (Grosir &amp; Mitra):</strong> Diberikan secara khusus ke toko mitra pelanggan (agen, reseller, minimarket, konsinyasi) dengan margin khusus.<br>
-                            <strong>Resep BOM (Bill of Materials):</strong> Mengikat bahan mentah, bumbu, dan plastik ke produk jadi sehingga saat batch produksi dibuat, bahan baku berkurang otomatis dan HPP terhitung presisi.
+
+                    <!-- SUB-BAB 2.1: UNIVERSAL SEARCH EXPLANATION -->
+                    <div class="sub-chapter-block" style="margin-bottom:20px;">
+                        <h4 style="font-size:15px;font-weight:800;color:var(--guide-text-primary);display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <i data-lucide="search" style="width:16px;height:16px;color:var(--guide-accent);"></i>
+                            <span>2.1 Fitur Kolom Pencarian Pintar (Live Debounce &amp; Universal Multi-Field Search)</span>
+                        </h4>
+                        <p class="step-desc">
+                            Seluruh halaman pada menu <strong>Master Data</strong> (<em>Toko Pelanggan, Produk &amp; Bahan, Matriks Level Harga, Pemasok Vendor, dan Data Karyawan</em>) telah dilengkapi dengan teknologi <strong>Live Debounce &amp; Universal Global Search</strong>:
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3" style="margin:12px 0;">
+                            <div class="card p-3.5" style="background:var(--guide-card-bg);border:1px solid var(--guide-border);border-radius:12px;">
+                                <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--guide-text-primary);margin-bottom:4px;">
+                                    <div style="width:26px;height:26px;border-radius:6px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;">
+                                        <i data-lucide="zap" style="width:14px;height:14px;"></i>
+                                    </div>
+                                    <span>Pencarian Otomatis (Live Debounce)</span>
+                                </div>
+                                <div style="font-size:11.5px;color:var(--guide-text-secondary);line-height:1.5;">
+                                    Cukup ketik kata kunci, sistem secara otomatis mengeksekusi pencarian setelah jeda mengetik 0,3 detik (350 ms) <strong>tanpa perlu menekan tombol Cari atau Enter</strong>.
+                                </div>
+                            </div>
+
+                            <div class="card p-3.5" style="background:var(--guide-card-bg);border:1px solid var(--guide-border);border-radius:12px;">
+                                <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--guide-text-primary);margin-bottom:4px;">
+                                    <div style="width:26px;height:26px;border-radius:6px;background:rgba(14,165,233,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;">
+                                        <i data-lucide="loader-2" style="width:14px;height:14px;"></i>
+                                    </div>
+                                    <span>Loading Cepat Hanya di Tabel</span>
+                                </div>
+                                <div style="font-size:11.5px;color:var(--guide-text-secondary);line-height:1.5;">
+                                    Tidak ada kedip layar (*zero full-page reload*). Hanya area tabel data yang memuat animasi *shimmer bar* halus saat mengambil data, kursor tetap fokus di kolom input.
+                                </div>
+                            </div>
+
+                            <div class="card p-3.5" style="background:var(--guide-card-bg);border:1px solid var(--guide-border);border-radius:12px;">
+                                <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--guide-text-primary);margin-bottom:4px;">
+                                    <div style="width:26px;height:26px;border-radius:6px;background:rgba(99,102,241,0.12);color:#6366f1;display:flex;align-items:center;justify-content:center;">
+                                        <i data-lucide="globe" style="width:14px;height:14px;"></i>
+                                    </div>
+                                    <span>Pencarian Database Menyeluruh</span>
+                                </div>
+                                <div style="font-size:11.5px;color:var(--guide-text-secondary);line-height:1.5;">
+                                    Mencakup 100% basis data dari 1 kolom pencarian tunggal: nama, kode unik, nomor WA/telepon, PIC, alamat, sales pembina, rute, rekening bank, hingga tipe pembayaran.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Info Popover Explanation -->
+                        <div class="guide-box box-info" style="margin:12px 0;">
+                            <i data-lucide="info"></i>
+                            <div>
+                                <strong>Ikon Info Bantuan ℹ️ di Samping Kolom Search:</strong><br>
+                                Arahkan kursor (*hover*) pada komputer atau tap ikon <code>ℹ️</code> pada layar sentuh/HP untuk melihat kartu popover panduan atribut lengkap apa saja yang dapat dicari pada halaman tersebut.
+                            </div>
+                        </div>
+
+                        <!-- Search Tips -->
+                        <div style="background:var(--guide-bg);border:1px solid var(--guide-border);border-radius:12px;padding:12px 14px;margin-top:12px;">
+                            <div style="font-weight:800;font-size:12px;color:var(--guide-text-primary);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                                <i data-lucide="zap" style="width:14px;height:14px;color:#f59e0b;"></i>
+                                <span>Tips Efisiensi Pencarian Cepat:</span>
+                            </div>
+                            <ul style="font-size:11.5px;color:var(--guide-text-secondary);line-height:1.6;padding-left:18px;margin:0;">
+                                <li>• <strong>Pencarian Kode Cepat:</strong> Cukup ketik prefix kode seperti <code>CUST-</code> (toko), <code>FG-</code> (barang jadi), <code>RAW-</code>/<code>PKG-</code> (bahan baku), <code>SUP-</code> (vendor), atau <code>RTE-</code> (rute).</li>
+                                <li>• <strong>Pencarian No. HP / WhatsApp / Rekening:</strong> Cukup ketik beberapa digit nomor kontak atau rekening untuk menemukan data yang bersangkutan seketika.</li>
+                                <li>• <strong>Tombol Reset ✕ Instan:</strong> Klik tombol <code>✕</code> pada ujung kanan kolom input untuk mengosongkan pencarian dan mereset tabel kembali ke daftar awal secara instan.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- SUB-BAB 2.2: MASTER PRODUK & MATRIKS HARGA -->
+                    <div class="sub-chapter-block">
+                        <h4 style="font-size:15px;font-weight:800;color:var(--guide-text-primary);display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                            <i data-lucide="tag" style="width:16px;height:16px;color:var(--guide-accent);"></i>
+                            <span>2.2 Matriks 30 Tingkat Level Harga &amp; Resep BOM</span>
+                        </h4>
+                        <p class="step-desc">
+                            Penetapan harga jual di sistem dikelola melalui menu <strong>Matriks Level Harga</strong> (Sidebar: <em>Master Data &rarr; Matriks Level Harga</em>) menggunakan <strong>Matriks Level Harga Multi-Tier (Level 1 s/d Level 30)</strong> dan diskon dinamis berbasis grup mitra toko:
+                        </p>
+                        <div class="guide-box box-success">
+                            <i data-lucide="check-circle-2"></i>
+                            <div>
+                                <strong>Level 1 (Default Ritel):</strong> Digunakan untuk transaksi tunai langsung di menu Kasir POS.<br>
+                                <strong>Level 2 - 30 (Grosir &amp; Mitra):</strong> Diberikan secara khusus ke toko mitra pelanggan (agen, reseller, minimarket, konsinyasi) dengan margin khusus.<br>
+                                <strong>Resep BOM (Bill of Materials):</strong> Mengikat bahan mentah, bumbu, dan plastik ke produk jadi sehingga saat batch produksi dibuat, bahan baku berkurang otomatis dan HPP terhitung presisi.
+                            </div>
                         </div>
                     </div>
                 </section>

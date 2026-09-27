@@ -5,6 +5,65 @@ ob_start();
 $activeTab = $_GET['tab'] ?? 'customers';
 ?>
 
+<style>
+.search-info-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.search-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-ink-mute);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.search-info-btn:hover, .search-info-btn.is-active {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: rgba(136, 19, 55, 0.08);
+}
+.search-info-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    animation: searchPopIn 0.15s ease-out forwards;
+}
+@keyframes searchPopIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.table-loading-bar {
+    height: 3px;
+    width: 100%;
+    background: linear-gradient(90deg, #881337 0%, #fb7185 50%, #881337 100%);
+    background-size: 200% 100%;
+    animation: tableLoadingShimmer 1.1s infinite linear;
+}
+@keyframes tableLoadingShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+</style>
+
 <div x-data="customerApp('<?= htmlspecialchars($activeTab) ?>')" x-init="init()" class="space-y-5">
 
     <!-- ========================================================================= -->
@@ -114,45 +173,64 @@ $activeTab = $_GET['tab'] ?? 'customers';
     <div x-show="activeTab === 'customers'" class="card" style="padding:0;overflow:hidden;">
         <!-- FILTER & ACTION BAR -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
-            <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto flex-1">
-                <!-- Search Input -->
-                <div class="form-input-icon flex-1 sm:max-w-xs">
+            <div class="flex items-center gap-1.5 flex-1 sm:max-w-md w-full">
+                <!-- Universal Search Input & Info Trigger -->
+                <div class="form-input-icon flex-1 relative">
                     <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                    <input type="text" x-model="searchQuery"
-                           @keydown.enter.prevent="window.location.href = '<?= Router::url('/customers') ?>?q=' + encodeURIComponent(searchQuery)"
-                           placeholder="Cari toko/kode... (Tekan Enter)"
-                           class="form-input" style="height:38px;font-size:13px;">
+                    <input type="search" x-model="searchQuery"
+                           name="q"
+                           id="customerSearchInput"
+                           @input.debounce.350ms="fetchCustomers(1)"
+                           @keydown.enter.prevent="fetchCustomers(1)"
+                           placeholder="Cari toko, kode, PIC, WA, rute, sales, rek..."
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-lpignore="true"
+                           data-1p-ignore="true"
+                           data-bwignore="true"
+                           data-form-type="other"
+                           inputmode="search"
+                           class="form-input" style="height:38px;font-size:13px;padding-right:32px;">
+
+                    <!-- Clear Button (✕) -->
+                    <button type="button" x-cloak x-show="searchQuery" @click="clearSearch()" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan Pencarian">
+                        <i data-lucide="x" style="width:14px;height:14px;"></i>
+                    </button>
                 </div>
 
-                <?php if (!empty($pagination['q'])): ?>
-                <a href="<?= Router::url('/customers') ?>" class="btn btn-secondary btn-sm" style="height:38px;padding:0 10px;display:flex;align-items:center;gap:4px;" title="Reset Pencarian">
-                    <i data-lucide="x" style="width:14px;height:14px;"></i>
-                    <span style="font-size:12px;">Reset</span>
-                </a>
-                <?php endif; ?>
+                <!-- Info Popover Button -->
+                <div class="search-info-wrapper" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                    <button type="button" @click="open = !open" class="search-info-btn" :class="open ? 'is-active' : ''" title="Informasi Atribut Pencarian">
+                        <i data-lucide="info" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div x-show="open" x-cloak @click.away="open = false" class="search-info-popover">
+                        <div style="font-weight:800;font-size:12.5px;color:var(--color-primary);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i data-lucide="search" style="width:14px;height:14px;"></i>
+                            <span>Panduan Pencarian Toko</span>
+                        </div>
+                        <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">Pencarian otomatis langsung (*live debounce*) mencakup <b>seluruh database</b>:</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
+                            <div>• <b>Nama Toko &amp; Kode</b> (<code>CUST-xxxx</code>)</div>
+                            <div>• <b>Nama Pemilik / PIC &amp; No. WhatsApp</b></div>
+                            <div>• <b>Alamat Lengkap &amp; Google Maps</b></div>
+                            <div>• <b>Wilayah, Kota &amp; Kode Rute</b> (<code>RTE-xxx</code>)</div>
+                            <div>• <b>Nama Grup Pelanggan &amp; Kode Grup</b></div>
+                            <div>• <b>Sales Pembina / Penanggung Jawab</b></div>
+                            <div>• <b>Nomor Rekening, Bank &amp; Atas Nama</b></div>
+                            <div>• <b>Tipe Pembayaran Default</b> (Cash/Konsinyasi/Tempo)</div>
+                        </div>
+                        <div style="font-size:10.5px;color:var(--color-primary);margin-top:8px;padding-top:6px;border-top:1px dashed var(--color-hairline);font-weight:600;">
+                            ⚡ Tips: Hasil muncul otomatis saat Anda mengetik (jeda 0.3 dtk) tanpa reload halaman.
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Filter Wilayah -->
-                <select x-model="filterTerritory" class="form-input" style="height:38px;font-size:13px;max-width:180px;">
-                    <option value="all">Semua Wilayah</option>
-                    <?php foreach ($territories as $t): ?>
-                    <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nama_wilayah']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-
-                <!-- Filter Tipe Bayar -->
-                <select x-model="filterType" class="form-input" style="height:38px;font-size:13px;width:170px;">
-                    <option value="all">Semua Tipe Bayar</option>
-                    <option value="cash">Tunai (Cash)</option>
-                    <option value="transfer">Transfer Bank</option>
-                    <option value="qris">QRIS</option>
-                    <option value="tempo_faktur">Tempo Faktur</option>
-                    <option value="tempo_tanggal">Tempo Tanggal</option>
-                    <option value="konsinyasi">Konsinyasi (Rak)</option>
-                </select>
             </div>
 
             <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
-            <button @click="openAddModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;">
+            <button @click="openAddModal()" class="btn btn-primary" style="height:38px;white-space:nowrap;justify-content:center;">
                 <i data-lucide="plus"></i>
                 <span>Tambah Toko Baru</span>
             </button>
@@ -160,7 +238,9 @@ $activeTab = $_GET['tab'] ?? 'customers';
         </div>
 
         <!-- TABLE LIST -->
-        <div class="overflow-x-auto custom-scrollbar">
+        <div class="relative overflow-x-auto custom-scrollbar">
+            <!-- Shimmer Loading Bar on top of Table -->
+            <div x-show="isSearching" class="table-loading-bar" style="display:none;"></div>
             <table class="data-table" style="min-width: 920px;">
                 <thead>
                     <tr>
@@ -173,7 +253,40 @@ $activeTab = $_GET['tab'] ?? 'customers';
                         <th class="cell-center cell-nowrap" style="width:110px; min-width:100px;">Aksi</th>
                     </tr>
                 </thead>
-                <tbody>
+
+                <!-- Skeleton Rows (Tampil saat isSearching aktif) -->
+                <tbody x-show="isSearching" style="display:none;">
+                    <?php for ($sk = 0; $sk < 6; $sk++): ?>
+                    <tr>
+                        <td class="cell-nowrap">
+                            <div class="skeleton-shimmer skeleton-pill" style="width:75px;height:20px;"></div>
+                        </td>
+                        <td>
+                            <div class="skeleton-shimmer skeleton-line" style="width:55%;height:14px;margin-bottom:6px;"></div>
+                            <div class="skeleton-shimmer skeleton-line" style="width:38%;height:11px;"></div>
+                        </td>
+                        <td class="cell-nowrap">
+                            <div class="skeleton-shimmer skeleton-line" style="width:90px;height:13px;"></div>
+                        </td>
+                        <td>
+                            <div class="skeleton-shimmer skeleton-line" style="width:85px;height:13px;margin-bottom:4px;"></div>
+                            <div class="skeleton-shimmer skeleton-line" style="width:60px;height:10px;"></div>
+                        </td>
+                        <td class="cell-center cell-nowrap">
+                            <div class="skeleton-shimmer skeleton-pill" style="width:72px;height:20px;margin:0 auto;"></div>
+                        </td>
+                        <td class="cell-center cell-nowrap">
+                            <div class="skeleton-shimmer skeleton-pill" style="width:95px;height:20px;margin:0 auto;"></div>
+                        </td>
+                        <td class="cell-center cell-nowrap">
+                            <div class="skeleton-shimmer skeleton-box" style="width:50px;height:26px;border-radius:6px;margin:0 auto;"></div>
+                        </td>
+                    </tr>
+                    <?php endfor; ?>
+                </tbody>
+
+                <!-- Real Data Rows -->
+                <tbody x-show="!isSearching">
                     <template x-for="c in filteredCustomers" :key="c.id">
                         <tr :style="!c.status_aktif ? 'opacity:0.6;' : ''">
                             <td class="cell-nowrap">
@@ -307,37 +420,68 @@ $activeTab = $_GET['tab'] ?? 'customers';
             </table>
         </div>
 
-        <!-- PAGINATION BAR -->
-        <?php if (!empty($pagination) && $pagination['totalPages'] > 1): ?>
-        <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <div style="font-size:12px;color:var(--color-ink-mute);">
-                Menampilkan Halaman <strong><?= $pagination['page'] ?></strong> dari <strong><?= $pagination['totalPages'] ?></strong> (Total <?= number_format($pagination['total'], 0, ',', '.') ?> toko)
+        <!-- PAGINATION BAR (Reactive & AJAX Powered) -->
+        <template x-if="serverPagination && serverPagination.totalPages > 1">
+            <div style="padding:12px 16px;background:var(--color-canvas-soft, #f8fafc);border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                <div style="font-size:12px;color:var(--color-ink-mute);">
+                    Menampilkan Halaman <strong x-text="serverPagination.page"></strong> dari <strong x-text="serverPagination.totalPages"></strong> (Total <span x-text="Number(serverPagination.total).toLocaleString('id-ID')"></span> toko)
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <button type="button" x-show="serverPagination.page > 1" @click="fetchCustomers(serverPagination.page - 1)" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                        &laquo; Sebelumnya
+                    </button>
+                    <button type="button" x-show="serverPagination.page < serverPagination.totalPages" @click="fetchCustomers(serverPagination.page + 1)" class="btn btn-secondary btn-sm" style="font-size:12px;">
+                        Selanjutnya &raquo;
+                    </button>
+                </div>
             </div>
-            <div style="display:flex;gap:6px;">
-                <?php if ($pagination['page'] > 1): ?>
-                <a href="<?= Router::url('/customers?' . http_build_query(array_merge($_GET, ['page' => $pagination['page'] - 1]))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
-                    &laquo; Sebelumnya
-                </a>
-                <?php endif; ?>
-                <?php if ($pagination['page'] < $pagination['totalPages']): ?>
-                <a href="<?= Router::url('/customers?' . http_build_query(array_merge($_GET, ['page' => $pagination['page'] + 1]))) ?>" class="btn btn-secondary btn-sm" style="font-size:12px;">
-                    Selanjutnya &raquo;
-                </a>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
+        </template>
     </div>
 
     <!-- ========================================================================= -->
     <!-- TAB 2: MASTER GRUP PELANGGAN                                              -->
     <!-- ========================================================================= -->
     <div x-show="activeTab === 'customer_groups'" class="card" style="padding:0;overflow:hidden;">
-        <!-- ACTION & FILTER BAR -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
-            <div class="form-input-icon flex-1 sm:max-w-xs">
-                <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                <input type="text" x-model="searchCustomerGroup" placeholder="Cari nama grup / kode..." class="form-input" style="height:38px;font-size:13px;">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
+            <div class="flex items-center gap-1.5 flex-1 sm:max-w-md w-full">
+                <div class="form-input-icon flex-1 relative">
+                    <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+                    <input type="search" x-model="searchCustomerGroup"
+                           placeholder="Cari nama grup, kode GRP, level..."
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-lpignore="true"
+                           data-1p-ignore="true"
+                           data-bwignore="true"
+                           data-form-type="other"
+                           inputmode="search"
+                           class="form-input" style="height:38px;font-size:13px;padding-right:32px;">
+                    <button type="button" x-cloak x-show="searchCustomerGroup" @click="searchCustomerGroup = ''" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan">
+                        <i data-lucide="x" style="width:13px;height:13px;"></i>
+                    </button>
+                </div>
+                <div class="search-info-wrapper" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                    <button type="button" @click="open = !open" class="search-info-btn" :class="open ? 'is-active' : ''" title="Informasi Pencarian Grup">
+                        <i data-lucide="info" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div x-show="open" x-cloak @click.away="open = false" class="search-info-popover">
+                        <div style="font-weight:800;font-size:12.5px;color:var(--color-primary);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i data-lucide="users" style="width:14px;height:14px;"></i>
+                            <span>Pencarian Grup Pelanggan</span>
+                        </div>
+                        <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">Pencarian langsung master kategori &amp; tier harga toko:</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
+                            <div>• <b>Nama Grup Pelanggan</b></div>
+                            <div>• <b>Kode Grup</b> (<code>GRP-xxx</code>)</div>
+                            <div>• <b>Level Acuan &amp; Diskon Khusus Merek</b></div>
+                        </div>
+                        <div style="font-size:10.5px;color:var(--color-primary);margin-top:8px;padding-top:6px;border-top:1px dashed var(--color-hairline);font-weight:600;">
+                            ⚡ Tips: Ketik nama grup, kode GRP, atau level harga untuk menyaring grup pelanggan.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <?php if (\App\Core\Auth::can('master.customers_manage')): ?>
@@ -437,11 +581,47 @@ $activeTab = $_GET['tab'] ?? 'customers';
     <!-- ========================================================================= -->
     <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
     <div x-show="activeTab === 'territories'" class="card" style="padding:0;overflow:hidden;">
-        <!-- ACTION & FILTER BAR -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
-            <div class="form-input-icon flex-1 sm:max-w-xs">
-                <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                <input type="text" x-model="searchTerritory" placeholder="Cari nama wilayah / kota / rute..." class="form-input" style="height:38px;font-size:13px;">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
+            <div class="flex items-center gap-1.5 flex-1 sm:max-w-md w-full">
+                <div class="form-input-icon flex-1 relative">
+                    <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+                    <input type="search" x-model="searchTerritory"
+                           placeholder="Cari wilayah, kota, rute, catatan..."
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-lpignore="true"
+                           data-1p-ignore="true"
+                           data-bwignore="true"
+                           data-form-type="other"
+                           inputmode="search"
+                           class="form-input" style="height:38px;font-size:13px;padding-right:32px;">
+                    <button type="button" x-cloak x-show="searchTerritory" @click="searchTerritory = ''" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan">
+                        <i data-lucide="x" style="width:13px;height:13px;"></i>
+                    </button>
+                </div>
+                <div class="search-info-wrapper" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                    <button type="button" @click="open = !open" class="search-info-btn" :class="open ? 'is-active' : ''" title="Informasi Pencarian Wilayah">
+                        <i data-lucide="info" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div x-show="open" x-cloak @click.away="open = false" class="search-info-popover">
+                        <div style="font-weight:800;font-size:12.5px;color:var(--color-primary);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i data-lucide="map-pin" style="width:14px;height:14px;"></i>
+                            <span>Pencarian Master Wilayah</span>
+                        </div>
+                        <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">Pencarian langsung peta logistik distribusi &amp; rute vendor:</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
+                            <div>• <b>Nama Wilayah / Jalur Rute</b></div>
+                            <div>• <b>Kode Rute</b> (<code>RTE-xxx</code>)</div>
+                            <div>• <b>Kota / Kabupaten &amp; Provinsi</b></div>
+                            <div>• <b>Sub-Wilayah / Rincian Daerah</b></div>
+                        </div>
+                        <div style="font-size:10.5px;color:var(--color-primary);margin-top:8px;padding-top:6px;border-top:1px dashed var(--color-hairline);font-weight:600;">
+                            ⚡ Tips: Cari nama jalur pengiriman, kode rute RTE, atau kota tujuan logistik.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
@@ -1477,6 +1657,8 @@ function customerApp(initialTab) {
         shelfItemsMap: <?= json_encode($shelfItemsMap ?? []) ?>,
 
         searchQuery: <?= json_encode($pagination['q'] ?? '') ?>,
+        isSearching: false,
+        serverPagination: <?= json_encode($pagination ?? ['page' => 1, 'totalPages' => 1, 'total' => count($customers), 'perPage' => 50, 'q' => '']) ?>,
         filterTerritory: 'all',
         filterType: 'all',
         searchCustomerGroup: '',
@@ -1574,15 +1756,61 @@ function customerApp(initialTab) {
             return digits;
         },
 
+        async fetchCustomers(page = 1) {
+            this.isSearching = true;
+            try {
+                const q = (this.searchQuery || '').trim();
+                const params = new URLSearchParams({
+                    ajax_search: '1',
+                    q: q,
+                    page: String(page),
+                    per_page: '50'
+                });
+                const res = await fetch('<?= Router::url("/customers") ?>?' + params.toString(), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        this.customers = data.customers || [];
+                        this.serverPagination = data.pagination;
+                        // Update URL bar secara silent tanpa refresh halaman
+                        const url = new URL(window.location.href);
+                        if (q) url.searchParams.set('q', q); else url.searchParams.delete('q');
+                        if (page > 1) url.searchParams.set('page', String(page)); else url.searchParams.delete('page');
+                        window.history.replaceState(null, '', url.toString());
+                    }
+                }
+            } catch (err) {
+                console.error('Gagal memuat live search pelanggan:', err);
+            } finally {
+                this.isSearching = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        clearSearch() {
+            this.searchQuery = '';
+            this.fetchCustomers(1);
+        },
+
         get filteredCustomers() {
             return this.customers.filter(c => {
-                const q = this.searchQuery.toLowerCase();
+                const q = (this.searchQuery || '').toLowerCase().trim();
                 const matchQuery = !q ||
-                    c.nama_toko.toLowerCase().includes(q) ||
-                    c.kode_pelanggan.toLowerCase().includes(q) ||
+                    (c.nama_toko && c.nama_toko.toLowerCase().includes(q)) ||
+                    (c.kode_pelanggan && c.kode_pelanggan.toLowerCase().includes(q)) ||
                     (c.nama_pemilik && c.nama_pemilik.toLowerCase().includes(q)) ||
+                    (c.nomor_whatsapp && c.nomor_whatsapp.toLowerCase().includes(q)) ||
+                    (c.alamat_lengkap && c.alamat_lengkap.toLowerCase().includes(q)) ||
                     (c.nama_grup && c.nama_grup.toLowerCase().includes(q)) ||
-                    (c.nama_wilayah && c.nama_wilayah.toLowerCase().includes(q));
+                    (c.nama_wilayah && c.nama_wilayah.toLowerCase().includes(q)) ||
+                    (c.kode_rute && c.kode_rute.toLowerCase().includes(q)) ||
+                    (c.nama_sales && c.nama_sales.toLowerCase().includes(q)) ||
+                    (c.nama_bank && c.nama_bank.toLowerCase().includes(q)) ||
+                    (c.nomor_rekening && c.nomor_rekening.toLowerCase().includes(q)) ||
+                    (c.atas_nama_rekening && c.atas_nama_rekening.toLowerCase().includes(q)) ||
+                    (c.tipe_pembayaran_default && c.tipe_pembayaran_default.toLowerCase().includes(q));
 
                 const matchTerritory = this.filterTerritory === 'all' || c.wilayah_id === this.filterTerritory;
 
@@ -1601,21 +1829,23 @@ function customerApp(initialTab) {
 
         get filteredCustomerGroups() {
             return this.customerGroups.filter(cg => {
-                const q = this.searchCustomerGroup.toLowerCase();
+                const q = (this.searchCustomerGroup || '').toLowerCase().trim();
                 return !q ||
-                    cg.nama_grup.toLowerCase().includes(q) ||
-                    cg.kode_grup.toLowerCase().includes(q);
+                    (cg.nama_grup && cg.nama_grup.toLowerCase().includes(q)) ||
+                    (cg.kode_grup && cg.kode_grup.toLowerCase().includes(q)) ||
+                    (cg.master_nama_level && cg.master_nama_level.toLowerCase().includes(q));
             });
         },
 
         get filteredTerritories() {
             return this.territories.filter(t => {
-                const q = this.searchTerritory.toLowerCase();
+                const q = (this.searchTerritory || '').toLowerCase().trim();
                 return !q ||
-                    t.nama_wilayah.toLowerCase().includes(q) ||
-                    t.kode_rute.toLowerCase().includes(q) ||
-                    t.kota_kabupaten.toLowerCase().includes(q) ||
-                    t.provinsi.toLowerCase().includes(q);
+                    (t.nama_wilayah && t.nama_wilayah.toLowerCase().includes(q)) ||
+                    (t.kode_rute && t.kode_rute.toLowerCase().includes(q)) ||
+                    (t.kota_kabupaten && t.kota_kabupaten.toLowerCase().includes(q)) ||
+                    (t.provinsi && t.provinsi.toLowerCase().includes(q)) ||
+                    (t.sub_wilayah && t.sub_wilayah.toLowerCase().includes(q));
             });
         },
 

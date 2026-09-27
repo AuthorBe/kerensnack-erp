@@ -5,6 +5,53 @@ ob_start();
 ?>
 
 <style>
+/* Universal Search Info Popover */
+.search-info-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.search-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-ink-mute);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.search-info-btn:hover, .search-info-btn.is-active {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: rgba(136, 19, 55, 0.08);
+}
+.search-info-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    animation: searchPopIn 0.15s ease-out forwards;
+}
+@keyframes searchPopIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
 /* ========================================================= */
 /* MODAL SKEMA KOMISI BERTINGKAT (STANDALONE STYLES)         */
 /* ========================================================= */
@@ -691,30 +738,52 @@ ob_start();
     <div class="card p-0 overflow-hidden" style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--rounded-lg);">
 
         <!-- ACTION & FILTER BAR -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
-            
-            <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto flex-1">
-                <div class="form-input-icon flex-1 sm:max-w-xs">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
+            <div class="flex items-center gap-1.5 flex-1 sm:max-w-md w-full">
+                <div class="form-input-icon flex-1 relative">
                     <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                    <input type="text" x-model="searchQuery" placeholder="Cari nama / NIK / HP..." class="form-input" style="height:38px;font-size:13px;">
+                    <input type="search" x-model="searchQuery"
+                           placeholder="Cari nama, NIK, WA, posisi, plat, bank, rek..."
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-lpignore="true"
+                           data-1p-ignore="true"
+                           data-bwignore="true"
+                           data-form-type="other"
+                           inputmode="search"
+                           class="form-input" style="height:38px;font-size:13px;padding-right:32px;">
+                    <button type="button" x-cloak x-show="searchQuery" @click="searchQuery = ''" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan">
+                        <i data-lucide="x" style="width:13px;height:13px;"></i>
+                    </button>
                 </div>
 
-                <select x-model="filterPosition" class="form-input" style="height:38px;font-size:13px;max-width:220px;">
-                    <option value="all">Semua Divisi / Posisi</option>
-                    <option value="owner">👑 Owner / Direksi</option>
-                    <option value="sales">💼 Sales Toko</option>
-                    <option value="driver">🚚 Driver Logistik</option>
-                    <option value="pengemasan">🍿 Pengemasan (Borongan)</option>
-                    <option value="gudang">📦 Staff Gudang &amp; Logistik</option>
-                    <option value="admin">👩‍💼 Admin &amp; Keuangan</option>
-                    <option value="mandor">👷 Mandor / Supervisor</option>
-                </select>
-
-                <select x-model="filterNik" class="form-input" style="height:38px;font-size:13px;max-width:210px;">
-                    <option value="all">Semua Status NIK</option>
-                    <option value="verified">✅ NIK Lengkap (16 Digit)</option>
-                    <option value="pending">⚠ NIK Belum Ada / Pending</option>
-                </select>
+                <!-- Info Popover Button -->
+                <div class="search-info-wrapper" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                    <button type="button" @click="open = !open" class="search-info-btn" :class="open ? 'is-active' : ''" title="Informasi Atribut Pencarian Karyawan">
+                        <i data-lucide="info" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div x-show="open" x-cloak @click.away="open = false" class="search-info-popover">
+                        <div style="font-weight:800;font-size:12.5px;color:var(--color-primary);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i data-lucide="users" style="width:14px;height:14px;"></i>
+                            <span>Panduan Pencarian Karyawan</span>
+                        </div>
+                        <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">Pencarian otomatis langsung mencakup seluruh data pegawai:</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
+                            <div>• <b>Nama Lengkap &amp; Nama Panggilan</b></div>
+                            <div>• <b>Nomor Induk Kependudukan (NIK)</b> / KTP</div>
+                            <div>• <b>Divisi / Posisi Kerja &amp; Tipe Gaji</b> (Sales/Driver/Gudang/Admin/Mandor)</div>
+                            <div>• <b>Status Kelengkapan NIK</b> (Ketik <code>pending</code> atau <code>lengkap</code>)</div>
+                            <div>• <b>Nomor WhatsApp / Telepon &amp; Alamat</b></div>
+                            <div>• <b>No. Polisi Kendaraan</b> (Khusus Driver Logistik)</div>
+                            <div>• <b>Nama Bank, No. Rekening &amp; Atas Nama</b></div>
+                        </div>
+                        <div style="font-size:10.5px;color:var(--color-primary);margin-top:8px;padding-top:6px;border-top:1px dashed var(--color-hairline);font-weight:600;">
+                            ⚡ Tips: Ketik nama divisi atau ketik <code>pending</code> untuk memfilter NIK yang belum tervalidasi.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="text-xs" style="color:var(--color-ink-mute);font-weight:600;white-space:nowrap;">
@@ -1653,25 +1722,29 @@ function employeeApp() {
 
         get filteredEmployees() {
             return this.employees.filter(e => {
-                const q = this.searchQuery.toLowerCase().trim();
+                const q = (this.searchQuery || '').toLowerCase().trim();
                 const isPending = !e.nik || Boolean(e.nik_pending);
+                const isVerified = !isPending && Boolean(e.nik);
                 const isPendingKeyword = (q === 'pending' || q === 'belum' || q === 'belum ada' || q === 'ktp' || q === 'nik pending') && isPending;
+                const isVerifiedKeyword = (q === 'verified' || q === 'lengkap' || q === 'valid' || q === 'nik lengkap') && isVerified;
 
                 const matchQuery = !q ||
                     (e.nama_karyawan && e.nama_karyawan.toLowerCase().includes(q)) ||
                     (e.nama_panggilan && e.nama_panggilan.toLowerCase().includes(q)) ||
                     (e.nik && e.nik.toLowerCase().includes(q)) ||
+                    (e.posisi && e.posisi.toLowerCase().includes(q)) ||
+                    (e.tipe_penggajian && e.tipe_penggajian.toLowerCase().includes(q)) ||
                     (e.nomor_telepon && e.nomor_telepon.includes(q)) ||
                     (e.nomor_whatsapp && e.nomor_whatsapp.includes(q)) ||
-                    isPendingKeyword;
+                    (e.alamat && e.alamat.toLowerCase().includes(q)) ||
+                    (e.nomor_polisi_kendaraan && e.nomor_polisi_kendaraan.toLowerCase().includes(q)) ||
+                    (e.bank_nama && e.bank_nama.toLowerCase().includes(q)) ||
+                    (e.bank_nomor_rekening && e.bank_nomor_rekening.includes(q)) ||
+                    (e.bank_atas_nama && e.bank_atas_nama.toLowerCase().includes(q)) ||
+                    isPendingKeyword ||
+                    isVerifiedKeyword;
 
-                const matchPos = this.filterPosition === 'all' || e.posisi === this.filterPosition;
-
-                const matchNik = this.filterNik === 'all' ||
-                    (this.filterNik === 'pending' && isPending) ||
-                    (this.filterNik === 'verified' && !isPending && Boolean(e.nik));
-
-                return matchQuery && matchPos && matchNik;
+                return matchQuery;
             });
         },
 

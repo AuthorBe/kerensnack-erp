@@ -73,7 +73,23 @@ class CustomerController extends Controller
             $whereClause = "";
             $params = [];
             if (!empty($q)) {
-                $whereClause = "WHERE (p.nama_toko ILIKE :q OR p.kode_pelanggan ILIKE :q OR p.nama_pemilik ILIKE :q OR gp.nama_grup ILIKE :q OR w.nama_wilayah ILIKE :q)";
+                $whereClause = "WHERE (
+                    p.nama_toko ILIKE :q 
+                    OR p.kode_pelanggan ILIKE :q 
+                    OR p.nama_pemilik ILIKE :q 
+                    OR p.nomor_whatsapp ILIKE :q 
+                    OR p.alamat_lengkap ILIKE :q 
+                    OR p.nama_bank ILIKE :q 
+                    OR p.nomor_rekening ILIKE :q 
+                    OR p.atas_nama_rekening ILIKE :q 
+                    OR p.tipe_pembayaran_default ILIKE :q 
+                    OR gp.nama_grup ILIKE :q 
+                    OR gp.kode_grup ILIKE :q 
+                    OR w.nama_wilayah ILIKE :q 
+                    OR w.kode_rute ILIKE :q 
+                    OR w.kota_kabupaten ILIKE :q 
+                    OR k.nama_karyawan ILIKE :q
+                )";
                 $params['q'] = "%{$q}%";
             }
 
@@ -83,6 +99,7 @@ class CustomerController extends Controller
                 FROM public.pelanggan p
                 LEFT JOIN public.grup_pelanggan gp ON p.grup_pelanggan_id = gp.id
                 LEFT JOIN public.wilayah w ON p.wilayah_id = w.id
+                LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 {$whereClause}
             ";
             $totalCustomers = (int)(Database::fetchOne($countSql, $params)['total'] ?? 0);
@@ -115,6 +132,22 @@ class CustomerController extends Controller
                 ORDER BY p.status_aktif DESC, p.nama_toko ASC
                 LIMIT {$perPage} OFFSET {$offset}
             ", $params);
+
+            // Respon cepat untuk live search AJAX (hemat resource & ultra-fast)
+            if ($this->isAjax() || $this->input('ajax_search') === '1') {
+                $this->json([
+                    'status' => 'success',
+                    'customers' => $customers,
+                    'pagination' => [
+                        'page' => $page,
+                        'perPage' => $perPage,
+                        'total' => $totalCustomers,
+                        'totalPages' => $totalPages,
+                        'q' => $q
+                    ]
+                ]);
+                return;
+            }
 
             // 2. Ambil master grup pelanggan beserta detail diskon dan jumlah toko
             $customerGroups = Database::fetchAll("

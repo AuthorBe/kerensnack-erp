@@ -30,7 +30,22 @@ class SupplierController extends Controller
             $where = "WHERE 1=1";
             $params = [];
             if (!empty($q)) {
-                $where .= " AND (s.nama_pemasok ILIKE :q OR s.kode_pemasok ILIKE :q OR s.nama_kontak ILIKE :q OR s.nomor_whatsapp ILIKE :q OR s.email ILIKE :q OR s.nomor_rekening ILIKE :q OR s.alamat_lengkap ILIKE :q OR w.nama_wilayah ILIKE :q)";
+                $where .= " AND (
+                    s.nama_pemasok ILIKE :q 
+                    OR s.kode_pemasok ILIKE :q 
+                    OR s.nama_kontak ILIKE :q 
+                    OR s.nomor_whatsapp ILIKE :q 
+                    OR s.email ILIKE :q 
+                    OR s.alamat_lengkap ILIKE :q 
+                    OR s.nama_bank ILIKE :q 
+                    OR s.nomor_rekening ILIKE :q 
+                    OR s.atas_nama_rekening ILIKE :q 
+                    OR s.termin_bayar ILIKE :q 
+                    OR s.catatan ILIKE :q 
+                    OR w.nama_wilayah ILIKE :q 
+                    OR w.kode_rute ILIKE :q 
+                    OR w.kota_kabupaten ILIKE :q
+                )";
                 $params['q'] = "%{$q}%";
             }
 
@@ -53,6 +68,22 @@ class SupplierController extends Controller
                 ORDER BY s.status_aktif DESC, s.nama_pemasok ASC
                 LIMIT {$perPage} OFFSET {$offset}
             ", $params);
+
+            // Respon cepat untuk live search AJAX (hemat resource & ultra-fast)
+            if ($this->isAjax() || $this->input('ajax_search') === '1') {
+                $this->json([
+                    'status' => 'success',
+                    'suppliers' => $suppliers,
+                    'pagination' => [
+                        'page' => $page,
+                        'perPage' => $perPage,
+                        'total' => $totalSuppliers,
+                        'totalPages' => $totalPages,
+                        'q' => $q
+                    ]
+                ]);
+                return;
+            }
 
             $territories = Database::fetchAll("SELECT id, kode_rute, nama_wilayah FROM public.wilayah WHERE status_aktif = TRUE ORDER BY nama_wilayah ASC");
 

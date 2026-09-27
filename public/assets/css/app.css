@@ -1898,6 +1898,13 @@ textarea.form-input {
   height: 16px;
 }
 .form-input-icon .form-input { padding-left: 38px; }
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
 
 .form-label {
   display: block;
@@ -6412,6 +6419,28 @@ html.is-pwa-standalone .pwa-install-trigger,
   color: var(--color-ink-mute);
   max-width: 420px;
   line-height: 1.45;
+}
+
+/* ==========================================================================
+   THIRD-PARTY EXTENSION SUPPRESSION (Clockify, Autofill Overlays, Timers)
+   ========================================================================== */
+.clockify-button,
+.clockify-timer-button,
+.clockify-widget,
+[id*="clockify" i],
+[class*="clockify" i],
+div[class*="clockify" i],
+span[class*="clockify" i],
+button[class*="clockify" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  clip: rect(0, 0, 0, 0) !important;
 }
 
 

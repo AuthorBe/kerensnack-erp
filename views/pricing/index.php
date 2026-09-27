@@ -4,6 +4,54 @@ use App\Core\Router;
 ob_start();
 ?>
 
+<style>
+.search-info-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.search-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-ink-mute);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.search-info-btn:hover, .search-info-btn.is-active {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+    background: rgba(136, 19, 55, 0.08);
+}
+.search-info-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 60;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.18), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    animation: searchPopIn 0.15s ease-out forwards;
+}
+@keyframes searchPopIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
 <div class="space-y-5" x-data="pricingApp()">
 
     <!-- ========================================================================= -->
@@ -71,10 +119,50 @@ ob_start();
     <div class="card p-5 space-y-4">
         <!-- Toolbar Header -->
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b" style="border-color:var(--color-hairline); padding-bottom:20px;">
-            <!-- Search Box -->
-            <div class="form-input-icon w-full md:w-auto flex-1 md:max-w-sm">
-                <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                <input type="text" x-model="searchMatrix" class="form-input" style="height:36px;font-size:13px;width:100%;" placeholder="Cari kode / nama grup...">
+            <!-- Search Box & Info Trigger -->
+            <div class="flex items-center gap-1.5 w-full md:w-auto flex-1 md:max-w-md">
+                <div class="form-input-icon flex-1 relative">
+                    <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+                    <input type="search" x-model="searchMatrix"
+                           placeholder="Cari nama grup, kode, barcode, level, harga..."
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-lpignore="true"
+                           data-1p-ignore="true"
+                           data-bwignore="true"
+                           data-form-type="other"
+                           inputmode="search"
+                           class="form-input" style="height:36px;font-size:13px;width:100%;padding-right:32px;">
+                    <button type="button" x-cloak x-show="searchMatrix" @click="searchMatrix = ''" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan">
+                        <i data-lucide="x" style="width:13px;height:13px;"></i>
+                    </button>
+                </div>
+
+                <!-- Info Popover Button -->
+                <div class="search-info-wrapper" x-data="{ open: false }" @mouseenter="open = true" @mouseleave="open = false">
+                    <button type="button" @click="open = !open" class="search-info-btn" :class="open ? 'is-active' : ''" style="width:36px;height:36px;" title="Informasi Atribut Pencarian Matriks Harga">
+                        <i data-lucide="info" style="width:15px;height:15px;"></i>
+                    </button>
+                    <div x-show="open" x-cloak @click.away="open = false" class="search-info-popover">
+                        <div style="font-weight:800;font-size:12.5px;color:var(--color-primary);display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                            <i data-lucide="tags" style="width:14px;height:14px;"></i>
+                            <span>Pencarian Matriks Level Harga</span>
+                        </div>
+                        <p style="font-size:11px;color:var(--color-ink-mute);margin-bottom:8px;">Pencarian langsung 30 tingkat harga produk:</p>
+                        <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
+                            <div>• <b>Nama Grup Produk Kemasan</b></div>
+                            <div>• <b>Kode Grup</b> (<code>GRP-xxx</code>)</div>
+                            <div>• <b>Barcode Universal EAN-13</b></div>
+                            <div>• <b>Nama Level Harga</b> (Level 1 s/d 30)</div>
+                            <div>• <b>Nominal Angka Harga Jual</b> (contoh: <code>15000</code>)</div>
+                        </div>
+                        <div style="font-size:10.5px;color:var(--color-primary);margin-top:8px;padding-top:6px;border-top:1px dashed var(--color-hairline);font-weight:600;">
+                            ⚡ Tips: Ketik nominal harga, kode grup GRP, atau level harga untuk menyaring matriks.
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="grid grid-cols-2 md:flex items-center gap-2 w-full md:w-auto">
@@ -582,12 +670,23 @@ function pricingApp() {
 
         get filteredGroups() {
             if (!this.searchMatrix.trim()) return this.groups;
-            const q = this.searchMatrix.toLowerCase();
-            return this.groups.filter(g =>
-                g.nama_grup.toLowerCase().includes(q) ||
-                g.kode_grup.toLowerCase().includes(q) ||
-                (g.barcode_universal && g.barcode_universal.includes(q))
-            );
+            const q = this.searchMatrix.toLowerCase().trim();
+            return this.groups.filter(g => {
+                const matchBasic = (g.nama_grup && g.nama_grup.toLowerCase().includes(q)) ||
+                    (g.kode_grup && g.kode_grup.toLowerCase().includes(q)) ||
+                    (g.barcode_universal && g.barcode_universal.includes(q));
+
+                if (matchBasic) return true;
+
+                // Cek harga level di dalam grup
+                const prices = this.groupedPrices[g.id] || [];
+                return prices.some(p => {
+                    const priceStr = String(p.harga_jual_pcs || '');
+                    const levelName = (p.nama_level || '').toLowerCase();
+                    const levelNo = 'level ' + p.level_harga;
+                    return priceStr.includes(q) || levelName.includes(q) || levelNo.includes(q);
+                });
+            });
         },
 
         formatRupiah(num) {
