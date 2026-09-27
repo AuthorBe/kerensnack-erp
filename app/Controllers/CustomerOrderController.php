@@ -1421,6 +1421,7 @@ class CustomerOrderController extends Controller
                        COALESCE(k_sj.nama_karyawan, k.nama_karyawan) as nama_driver,
                        COALESCE(k_sj.nomor_polisi_kendaraan, k.nomor_polisi_kendaraan) as nopol_driver,
                        COALESCE(k_sj.nomor_telepon, k.nomor_telepon) as telp_driver,
+                       COALESCE(k_gud.nama_karyawan, u_gud.nama_lengkap, u_gud.nama_pengguna) as nama_petugas_gudang,
                        COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
                        COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
                 FROM public.pesanan p
@@ -1428,6 +1429,8 @@ class CustomerOrderController extends Controller
                 LEFT JOIN public.surat_jalan sj ON (sj.pesanan_id = p.id AND sj.status_surat_jalan != 'gagal_kirim')
                 LEFT JOIN public.v_karyawan_info k ON p.sales_driver_id = k.id
                 LEFT JOIN public.v_karyawan_info k_sj ON sj.sales_driver_id = k_sj.id
+                LEFT JOIN public.pengguna u_gud ON p.disiapkan_oleh = u_gud.id
+                LEFT JOIN public.v_karyawan_info k_gud ON u_gud.id = k_gud.pengguna_id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, pel.wilayah_id) = w.id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 WHERE p.id = :id
@@ -2385,11 +2388,13 @@ class CustomerOrderController extends Controller
             $stmtUpdateOrder = $pdo->prepare("
                 UPDATE public.pesanan 
                 SET status_pemrosesan = 'siap_dikirim',
+                    disiapkan_oleh = :user_id,
                     diubah_pada = NOW() 
                 WHERE id = :id
             ");
             $stmtUpdateOrder->execute([
-                'id' => $orderId
+                'id' => $orderId,
+                'user_id' => $userId
             ]);
 
             $auditMsg = "Petugas gudang menyelesaikan penyiapan barang PO #{$order['nomor_nota']} ({$order['nama_toko']}). Stok fisik gudang terpotong, status pesanan menjadi Siap Dikirim.";

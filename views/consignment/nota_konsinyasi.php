@@ -82,9 +82,9 @@ ob_start();
 .nusantara-summary-table td { padding: 4px 8px; border: 1px solid #000000; }
 
 .nusantara-sig-table { width: 100%; border-collapse: collapse; margin-top: 20px; page-break-inside: avoid; text-align: center; font-size: 8.5pt; }
-.nusantara-sig-table td { vertical-align: top; width: 33.33%; padding: 0 10px; }
-.nusantara-sig-space { height: 48px; }
-.nusantara-sig-line { display: inline-block; min-width: 140px; border-bottom: 1px dashed #000000; padding-bottom: 2px; font-weight: 800; }
+.nusantara-sig-table td { vertical-align: top; width: 25%; padding: 0 4px; }
+.nusantara-sig-space { height: 42px; }
+.nusantara-sig-line { display: inline-block; min-width: 110px; border-bottom: 1px dashed #000000; padding-bottom: 2px; font-weight: 800; font-size: 8pt; }
 
 /* Styling Khusus Printer Dot Matrix (Continuous 9.5"x11" Full / 9.5"x5.5" Half) */
 .dm-nusantara-wrapper {
@@ -244,30 +244,32 @@ ob_start();
         </tr>
     </table>
 
-    <!-- 3 KOLOM TANDA TANGAN RESMI -->
+    <!-- 4 KOLOM TANDA TANGAN RESMI -->
     <table class="nusantara-sig-table">
         <tr>
             <td>
-                <div style="font-weight: 800; text-transform: uppercase;">Penerima,</div>
-                <div class="nusantara-sig-space">
-                    <div style="display: inline-block; border: 1.5px solid #1e3a8a; color: #1e3a8a; border-radius: 50%; width: 44px; height: 44px; line-height: 12px; padding-top: 8px; font-size: 6pt; font-weight: 900; text-transform: uppercase; transform: rotate(-8deg); opacity: 0.75;">
-                        TERIMA<br>BARANG
-                    </div>
-                </div>
-                <div class="nusantara-sig-line">( <?= htmlspecialchars($visit['nama_pemilik'] ?: $visit['nama_toko']) ?> )</div>
-                <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Cap Toko &amp; Paraf</div>
+                <div style="font-weight: 800; text-transform: uppercase;">Petugas Gudang,</div>
+                <div class="nusantara-sig-space"></div>
+                <div class="nusantara-sig-line">( <?= htmlspecialchars(!empty($visit['nama_petugas_gudang']) ? $visit['nama_petugas_gudang'] : 'Petugas Gudang') ?> )</div>
+                <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Verifikasi Kiriman</div>
             </td>
             <td>
-                <div style="font-weight: 800; text-transform: uppercase;">Pengirim / Return,</div>
+                <div style="font-weight: 800; text-transform: uppercase;">Driver Pengantar,</div>
                 <div class="nusantara-sig-space"></div>
-                <div class="nusantara-sig-line">( <?= htmlspecialchars(!empty($visit['driver_name']) && $visit['driver_name'] !== '-' ? $visit['driver_name'] : '............................................') ?> )</div>
-                <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Driver / Armada Fisik</div>
+                <div class="nusantara-sig-line">( <?= htmlspecialchars(!empty($visit['driver_name']) && $visit['driver_name'] !== '-' ? $visit['driver_name'] : 'Driver Pengantar') ?> )</div>
+                <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Pengantar Barang</div>
             </td>
             <td>
-                <div style="font-weight: 800; text-transform: uppercase;">Supplier,</div>
+                <div style="font-weight: 800; text-transform: uppercase;">Penerima Toko,</div>
                 <div class="nusantara-sig-space"></div>
-                <div class="nusantara-sig-line">( <?= htmlspecialchars($visit['sales_name']) ?> )</div>
-                <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Sales Pembina &bull; <?= htmlspecialchars($comp['nama']) ?></div>
+                <div class="nusantara-sig-line">( ........................................ )</div>
+                <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Penerima Titip Rak</div>
+            </td>
+            <td>
+                <div style="font-weight: 800; text-transform: uppercase;">Pemeriksa Return,</div>
+                <div class="nusantara-sig-space"></div>
+                <div class="nusantara-sig-line">( ........................................ )</div>
+                <div style="font-size: 7pt; color: #64748b; margin-top: 2px;">Penghitung Stok dan Laku</div>
             </td>
         </tr>
     </table>
@@ -392,26 +394,32 @@ ob_start();
             </tr>
         </table>
 
-        <!-- 3 TTD DOT MATRIX -->
+        <!-- 4 TTD DOT MATRIX -->
         <table style="width: 100%; margin-top: 14px; text-align: center; font-size: 7pt;">
             <tr>
-                <td style="width: 33%;">
-                    <strong>Penerima,</strong>
+                <td style="width: 25%;">
+                    <strong>Petugas Gudang,</strong>
                     <div style="height: 32px;"></div>
-                    <div>( <?= htmlspecialchars($visit['nama_pemilik'] ?: $visit['nama_toko']) ?> )</div>
-                    <div style="font-size: 6pt; color: #475569;">Toko Mitra</div>
+                    <div>( <?= htmlspecialchars(!empty($visit['nama_petugas_gudang']) ? $visit['nama_petugas_gudang'] : 'Petugas Gudang') ?> )</div>
+                    <div style="font-size: 6pt; color: #475569;">Verifikasi Kiriman</div>
                 </td>
-                <td style="width: 33%;">
-                    <strong>Pengirim / Return,</strong>
+                <td style="width: 25%;">
+                    <strong>Driver Pengantar,</strong>
                     <div style="height: 32px;"></div>
-                    <div>( <?= htmlspecialchars(!empty($visit['driver_name']) && $visit['driver_name'] !== '-' ? $visit['driver_name'] : '..........................') ?> )</div>
-                    <div style="font-size: 6pt; color: #475569;">Driver / Armada</div>
+                    <div>( <?= htmlspecialchars(!empty($visit['driver_name']) && $visit['driver_name'] !== '-' ? $visit['driver_name'] : 'Driver Pengantar') ?> )</div>
+                    <div style="font-size: 6pt; color: #475569;">Pengantar Barang</div>
                 </td>
-                <td style="width: 33%;">
-                    <strong>Supplier,</strong>
+                <td style="width: 25%;">
+                    <strong>Penerima Toko,</strong>
                     <div style="height: 32px;"></div>
-                    <div>( <?= htmlspecialchars($visit['sales_name']) ?> )</div>
-                    <div style="font-size: 6pt; color: #475569;">Sales Pembina</div>
+                    <div>( ........................................ )</div>
+                    <div style="font-size: 6pt; color: #475569;">Penerima Titip Rak</div>
+                </td>
+                <td style="width: 25%;">
+                    <strong>Pemeriksa Return,</strong>
+                    <div style="height: 32px;"></div>
+                    <div>( ........................................ )</div>
+                    <div style="font-size: 6pt; color: #475569;">Penghitung Stok dan Laku</div>
                 </td>
             </tr>
         </table>

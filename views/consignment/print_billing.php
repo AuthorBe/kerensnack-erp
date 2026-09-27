@@ -303,10 +303,11 @@ $comp = CompanySetting::getAll();
         <div class="meta-grid">
             <div class="meta-group">
                 <h4>Ditagihkan Kepada (Toko Konsinyasi):</h4>
-                <p><?= htmlspecialchars($store['nama_toko'] ?? 'Toko Mitra') ?></p>
+                <p><?= htmlspecialchars($store['nama_toko'] ?? 'Toko Mitra') ?> <span style="font-size:11px;font-weight:600;color:#64748b;">(<?= htmlspecialchars($store['kode_pelanggan'] ?? '-') ?>)</span></p>
                 <span>Pemilik: <?= htmlspecialchars($store['nama_pemilik'] ?? '-') ?></span><br>
                 <span>Alamat: <?= htmlspecialchars($store['alamat_lengkap'] ?? '-') ?></span><br>
-                <span>Rute Wilayah: <?= htmlspecialchars($store['rute'] ?? 'Umum') ?> • WA: <?= htmlspecialchars($store['nomor_whatsapp'] ?? '-') ?></span>
+                <span>Rute Wilayah: <?= htmlspecialchars($store['rute'] ?? 'Umum') ?> • WA: <?= htmlspecialchars($store['nomor_whatsapp'] ?? '-') ?></span><br>
+                <span style="display:inline-block;margin-top:4px;color:#1e293b;font-weight:700;">Sales Pembina: <?= htmlspecialchars($store['nama_sales'] ?: 'Sales Pembina') ?><?= !empty($store['telp_sales']) ? ' (WA: ' . htmlspecialchars($store['telp_sales']) . ')' : '' ?></span>
             </div>
             <div class="meta-group">
                 <h4>Periode &amp; Ringkasan Kunjungan:</h4>
@@ -392,15 +393,17 @@ $comp = CompanySetting::getAll();
             📌 <strong>Instruksi Pembayaran:</strong> Pembayaran tagihan konsinyasi dapat diserahkan tunai kepada Sales Pembina Toko<?php if (!empty($comp['nomor_rekening'])): ?> atau ditransfer ke Rekening <strong><?= htmlspecialchars($comp['nama_bank']) ?>: <?= htmlspecialchars($comp['nomor_rekening']) ?> (a.n. <?= htmlspecialchars($comp['atas_nama_bank']) ?>)</strong><?php endif; ?>. Mohon simpan lembar rekap ini sebagai bukti sah serah terima dan transaksi.
         </div>
 
-        <!-- SIGNATURES -->
+        <!-- SIGNATURES (2 KOLOM RESMI) -->
         <div class="signatures">
             <div class="sig-block">
-                <div class="sig-title">Diterima &amp; Disetujui Oleh,<br><strong>Pemilik / Kasir Toko</strong></div>
-                <div class="sig-line">( <?= htmlspecialchars($store['nama_pemilik'] ?? $store['nama_toko'] ?? '.......................') ?> )</div>
+                <div class="sig-title">Pihak Toko yang Menyetujui Tagihan,</div>
+                <div class="sig-line">( ........................................ )</div>
+                <div style="font-size:10.5px;color:#64748b;margin-top:4px;">Tanda Tangan dan Cap Toko</div>
             </div>
             <div class="sig-block">
-                <div class="sig-title">Diserahkan Oleh,<br><strong>Sales Pembina Toko / Petugas ERP</strong></div>
-                <div class="sig-line">( ............................................ )</div>
+                <div class="sig-title">Pihak Penagih (Keren Snack),</div>
+                <div class="sig-line">( ........................................ )</div>
+                <div style="font-size:10.5px;color:#64748b;margin-top:4px;">Serah Terima Pembayaran</div>
             </div>
         </div>
     </div>

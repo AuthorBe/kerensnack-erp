@@ -261,23 +261,23 @@ ob_start();
         </tr>
     </table>
 
-    <!-- SIGNATURES (3 PIHAK: GUDANG, DRIVER, PENERIMA TOKO) -->
+    <!-- SIGNATURES (3 PIHAK: PETUGAS GUDANG, DRIVER PENGANTAR, PENERIMA TOKO) -->
     <table class="signature-grid-table" style="width: 100%; border-collapse: collapse; margin-top: 30px; text-align: center;">
         <tr>
             <td style="width: 33.3%; vertical-align: top;">
-                <div style="font-size: 10.5px; color: #475569; margin-bottom: 42px; font-weight: 700;">Petugas Gudang (Pengirim),</div>
-                <div class="sign-box">( Staf Logistik Gudang )</div>
-                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Diserahkan dari Gudang</div>
+                <div style="font-size: 10.5px; color: #475569; margin-bottom: 42px; font-weight: 700;">Petugas Gudang,</div>
+                <div class="sign-box">( <?= htmlspecialchars(!empty($order['nama_petugas_gudang']) ? $order['nama_petugas_gudang'] : 'Petugas Gudang') ?> )</div>
+                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Verifikasi Fisik Sesuai PO</div>
             </td>
             <td style="width: 33.3%; vertical-align: top;">
-                <div style="font-size: 10.5px; color: #475569; margin-bottom: 42px; font-weight: 700;">Driver / Sopir Pengantar,</div>
+                <div style="font-size: 10.5px; color: #475569; margin-bottom: 42px; font-weight: 700;">Driver Pengantar,</div>
                 <div class="sign-box">( <?= htmlspecialchars($order['nama_driver'] ?: $order['nama_sales'] ?: 'Driver Pengantar') ?> )</div>
-                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Diantar &amp; Diserahkan ke Toko</div>
+                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Diantar ke Tujuan</div>
             </td>
             <td style="width: 33.3%; vertical-align: top;">
-                <div style="font-size: 10.5px; color: #475569; margin-bottom: 42px; font-weight: 700;">Penerima / Toko Pelanggan,</div>
-                <div class="sign-box">( <?= htmlspecialchars($order['nama_pemilik'] ?: $order['nama_toko'] ?: 'Penerima Toko') ?> )</div>
-                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Cap Toko &amp; Tanda Tangan</div>
+                <div style="font-size: 10.5px; color: #475569; margin-bottom: 42px; font-weight: 700;">Penerima Toko,</div>
+                <div class="sign-box">( ........................................ )</div>
+                <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Cap Toko dan Tanda Tangan</div>
             </td>
         </tr>
     </table>
@@ -506,22 +506,22 @@ ob_start();
         <table class="dm-table dm-sig-table">
             <tr>
                 <td style="width: 33.3%; text-align: center;">
-                    <div class="dm-sig-title">Petugas Gudang (Pengirim),</div>
+                    <div class="dm-sig-title">Petugas Gudang,</div>
                     <div class="dm-sig-space"></div>
-                    <div class="dm-sig-line">( Logistik Gudang )</div>
-                    <div class="dm-sig-sub">Diserahkan dari Gudang</div>
+                    <div class="dm-sig-line">( <?= htmlspecialchars(!empty($order['nama_petugas_gudang']) ? $order['nama_petugas_gudang'] : 'Petugas Gudang') ?> )</div>
+                    <div class="dm-sig-sub">Verifikasi Fisik Sesuai PO</div>
                 </td>
                 <td style="width: 33.3%; text-align: center;">
-                    <div class="dm-sig-title">Driver / Pengantar,</div>
+                    <div class="dm-sig-title">Driver Pengantar,</div>
                     <div class="dm-sig-space"></div>
                     <div class="dm-sig-line">( <?= htmlspecialchars($order['nama_driver'] ?: $order['nama_sales'] ?: 'Driver') ?> )</div>
                     <div class="dm-sig-sub">Diantar ke Tujuan</div>
                 </td>
                 <td style="width: 33.3%; text-align: center;">
-                    <div class="dm-sig-title">Penerima / Toko Pelanggan,</div>
+                    <div class="dm-sig-title">Penerima Toko,</div>
                     <div class="dm-sig-space"></div>
-                    <div class="dm-sig-line">( <?= htmlspecialchars($order['nama_pemilik'] ?: $order['nama_toko'] ?: 'Penerima') ?> )</div>
-                    <div class="dm-sig-sub">Cap Toko &amp; Tanda Tangan</div>
+                    <div class="dm-sig-line">( ........................................ )</div>
+                    <div class="dm-sig-sub">Cap Toko dan Tanda Tangan</div>
                 </td>
             </tr>
         </table>

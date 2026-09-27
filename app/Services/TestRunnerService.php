@@ -51,7 +51,7 @@ class TestRunnerService
     // -------------------------------------------------------------------------
 
     /**
-     * Master Registry 26 Test Suites Resmi ERP
+     * Master Registry Test Suites Resmi ERP
      */
     public const SUITES = [
         'sales_vs_driver' => [
@@ -754,7 +754,7 @@ class TestRunnerService
     // -------------------------------------------------------------------------
 
     /**
-     * Jalankan SELURUH 24 Test Suites di Terminal CLI.
+     * Jalankan SELURUH Test Suites di Terminal CLI.
      *
      * Catatan: CLI runner TIDAK menggunakan global lock/cooldown karena:
      * - Dijalankan oleh developer secara langsung di terminal lokal
@@ -766,7 +766,7 @@ class TestRunnerService
         $testsDir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'tests';
 
         echo "====================================================================\n";
-        echo " KEREN SNACK ERP - UNIFIED TEST SUITE RUNNER (26 SUITES)\n";
+        echo " KEREN SNACK ERP - UNIFIED TEST SUITE RUNNER (" . count(self::SUITES) . " SUITES)\n";
         echo "====================================================================\n";
         echo "PHP Binary : {$phpBin}\n";
         echo "Test Suite : " . count(self::SUITES) . " comprehensive suites\n\n";

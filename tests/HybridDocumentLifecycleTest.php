@@ -275,8 +275,8 @@ runTest("2. Render Dokumen Hybrid: Memuat No Faktur, No SJ, Info Driver, dan 3 T
         if (!str_contains($renderedHtml, 'Ahmad Budi Driver')) {
             return "Nama Driver 'Ahmad Budi Driver' tidak tercantum di metadata pengiriman!";
         }
-        if (!str_contains($renderedHtml, 'Petugas Gudang (Pengirim)') || !str_contains($renderedHtml, 'Driver / Sopir Pengantar') || !str_contains($renderedHtml, 'Penerima / Toko Pelanggan')) {
-            return "Blok 3 Tanda Tangan sah (Gudang, Driver, Toko) tidak lengkap di dokumen hybrid!";
+        if (!str_contains($renderedHtml, 'Petugas Gudang') || !str_contains($renderedHtml, 'Driver Pengantar') || !str_contains($renderedHtml, 'Penerima Toko')) {
+            return "Blok 3 Tanda Tangan sah (Petugas Gudang, Driver Pengantar, Penerima Toko) tidak lengkap di dokumen hybrid!";
         }
 
         return true;

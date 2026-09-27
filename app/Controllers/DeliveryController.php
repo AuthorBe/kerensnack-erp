@@ -633,6 +633,7 @@ class DeliveryController extends Controller
                        COALESCE(driver_sj.nomor_telepon, driver_p.nomor_telepon) as telp_driver,
                        COALESCE(driver_sj.nomor_polisi_kendaraan, driver_p.nomor_polisi_kendaraan) as nopol_driver,
                        sales_p.nama_karyawan as nama_sales,
+                       COALESCE(k_gud.nama_karyawan, u_gud.nama_lengkap, u_gud.nama_pengguna) as nama_petugas_gudang,
                        ak.nama_akun as nama_akun_kas,
                        COALESCE(sj.nama_wilayah_snapshot, w.nama_wilayah, '-') as nama_wilayah,
                        COALESCE(sj.kode_rute_snapshot, w.kode_rute, '-') as kode_rute
@@ -642,6 +643,8 @@ class DeliveryController extends Controller
                 LEFT JOIN public.v_karyawan_info driver_sj ON sj.sales_driver_id = driver_sj.id
                 LEFT JOIN public.v_karyawan_info driver_p ON p.sales_driver_id = driver_p.id
                 LEFT JOIN public.v_karyawan_info sales_p ON cust.sales_driver_id = sales_p.id
+                LEFT JOIN public.pengguna u_gud ON p.disiapkan_oleh = u_gud.id
+                LEFT JOIN public.v_karyawan_info k_gud ON u_gud.id = k_gud.pengguna_id
                 LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
                 LEFT JOIN public.wilayah w ON COALESCE(sj.rute_wilayah_id, cust.wilayah_id) = w.id
                 WHERE sj.id = :id

@@ -507,6 +507,7 @@ CREATE TABLE IF NOT EXISTS public.pesanan (
     status_pemrosesan VARCHAR(30) NOT NULL DEFAULT 'po' CHECK (status_pemrosesan IN ('po', 'siap_dikirim', 'siap_kirim', 'sedang_dikirim', 'selesai_dikirim', 'selesai_diterima', 'selesai', 'gagal_dikirim', 'dibatalkan')),
     catatan TEXT,
     dibuat_oleh UUID REFERENCES public.pengguna(id),
+    disiapkan_oleh UUID REFERENCES public.pengguna(id),
     akun_kas_id UUID REFERENCES public.akun_kas(id),
     total_dibayar NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     sisa_tagihan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,

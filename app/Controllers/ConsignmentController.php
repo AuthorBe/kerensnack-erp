@@ -1006,6 +1006,7 @@ class ConsignmentController extends Controller
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                            COALESCE(k_driver.nama_karyawan, '-') as driver_name,
+                           COALESCE(k_gud.nama_karyawan, u_gud.nama_lengkap, u_gud.nama_pengguna) as nama_petugas_gudang,
                            peng.nama_lengkap as auditor_name,
                            COALESCE(peng.posisi, 'Auditor') as auditor_role,
                            (SELECT kk.nomor_kunjungan FROM public.tagihan_kunjungan tk JOIN public.kunjungan_konsinyasi kk ON tk.kunjungan_id = kk.id WHERE tk.pesanan_id = pes.id ORDER BY kk.tanggal_kunjungan DESC LIMIT 1) as nomor_kunjungan,
@@ -1021,6 +1022,8 @@ class ConsignmentController extends Controller
                         LIMIT 1
                     ) l_driver ON TRUE
                     LEFT JOIN public.v_karyawan_info k_driver ON l_driver.driver_pengirim_id = k_driver.id
+                    LEFT JOIN public.pengguna u_gud ON pes.disiapkan_oleh = u_gud.id
+                    LEFT JOIN public.v_karyawan_info k_gud ON u_gud.id = k_gud.pengguna_id
                     LEFT JOIN public.pengguna peng ON pes.dibuat_oleh = peng.id
                     WHERE pes.id = :id
                 ", ['id' => $pesananId]);
@@ -1100,6 +1103,7 @@ class ConsignmentController extends Controller
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                            COALESCE(k_driver.nama_karyawan, '-') as driver_name,
+                           COALESCE(k_gud.nama_karyawan, u_gud.nama_lengkap, u_gud.nama_pengguna) as nama_petugas_gudang,
                            peng.nama_lengkap as auditor_name,
                            COALESCE(peng.posisi, 'Auditor') as auditor_role,
                            COALESCE(pes.id, tk.pesanan_id) as pesanan_id,
@@ -1111,6 +1115,8 @@ class ConsignmentController extends Controller
                     LEFT JOIN public.v_karyawan_info k_driver ON kk.driver_pengirim_id = k_driver.id
                     LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                     LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
+                    LEFT JOIN public.pengguna u_gud ON pes.disiapkan_oleh = u_gud.id
+                    LEFT JOIN public.v_karyawan_info k_gud ON u_gud.id = k_gud.pengguna_id
                     WHERE kk.id = :id
                 ";
                 $visit = Database::fetchOne($sql, ['id' => $kunjunganId]);
@@ -1222,6 +1228,7 @@ class ConsignmentController extends Controller
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Petugas ERP') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                            COALESCE(k_driver.nama_karyawan, '-') as driver_name,
+                           COALESCE(k_gud.nama_karyawan, u_gud.nama_lengkap, u_gud.nama_pengguna) as nama_petugas_gudang,
                            peng.nama_lengkap as auditor_name,
                            COALESCE(peng.posisi, 'Auditor') as auditor_role,
                            (SELECT kk.nomor_kunjungan FROM public.tagihan_kunjungan tk JOIN public.kunjungan_konsinyasi kk ON tk.kunjungan_id = kk.id WHERE tk.pesanan_id = pes.id ORDER BY kk.tanggal_kunjungan DESC LIMIT 1) as nomor_kunjungan,
@@ -1237,6 +1244,8 @@ class ConsignmentController extends Controller
                         LIMIT 1
                     ) l_driver ON TRUE
                     LEFT JOIN public.v_karyawan_info k_driver ON l_driver.driver_pengirim_id = k_driver.id
+                    LEFT JOIN public.pengguna u_gud ON pes.disiapkan_oleh = u_gud.id
+                    LEFT JOIN public.v_karyawan_info k_gud ON u_gud.id = k_gud.pengguna_id
                     LEFT JOIN public.pengguna peng ON pes.dibuat_oleh = peng.id
                     WHERE pes.id = :id
                 ", ['id' => $pesananId]);
@@ -1294,6 +1303,7 @@ class ConsignmentController extends Controller
                            COALESCE(k.nama_karyawan, peng.nama_lengkap, 'Sales Lapangan') as sales_name,
                            COALESCE(k.posisi, 'Sales Lapangan') as sales_role,
                            COALESCE(k_driver.nama_karyawan, '-') as driver_name,
+                           COALESCE(k_gud.nama_karyawan, u_gud.nama_lengkap, u_gud.nama_pengguna) as nama_petugas_gudang,
                            peng.nama_lengkap as auditor_name,
                            COALESCE(peng.posisi, 'Auditor') as auditor_role,
                            COALESCE(pes.id, tk.pesanan_id) as pesanan_id,
@@ -1305,6 +1315,8 @@ class ConsignmentController extends Controller
                     LEFT JOIN public.v_karyawan_info k_driver ON kk.driver_pengirim_id = k_driver.id
                     LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                     LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
+                    LEFT JOIN public.pengguna u_gud ON pes.disiapkan_oleh = u_gud.id
+                    LEFT JOIN public.v_karyawan_info k_gud ON u_gud.id = k_gud.pengguna_id
                     WHERE kk.id = :id
                 ";
                 $visit = Database::fetchOne($sql, ['id' => $kunjunganId]);
@@ -3115,6 +3127,8 @@ class ConsignmentController extends Controller
                 LEFT JOIN public.v_karyawan_info k_driver ON kk.driver_pengirim_id = k_driver.id
                 LEFT JOIN public.tagihan_kunjungan tk ON tk.kunjungan_id = kk.id
                 LEFT JOIN public.pesanan pes ON (kk.pesanan_id = pes.id OR tk.pesanan_id = pes.id)
+                LEFT JOIN public.pengguna u_gud ON pes.disiapkan_oleh = u_gud.id
+                LEFT JOIN public.v_karyawan_info k_gud ON u_gud.id = k_gud.pengguna_id
                 LEFT JOIN (
                     SELECT kunjungan_id,
                            COUNT(*) as total_sku,
