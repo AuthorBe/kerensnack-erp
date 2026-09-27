@@ -112,12 +112,22 @@
         }
       }, { passive: true });
 
-      // 4. Save immediately when clicking any link inside sidebar
-      this.navEl.addEventListener('click', (e) => {
-        if (e.target.closest('a')) {
-          this.saveScroll();
-        }
-      });
+      // 4. Save scroll and auto-collapse sidebar whenever a menu link is clicked
+      if (this.sidebar) {
+        this.sidebar.addEventListener('click', (e) => {
+          const link = e.target.closest('a');
+          if (link && !link.classList.contains('pwa-install-trigger') && link.getAttribute('target') !== '_blank') {
+            this.saveScroll();
+            // Setiap selesai pilih menu di sidebar, sidebar otomatis diperkecil (collapsed)
+            try {
+              localStorage.setItem('ksnack_sidebar_collapsed', '1');
+              document.cookie = 'ksnack_sidebar_collapsed=1; path=/; max-age=31536000';
+              document.documentElement.classList.add('sidebar-is-collapsed');
+            } catch (err) {}
+            this.close();
+          }
+        });
+      }
 
       // 5. Save on page unload / page hide as final safeguard
       window.addEventListener('beforeunload', () => {
@@ -125,6 +135,13 @@
       });
       window.addEventListener('pagehide', () => {
         this.saveScroll();
+      });
+
+      // 6. Enable interactive CSS transitions only after initial paint
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          document.documentElement.classList.add('sidebar-ready');
+        });
       });
     },
 

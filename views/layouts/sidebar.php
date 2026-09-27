@@ -21,9 +21,10 @@ if (!function_exists('isActiveSection')) {
         return str_starts_with(rtrim($currentPath, '/'), rtrim($base . $prefix, '/'));
     }
 }
+$isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
 ?>
 <aside id="app-sidebar"
-       class="sidebar"
+       class="sidebar <?= $isSidebarCollapsed ? 'sidebar-collapsed' : '' ?>"
        :class="{ 'is-open': sidebarOpen, 'sidebar-collapsed': sidebarCollapsed }">
 
     <!-- Brand Header -->

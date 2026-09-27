@@ -1603,4 +1603,11 @@ REVOKE EXECUTE ON FUNCTION public.fn_trg_grup_pelanggan_after_insert() FROM PUBL
 REVOKE EXECUTE ON FUNCTION public.fn_trg_merek_after_insert() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.fn_trg_grup_pelanggan_after_insert() TO postgres, service_role;
 GRANT EXECUTE ON FUNCTION public.fn_trg_merek_after_insert() TO postgres, service_role;
+REVOKE EXECUTE ON FUNCTION public.fn_buat_tagihan_kunjungan_konsinyasi(uuid[], uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_proses_kunjungan_konsinyasi(uuid, uuid, jsonb, text, text, uuid, uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_revisi_dan_rekonsiliasi_piutang_pelanggan(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_buat_tagihan_kunjungan_konsinyasi(uuid[], uuid) TO postgres, service_role;
+GRANT EXECUTE ON FUNCTION public.fn_proses_kunjungan_konsinyasi(uuid, uuid, jsonb, text, text, uuid, uuid) TO postgres, service_role;
+GRANT EXECUTE ON FUNCTION public.fn_revisi_dan_rekonsiliasi_piutang_pelanggan(uuid) TO postgres, service_role;
+
 

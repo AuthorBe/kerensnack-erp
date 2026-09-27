@@ -15,7 +15,7 @@ $companyName = $comp['nama'] ?? 'KEREN SNACK';
 $companyPhone = $comp['telepon'] ?? '';
 $cssV = file_exists(ROOT_PATH . '/public/assets/css/app.css') ? (string)filemtime(ROOT_PATH . '/public/assets/css/app.css') : '1';
 $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? (string)filemtime(ROOT_PATH . '/public/assets/js/app.js')  : '1';
-$favGuideFile = ROOT_PATH . '/public/assets/favicon_guide.svg';
+$favGuideFile = ROOT_PATH . '/public/assets/favicon/favicon_guide.svg';
 $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (string)time();
 ?>
 <!DOCTYPE html>
@@ -25,19 +25,20 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Buku Panduan Operasional &amp; SOP — <?= htmlspecialchars($companyName) ?></title>
 
-    <!-- PWA, iOS & Meta Tags -->
-    <meta name="theme-color" content="#E30613">
+    <!-- PWA & Mobile Web App Meta Tags (Keren One Ecosystem DNA) -->
+    <meta name="theme-color" content="#881337">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Buku Panduan Keren One">
+    <meta name="application-name" content="Buku Panduan Keren One">
     <meta name="apple-touch-fullscreen" content="yes">
     <meta name="format-detection" content="telephone=no">
 
-    <!-- Dedicated Guide Favicon (Khusus Tab Guide: public/assets/favicon_guide.svg) -->
-    <link rel="icon" type="image/svg+xml" href="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
-    <link rel="alternate icon" href="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
-    <link rel="apple-touch-icon" href="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
-    <link rel="shortcut icon" href="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
+    <!-- Dedicated Guide Favicon -->
+    <link rel="icon" type="image/svg+xml" href="<?= Router::asset('/favicon/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
+    <link rel="shortcut icon" type="image/svg+xml" href="<?= Router::asset('/favicon/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
+    <link rel="apple-touch-icon" href="<?= Router::asset('/favicon/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
 
     <!-- Google Fonts: Inter & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -60,8 +61,9 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             --guide-text-primary: #0f172a;
             --guide-text-secondary: #475569;
             --guide-text-muted: #64748b;
-            --guide-accent: #e11d48;
-            --guide-accent-soft: #ffe4e6;
+            --guide-accent: #881337;
+            --guide-accent-hover: #9f1239;
+            --guide-accent-soft: rgba(136, 19, 55, 0.08);
             --guide-sidebar-bg: #ffffff;
             --guide-header-bg: #ffffff;
         }
@@ -73,8 +75,9 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             --guide-text-primary: #f8fafc;
             --guide-text-secondary: #cbd5e1;
             --guide-text-muted: #94a3b8;
-            --guide-accent: #f43f5e;
-            --guide-accent-soft: rgba(244, 63, 94, 0.15);
+            --guide-accent: #fb7185;
+            --guide-accent-hover: #f43f5e;
+            --guide-accent-soft: rgba(251, 113, 133, 0.15);
             --guide-sidebar-bg: #0b1120;
             --guide-header-bg: #0f172a;
         }
@@ -471,32 +474,15 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             }
         }
 
-        /* 3. SINGLE OFF-CANVAS SIDEBAR (TOC DRAWER) & FROZEN BLUR EFFECT */
+        /* 3. SINGLE OFF-CANVAS SIDEBAR (TOC DRAWER) & BACKDROP */
         .guide-drawer-backdrop {
             position: fixed;
             inset: 0;
             z-index: 999;
             background: rgba(15, 23, 42, 0.65);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            transition: opacity 0.25s ease, backdrop-filter 0.25s ease;
-        }
-
-        .guide-navbar,
-        .guide-content-wrapper {
-            transition: filter 0.25s ease, opacity 0.25s ease;
-        }
-
-        .guide-bg-frozen-blur {
-            filter: blur(6px) brightness(0.85);
-            -webkit-filter: blur(6px) brightness(0.85);
-            pointer-events: none !important;
-            user-select: none !important;
-            touch-action: none !important;
-        }
-        html.dark .guide-bg-frozen-blur {
-            filter: blur(6px) brightness(0.7);
-            -webkit-filter: blur(6px) brightness(0.7);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            will-change: opacity;
         }
 
         .guide-drawer {
@@ -506,9 +492,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             bottom: 0;
             height: 100vh;
             height: 100dvh;
-            height: -webkit-fill-available;
-            width: 85%;
-            max-width: 320px;
+            width: min(85vw, 320px);
             background: var(--guide-sidebar-bg);
             z-index: 1000;
             padding-top: max(18px, env(safe-area-inset-top, 0px));
@@ -518,11 +502,12 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
-            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25);
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
             border-right: 1px solid var(--guide-border);
             display: flex;
             flex-direction: column;
             gap: 14px;
+            will-change: transform;
         }
         .guide-drawer-header {
             display: flex;
@@ -1142,6 +1127,13 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         var m = document.cookie.match(/(?:^|; )ksnack_theme=([^;]*)/);
         return (m ? decodeURIComponent(m[1]) : 'light') === 'dark';
     })(),
+    isPWA: (function() {
+        try {
+            return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || Boolean(window.navigator.standalone);
+        } catch(e) {
+            return false;
+        }
+    })(),
     init() {
         this.$watch('searchQuery', (val) => {
             if (window.guideSearchEngine) {
@@ -1183,26 +1175,36 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         const theme = this.isDark ? 'dark' : 'light';
         document.documentElement.classList.toggle('dark', this.isDark);
         document.cookie = 'ksnack_theme=' + theme + '; path=/; max-age=31536000';
+    },
+    closeOrReturn() {
+        window.close();
+        setTimeout(() => {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '<?= Router::url('/dashboard') ?>';
+            }
+        }, 150);
     }
 }" @keydown.window.escape="sidebarOpen = false">
 
     <!-- ===================================================================== -->
     <!-- 1. TOP NAVBAR                                                         -->
     <!-- ===================================================================== -->
-    <header class="guide-navbar" :class="{ 'guide-bg-frozen-blur': sidebarOpen }">
+    <header class="guide-navbar">
         <div class="guide-navbar-left">
             <!-- Hamburger Button (Opens Single Sidebar Drawer) -->
             <button type="button" 
                     class="guide-btn-icon" 
                     @click="sidebarOpen = !sidebarOpen" 
-                    title="Daftar Isi Panduan (10 Bab)">
+                    title="Daftar Isi Panduan (11 Bab)">
                 <i data-lucide="menu"></i>
             </button>
 
             <!-- Brand Info (Main App Logo Badge) -->
             <div class="guide-brand-box">
                 <div class="guide-brand-badge">
-                    <img src="<?= Router::asset('/favicon/apple-touch-icon.png') ?>" alt="<?= htmlspecialchars($companyName) ?>" class="guide-brand-logo-img">
+                    <img src="<?= Router::asset('/favicon/favicon-96x96.png') ?>" alt="<?= htmlspecialchars($companyName) ?>" class="guide-brand-logo-img">
                 </div>
                 <div class="guide-brand-text">
                     <h1><?= htmlspecialchars($companyName) ?></h1>
@@ -1263,13 +1265,13 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </template>
             </button>
 
-            <!-- Close Guide Tab Button -->
+            <!-- Smart Close / Return Button -->
             <button type="button" 
                     class="guide-btn-close" 
-                    onclick="window.close(); setTimeout(() => { window.location.href = '<?= Router::url('/dashboard') ?>'; }, 200);" 
-                    title="Tutup Panduan (Tutup Tab)">
+                    @click="closeOrReturn()" 
+                    :title="isPWA ? 'Kembali ke Aplikasi (Tutup Panduan)' : 'Tutup Panduan (Tutup Tab)'">
                 <i data-lucide="x" style="width:14px;height:14px;"></i>
-                <span class="guide-btn-close-text">Tutup Panduan</span>
+                <span class="guide-btn-close-text" x-text="isPWA ? 'Kembali' : 'Tutup Panduan'">Tutup Panduan</span>
             </button>
         </div>
     </header>
@@ -1283,10 +1285,10 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         <div x-show="sidebarOpen" 
              x-cloak 
              class="guide-drawer-backdrop" 
-             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter="transition-opacity ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave="transition-opacity ease-in duration-200"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
              @click="sidebarOpen = false"></div>
@@ -1294,7 +1296,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         <aside x-show="sidebarOpen" 
                x-cloak 
                class="guide-drawer custom-scrollbar"
-               x-transition:enter="transition ease-out duration-250 transform"
+               x-transition:enter="transition ease-out duration-200 transform"
                x-transition:enter-start="-translate-x-full"
                x-transition:enter-end="translate-x-0"
                x-transition:leave="transition ease-in duration-200 transform"
@@ -1328,14 +1330,14 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         </aside>
 
         <!-- MAIN ARTICLE BODY -->
-        <main class="guide-content-wrapper" :class="{ 'guide-bg-frozen-blur': sidebarOpen }">
+        <main class="guide-content-wrapper">
             <article class="guide-article">
 
                 <!-- 1. HERO BANNER -->
                 <div class="guide-main-hero">
                     <div class="hero-header-flex">
                         <div class="hero-brand-icon">
-                            <img src="<?= Router::asset('/favicon_guide.svg') ?>?v=<?= $favGuideV ?>" alt="<?= htmlspecialchars($companyName) ?>" class="hero-brand-logo-img">
+                            <img src="<?= Router::asset('/favicon/favicon_guide.svg') ?>?v=<?= $favGuideV ?>" alt="<?= htmlspecialchars($companyName) ?>" class="hero-brand-logo-img">
                         </div>
                         <div class="hero-header-body">
                             <div class="hero-top-row">

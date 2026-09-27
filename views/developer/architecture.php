@@ -41,7 +41,7 @@ ob_start();
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_procedures'] ?? count($procedures) ?> Procedures &amp; RPC</span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_controllers'] ?? 24 ?> Controllers</span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_helpers'] ?? 13 ?> Helpers</span>
-                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_suites'] ?? 27 ?> Test Suites</span>
+                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_suites'] ?? 35 ?> Test Suites</span>
                         <span class="badge badge-mono" style="font-size:10px;">Cloudflare R2 Storage</span>
                     </div>
                     <h1 style="font-size:18px;font-weight:900;color:var(--color-ink);line-height:1.3;">
@@ -473,7 +473,7 @@ ob_start();
                             <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🧪 Developer Hub (`/developer`)</div>
                             <span class="badge badge-mono text-[9.5px]">Pilih</span>
                         </div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Portal arsitektur, diagnostik DB Supabase, dan <?= $systemInfo['total_suites'] ?? 27 ?> test suites runner.</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Portal arsitektur, diagnostik DB Supabase, dan <?= $systemInfo['total_suites'] ?? 35 ?> test suites runner.</div>
                     </div>
                 </div>
             </div>
@@ -516,7 +516,7 @@ ob_start();
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
                         <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚡ 4 Enterprise Services (`app/Services/*`)</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">TestRunnerService (27 Suites), R2StorageService, MediaCacheService, dan ImportProcessor Engine.</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">TestRunnerService (35 Suites), R2StorageService, MediaCacheService, dan ImportProcessor Engine.</div>
                     </div>
                 </div>
             </div>
@@ -805,11 +805,11 @@ function devArchitectureApp() {
             {
                 id: 'tests',
                 name: 'tests/',
-                badge: '27 Test Suites',
+                badge: '35 Test Suites',
                 icon: '🧪',
                 desc: 'Rangkaian pengujian integrasi otomatis menyeluruh yang memverifikasi 100% kesehatan kode ERP.',
                 files: [
-                    { name: 'run_all.php', desc: 'CLI runner wrapper tipis yang mengeksekusi seluruh 27 test suites terpadu.' },
+                    { name: 'run_all.php', desc: 'CLI runner wrapper tipis yang mengeksekusi seluruh 35 test suites terpadu.' },
                     { name: 'SalesDriverIntegrityTest.php', desc: 'Integritas pemisahan tugas ketat Sales (punya komisi) vs Driver (punya armada nopol).' },
                     { name: 'CustomerIntegrityTest.php', desc: 'Integritas master pelanggan, validasi NIK/WA, grup tier harga, dan assignment sales.' },
                     { name: 'MasterDataCoreTest.php', desc: 'Integritas master data inti (produk, pelanggan, supplier, kas, karyawan).' },
@@ -835,9 +835,16 @@ function devArchitectureApp() {
                     { name: 'OwnerDashboardExecutiveTest.php', desc: 'Verifikasi integritas angka analitik eksekutif pada Owner Command Center.' },
                     { name: 'ImportDataLifecycleTest.php', desc: 'Verifikasi pengujian siklus impor data master Excel dan full-sync reconciliation.' },
                     { name: 'EmployeeManualTypeAndWhatsAppTest.php', desc: 'Verifikasi tipe penggajian karyawan manual dan unifikasi kontak WhatsApp.' },
+                    { name: 'EmployeeNik16DigitIntegrityTest.php', desc: 'Verifikasi validasi 16 digit NIK asli karyawan dan mode NIK Pending.' },
                     { name: 'AccessDenied403Test.php', desc: 'Verifikasi halaman kejutan 403, auto-logout, audio API, dan proteksi rute developer.' },
                     { name: 'BrandMasterModuleTest.php', desc: 'Verifikasi master data merek (Brand) dan relasinya dengan grup produk.' },
-                    { name: 'test_r2_integration.php', desc: 'Pengujian konektivitas langsung Cloudflare R2 bucket dan verifikasi presigned URL.' }
+                    { name: 'CustomerGroupBrandPricingTest.php', desc: 'Verifikasi level harga & diskon merek per grup pelanggan.' },
+                    { name: 'MasterFullSyncSafetyAuditTest.php', desc: 'Audit sensor relasi FK dan proteksi master default saat full-sync.' },
+                    { name: 'GudangRoleAndPositionIntegrityTest.php', desc: 'Validasi posisi Gudang dan role sistem permanen gudang.' },
+                    { name: 'DownloadFilenameSanitizationTest.php', desc: 'Audit pembersihan nama berkas unduhan dari tanda hubung & garis bawah.' },
+                    { name: 'DriverAssignmentAtPoIntegrationTest.php', desc: 'Validasi pemilihan driver sejak PO dan alur rute pengiriman.' },
+                    { name: 'HybridDocumentLifecycleTest.php', desc: 'Validasi dokumen gabungan Faktur & Surat Jalan serta proteksi cetak PO.' },
+                    { name: 'GuidePortalTest.php', desc: 'Verifikasi portal buku panduan mandiri (/guide), Table of Contents, dan pencarian teks.' }
                 ]
             },
             {
@@ -848,16 +855,17 @@ function devArchitectureApp() {
                 desc: 'Alat bantu diagnostik database PostgreSQL Supabase dan runner pengujian cepat.',
                 files: [
                     { name: 'test_db.php', desc: 'Skrip diagnostik kesehatan database Supabase, SSL pooler latency, integrity schema, dan RPC test.' },
-                    { name: 'run_all.php', desc: 'Shortcut CLI runner pengujian 27 test suites di lingkungan developer.' }
+                    { name: 'run_all.php', desc: 'Shortcut CLI runner pengujian 35 test suites di lingkungan developer.' }
                 ]
             },
             {
                 id: 'views',
                 name: 'views/',
-                badge: '19 Modul Views',
+                badge: '20 Modul Views',
                 icon: '🎨',
                 desc: 'Antarmuka visual pengguna berbasis Server-Side Rendered PHP dengan Alpine.js reactivity.',
                 files: [
+                    { name: 'guide/index.php', desc: 'Portal Dokumentasi & Buku Panduan Operasional Mandiri (11 Bab SOP Terpadu).' },
                     { name: 'consignment/', desc: 'Portal konsinyasi: index.php, stok_rak.php, opname.php, opname_hasil.php, tagihan.php, laporan_penjualan.php, dll.' },
                     { name: 'deliveries/index.php', desc: 'Layar Driver Mobile & ekspedisi: manifest pengiriman surat jalan tanpa bocor harga.' },
                     { name: 'pos/index.php', desc: 'Layar Kasir POS Retail: keranjang transaksi, scan barcode, diskon, dan cetak struk thermal.' },
@@ -983,6 +991,8 @@ function devArchitectureApp() {
             { url: '/settings/company', method: 'GET / POST', action: 'SettingsController::company()', view: 'views/settings/company.php', role: 'Owner, Admin' },
             { url: '/settings/activity-logs', method: 'GET', action: 'ActivityLogController::index()', view: 'views/settings/logs.php', role: 'Owner, Admin' },
             { url: '/settings/impor-data', method: 'GET', action: 'ImportDataController::index()', view: 'views/settings/impor_data.php', role: 'Owner, Admin' },
+            { url: '/guide', method: 'GET', action: 'GuideController::index()', view: 'views/guide/index.php', role: 'Semua Pengguna Terotentikasi' },
+            { url: '/panduan', method: 'GET', action: 'GuideController::index() (Alias)', view: 'views/guide/index.php', role: 'Semua Pengguna Terotentikasi' },
             { url: '/profile', method: 'GET / POST', action: 'ProfileController::index()', view: 'views/profile/index.php', role: 'Semua Pengguna' },
             { url: '/developer', method: 'GET', action: 'DeveloperController::index()', view: 'views/developer/index.php', role: 'Khusus Developer' },
             { url: '/developer/architecture', method: 'GET', action: 'DeveloperController::architecture()', view: 'views/developer/architecture.php', role: 'Khusus Developer' },
@@ -1394,10 +1404,10 @@ kerensnack-erp/
 │   └── assets/                          # Aset statis: css/app.css, js/app.js, alpine.min.js, lucide.min.js
 │
 ├── storage/                             # 💾 Penyimpanan Berkas Lokal & Uploads
-├── cache/                               # ⚡ Cache Lokal Media Cloudflare R2 & File Sementara
-├── tests/                               # 🧪 27 Test Suites Otomatis & Integration Tests
+├── cache/                               # ⚡ Cache Lokal Media & File Sementara
+├── tests/                               # 🧪 35 Test Suites Otomatis & Integration Tests
 │   ├── run_all.php                      # CLI test runner terpadu
-│   └── test_r2_integration.php          # Verifikasi konektivitas bucket Cloudflare R2
+│   └── GuidePortalTest.php              # Verifikasi portal buku panduan mandiri
 │
 └── views/                               # 🎨 19 Direktori Modul Antarmuka Tampilan (Views)
     ├── auth/                            # Layar login & sesi pengguna

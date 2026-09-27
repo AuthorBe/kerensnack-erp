@@ -880,11 +880,15 @@ textarea:focus-visible {
    6.1 SIDEBAR COLLAPSIBLE (Icon-Only Mode — Desktop ≥1024px)
    ============================================================================= */
 
-/* Sidebar width transition for smooth collapse/expand */
-.sidebar {
+/* Sidebar width transition for smooth collapse/expand (only after initial paint) */
+html.sidebar-ready .sidebar {
   transition: width 0.42s cubic-bezier(0.25, 1, 0.4, 1),
               transform 0.3s cubic-bezier(0.25, 1, 0.4, 1);
   will-change: width;
+}
+html:not(.sidebar-ready) .sidebar,
+html:not(.sidebar-ready) .sidebar * {
+  transition: none !important;
 }
 
 /* Toggle button: only visible on desktop */
@@ -4350,7 +4354,7 @@ html:not(.dark) .toast-info {
   border-radius: 4px;
 }
 
-/* --- Global Full-Page Ghost Skeleton Overlay --- */
+/* --- Global Full-Page Ghost Skeleton Overlay (Main Workspace Only) --- */
 #app-page-loader {
   position: fixed;
   inset: 0;
@@ -4366,6 +4370,21 @@ html:not(.dark) .toast-info {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 24px;
+}
+
+@media (min-width: 1024px) {
+  #app-page-loader {
+    left: var(--sidebar-width, 260px);
+    width: calc(100% - var(--sidebar-width, 260px));
+    transition: left 0.35s cubic-bezier(0.25, 1, 0.4, 1),
+                width 0.35s cubic-bezier(0.25, 1, 0.4, 1),
+                opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  html.sidebar-is-collapsed #app-page-loader,
+  .sidebar.sidebar-collapsed ~ #app-page-loader {
+    left: 60px;
+    width: calc(100% - 60px);
+  }
 }
 
 .dark #app-page-loader {

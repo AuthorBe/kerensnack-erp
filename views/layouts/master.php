@@ -6,9 +6,10 @@ use App\Core\Router;
 $cssV = file_exists(ROOT_PATH . '/public/assets/css/app.css') ? filemtime(ROOT_PATH . '/public/assets/css/app.css') : '1';
 $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PATH . '/public/assets/js/app.js')  : '1';
 $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemtime(ROOT_PATH . '/public/assets/js/erp-helpers.js') : '1';
+$isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
 ?>
 <!DOCTYPE html>
-<html lang="id" class="<?= (($_COOKIE['ksnack_theme'] ?? 'light') === 'dark') ? 'dark' : '' ?>">
+<html lang="id" class="<?= (($_COOKIE['ksnack_theme'] ?? 'light') === 'dark') ? 'dark' : '' ?> <?= $isSidebarCollapsed ? 'sidebar-is-collapsed' : '' ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -69,12 +70,10 @@ $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemt
             else document.documentElement.classList.remove('dark');
 
             // Zero-flash sidebar collapsed state (apply before CSS paint)
-            // Default on large screens (tablet landscape / laptop / desktop >=1024px) is COLLAPSED,
-            // unless the user explicitly expanded it (ksnack_sidebar_collapsed === '0')
+            // Default is ALWAYS COLLAPSED (diperkecil)
             try {
                 var savedSidebar = window.readStorageOrCookie('ksnack_sidebar_collapsed');
-                var isDesktop = window.innerWidth >= 1024;
-                var shouldCollapse = isDesktop ? (savedSidebar !== '0') : (savedSidebar === '1');
+                var shouldCollapse = (savedSidebar !== '0');
                 if (shouldCollapse) {
                     document.documentElement.classList.add('sidebar-is-collapsed');
                 } else {
