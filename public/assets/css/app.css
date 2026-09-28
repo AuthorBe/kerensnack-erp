@@ -2261,13 +2261,17 @@ body.ksnack-popup-freeze .app-header {
   padding-right: calc(var(--ksnack-scrollbar-comp, 0px) + 16px);
 }
 
-/* Universal Frosted Glass Modal Backdrops */
+/* =============================================================================
+   13. UNIVERSAL MODAL DNA SYSTEM (KEREN ONE DESIGN SYSTEM)
+   Responsive Center Dialog on Desktop | Bottom-Sheet Drawer on Tablet & Mobile
+   ============================================================================= */
+
+/* 1. Universal Frosted Glass Modal Backdrops */
 .modal-backdrop,
 .tagihan-modal-backdrop,
 .tagihan-modal-overlay,
 .receipt-backdrop,
 .confirm-overlay,
-.m3-payment-backdrop,
 .popup-blur-backdrop,
 [data-popup-backdrop] {
   position: fixed !important;
@@ -2284,10 +2288,10 @@ body.ksnack-popup-freeze .app-header {
   background: rgba(15, 23, 42, 0.72) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  display: flex !important;
+  align-items: center !important; /* Desktop: Center */
+  justify-content: center !important;
+  padding: max(20px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)) !important;
   overflow-y: auto !important;
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
@@ -2301,10 +2305,9 @@ body.ksnack-popup-freeze .app-header {
 .dark .tagihan-modal-overlay,
 .dark .receipt-backdrop,
 .dark .confirm-overlay,
-.dark .m3-payment-backdrop,
 .dark .popup-blur-backdrop,
 .dark [data-popup-backdrop] {
-  background: rgba(3, 7, 18, 0.80) !important;
+  background: rgba(3, 7, 18, 0.82) !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
 }
@@ -2312,8 +2315,7 @@ body.ksnack-popup-freeze .app-header {
 .modal-backdrop::-webkit-scrollbar,
 .tagihan-modal-backdrop::-webkit-scrollbar,
 .receipt-backdrop::-webkit-scrollbar,
-.confirm-overlay::-webkit-scrollbar,
-.m3-payment-backdrop::-webkit-scrollbar {
+.confirm-overlay::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
@@ -2328,78 +2330,210 @@ body.ksnack-popup-freeze .app-header {
   display: none !important;
 }
 
-.modal-box {
-  background-color: var(--color-canvas);
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--rounded-xl);
-  padding: 24px;
-  width: 100%;
-  max-width: 480px;
-  max-height: calc(100vh - 40px);
-  max-height: calc(100dvh - 40px);
-  overflow-y: auto;
+/* 2. Universal Modal Shell / Box (Desktop Dialog) */
+.modal-box,
+.tagihan-modal-shell,
+.detail-modal-shell,
+.skema-modal-box,
+.purchase-modal-box,
+.company-preview-modal-box {
+  background-color: var(--color-canvas) !important;
+  border: 1px solid var(--color-hairline) !important;
+  border-radius: 20px !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 520px;
+  max-height: calc(100vh - 40px) !important;
+  max-height: calc(100dvh - 40px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
   -ms-overflow-style: none;
   scrollbar-width: none;
-  margin: auto;
-  box-shadow: var(--shadow-3);
-  position: relative;
-  z-index: 10000;
-  animation: modalPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  margin: auto !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+  position: relative !important;
+  z-index: 10000 !important;
+  animation: modalPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
-.modal-box::-webkit-scrollbar {
+.modal-box-sm { max-width: 420px !important; }
+.modal-box-md { max-width: 540px !important; }
+.modal-box-lg { max-width: 900px !important; }
+.modal-box-xl { max-width: 1100px !important; }
+
+.modal-box::-webkit-scrollbar,
+.tagihan-modal-shell::-webkit-scrollbar,
+.detail-modal-shell::-webkit-scrollbar,
+.skema-modal-box::-webkit-scrollbar,
+.purchase-modal-box::-webkit-scrollbar,
+.company-preview-modal-box::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
 
-@keyframes modalPopIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.dark .modal-box {
+.dark .modal-box,
+.dark .tagihan-modal-shell,
+.dark .detail-modal-shell,
+.dark .skema-modal-box,
+.dark .purchase-modal-box,
+.dark .company-preview-modal-box {
   background-color: var(--color-canvas) !important;
   border-color: var(--color-hairline) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
 }
 
-.modal-header {
-  display: flex;
+/* 3. Mobile Bottom-Sheet Pull Handle Indicator */
+.modal-handle {
+  display: none;
+  width: 100%;
+  justify-content: center;
   align-items: center;
-  justify-content: space-between;
-  padding-bottom: 14px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--color-hairline);
+  padding: 10px 0 4px 0;
+  flex-shrink: 0;
+  background: var(--color-canvas);
+  cursor: grab;
+  user-select: none;
+}
+.modal-handle-bar {
+  width: 38px;
+  height: 4.5px;
+  border-radius: 999px;
+  background: var(--color-hairline-strong);
+  opacity: 0.85;
 }
 
-.dark .modal-header { border-bottom-color: var(--color-hairline); }
-
-.modal-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-ink);
-  letter-spacing: -0.01em;
+/* 4. Modal Header */
+.modal-header,
+.tagihan-modal-header,
+.detail-modal-header,
+.skema-modal-header,
+.purchase-detail-modal-header,
+.company-preview-modal-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid var(--color-hairline) !important;
+  background: var(--color-canvas) !important;
+  flex-shrink: 0 !important;
+  gap: 12px !important;
+  margin: 0 !important;
 }
 
-.modal-box-lg {
-  max-width: 900px;
-  width: 95%;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
-  max-height: 90dvh;
-  overflow: hidden;
-  border-radius: 20px;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.04);
+.dark .modal-header,
+.dark .tagihan-modal-header,
+.dark .detail-modal-header,
+.dark .skema-modal-header,
+.dark .purchase-detail-modal-header,
+.dark .company-preview-modal-header {
+  border-bottom-color: var(--color-hairline) !important;
+  background: var(--color-canvas) !important;
 }
 
+.modal-title,
+.skema-modal-title {
+  font-size: 15.5px !important;
+  font-weight: 800 !important;
+  color: var(--color-ink) !important;
+  letter-spacing: -0.015em !important;
+  margin: 0 !important;
+  line-height: 1.3 !important;
+}
+
+/* 5. Header Close X Button (DNA Standard: Ditampilkan di HP & Tablet < 1024px, Disembunyikan di Laptop & Desktop >= 1024px) */
+.modal-close-x,
+.tagihan-modal-close-btn,
+.modal-close-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 9px !important;
+  color: var(--color-ink-mute) !important;
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+  padding: 0 !important;
+}
+
+.modal-close-x:hover,
+.tagihan-modal-close-btn:hover,
+.modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: var(--color-ink) !important;
+}
+
+.dark .modal-close-x:hover,
+.dark .tagihan-modal-close-btn:hover,
+.dark .modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+/* Di Layar Laptop, Komputer, & Tablet (>= 768px): Sembunyikan ikon X karena penutupan menggunakan tombol Batal / Tutup di footer */
+@media (min-width: 768px) {
+  .modal-close-x:not(.modal-close-always),
+  .tagihan-modal-close-btn:not(.modal-close-always),
+  .modal-close-btn:not(.modal-close-always) {
+    display: none !important;
+  }
+}
+
+/* Di Layar HP (< 768px): Sembunyikan tombol Batal di footer dan gunakan ikon X di header */
+@media (max-width: 767px) {
+  .modal-btn-cancel-desktop {
+    display: none !important;
+  }
+  .modal-close-x,
+  .tagihan-modal-close-btn,
+  .modal-close-btn {
+    display: inline-flex !important;
+  }
+}
+
+/* 6. Modal Body & Custom Scrollable Area */
+.modal-body,
+.tagihan-modal-body,
+.detail-modal-body,
+.skema-modal-body,
+.company-preview-modal-body {
+  padding: 20px !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  flex: 1 1 auto !important;
+}
+
+/* 7. Modal Footer & Responsive Action Buttons */
+.modal-footer,
+.tagihan-modal-footer,
+.detail-modal-footer,
+.skema-modal-footer,
+.company-preview-modal-footer {
+  padding: 14px 20px !important;
+  border-top: 1px solid var(--color-hairline) !important;
+  background: var(--color-canvas-soft) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.dark .modal-footer,
+.dark .tagihan-modal-footer,
+.dark .detail-modal-footer,
+.dark .skema-modal-footer,
+.dark .company-preview-modal-footer {
+  border-top-color: var(--color-hairline) !important;
+  background: var(--color-canvas-soft) !important;
+}
+
+/* 8. Modal Tab Navigation */
 .modal-tab-nav {
   display: flex;
   align-items: center;
@@ -2470,28 +2604,154 @@ body.ksnack-popup-freeze .app-header {
   -webkit-overflow-scrolling: touch;
 }
 
-@media (max-width: 1023px) {
-  .modal-backdrop {
-    padding: 0;
-    align-items: flex-end;
+/* =============================================================================
+   MOBILE BOTTOM-SHEET ENGINE (< 768px: Android & iOS Hardened)
+   ============================================================================= */
+@media (max-width: 767px) {
+  .modal-backdrop,
+  .tagihan-modal-backdrop,
+  .tagihan-modal-overlay,
+  .receipt-backdrop,
+  .confirm-overlay,
+  .popup-blur-backdrop,
+  [data-popup-backdrop] {
+    position: fixed !important;
+    inset: 0 !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    padding: 0 !important;
+    align-items: flex-end !important; /* Menempel ke dasar layar */
+    justify-content: center !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch !important;
   }
-  .modal-box-lg {
-    max-width: 100%;
-    width: 100%;
-    max-height: 94vh;
-    max-height: 94dvh;
-    border-radius: 20px 20px 0 0;
-    margin: 0;
-    animation: drawerSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  .modal-box,
+  .tagihan-modal-shell,
+  .detail-modal-shell,
+  .skema-modal-box,
+  .purchase-modal-box,
+  .company-preview-modal-box,
+  .modal-box-lg,
+  .modal-box-md,
+  .modal-box-sm,
+  .modal-box-xl {
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    max-height: 90dvh !important;
+    border-radius: 22px 22px 0 0 !important; /* Melengkung di bagian atas saja */
+    margin: 0 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.28) !important;
+    animation: drawerSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    overscroll-behavior-y: contain !important;
+    display: flex !important;
+    flex-direction: column !important;
   }
+
+  /* Munculkan Handle Bar di Mobile */
+  .modal-handle {
+    display: flex !important;
+    padding: 10px 0 6px 0 !important;
+    touch-action: pan-y !important;
+  }
+
+  .modal-handle-bar {
+    width: 40px !important;
+    height: 5px !important;
+    border-radius: 999px !important;
+    background: var(--color-hairline-strong) !important;
+    opacity: 0.75 !important;
+  }
+
+  .modal-header,
+  .tagihan-modal-header,
+  .detail-modal-header,
+  .skema-modal-header,
+  .purchase-detail-modal-header,
+  .company-preview-modal-header {
+    padding: 12px 18px !important;
+  }
+
+  .modal-body,
+  .tagihan-modal-body,
+  .detail-modal-body,
+  .skema-modal-body,
+  .company-preview-modal-body {
+    padding: 16px 18px 24px 18px !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
+  }
+
   .modal-tab-body {
-    padding: 14px 16px 24px 16px;
+    padding: 14px 18px 26px 18px !important;
+  }
+
+  /* Safe Area Inset Hardening for Android & iOS (Navigation Bar & Home Indicator Protection) */
+  .modal-footer,
+  .tagihan-modal-footer,
+  .detail-modal-footer,
+  .skema-modal-footer,
+  .company-preview-modal-footer {
+    padding: 12px 18px !important;
+    padding-bottom: max(22px, calc(12px + env(safe-area-inset-bottom, 14px))) !important;
+    background: var(--color-canvas) !important;
+    border-top: 1px solid var(--color-hairline) !important;
+    gap: 10px !important;
+  }
+
+  /* Sembunyikan tombol teks Batal di HP jika menggunakan class modal-btn-cancel-desktop */
+  .modal-btn-cancel-desktop {
+    display: none !important;
+  }
+
+  /* Tombol aksi utama (Simpan/Bayar/Konfirmasi) di HP menjadi Full-Width & Touch-Friendly */
+  .modal-footer > .btn,
+  .modal-footer > form,
+  .modal-footer > form > .btn,
+  .modal-footer > .btn-primary,
+  .modal-footer > .btn-danger,
+  .modal-footer > .btn-success,
+  .tagihan-modal-footer > .btn-primary,
+  .tagihan-modal-footer > .btn-success,
+  .detail-modal-footer > .btn-primary {
+    width: 100% !important;
+    min-height: 44px !important;
+    height: auto !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    justify-content: center !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
 @keyframes drawerSlideUp {
   from {
-    opacity: 0.7;
+    opacity: 0.6;
     transform: translateY(100%);
   }
   to {

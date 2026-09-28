@@ -12,41 +12,40 @@ $currentAppHostPath = htmlspecialchars(($_SERVER['HTTP_HOST'] ?? 'preview.ajisak
 <div id="pwaInstallModal" 
      class="modal-backdrop"
      style="display:none !important;" 
+     onclick="if(event.target===this) closePwaInstallModal()"
      role="dialog" 
      aria-modal="true" 
      aria-labelledby="pwaModalTitle">
     
     <div class="modal-box modal-box-lg" 
-         style="max-width:520px;width:100%;padding:0;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;max-height:min(90vh, 680px);border:1px solid var(--color-hairline);box-shadow:0 25px 60px -15px rgba(0,0,0,0.3);-webkit-overflow-scrolling:touch;"
+         style="max-width:520px;"
          onclick="event.stopPropagation()">
 
         <!-- MOBILE PULL HANDLE -->
-        <div class="sm:hidden w-full flex justify-center pt-3 pb-1 flex-shrink-0" style="background:var(--color-canvas);">
-            <div style="width:40px;height:4px;border-radius:2px;background:var(--color-hairline-strong);"></div>
-        </div>
+        <div class="modal-handle"><div class="modal-handle-bar"></div></div>
 
-        <!-- 1. MODAL HEADER (Tanpa Tombol X Sesuai Standar Konfirmasi ERP) -->
-        <div style="padding:16px 20px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between;background:var(--color-canvas);flex-shrink:0;gap:12px;">
-            <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
-                <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(30,58,138,0.12) 100%);border:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
+        <!-- 1. MODAL HEADER -->
+        <div class="modal-header">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(30,58,138,0.12) 100%);border:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">
                     <img src="<?= \App\Core\Router::url('/assets/favicon/web-app-manifest-192x192.png') ?>" 
                          alt="Logo Keren One" 
-                         style="width:30px;height:30px;object-fit:contain;border-radius:6px;"
+                         style="width:28px;height:28px;object-fit:contain;border-radius:6px;"
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                     <div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;color:var(--color-primary);font-weight:900;font-size:18px;">
                         K
                     </div>
                 </div>
-                <div style="min-width:0;flex:1;">
+                <div class="min-w-0 flex-1">
                     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <h3 id="pwaModalTitle" class="modal-title font-black" style="font-size:15.5px;color:var(--color-ink);letter-spacing:-0.02em;margin:0;">
+                        <h3 id="pwaModalTitle" class="modal-title" style="margin:0;">
                             Pasang Aplikasi KEREN ONE
                         </h3>
                         <span class="badge badge-primary font-mono" style="font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:6px;">
                             PWA
                         </span>
                     </div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;display:flex;align-items:center;gap:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;display:flex;align-items:center;gap:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                         <i data-lucide="shield-check" style="width:13px;height:13px;color:var(--color-success);flex-shrink:0;"></i>
                         <span id="pwaModalDomainLabel" class="font-mono" style="font-weight:600;"><?= $currentAppHostPath ?></span>
                         <span style="opacity:0.4;">&bull;</span>
@@ -54,6 +53,9 @@ $currentAppHostPath = htmlspecialchars(($_SERVER['HTTP_HOST'] ?? 'preview.ajisak
                     </div>
                 </div>
             </div>
+            <button type="button" onclick="closePwaInstallModal()" class="modal-close-x" title="Tutup Modal">
+                <i data-lucide="x" style="width:18px;height:18px;"></i>
+            </button>
         </div>
 
         <!-- 2. TAB NAVIGATION BAR -->
@@ -312,19 +314,18 @@ $currentAppHostPath = htmlspecialchars(($_SERVER['HTTP_HOST'] ?? 'preview.ajisak
 
         </div>
 
-        <!-- 4. MODAL FOOTER (Hanya Batal & Download di Sisi Kanan + iOS Safe-Area Padding) -->
-        <div style="padding:14px 20px;padding-bottom:max(16px, env(safe-area-inset-bottom, 16px));border-top:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:flex-end;background:var(--color-canvas);flex-shrink:0;gap:10px;">
+        <!-- 4. MODAL FOOTER -->
+        <div class="modal-footer">
             <button type="button" 
                     onclick="closePwaInstallModal()" 
-                    class="btn btn-secondary btn-sm" 
-                    style="font-weight:700;height:38px;padding:0 18px;font-size:12.5px;">
+                    class="btn btn-secondary modal-btn-cancel-desktop">
                 Batal
             </button>
             <button type="button" 
                     id="btnPwaTriggerDirect" 
                     onclick="handlePwaDirectInstall()" 
-                    class="btn btn-primary btn-sm" 
-                    style="font-weight:700;height:38px;padding:0 22px;gap:6px;font-size:12.5px;box-shadow:0 3px 10px rgba(30,58,138,0.22);">
+                    class="btn btn-primary w-full sm:w-auto" 
+                    style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
                 <i data-lucide="download" style="width:15px;height:15px;"></i>
                 <span id="btnPwaTriggerDirectText">Pasang Sekarang</span>
             </button>
