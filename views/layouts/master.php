@@ -370,6 +370,22 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
                     window.open('<?= Router::url('/guide') ?>', '_blank');
                 }
             });
+
+            // PWA Standalone Navigation Guard: Pertahankan pembukaan link /guide di dalam aplikasi PWA di HP
+            var isPwaClient = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) 
+                || (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches)
+                || (window.matchMedia && window.matchMedia('(display-mode: minimal-ui)').matches)
+                || Boolean(window.navigator.standalone);
+
+            if (isPwaClient) {
+                document.addEventListener('click', function(e) {
+                    var anchor = e.target && e.target.closest ? e.target.closest('a[href*="/guide"], a[href*="/panduan"]') : null;
+                    if (anchor && anchor.getAttribute('target') === '_blank') {
+                        e.preventDefault();
+                        window.location.href = anchor.href;
+                    }
+                }, { capture: true });
+            }
         })();
     </script>
 

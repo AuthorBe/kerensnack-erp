@@ -1129,7 +1129,11 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
     })(),
     isPWA: (function() {
         try {
-            return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || Boolean(window.navigator.standalone);
+            return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) 
+                || (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches)
+                || (window.matchMedia && window.matchMedia('(display-mode: minimal-ui)').matches)
+                || Boolean(window.navigator.standalone)
+                || Boolean(document.referrer && document.referrer.includes('android-app://'));
         } catch(e) {
             return false;
         }
@@ -1177,14 +1181,62 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         document.cookie = 'ksnack_theme=' + theme + '; path=/; max-age=31536000';
     },
     closeOrReturn() {
-        window.close();
+        const isStandalone = this.isPWA;
+        const referrer = document.referrer || '';
+        const isSameOriginReferrer = Boolean(referrer && referrer.startsWith(window.location.origin) && !referrer.includes('/guide') && !referrer.includes('/panduan'));
+
+        // 1. Skenario PWA (Progressive Web App Standalone di HP):
+        // DILARANG memanggil window.close() karena akan langsung menutup aplikasi PWA (keluar ke Home Screen HP)!
+        if (isStandalone) {
+            if (isSameOriginReferrer) {
+                window.location.href = referrer;
+            } else if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = '<?= Router::url('/dashboard') ?>';
+            }
+            return;
+        }
+
+        // 2. Skenario Browser Biasa dengan window.opener (Popup / tab baru via window.open):
+        if (window.opener && !window.opener.closed) {
+            try {
+                window.close();
+            } catch (e) {}
+            setTimeout(() => {
+                if (isSameOriginReferrer) {
+                    window.location.href = referrer;
+                } else {
+                    window.location.href = '<?= Router::url('/dashboard') ?>';
+                }
+            }, 250);
+            return;
+        }
+
+        // 3. Skenario Browser Mobile / Tab Biasa (target="_blank" atau navigasi internal):
+        // Jika ada referrer internal dari origin yang sama, prioritaskan kembali ke sesi transaksi kerjaan
+        if (isSameOriginReferrer) {
+            try {
+                window.close();
+            } catch (e) {}
+            setTimeout(() => {
+                window.location.href = referrer;
+            }, 150);
+            return;
+        }
+
+        // 4. Jika dibuka langsung tanpa referrer internal (misal URL direct/bookmark/new tab):
+        try {
+            window.close();
+        } catch (e) {}
+
         setTimeout(() => {
             if (window.history.length > 1) {
                 window.history.back();
             } else {
                 window.location.href = '<?= Router::url('/dashboard') ?>';
             }
-        }, 150);
+        }, 200);
     }
 }" @keydown.window.escape="sidebarOpen = false">
 
@@ -1270,7 +1322,12 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                     class="guide-btn-close" 
                     @click="closeOrReturn()" 
                     :title="isPWA ? 'Kembali ke Aplikasi (Tutup Panduan)' : 'Tutup Panduan (Tutup Tab)'">
-                <i data-lucide="x" style="width:14px;height:14px;"></i>
+                <span x-show="isPWA" style="display:inline-flex;align-items:center;">
+                    <i data-lucide="arrow-left" style="width:14px;height:14px;"></i>
+                </span>
+                <span x-show="!isPWA" style="display:inline-flex;align-items:center;">
+                    <i data-lucide="x" style="width:14px;height:14px;"></i>
+                </span>
                 <span class="guide-btn-close-text" x-text="isPWA ? 'Kembali' : 'Tutup Panduan'">Tutup Panduan</span>
             </button>
         </div>
