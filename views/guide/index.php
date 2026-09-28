@@ -1117,128 +1117,133 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             }
         }
     </style>
-</head>
-<body x-data="{
-    sidebarOpen: false,
-    searchQuery: '',
-    matchCount: 0,
-    currentMatchIndex: 0,
-    isDark: (function() {
-        var m = document.cookie.match(/(?:^|; )ksnack_theme=([^;]*)/);
-        return (m ? decodeURIComponent(m[1]) : 'light') === 'dark';
-    })(),
-    isPWA: (function() {
-        try {
-            return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) 
-                || (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches)
-                || (window.matchMedia && window.matchMedia('(display-mode: minimal-ui)').matches)
-                || Boolean(window.navigator.standalone)
-                || Boolean(document.referrer && document.referrer.includes('android-app://'));
-        } catch(e) {
-            return false;
-        }
-    })(),
-    init() {
-        this.$watch('searchQuery', (val) => {
-            if (window.guideSearchEngine) {
-                const res = window.guideSearchEngine.highlight(val);
-                this.matchCount = res.total;
-                this.currentMatchIndex = res.current;
-            }
-        });
-        this.$watch('sidebarOpen', (val) => {
-            if (val) {
-                document.body.style.overflow = 'hidden';
-                document.documentElement.style.overflow = 'hidden';
-            } else {
-                document.body.style.overflow = '';
-                document.documentElement.style.overflow = '';
-            }
-        });
-    },
-    clearSearch() {
-        this.searchQuery = '';
-        if (window.guideSearchEngine) {
-            window.guideSearchEngine.clear();
-        }
-        this.matchCount = 0;
-        this.currentMatchIndex = 0;
-    },
-    nextMatch() {
-        if (window.guideSearchEngine && this.matchCount > 0) {
-            this.currentMatchIndex = window.guideSearchEngine.next();
-        }
-    },
-    prevMatch() {
-        if (window.guideSearchEngine && this.matchCount > 0) {
-            this.currentMatchIndex = window.guideSearchEngine.prev();
-        }
-    },
-    toggleTheme() {
-        this.isDark = !this.isDark;
-        const theme = this.isDark ? 'dark' : 'light';
-        document.documentElement.classList.toggle('dark', this.isDark);
-        document.cookie = 'ksnack_theme=' + theme + '; path=/; max-age=31536000';
-    },
-    closeOrReturn() {
-        const isStandalone = this.isPWA;
-        const referrer = document.referrer || '';
-        const isSameOriginReferrer = Boolean(referrer && referrer.startsWith(window.location.origin) && !referrer.includes('/guide') && !referrer.includes('/panduan'));
+    <script>
+        function guideApp() {
+            return {
+                sidebarOpen: false,
+                searchQuery: '',
+                matchCount: 0,
+                currentMatchIndex: 0,
+                isDark: (function() {
+                    var m = document.cookie.match(/(?:^|; )ksnack_theme=([^;]*)/);
+                    return (m ? decodeURIComponent(m[1]) : 'light') === 'dark';
+                })(),
+                isPWA: (function() {
+                    try {
+                        return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) 
+                            || (window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches)
+                            || (window.matchMedia && window.matchMedia('(display-mode: minimal-ui)').matches)
+                            || Boolean(window.navigator.standalone)
+                            || Boolean(document.referrer && document.referrer.includes('android-app://'));
+                    } catch(e) {
+                        return false;
+                    }
+                })(),
+                init() {
+                    this.$watch('searchQuery', (val) => {
+                        if (window.guideSearchEngine) {
+                            const res = window.guideSearchEngine.highlight(val);
+                            this.matchCount = res.total;
+                            this.currentMatchIndex = res.current;
+                        }
+                    });
+                    this.$watch('sidebarOpen', (val) => {
+                        if (val) {
+                            document.body.style.overflow = 'hidden';
+                            document.documentElement.style.overflow = 'hidden';
+                        } else {
+                            document.body.style.overflow = '';
+                            document.documentElement.style.overflow = '';
+                        }
+                    });
+                },
+                clearSearch() {
+                    this.searchQuery = '';
+                    if (window.guideSearchEngine) {
+                        window.guideSearchEngine.clear();
+                    }
+                    this.matchCount = 0;
+                    this.currentMatchIndex = 0;
+                },
+                nextMatch() {
+                    if (window.guideSearchEngine && this.matchCount > 0) {
+                        this.currentMatchIndex = window.guideSearchEngine.next();
+                    }
+                },
+                prevMatch() {
+                    if (window.guideSearchEngine && this.matchCount > 0) {
+                        this.currentMatchIndex = window.guideSearchEngine.prev();
+                    }
+                },
+                toggleTheme() {
+                    this.isDark = !this.isDark;
+                    const theme = this.isDark ? 'dark' : 'light';
+                    document.documentElement.classList.toggle('dark', this.isDark);
+                    document.cookie = 'ksnack_theme=' + theme + '; path=/; max-age=31536000';
+                },
+                closeOrReturn() {
+                    const isStandalone = this.isPWA;
+                    const referrer = document.referrer || '';
+                    const isSameOriginReferrer = Boolean(referrer && referrer.startsWith(window.location.origin) && !referrer.includes('/guide') && !referrer.includes('/panduan'));
 
-        // 1. Skenario PWA (Progressive Web App Standalone di HP):
-        // DILARANG memanggil window.close() karena akan langsung menutup aplikasi PWA (keluar ke Home Screen HP)!
-        if (isStandalone) {
-            if (isSameOriginReferrer) {
-                window.location.href = referrer;
-            } else if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.href = '<?= Router::url('/dashboard') ?>';
-            }
-            return;
-        }
+                    // 1. Skenario PWA (Progressive Web App Standalone di HP):
+                    // DILARANG memanggil window.close() karena akan langsung menutup aplikasi PWA (keluar ke Home Screen HP)!
+                    if (isStandalone) {
+                        if (isSameOriginReferrer) {
+                            window.location.href = referrer;
+                        } else if (window.history.length > 1) {
+                            window.history.back();
+                        } else {
+                            window.location.href = '<?= Router::url('/dashboard') ?>';
+                        }
+                        return;
+                    }
 
-        // 2. Skenario Browser Biasa dengan window.opener (Popup / tab baru via window.open):
-        if (window.opener && !window.opener.closed) {
-            try {
-                window.close();
-            } catch (e) {}
-            setTimeout(() => {
-                if (isSameOriginReferrer) {
-                    window.location.href = referrer;
-                } else {
-                    window.location.href = '<?= Router::url('/dashboard') ?>';
+                    // 2. Skenario Browser Biasa dengan window.opener (Popup / tab baru via window.open):
+                    if (window.opener && !window.opener.closed) {
+                        try {
+                            window.close();
+                        } catch (e) {}
+                        setTimeout(() => {
+                            if (isSameOriginReferrer) {
+                                window.location.href = referrer;
+                            } else {
+                                window.location.href = '<?= Router::url('/dashboard') ?>';
+                            }
+                        }, 250);
+                        return;
+                    }
+
+                    // 3. Skenario Browser Mobile / Tab Biasa (target="_blank" atau navigasi internal):
+                    // Jika ada referrer internal dari origin yang sama, prioritaskan kembali ke sesi transaksi kerjaan
+                    if (isSameOriginReferrer) {
+                        try {
+                            window.close();
+                        } catch (e) {}
+                        setTimeout(() => {
+                            window.location.href = referrer;
+                        }, 150);
+                        return;
+                    }
+
+                    // 4. Jika dibuka langsung tanpa referrer internal (misal URL direct/bookmark/new tab):
+                    try {
+                        window.close();
+                    } catch (e) {}
+
+                    setTimeout(() => {
+                        if (window.history.length > 1) {
+                            window.history.back();
+                        } else {
+                            window.location.href = '<?= Router::url('/dashboard') ?>';
+                        }
+                    }, 200);
                 }
-            }, 250);
-            return;
+            };
         }
-
-        // 3. Skenario Browser Mobile / Tab Biasa (target="_blank" atau navigasi internal):
-        // Jika ada referrer internal dari origin yang sama, prioritaskan kembali ke sesi transaksi kerjaan
-        if (isSameOriginReferrer) {
-            try {
-                window.close();
-            } catch (e) {}
-            setTimeout(() => {
-                window.location.href = referrer;
-            }, 150);
-            return;
-        }
-
-        // 4. Jika dibuka langsung tanpa referrer internal (misal URL direct/bookmark/new tab):
-        try {
-            window.close();
-        } catch (e) {}
-
-        setTimeout(() => {
-            if (window.history.length > 1) {
-                window.history.back();
-            } else {
-                window.location.href = '<?= Router::url('/dashboard') ?>';
-            }
-        }, 200);
-    }
-}" @keydown.window.escape="sidebarOpen = false">
+    </script>
+</head>
+<body x-data="guideApp()" @keydown.window.escape="sidebarOpen = false">
 
     <!-- ===================================================================== -->
     <!-- 1. TOP NAVBAR                                                         -->
