@@ -8,6 +8,7 @@ ob_start();
 // Perhitungan Finansial KPI untuk Tab Daftar Tagihan
 $totalTagihanDiterbitkan = array_sum(array_column($tagihan, 'total_netto'));
 $totalSudahDibayar       = array_sum(array_column($tagihan, 'total_dibayar'));
+$totalPotonganDiskon     = array_sum(array_column($tagihan, 'total_diskon'));
 $totalPiutangTertunggak  = $totalOutstanding;
 $collectionRate          = $totalTagihanDiterbitkan > 0 ? round(($totalSudahDibayar / $totalTagihanDiterbitkan) * 100, 1) : 0;
 $countBelumLunas         = count(array_filter($tagihan, fn($t) => in_array($t['status_pembayaran'], ['belum_lunas', 'sebagian'])));
@@ -288,9 +289,19 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
     color: var(--color-ink);
 }
 
+.tagihan-alert-banner.is-warning {
+    background-color: rgba(245, 158, 11, 0.09);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
 .dark .tagihan-alert-banner {
     background-color: rgba(2, 132, 199, 0.12);
     border-color: rgba(2, 132, 199, 0.3);
+}
+
+.dark .tagihan-alert-banner.is-warning {
+    background-color: rgba(245, 158, 11, 0.14);
+    border-color: rgba(245, 158, 11, 0.35);
 }
 
 /* ========================================================================= */
@@ -349,7 +360,7 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
 }
 
 /* ========================================================================= */
-/* 5. TABLE WRAPPER & ACTIVE ROW HIGHLIGHT                                   */
+/* 7. TABLE WRAPPER & ACTIVE ROW HIGHLIGHT                                   */
 /* ========================================================================= */
 .tagihan-row-selected {
     background-color: rgba(2, 132, 199, 0.08) !important;
@@ -360,7 +371,7 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
 }
 
 /* ========================================================================= */
-/* 6. STICKY FLOATING ACTION BAR (Bottom Sheet Style)                        */
+/* 8. STICKY FLOATING ACTION BAR (Bottom Sheet Style)                        */
 /* ========================================================================= */
 .floating-action-bar {
     position: fixed;
@@ -391,8 +402,7 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
 }
 
 /* ========================================================================= */
-/* ========================================================================= */
-/* 7. MODAL POP-UPS (Catat Pembayaran & Panduan Ketentuan)                  */
+/* 9. MODAL POP-UPS (Catat Pembayaran, Riwayat Ledger & Batch Settle)        */
 /* ========================================================================= */
 @keyframes tagihanModalPopIn {
     0% {
@@ -430,34 +440,11 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
     overscroll-behavior: contain !important;
 }
 
-.tagihan-modal-backdrop[style*="display: none"],
-.tagihan-modal-backdrop[style*="display:none"],
-.tagihan-modal-overlay[style*="display: none"],
-.tagihan-modal-overlay[style*="display:none"] {
-    display: none !important;
-}
-
 .tagihan-modal-shell {
     width: 100%;
-    max-width: 520px;
+    max-width: 580px;
     max-height: 90vh;
     max-height: 90dvh;
-    background-color: var(--color-canvas);
-    border: 1px solid var(--color-hairline);
-    border-radius: 20px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    margin: auto !important;
-    animation: tagihanModalPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.tagihan-modal-guide-shell {
-    width: 100%;
-    max-width: 740px;
-    height: 86vh;
-    max-height: 760px;
     background-color: var(--color-canvas);
     border: 1px solid var(--color-hairline);
     border-radius: 20px;
@@ -498,7 +485,7 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
     flex-shrink: 0;
 }
 
-/* Modal Pembayaran: Modern Fintech UI Refinements */
+/* Modal Pembayaran UI Controls */
 .tagihan-pay-field {
     display: flex;
     flex-direction: column;
@@ -533,8 +520,43 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
 .tagihan-pay-input:focus,
 .tagihan-pay-select:focus,
 .tagihan-pay-textarea:focus {
-    border-color: #0284c7;
-    box-shadow: 0 0 0 3.5px rgba(2, 132, 199, 0.15);
+    border-color: #881337;
+    box-shadow: 0 0 0 3.5px rgba(136, 19, 55, 0.15);
+}
+
+.dark .tagihan-pay-input:focus,
+.dark .tagihan-pay-select:focus,
+.dark .tagihan-pay-textarea:focus {
+    border-color: #fb7185;
+    box-shadow: 0 0 0 3.5px rgba(251, 113, 133, 0.2);
+}
+
+.tagihan-modal-close-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-hairline);
+    background-color: var(--color-canvas-soft);
+    color: var(--color-ink-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.tagihan-modal-close-btn:hover {
+    background-color: rgba(244, 63, 94, 0.1);
+    border-color: rgba(244, 63, 94, 0.3);
+    color: #f43f5e;
+    transform: scale(1.05);
+}
+
+.dark .tagihan-modal-close-btn:hover {
+    background-color: rgba(244, 63, 94, 0.2);
+    border-color: rgba(244, 63, 94, 0.4);
+    color: #fda4af;
 }
 
 .tagihan-pay-amount-box {
@@ -549,8 +571,13 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
 }
 
 .tagihan-pay-amount-box:focus-within {
-    border-color: #0284c7;
-    box-shadow: 0 0 0 3.5px rgba(2, 132, 199, 0.16);
+    border-color: #881337;
+    box-shadow: 0 0 0 3.5px rgba(136, 19, 55, 0.16);
+}
+
+.dark .tagihan-pay-amount-box:focus-within {
+    border-color: #fb7185;
+    box-shadow: 0 0 0 3.5px rgba(251, 113, 133, 0.2);
 }
 
 .tagihan-pay-amount-box.is-invalid {
@@ -603,10 +630,16 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
 }
 
 .tagihan-pay-preset-chip:hover {
-    background-color: rgba(2, 132, 199, 0.08);
-    border-color: rgba(2, 132, 199, 0.3);
-    color: #0284c7;
+    background-color: rgba(136, 19, 55, 0.08);
+    border-color: rgba(136, 19, 55, 0.3);
+    color: #881337;
     transform: translateY(-1px);
+}
+
+.dark .tagihan-pay-preset-chip:hover {
+    background-color: rgba(251, 113, 133, 0.12);
+    border-color: rgba(251, 113, 133, 0.35);
+    color: #fb7185;
 }
 
 .tagihan-pay-preset-chip.is-full {
@@ -614,6 +647,12 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
     border-color: rgba(16, 185, 129, 0.35);
     color: #059669;
     font-weight: 800;
+}
+
+.dark .tagihan-pay-preset-chip.is-full {
+    background-color: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34d399;
 }
 
 .tagihan-pay-preset-chip.is-full:hover {
@@ -666,13 +705,89 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
 
 .tagihan-pay-textarea {
     resize: none;
-    min-height: 70px;
+    min-height: 60px;
     line-height: 1.5;
 }
 
-/* ========================================================================= */
-/* 8. RESPONSIVE MEDIA QUERIES (Mobile Screen Optimizations)                 */
-/* ========================================================================= */
+/* Semantic Badges for Consignment Tagihan */
+.tagihan-badge-rolling {
+    font-size: 10px;
+    font-weight: 800;
+    color: #7c3aed;
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.25);
+    padding: 1.5px 7px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.dark .tagihan-badge-rolling {
+    color: #c4b5fd;
+    background: rgba(124, 58, 237, 0.2);
+    border-color: rgba(124, 58, 237, 0.35);
+}
+
+.tagihan-badge-kolektif {
+    font-size: 10px;
+    font-weight: 800;
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.08);
+    border: 1px solid rgba(2, 132, 199, 0.2);
+    padding: 1.5px 7px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+.dark .tagihan-badge-kolektif {
+    color: #7dd3fc;
+    background: rgba(2, 132, 199, 0.18);
+    border-color: rgba(2, 132, 199, 0.3);
+}
+
+.tagihan-badge-stale {
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #e11d48;
+    background: rgba(244, 63, 94, 0.1);
+    border: 1px solid rgba(244, 63, 94, 0.25);
+    padding: 2px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.dark .tagihan-badge-stale {
+    color: #fda4af;
+    background: rgba(244, 63, 94, 0.2);
+    border-color: rgba(244, 63, 94, 0.35);
+}
+
+/* History Ledger Accordion in Modal */
+.ledger-collapse-box {
+    border: 1px solid var(--color-hairline);
+    border-radius: 12px;
+    background: var(--color-canvas-soft);
+    overflow: hidden;
+    margin-top: 10px;
+}
+.ledger-collapse-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-ink-secondary);
+}
+.ledger-collapse-body {
+    padding: 0 14px 12px 14px;
+    border-top: 1px dashed var(--color-hairline);
+}
+
+/* Responsive Media Queries */
 @media (max-width: 640px) {
     .tagihan-card {
         padding: 15px 14px !important;
@@ -687,8 +802,7 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
         align-items: center !important;
         justify-content: center !important;
     }
-    .tagihan-modal-shell,
-    .tagihan-modal-guide-shell {
+    .tagihan-modal-shell {
         width: 100% !important;
         max-width: 100% !important;
         max-height: 92vh !important;
@@ -725,6 +839,18 @@ document.addEventListener('alpine:init', () => {
             'total_laku_nominal' => (float)$v['total_laku_nominal']
         ], $unbilledVisits)) ?>,
 
+        // Tab 2: Multi-Faktur Settlement State
+        selectedInvoices: [],
+        totalSelectedDebt: 0,
+        selectedInvoiceStoreName: '',
+        invoicesData: <?= json_encode(array_map(fn($t) => [
+            'id' => $t['pesanan_id'],
+            'pelanggan_id' => $t['pelanggan_id'],
+            'nama_toko' => $t['nama_toko'],
+            'nomor_nota' => $t['nomor_nota'],
+            'sisa_tagihan' => (float)$t['sisa_tagihan']
+        ], $tagihan)) ?>,
+
         init() {
             const params = new URLSearchParams(window.location.search);
             if (params.has('tab')) {
@@ -742,6 +868,7 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        // Tab 1 Actions
         toggleVisit(id) {
             const index = this.selectedVisits.indexOf(id);
             if (index === -1) {
@@ -749,10 +876,10 @@ document.addEventListener('alpine:init', () => {
             } else {
                 this.selectedVisits.splice(index, 1);
             }
-            this.recalculate();
+            this.recalculateVisits();
         },
 
-        recalculate() {
+        recalculateVisits() {
             let total = 0;
             let storeName = '';
             this.selectedVisits.forEach(id => {
@@ -766,7 +893,7 @@ document.addEventListener('alpine:init', () => {
             this.selectedStoreName = storeName;
         },
 
-        isMixedStore() {
+        isMixedStoreVisits() {
             if (this.selectedVisits.length <= 1) return false;
             let storeId = null;
             for (let i = 0; i < this.selectedVisits.length; i++) {
@@ -779,13 +906,59 @@ document.addEventListener('alpine:init', () => {
             return false;
         },
 
-        clearSelection() {
+        clearVisitsSelection() {
             this.selectedVisits = [];
-            this.recalculate();
+            this.recalculateVisits();
+        },
+
+        // Tab 2 Actions (Multi-Invoices Selection)
+        toggleInvoice(id) {
+            const index = this.selectedInvoices.indexOf(id);
+            if (index === -1) {
+                this.selectedInvoices.push(id);
+            } else {
+                this.selectedInvoices.splice(index, 1);
+            }
+            this.recalculateInvoices();
+        },
+
+        recalculateInvoices() {
+            let total = 0;
+            let storeName = '';
+            this.selectedInvoices.forEach(id => {
+                const inv = this.invoicesData.find(x => x.id === id);
+                if (inv) {
+                    total += inv.sisa_tagihan;
+                    if (!storeName) storeName = inv.nama_toko;
+                }
+            });
+            this.totalSelectedDebt = total;
+            this.selectedInvoiceStoreName = storeName;
+        },
+
+        isMixedStoreInvoices() {
+            if (this.selectedInvoices.length <= 1) return false;
+            let storeId = null;
+            for (let i = 0; i < this.selectedInvoices.length; i++) {
+                const inv = this.invoicesData.find(x => x.id === this.selectedInvoices[i]);
+                if (inv) {
+                    if (storeId === null) storeId = inv.pelanggan_id;
+                    else if (storeId !== inv.pelanggan_id) return true;
+                }
+            }
+            return false;
+        },
+
+        clearInvoicesSelection() {
+            this.selectedInvoices = [];
+            this.recalculateInvoices();
         },
 
         // Tab 2: Modal Catat Pembayaran State
         bayarModalOpen: false,
+        ledgerOpen: false,
+        loadingLedger: false,
+        paymentHistory: [],
         bayarData: {
             pesanan_id: '',
             nama_toko: '',
@@ -794,7 +967,22 @@ document.addEventListener('alpine:init', () => {
             sisa_tagihan: 0,
             sisa_formatted: '',
             nominal: '',
+            nominal_potongan: '',
+            alasan_potongan: '',
             tanggal_bayar: '<?= date('Y-m-d') ?>',
+            keterangan: ''
+        },
+
+        // Tab 2: Modal Batch Multi-Settlement State
+        batchModalOpen: false,
+        batchData: {
+            pesanan_ids: [],
+            nama_toko: '',
+            total_debt: 0,
+            total_debt_formatted: '',
+            nominal: '',
+            tanggal_bayar: '<?= date('Y-m-d') ?>',
+            akun_kas_id: '',
             keterangan: ''
         },
 
@@ -806,10 +994,18 @@ document.addEventListener('alpine:init', () => {
             this.bayarData.sisa_tagihan = parseFloat(sisa) || 0;
             this.bayarData.sisa_formatted = this.formatRupiah(this.bayarData.sisa_tagihan);
             this.bayarData.nominal = '';
+            this.bayarData.nominal_potongan = '';
+            this.bayarData.alasan_potongan = '';
             this.bayarData.tanggal_bayar = '<?= date('Y-m-d') ?>';
             this.bayarData.keterangan = '';
+            this.ledgerOpen = false;
+            this.paymentHistory = [];
             this.bayarModalOpen = true;
             document.body.style.overflow = 'hidden';
+
+            // Load riwayat pembayaran cicilan sebelumnya via AJAX
+            this.fetchPaymentHistory(id);
+
             this.$nextTick(() => {
                 if (window.lucide) lucide.createIcons();
             });
@@ -820,8 +1016,53 @@ document.addEventListener('alpine:init', () => {
             document.body.style.overflow = '';
         },
 
+        openBatchModal() {
+            if (this.selectedInvoices.length === 0 || this.isMixedStoreInvoices()) return;
+            this.batchData.pesanan_ids = [...this.selectedInvoices];
+            this.batchData.nama_toko = this.selectedInvoiceStoreName;
+            this.batchData.total_debt = this.totalSelectedDebt;
+            this.batchData.total_debt_formatted = this.formatRupiah(this.totalSelectedDebt);
+            this.batchData.nominal = this.totalSelectedDebt;
+            this.batchData.tanggal_bayar = '<?= date('Y-m-d') ?>';
+            this.batchData.akun_kas_id = '';
+            this.batchData.keterangan = 'Pelunasan transfer gabungan ' + this.selectedInvoices.length + ' faktur';
+            this.batchModalOpen = true;
+            document.body.style.overflow = 'hidden';
+            this.$nextTick(() => {
+                if (window.lucide) lucide.createIcons();
+            });
+        },
+
+        closeBatchModal() {
+            this.batchModalOpen = false;
+            document.body.style.overflow = '';
+        },
+
+        fetchPaymentHistory(pesananId) {
+            this.loadingLedger = true;
+            fetch('<?= Router::url('/consignment/tagihan/riwayat-pembayaran') ?>?pesanan_id=' + encodeURIComponent(pesananId))
+                .then(res => res.json())
+                .then(res => {
+                    this.loadingLedger = false;
+                    if (res.success && Array.isArray(res.payments)) {
+                        this.paymentHistory = res.payments;
+                        if (this.paymentHistory.length > 0) {
+                            this.ledgerOpen = true;
+                        }
+                    }
+                    this.$nextTick(() => {
+                        if (window.lucide) lucide.createIcons();
+                    });
+                })
+                .catch(err => {
+                    this.loadingLedger = false;
+                    console.error('Error fetching payment history:', err);
+                });
+        },
+
         setBayarPreset(percentage) {
-            this.bayarData.nominal = Math.round(this.bayarData.sisa_tagihan * (percentage / 100));
+            const sisa = this.bayarData.sisa_tagihan - this.getCleanPotongan();
+            this.bayarData.nominal = Math.max(0, Math.round(sisa * (percentage / 100)));
             this.$nextTick(() => {
                 if (window.lucide) lucide.createIcons();
             });
@@ -841,24 +1082,34 @@ document.addEventListener('alpine:init', () => {
             return isNaN(val) ? 0 : Math.max(0, val);
         },
 
+        getCleanPotongan() {
+            if (!this.bayarData.nominal_potongan || this.bayarData.nominal_potongan === '') return 0;
+            const val = parseFloat(this.bayarData.nominal_potongan);
+            return isNaN(val) ? 0 : Math.max(0, val);
+        },
+
+        getTotalPengurang() {
+            return this.getCleanNominal() + this.getCleanPotongan();
+        },
+
         getSisaBaru() {
-            const nom = this.getCleanNominal();
-            return Math.max(0, this.bayarData.sisa_tagihan - nom);
+            const totalPengurang = this.getTotalPengurang();
+            return Math.max(0, this.bayarData.sisa_tagihan - totalPengurang);
         },
 
         isOverpaid() {
-            const nom = this.getCleanNominal();
-            return nom > 0 && nom > this.bayarData.sisa_tagihan;
+            const totalPengurang = this.getTotalPengurang();
+            return totalPengurang > 0 && totalPengurang > this.bayarData.sisa_tagihan;
         },
 
         isLunas() {
-            const nom = this.getCleanNominal();
-            return nom > 0 && nom >= this.bayarData.sisa_tagihan;
+            const totalPengurang = this.getTotalPengurang();
+            return totalPengurang > 0 && totalPengurang >= this.bayarData.sisa_tagihan;
         },
 
         canSubmitBayar() {
-            const nom = this.getCleanNominal();
-            return nom > 0 && nom <= this.bayarData.sisa_tagihan;
+            const totalPengurang = this.getTotalPengurang();
+            return totalPengurang > 0 && totalPengurang <= this.bayarData.sisa_tagihan;
         },
 
         formatRupiah(num) {
@@ -867,6 +1118,23 @@ document.addEventListener('alpine:init', () => {
                 currency: 'IDR',
                 minimumFractionDigits: 0
             }).format(num || 0);
+        },
+
+        getWhatsAppUrl(phone, toko, nota, total, sisa, status) {
+            let cleanPhone = (phone || '').replace(/[^0-9]/g, '');
+            if (cleanPhone.startsWith('0')) {
+                cleanPhone = '62' + cleanPhone.substring(1);
+            }
+            if (!cleanPhone) return '#';
+            
+            const text = "Halo " + toko + ", terima kasih atas kerjasamanya.\n\n"
+                + "🧾 *INFO STATUS PEMBAYARAN KONSINYASI*\n"
+                + "• No. Tagihan: *" + nota + "*\n"
+                + "• Total Nilai: " + this.formatRupiah(total) + "\n"
+                + "• Sisa Piutang: *" + this.formatRupiah(sisa) + "*\n"
+                + "• Status: *" + status.toUpperCase() + "*\n\n"
+                + "Kuitansi dan riwayat transaksi dapat dilihat pada sistem Keren One.";
+            return "https://wa.me/" + cleanPhone + "?text=" + encodeURIComponent(text);
         }
     }));
 });
@@ -884,11 +1152,11 @@ document.addEventListener('alpine:init', () => {
             </a>
             <div class="page-header-text">
                 <div class="page-header-tag">
-                    <span class="tag-dot" style="background-color:#10b981;"></span>
+                    <span class="tag-dot" style="background-color:#881337;"></span>
                     <span>Modul Konsinyasi &bull; Keuangan &amp; Piutang</span>
                 </div>
                 <h1 class="page-title text-xl sm:text-2xl"><?= htmlspecialchars($pageTitle) ?></h1>
-                <p class="page-subtitle text-xs sm:text-sm">Penerbitan faktur tagihan batch dari kunjungan opname &amp; pencatatan pelunasan piutang toko mitra.</p>
+                <p class="page-subtitle text-xs sm:text-sm">Gerbang utama penerbitan faktur batch, pelunasan piutang, kuitansi resmi &amp; penyesuaian konsinyasi.</p>
             </div>
         </div>
         
@@ -947,17 +1215,17 @@ document.addEventListener('alpine:init', () => {
         <div class="hidden sm:flex items-center">
             <div x-show="activeTab === 'buat'" class="tagihan-tab-hint">
                 <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-500"></i>
-                <span>Gabungkan kunjungan opname jadi 1 faktur piutang resmi</span>
+                <span>Mode Backlog Kunjungan (Semua unbilled terjual siap difakturkan)</span>
             </div>
             <div x-show="activeTab === 'daftar'" class="tagihan-tab-hint" x-cloak>
                 <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-500"></i>
-                <span>Pantau saldo piutang &amp; catat kas pelunasan</span>
+                <span>Pantau saldo piutang, kuitansi resmi &amp; pelunasan massal</span>
             </div>
         </div>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 3. TAB 1: BUAT TAGIHAN (BATCH INVOICING)                                  -->
+    <!-- 3. TAB 1: BUAT TAGIHAN (BATCH INVOICING & BACKLOG MONITORING)            -->
     <!-- ========================================================================= -->
     <div x-show="activeTab === 'buat'" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="tagihan-tab-pane">
         
@@ -968,9 +1236,9 @@ document.addEventListener('alpine:init', () => {
                 <div class="tagihan-card-header flex-wrap gap-2">
                     <div class="flex items-center gap-2 text-xs font-bold" style="color:var(--color-ink-secondary);">
                         <i data-lucide="filter" class="w-4 h-4 text-sky-500"></i>
-                        <span>FILTER KUNJUNGAN BELUM DITAGIH</span>
+                        <span>FILTER KUNJUNGAN BELUM DITAGIH (BACKLOG MODE)</span>
                     </div>
-                    <?php if (!empty($filterStoreId) || $filterStart !== date('Y-m-01') || $filterEnd !== date('Y-m-d')): ?>
+                    <?php if (!empty($filterStoreId) || !empty($filterStart) || !empty($filterEnd)): ?>
                     <a href="<?= Router::url('/consignment/tagihan?tab=buat') ?>" class="text-xs font-bold text-rose-500 hover:underline flex items-center gap-1">
                         <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                         <span>Reset Filter</span>
@@ -992,12 +1260,12 @@ document.addEventListener('alpine:init', () => {
                     </div>
 
                     <div>
-                        <label class="form-label" style="font-size:11.5px;font-weight:700;color:var(--color-ink-secondary);margin-bottom:7px;display:block;">Dari Tanggal Kunjungan</label>
+                        <label class="form-label" style="font-size:11.5px;font-weight:700;color:var(--color-ink-secondary);margin-bottom:7px;display:block;">Dari Tanggal (Opsional)</label>
                         <input type="date" name="start_date" value="<?= htmlspecialchars($filterStart) ?>" class="form-input" style="height:38px; font-size:12.5px; width:100%;">
                     </div>
 
                     <div>
-                        <label class="form-label" style="font-size:11.5px;font-weight:700;color:var(--color-ink-secondary);margin-bottom:7px;display:block;">Sampai Tanggal</label>
+                        <label class="form-label" style="font-size:11.5px;font-weight:700;color:var(--color-ink-secondary);margin-bottom:7px;display:block;">Sampai Tanggal (Opsional)</label>
                         <input type="date" name="end_date" value="<?= htmlspecialchars($filterEnd) ?>" class="form-input" style="height:38px; font-size:12.5px; width:100%;">
                     </div>
 
@@ -1008,7 +1276,7 @@ document.addEventListener('alpine:init', () => {
                                 <i data-lucide="search" class="w-4 h-4"></i>
                                 <span>Cari Kunjungan</span>
                             </button>
-                            <?php if (!empty($filterStoreId) || $filterStart !== date('Y-m-01') || $filterEnd !== date('Y-m-d')): ?>
+                            <?php if (!empty($filterStoreId) || !empty($filterStart) || !empty($filterEnd)): ?>
                             <a href="<?= Router::url('/consignment/tagihan?tab=buat') ?>" class="btn btn-secondary" style="height:38px; padding:0 12px; display:inline-flex; align-items:center; justify-content:center; border-radius:10px;" title="Reset Filter">
                                 <i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-500"></i>
                             </a>
@@ -1019,14 +1287,24 @@ document.addEventListener('alpine:init', () => {
             </form>
         </div>
 
-        <!-- Info Callout Banner -->
-        <div class="tagihan-alert-banner">
-            <i data-lucide="info" class="w-5 h-5 flex-shrink-0 text-sky-600 dark:text-sky-400 mt-0.5"></i>
-            <div class="text-xs sm:text-sm leading-relaxed">
-                Pilih satu atau lebih kunjungan opname dengan nominal terjual untuk digabungkan menjadi <strong>1 Faktur Tagihan Konsinyasi</strong> resmi. 
-                <span class="font-bold text-sky-700 dark:text-sky-300">Seluruh kunjungan yang digabungkan harus berasal dari toko mitra yang sama.</span>
+        <!-- Backlog & Stale Warning Alert Banner -->
+        <?php if (!empty($staleUnbilledCount) && $staleUnbilledCount > 0): ?>
+            <div class="tagihan-alert-banner is-warning">
+                <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5"></i>
+                <div class="text-xs sm:text-sm leading-relaxed">
+                    <strong class="text-amber-800 dark:text-amber-300">Peringatan Backlog Penagihan:</strong> 
+                    Terdapat <strong><?= $staleUnbilledCount ?> sesi kunjungan</strong> yang telah selesai <strong>lebih dari 7 hari lalu</strong> namun belum diterbitkan fakturnya (Total potensi: <strong><?= Format::rupiah($totalUnbilledNominal) ?></strong>). Segera buatkan faktur tagihan agar arus kas tidak tertunda.
+                </div>
             </div>
-        </div>
+        <?php else: ?>
+            <div class="tagihan-alert-banner">
+                <i data-lucide="info" class="w-5 h-5 flex-shrink-0 text-sky-600 dark:text-sky-400 mt-0.5"></i>
+                <div class="text-xs sm:text-sm leading-relaxed">
+                    Pilih satu atau lebih kunjungan opname dengan nominal terjual untuk digabungkan menjadi <strong>1 Faktur Tagihan Konsinyasi</strong> resmi. 
+                    <span class="font-bold text-sky-700 dark:text-sky-300">Seluruh kunjungan yang digabungkan harus berasal dari toko mitra yang sama.</span>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if (empty($unbilledVisits)): ?>
             <!-- Empty State: Semua Kunjungan Sudah Ditagih -->
@@ -1036,7 +1314,7 @@ document.addEventListener('alpine:init', () => {
                 </div>
                 <h3 class="tagihan-empty-state-title">Semua Kunjungan Sudah Ditagih</h3>
                 <p class="tagihan-empty-state-desc">
-                    Tidak ada kunjungan baru dengan nominal laku terjual yang belum diterbitkan fakturnya pada rentang tanggal ini.
+                    Tidak ada kunjungan opname tertunggak dengan nominal laku terjual yang belum difakturkan. Semua data operasional telah sinkron!
                 </p>
                 <div>
                     <button type="button" @click="setTab('daftar')" class="btn btn-secondary btn-sm" style="font-weight:700; font-size:12px; height:36px; padding:0 18px; border-radius:10px; display:inline-flex; align-items:center; gap:6px;">
@@ -1054,7 +1332,7 @@ document.addEventListener('alpine:init', () => {
                         <div class="flex items-center gap-2.5">
                             <i data-lucide="clipboard-list" class="w-4 h-4 text-sky-500"></i>
                             <span style="font-size:13px;font-weight:800;color:var(--color-ink);">Kunjungan Menunggu Faktur</span>
-                            <span class="badge badge-mono" style="font-size:10.5px;"><?= count($unbilledVisits) ?> Data</span>
+                            <span class="badge badge-mono" style="font-size:10.5px;"><?= count($unbilledVisits) ?> Data (<?= Format::rupiah($totalUnbilledNominal) ?>)</span>
                         </div>
 
                         <div class="flex items-center gap-2">
@@ -1062,7 +1340,7 @@ document.addEventListener('alpine:init', () => {
                                 <strong class="text-sky-600 dark:text-sky-400" x-text="selectedVisits.length"></strong> kunjungan terpilih
                             </span>
                             <button type="button" 
-                                    @click="clearSelection()" 
+                                    @click="clearVisitsSelection()" 
                                     x-show="selectedVisits.length > 0" 
                                     class="btn btn-ghost btn-sm" 
                                     style="font-size:11px;padding:3px 8px;"
@@ -1078,14 +1356,19 @@ document.addEventListener('alpine:init', () => {
                                 <tr>
                                     <th class="cell-center" style="width:50px;">Pilih</th>
                                     <th style="min-width:180px;">Tanggal &amp; No. Kunjungan</th>
-                                    <th style="min-width:220px;">Toko Mitra &amp; Kode</th>
+                                    <th style="min-width:220px;">Toko Mitra &amp; Tipe</th>
                                     <th style="min-width:130px;">Sales PIC</th>
-                                    <th class="cell-center" style="width:100px;">Jml SKU</th>
+                                    <th class="cell-center" style="width:110px;">Status Usia</th>
+                                    <th class="cell-center" style="width:90px;">SKU</th>
                                     <th class="cell-right" style="width:150px;">Total Laku Terjual</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($unbilledVisits as $v): ?>
+                                <?php foreach ($unbilledVisits as $v): 
+                                    $isStale = !empty($v['is_stale']);
+                                    $days = (int)($v['days_pending'] ?? 0);
+                                    $isRolling = ($v['tipe_konsinyasi'] ?? '') === 'rolling_nota';
+                                ?>
                                 <tr class="cursor-pointer transition-colors" 
                                     :class="{'tagihan-row-selected': selectedVisits.includes('<?= $v['id'] ?>')}"
                                     @click="toggleVisit('<?= $v['id'] ?>')">
@@ -1121,16 +1404,27 @@ document.addEventListener('alpine:init', () => {
                                         </div>
                                     </td>
 
-                                    <!-- Toko Mitra & Kode (2-Line) -->
+                                    <!-- Toko Mitra & Tipe (2-Line) -->
                                     <td>
                                         <div style="display:flex;flex-direction:column;gap:3px;">
                                             <strong style="color:var(--color-ink);font-size:13px;">
                                                 <?= htmlspecialchars($v['nama_toko']) ?>
                                             </strong>
-                                            <div class="flex items-center gap-1.5">
-                                                <span style="font-size:10px;font-weight:800;color:#0284c7;background:rgba(2,132,199,0.08);padding:1px 6px;border-radius:4px;border:1px solid rgba(2,132,199,0.18);font-family:var(--font-mono);">
+                                            <div class="flex items-center flex-wrap gap-1.5">
+                                                <span class="tagihan-badge-kolektif font-mono">
                                                     <?= htmlspecialchars($v['kode_pelanggan'] ?: 'TOKO') ?>
                                                 </span>
+                                                <?php if ($isRolling): ?>
+                                                    <span class="tagihan-badge-rolling">
+                                                        <i data-lucide="repeat" style="width:10px;height:10px;"></i>
+                                                        Rolling Nota
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="tagihan-badge-kolektif">
+                                                        <i data-lucide="layers" style="width:10px;height:10px;"></i>
+                                                        Kolektif Toko
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                     </td>
@@ -1141,6 +1435,20 @@ document.addEventListener('alpine:init', () => {
                                             <i data-lucide="user" class="w-3.5 h-3.5 flex-shrink-0" style="color:var(--color-ink-mute);"></i>
                                             <span class="truncate"><?= htmlspecialchars($v['nama_sales']) ?></span>
                                         </div>
+                                    </td>
+
+                                    <!-- Status Usia Kunjungan -->
+                                    <td class="cell-center">
+                                        <?php if ($isStale): ?>
+                                            <span class="tagihan-badge-stale font-bold" title="Kunjungan lebih dari 7 hari belum difakturkan">
+                                                <i data-lucide="alert-triangle" style="width:11px;height:11px;"></i>
+                                                <?= $days ?> hari lalu
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge badge-mono font-semibold" style="font-size:10.5px;">
+                                                <?= $days === 0 ? 'Hari ini' : $days . ' hari lalu' ?>
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
 
                                     <!-- Jml SKU -->
@@ -1161,7 +1469,7 @@ document.addEventListener('alpine:init', () => {
                     </div>
                 </div>
 
-                <!-- STICKY FLOATING ACTION BAR -->
+                <!-- STICKY FLOATING ACTION BAR FOR BATCH INVOICE GENERATION -->
                 <div class="floating-action-bar" 
                      x-show="selectedVisits.length > 0" 
                      x-transition:enter="transition ease-out duration-200" 
@@ -1180,7 +1488,7 @@ document.addEventListener('alpine:init', () => {
                             <div class="min-w-0 flex-1">
                                 <div style="font-size:11.5px; color:var(--color-ink-mute); line-height:1.2;">
                                     <span>Total Terpilih (<strong style="color:var(--color-ink);" x-text="`${selectedVisits.length} Kunjungan`"></strong>)</span>
-                                    <template x-if="selectedStoreName && !isMixedStore()">
+                                    <template x-if="selectedStoreName && !isMixedStoreVisits()">
                                         <span class="truncate">&bull; Toko: <strong style="color:var(--color-ink);" x-text="selectedStoreName"></strong></span>
                                     </template>
                                 </div>
@@ -1190,7 +1498,7 @@ document.addEventListener('alpine:init', () => {
 
                         <!-- Action Buttons & Validation Alert -->
                         <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-                            <template x-if="isMixedStore()">
+                            <template x-if="isMixedStoreVisits()">
                                 <div class="badge badge-danger" style="padding:5px 10px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
                                     <i data-lucide="alert-triangle" class="w-3.5 h-3.5 flex-shrink-0"></i>
                                     <span>Kunjungan Beda Toko! Pilih 1 Toko yang Sama</span>
@@ -1200,7 +1508,7 @@ document.addEventListener('alpine:init', () => {
                             <button type="submit" 
                                     class="btn btn-primary w-full sm:w-auto"
                                     style="height:40px; padding:0 20px; font-size:12.5px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:10px;"
-                                    :disabled="selectedVisits.length === 0 || isMixedStore()">
+                                    :disabled="selectedVisits.length === 0 || isMixedStoreVisits()">
                                 <i data-lucide="file-check-2" class="w-4 h-4"></i>
                                 <span>Buat Faktur Tagihan &rarr;</span>
                             </button>
@@ -1212,7 +1520,7 @@ document.addEventListener('alpine:init', () => {
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 4. TAB 2: DAFTAR TAGIHAN (RECEIVABLES & PAYMENTS)                          -->
+    <!-- 4. TAB 2: DAFTAR TAGIHAN (RECEIVABLES, PAYMENTS & MULTI-SETTLEMENT)        -->
     <!-- ========================================================================= -->
     <div x-show="activeTab === 'daftar'" x-cloak x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="tagihan-tab-pane">
         
@@ -1249,7 +1557,7 @@ document.addEventListener('alpine:init', () => {
                 </div>
                 <div class="tagihan-kpi-footer">
                     <i data-lucide="check-circle-2" style="width:13px;height:13px;"></i>
-                    <span>Pelunasan piutang konsinyasi</span>
+                    <span><?= $totalPotonganDiskon > 0 ? '+ Potongan ' . Format::rupiah($totalPotonganDiskon) : 'Pelunasan piutang konsinyasi' ?></span>
                 </div>
             </div>
 
@@ -1362,11 +1670,24 @@ document.addEventListener('alpine:init', () => {
         <?php else: ?>
             <!-- Table of Tagihan -->
             <div class="table-wrapper" style="border-radius:18px;">
-                <div style="padding:14px 20px;border-bottom:1px solid var(--color-hairline);background-color:var(--color-canvas);display:flex;align-items:center;justify-content:space-between;">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--color-hairline);background-color:var(--color-canvas);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
                     <div class="flex items-center gap-2.5">
                         <i data-lucide="receipt" class="w-4 h-4 text-emerald-500"></i>
                         <span style="font-size:13px;font-weight:800;color:var(--color-ink);">Daftar Faktur Tagihan Konsinyasi</span>
                         <span class="badge badge-mono" style="font-size:10.5px;"><?= count($tagihan) ?> Nota</span>
+                    </div>
+
+                    <div class="flex items-center gap-2" x-show="selectedInvoices.length > 0" x-cloak>
+                        <span class="text-xs" style="color:var(--color-ink-mute);">
+                            <strong class="text-emerald-600 dark:text-emerald-400" x-text="selectedInvoices.length"></strong> faktur dipilih untuk pelunasan massal
+                        </span>
+                        <button type="button" 
+                                @click="clearInvoicesSelection()" 
+                                class="btn btn-ghost btn-sm" 
+                                style="font-size:11px;padding:3px 8px;"
+                                title="Batalkan Pilihan">
+                            Batalkan
+                        </button>
                     </div>
                 </div>
 
@@ -1374,15 +1695,16 @@ document.addEventListener('alpine:init', () => {
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th style="min-width:230px;">Toko Mitra &amp; Tipe</th>
-                                <th style="min-width:180px;">No. Tagihan &amp; Tgl</th>
+                                <th class="cell-center" style="width:40px;">Pilih</th>
+                                <th style="min-width:220px;">Toko Mitra &amp; Tipe</th>
+                                <th style="min-width:170px;">No. Tagihan &amp; Tgl</th>
                                 <th style="min-width:130px;">Sales &amp; Driver</th>
-                                <th class="cell-center" style="width:110px;">Kunjungan / Ref</th>
-                                <th class="cell-right" style="width:135px;">Total Nilai</th>
-                                <th class="cell-right" style="width:135px;">Terbayar</th>
-                                <th class="cell-right" style="width:135px;">Sisa Piutang</th>
-                                <th class="cell-center" style="width:115px;">Status</th>
-                                <th class="cell-center" style="width:115px;">Aksi</th>
+                                <th class="cell-center" style="width:100px;">Ref / Kunj</th>
+                                <th class="cell-right" style="width:130px;">Total Nilai</th>
+                                <th class="cell-right" style="width:130px;">Terbayar</th>
+                                <th class="cell-right" style="width:130px;">Sisa Piutang</th>
+                                <th class="cell-center" style="width:105px;">Status</th>
+                                <th class="cell-center" style="width:150px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1392,9 +1714,25 @@ document.addEventListener('alpine:init', () => {
                                 $isRolling = ($t['tipe_konsinyasi'] ?? '') === 'rolling_nota';
                                 $tipeLabel = $isRolling ? 'rolling nota' : 'kolektif toko';
                                 $searchKey = strtolower($t['nama_toko'] . ' ' . ($t['kode_pelanggan'] ?? '') . ' ' . $t['nomor_nota'] . ' ' . ($t['nama_sales'] ?? '') . ' ' . ($t['driver_name'] ?? '') . ' ' . $tipeLabel);
+                                $hasDiskon = (float)($t['total_diskon'] ?? 0) > 0;
                             ?>
-                            <tr x-show="!searchQuery || '<?= addslashes($searchKey) ?>'.includes(searchQuery.toLowerCase())">
+                            <tr x-show="!searchQuery || '<?= addslashes($searchKey) ?>'.includes(searchQuery.toLowerCase())"
+                                :class="{'tagihan-row-selected': selectedInvoices.includes('<?= $t['pesanan_id'] ?>')}">
                                 
+                                <!-- Checkbox untuk Pelunasan Massal (Hanya yang belum lunas) -->
+                                <td class="cell-center">
+                                    <?php if (!$isLunas): ?>
+                                    <input type="checkbox" 
+                                           value="<?= $t['pesanan_id'] ?>" 
+                                           class="form-checkbox"
+                                           style="width:17px;height:17px;border-radius:4px;cursor:pointer;"
+                                           :checked="selectedInvoices.includes('<?= $t['pesanan_id'] ?>')"
+                                           @change="toggleInvoice('<?= $t['pesanan_id'] ?>')">
+                                    <?php else: ?>
+                                    <i data-lucide="check" style="width:15px;height:15px;color:#10b981;margin:0 auto;"></i>
+                                    <?php endif; ?>
+                                </td>
+
                                 <!-- Toko Mitra, Kode & Tipe Konsinyasi -->
                                 <td>
                                     <div style="display:flex;flex-direction:column;gap:3px;">
@@ -1402,16 +1740,16 @@ document.addEventListener('alpine:init', () => {
                                             <?= htmlspecialchars($t['nama_toko']) ?>
                                         </strong>
                                         <div class="flex items-center flex-wrap gap-1.5">
-                                            <span style="font-size:10px;font-weight:800;color:#0284c7;background:rgba(2,132,199,0.08);padding:1px 6px;border-radius:4px;border:1px solid rgba(2,132,199,0.18);font-family:var(--font-mono);">
+                                            <span class="tagihan-badge-kolektif font-mono">
                                                 <?= htmlspecialchars($t['kode_pelanggan'] ?: 'TOKO') ?>
                                             </span>
                                             <?php if ($isRolling): ?>
-                                                <span style="font-size:10px;font-weight:800;color:#7c3aed;background:rgba(124,58,237,0.1);padding:1px 6px;border-radius:4px;border:1px solid rgba(124,58,237,0.25);display:inline-flex;align-items:center;gap:3px;">
+                                                <span class="tagihan-badge-rolling">
                                                     <i data-lucide="repeat" style="width:10px;height:10px;"></i>
                                                     Rolling Nota
                                                 </span>
                                             <?php else: ?>
-                                                <span style="font-size:10px;font-weight:800;color:#0284c7;background:rgba(2,132,199,0.08);padding:1px 6px;border-radius:4px;border:1px solid rgba(2,132,199,0.18);display:inline-flex;align-items:center;gap:3px;">
+                                                <span class="tagihan-badge-kolektif">
                                                     <i data-lucide="layers" style="width:10px;height:10px;"></i>
                                                     Kolektif Toko
                                                 </span>
@@ -1449,11 +1787,18 @@ document.addEventListener('alpine:init', () => {
                                     </div>
                                 </td>
 
-                                <!-- Kunjungan / Ref -->
+                                <!-- Kunjungan / Ref & Payment Count -->
                                 <td class="cell-center">
-                                    <span class="badge badge-mono font-bold">
-                                        <?= $t['jumlah_kunjungan'] > 0 ? $t['jumlah_kunjungan'] . 'x visit' : ($isRolling ? '1x Nota PO' : '1x visit') ?>
-                                    </span>
+                                    <div style="display:flex;flex-direction:column;gap:2px;align-items:center;">
+                                        <span class="badge badge-mono font-bold" style="font-size:10.5px;">
+                                            <?= $t['jumlah_kunjungan'] > 0 ? $t['jumlah_kunjungan'] . 'x visit' : ($isRolling ? '1x Nota' : '1x visit') ?>
+                                        </span>
+                                        <?php if ((int)($t['payment_count'] ?? 0) > 0): ?>
+                                        <span style="font-size:10px;font-weight:700;color:#10b981;" title="Jumlah transaksi setoran kas">
+                                            <?= $t['payment_count'] ?>x bayar
+                                        </span>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
 
                                 <!-- Total Nilai -->
@@ -1463,7 +1808,12 @@ document.addEventListener('alpine:init', () => {
 
                                 <!-- Terbayar -->
                                 <td class="cell-right cell-currency" style="font-weight:700;font-size:12.5px;color:#10b981;">
-                                    <?= Format::rupiah($t['total_dibayar']) ?>
+                                    <div><?= Format::rupiah($t['total_dibayar']) ?></div>
+                                    <?php if ($hasDiskon): ?>
+                                    <div style="font-size:10px;font-weight:700;color:#d97706;" title="Potongan retur susulan / penyesuaian">
+                                        + Pot. <?= Format::rupiah($t['total_diskon']) ?>
+                                    </div>
+                                    <?php endif; ?>
                                 </td>
 
                                 <!-- Sisa Piutang -->
@@ -1482,23 +1832,46 @@ document.addEventListener('alpine:init', () => {
                                     <?php endif; ?>
                                 </td>
 
-                                <!-- Aksi -->
+                                <!-- Aksi (Print Faktur, Kuitansi, WA Share & Bayar) -->
                                 <td class="cell-center">
                                     <div class="flex items-center justify-center gap-1.5">
+                                        
+                                        <!-- Cetak Faktur -->
                                         <a href="<?= Router::url('/consignment/nota-print?pesanan_id=' . $t['pesanan_id'] . '&ref=tagihan') ?>" 
                                            class="btn btn-secondary btn-sm" 
-                                           style="padding:5px 8px;border-radius:8px;" 
+                                           style="padding:5px 7px;border-radius:8px;" 
                                            title="Cetak Faktur (Dot Matrix & A4)">
-                                            <i data-lucide="printer" style="width:14px;height:14px;"></i>
+                                            <i data-lucide="printer" style="width:13.5px;height:13.5px;"></i>
                                         </a>
 
+                                        <!-- Cetak Kuitansi Resmi -->
+                                        <a href="<?= Router::url('/consignment/tagihan/kuitansi?pesanan_id=' . $t['pesanan_id']) ?>" 
+                                           class="btn btn-secondary btn-sm" 
+                                           style="padding:5px 7px;border-radius:8px;color:#881337;" 
+                                           title="Cetak Kuitansi Tanda Terima Resmi">
+                                            <i data-lucide="file-check" style="width:13.5px;height:13.5px;"></i>
+                                        </a>
+
+                                        <!-- Kirim WhatsApp Tanda Terima -->
+                                        <?php if (!empty($t['nomor_whatsapp'])): ?>
+                                        <a :href="getWhatsAppUrl('<?= htmlspecialchars(addslashes($t['nomor_whatsapp'])) ?>', '<?= htmlspecialchars(addslashes($t['nama_toko'])) ?>', '<?= htmlspecialchars(addslashes($t['nomor_nota'])) ?>', <?= (float)$t['total_netto'] ?>, <?= (float)$t['sisa_tagihan'] ?>, '<?= $t['status_pembayaran'] ?>')" 
+                                           target="_blank" 
+                                           rel="noopener noreferrer" 
+                                           class="btn btn-secondary btn-sm" 
+                                           style="padding:5px 7px;border-radius:8px;color:#16a34a;" 
+                                           title="Kirim Tanda Terima via WhatsApp Toko">
+                                            <i data-lucide="message-circle" style="width:13.5px;height:13.5px;"></i>
+                                        </a>
+                                        <?php endif; ?>
+
+                                        <!-- Tombol Catat Pembayaran -->
                                         <?php if (!$isLunas && ($isAdmin || $isOwner)): ?>
                                             <button type="button" 
                                                     @click="openBayarModal('<?= $t['pesanan_id'] ?>', '<?= htmlspecialchars(addslashes($t['nama_toko'])) ?>', '<?= htmlspecialchars(addslashes($t['nomor_nota'])) ?>', <?= $t['sisa_tagihan'] ?>, '<?= $t['tipe_konsinyasi'] ?>')" 
                                                     class="btn btn-primary btn-sm"
-                                                    style="padding:5px 10px;font-size:11px;font-weight:700;border-radius:8px;gap:4px;display:inline-flex;align-items:center;"
+                                                    style="padding:5px 9px;font-size:11px;font-weight:700;border-radius:8px;gap:4px;display:inline-flex;align-items:center;"
                                                     title="Catat Pembayaran Sisa Piutang">
-                                                <i data-lucide="wallet" style="width:13px;height:13px;"></i>
+                                                <i data-lucide="wallet" style="width:12.5px;height:12.5px;"></i>
                                                 <span>Bayar</span>
                                             </button>
                                         <?php endif; ?>
@@ -1510,17 +1883,62 @@ document.addEventListener('alpine:init', () => {
                     </table>
                 </div>
             </div>
+
+            <!-- STICKY FLOATING ACTION BAR FOR MULTI-INVOICE SETTLEMENT -->
+            <div class="floating-action-bar" 
+                 x-show="selectedInvoices.length > 0" 
+                 x-transition:enter="transition ease-out duration-200" 
+                 x-transition:enter-start="transform translate-y-full" 
+                 x-transition:enter-end="transform translate-y-0" 
+                 x-transition:leave="transition ease-in duration-150" 
+                 x-transition:leave-start="transform translate-y-0" 
+                 x-transition:leave-end="transform translate-y-full" 
+                 x-cloak>
+                <div style="max-width:1200px; margin:0 auto; width:100%;" class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <div class="flex items-center gap-3 w-full sm:w-auto">
+                        <div style="width:38px;height:38px;border-radius:10px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="layers" style="width:19px;height:19px;"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div style="font-size:11.5px; color:var(--color-ink-mute); line-height:1.2;">
+                                <span>Pelunasan Massal (<strong style="color:var(--color-ink);" x-text="`${selectedInvoices.length} Faktur`"></strong>)</span>
+                                <template x-if="selectedInvoiceStoreName && !isMixedStoreInvoices()">
+                                    <span class="truncate">&bull; Toko: <strong style="color:var(--color-ink);" x-text="selectedInvoiceStoreName"></strong></span>
+                                </template>
+                            </div>
+                            <div class="font-mono font-black text-emerald-600 dark:text-emerald-400" style="font-size:18px; line-height:1.2;" x-text="formatRupiah(totalSelectedDebt)"></div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                        <template x-if="isMixedStoreInvoices()">
+                            <div class="badge badge-danger" style="padding:5px 10px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
+                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                                <span>Pilih Faktur dari 1 Toko yang Sama</span>
+                            </div>
+                        </template>
+
+                        <button type="button" 
+                                @click="openBatchModal()" 
+                                class="btn btn-primary w-full sm:w-auto"
+                                style="height:40px; padding:0 20px; font-size:12.5px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:10px; background:#10b981; border-color:#059669;"
+                                :disabled="selectedInvoices.length === 0 || isMixedStoreInvoices()">
+                            <i data-lucide="wallet" class="w-4 h-4"></i>
+                            <span>Pelunasan Massal Transfer &rarr;</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         <?php endif; ?>
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 5. MODAL POP-UP CATAT PEMBAYARAN (3-Layer Modern Shell)                   -->
+    <!-- 5. MODAL POP-UP CATAT PEMBAYARAN & PAYMENT HISTORY LEDGER                 -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="bayarModalOpen" 
          x-cloak 
          class="tagihan-modal-backdrop" 
-         
          @keydown.escape.window="closeBayarModal()">
         
         <div class="tagihan-modal-shell" @click.stop>
@@ -1528,16 +1946,22 @@ document.addEventListener('alpine:init', () => {
             <!-- LAYER 1: MODAL HEADER (STICKY) -->
             <div class="tagihan-modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(2,132,199,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(136,19,55,0.1);color:#881337;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i data-lucide="wallet" style="width:20px;height:20px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
                         <h3 class="truncate" style="font-size:15px;font-weight:900;color:var(--color-ink);margin:0;">Catat Pembayaran Tagihan</h3>
                         <div class="text-xs truncate" style="color:var(--color-ink-mute);margin-top:2px;">
-                            Pelunasan faktur piutang konsinyasi (Rolling Nota &amp; Kolektif)
+                            Pelunasan faktur, cicilan kas &amp; penyesuaian potongan retur
                         </div>
                     </div>
                 </div>
+                <button type="button" 
+                        @click="closeBayarModal()" 
+                        class="tagihan-modal-close-btn ml-2" 
+                        title="Tutup Modal (Esc)">
+                    <i data-lucide="x" style="width:17px;height:17px;"></i>
+                </button>
             </div>
 
             <!-- LAYER 2: MODAL BODY (SCROLLABLE & TOUCH FRIENDLY) -->
@@ -1547,7 +1971,7 @@ document.addEventListener('alpine:init', () => {
                   data-confirm="Proses pembayaran ini? Saldo kas akan langsung bertambah dan sisa piutang berkurang."
                   data-confirm-title="Konfirmasi Pembayaran Tagihan"
                   data-confirm-type="primary"
-                  data-confirm-btn="Ya, Proses Bayar"
+                  data-confirm-btn="Ya, Simpan Pembayaran"
                   data-action-text="Memproses pembayaran tagihan..."
                   @submit="if(!canSubmitBayar()) { $event.preventDefault(); return; }">
                 
@@ -1557,10 +1981,10 @@ document.addEventListener('alpine:init', () => {
                 <div class="tagihan-modal-body custom-scrollbar space-y-4">
                     
                     <!-- 1. Ringkasan Faktur Toko & Sisa Piutang Sekarang -->
-                    <div style="background:linear-gradient(135deg, var(--color-canvas-soft) 0%, rgba(2, 132, 199, 0.04) 100%);border:1px solid var(--color-hairline);border-radius:16px;padding:16px 18px;">
+                    <div style="background:linear-gradient(135deg, var(--color-canvas-soft) 0%, rgba(136, 19, 55, 0.04) 100%);border:1px solid var(--color-hairline);border-radius:16px;padding:16px 18px;">
                         <div class="flex items-center justify-between gap-2 mb-1.5">
                             <span class="text-xs font-bold flex items-center gap-1.5" style="color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
-                                <i data-lucide="store" style="width:13px;height:13px;color:#0284c7;"></i>
+                                <i data-lucide="store" style="width:13px;height:13px;color:#881337;"></i>
                                 Toko Mitra
                             </span>
                             <div class="flex items-center gap-1.5">
@@ -1580,6 +2004,32 @@ document.addEventListener('alpine:init', () => {
                             <span class="font-mono font-black text-rose-600 dark:text-rose-400" style="font-size:19px;" x-text="bayarData.sisa_formatted"></span>
                         </div>
                     </div>
+
+                    <!-- Riwayat Pembayaran Sebelumnya (Payment History Ledger Accordion) -->
+                    <template x-if="paymentHistory.length > 0">
+                        <div class="ledger-collapse-box">
+                            <div class="ledger-collapse-header" @click="ledgerOpen = !ledgerOpen">
+                                <span class="flex items-center gap-1.5">
+                                    <i data-lucide="history" style="width:13px;height:13px;color:#10b981;"></i>
+                                    <span>Riwayat Pembayaran Sebelumnya (<strong x-text="paymentHistory.length"></strong>x cicilan)</span>
+                                </span>
+                                <i data-lucide="chevron-down" style="width:14px;height:14px;transition:transform 0.2s;" :style="ledgerOpen ? 'transform:rotate(180deg);' : ''"></i>
+                            </div>
+                            <div x-show="ledgerOpen" class="ledger-collapse-body" x-cloak>
+                                <div class="space-y-2 pt-2">
+                                    <template x-for="p in paymentHistory" :key="p.id">
+                                        <div class="flex items-center justify-between text-xs py-1 border-b border-dashed border-slate-200 dark:border-slate-800">
+                                            <div>
+                                                <strong style="color:var(--color-ink);" x-text="p.nama_akun"></strong>
+                                                <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="`${p.tanggal_transaksi} • ${p.keterangan || '-'}`"></div>
+                                            </div>
+                                            <div class="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-right" x-text="formatRupiah(p.nominal)"></div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
 
                     <!-- 2. Tanggal Pembayaran & Rekening Kas Penerima (2 Kolom) -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -1605,9 +2055,9 @@ document.addEventListener('alpine:init', () => {
                                     <i data-lucide="landmark" style="width:13px;height:13px;color:var(--color-ink-mute);"></i>
                                     Akun Kas / Bank
                                 </span>
-                                <span class="text-rose-500 font-bold">*</span>
+                                <span class="text-rose-500 font-bold" x-show="getCleanNominal() > 0">*</span>
                             </label>
-                            <select name="akun_kas_id" required class="tagihan-pay-select text-xs font-semibold" style="height:44px;">
+                            <select name="akun_kas_id" :required="getCleanNominal() > 0" class="tagihan-pay-select text-xs font-semibold" style="height:44px;">
                                 <option value="">-- Pilih Rekening Kas --</option>
                                 <?php foreach ($cashAccounts as $ca): ?>
                                     <option value="<?= $ca['id'] ?>" <?= (!empty($ca['is_default_pos']) ? 'selected' : '') ?>>
@@ -1618,13 +2068,12 @@ document.addEventListener('alpine:init', () => {
                         </div>
                     </div>
 
-                    <!-- 3. Input Nominal Pembayaran & Modern Preset Chips -->
+                    <!-- 3. Input Nominal Pembayaran Kas/Transfer & Quick Presets -->
                     <div class="tagihan-pay-field">
                         <div class="tagihan-pay-label">
                             <span class="flex items-center gap-1.5">
-                                <i data-lucide="wallet" style="width:13px;height:13px;color:#0284c7;"></i>
-                                Nominal Pembayaran
-                                <span class="text-rose-500 font-bold">*</span>
+                                <i data-lucide="wallet" style="width:13px;height:13px;color:#881337;"></i>
+                                Nominal Kas Masuk (Bayar)
                             </span>
                             <div class="flex items-center gap-1.5">
                                 <button type="button" 
@@ -1640,7 +2089,7 @@ document.addEventListener('alpine:init', () => {
                                 <button type="button" 
                                         @click="setBayarFull()" 
                                         class="tagihan-pay-preset-chip is-full">
-                                    Bayar Lunas (100%)
+                                    Lunas (100%)
                                 </button>
                             </div>
                         </div>
@@ -1651,16 +2100,46 @@ document.addEventListener('alpine:init', () => {
                                    name="nominal" 
                                    x-model="bayarData.nominal" 
                                    @input="$nextTick(() => { if (window.lucide) lucide.createIcons(); })"
-                                   required 
-                                   min="1" 
+                                   min="0" 
                                    :max="bayarData.sisa_tagihan" 
                                    class="tagihan-pay-amount-input" 
                                    placeholder="0">
                         </div>
                     </div>
 
-                    <!-- 4. LIVE CALCULATION & STATUS PREVIEW CARD (Spacious & Clean) -->
-                    <div x-show="getCleanNominal() > 0" x-cloak>
+                    <!-- 4. Input Potongan Retur Susulan / Adjustment (Optional) -->
+                    <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:14px;padding:12px 14px;">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <span class="text-xs font-bold flex items-center gap-1.5" style="color:#b45309;">
+                                <i data-lucide="tag" style="width:13px;height:13px;"></i>
+                                Potongan Retur Susulan / Adjustment (Opsional)
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-500 mb-1 block">Nominal Potongan (Rp)</label>
+                                <input type="number" 
+                                       name="nominal_potongan" 
+                                       x-model="bayarData.nominal_potongan" 
+                                       min="0" 
+                                       placeholder="0" 
+                                       class="tagihan-pay-input font-mono text-xs" 
+                                       style="height:38px;">
+                            </div>
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-500 mb-1 block">Alasan Potongan</label>
+                                <input type="text" 
+                                       name="alasan_potongan" 
+                                       x-model="bayarData.alasan_potongan" 
+                                       placeholder="Misal: Retur susulan 5 bungkus bocor" 
+                                       class="tagihan-pay-input text-xs" 
+                                       style="height:38px;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. LIVE CALCULATION & STATUS PREVIEW CARD -->
+                    <div x-show="getTotalPengurang() > 0" x-cloak>
                         
                         <!-- Overpayment Warning Card -->
                         <div x-show="isOverpaid()" class="tagihan-pay-calc-card is-overpaid">
@@ -1668,7 +2147,7 @@ document.addEventListener('alpine:init', () => {
                                 <i data-lucide="alert-circle" style="width:18px;height:18px;flex-shrink:0;margin-top:2px;"></i>
                                 <div class="text-xs leading-relaxed">
                                     <strong class="font-bold text-rose-700 dark:text-rose-300">Nominal melebihi sisa piutang!</strong><br>
-                                    Sisa tagihan saat ini adalah <span class="font-mono font-bold" x-text="bayarData.sisa_formatted"></span>. Mohon kurangi nominal pembayaran.
+                                    Total pembayaran + potongan (<span class="font-mono font-bold" x-text="formatRupiah(getTotalPengurang())"></span>) melebihi sisa tagihan saat ini (<span class="font-mono font-bold" x-text="bayarData.sisa_formatted"></span>).
                                 </div>
                             </div>
                         </div>
@@ -1678,10 +2157,20 @@ document.addEventListener('alpine:init', () => {
                             <div class="tagihan-pay-calc-row">
                                 <span class="text-xs font-semibold flex items-center gap-1.5" style="color:var(--color-ink-mute);">
                                     <i data-lucide="arrow-down-right" style="width:14px;height:14px;color:#10b981;"></i>
-                                    Nominal Masuk Kas
+                                    Uang Kas Masuk
                                 </span>
-                                <strong class="font-mono text-base font-black text-emerald-600 dark:text-emerald-400" x-text="formatRupiah(getCleanNominal())"></strong>
+                                <strong class="font-mono text-sm font-black text-emerald-600 dark:text-emerald-400" x-text="formatRupiah(getCleanNominal())"></strong>
                             </div>
+
+                            <template x-if="getCleanPotongan() > 0">
+                                <div class="tagihan-pay-calc-row">
+                                    <span class="text-xs font-semibold flex items-center gap-1.5 text-amber-600">
+                                        <i data-lucide="minus" style="width:14px;height:14px;"></i>
+                                        Potongan / Adjustment
+                                    </span>
+                                    <strong class="font-mono text-sm font-bold text-amber-600" x-text="formatRupiah(getCleanPotongan())"></strong>
+                                </div>
+                            </template>
 
                             <div class="tagihan-pay-calc-row">
                                 <span class="text-xs font-semibold flex items-center gap-1.5" style="color:var(--color-ink-mute);">
@@ -1708,7 +2197,7 @@ document.addEventListener('alpine:init', () => {
                         </div>
                     </div>
 
-                    <!-- 5. Input Keterangan / Catatan Pembayaran -->
+                    <!-- 6. Input Keterangan / Catatan Pembayaran -->
                     <div class="tagihan-pay-field">
                         <label class="tagihan-pay-label">
                             <span class="flex items-center gap-1.5">
@@ -1718,10 +2207,10 @@ document.addEventListener('alpine:init', () => {
                             <span class="text-xs font-normal" style="color:var(--color-ink-mute);">(Opsional)</span>
                         </label>
                         <textarea name="keterangan" 
-                                  x-model="bayarData.keterangan"
+                                  x-model="bayarData.keterangan" 
                                   rows="2" 
                                   class="tagihan-pay-textarea text-xs" 
-                                  placeholder="Contoh: Titipan tunai via sales driver, transfer m-banking, dll..."></textarea>
+                                  placeholder="Contoh: Titipan tunai via sales driver, transfer m-banking BCA, dll..."></textarea>
                     </div>
 
                 </div>
@@ -1737,7 +2226,7 @@ document.addEventListener('alpine:init', () => {
                     <button type="submit" 
                             :disabled="!canSubmitBayar()" 
                             class="btn btn-primary btn-sm flex-1 sm:flex-initial justify-center disabled:opacity-40 disabled:cursor-not-allowed" 
-                            style="font-weight:800;font-size:12.5px;padding:8px 20px;border-radius:10px;gap:7px;box-shadow:0 2px 8px rgba(2,132,199,0.25);">
+                            style="font-weight:800;font-size:12.5px;padding:8px 20px;border-radius:10px;gap:7px;box-shadow:0 2px 8px rgba(136,19,55,0.25);">
                         <i data-lucide="check" style="width:15px;height:15px;"></i>
                         <span>Simpan Pembayaran</span>
                     </button>
@@ -1747,6 +2236,128 @@ document.addEventListener('alpine:init', () => {
         </div>
     </div>
     </template>
+
+    <!-- ========================================================================= -->
+    <!-- 6. MODAL POP-UP PELUNASAN MASSAL (BATCH MULTI-INVOICE SETTLEMENT)         -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="batchModalOpen" 
+         x-cloak 
+         class="tagihan-modal-backdrop" 
+         @keydown.escape.window="closeBatchModal()">
+        
+        <div class="tagihan-modal-shell" @click.stop>
+            <div class="tagihan-modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="layers" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <h3 class="truncate" style="font-size:15px;font-weight:900;color:var(--color-ink);margin:0;">Pelunasan Massal Multi-Faktur</h3>
+                        <div class="text-xs truncate" style="color:var(--color-ink-mute);margin-top:2px;">
+                            Alokasi otomatis 1 setoran bank/kas ke beberapa faktur toko
+                        </div>
+                    </div>
+                </div>
+                <button type="button" 
+                        @click="closeBatchModal()" 
+                        class="tagihan-modal-close-btn ml-2" 
+                        title="Tutup Modal (Esc)">
+                    <i data-lucide="x" style="width:17px;height:17px;"></i>
+                </button>
+            </div>
+
+            <form action="<?= Router::url('/consignment/tagihan/bayar-multi') ?>" 
+                  method="POST" 
+                  class="flex flex-col flex-1 overflow-hidden"
+                  data-confirm="Proses pelunasan massal ini? Dana akan dialokasikan ke seluruh faktur yang dipilih."
+                  data-confirm-title="Konfirmasi Pelunasan Massal"
+                  data-confirm-type="primary"
+                  data-confirm-btn="Ya, Proses Pelunasan Massal"
+                  data-action-text="Memproses pelunasan massal...">
+                
+                <?= CSRF::field() ?>
+                <template x-for="id in batchData.pesanan_ids" :key="id">
+                    <input type="hidden" name="pesanan_ids[]" :value="id">
+                </template>
+
+                <div class="tagihan-modal-body custom-scrollbar space-y-4">
+                    
+                    <div style="background:linear-gradient(135deg, var(--color-canvas-soft) 0%, rgba(16, 185, 129, 0.04) 100%);border:1px solid var(--color-hairline);border-radius:16px;padding:16px 18px;">
+                        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Toko Mitra:</div>
+                        <div class="text-base font-black truncate" style="color:var(--color-ink);" x-text="batchData.nama_toko"></div>
+                        <div class="flex items-center justify-between pt-3 mt-3 border-t" style="border-color:var(--color-hairline-cool);">
+                            <span class="text-xs font-bold" style="color:var(--color-ink-mute);">Total Tagihan <span x-text="`(${batchData.pesanan_ids.length} Nota)`"></span>:</span>
+                            <span class="font-mono font-black text-emerald-600 dark:text-emerald-400" style="font-size:19px;" x-text="batchData.total_debt_formatted"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div class="tagihan-pay-field">
+                            <label class="tagihan-pay-label">
+                                <span>Tanggal Bayar</span>
+                                <span class="text-rose-500 font-bold">*</span>
+                            </label>
+                            <input type="date" name="tanggal_bayar" x-model="batchData.tanggal_bayar" required class="tagihan-pay-input font-mono text-xs" style="height:44px;">
+                        </div>
+
+                        <div class="tagihan-pay-field">
+                            <label class="tagihan-pay-label">
+                                <span>Akun Kas / Bank</span>
+                                <span class="text-rose-500 font-bold">*</span>
+                            </label>
+                            <select name="akun_kas_id" x-model="batchData.akun_kas_id" required class="tagihan-pay-select text-xs font-semibold" style="height:44px;">
+                                <option value="">-- Pilih Rekening Kas --</option>
+                                <?php foreach ($cashAccounts as $ca): ?>
+                                    <option value="<?= $ca['id'] ?>">
+                                        <?= htmlspecialchars($ca['nama_akun']) ?> (<?= Format::rupiah($ca['saldo_saat_ini']) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="tagihan-pay-field">
+                        <label class="tagihan-pay-label">
+                            <span>Total Nominal Transfer / Kas Masuk</span>
+                            <span class="text-rose-500 font-bold">*</span>
+                        </label>
+                        <div class="tagihan-pay-amount-box">
+                            <span class="tagihan-pay-amount-prefix">Rp</span>
+                            <input type="number" 
+                                   name="nominal" 
+                                   x-model="batchData.nominal" 
+                                   required 
+                                   min="1" 
+                                   :max="batchData.total_debt" 
+                                   class="tagihan-pay-amount-input" 
+                                   placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="tagihan-pay-field">
+                        <label class="tagihan-pay-label">
+                            <span>Catatan Pelunasan Massal</span>
+                        </label>
+                        <textarea name="keterangan" x-model="batchData.keterangan" rows="2" class="tagihan-pay-textarea text-xs"></textarea>
+                    </div>
+
+                </div>
+
+                <div class="tagihan-modal-footer">
+                    <button type="button" @click="closeBatchModal()" class="btn btn-secondary btn-sm" style="font-weight:700;font-size:12.5px;padding:8px 18px;border-radius:10px;">
+                        <span>Batal</span>
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-sm" style="font-weight:800;font-size:12.5px;padding:8px 20px;border-radius:10px;background:#10b981;border-color:#059669;">
+                        <i data-lucide="check" style="width:15px;height:15px;"></i>
+                        <span>Proses Pelunasan Massal</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </template>
+
 </div>
 
 <?php

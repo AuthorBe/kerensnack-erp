@@ -150,6 +150,12 @@ class TestRunnerService
             'category'    => 'Konsinyasi',
             'description' => 'Konversi barang titip jual toko menjadi transaksi penjualan final dan penyelesaian etalase.'
         ],
+        'consignment_billing_adjustment' => [
+            'file'        => 'ConsignmentBillingAndAdjustmentTest.php',
+            'title'       => 'Consignment Billing, Ledger, Credit Adjustment & Multi-Settlement',
+            'category'    => 'Konsinyasi',
+            'description' => 'Gerbang tagihan konsinyasi, riwayat pembayaran ledger, potongan retur susulan, kuitansi dan alokasi multi-faktur.'
+        ],
         'tiered_commission' => [
             'file'        => 'TieredCommissionTest.php',
             'title'       => 'Tiered Sales Commission & Thresholds',

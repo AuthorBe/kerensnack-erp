@@ -278,6 +278,10 @@ Router::get('/consignment/laporan-penjualan/export-excel', [ConsignmentControlle
 Router::get('/consignment/tagihan', [ConsignmentController::class, 'tagihanIndex']);
 Router::post('/consignment/tagihan/generate', [ConsignmentController::class, 'tagihanGenerate']);
 Router::post('/consignment/tagihan/bayar', [ConsignmentController::class, 'tagihanBayar']);
+Router::post('/consignment/tagihan/bayar-multi', [ConsignmentController::class, 'tagihanBayarMulti']);
+Router::get('/consignment/tagihan/riwayat-pembayaran', [ConsignmentController::class, 'tagihanRiwayatPembayaranAjax']);
+Router::get('/consignment/tagihan/kuitansi', [ConsignmentController::class, 'tagihanKuitansi']);
+Router::get('/consignment/tagihan/print-billing', [ConsignmentController::class, 'tagihanPrintBilling']);
 Router::get('/consignment/tagihan/export-excel', [ConsignmentController::class, 'tagihanExportExcel']);
 Router::get('/consignment/assignment-sales', [ConsignmentController::class, 'assignmentSales']);
 Router::post('/consignment/assignment-sales/save', [ConsignmentController::class, 'saveAssignment']);

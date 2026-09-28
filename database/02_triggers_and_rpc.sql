@@ -653,11 +653,20 @@ $function$;
 
 -- Fungsi: fn_catat_pembayaran_konsinyasi
 -- Mencatat pelunasan tagihan konsinyasi dan memperbarui buku kas penerimaan
-CREATE OR REPLACE FUNCTION public.fn_catat_pembayaran_konsinyasi(p_pesanan_id uuid, p_akun_kas_id uuid, p_nominal_bayar numeric, p_dicatat_oleh uuid DEFAULT NULL::uuid, p_keterangan text DEFAULT NULL::text, p_tanggal_bayar date DEFAULT CURRENT_DATE)
- RETURNS jsonb
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path = public, pg_temp
+CREATE OR REPLACE FUNCTION public.fn_catat_pembayaran_konsinyasi(
+    p_pesanan_id uuid,
+    p_akun_kas_id uuid,
+    p_nominal_bayar numeric,
+    p_dicatat_oleh uuid DEFAULT NULL::uuid,
+    p_keterangan text DEFAULT NULL::text,
+    p_tanggal_bayar date DEFAULT CURRENT_DATE,
+    p_nominal_potongan numeric DEFAULT 0.00,
+    p_alasan_potongan text DEFAULT NULL::text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_pesanan RECORD;
@@ -668,6 +677,10 @@ DECLARE
     v_pengguna_id UUID := p_dicatat_oleh;
     v_tgl_transaksi DATE := COALESCE(p_tanggal_bayar, CURRENT_DATE);
     v_ket_kas TEXT;
+    v_potongan NUMERIC(15,2) := GREATEST(0.00, COALESCE(p_nominal_potongan, 0.00));
+    v_bayar NUMERIC(15,2) := GREATEST(0.00, COALESCE(p_nominal_bayar, 0.00));
+    v_total_pengurang NUMERIC(15,2);
+    v_transaksi_kas_id UUID := NULL;
 BEGIN
     SELECT * INTO v_pesanan FROM public.pesanan WHERE id = p_pesanan_id FOR UPDATE;
 
@@ -683,75 +696,88 @@ BEGIN
         RAISE EXCEPTION 'Tagihan % telah dibatalkan. Pembayaran tidak dapat diproses.', v_pesanan.nomor_nota;
     END IF;
 
-    IF v_pesanan.status_pembayaran = 'lunas' OR v_pesanan.sisa_tagihan <= 0 THEN
-        RAISE EXCEPTION 'Tagihan % sudah berstatus LUNAS. Tidak ada sisa piutang.', v_pesanan.nomor_nota;
+    IF v_pesanan.status_pembayaran = 'lunas' AND v_pesanan.sisa_tagihan <= 0 THEN
+        RAISE EXCEPTION 'Tagihan % sudah lunas sepenuhnya.', v_pesanan.nomor_nota;
     END IF;
 
-    IF p_nominal_bayar <= 0 THEN
-        RAISE EXCEPTION 'Nominal bayar harus lebih dari 0';
+    v_total_pengurang := v_bayar + v_potongan;
+    IF v_total_pengurang <= 0 THEN
+        RAISE EXCEPTION 'Total pembayaran dan/atau potongan harus lebih dari 0';
     END IF;
 
-    IF p_nominal_bayar > v_pesanan.sisa_tagihan THEN
-        RAISE EXCEPTION 'Nominal bayar (%) melebihi sisa tagihan (%)', p_nominal_bayar, v_pesanan.sisa_tagihan;
+    IF v_total_pengurang > v_pesanan.sisa_tagihan THEN
+        RAISE EXCEPTION 'Total pembayaran + potongan (Rp %) melebihi sisa tagihan (Rp %)',
+            TO_CHAR(v_total_pengurang, 'FM999,999,999,990D00'),
+            TO_CHAR(v_pesanan.sisa_tagihan, 'FM999,999,999,990D00');
     END IF;
 
-    -- Validasi pengguna yang mencatat (hindari foreign key violation pada arus_kas)
-    IF v_pengguna_id IS NOT NULL THEN
-        IF NOT EXISTS (SELECT 1 FROM public.pengguna WHERE id = v_pengguna_id) THEN
-            SELECT pengguna_id INTO v_pengguna_id FROM public.karyawan WHERE id = p_dicatat_oleh LIMIT 1;
-        END IF;
+    IF v_bayar > 0 AND p_akun_kas_id IS NULL THEN
+        RAISE EXCEPTION 'Akun kas penerima pembayaran wajib dipilih jika ada nominal bayar kas/transfer';
     END IF;
+
     IF v_pengguna_id IS NULL THEN
         SELECT id INTO v_pengguna_id FROM public.pengguna WHERE status_aktif = TRUE ORDER BY dibuat_pada ASC LIMIT 1;
     END IF;
 
-    v_sisa_baru := GREATEST(0, v_pesanan.sisa_tagihan - p_nominal_bayar);
-    v_status_baru := CASE WHEN v_sisa_baru <= 0 THEN 'lunas' ELSE 'sebagian' END;
+    v_sisa_baru := GREATEST(0.00, v_pesanan.sisa_tagihan - v_total_pengurang);
+    IF v_sisa_baru <= 0 THEN
+        v_status_baru := 'lunas';
+    ELSE
+        v_status_baru := 'sebagian';
+    END IF;
 
+    -- Update pesanan
     UPDATE public.pesanan
-    SET total_dibayar = COALESCE(total_dibayar, 0) + p_nominal_bayar,
+    SET total_dibayar = COALESCE(total_dibayar, 0) + v_bayar,
+        total_diskon = COALESCE(total_diskon, 0) + v_potongan,
         sisa_tagihan = v_sisa_baru,
         status_pembayaran = v_status_baru,
-        akun_kas_id = COALESCE(akun_kas_id, p_akun_kas_id),
+        akun_kas_id = COALESCE(p_akun_kas_id, akun_kas_id),
         diubah_pada = NOW()
     WHERE id = p_pesanan_id;
 
+    -- Update piutang berjalan pelanggan
     UPDATE public.pelanggan
-    SET total_piutang_berjalan = GREATEST(0, COALESCE(total_piutang_berjalan, 0) - p_nominal_bayar),
+    SET total_piutang_berjalan = GREATEST(0.00, COALESCE(total_piutang_berjalan, 0) - v_total_pengurang),
         diubah_pada = NOW()
     WHERE id = v_pesanan.pelanggan_id;
 
-    SELECT saldo_saat_ini INTO v_saldo_lama FROM public.akun_kas WHERE id = p_akun_kas_id FOR UPDATE;
-    IF v_saldo_lama IS NULL THEN
-        RAISE EXCEPTION 'Akun kas % tidak ditemukan/tidak aktif', p_akun_kas_id;
+    -- Jika ada uang riil masuk kas (v_bayar > 0)
+    IF v_bayar > 0 THEN
+        SELECT saldo_saat_ini INTO v_saldo_lama FROM public.akun_kas WHERE id = p_akun_kas_id FOR UPDATE;
+        v_saldo_baru := COALESCE(v_saldo_lama, 0) + v_bayar;
+
+        UPDATE public.akun_kas
+        SET saldo_saat_ini = v_saldo_baru,
+            diubah_pada = NOW()
+        WHERE id = p_akun_kas_id;
+
+        v_ket_kas := COALESCE(p_keterangan, 'Pelunasan Tagihan Konsinyasi: ' || v_pesanan.nomor_nota);
+        IF v_potongan > 0 THEN
+            v_ket_kas := v_ket_kas || ' (Potongan/Adjustment: Rp ' || TO_CHAR(v_potongan, 'FM999,999,999,990D00') || COALESCE(' - ' || p_alasan_potongan, '') || ')';
+        END IF;
+
+        INSERT INTO public.arus_kas (
+            akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
+            nominal, saldo_berjalan, referensi_tabel, referensi_id,
+            keterangan, dicatat_oleh, dibuat_pada
+        ) VALUES (
+            p_akun_kas_id, v_tgl_transaksi, 'masuk', 'penjualan',
+            v_bayar, v_saldo_baru, 'pesanan', p_pesanan_id,
+            v_ket_kas, v_pengguna_id, NOW()
+        ) RETURNING id INTO v_transaksi_kas_id;
     END IF;
-    v_saldo_baru := v_saldo_lama + p_nominal_bayar;
-
-    UPDATE public.akun_kas
-    SET saldo_saat_ini = v_saldo_baru, diubah_pada = NOW()
-    WHERE id = p_akun_kas_id;
-
-    v_ket_kas := 'Pembayaran Nota ' || v_pesanan.nomor_nota;
-    IF p_keterangan IS NOT NULL AND TRIM(p_keterangan) != '' THEN
-        v_ket_kas := v_ket_kas || ' - ' || TRIM(p_keterangan);
-    END IF;
-
-    INSERT INTO public.arus_kas (
-        akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan,
-        referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
-    ) VALUES (
-        p_akun_kas_id, v_tgl_transaksi, 'masuk', 'penjualan', p_nominal_bayar,
-        v_ket_kas, 'pesanan', p_pesanan_id, v_saldo_baru, v_pengguna_id, NOW()
-    );
 
     RETURN jsonb_build_object(
         'success', true,
         'pesanan_id', p_pesanan_id,
         'nomor_nota', v_pesanan.nomor_nota,
-        'total_dibayar', COALESCE(v_pesanan.total_dibayar, 0) + p_nominal_bayar,
+        'nominal_dibayar', v_bayar,
+        'nominal_potongan', v_potongan,
+        'total_pengurang', v_total_pengurang,
         'sisa_tagihan', v_sisa_baru,
         'status_pembayaran', v_status_baru,
-        'tanggal_transaksi', v_tgl_transaksi
+        'transaksi_kas_id', v_transaksi_kas_id
     );
 END;
 $function$;
