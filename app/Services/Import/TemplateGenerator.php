@@ -97,7 +97,7 @@ class TemplateGenerator
 
             // 1. Kolom WAJIB String/Text murni (mencegah hilangnya awalan nol pada nomor WA, HP, NIK, No Rekening, Kode SKU, serta menjaga kolom kategori/tipe seperti Tipe Penggajian)
             $isForceString = false;
-            foreach (['kode', 'sku', 'nik', 'telepon', 'whatsapp', 'wa', 'hp', 'rekening', 'barcode', 'rute', 'npwp', 'ktp', 'pos', 'tipe', 'jenis', 'skema', 'metode'] as $kw) {
+            foreach (['kode', 'sku', 'nik', 'telepon', 'whatsapp', 'wa', 'hp', 'rekening', 'barcode', 'rute', 'npwp', 'ktp', 'pos', 'tipe', 'jenis', 'skema', 'metode', 'maps', 'link', 'url'] as $kw) {
                 if (str_contains($hLower, $kw)) {
                     $isForceString = true;
                     break;

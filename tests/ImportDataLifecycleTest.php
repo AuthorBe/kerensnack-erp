@@ -377,6 +377,7 @@ runTest("4.1 - CustomerImportHandler: Resolusi foreign key grup, wilayah, dan sa
         'Reguler',
         '', // Tipe Konsinyasi (kosong untuk Reguler)
         'Jl. Pengujian No. 123',
+        'https://maps.app.goo.gl/tokoTest41', // Link Google Maps
         '081122334455',
         'Tempo Faktur',
         '1000000',
@@ -423,6 +424,7 @@ runTest("4.2 - CustomerImportHandler: FK yang tidak ada di database menghasilkan
         'Reguler',
         '', // Tipe Konsinyasi (kosong untuk Reguler)
         'Jl. Hantu No. 404',
+        '', // Link Google Maps
         '081111111',
         'Cash',
         '0',
@@ -483,7 +485,7 @@ runTest("4.4 - CustomerImportHandler: Validasi eksklusif Tipe Konsinyasi (hanya 
     // 1. Kasus Salah: Toko Reguler tapi kolom Tipe Konsinyasi diisi -> Wajib ERROR
     $invalidRow = [
         'CUST-ERR-TIPE', 'Toko Reguler Salah Tipe', 'Bpk Reguler', '', $wilayah,
-        'Reguler', 'Rolling Nota', 'Jl. Uji No. 1', '08123', 'Cash', 0, '', '', '', '', 'Aktif'
+        'Reguler', 'Rolling Nota', 'Jl. Uji No. 1', '', '08123', 'Cash', 0, '', '', '', '', 'Aktif'
     ];
     $prev1 = $handler->previewRows([$invalidRow], $header, $pdo, 'append');
     if (empty($prev1) || $prev1[0]['action'] !== 'ERROR' || !str_contains($prev1[0]['error_msg'], 'Tipe Konsinyasi')) {
@@ -493,7 +495,7 @@ runTest("4.4 - CustomerImportHandler: Validasi eksklusif Tipe Konsinyasi (hanya 
     // 2. Kasus Benar: Toko Konsinyasi dengan Tipe Konsinyasi 'Kolektif Tagihan' -> Wajib Valid
     $validRow = [
         'CUST-OK-KONSIN-' . time(), 'Toko Konsinyasi Sah', 'Ibu Konsin', '', $wilayah,
-        'Konsinyasi', 'Kolektif Tagihan', 'Jl. Uji No. 2', '08124', 'konsinyasi', 0, '', '', '', '', 'Aktif'
+        'Konsinyasi', 'Kolektif Tagihan', 'Jl. Uji No. 2', 'https://maps.app.goo.gl/tokoKonsinValid', '08124', 'konsinyasi', 0, '', '', '', '', 'Aktif'
     ];
     $prev2 = $handler->previewRows([$validRow], $header, $pdo, 'append');
     if (empty($prev2) || $prev2[0]['action'] !== 'INSERT' || $prev2[0]['data']['tipe_konsinyasi'] !== 'kolektif_tagihan') {
@@ -517,16 +519,18 @@ runTest("5.1 - Diffing Engine: Baris dengan kode baru menghasilkan status INSERT
         'CUST-NONEXISTENT-' . time(),
         'Toko Baru Lahir',
         'Owner Baru',
-        '', $wilayah, 'Reguler', '', 'Jl. Baru No. 1', '0812345', 'Tempo 7 Hari', 0, '', '', '', '', 'Aktif'
+        '', $wilayah, 'Reguler', '', 'Jl. Baru No. 1', 'https://maps.app.goo.gl/tokoNew', '0812345', 'Tempo 7 Hari', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
-    return !empty($preview) && $preview[0]['action'] === 'INSERT';
+    return !empty($preview) &&
+           $preview[0]['action'] === 'INSERT' &&
+           ($preview[0]['data']['link_google_maps'] ?? '') === 'https://maps.app.goo.gl/tokoNew';
 });
 
 runTest("5.2 - Diffing Engine: Baris dengan kode sama tetapi field diubah menghasilkan status UPDATE", function() use ($pdo) {
     $handler = new CustomerImportHandler();
-    $existing = $pdo->query("SELECT p.id, p.kode_pelanggan, p.nama_toko, p.alamat_lengkap, COALESCE(w.nama_wilayah, '') as nama_wilayah FROM public.pelanggan p LEFT JOIN public.wilayah w ON w.id = p.wilayah_id WHERE p.wilayah_id IS NOT NULL LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    $existing = $pdo->query("SELECT p.id, p.kode_pelanggan, p.nama_toko, p.alamat_lengkap, p.link_google_maps, COALESCE(w.nama_wilayah, '') as nama_wilayah FROM public.pelanggan p LEFT JOIN public.wilayah w ON w.id = p.wilayah_id WHERE p.wilayah_id IS NOT NULL LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 
     if (!$existing) {
         return true;
@@ -534,11 +538,12 @@ runTest("5.2 - Diffing Engine: Baris dengan kode sama tetapi field diubah mengha
 
     $header = $handler->getTemplateHeaders();
     $updatedAlamat = 'Alamat Modifikasi Test ' . time();
+    $updatedMaps = 'https://maps.app.goo.gl/updated_' . time();
 
     $row = [
         $existing['kode_pelanggan'],
         $existing['nama_toko'],
-        '', '', $existing['nama_wilayah'], 'Reguler', '', $updatedAlamat, '', 'Cash', 0, '', '', '', '', 'Aktif'
+        '', '', $existing['nama_wilayah'], 'Reguler', '', $updatedAlamat, $updatedMaps, '', 'Cash', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
@@ -549,6 +554,7 @@ runTest("5.2 - Diffing Engine: Baris dengan kode sama tetapi field diubah mengha
 
     return $first['action'] === 'UPDATE' &&
            $first['data']['alamat_lengkap'] === $updatedAlamat &&
+           $first['data']['link_google_maps'] === $updatedMaps &&
            $first['old_data']['alamat_lengkap'] !== $updatedAlamat;
 });
 
@@ -584,7 +590,7 @@ runTest("5.4 - Diffing Engine: Baris tanpa field wajib (nama kosong) menghasilka
     $row = [
         'CUST-NO-NAME',
         '', // NAMA TOKO KOSONG (Wajib)
-        'Owner', '', 'Kota Tangerang', 'Reguler', '', 'Jl. Ada', '', 'Cash', 0, '', '', '', '', 'Aktif'
+        'Owner', '', 'Kota Tangerang', 'Reguler', '', 'Jl. Ada', '', '', 'Cash', 0, '', '', '', '', 'Aktif'
     ];
 
     $preview = $handler->previewRows([$row], $header, $pdo, 'append');
@@ -598,20 +604,57 @@ runTest("5.5 - SupplierImportHandler: Baris dengan wilayah kosong / tidak terdaf
     $header = $handler->getTemplateHeaders();
 
     // 1. Wilayah kosong
-    $rowEmpty = ['', 'Vendor Uji Wilayah Kosong', 'PIC', '', 'Jl. Raya', '08123', '', 'cash', 'BCA', '123', 'PT', '', 'Aktif'];
+    $rowEmpty = ['', 'Vendor Uji Wilayah Kosong', 'PIC', '', 'Jl. Raya', 'https://maps.app.goo.gl/vendorEmpty', '08123', '', 'cash', 'BCA', '123', 'PT', '', 'Aktif'];
     $prevEmpty = $handler->previewRows([$rowEmpty], $header, $pdo, 'append');
     if (empty($prevEmpty) || $prevEmpty[0]['action'] !== 'ERROR') {
         return "Empty territory was not rejected with ERROR";
     }
 
     // 2. Wilayah tidak terdaftar
-    $rowFake = ['', 'Vendor Uji Wilayah Fiktif', 'PIC', 'WILAYAH_TIDAK_TERDAFTAR_99999', 'Jl. Raya', '08123', '', 'cash', 'BCA', '123', 'PT', '', 'Aktif'];
+    $rowFake = ['', 'Vendor Uji Wilayah Fiktif', 'PIC', 'WILAYAH_TIDAK_TERDAFTAR_99999', 'Jl. Raya', '', '08123', '', 'cash', 'BCA', '123', 'PT', '', 'Aktif'];
     $prevFake = $handler->previewRows([$rowFake], $header, $pdo, 'append');
     if (empty($prevFake) || $prevFake[0]['action'] !== 'ERROR') {
         return "Unregistered territory was not rejected with ERROR";
     }
 
     return true;
+});
+
+runTest("5.6 - SupplierImportHandler: Mutasi link_google_maps terdeteksi pada preview diffing", function() use ($pdo) {
+    $handler = new SupplierImportHandler();
+    $existing = $pdo->query("SELECT p.*, COALESCE(w.nama_wilayah, '') as nama_wilayah FROM public.pemasok p LEFT JOIN public.wilayah w ON w.id = p.wilayah_id WHERE p.wilayah_id IS NOT NULL LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+
+    if (!$existing) {
+        return true;
+    }
+
+    $header = $handler->getTemplateHeaders();
+    $newMaps = 'https://maps.app.goo.gl/vendor_loc_' . time();
+
+    $row = [
+        $existing['kode_pemasok'],
+        $existing['nama_pemasok'],
+        $existing['nama_kontak'] ?? '',
+        $existing['nama_wilayah'],
+        $existing['alamat_lengkap'] ?? '',
+        $newMaps,
+        $existing['nomor_whatsapp'] ?? '',
+        $existing['email'] ?? '',
+        $existing['termin_bayar'] ?? 'cash',
+        $existing['nama_bank'] ?? '',
+        $existing['nomor_rekening'] ?? '',
+        $existing['atas_nama_rekening'] ?? '',
+        $existing['catatan'] ?? '',
+        'Aktif'
+    ];
+
+    $preview = $handler->previewRows([$row], $header, $pdo, 'append');
+    if (empty($preview)) {
+        return "Preview returned empty for supplier maps change";
+    }
+
+    return $preview[0]['action'] === 'UPDATE' &&
+           $preview[0]['data']['link_google_maps'] === $newMaps;
 });
 
 // ==================================================================

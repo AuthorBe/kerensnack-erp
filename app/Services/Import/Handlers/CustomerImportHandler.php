@@ -42,6 +42,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             'Model Kerjasama',
             'Tipe Konsinyasi',
             'Alamat Lengkap',
+            'Link Google Maps',
             'No WhatsApp',
             'Tipe Bayar Default',
             'Plafon Piutang',
@@ -55,15 +56,15 @@ class CustomerImportHandler implements EntityImportHandlerInterface
 
     public function getTemplateWidths(): array
     {
-        return [18, 28, 22, 22, 22, 18, 20, 35, 18, 20, 18, 22, 14, 18, 22, 14];
+        return [18, 28, 22, 22, 22, 18, 20, 35, 25, 18, 20, 18, 22, 14, 18, 22, 14];
     }
 
     public function getTemplateExamples(): array
     {
         return [
-            ['CUST-0001', 'Toko Sumber Rezeki', 'Ibu Hj. Aminah', 'Grup Ritel A', 'RUTE-TNG-BARAT', 'Reguler', '', 'Jl. Merdeka No. 12, Tangerang', '081234567890', 'Tempo Faktur', 5000000, 'Budi Santoso', 'BCA', '1234567890', 'Aminah', 'Aktif'],
-            ['CUST-0002', 'Warung Berkah Jaya', 'Pak Hendra', 'Grup Grosir Pasar', 'RUTE-JAKBAR-1', 'Konsinyasi', 'Rolling Nota', 'Pasar Laris Blok B No. 4, Cengkareng', '085678901234', 'Konsinyasi', 2000000, '', 'BRI', '9876543210', 'Hendra', 'Aktif'],
-            ['', 'Toko Baru Makmur (Contoh Baru)', 'Bpk Slamet', 'Grup Ritel A', 'RUTE-TNG-TIMUR', 'Reguler', '', '', '081399887766', 'Cash', 0, '', '', '', '', 'Aktif'],
+            ['CUST-0001', 'Toko Sumber Rezeki', 'Ibu Hj. Aminah', 'Grup Ritel A', 'RUTE-TNG-BARAT', 'Reguler', '', 'Jl. Merdeka No. 12, Tangerang', 'https://maps.app.goo.gl/sampleToko1', '081234567890', 'Tempo Faktur', 5000000, 'Budi Santoso', 'BCA', '1234567890', 'Aminah', 'Aktif'],
+            ['CUST-0002', 'Warung Berkah Jaya', 'Pak Hendra', 'Grup Grosir Pasar', 'RUTE-JAKBAR-1', 'Konsinyasi', 'Rolling Nota', 'Pasar Laris Blok B No. 4, Cengkareng', 'https://maps.app.goo.gl/sampleToko2', '085678901234', 'Konsinyasi', 2000000, '', 'BRI', '9876543210', 'Hendra', 'Aktif'],
+            ['', 'Toko Baru Makmur (Contoh Baru)', 'Bpk Slamet', 'Grup Ritel A', 'RUTE-TNG-TIMUR', 'Reguler', '', '', '', '081399887766', 'Cash', 0, '', '', '', '', 'Aktif'],
         ];
     }
 
@@ -72,7 +73,8 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         return [
             'Kolom Kode Pelanggan dapat dikosongkan untuk entri baru (akan dibuatkan otomatis oleh sistem: CUST-0002, dst).',
             'Pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak akan pernah terhapus atau dinonaktifkan pada proses sinkronisasi.',
-            'Nama Toko dan Wilayah/Rute WAJIB diisi. Alamat Lengkap bersifat opsional (dapat dikosongkan jika belum ada).',
+            'Nama Toko dan Wilayah/Rute WAJIB diisi. Alamat Lengkap dan Link Google Maps bersifat opsional (dapat dikosongkan jika belum ada).',
+            'Link Google Maps: Salin tautan titik presisi Google Maps toko untuk rute navigasi armada driver & sales.',
             'Model Kerjasama: isi "Konsinyasi" untuk toko titip jual rak, atau "Reguler" untuk jual putus / tempo.',
             'Tipe Konsinyasi: isi "Rolling Nota" atau "Kolektif Tagihan". HANYA boleh diisi jika Model Kerjasama adalah Konsinyasi (wajib kosongkan jika Reguler).',
             'Tipe Bayar Default: Cash, Transfer, QRIS, Tempo Faktur, Tempo Tanggal, atau Konsinyasi (dapat ditulis dengan spasi atau huruf kecil/besar).',
@@ -92,6 +94,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                            ELSE 'Rolling Nota'
                        END as tipe_konsinyasi_label,
                        p.alamat_lengkap,
+                       COALESCE(p.link_google_maps, '') as link_google_maps,
                        COALESCE(p.nomor_whatsapp, '') as nomor_whatsapp,
                        CASE 
                            WHEN p.tipe_pembayaran_default = 'tempo_faktur' THEN 'Tempo Faktur'
@@ -222,7 +225,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
         // Data database saat ini untuk diffing
         $currentDbRows = $pdo->query("SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik,
                                              p.grup_pelanggan_id, p.is_konsinyasi, p.tipe_konsinyasi, p.wilayah_id,
-                                             p.alamat_lengkap, p.nomor_whatsapp,
+                                             p.alamat_lengkap, p.link_google_maps, p.nomor_whatsapp,
                                              p.tipe_pembayaran_default, p.plafon_piutang, p.sales_driver_id,
                                              p.nama_bank, p.nomor_rekening, p.atas_nama_rekening, p.status_aktif,
                                              g.nama_grup, w.nama_wilayah,
@@ -263,6 +266,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
             if ($alamat === '') {
                 $alamat = '-';
             }
+            $linkMaps = trim((string)(SmartReader::getSmartValue($rowData, ['link_google_maps', 'link_maps', 'google_maps', 'maps', 'gmaps', 'lokasi_maps', 'url_maps', 'titik_maps']) ?? ''));
             $whatsapp = (string)(SmartReader::getSmartValue($rowData, ['nomor_whatsapp', 'whatsapp', 'no_wa', 'wa', 'no_hp', 'hp', 'nomor_telepon', 'telepon', 'no_telp', 'telp']) ?? '');
             $tipeBayarRaw = (string)(SmartReader::getSmartValue($rowData, ['tipe_pembayaran_default', 'tipe_bayar', 'pembayaran', 'cara_bayar', 'metode_bayar']) ?? '');
             $plafonRaw = SmartReader::getSmartValue($rowData, ['plafon_piutang', 'plafon', 'limit_piutang']);
@@ -410,6 +414,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 'tipe_konsinyasi'         => $tipeKonsinyasi,
                 'wilayah_id'              => $wilayahId,
                 'alamat_lengkap'          => $alamat,
+                'link_google_maps'        => $linkMaps,
                 'nomor_whatsapp'          => $whatsapp,
                 'tipe_pembayaran_default' => $tipeBayar,
                 'plafon_piutang'          => $plafon,
@@ -444,6 +449,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                 $isDiff = trim($nama) !== trim((string)$dbRow['nama_toko'])
                     || trim($pemilik) !== trim((string)($dbRow['nama_pemilik'] ?? ''))
                     || trim($alamat) !== trim((string)$dbRow['alamat_lengkap'])
+                    || trim($linkMaps) !== trim((string)($dbRow['link_google_maps'] ?? ''))
                     || trim($whatsapp) !== trim((string)($dbRow['nomor_whatsapp'] ?? ''))
                     || $isKonsinyasi !== (bool)$dbRow['is_konsinyasi']
                     || ($isKonsinyasi && $tipeKonsinyasi !== ($dbRow['tipe_konsinyasi'] ?? 'rolling_nota'))
@@ -484,14 +490,15 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     $previewList[] = [
                         'action' => 'DELETE',
                         'data'   => [
-                            'id'             => $c['id'],
-                            'kode_pelanggan' => $c['kode_pelanggan'],
-                            'nama_toko'      => $c['nama_toko'],
-                            'alamat_lengkap' => $c['alamat_lengkap'],
-                            'status_aktif'   => $c['status_aktif'],
-                            'display_grup'   => $c['nama_grup'] ?? '—',
-                            'display_wilayah'=> $c['nama_wilayah'] ?? '—',
-                            'display_sales'  => $c['display_sales'] ?? '—',
+                            'id'               => $c['id'],
+                            'kode_pelanggan'   => $c['kode_pelanggan'],
+                            'nama_toko'        => $c['nama_toko'],
+                            'alamat_lengkap'   => $c['alamat_lengkap'],
+                            'link_google_maps' => $c['link_google_maps'] ?? '',
+                            'status_aktif'     => $c['status_aktif'],
+                            'display_grup'     => $c['nama_grup'] ?? '—',
+                            'display_wilayah'  => $c['nama_wilayah'] ?? '—',
+                            'display_sales'    => $c['display_sales'] ?? '—',
                         ]
                     ];
                 }
@@ -531,13 +538,13 @@ class CustomerImportHandler implements EntityImportHandlerInterface
 
         $stmtIns = $pdo->prepare("INSERT INTO public.pelanggan 
             (kode_pelanggan, nama_toko, nama_pemilik, grup_pelanggan_id, is_konsinyasi, tipe_konsinyasi, wilayah_id, 
-             alamat_lengkap, nomor_whatsapp, tipe_pembayaran_default, plafon_piutang, 
+             alamat_lengkap, link_google_maps, nomor_whatsapp, tipe_pembayaran_default, plafon_piutang, 
              sales_driver_id, nama_bank, nomor_rekening, atas_nama_rekening, status_aktif)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         $stmtUpd = $pdo->prepare("UPDATE public.pelanggan SET 
             nama_toko = ?, nama_pemilik = ?, grup_pelanggan_id = ?, is_konsinyasi = ?, tipe_konsinyasi = ?, wilayah_id = ?, 
-            alamat_lengkap = ?, nomor_whatsapp = ?, tipe_pembayaran_default = ?, 
+            alamat_lengkap = ?, link_google_maps = ?, nomor_whatsapp = ?, tipe_pembayaran_default = ?, 
             plafon_piutang = ?, sales_driver_id = ?, nama_bank = ?, nomor_rekening = ?, atas_nama_rekening = ?, 
             status_aktif = ?, diubah_pada = NOW()
             WHERE id = ?");
@@ -567,6 +574,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     $d['tipe_konsinyasi'] ?? 'rolling_nota',
                     $d['wilayah_id'] ?? null,
                     !empty($d['alamat_lengkap']) ? $d['alamat_lengkap'] : '-',
+                    !empty($d['link_google_maps']) ? $d['link_google_maps'] : null,
                     $d['nomor_whatsapp'] ?? null,
                     $d['tipe_pembayaran_default'] ?? 'cash',
                     $d['plafon_piutang'] ?? 0,
@@ -589,6 +597,7 @@ class CustomerImportHandler implements EntityImportHandlerInterface
                     $d['tipe_konsinyasi'] ?? 'rolling_nota',
                     $d['wilayah_id'] ?? null,
                     !empty($d['alamat_lengkap']) ? $d['alamat_lengkap'] : '-',
+                    !empty($d['link_google_maps']) ? $d['link_google_maps'] : null,
                     $d['nomor_whatsapp'] ?? null,
                     $d['tipe_pembayaran_default'] ?? 'cash',
                     $d['plafon_piutang'] ?? 0,

@@ -22,6 +22,13 @@ if (!function_exists('ks_format_diff_val')) {
                 ? '<span class="inline-flex items-center gap-1 font-bold text-pink-600 dark:text-pink-400">🧕 Perempuan</span>'
                 : '<span class="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">👨‍💼 Laki-laki</span>';
         }
+        if ($key === 'link_google_maps') {
+            $url = trim((string)$val);
+            if ($url === '' || $url === '—' || $url === 'null') {
+                return '<span class="italic text-slate-400 dark:text-slate-500 font-mono text-[11px]">(Kosong)</span>';
+            }
+            return '<a href="' . htmlspecialchars($url) . '" target="_blank" rel="noopener noreferrer" class="badge" style="background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.25);padding:1px 6px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Buka Titik Presisi Google Maps di Tab Baru"><i data-lucide="map-pin" style="width:11px;height:11px;color:#ef4444;"></i><span>Buka Maps</span></a>';
+        }
         if (in_array(strtolower((string)$val), ['aktif', 'nonaktif'], true)) {
             return strtolower((string)$val) === 'aktif'
                 ? '<span class="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400"><i data-lucide="check" class="w-3.5 h-3.5"></i> Aktif</span>' 
@@ -53,6 +60,7 @@ if (!function_exists('ks_format_diff_label')) {
             'nama_toko'               => 'Nama Toko / Mitra',
             'nama_pemilik'            => 'Nama Pemilik',
             'alamat_lengkap'          => 'Alamat Lengkap',
+            'link_google_maps'        => 'Link Google Maps',
             'nomor_whatsapp'          => 'No WhatsApp',
             'nama_kontak'             => 'Kontak PIC',
             'plafon_piutang'          => 'Plafon Piutang',
@@ -153,6 +161,13 @@ if (!function_exists('rm_format_cell_value')) {
             }
             return '<span class="text-slate-400 dark:text-slate-500 italic text-xs">—</span>';
         }
+        if ($type === 'maps' || $type === 'link_maps') {
+            $url = trim((string)$val);
+            if ($url === '' || $url === '—' || $url === 'null') {
+                return '<span class="text-slate-400 dark:text-slate-500 italic text-xs">—</span>';
+            }
+            return '<a href="' . htmlspecialchars($url) . '" target="_blank" rel="noopener noreferrer" class="badge" style="background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.25);padding:1px 6px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:3px;text-decoration:none;" title="Buka Titik Presisi Google Maps di Tab Baru"><i data-lucide="map-pin" style="width:11px;height:11px;color:#ef4444;"></i><span>Buka Maps</span></a>';
+        }
         if ($type === 'gender') {
             $g = strtoupper(trim((string)$val));
             return (in_array($g, ['P', 'PEREMPUAN', 'WANITA'], true))
@@ -184,6 +199,8 @@ if (!function_exists('ks_get_row_val')) {
         if ($key === 'display_merek' && (isset($arr['merek']) || isset($arr['nama_merek']))) return $arr['merek'] ?? $arr['nama_merek'];
         if ($key === 'alamat' && isset($arr['alamat_lengkap'])) return $arr['alamat_lengkap'];
         if ($key === 'alamat_lengkap' && isset($arr['alamat'])) return $arr['alamat'];
+        if ($key === 'link_google_maps' && isset($arr['maps'])) return $arr['maps'];
+        if ($key === 'link_google_maps' && isset($arr['link_maps'])) return $arr['link_maps'];
         if ($key === 'telepon' && isset($arr['nomor_whatsapp'])) return $arr['nomor_whatsapp'];
         if ($key === 'nomor_whatsapp' && isset($arr['nomor_telepon'])) return $arr['nomor_telepon'];
         if ($key === 'nomor_whatsapp' && isset($arr['telepon'])) return $arr['telepon'];
@@ -217,6 +234,7 @@ $entityColumnsConfig = [
             ['key' => 'display_tipe_konsinyasi', 'label' => 'Tipe Konsinyasi', 'type' => 'tipe_konsinyasi'],
             ['key' => 'plafon_piutang', 'label' => 'Plafon Piutang', 'type' => 'currency'],
             ['key' => 'tipe_pembayaran_default', 'label' => 'Tipe Bayar'],
+            ['key' => 'link_google_maps', 'label' => 'Google Maps', 'type' => 'maps'],
             ['key' => 'nomor_whatsapp', 'label' => 'WhatsApp'],
             ['key' => 'status_aktif', 'label' => 'Status', 'type' => 'boolean'],
         ]
@@ -260,6 +278,7 @@ $entityColumnsConfig = [
             ['key' => 'nama_kontak', 'label' => 'Kontak PIC'],
             ['key' => 'display_wilayah', 'label' => 'Wilayah / Kota'],
             ['key' => 'alamat_lengkap', 'label' => 'Alamat Lengkap'],
+            ['key' => 'link_google_maps', 'label' => 'Google Maps', 'type' => 'maps'],
             ['key' => 'nomor_whatsapp', 'label' => 'No. WhatsApp'],
             ['key' => 'termin_bayar', 'label' => 'Termin Bayar'],
             ['key' => 'nama_bank', 'label' => 'Bank'],
