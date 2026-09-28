@@ -996,92 +996,110 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <?php if (\App\Core\Auth::can('master.products_manage')): ?>
     <!-- MODAL 1: TAMBAH / EDIT BARANG JADI -->
     <template x-teleport="body">
-    <div x-show="showItemModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:540px;padding:24px;">
-            <div class="modal-header">
-                <div class="modal-title" x-text="isEditItem ? 'Edit Barang Jadi' : 'Tambah Barang Jadi Baru'"></div>
+    <div x-show="showItemModal" x-cloak class="modal-backdrop" @click="showItemModal = false">
+        <div class="modal-box" style="max-width:540px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form :action="isEditItem ? '<?= Router::url('/products/update-item') ?>' : '<?= Router::url('/products/store-item') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="package" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEditItem ? 'Edit Barang Jadi' : 'Tambah Barang Jadi Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Master Data SKU Barang Jadi</div>
+                    </div>
+                </div>
+                <button type="button" @click="showItemModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form :action="isEditItem ? '<?= Router::url('/products/update-item') ?>' : '<?= Router::url('/products/store-item') ?>'" method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="id" :value="itemForm.id">
 
-                <div>
-                    <label class="form-label">Grup Kemasan Luar (Barcode Universal) *</label>
-                    <select name="grup_id" x-model="itemForm.grup_id" required class="form-input">
-                        <option value="">-- Pilih Grup Kemasan --</option>
-                        <?php foreach ($groups as $g): ?>
-                        <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['nama_grup']) ?> (<?= $g['kode_grup'] ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="form-label">Nama Barang Jadi Lengkap *</label>
-                    <input type="text" name="nama_item" x-model="itemForm.nama_item" required class="form-input" placeholder="Contoh: Berondong Beras Manis Gurih 135gr">
-                </div>
-
-                <div>
-                    <label class="form-label">Kelompok Upah Borongan</label>
-                    <select name="kelompok_borongan_id" x-model="itemForm.kelompok_borongan_id" class="form-input">
-                        <option value="">-- Tanpa Kelompok Upah (Rp 0) --</option>
-                        <?php foreach ($wageGroups as $w): ?>
-                        <option value="<?= $w['id'] ?>" data-wage="<?= (float)$w['upah_per_bungkus'] ?>"><?= htmlspecialchars($w['nama_kelompok']) ?> (Rp <?= number_format((float)$w['upah_per_bungkus'], 0, ',', '.') ?>/pack)</option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
-                        Tarif upah borongan kemas otomatis mengikuti master kelompok upah borongan yang dipilih.
-                    </div>
-                </div>
-
-                <div>
-                    <label class="form-label">Vendor Pemasok Utama (Opsional)</label>
-                    <select name="pemasok_utama_id" x-model="itemForm.pemasok_utama_id" class="form-input">
-                        <option value="">-- Tanpa Pemasok (Produksi Internal / Mandiri) --</option>
-                        <?php foreach ($suppliers as $sup): ?>
-                        <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['nama_pemasok']) ?> (<?= $sup['kode_pemasok'] ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
-                        Jika barang jadi dipasok oleh vendor / maklon, pilih pemasok agar item ini dapat dimasukkan ke daftar belanjaan di Pembelian (/purchases).
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="modal-body custom-scrollbar space-y-3.5">
                     <div>
-                        <label class="form-label">HPP Acuan (Rp)</label>
-                        <input type="text" name="harga_pokok_pembelian" x-model="itemForm.harga_pokok_pembelian" class="form-input font-mono input-rupiah" placeholder="10.000">
+                        <label class="form-label font-bold">Grup Kemasan Luar (Barcode Universal) *</label>
+                        <select name="grup_id" x-model="itemForm.grup_id" required class="form-input">
+                            <option value="">-- Pilih Grup Kemasan --</option>
+                            <?php foreach ($groups as $g): ?>
+                            <option value="<?= $g['id'] ?>"><?= htmlspecialchars($g['nama_grup']) ?> (<?= $g['kode_grup'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
+
                     <div>
-                        <label class="form-label">Stok Minimum Alert (Pcs)</label>
-                        <input type="number" name="stok_minimum_peringatan" x-model.number="itemForm.stok_minimum_peringatan" class="form-input font-mono" placeholder="10">
+                        <label class="form-label font-bold">Nama Barang Jadi Lengkap *</label>
+                        <input type="text" name="nama_item" x-model="itemForm.nama_item" required class="form-input" placeholder="Contoh: Berondong Beras Manis Gurih 135gr">
                     </div>
+
+                    <div>
+                        <label class="form-label font-bold">Kelompok Upah Borongan</label>
+                        <select name="kelompok_borongan_id" x-model="itemForm.kelompok_borongan_id" class="form-input">
+                            <option value="">-- Tanpa Kelompok Upah (Rp 0) --</option>
+                            <?php foreach ($wageGroups as $w): ?>
+                            <option value="<?= $w['id'] ?>" data-wage="<?= (float)$w['upah_per_bungkus'] ?>"><?= htmlspecialchars($w['nama_kelompok']) ?> (Rp <?= number_format((float)$w['upah_per_bungkus'], 0, ',', '.') ?>/pack)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
+                            Tarif upah borongan kemas otomatis mengikuti master kelompok upah borongan yang dipilih.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label font-bold">Vendor Pemasok Utama (Opsional)</label>
+                        <select name="pemasok_utama_id" x-model="itemForm.pemasok_utama_id" class="form-input">
+                            <option value="">-- Tanpa Pemasok (Produksi Internal / Mandiri) --</option>
+                            <?php foreach ($suppliers as $sup): ?>
+                            <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['nama_pemasok']) ?> (<?= $sup['kode_pemasok'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
+                            Jika barang jadi dipasok oleh vendor / maklon, pilih pemasok agar item ini dapat dimasukkan ke daftar belanjaan di Pembelian (/purchases).
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label font-bold">HPP Acuan (Rp)</label>
+                            <input type="text" name="harga_pokok_pembelian" x-model="itemForm.harga_pokok_pembelian" class="form-input font-mono input-rupiah" placeholder="10.000">
+                        </div>
+                        <div>
+                            <label class="form-label font-bold">Stok Minimum Alert (Pcs)</label>
+                            <input type="number" name="stok_minimum_peringatan" x-model.number="itemForm.stok_minimum_peringatan" class="form-input font-mono" placeholder="10">
+                        </div>
+                    </div>
+
+                    <template x-if="!isEditItem">
+                        <div>
+                            <label class="form-label font-bold">Stok Awal Fisik (Pcs)</label>
+                            <input type="number" name="stok_awal" x-model.number="itemForm.stok_awal" class="form-input font-mono" placeholder="0">
+                        </div>
+                    </template>
+
+                    <template x-if="isEditItem">
+                        <div style="display:flex;gap:16px;margin-top:6px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
+                                <input type="checkbox" name="status_jual" x-model="itemForm.status_jual" style="width:15px;height:15px;accent-color:var(--color-primary);">
+                                <span>Dapat Dijual di POS</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
+                                <input type="checkbox" name="status_aktif" x-model="itemForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
+                                <span>Status Aktif</span>
+                            </label>
+                        </div>
+                    </template>
                 </div>
 
-                <template x-if="!isEditItem">
-                    <div>
-                        <label class="form-label">Stok Awal Fisik (Pcs)</label>
-                        <input type="number" name="stok_awal" x-model.number="itemForm.stok_awal" class="form-input font-mono" placeholder="0">
-                    </div>
-                </template>
-
-                <template x-if="isEditItem">
-                    <div style="display:flex;gap:16px;margin-top:6px;">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
-                            <input type="checkbox" name="status_jual" x-model="itemForm.status_jual" style="width:15px;height:15px;accent-color:var(--color-primary);">
-                            <span>Dapat Dijual di POS</span>
-                        </label>
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
-                            <input type="checkbox" name="status_aktif" x-model="itemForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
-                            <span>Status Aktif</span>
-                        </label>
-                    </div>
-                </template>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showItemModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showItemModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEditItem ? 'Simpan Perubahan' : 'Tambah Barang Jadi'"></span>
                     </button>
                 </div>
@@ -1092,44 +1110,62 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
     <!-- MODAL 2: TAMBAH GRUP KEMASAN -->
     <template x-teleport="body">
-    <div x-show="showGroupModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:460px;padding:24px;">
-            <div class="modal-header">
-                <div class="modal-title">Tambah Grup Kemasan Baru</div>
+    <div x-show="showGroupModal" x-cloak class="modal-backdrop" @click="showGroupModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form action="<?= Router::url('/products/store-group') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="box" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Tambah Grup Kemasan Baru</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Kelompok Kemasan &amp; Barcode Pabrik</div>
+                    </div>
+                </div>
+                <button type="button" @click="showGroupModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form action="<?= Router::url('/products/store-group') ?>" method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
-                <div>
-                    <label class="form-label">Merek Dagang *</label>
-                    <select name="merek_id" required class="form-input">
-                        <?php foreach ($brands as $b): ?>
-                        <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['nama_merek']) ?> (<?= $b['kode_merek'] ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <div>
+                        <label class="form-label font-bold">Merek Dagang *</label>
+                        <select name="merek_id" required class="form-input">
+                            <?php foreach ($brands as $b): ?>
+                            <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['nama_merek']) ?> (<?= $b['kode_merek'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="form-label font-bold">Nama Grup Kemasan *</label>
+                        <input type="text" name="nama_grup" required class="form-input" placeholder="Contoh: KEREN SNACK SINGKONG 250GR">
+                    </div>
+
+                    <div>
+                        <label class="form-label font-bold">Barcode Universal Kemasan (Pabrik)</label>
+                        <input type="text" name="barcode_universal" 
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13)"
+                               maxlength="13" class="form-input font-mono" placeholder="88030173 (8–13 Digit Angka)">
+                    </div>
+
+                    <div>
+                        <label class="form-label font-bold">Harga Ritel Standar (L1) (Rp/pcs) *</label>
+                        <input type="text" name="harga_ritel_l1" required class="form-input font-mono input-rupiah" placeholder="15.000" value="15.000">
+                    </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Nama Grup Kemasan *</label>
-                    <input type="text" name="nama_grup" required class="form-input" placeholder="Contoh: KEREN SNACK SINGKONG 250GR">
-                </div>
-
-                <div>
-                    <label class="form-label">Barcode Universal Kemasan (Pabrik)</label>
-                    <input type="text" name="barcode_universal" 
-                           oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13)"
-                           maxlength="13" class="form-input font-mono" placeholder="88030173 (8–13 Digit Angka)">
-                </div>
-
-                <div>
-                    <label class="form-label">Harga Ritel Standar (L1) (Rp/pcs) *</label>
-                    <input type="text" name="harga_ritel_l1" required class="form-input font-mono input-rupiah" placeholder="15.000" value="15.000">
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showGroupModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showGroupModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span>Tambah Grup</span>
                     </button>
                 </div>
@@ -1140,81 +1176,96 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
     <!-- MODAL 2B: KELOLA DAFTAR GRUP KEMASAN -->
     <template x-teleport="body">
-    <div x-show="showManageGroupsModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:780px;padding:24px;">
-            <div class="modal-header">
-                <div>
-                    <div class="modal-title">Kelola Grup Kemasan Luar</div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Daftar seluruh grup kemasan dan barcode universal kemasan pabrik</div>
-                </div>
+    <div x-show="showManageGroupsModal" x-cloak class="modal-backdrop" @click="showManageGroupsModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:780px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;margin-bottom:12px;">
-                <button type="button" @click="openAddGroupModal()" class="btn btn-primary btn-sm" style="height:34px;">
-                    <i data-lucide="plus" style="width:14px;height:14px;"></i>
-                    <span>Tambah Grup Baru</span>
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(59,130,246,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="boxes" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Kelola Grup Kemasan Luar</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Daftar seluruh grup kemasan dan barcode universal kemasan pabrik</div>
+                    </div>
+                </div>
+                <button type="button" @click="showManageGroupsModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
                 </button>
             </div>
 
-            <div class="overflow-x-auto custom-scrollbar" style="max-height:380px;border:1px solid var(--color-hairline);border-radius:6px;">
-                <table class="data-table" style="width:100%;font-size:12.5px;">
-                    <thead>
-                        <tr>
-                            <th style="width:85px;">Kode</th>
-                            <th style="width:120px;">Merek</th>
-                            <th>Nama Grup Kemasan</th>
-                            <th style="width:120px;">Barcode Pabrik</th>
-                            <th class="cell-center" style="width:85px;">Total SKU</th>
-                            <th class="cell-center" style="width:75px;">Status</th>
-                            <th class="cell-center" style="width:85px;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="g in groups" :key="g.id">
-                            <tr :style="!g.status_aktif ? 'opacity:0.5;' : ''">
-                                <td class="cell-nowrap">
-                                    <span class="badge badge-mono" x-text="g.kode_grup"></span>
-                                </td>
-                                <td class="cell-nowrap">
-                                    <span class="badge badge-mono" style="font-weight:700;" x-text="g.nama_merek || 'KEREN SNACK'"></span>
-                                </td>
-                                <td>
-                                    <div style="font-weight:700;" x-text="g.nama_grup"></div>
-                                </td>
-                                <td class="cell-nowrap">
-                                    <span class="badge badge-mono" x-text="g.barcode_universal || '-'"></span>
-                                </td>
-                                <td class="cell-center cell-nowrap">
-                                    <span class="badge badge-secondary" x-text="(g.total_sku || 0) + ' SKU'"></span>
-                                </td>
-                                <td class="cell-center cell-nowrap">
-                                    <template x-if="g.status_aktif">
-                                        <span class="badge badge-success">Aktif</span>
-                                    </template>
-                                    <template x-if="!g.status_aktif">
-                                        <span class="badge badge-danger">Nonaktif</span>
-                                    </template>
-                                </td>
-                                <td class="cell-center cell-nowrap">
-                                    <div class="flex items-center justify-center gap-1">
-                                        <button @click="openEditGroupModal(g)" class="btn btn-ghost btn-sm" style="padding:4px 6px;" title="Edit Grup">
-                                            <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
-                                        </button>
-                                        <template x-if="!g.total_sku || g.total_sku == 0">
-                                            <button @click="deleteGroup(g.id, g.nama_grup)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:#ef4444;" title="Hapus Grup">
-                                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                            </button>
-                                        </template>
-                                    </div>
-                                </td>
+            <div class="modal-body custom-scrollbar space-y-3">
+                <div style="display:flex;justify-content:flex-end;">
+                    <button type="button" @click="openAddGroupModal()" class="btn btn-primary btn-sm" style="height:34px;">
+                        <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                        <span>Tambah Grup Baru</span>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto custom-scrollbar" style="max-height:380px;border:1px solid var(--color-hairline);border-radius:10px;">
+                    <table class="data-table" style="width:100%;font-size:12.5px;">
+                        <thead>
+                            <tr>
+                                <th style="width:85px;">Kode</th>
+                                <th style="width:120px;">Merek</th>
+                                <th>Nama Grup Kemasan</th>
+                                <th style="width:120px;">Barcode Pabrik</th>
+                                <th class="cell-center" style="width:85px;">Total SKU</th>
+                                <th class="cell-center" style="width:75px;">Status</th>
+                                <th class="cell-center" style="width:85px;">Aksi</th>
                             </tr>
-                        </template>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <template x-for="g in groups" :key="g.id">
+                                <tr :style="!g.status_aktif ? 'opacity:0.5;' : ''">
+                                    <td class="cell-nowrap">
+                                        <span class="badge badge-mono" x-text="g.kode_grup"></span>
+                                    </td>
+                                    <td class="cell-nowrap">
+                                        <span class="badge badge-mono" style="font-weight:700;" x-text="g.nama_merek || 'KEREN SNACK'"></span>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight:700;" x-text="g.nama_grup"></div>
+                                    </td>
+                                    <td class="cell-nowrap">
+                                        <span class="badge badge-mono" x-text="g.barcode_universal || '-'"></span>
+                                    </td>
+                                    <td class="cell-center cell-nowrap">
+                                        <span class="badge badge-secondary" x-text="(g.total_sku || 0) + ' SKU'"></span>
+                                    </td>
+                                    <td class="cell-center cell-nowrap">
+                                        <template x-if="g.status_aktif">
+                                            <span class="badge badge-success">Aktif</span>
+                                        </template>
+                                        <template x-if="!g.status_aktif">
+                                            <span class="badge badge-danger">Nonaktif</span>
+                                        </template>
+                                    </td>
+                                    <td class="cell-center cell-nowrap">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <button @click="openEditGroupModal(g)" class="btn btn-ghost btn-sm" style="padding:4px 6px;" title="Edit Grup">
+                                                <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                                            </button>
+                                            <template x-if="!g.total_sku || g.total_sku == 0">
+                                                <button @click="deleteGroup(g.id, g.nama_grup)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:#ef4444;" title="Hapus Grup">
+                                                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <div style="display:flex;justify-content:flex-end;margin-top:16px;">
-                <button type="button" @click="showManageGroupsModal = false" class="btn btn-secondary">Tutup</button>
+            <div class="modal-footer">
+                <button type="button" @click="showManageGroupsModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Tutup</button>
             </div>
         </div>
     </div>
@@ -1222,51 +1273,66 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
     <!-- MODAL 2C: EDIT GRUP KEMASAN -->
     <template x-teleport="body">
-    <div x-show="showEditGroupModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:460px;padding:24px;">
-            <div class="modal-header">
-                <div>
-                    <div class="modal-title">Edit Grup Kemasan</div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;" x-text="editGroupForm.kode_grup"></div>
-                </div>
+    <div x-show="showEditGroupModal" x-cloak class="modal-backdrop" @click="showEditGroupModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form action="<?= Router::url('/products/update-group') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Edit Grup Kemasan</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;" x-text="editGroupForm.kode_grup"></div>
+                    </div>
+                </div>
+                <button type="button" @click="showEditGroupModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form action="<?= Router::url('/products/update-group') ?>" method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="id" :value="editGroupForm.id">
 
-                <div>
-                    <label class="form-label">Merek Dagang *</label>
-                    <select name="merek_id" x-model="editGroupForm.merek_id" required class="form-input">
-                        <?php foreach ($brands as $b): ?>
-                        <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['nama_merek']) ?> (<?= $b['kode_merek'] ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <div>
+                        <label class="form-label font-bold">Merek Dagang *</label>
+                        <select name="merek_id" x-model="editGroupForm.merek_id" required class="form-input">
+                            <?php foreach ($brands as $b): ?>
+                            <option value="<?= $b['id'] ?>"><?= htmlspecialchars($b['nama_merek']) ?> (<?= $b['kode_merek'] ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="form-label font-bold">Nama Grup Kemasan *</label>
+                        <input type="text" name="nama_grup" x-model="editGroupForm.nama_grup" required class="form-input" placeholder="Contoh: KEREN SNACK SINGKONG 250GR">
+                    </div>
+
+                    <div>
+                        <label class="form-label font-bold">Barcode Universal Kemasan (Pabrik)</label>
+                        <input type="text" name="barcode_universal" x-model="editGroupForm.barcode_universal"
+                               @input="editGroupForm.barcode_universal = $event.target.value.replace(/[^0-9]/g, '').slice(0, 13)"
+                               maxlength="13" class="form-input font-mono" placeholder="88030173 (8–13 Digit Angka)">
+                    </div>
+
+                    <div>
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
+                            <input type="checkbox" name="status_aktif" x-model="editGroupForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
+                            <span>Status Grup Aktif</span>
+                        </label>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Nama Grup Kemasan *</label>
-                    <input type="text" name="nama_grup" x-model="editGroupForm.nama_grup" required class="form-input" placeholder="Contoh: KEREN SNACK SINGKONG 250GR">
-                </div>
-
-                <div>
-                    <label class="form-label">Barcode Universal Kemasan (Pabrik)</label>
-                    <input type="text" name="barcode_universal" x-model="editGroupForm.barcode_universal"
-                           @input="editGroupForm.barcode_universal = $event.target.value.replace(/[^0-9]/g, '').slice(0, 13)"
-                           maxlength="13" class="form-input font-mono" placeholder="88030173 (8–13 Digit Angka)">
-                </div>
-
-                <div>
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
-                        <input type="checkbox" name="status_aktif" x-model="editGroupForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
-                        <span>Status Grup Aktif</span>
-                    </label>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showEditGroupModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showEditGroupModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span>Simpan Perubahan</span>
                     </button>
                 </div>
@@ -1279,83 +1345,101 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- MODAL 3: TAMBAH / EDIT BAHAN BAKU & KEMASAN -->
     <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
     <template x-teleport="body">
-    <div x-show="showMaterialModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:500px;padding:24px;">
-            <div class="modal-header">
-                <div class="modal-title" x-text="isEditMaterial ? 'Edit Bahan / Kemasan' : 'Tambah Bahan / Kemasan Baru'"></div>
+    <div x-show="showMaterialModal" x-cloak class="modal-backdrop" @click="showMaterialModal = false">
+        <div class="modal-box" style="max-width:520px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form :action="isEditMaterial ? '<?= Router::url('/products/update-material') ?>' : '<?= Router::url('/products/store-material') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(245,158,11,0.12);color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="layers" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEditMaterial ? 'Edit Bahan / Kemasan' : 'Tambah Bahan / Kemasan Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Master Data Bahan Mentah Curah &amp; Kemasan</div>
+                    </div>
+                </div>
+                <button type="button" @click="showMaterialModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form :action="isEditMaterial ? '<?= Router::url('/products/update-material') ?>' : '<?= Router::url('/products/store-material') ?>'" method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="id" :value="materialForm.id">
 
-                <div>
-                    <label class="form-label">Nama Bahan Mentah / Kemasan *</label>
-                    <input type="text" name="nama_item" x-model="materialForm.nama_item" required class="form-input" placeholder="Contoh: Makaroni Curah Balan 10Kg, Plastik 150gr, Label Berondong">
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="modal-body custom-scrollbar space-y-3.5">
                     <div>
-                        <label class="form-label">Kategori Bahan *</label>
-                        <select name="tipe_item" x-model="materialForm.tipe_item" required class="form-input">
-                            <option value="bahan_mentah">Bahan Mentah Curah (Bal/Kg)</option>
-                            <option value="bahan_kemas">Bahan Kemasan (Plastik/Label/Cup)</option>
+                        <label class="form-label font-bold">Nama Bahan Mentah / Kemasan *</label>
+                        <input type="text" name="nama_item" x-model="materialForm.nama_item" required class="form-input" placeholder="Contoh: Makaroni Curah Balan 10Kg, Plastik 150gr, Label Berondong">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label font-bold">Kategori Bahan *</label>
+                            <select name="tipe_item" x-model="materialForm.tipe_item" required class="form-input">
+                                <option value="bahan_mentah">Bahan Mentah Curah (Bal/Kg)</option>
+                                <option value="bahan_kemas">Bahan Kemasan (Plastik/Label/Cup)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label font-bold">Satuan Beli / Dasar *</label>
+                            <select name="satuan_dasar" x-model="materialForm.satuan_dasar" required class="form-input font-mono">
+                                <option value="bal">bal</option>
+                                <option value="kg">kg</option>
+                                <option value="lembar">lembar</option>
+                                <option value="pack">pack</option>
+                                <option value="roll">roll</option>
+                                <option value="pcs">pcs</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label font-bold">Vendor Pemasok Utama</label>
+                        <select name="pemasok_utama_id" x-model="materialForm.pemasok_utama_id" class="form-input">
+                            <option value="">-- Pilih Supplier Vendor --</option>
+                            <?php foreach ($suppliers as $sup): ?>
+                            <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['nama_pemasok']) ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
-                    <div>
-                        <label class="form-label">Satuan Beli / Dasar *</label>
-                        <select name="satuan_dasar" x-model="materialForm.satuan_dasar" required class="form-input font-mono">
-                            <option value="bal">bal</option>
-                            <option value="kg">kg</option>
-                            <option value="lembar">lembar</option>
-                            <option value="pack">pack</option>
-                            <option value="roll">roll</option>
-                            <option value="pcs">pcs</option>
-                        </select>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label font-bold">HPP Beli Vendor (Rp)</label>
+                            <input type="text" name="harga_pokok_pembelian" x-model="materialForm.harga_pokok_pembelian" class="form-input font-mono input-rupiah" placeholder="250.000">
+                        </div>
+                        <div>
+                            <label class="form-label font-bold">Stok Minimum Peringatan</label>
+                            <input type="number" step="any" name="stok_minimum_peringatan" x-model.number="materialForm.stok_minimum_peringatan" class="form-input font-mono" placeholder="5">
+                        </div>
                     </div>
+
+                    <template x-if="!isEditMaterial">
+                        <div>
+                            <label class="form-label font-bold">Stok Awal Fisik</label>
+                            <input type="number" step="any" name="stok_awal" x-model.number="materialForm.stok_awal" class="form-input font-mono" placeholder="0">
+                        </div>
+                    </template>
+
+                    <template x-if="isEditMaterial">
+                        <div>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
+                                <input type="checkbox" name="status_aktif" x-model="materialForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
+                                <span>Status Bahan Aktif</span>
+                            </label>
+                        </div>
+                    </template>
                 </div>
 
-                <div>
-                    <label class="form-label">Vendor Pemasok Utama</label>
-                    <select name="pemasok_utama_id" x-model="materialForm.pemasok_utama_id" class="form-input">
-                        <option value="">-- Pilih Supplier Vendor --</option>
-                        <?php foreach ($suppliers as $sup): ?>
-                        <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['nama_pemasok']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">HPP Beli Vendor (Rp)</label>
-                        <input type="text" name="harga_pokok_pembelian" x-model="materialForm.harga_pokok_pembelian" class="form-input font-mono input-rupiah" placeholder="250.000">
-                    </div>
-                    <div>
-                        <label class="form-label">Stok Minimum Peringatan</label>
-                        <input type="number" step="any" name="stok_minimum_peringatan" x-model.number="materialForm.stok_minimum_peringatan" class="form-input font-mono" placeholder="5">
-                    </div>
-                </div>
-
-                <template x-if="!isEditMaterial">
-                    <div>
-                        <label class="form-label">Stok Awal Fisik</label>
-                        <input type="number" step="any" name="stok_awal" x-model.number="materialForm.stok_awal" class="form-input font-mono" placeholder="0">
-                    </div>
-                </template>
-
-                <template x-if="isEditMaterial">
-                    <div>
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
-                            <input type="checkbox" name="status_aktif" x-model="materialForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
-                            <span>Status Bahan Aktif</span>
-                        </label>
-                    </div>
-                </template>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showMaterialModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showMaterialModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEditMaterial ? 'Simpan Perubahan' : 'Tambah Bahan'"></span>
                     </button>
                 </div>
@@ -1368,138 +1452,153 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- MODAL 4: TAMBAH KOMPONEN RESEP BOM (DENGAN KALKULATOR HASIL BUNGKUS / YIELD) -->
     <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
     <template x-teleport="body">
-    <div x-show="showRecipeModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:520px;padding:24px;">
-            <div class="modal-header">
-                <div>
-                    <div class="modal-title">Tambah Komponen Resep BOM</div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;" x-text="'Produk: ' + (selectedRecipeProduct?.nama_item || '')"></div>
-                </div>
+    <div x-show="showRecipeModal" x-cloak class="modal-backdrop" @click="showRecipeModal = false">
+        <div class="modal-box" style="max-width:540px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form action="<?= Router::url('/products/store-recipe-item') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="calculator" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Tambah Komponen Resep BOM</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;" x-text="'Produk: ' + (selectedRecipeProduct?.nama_item || '')"></div>
+                    </div>
+                </div>
+                <button type="button" @click="showRecipeModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form action="<?= Router::url('/products/store-recipe-item') ?>" method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="item_jadi_id" :value="selectedRecipeProduct?.id">
 
-                <div>
-                    <label class="form-label">Pilih Bahan Baku / Kemasan *</label>
-                    <select name="item_bahan_id" x-model="recipeForm.item_bahan_id" @change="onRecipeMaterialChange()" required class="form-input">
-                        <option value="">-- Pilih Bahan Baku Curah / Kemasan --</option>
-                        <?php
-                        $bahanKemas = [];
-                        $bahanMentah = [];
-                        foreach ($materials as $m) {
-                            if (($m['tipe_item'] ?? '') === 'bahan_kemas') {
-                                $bahanKemas[] = $m;
-                            } else {
-                                $bahanMentah[] = $m;
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <div>
+                        <label class="form-label font-bold">Pilih Bahan Baku / Kemasan *</label>
+                        <select name="item_bahan_id" x-model="recipeForm.item_bahan_id" @change="onRecipeMaterialChange()" required class="form-input">
+                            <option value="">-- Pilih Bahan Baku Curah / Kemasan --</option>
+                            <?php
+                            $bahanKemas = [];
+                            $bahanMentah = [];
+                            foreach ($materials as $m) {
+                                if (($m['tipe_item'] ?? '') === 'bahan_kemas') {
+                                    $bahanKemas[] = $m;
+                                } else {
+                                    $bahanMentah[] = $m;
+                                }
                             }
-                        }
-                        ?>
-                        <?php if (!empty($bahanKemas)): ?>
-                        <optgroup label="Bahan Kemasan">
-                            <?php foreach ($bahanKemas as $m): ?>
-                            <option value="<?= $m['id'] ?>">
-                                <?= htmlspecialchars($m['nama_item']) ?> (Kemas - <?= $m['satuan_dasar'] ?> | HPP Rp <?= number_format((float)$m['harga_pokok_pembelian'], 0, ',', '.') ?>)
-                            </option>
-                            <?php endforeach; ?>
-                        </optgroup>
-                        <?php endif; ?>
-                        <?php if (!empty($bahanMentah)): ?>
-                        <optgroup label="Bahan Mentah / Curah">
-                            <?php foreach ($bahanMentah as $m): ?>
-                            <option value="<?= $m['id'] ?>">
-                                <?= htmlspecialchars($m['nama_item']) ?> (Mentah Curah - <?= $m['satuan_dasar'] ?> | HPP Rp <?= number_format((float)$m['harga_pokok_pembelian'], 0, ',', '.') ?>)
-                            </option>
-                            <?php endforeach; ?>
-                        </optgroup>
-                        <?php endif; ?>
-                    </select>
+                            ?>
+                            <?php if (!empty($bahanKemas)): ?>
+                            <optgroup label="Bahan Kemasan">
+                                <?php foreach ($bahanKemas as $m): ?>
+                                <option value="<?= $m['id'] ?>">
+                                    <?= htmlspecialchars($m['nama_item']) ?> (Kemas - <?= $m['satuan_dasar'] ?> | HPP Rp <?= number_format((float)$m['harga_pokok_pembelian'], 0, ',', '.') ?>)
+                                </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <?php endif; ?>
+                            <?php if (!empty($bahanMentah)): ?>
+                            <optgroup label="Bahan Mentah / Curah">
+                                <?php foreach ($bahanMentah as $m): ?>
+                                <option value="<?= $m['id'] ?>">
+                                    <?= htmlspecialchars($m['nama_item']) ?> (Mentah Curah - <?= $m['satuan_dasar'] ?> | HPP Rp <?= number_format((float)$m['harga_pokok_pembelian'], 0, ',', '.') ?>)
+                                </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+
+                    <!-- MODE INPUT SELECTION -->
+                    <div>
+                        <label class="form-label font-bold">Metode Input Kebutuhan Bahan</label>
+                        <div class="flex gap-2">
+                            <button type="button"
+                                    @click="recipeInputMode = 'yield'"
+                                    :class="recipeInputMode === 'yield' ? 'btn btn-primary btn-sm flex-1' : 'btn btn-secondary btn-sm flex-1'"
+                                    style="font-size:12px;">
+                                🎯 Hitung Hasil Bungkus (Yield)
+                            </button>
+                            <button type="button"
+                                    @click="recipeInputMode = 'direct'"
+                                    :class="recipeInputMode === 'direct' ? 'btn btn-primary btn-sm flex-1' : 'btn btn-secondary btn-sm flex-1'"
+                                    style="font-size:12px;">
+                                🔢 Input Desimal Langsung
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- MODE A: YIELD CALCULATOR (OPSI B) -->
+                    <template x-if="recipeInputMode === 'yield'">
+                        <div class="p-3 rounded-lg border border-hairline space-y-3" style="background:var(--color-canvas-soft, #f8fafc);">
+                            <div>
+                                <label class="form-label" style="font-size:12.5px;">
+                                    <span>1 </span>
+                                    <strong x-text="selectedMaterialInModal?.satuan_dasar || 'satuan'"></strong>
+                                    <span> bahan ini menghasilkan berapa bungkus barang jadi? *</span>
+                                </label>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="number" step="any" min="0.0001" x-model="recipeYieldPcs" @input="calculateFromYield()" class="form-input font-mono flex-1" placeholder="Contoh: 80">
+                                    <span class="badge badge-secondary" style="font-family:var(--font-mono);font-size:12px;height:38px;display:flex;align-items:center;padding:0 10px;font-weight:700;">bungkus / pack</span>
+                                </div>
+                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
+                                    💡 <em>Misal: 1 bal (10 kg) makaroni menghasilkan 80 bungkus snack, isi <strong>80</strong>.</em>
+                                </div>
+                            </div>
+
+                            <!-- LIVE PREVIEW HASIL KALKULASI -->
+                            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-hairline">
+                                <div style="font-size:12px;">
+                                    <div style="color:var(--color-ink-mute);font-size:10.5px;">Kebutuhan per bungkus:</div>
+                                    <div style="font-weight:700;font-family:var(--font-mono);color:var(--color-ink);" x-text="(recipeForm.jumlah_kebutuhan || '0') + ' ' + (selectedMaterialInModal?.satuan_dasar || '')"></div>
+                                </div>
+                                <div style="font-size:12px;text-align:right;">
+                                    <div style="color:var(--color-ink-mute);font-size:10.5px;">Estimasi biaya bahan:</div>
+                                    <div style="font-weight:800;font-family:var(--font-mono);color:var(--color-primary);" x-text="formatRupiah(estimatedCostPerPiece) + '/pack'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- MODE B: DIRECT DECIMAL INPUT -->
+                    <template x-if="recipeInputMode === 'direct'">
+                        <div class="p-3 rounded-lg border border-hairline space-y-3" style="background:var(--color-canvas-soft, #f8fafc);">
+                            <div>
+                                <label class="form-label" style="font-size:12.5px;">Jumlah Kebutuhan per 1 Bungkus Barang Jadi *</label>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input type="number" step="0.000001" min="0.000001" name="jumlah_kebutuhan" x-model="recipeForm.jumlah_kebutuhan" @input="calculateFromDirect()" required class="form-input font-mono flex-1" placeholder="Contoh: 0.15 atau 1">
+                                    <span class="badge badge-secondary" style="font-family:var(--font-mono);font-size:12px;height:38px;display:flex;align-items:center;padding:0 10px;font-weight:700;" x-text="selectedMaterialInModal?.satuan_dasar || 'satuan'"></span>
+                                </div>
+                                <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
+                                    💡 <em>Misal: 1 lembar plastik = <strong>1</strong>. Atau 150 gram dari satuan kg = <strong>0.15</strong>.</em>
+                                </div>
+                            </div>
+
+                            <!-- LIVE PREVIEW HASIL BIAYA -->
+                            <div class="flex justify-between items-center pt-2 border-t border-hairline" style="font-size:12px;">
+                                <span style="color:var(--color-ink-mute);">Estimasi biaya bahan per bungkus:</span>
+                                <span style="font-weight:800;font-family:var(--font-mono);color:var(--color-primary);" x-text="formatRupiah(estimatedCostPerPiece) + '/pack'"></span>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- HIDDEN INPUT IF YIELD MODE -->
+                    <template x-if="recipeInputMode === 'yield'">
+                        <input type="hidden" name="jumlah_kebutuhan" :value="recipeForm.jumlah_kebutuhan">
+                    </template>
                 </div>
 
-                <!-- MODE INPUT SELECTION -->
-                <div>
-                    <label class="form-label">Metode Input Kebutuhan Bahan</label>
-                    <div class="flex gap-2">
-                        <button type="button"
-                                @click="recipeInputMode = 'yield'"
-                                :class="recipeInputMode === 'yield' ? 'btn btn-primary btn-sm flex-1' : 'btn btn-secondary btn-sm flex-1'"
-                                style="font-size:12px;">
-                            🎯 Hitung Hasil Bungkus (Yield)
-                        </button>
-                        <button type="button"
-                                @click="recipeInputMode = 'direct'"
-                                :class="recipeInputMode === 'direct' ? 'btn btn-primary btn-sm flex-1' : 'btn btn-secondary btn-sm flex-1'"
-                                style="font-size:12px;">
-                            🔢 Input Desimal Langsung
-                        </button>
-                    </div>
-                </div>
-
-                <!-- MODE A: YIELD CALCULATOR (OPSI B) -->
-                <template x-if="recipeInputMode === 'yield'">
-                    <div class="p-3 rounded-lg border border-hairline space-y-3" style="background:var(--color-canvas-soft, #f8fafc);">
-                        <div>
-                            <label class="form-label" style="font-size:12.5px;">
-                                <span>1 </span>
-                                <strong x-text="selectedMaterialInModal?.satuan_dasar || 'satuan'"></strong>
-                                <span> bahan ini menghasilkan berapa bungkus barang jadi? *</span>
-                            </label>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <input type="number" step="any" min="0.0001" x-model="recipeYieldPcs" @input="calculateFromYield()" class="form-input font-mono flex-1" placeholder="Contoh: 80">
-                                <span class="badge badge-secondary" style="font-family:var(--font-mono);font-size:12px;height:38px;display:flex;align-items:center;padding:0 10px;font-weight:700;">bungkus / pack</span>
-                            </div>
-                            <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
-                                💡 <em>Misal: 1 bal (10 kg) makaroni menghasilkan 80 bungkus snack, isi <strong>80</strong>.</em>
-                            </div>
-                        </div>
-
-                        <!-- LIVE PREVIEW HASIL KALKULASI -->
-                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-hairline">
-                            <div style="font-size:12px;">
-                                <div style="color:var(--color-ink-mute);font-size:10.5px;">Kebutuhan per bungkus:</div>
-                                <div style="font-weight:700;font-family:var(--font-mono);color:var(--color-ink);" x-text="(recipeForm.jumlah_kebutuhan || '0') + ' ' + (selectedMaterialInModal?.satuan_dasar || '')"></div>
-                            </div>
-                            <div style="font-size:12px;text-align:right;">
-                                <div style="color:var(--color-ink-mute);font-size:10.5px;">Estimasi biaya bahan:</div>
-                                <div style="font-weight:800;font-family:var(--font-mono);color:var(--color-primary);" x-text="formatRupiah(estimatedCostPerPiece) + '/pack'"></div>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-
-                <!-- MODE B: DIRECT DECIMAL INPUT -->
-                <template x-if="recipeInputMode === 'direct'">
-                    <div class="p-3 rounded-lg border border-hairline space-y-3" style="background:var(--color-canvas-soft, #f8fafc);">
-                        <div>
-                            <label class="form-label" style="font-size:12.5px;">Jumlah Kebutuhan per 1 Bungkus Barang Jadi *</label>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <input type="number" step="0.000001" min="0.000001" name="jumlah_kebutuhan" x-model="recipeForm.jumlah_kebutuhan" @input="calculateFromDirect()" required class="form-input font-mono flex-1" placeholder="Contoh: 0.15 atau 1">
-                                <span class="badge badge-secondary" style="font-family:var(--font-mono);font-size:12px;height:38px;display:flex;align-items:center;padding:0 10px;font-weight:700;" x-text="selectedMaterialInModal?.satuan_dasar || 'satuan'"></span>
-                            </div>
-                            <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
-                                💡 <em>Misal: 1 lembar plastik = <strong>1</strong>. Atau 150 gram dari satuan kg = <strong>0.15</strong>.</em>
-                            </div>
-                        </div>
-
-                        <!-- LIVE PREVIEW HASIL BIAYA -->
-                        <div class="flex justify-between items-center pt-2 border-t border-hairline" style="font-size:12px;">
-                            <span style="color:var(--color-ink-mute);">Estimasi biaya bahan per bungkus:</span>
-                            <span style="font-weight:800;font-family:var(--font-mono);color:var(--color-primary);" x-text="formatRupiah(estimatedCostPerPiece) + '/pack'"></span>
-                        </div>
-                    </div>
-                </template>
-
-                <!-- HIDDEN INPUT IF YIELD MODE -->
-                <template x-if="recipeInputMode === 'yield'">
-                    <input type="hidden" name="jumlah_kebutuhan" :value="recipeForm.jumlah_kebutuhan">
-                </template>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-                    <button type="button" @click="showRecipeModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary" :disabled="!recipeForm.item_bahan_id || Number(recipeForm.jumlah_kebutuhan) <= 0">
-                        <i data-lucide="save"></i>
-                        <span>Simpan Komponen Resep</span>
+                <div class="modal-footer">
+                    <button type="button" @click="showRecipeModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" :disabled="!recipeForm.item_bahan_id || Number(recipeForm.jumlah_kebutuhan) <= 0" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
+                        <span>Simpan Resep</span>
                     </button>
                 </div>
             </form>
@@ -1509,123 +1608,134 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
     <!-- MODAL 4B: SALIN RESEP KE PRODUK LAIN (MASSAL / CHECKBOX) -->
     <template x-teleport="body">
-    <div x-show="showCopyRecipeModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:580px;padding:24px;">
-            <div class="modal-header" style="align-items:flex-start;padding-bottom:12px;border-bottom:1px solid var(--color-hairline);">
-                <div>
-                    <div class="modal-title" style="font-size:16px;font-weight:800;color:var(--color-ink);">Salin &amp; Terapkan Resep ke Produk Lain</div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Duplikasi komposisi bahan baku &amp; kemasan ke beberapa produk jadi sekaligus.</div>
+    <div x-show="showCopyRecipeModal" x-cloak class="modal-backdrop" @click="showCopyRecipeModal = false">
+        <div class="modal-box" style="max-width:580px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="copy" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Salin &amp; Terapkan Resep</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Duplikasi komposisi bahan baku &amp; kemasan ke beberapa produk jadi sekaligus.</div>
+                    </div>
                 </div>
+                <button type="button" @click="showCopyRecipeModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form action="<?= Router::url('/products/copy-recipe') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;margin-top:14px;">
-                <?= \App\Helpers\CSRF::field() ?>
-                <input type="hidden" name="source_item_id" :value="selectedRecipeProduct?.id">
+            <form action="<?= Router::url('/products/copy-recipe') ?>" method="POST">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="source_item_id" :value="selectedRecipeProduct?.id">
 
-                <!-- CARD SUMBER RESEP & KOMPOSISI BAHAN -->
-                <div class="rounded-xl border border-hairline overflow-hidden" style="background:var(--color-canvas-soft, #f8fafc);">
-                    <!-- Header Produk Sumber -->
-                    <div class="p-3 border-b border-hairline flex items-center justify-between gap-2.5 flex-wrap" style="background:var(--color-canvas);">
-                        <div class="flex items-center gap-2 min-w-0 flex-1">
-                            <span style="font-size:10.5px;font-weight:700;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;" class="shrink-0">Sumber:</span>
-                            <span class="badge badge-mono font-bold shrink-0" style="font-size:11px;padding:2px 7px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline-strong);" x-text="selectedRecipeProduct?.kode_sku"></span>
-                            <span class="font-bold text-xs sm:text-sm truncate" style="color:var(--color-ink);" x-text="selectedRecipeProduct?.nama_item"></span>
+                    <!-- CARD SUMBER RESEP & KOMPOSISI BAHAN -->
+                    <div class="rounded-xl border border-hairline overflow-hidden" style="background:var(--color-canvas-soft, #f8fafc);">
+                        <!-- Header Produk Sumber -->
+                        <div class="p-3 border-b border-hairline flex items-center justify-between gap-2.5 flex-wrap" style="background:var(--color-canvas);">
+                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                                <span style="font-size:10.5px;font-weight:700;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;" class="shrink-0">Sumber:</span>
+                                <span class="badge badge-mono font-bold shrink-0" style="font-size:11px;padding:2px 7px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline-strong);" x-text="selectedRecipeProduct?.kode_sku"></span>
+                                <span class="font-bold text-xs sm:text-sm truncate" style="color:var(--color-ink);" x-text="selectedRecipeProduct?.nama_item"></span>
+                            </div>
+                            <span class="badge badge-primary shrink-0" style="font-size:11px;font-weight:600;padding:2px 8px;display:inline-flex;align-items:center;gap:4px;">
+                                <i data-lucide="layers" style="width:12px;height:12px;"></i>
+                                <span x-text="currentProductRecipeList.length + ' Bahan'"></span>
+                            </span>
                         </div>
-                        <span class="badge badge-primary shrink-0" style="font-size:11px;font-weight:600;padding:2px 8px;display:inline-flex;align-items:center;gap:4px;">
-                            <i data-lucide="layers" style="width:12px;height:12px;"></i>
-                            <span x-text="currentProductRecipeList.length + ' Bahan'"></span>
-                        </span>
+
+                        <!-- Komposisi yang Akan Disalin -->
+                        <div class="p-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <span style="font-size:10.5px;font-weight:700;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Komposisi yang akan disalin:</span>
+                                <span style="font-size:11px;color:var(--color-primary);font-weight:600;" x-text="currentProductRecipeList.length + ' komponen resep'"></span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar">
+                                <template x-for="b in currentProductRecipeList" :key="b.id">
+                                    <span class="badge" style="font-size:11px;padding:4px 9px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
+                                        <span style="font-weight:600;color:var(--color-ink);" x-text="b.item_bahan_nama"></span>
+                                        <span class="font-mono ml-1 font-bold" style="color:var(--color-primary);" x-text="'(' + Number(b.jumlah_kebutuhan).toLocaleString('id-ID', {maximumFractionDigits:4}) + ' ' + b.item_bahan_satuan + ')'"></span>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Komposisi yang Akan Disalin -->
-                    <div class="p-3">
-                        <div class="flex items-center justify-between mb-2">
-                            <span style="font-size:10.5px;font-weight:700;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">Komposisi yang akan disalin:</span>
-                            <span style="font-size:11px;color:var(--color-primary);font-weight:600;" x-text="currentProductRecipeList.length + ' komponen resep'"></span>
+                    <!-- TOOLBAR PENCARIAN & FILTER -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <label class="form-label" style="font-size:12px;font-weight:700;margin:0;color:var(--color-ink);">
+                                Pilih Produk Tujuan yang Akan Mengikuti Resep Ini:
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer text-xs" style="color:var(--color-ink-secondary);">
+                                <input type="checkbox" x-model="copyOnlyWithoutRecipe" class="form-checkbox" style="width:14px;height:14px;border-radius:3px;">
+                                <span style="font-size:11px;font-weight:600;">Hanya yang belum ada resep</span>
+                            </label>
                         </div>
-                        <div class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar">
-                            <template x-for="b in currentProductRecipeList" :key="b.id">
-                                <span class="badge" style="font-size:11px;padding:4px 9px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,0.02);">
-                                    <span style="font-weight:600;color:var(--color-ink);" x-text="b.item_bahan_nama"></span>
-                                    <span class="font-mono ml-1 font-bold" style="color:var(--color-primary);" x-text="'(' + Number(b.jumlah_kebutuhan).toLocaleString('id-ID', {maximumFractionDigits:4}) + ' ' + b.item_bahan_satuan + ')'"></span>
-                                </span>
-                            </template>
+
+                        <div class="form-input-icon">
+                            <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);width:14px;height:14px;"></i>
+                            <input type="text" x-model="copySearchQuery" placeholder="Cari nama produk / varian / SKU tujuan..." class="form-input" style="height:36px;font-size:12.5px;padding-left:32px;">
                         </div>
                     </div>
-                </div>
 
-                <!-- TOOLBAR PENCARIAN & FILTER -->
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between gap-2 flex-wrap">
-                        <label class="form-label" style="font-size:12px;font-weight:700;margin:0;color:var(--color-ink);">
-                            Pilih Produk Tujuan yang Akan Mengikuti Resep Ini:
+                    <!-- SELECT ALL & COUNTER -->
+                    <div class="flex items-center justify-between px-1 py-1.5 text-xs border-b border-hairline" style="color:var(--color-ink-mute);">
+                        <label class="flex items-center gap-2 cursor-pointer font-medium hover:text-slate-900 dark:hover:text-white select-none">
+                            <input type="checkbox" :checked="isAllTargetsSelected" @change="toggleSelectAllTargets()" class="form-checkbox" style="width:15px;height:15px;border-radius:3px;">
+                            <span x-text="isAllTargetsSelected ? 'Batal Pilih Semua' : 'Pilih Semua (' + availableTargetProducts.length + ' produk)'"></span>
                         </label>
-                        <label class="flex items-center gap-1.5 cursor-pointer text-xs" style="color:var(--color-ink-secondary);">
-                            <input type="checkbox" x-model="copyOnlyWithoutRecipe" class="form-checkbox" style="width:14px;height:14px;border-radius:3px;">
-                            <span style="font-size:11px;font-weight:600;">Hanya yang belum ada resep</span>
-                        </label>
+                        <span class="badge" :class="selectedTargetItemIds.length > 0 ? 'badge-primary' : 'badge-secondary'" style="font-size:11px;font-weight:700;padding:2.5px 10px;white-space:nowrap;" x-text="selectedTargetItemIds.length + ' produk terpilih'"></span>
                     </div>
 
-                    <div class="form-input-icon">
-                        <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);width:14px;height:14px;"></i>
-                        <input type="text" x-model="copySearchQuery" placeholder="Cari nama produk / varian / SKU tujuan..." class="form-input" style="height:36px;font-size:12.5px;padding-left:32px;">
-                    </div>
-                </div>
-
-                <!-- SELECT ALL & COUNTER -->
-                <div class="flex items-center justify-between px-1 py-1.5 text-xs border-b border-hairline" style="color:var(--color-ink-mute);">
-                    <label class="flex items-center gap-2 cursor-pointer font-medium hover:text-slate-900 dark:hover:text-white select-none">
-                        <input type="checkbox" :checked="isAllTargetsSelected" @change="toggleSelectAllTargets()" class="form-checkbox" style="width:15px;height:15px;border-radius:3px;">
-                        <span x-text="isAllTargetsSelected ? 'Batal Pilih Semua' : 'Pilih Semua (' + availableTargetProducts.length + ' produk)'"></span>
-                    </label>
-                    <span class="badge" :class="selectedTargetItemIds.length > 0 ? 'badge-primary' : 'badge-secondary'" style="font-size:11px;font-weight:700;padding:2.5px 10px;white-space:nowrap;" x-text="selectedTargetItemIds.length + ' produk terpilih'"></span>
-                </div>
-
-                <!-- DAFTAR PRODUK TARGET (CHECKBOX LIST) -->
-                <div class="max-h-60 overflow-y-auto custom-scrollbar border rounded-lg p-1.5 space-y-1" style="background:var(--color-canvas, #ffffff);border-color:var(--color-hairline);">
-                    <template x-for="p in availableTargetProducts" :key="p.id">
-                        <label class="flex items-center justify-between p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer border border-transparent hover:border-hairline"
-                               :style="selectedTargetItemIds.includes(p.id) ? 'background:rgba(37,99,235,0.05);border-color:rgba(37,99,235,0.25);' : ''">
-                            <div class="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
-                                <input type="checkbox" name="target_item_ids[]" :value="p.id" x-model="selectedTargetItemIds" class="form-checkbox shrink-0" style="width:16px;height:16px;border-radius:4px;">
-                                <span class="badge badge-mono text-xs font-bold shrink-0" x-text="p.kode_sku"></span>
-                                <div class="min-w-0 flex-1">
-                                    <div class="font-bold text-xs truncate" style="color:var(--color-ink);" x-text="p.nama_item"></div>
-                                    <div class="text-xs truncate flex items-center gap-1.5" style="font-size:10.5px;color:var(--color-ink-mute);">
-                                        <span x-text="p.nama_grup || 'Tanpa Grup'"></span>
+                    <!-- DAFTAR PRODUK TARGET (CHECKBOX LIST) -->
+                    <div class="max-h-60 overflow-y-auto custom-scrollbar border rounded-lg p-1.5 space-y-1" style="background:var(--color-canvas, #ffffff);border-color:var(--color-hairline);">
+                        <template x-for="p in availableTargetProducts" :key="p.id">
+                            <label class="flex items-center justify-between p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer border border-transparent hover:border-hairline"
+                                   :style="selectedTargetItemIds.includes(p.id) ? 'background:rgba(37,99,235,0.05);border-color:rgba(37,99,235,0.25);' : ''">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+                                    <input type="checkbox" name="target_item_ids[]" :value="p.id" x-model="selectedTargetItemIds" class="form-checkbox shrink-0" style="width:16px;height:16px;border-radius:4px;">
+                                    <span class="badge badge-mono text-xs font-bold shrink-0" x-text="p.kode_sku"></span>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="font-bold text-xs truncate" style="color:var(--color-ink);" x-text="p.nama_item"></div>
+                                        <div class="text-xs truncate flex items-center gap-1.5" style="font-size:10.5px;color:var(--color-ink-mute);">
+                                            <span x-text="p.nama_grup || 'Tanpa Grup'"></span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="shrink-0">
-                                <template x-if="!p.total_resep_bahan || Number(p.total_resep_bahan) === 0">
-                                    <span class="badge badge-warning" style="font-size:10px;padding:2px 6px;">Belum Ada Resep</span>
-                                </template>
-                                <template x-if="Number(p.total_resep_bahan) > 0">
-                                    <span class="badge badge-secondary" style="font-size:10px;padding:2px 6px;" x-text="p.total_resep_bahan + ' Bahan'"></span>
-                                </template>
-                            </div>
-                        </label>
-                    </template>
+                                <div class="shrink-0">
+                                    <template x-if="!p.total_resep_bahan || Number(p.total_resep_bahan) === 0">
+                                        <span class="badge badge-warning" style="font-size:10px;padding:2px 6px;">Belum Ada Resep</span>
+                                    </template>
+                                    <template x-if="Number(p.total_resep_bahan) > 0">
+                                        <span class="badge badge-secondary" style="font-size:10px;padding:2px 6px;" x-text="p.total_resep_bahan + ' Bahan'"></span>
+                                    </template>
+                                </div>
+                            </label>
+                        </template>
 
-                    <template x-if="availableTargetProducts.length === 0">
-                        <div class="text-center py-8 px-4" style="color:var(--color-ink-mute);">
-                            <i data-lucide="inbox" style="width:32px;height:32px;margin:0 auto 6px auto;opacity:0.4;"></i>
-                            <div class="text-xs font-semibold">Tidak ada produk yang cocok</div>
-                            <div class="text-xs mt-1" x-show="copyOnlyWithoutRecipe">Semua produk lainnya sudah memiliki resep BOM. Matikan centang filter jika ingin menimpa resep produk lain.</div>
-                        </div>
-                    </template>
+                        <template x-if="availableTargetProducts.length === 0">
+                            <div class="text-center py-8 px-4" style="color:var(--color-ink-mute);">
+                                <i data-lucide="inbox" style="width:32px;height:32px;margin:0 auto 6px auto;opacity:0.4;"></i>
+                                <div class="text-xs font-semibold">Tidak ada produk yang cocok</div>
+                                <div class="text-xs mt-1" x-show="copyOnlyWithoutRecipe">Semua produk lainnya sudah memiliki resep BOM. Matikan centang filter jika ingin menimpa resep produk lain.</div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="p-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-xs leading-relaxed flex items-start gap-2">
+                        <i data-lucide="info" style="width:15px;height:15px;flex-shrink:0;margin-top:2px;"></i>
+                        <span>Resep dari <strong><span x-text="selectedRecipeProduct?.nama_item"></span></strong> akan disalin dan langsung diterapkan ke <strong><span x-text="selectedTargetItemIds.length"></span> produk tujuan</strong> yang dicentang.</span>
+                    </div>
                 </div>
 
-                <div class="p-3 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800 text-blue-800 dark:text-blue-300 text-xs leading-relaxed flex items-start gap-2">
-                    <i data-lucide="info" style="width:15px;height:15px;flex-shrink:0;margin-top:2px;"></i>
-                    <span>Resep dari <strong><span x-text="selectedRecipeProduct?.nama_item"></span></strong> akan disalin dan langsung diterapkan ke <strong><span x-text="selectedTargetItemIds.length"></span> produk tujuan</strong> yang dicentang.</span>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px;">
-                    <button type="button" @click="showCopyRecipeModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary" :disabled="selectedTargetItemIds.length === 0">
-                        <i data-lucide="copy"></i>
-                        <span x-text="selectedTargetItemIds.length > 0 ? 'Salin &amp; Terapkan ke (' + selectedTargetItemIds.length + ') Produk' : 'Pilih Minimal 1 Produk'"></span>
+                <div class="modal-footer">
+                    <button type="button" @click="showCopyRecipeModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" :disabled="selectedTargetItemIds.length === 0" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="copy" style="width:16px;height:16px;"></i>
+                        <span x-text="selectedTargetItemIds.length > 0 ? 'Salin &amp; Terapkan (' + selectedTargetItemIds.length + ')' : 'Pilih Minimal 1 Produk'"></span>
                     </button>
                 </div>
             </form>
@@ -1635,41 +1745,56 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
     <!-- MODAL 5: TAMBAH / EDIT KELOMPOK UPAH BORONGAN -->
     <template x-teleport="body">
-    <div x-show="showBoronganModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:480px;padding:24px;">
+    <div x-show="showBoronganModal" x-cloak class="modal-backdrop" @click="showBoronganModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div class="modal-title" x-text="isEditBorongan ? 'Edit Kelompok Upah Borongan' : 'Tambah Kelompok Upah Borongan'"></div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(217,119,6,0.12);color:var(--color-warning);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="calculator" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEditBorongan ? 'Edit Kelompok Upah Borongan' : 'Tambah Kelompok Upah Borongan'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Konfigurasi tarif upah satuan borongan produksi.</div>
+                    </div>
+                </div>
+                <button type="button" @click="showBoronganModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form :action="isEditBorongan ? '<?= Router::url('/products/update-borongan-group') ?>' : '<?= Router::url('/products/store-borongan-group') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <input type="hidden" name="id" :value="boronganForm.id">
+            <form :action="isEditBorongan ? '<?= Router::url('/products/update-borongan-group') ?>' : '<?= Router::url('/products/store-borongan-group') ?>'" method="POST">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="id" :value="boronganForm.id">
 
-                <div>
-                    <label class="form-label">Nama Kelompok Borongan *</label>
-                    <input type="text" name="nama_kelompok" x-model="boronganForm.nama_kelompok" required class="form-input" placeholder="Contoh: Kelompok 600">
+                    <div>
+                        <label class="form-label">Nama Kelompok Borongan *</label>
+                        <input type="text" name="nama_kelompok" x-model="boronganForm.nama_kelompok" required class="form-input" placeholder="Contoh: Kelompok 600">
+                    </div>
+
+                    <div>
+                        <label class="form-label">Tarif Upah per Bungkus (Rp/pcs) *</label>
+                        <input type="text" name="upah_per_bungkus" x-model="boronganForm.upah_per_bungkus" required class="form-input font-mono input-rupiah" placeholder="600">
+                    </div>
+
+                    <div>
+                        <label class="form-label">Keterangan / Deskripsi</label>
+                        <textarea name="keterangan" x-model="boronganForm.keterangan" class="form-input" rows="2" placeholder="Contoh: Tarif borongan pack bungkus Rp 600/pcs"></textarea>
+                    </div>
+
+                    <template x-if="isEditBorongan">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
+                            <input type="checkbox" name="status_aktif" x-model="boronganForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                            <span>Kelompok Upah Borongan Aktif</span>
+                        </label>
+                    </template>
                 </div>
 
-                <div>
-                    <label class="form-label">Tarif Upah per Bungkus (Rp/pcs) *</label>
-                    <input type="text" name="upah_per_bungkus" x-model="boronganForm.upah_per_bungkus" required class="form-input font-mono input-rupiah" placeholder="600">
-                </div>
-
-                <div>
-                    <label class="form-label">Keterangan / Deskripsi</label>
-                    <textarea name="keterangan" x-model="boronganForm.keterangan" class="form-input" rows="2" placeholder="Contoh: Tarif borongan pack bungkus Rp 600/pcs"></textarea>
-                </div>
-
-                <template x-if="isEditBorongan">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
-                        <input type="checkbox" name="status_aktif" x-model="boronganForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                        <span>Kelompok Upah Borongan Aktif</span>
-                    </label>
-                </template>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showBoronganModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showBoronganModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEditBorongan ? 'Simpan Perubahan' : 'Tambah Kelompok'"></span>
                     </button>
                 </div>
@@ -1682,41 +1807,55 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     <!-- MODAL 6: TAMBAH / EDIT MASTER MEREK -->
     <?php if (\App\Core\Auth::can('master.products_manage')): ?>
     <template x-teleport="body">
-    <div x-show="showBrandModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:460px;padding:24px;">
+    <div x-show="showBrandModal" x-cloak class="modal-backdrop" @click="showBrandModal = false">
+        <div class="modal-box" style="max-width:460px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div class="modal-title" x-text="isEditBrand ? 'Edit Merek Produk' : 'Tambah Merek Produk Baru'"></div>
-            </div>
-
-            <form :action="isEditBrand ? '<?= Router::url('/products/update-brand') ?>' : '<?= Router::url('/products/store-brand') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <?= \App\Helpers\CSRF::field() ?>
-                <input type="hidden" name="id" :value="brandForm.id">
-
-                <div>
-                    <label class="form-label">Kode Merek</label>
-                    <input type="text" name="kode_merek" x-model="brandForm.kode_merek" :readonly="isEditBrand" class="form-input font-mono" placeholder="Otomatis (Contoh: KRN / KEREN)">
-                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;">
-                        <span x-show="!isEditBrand">💡 Kosongkan untuk kode otomatis <code>MRK-XXX</code> atau ketik kode khusus.</span>
-                        <span x-show="isEditBrand">🔒 Kode merek bersifat permanen untuk integritas database.</span>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(136,19,55,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="award" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEditBrand ? 'Edit Merek Produk' : 'Tambah Merek Produk Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Pengelolaan merek dagang dan klasifikasi brand.</div>
                     </div>
                 </div>
+                <button type="button" @click="showBrandModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
 
-                <div>
-                    <label class="form-label">Nama Merek Dagang *</label>
-                    <input type="text" name="nama_merek" x-model="brandForm.nama_merek" required class="form-input" placeholder="Contoh: KEREN SNACK, SNACK NUSANTARA">
+            <form :action="isEditBrand ? '<?= Router::url('/products/update-brand') ?>' : '<?= Router::url('/products/store-brand') ?>'" method="POST">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="id" :value="brandForm.id">
+
+                    <div>
+                        <label class="form-label">Kode Merek</label>
+                        <input type="text" name="kode_merek" x-model="brandForm.kode_merek" :readonly="isEditBrand" class="form-input font-mono" placeholder="Otomatis (Contoh: KRN / KEREN)">
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;">
+                            <span x-show="!isEditBrand">💡 Kosongkan untuk kode otomatis <code>MRK-XXX</code> atau ketik kode khusus.</span>
+                            <span x-show="isEditBrand">🔒 Kode merek bersifat permanen untuk integritas database.</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Nama Merek Dagang *</label>
+                        <input type="text" name="nama_merek" x-model="brandForm.nama_merek" required class="form-input" placeholder="Contoh: KEREN SNACK, SNACK NUSANTARA">
+                    </div>
+
+                    <template x-if="isEditBrand">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
+                            <input type="checkbox" name="status_aktif" x-model="brandForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                            <span>Status Merek Aktif</span>
+                        </label>
+                    </template>
                 </div>
 
-                <template x-if="isEditBrand">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
-                        <input type="checkbox" name="status_aktif" x-model="brandForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                        <span>Status Merek Aktif</span>
-                    </label>
-                </template>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showBrandModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showBrandModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEditBrand ? 'Simpan Perubahan' : 'Tambah Merek'"></span>
                     </button>
                 </div>

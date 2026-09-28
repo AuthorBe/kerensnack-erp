@@ -391,64 +391,76 @@ ob_start();
     <!-- MODAL: ATUR / TAMBAH LEVEL HARGA PRODUK -->
     <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
     <template x-teleport="body">
-    <div x-show="showLevelModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:480px;padding:24px;">
+    <div x-show="showLevelModal" x-cloak class="modal-backdrop" @click="showLevelModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title" x-text="isEditLevel ? ('Ubah Harga Level ' + levelForm.level_harga) : 'Tambah Level Harga Baru'"></div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;" x-text="selectedGroup?.nama_grup"></div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(245,158,11,0.12);color:#f59e0b;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="tag" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEditLevel ? ('Ubah Harga Level ' + levelForm.level_harga) : 'Tambah Level Harga Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;" x-text="selectedGroup?.nama_grup"></div>
+                    </div>
                 </div>
+                <button type="button" @click="showLevelModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form action="<?= Router::url('/pricing/update-level') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <input type="hidden" name="id" :value="levelForm.id">
-                <input type="hidden" name="grup_produk_id" :value="selectedGroup?.id">
+            <form action="<?= Router::url('/pricing/update-level') ?>" method="POST">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="id" :value="levelForm.id">
+                    <input type="hidden" name="grup_produk_id" :value="selectedGroup?.id">
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <!-- Tingkat Level -->
-                    <div>
-                        <label class="form-label">Tingkat Level Harga (1–30) *</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Tingkat Level -->
+                        <div>
+                            <label class="form-label">Tingkat Level Harga (1–30) *</label>
 
-                        <!-- Tampilan Mode Tambah: Hanya level yang belum terdaftar di grup ini -->
-                        <template x-if="!isEditLevel">
-                            <select name="level_harga" x-model.number="levelForm.level_harga" @change="onLevelNumberChange()" class="form-input">
-                                <template x-for="lvl in getAvailableLevels(selectedGroup)" :key="lvl.level_nomor">
-                                    <option :value="lvl.level_nomor" x-text="'Level ' + lvl.level_nomor"></option>
-                                </template>
-                            </select>
-                        </template>
+                            <!-- Tampilan Mode Tambah: Hanya level yang belum terdaftar di grup ini -->
+                            <template x-if="!isEditLevel">
+                                <select name="level_harga" x-model.number="levelForm.level_harga" @change="onLevelNumberChange()" class="form-input">
+                                    <template x-for="lvl in getAvailableLevels(selectedGroup)" :key="lvl.level_nomor">
+                                        <option :value="lvl.level_nomor" x-text="'Level ' + lvl.level_nomor"></option>
+                                    </template>
+                                </select>
+                            </template>
 
-                        <!-- Tampilan Mode Ubah: Nomor level terkunci paten (tidak bisa dibajak) -->
-                        <template x-if="isEditLevel">
-                            <div>
-                                <input type="hidden" name="level_harga" :value="levelForm.level_harga">
-                                <div class="form-input font-mono font-bold" style="background:var(--color-canvas-soft);color:var(--color-ink);display:flex;align-items:center;justify-content:space-between;cursor:not-allowed;">
-                                    <span x-text="'Level ' + levelForm.level_harga"></span>
-                                    <span class="badge badge-mono text-xs" style="font-size:10px;">Terkunci</span>
+                            <!-- Tampilan Mode Ubah: Nomor level terkunci paten (tidak bisa dibajak) -->
+                            <template x-if="isEditLevel">
+                                <div>
+                                    <input type="hidden" name="level_harga" :value="levelForm.level_harga">
+                                    <div class="form-input font-mono font-bold" style="background:var(--color-canvas-soft);color:var(--color-ink);display:flex;align-items:center;justify-content:space-between;cursor:not-allowed;">
+                                        <span x-text="'Level ' + levelForm.level_harga"></span>
+                                        <span class="badge badge-mono text-xs" style="font-size:10px;">Terkunci</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
+
+                        <!-- Nama / Label Level -->
+                        <div>
+                            <label class="form-label">Nama / Label Level *</label>
+                            <input type="text" name="nama_level" x-model="levelForm.nama_level" required class="form-input" placeholder="Contoh: Level 8 - Grosir Mitra">
+                        </div>
                     </div>
 
-                    <!-- Nama / Label Level -->
                     <div>
-                        <label class="form-label">Nama / Label Level *</label>
-                        <input type="text" name="nama_level" x-model="levelForm.nama_level" required class="form-input" placeholder="Contoh: Level 8 - Grosir Mitra">
+                        <label class="form-label">Harga Jual Satuan per Bungkus / Pcs (Rp) *</label>
+                        <input type="text" name="harga_jual_pcs" x-model="levelForm.harga_jual_pcs" required class="form-input font-mono input-rupiah" placeholder="15.000">
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
+                            Semua transaksi POS kasir dan penjualan B2B dihitung murni berdasarkan harga satuan pcs.
+                        </div>
                     </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Harga Jual Satuan per Bungkus / Pcs (Rp) *</label>
-                    <input type="text" name="harga_jual_pcs" x-model="levelForm.harga_jual_pcs" required class="form-input font-mono input-rupiah" placeholder="15.000">
-                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;">
-                        Semua transaksi POS kasir dan penjualan B2B dihitung murni berdasarkan harga satuan pcs.
-                    </div>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-                    <button type="button" @click="showLevelModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showLevelModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEditLevel ? 'Simpan Perubahan' : 'Simpan Level Harga'"></span>
                     </button>
                 </div>
@@ -459,63 +471,71 @@ ob_start();
 
     <!-- MODAL: DAFTAR 30 MASTER LEVEL HARGA ACUAN -->
     <template x-teleport="body">
-    <div x-show="showMasterLevelsModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:720px;padding:24px;max-height:90vh;display:flex;flex-direction:column;">
-            <div class="modal-header" style="flex-shrink:0;">
+    <div x-show="showMasterLevelsModal" x-cloak class="modal-backdrop" @click="showMasterLevelsModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:720px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(136,19,55,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="list-tree" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Daftar 30 Level Harga Acuan Sistem</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">
+                            Kustomisasi label nama dan deskripsi peruntukan untuk masing-masing Level 1 sampai 30
+                        </div>
+                    </div>
+                </div>
+                <button type="button" @click="showMasterLevelsModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body custom-scrollbar space-y-3.5">
+                <!-- Search box for master levels -->
                 <div>
-                    <div class="modal-title flex items-center gap-2">
-                        <i data-lucide="list-tree" style="width:20px;height:20px;color:var(--color-primary);"></i>
-                        <span>Daftar 30 Level Harga Acuan Sistem</span>
-                    </div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">
-                        Kustomisasi label nama dan deskripsi peruntukan untuk masing-masing Level 1 sampai 30
-                    </div>
+                    <input type="text" x-model="masterLevelSearch" class="form-input" style="height:36px;font-size:12.5px;width:100%;" placeholder="Cari nomor level / nama acuan...">
+                </div>
+
+                <div class="overflow-y-auto custom-scrollbar" style="border:1px solid var(--color-hairline);border-radius:10px;max-height:50vh;">
+                    <table class="data-table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th style="width:80px;" class="cell-nowrap">Level</th>
+                                <th>Nama Acuan Level</th>
+                                <th>Deskripsi / Sasaran Mitra</th>
+                                <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
+                                <th class="cell-center cell-nowrap" style="width:90px;">Aksi</th>
+                                <?php endif; ?>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="ml in filteredMasterLevels" :key="ml.level_nomor">
+                                <tr>
+                                    <td class="cell-nowrap">
+                                        <span class="badge badge-mono" :class="Number(ml.level_nomor) === 1 ? 'badge-primary' : 'badge-secondary'" x-text="'Level ' + ml.level_nomor"></span>
+                                    </td>
+                                    <td>
+                                        <strong style="color:var(--color-ink);" x-text="ml.nama_level || ('Level ' + ml.level_nomor)"></strong>
+                                    </td>
+                                    <td style="font-size:12px;color:var(--color-ink-mute);" x-text="ml.deskripsi || '-'"></td>
+                                    <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
+                                    <td class="cell-center cell-nowrap">
+                                        <button type="button" @click="editMasterLevel(ml)" class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:11px;font-weight:700;">
+                                            <i data-lucide="edit-3" style="width:12px;height:12px;"></i>
+                                            <span>Ubah</span>
+                                        </button>
+                                    </td>
+                                    <?php endif; ?>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Search box for master levels -->
-            <div style="margin-bottom:12px;flex-shrink:0;">
-                <input type="text" x-model="masterLevelSearch" class="form-input" style="height:36px;font-size:12.5px;width:100%;" placeholder="Cari nomor level / nama acuan...">
-            </div>
-
-            <div class="overflow-y-auto custom-scrollbar flex-1" style="border:1px solid var(--color-hairline);border-radius:10px;">
-                <table class="data-table" style="width:100%;">
-                    <thead>
-                        <tr>
-                            <th style="width:80px;" class="cell-nowrap">Level</th>
-                            <th>Nama Acuan Level</th>
-                            <th>Deskripsi / Sasaran Mitra</th>
-                            <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
-                            <th class="cell-center cell-nowrap" style="width:90px;">Aksi</th>
-                            <?php endif; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template x-for="ml in filteredMasterLevels" :key="ml.level_nomor">
-                            <tr>
-                                <td class="cell-nowrap">
-                                    <span class="badge badge-mono" :class="Number(ml.level_nomor) === 1 ? 'badge-primary' : 'badge-secondary'" x-text="'Level ' + ml.level_nomor"></span>
-                                </td>
-                                <td>
-                                    <strong style="color:var(--color-ink);" x-text="ml.nama_level || ('Level ' + ml.level_nomor)"></strong>
-                                </td>
-                                <td style="font-size:12px;color:var(--color-ink-mute);" x-text="ml.deskripsi || '-'"></td>
-                                <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
-                                <td class="cell-center cell-nowrap">
-                                    <button type="button" @click="editMasterLevel(ml)" class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:11px;font-weight:700;">
-                                        <i data-lucide="edit-3" style="width:12px;height:12px;"></i>
-                                        <span>Ubah</span>
-                                    </button>
-                                </td>
-                                <?php endif; ?>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
-
-            <div style="display:flex;justify-content:flex-end;margin-top:14px;flex-shrink:0;">
-                <button type="button" @click="showMasterLevelsModal = false" class="btn btn-secondary">Tutup</button>
+            <div class="modal-footer">
+                <button type="button" @click="showMasterLevelsModal = false" class="btn btn-secondary w-full sm:w-auto">Tutup</button>
             </div>
         </div>
     </div>
@@ -524,32 +544,44 @@ ob_start();
     <!-- MODAL: EDIT SINGLE MASTER LEVEL -->
     <?php if (\App\Core\Auth::can('master.pricing_manage')): ?>
     <template x-teleport="body">
-    <div x-show="showEditMasterModal" x-cloak class="modal-backdrop" style="z-index:99999;">
-        <div class="modal-box" style="max-width:480px;padding:24px;">
+    <div x-show="showEditMasterModal" x-cloak class="modal-backdrop" style="z-index:99999;" @click="showEditMasterModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title" x-text="'Ubah Label Level ' + editingMasterLevel.level_nomor"></div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Kustomisasi nama acuan level yang tampil di sistem & Excel</div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(136,19,55,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="'Ubah Label Level ' + editingMasterLevel.level_nomor"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Kustomisasi nama acuan level yang tampil di sistem &amp; Excel</div>
+                    </div>
                 </div>
+                <button type="button" @click="showEditMasterModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form action="<?= Router::url('/pricing/update-master-level') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <input type="hidden" name="level_nomor" :value="editingMasterLevel.level_nomor">
+            <form action="<?= Router::url('/pricing/update-master-level') ?>" method="POST">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="level_nomor" :value="editingMasterLevel.level_nomor">
 
-                <div>
-                    <label class="form-label">Nama / Label Level Acuan *</label>
-                    <input type="text" name="nama_level" x-model="editingMasterLevel.nama_level" required class="form-input" placeholder="Contoh: Level 8 - Grosir Mitra">
+                    <div>
+                        <label class="form-label">Nama / Label Level Acuan *</label>
+                        <input type="text" name="nama_level" x-model="editingMasterLevel.nama_level" required class="form-input" placeholder="Contoh: Level 8 - Grosir Mitra">
+                    </div>
+
+                    <div>
+                        <label class="form-label">Deskripsi / Peruntukan Sasaran Mitra</label>
+                        <textarea name="deskripsi" x-model="editingMasterLevel.deskripsi" rows="3" class="form-input" placeholder="Contoh: Khusus grosir mitra warung pembelian minimal 5 karton..."></textarea>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Deskripsi / Peruntukan Sasaran Mitra</label>
-                    <textarea name="deskripsi" x-model="editingMasterLevel.deskripsi" rows="3" class="form-input" placeholder="Contoh: Khusus grosir mitra warung pembelian minimal 5 karton..."></textarea>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-                    <button type="button" @click="showEditMasterModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showEditMasterModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span>Simpan Nama Acuan</span>
                     </button>
                 </div>
@@ -561,6 +593,7 @@ ob_start();
 
     <!-- FORM SUBMIT HIDDEN FOR DELETE -->
     <form id="delete-level-form" action="<?= Router::url('/pricing/delete-level') ?>" method="POST" data-action-text="Menghapus level harga..." style="display:none;">
+        <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-level-id">
     </form>
     <?php endif; ?>

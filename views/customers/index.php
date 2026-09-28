@@ -714,21 +714,33 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
     <!-- MODAL 1: TAMBAH / EDIT TOKO PELANGGAN -->
     <template x-teleport="body">
-    <div x-show="showModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" :style="isChangingFromConsignment ? 'max-width:720px;padding:24px;' : 'max-width:560px;padding:24px;'" style="transition:max-width 0.2s ease;">
+    <div x-show="showModal" x-cloak class="modal-backdrop" @click="showModal = false">
+        <div class="modal-box" :style="isChangingFromConsignment ? 'max-width:720px;' : 'max-width:560px;'" style="transition:max-width 0.2s ease;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div class="modal-title" x-text="isEdit ? 'Edit Data Toko Pelanggan' : 'Tambah Toko Pelanggan Baru'"></div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(6,182,212,0.12);color:#06b6d4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="store" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEdit ? 'Edit Data Toko Pelanggan' : 'Tambah Toko Pelanggan Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Pengelolaan profil toko, rute distribusi, dan tier harga.</div>
+                    </div>
+                </div>
+                <button type="button" @click="showModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
             <form id="customer-modal-form"
-                  action="<?= Router::url('/customers/update') ?>"
+                  action="isEdit ? '<?= Router::url('/customers/update') ?>' : '<?= Router::url('/customers/store') ?>'"
                   :action="isEdit ? '<?= Router::url('/customers/update') ?>' : '<?= Router::url('/customers/store') ?>'"
                   method="POST"
-                  @submit="submitCustomerForm($event)"
-                  style="display:flex;flex-direction:column;gap:14px;">
+                  @submit="submitCustomerForm($event)">
                 <?= \App\Helpers\CSRF::field() ?>
-                <input type="hidden" name="id" :value="form.id">
-                <input type="hidden" name="is_konsinyasi" :value="form.tipe_pembayaran_default === 'konsinyasi' ? '1' : '0'">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <input type="hidden" name="id" :value="form.id">
+                    <input type="hidden" name="is_konsinyasi" :value="form.tipe_pembayaran_default === 'konsinyasi' ? '1' : '0'">
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -1339,10 +1351,12 @@ $activeTab = $_GET['tab'] ?? 'customers';
                     </div>
                 </template>
 
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary" id="btn-submit-customer">
-                        <i data-lucide="save"></i>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" @click="showModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" id="btn-submit-customer" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEdit ? 'Simpan Perubahan' : 'Tambah Toko'"></span>
                     </button>
                 </div>
@@ -1353,69 +1367,78 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
     <!-- MODAL 2: ATUR ITEM KHUSUS TOKO (WHITELIST) -->
     <template x-teleport="body">
-    <div x-show="showItemsModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:620px;padding:24px;">
+    <div x-show="showItemsModal" x-cloak class="modal-backdrop" @click="showItemsModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:620px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title">Atur Daftar Item Khusus Toko</div>
-                    <div style="font-size:12.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="selectedCustomer?.nama_toko + ' (' + selectedCustomer?.kode_pelanggan + ')'"></div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="list-checks" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Atur Daftar Item Khusus Toko</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;" x-text="selectedCustomer?.nama_toko + ' (' + selectedCustomer?.kode_pelanggan + ')'"></div>
+                    </div>
                 </div>
+                <button type="button" @click="showItemsModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form action="<?= Router::url('/customers/save-items') ?>" method="POST" style="display:flex;flex-direction:column;gap:12px;">
+            <form action="<?= Router::url('/customers/save-items') ?>" method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
-                <input type="hidden" name="pelanggan_id" :value="selectedCustomer?.id">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <input type="hidden" name="pelanggan_id" :value="selectedCustomer?.id">
 
-                <div style="padding:10px 12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);font-size:12px;color:var(--color-ink-mute);">
-                    💡 <em>Centang barang jadi yang biasa dibeli atau dipajang di toko ini. Jika <strong>tidak ada yang dicentang</strong>, maka toko ini diizinkan membeli <strong>semua produk (<?= count($finishedGoods) ?> SKU)</strong> secara default di POS.</em>
-                </div>
-
-                <!-- SEARCH & BULK ACTIONS -->
-                <div class="flex items-center justify-between gap-2">
-                    <input type="text" x-model="searchItemModal" placeholder="Cari nama snack / varian / SKU..." class="form-input" style="height:36px;font-size:12.5px;flex:1;">
-                    <div style="display:flex;gap:6px;">
-                        <button type="button" @click="selectAllItems()" class="btn btn-secondary btn-sm" style="font-size:11.5px;padding:4px 8px;">Pilih Semua</button>
-                        <button type="button" @click="deselectAllItems()" class="btn btn-secondary btn-sm" style="font-size:11.5px;padding:4px 8px;">Kosongkan</button>
+                    <div style="padding:10px 12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);font-size:12px;color:var(--color-ink-mute);">
+                        💡 <em>Centang barang jadi yang biasa dibeli atau dipajang di toko ini. Jika <strong>tidak ada yang dicentang</strong>, maka toko ini diizinkan membeli <strong>semua produk (<?= count($finishedGoods) ?> SKU)</strong> secara default di POS.</em>
                     </div>
-                </div>
 
-                <!-- ITEM CHECKLIST CONTAINER -->
-                <div style="max-height:300px;overflow-y:auto;border:1px solid var(--color-hairline);border-radius:var(--rounded-md);padding:8px;" class="custom-scrollbar space-y-1">
-                    <template x-for="item in filteredModalItems" :key="item.id">
-                        <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--rounded-sm);cursor:pointer;transition:background 0.1s ease;"
-                               :style="isItemSelected(item.id) ? 'background:rgba(62,207,142,0.1);' : 'background:var(--color-canvas);'">
-                            <div style="display:flex;align-items:center;gap:10px;">
-                                <input type="checkbox" name="item_ids[]" :value="item.id" :checked="isItemSelected(item.id)" @change="toggleItemSelection(item.id)"
-                                       style="width:16px;height:16px;accent-color:var(--color-primary);">
-                                <div>
-                                    <div style="font-weight:700;font-size:12.5px;color:var(--color-ink);" x-text="item.nama_item"></div>
-                                    <div style="font-size:11px;color:var(--color-ink-mute);" x-text="'SKU: ' + item.kode_sku + ' | Grup: ' + (item.nama_grup || '-')"></div>
-                                </div>
-                            </div>
-                            <span class="badge badge-mono" style="font-size:11px;" x-text="item.kode_sku"></span>
-                        </label>
-                    </template>
-
-                    <template x-if="filteredModalItems.length === 0">
-                        <div style="text-align:center;padding:20px;font-size:12px;color:var(--color-ink-mute);">
-                            Tidak ada produk yang cocok dengan pencarian
+                    <!-- SEARCH & BULK ACTIONS -->
+                    <div class="flex items-center justify-between gap-2">
+                        <input type="text" x-model="searchItemModal" placeholder="Cari nama snack / varian / SKU..." class="form-input" style="height:36px;font-size:12.5px;flex:1;">
+                        <div style="display:flex;gap:6px;">
+                            <button type="button" @click="selectAllItems()" class="btn btn-secondary btn-sm" style="font-size:11.5px;padding:4px 8px;">Pilih Semua</button>
+                            <button type="button" @click="deselectAllItems()" class="btn btn-secondary btn-sm" style="font-size:11.5px;padding:4px 8px;">Kosongkan</button>
                         </div>
-                    </template>
+                    </div>
+
+                    <!-- ITEM CHECKLIST CONTAINER -->
+                    <div style="max-height:300px;overflow-y:auto;border:1px solid var(--color-hairline);border-radius:var(--rounded-md);padding:8px;" class="custom-scrollbar space-y-1">
+                        <template x-for="item in filteredModalItems" :key="item.id">
+                            <label style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--rounded-sm);cursor:pointer;transition:background 0.1s ease;"
+                                   :style="isItemSelected(item.id) ? 'background:rgba(62,207,142,0.1);' : 'background:var(--color-canvas);'">
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <input type="checkbox" name="item_ids[]" :value="item.id" :checked="isItemSelected(item.id)" @change="toggleItemSelection(item.id)"
+                                           style="width:16px;height:16px;accent-color:var(--color-primary);">
+                                    <div>
+                                        <div style="font-weight:700;font-size:12.5px;color:var(--color-ink);" x-text="item.nama_item"></div>
+                                        <div style="font-size:11px;color:var(--color-ink-mute);" x-text="'SKU: ' + item.kode_sku + ' | Grup: ' + (item.nama_grup || '-')"></div>
+                                    </div>
+                                </div>
+                                <span class="badge badge-mono" style="font-size:11px;" x-text="item.kode_sku"></span>
+                            </label>
+                        </template>
+
+                        <template x-if="filteredModalItems.length === 0">
+                            <div style="text-align:center;padding:20px;font-size:12px;color:var(--color-ink-mute);">
+                                Tidak ada produk yang cocok dengan pencarian
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- SUMMARY INFO -->
+                    <div style="font-size:12px;font-weight:600;color:var(--color-ink-secondary);">
+                        Terpilih: <strong style="color:var(--color-primary);" x-text="selectedItemIds.length"></strong> dari <?= count($finishedGoods) ?> Barang Jadi
+                    </div>
                 </div>
 
-                <!-- SUMMARY FOOTER -->
-                <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px;">
-                    <span style="font-size:12px;font-weight:600;color:var(--color-ink-secondary);">
-                        Terpilih: <strong style="color:var(--color-primary);" x-text="selectedItemIds.length"></strong> dari <?= count($finishedGoods) ?> Barang Jadi
-                    </span>
-
-                    <div style="display:flex;gap:8px;">
-                        <button type="button" @click="showItemsModal = false" class="btn btn-secondary">Batal</button>
-                        <button type="submit" class="btn btn-primary">
-                            <i data-lucide="save"></i>
-                            <span>Simpan Daftar Item</span>
-                        </button>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" @click="showItemsModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
+                        <span>Simpan Daftar Item</span>
+                    </button>
                 </div>
             </form>
         </div>
@@ -1424,127 +1447,137 @@ $activeTab = $_GET['tab'] ?? 'customers';
 
     <!-- MODAL 3: TAMBAH / EDIT GRUP PELANGGAN -->
     <template x-teleport="body">
-    <div x-show="showCustomerGroupModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:460px;padding:24px;">
+    <div x-show="showCustomerGroupModal" x-cloak class="modal-backdrop" @click="showCustomerGroupModal = false">
+        <div class="modal-box" style="max-width:560px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title" x-text="isEditCustomerGroup ? 'Edit Grup Pelanggan' : 'Tambah Grup Pelanggan Baru'"></div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Konfigurasi tier toko dan diskon standar</div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(99,102,241,0.12);color:#6366f1;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="users" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEditCustomerGroup ? 'Edit Grup Pelanggan' : 'Tambah Grup Pelanggan Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Konfigurasi tier toko dan diskon standar</div>
+                    </div>
                 </div>
+                <button type="button" @click="showCustomerGroupModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
             <form id="customer-group-modal-form"
-                  action="<?= Router::url('/customers/store-group') ?>"
+                  action="isEditCustomerGroup ? '<?= Router::url('/customers/update-group') ?>' : '<?= Router::url('/customers/store-group') ?>'"
                   :action="isEditCustomerGroup ? '<?= Router::url('/customers/update-group') ?>' : '<?= Router::url('/customers/store-group') ?>'"
-                  method="POST"
-                  style="display:flex;flex-direction:column;gap:14px;">
+                  method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
-                <template x-if="isEditCustomerGroup">
-                    <input type="hidden" name="id" :value="customerGroupForm.id">
-                </template>
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <template x-if="isEditCustomerGroup">
+                        <input type="hidden" name="id" :value="customerGroupForm.id">
+                    </template>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Nama Grup Pelanggan *</label>
-                        <input type="text" name="nama_grup" x-model="customerGroupForm.nama_grup" required class="form-input" placeholder="Contoh: KS 14.800 | CQ 15.800 | CM -">
-                    </div>
-                    <div>
-                        <label class="form-label">Kode Grup (ID) *</label>
-                        <div class="input-group-addon">
-                            <span class="addon-prefix">GRP-</span>
-                            <input type="text" 
-                                   x-model="customerGroupForm.kode_suffix" 
-                                   @input="customerGroupForm.kode_suffix = $event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 10)"
-                                   maxlength="10" 
-                                   class="form-input font-mono uppercase addon-input" 
-                                   placeholder="G01 / MITRA">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Nama Grup Pelanggan *</label>
+                            <input type="text" name="nama_grup" x-model="customerGroupForm.nama_grup" required class="form-input" placeholder="Contoh: KS 14.800 | CQ 15.800 | CM -">
                         </div>
-                        <input type="hidden" name="kode_grup" :value="'GRP-' + (customerGroupForm.kode_suffix || '').trim()">
-                        <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:3px;">Prefix <code>GRP-</code> otomatis. Maks. 10 huruf/angka.</div>
-                    </div>
-                </div>
-
-                <!-- PENGATURAN LEVEL HARGA & DISKON PER MEREK -->
-                <div style="background-color:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:8px;padding:12px;">
-                    <div style="font-size:12px;font-weight:700;color:var(--color-ink);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
-                        <i data-lucide="layers" style="width:15px;height:15px;color:var(--color-primary);"></i>
-                        <span>Konfigurasi Level Harga & Diskon per Merek Dagang</span>
-                    </div>
-
-                    <div style="display:flex;flex-direction:column;gap:10px;">
-                        <?php if (!empty($brands)): ?>
-                            <?php foreach ($brands as $b): ?>
-                            <div style="background:var(--color-surface);border:1px solid var(--color-hairline);border-radius:6px;padding:10px;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
-                                    <div style="display:flex;align-items:center;gap:6px;">
-                                        <span class="badge badge-mono font-bold"><?= htmlspecialchars($b['kode_merek']) ?></span>
-                                        <strong style="font-size:13px;color:var(--color-ink);"><?= htmlspecialchars($b['nama_merek']) ?></strong>
-                                    </div>
-                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
-                                        <input type="checkbox" 
-                                               x-model="customerGroupForm.brand_levels['<?= $b['id'] ?>'].is_dijual"
-                                               style="width:15px;height:15px;accent-color:var(--color-primary);">
-                                        <span x-text="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? 'Dijual' : 'Tidak Dijual'"
-                                              :style="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? 'color:#16a34a;' : 'color:#dc2626;'"></span>
-                                    </label>
-                                </div>
-
-                                <div x-show="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual" class="grid grid-cols-1 sm:grid-cols-3 gap-2" style="margin-top:6px;">
-                                    <div>
-                                        <label class="form-label" style="font-size:11px;">Level Harga (1–30) *</label>
-                                        <select x-model.number="customerGroupForm.brand_levels['<?= $b['id'] ?>'].level_harga" class="form-input" style="height:34px;font-size:12px;">
-                                            <?php if (!empty($masterLevels)): ?>
-                                                <?php foreach ($masterLevels as $ml): ?>
-                                                <option value="<?= $ml['level_nomor'] ?>"><?= htmlspecialchars($ml['nama_level']) ?></option>
-                                                <?php endforeach; ?>
-                                            <?php else: ?>
-                                                <?php for ($i = 1; $i <= 30; $i++): ?>
-                                                <option value="<?= $i ?>">Level <?= $i ?></option>
-                                                <?php endfor; ?>
-                                            <?php endif; ?>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="form-label" style="font-size:11px;">Diskon Merek (%)</label>
-                                        <input type="number" step="0.01" min="0" max="100" 
-                                               x-model.number="customerGroupForm.brand_levels['<?= $b['id'] ?>'].diskon_persen" 
-                                               class="form-input font-mono" style="height:34px;font-size:12px;" placeholder="0">
-                                    </div>
-                                    <div>
-                                        <label class="form-label" style="font-size:11px;">Diskon Merek (Rp / Pcs)</label>
-                                        <input type="text" 
-                                               x-model="customerGroupForm.brand_levels['<?= $b['id'] ?>'].diskon_nominal" 
-                                               class="form-input font-mono input-rupiah" style="height:34px;font-size:12px;" placeholder="0">
-                                    </div>
-                                </div>
-
-                                <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][is_dijual]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? '1' : '0'">
-                                <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][level_harga]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.level_harga || '1'">
-                                <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][diskon_persen]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.diskon_persen || 0">
-                                <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][diskon_nominal]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.diskon_nominal || 0">
+                        <div>
+                            <label class="form-label">Kode Grup (ID) *</label>
+                            <div class="input-group-addon">
+                                <span class="addon-prefix">GRP-</span>
+                                <input type="text" 
+                                       x-model="customerGroupForm.kode_suffix" 
+                                       @input="customerGroupForm.kode_suffix = $event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 10)"
+                                       maxlength="10" 
+                                       class="form-input font-mono uppercase addon-input" 
+                                       placeholder="G01 / MITRA">
                             </div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
+                            <input type="hidden" name="kode_grup" :value="'GRP-' + (customerGroupForm.kode_suffix || '').trim()">
+                            <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:3px;">Prefix <code>GRP-</code> otomatis. Maks. 10 huruf/angka.</div>
+                        </div>
                     </div>
+
+                    <!-- PENGATURAN LEVEL HARGA & DISKON PER MEREK -->
+                    <div style="background-color:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:8px;padding:12px;">
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="layers" style="width:15px;height:15px;color:var(--color-primary);"></i>
+                            <span>Konfigurasi Level Harga &amp; Diskon per Merek Dagang</span>
+                        </div>
+
+                        <div style="display:flex;flex-direction:column;gap:10px;">
+                            <?php if (!empty($brands)): ?>
+                                <?php foreach ($brands as $b): ?>
+                                <div style="background:var(--color-surface);border:1px solid var(--color-hairline);border-radius:6px;padding:10px;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                                        <div style="display:flex;align-items:center;gap:6px;">
+                                            <span class="badge badge-mono font-bold"><?= htmlspecialchars($b['kode_merek']) ?></span>
+                                            <strong style="font-size:13px;color:var(--color-ink);"><?= htmlspecialchars($b['nama_merek']) ?></strong>
+                                        </div>
+                                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;">
+                                            <input type="checkbox" 
+                                                   x-model="customerGroupForm.brand_levels['<?= $b['id'] ?>'].is_dijual"
+                                                   style="width:15px;height:15px;accent-color:var(--color-primary);">
+                                            <span x-text="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? 'Dijual' : 'Tidak Dijual'"
+                                                  :style="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? 'color:#16a34a;' : 'color:#dc2626;'"></span>
+                                        </label>
+                                    </div>
+
+                                    <div x-show="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual" class="grid grid-cols-1 sm:grid-cols-3 gap-2" style="margin-top:6px;">
+                                        <div>
+                                            <label class="form-label" style="font-size:11px;">Level Harga (1–30) *</label>
+                                            <select x-model.number="customerGroupForm.brand_levels['<?= $b['id'] ?>'].level_harga" class="form-input" style="height:34px;font-size:12px;">
+                                                <?php if (!empty($masterLevels)): ?>
+                                                    <?php foreach ($masterLevels as $ml): ?>
+                                                    <option value="<?= $ml['level_nomor'] ?>"><?= htmlspecialchars($ml['nama_level']) ?></option>
+                                                    <?php endforeach; ?>
+                                                <?php else: ?>
+                                                    <?php for ($i = 1; $i <= 30; $i++): ?>
+                                                    <option value="<?= $i ?>">Level <?= $i ?></option>
+                                                    <?php endfor; ?>
+                                                <?php endif; ?>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="form-label" style="font-size:11px;">Diskon Merek (%)</label>
+                                            <input type="number" step="0.01" min="0" max="100" 
+                                                   x-model.number="customerGroupForm.brand_levels['<?= $b['id'] ?>'].diskon_persen" 
+                                                   class="form-input font-mono" style="height:34px;font-size:12px;" placeholder="0">
+                                        </div>
+                                        <div>
+                                            <label class="form-label" style="font-size:11px;">Diskon Merek (Rp / Pcs)</label>
+                                            <input type="text" 
+                                                   x-model="customerGroupForm.brand_levels['<?= $b['id'] ?>'].diskon_nominal" 
+                                                   class="form-input font-mono input-rupiah" style="height:34px;font-size:12px;" placeholder="0">
+                                        </div>
+                                    </div>
+
+                                    <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][is_dijual]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.is_dijual ? '1' : '0'">
+                                    <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][level_harga]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.level_harga || '1'">
+                                    <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][diskon_persen]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.diskon_persen || 0">
+                                    <input type="hidden" :name="'brand_levels[<?= $b['id'] ?>][diskon_nominal]'" :value="customerGroupForm.brand_levels['<?= $b['id'] ?>']?.diskon_nominal || 0">
+                                </div>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="default_level_harga" :value="customerGroupForm.default_level_harga || 1">
+                    <input type="hidden" name="diskon_persen_default" :value="customerGroupForm.diskon_persen_default || 0">
+                    <input type="hidden" name="diskon_nominal_default" :value="customerGroupForm.diskon_nominal_default || 0">
+
+                    <template x-if="isEditCustomerGroup">
+                        <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                                <input type="checkbox" name="status_aktif" x-model="customerGroupForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                                <span>Grup Pelanggan Aktif</span>
+                            </label>
+                        </div>
+                    </template>
                 </div>
 
-                <input type="hidden" name="default_level_harga" :value="customerGroupForm.default_level_harga || 1">
-                <input type="hidden" name="diskon_persen_default" :value="customerGroupForm.diskon_persen_default || 0">
-                <input type="hidden" name="diskon_nominal_default" :value="customerGroupForm.diskon_nominal_default || 0">
-
-                <template x-if="isEditCustomerGroup">
-                    <div style="display:flex;align-items:center;gap:8px;padding-top:4px;">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
-                            <input type="checkbox" name="status_aktif" x-model="customerGroupForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                            <span>Grup Pelanggan Aktif</span>
-                        </label>
-                    </div>
-                </template>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-                    <button type="button" @click="showCustomerGroupModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary" @click="handleGroupFormSubmit($event)">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showCustomerGroupModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" @click="handleGroupFormSubmit($event)" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEditCustomerGroup ? 'Simpan Perubahan' : 'Tambah Grup'"></span>
                     </button>
                 </div>
@@ -1556,70 +1589,83 @@ $activeTab = $_GET['tab'] ?? 'customers';
     <!-- MODAL 4: TAMBAH / EDIT MASTER WILAYAH -->
     <?php if (\App\Core\Auth::can('master.territories_manage')): ?>
     <template x-teleport="body">
-    <div x-show="showTerritoryModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:480px;padding:24px;">
+    <div x-show="showTerritoryModal" x-cloak class="modal-backdrop" @click="showTerritoryModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div class="modal-title" x-text="isEditTerritory ? 'Edit Wilayah / Rute' : 'Tambah Wilayah / Rute Baru'"></div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(59,130,246,0.12);color:#3b82f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="map-pin" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEditTerritory ? 'Edit Wilayah / Rute' : 'Tambah Wilayah / Rute Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Pengaturan rute logistik dan wilayah pengiriman.</div>
+                    </div>
+                </div>
+                <button type="button" @click="showTerritoryModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
             <form id="territory-modal-form"
-                  action="<?= Router::url('/customers/store-territory') ?>"
+                  action="isEditTerritory ? '<?= Router::url('/customers/update-territory') ?>' : '<?= Router::url('/customers/store-territory') ?>'"
                   :action="isEditTerritory ? '<?= Router::url('/customers/update-territory') ?>' : '<?= Router::url('/customers/store-territory') ?>'"
-                  method="POST"
-                  style="display:flex;flex-direction:column;gap:14px;">
+                  method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
-                <input type="hidden" name="id" :value="territoryForm.id">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <input type="hidden" name="id" :value="territoryForm.id">
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Kode Rute (ID) *</label>
-                        <div class="input-group-addon">
-                            <span class="addon-prefix">RTE-</span>
-                            <input type="text" 
-                                   x-model="territoryForm.kode_suffix" 
-                                   @input="territoryForm.kode_suffix = $event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 8)"
-                                   maxlength="8" 
-                                   class="form-input font-mono uppercase addon-input" 
-                                   placeholder="001 / BDG-01">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Kode Rute (ID) *</label>
+                            <div class="input-group-addon">
+                                <span class="addon-prefix">RTE-</span>
+                                <input type="text" 
+                                       x-model="territoryForm.kode_suffix" 
+                                       @input="territoryForm.kode_suffix = $event.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 8)"
+                                       maxlength="8" 
+                                       class="form-input font-mono uppercase addon-input" 
+                                       placeholder="001 / BDG-01">
+                            </div>
+                            <input type="hidden" name="kode_rute" :value="'RTE-' + (territoryForm.kode_suffix || '').trim()">
+                            <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:3px;">Prefix <code>RTE-</code> otomatis. Maks. 8 huruf/angka.</div>
                         </div>
-                        <input type="hidden" name="kode_rute" :value="'RTE-' + (territoryForm.kode_suffix || '').trim()">
-                        <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:3px;">Prefix <code>RTE-</code> otomatis. Maks. 8 huruf/angka.</div>
+                        <div>
+                            <label class="form-label">Nama Wilayah / Jalur *</label>
+                            <input type="text" name="nama_wilayah" x-model="territoryForm.nama_wilayah" required class="form-input" placeholder="Contoh: Bandung Timur">
+                        </div>
                     </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Kota / Kabupaten *</label>
+                            <input type="text" name="kota_kabupaten" x-model="territoryForm.kota_kabupaten" required class="form-input" placeholder="Contoh: Bandung">
+                        </div>
+                        <div>
+                            <label class="form-label">Provinsi *</label>
+                            <input type="text" name="provinsi" x-model="territoryForm.provinsi" required class="form-input" placeholder="Contoh: Jawa Barat">
+                        </div>
+                    </div>
+
                     <div>
-                        <label class="form-label">Nama Wilayah / Jalur *</label>
-                        <input type="text" name="nama_wilayah" x-model="territoryForm.nama_wilayah" required class="form-input" placeholder="Contoh: Bandung Timur">
+                        <label class="form-label">Sub-Wilayah / Rincian Daerah / Catatan</label>
+                        <textarea name="sub_wilayah" x-model="territoryForm.sub_wilayah" class="form-input" rows="2" placeholder="Contoh: Rancaekek, Cileunyi, Tanjungsari..."></textarea>
                     </div>
+
+                    <template x-if="isEditTerritory">
+                        <div>
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
+                                <input type="checkbox" name="status_aktif" x-model="territoryForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
+                                <span>Status Wilayah Aktif</span>
+                            </label>
+                        </div>
+                    </template>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Kota / Kabupaten *</label>
-                        <input type="text" name="kota_kabupaten" x-model="territoryForm.kota_kabupaten" required class="form-input" placeholder="Contoh: Bandung">
-                    </div>
-                    <div>
-                        <label class="form-label">Provinsi *</label>
-                        <input type="text" name="provinsi" x-model="territoryForm.provinsi" required class="form-input" placeholder="Contoh: Jawa Barat">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="form-label">Sub-Wilayah / Rincian Daerah / Catatan</label>
-                    <textarea name="sub_wilayah" x-model="territoryForm.sub_wilayah" class="form-input" rows="2" placeholder="Contoh: Rancaekek, Cileunyi, Tanjungsari..."></textarea>
-                </div>
-
-                <template x-if="isEditTerritory">
-                    <div>
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
-                            <input type="checkbox" name="status_aktif" x-model="territoryForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
-                            <span>Status Wilayah Aktif</span>
-                        </label>
-                    </div>
-                </template>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showTerritoryModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showTerritoryModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEditTerritory ? 'Simpan Perubahan' : 'Tambah Wilayah'"></span>
                     </button>
                 </div>

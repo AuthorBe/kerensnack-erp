@@ -370,175 +370,187 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can('master.suppliers_manage')): ?>
     <template x-teleport="body">
-    <div x-show="showModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:620px;max-height:90vh;overflow-y:auto;padding:24px;">
-            <div class="modal-header" style="margin-bottom:18px;">
-                <div>
-                    <div class="modal-title" x-text="isEdit ? 'Edit Master Pemasok' : 'Tambah Pemasok Baru'"></div>
-                    <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;">Lengkapi data vendor, titik presisi peta, kontak PIC, dan syarat pembayaran</div>
+    <div x-show="showModal" x-cloak class="modal-backdrop" @click="showModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:640px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(139,92,246,0.12);color:#8b5cf6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="building-2" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEdit ? 'Edit Master Pemasok' : 'Tambah Pemasok Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Lengkapi data vendor, titik presisi peta, kontak PIC, dan syarat pembayaran.</div>
+                    </div>
                 </div>
+                <button type="button" @click="showModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form :action="isEdit ? '<?= Router::url('/suppliers/update') ?>' : '<?= Router::url('/suppliers/store') ?>'" method="POST" style="display:flex;flex-direction:column;gap:16px;">
-                <input type="hidden" name="id" :value="form.id">
+            <form :action="isEdit ? '<?= Router::url('/suppliers/update') ?>' : '<?= Router::url('/suppliers/store') ?>'" method="POST">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="id" :value="form.id">
 
-                <!-- SEKSI 1: IDENTITAS VENDOR & PIC -->
-                <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
-                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
-                        <i data-lucide="building" style="width:14px;height:14px;"></i>
-                        <span>1. Identitas Vendor &amp; PIC</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="form-label">Nama Pemasok / Badan Usaha <span style="color:var(--color-danger);">*</span></label>
-                            <input type="text" name="nama_pemasok" x-model="form.nama_pemasok" required class="form-input" placeholder="Contoh: PT SUMBER PLASTIK">
+                    <!-- SEKSI 1: IDENTITAS VENDOR & PIC -->
+                    <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="building" style="width:14px;height:14px;"></i>
+                            <span>1. Identitas Vendor &amp; PIC</span>
                         </div>
-                        <div>
-                            <label class="form-label">Nama Kontak / PIC Vendor</label>
-                            <input type="text" name="nama_kontak" x-model="form.nama_kontak" class="form-input" placeholder="Contoh: Pak Hendra (Sales)">
-                        </div>
-                    </div>
-                </div>
 
-                <!-- SEKSI 2: KONTAK & KOMUNIKASI -->
-                <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
-                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
-                        <i data-lucide="phone-call" style="width:14px;height:14px;"></i>
-                        <span>2. Kontak &amp; Komunikasi</span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="form-label">Nomor WhatsApp PIC</label>
-                            <input type="text" name="nomor_whatsapp" x-model="form.nomor_whatsapp"
-                                   @input="form.nomor_whatsapp = $event.target.value.replace(/[^0-9+]/g, '').slice(0, 25)"
-                                   class="form-input font-mono" placeholder="081234567890">
-                        </div>
-                        <div>
-                            <label class="form-label">Email Resmi Vendor</label>
-                            <input type="email" name="email" x-model="form.email" class="form-input" placeholder="sales@vendor.com">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="form-label">Nama Pemasok / Badan Usaha <span style="color:var(--color-danger);">*</span></label>
+                                <input type="text" name="nama_pemasok" x-model="form.nama_pemasok" required class="form-input" placeholder="Contoh: PT SUMBER PLASTIK">
+                            </div>
+                            <div>
+                                <label class="form-label">Nama Kontak / PIC Vendor</label>
+                                <input type="text" name="nama_kontak" x-model="form.nama_kontak" class="form-input" placeholder="Contoh: Pak Hendra (Sales)">
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- SEKSI 3: ALAMAT & TITIK LOKASI GOOGLE MAPS -->
-                <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
-                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
-                        <i data-lucide="map-pin" style="width:14px;height:14px;color:#ef4444;"></i>
-                        <span>3. Alamat &amp; Titik Lokasi Peta Presisi</span>
+                    <!-- SEKSI 2: KONTAK & KOMUNIKASI -->
+                    <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="phone-call" style="width:14px;height:14px;"></i>
+                            <span>2. Kontak &amp; Komunikasi</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="form-label">Nomor WhatsApp PIC</label>
+                                <input type="text" name="nomor_whatsapp" x-model="form.nomor_whatsapp"
+                                       @input="form.nomor_whatsapp = $event.target.value.replace(/[^0-9+]/g, '').slice(0, 25)"
+                                       class="form-input font-mono" placeholder="081234567890">
+                            </div>
+                            <div>
+                                <label class="form-label">Email Resmi Vendor</label>
+                                <input type="email" name="email" x-model="form.email" class="form-input" placeholder="sales@vendor.com">
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="form-label">Wilayah / Rute Pengiriman</label>
-                        <select name="wilayah_id" x-model="form.wilayah_id" class="form-input">
-                            <option value="">-- Tanpa Wilayah Tertentu --</option>
-                            <?php foreach ($territories as $t): ?>
-                            <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nama_wilayah']) ?> (<?= htmlspecialchars($t['kode_rute']) ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
+                    <!-- SEKSI 3: ALAMAT & TITIK LOKASI GOOGLE MAPS -->
+                    <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="map-pin" style="width:14px;height:14px;color:#ef4444;"></i>
+                            <span>3. Alamat &amp; Titik Lokasi Peta Presisi</span>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Wilayah / Rute Pengiriman</label>
+                            <select name="wilayah_id" x-model="form.wilayah_id" class="form-input">
+                                <option value="">-- Tanpa Wilayah Tertentu --</option>
+                                <?php foreach ($territories as $t): ?>
+                                <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['nama_wilayah']) ?> (<?= htmlspecialchars($t['kode_rute']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Alamat Lengkap Gudang / Toko</label>
+                            <textarea name="alamat_lengkap" x-model="form.alamat_lengkap" class="form-input" rows="2" placeholder="Contoh: Kawasan Industri Jababeka Blok C No. 12, Cikarang..."></textarea>
+                        </div>
+
+                        <!-- Link Google Maps Field -->
+                        <div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                                <label class="form-label" style="margin-bottom:0;display:flex;align-items:center;gap:6px;">
+                                    <i data-lucide="map-pin" style="width:14px;height:14px;color:#ef4444;"></i>
+                                    <span>Link Google Maps Titik Presisi</span>
+                                </label>
+                                <template x-if="form.link_google_maps">
+                                    <a :href="form.link_google_maps" target="_blank" rel="noopener noreferrer" style="font-size:11px;font-weight:700;color:#2563eb;display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
+                                        <i data-lucide="external-link" style="width:11px;height:11px;"></i>
+                                        <span>Tes Buka Peta</span>
+                                    </a>
+                                </template>
+                            </div>
+                            <input type="text" name="link_google_maps" x-model="form.link_google_maps" class="form-input" placeholder="https://maps.app.goo.gl/... atau https://maps.google.com/?q=-6.2,106.8">
+                            <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;line-height:1.4;">
+                                <i data-lucide="info" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-top:-2px;"></i>
+                                Salin link titik Google Maps agar armada driver belanja PO dapat langsung membuka rute navigasi menuju lokasi vendor.
+                            </div>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="form-label">Alamat Lengkap Gudang / Toko</label>
-                        <textarea name="alamat_lengkap" x-model="form.alamat_lengkap" class="form-input" rows="2" placeholder="Contoh: Kawasan Industri Jababeka Blok C No. 12, Cikarang..."></textarea>
+                    <!-- SEKSI 4: SYARAT PEMBAYARAN & REKENING BANK -->
+                    <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="credit-card" style="width:14px;height:14px;"></i>
+                            <span>4. Ketentuan Pembayaran &amp; Rekening Bank</span>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Termin Pembayaran Standar</label>
+                            <select name="termin_bayar" x-model="form.termin_bayar" class="form-input">
+                                <option value="cash">Tunai / COD (Cash on Delivery)</option>
+                                <option value="transfer">Transfer Bank (Sebelum Kirim / CBD)</option>
+                                <option value="tempo_7_hari">Tempo 7 Hari</option>
+                                <option value="tempo_14_hari">Tempo 14 Hari</option>
+                                <option value="tempo_30_hari">Tempo 30 Hari</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                            <div>
+                                <label class="form-label" style="font-size:11px;">Nama Bank</label>
+                                <input type="text" name="bank_nama" x-model="form.bank_nama" list="list-bank-supplier" class="form-input" placeholder="BCA / Mandiri / BRI / BSI">
+                                <datalist id="list-bank-supplier">
+                                    <option value="BCA">
+                                    <option value="BRI">
+                                    <option value="Mandiri">
+                                    <option value="BNI">
+                                    <option value="BSI">
+                                    <option value="CIMB Niaga">
+                                    <option value="Permata">
+                                    <option value="Danamon">
+                                    <option value="Bank Jago">
+                                    <option value="SeaBank">
+                                </datalist>
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size:11px;">No. Rekening</label>
+                                <input type="text" name="bank_rekening" x-model="form.bank_rekening"
+                                       @input="form.bank_rekening = $event.target.value.replace(/[^0-9-]/g, '').slice(0, 25)"
+                                       maxlength="25" class="form-input font-mono" placeholder="1234567890">
+                            </div>
+                            <div>
+                                <label class="form-label" style="font-size:11px;">Atas Nama Rekening <template x-if="form.bank_rekening"><span style="color:var(--color-danger);">*</span></template></label>
+                                <input type="text" name="bank_atas_nama" x-model="form.bank_atas_nama"
+                                       :required="!!form.bank_rekening"
+                                       class="form-input" placeholder="Nama Pemilik">
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Link Google Maps Field -->
-                    <div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-                            <label class="form-label" style="margin-bottom:0;display:flex;align-items:center;gap:6px;">
-                                <i data-lucide="map-pin" style="width:14px;height:14px;color:#ef4444;"></i>
-                                <span>Link Google Maps Titik Presisi</span>
+                    <!-- SEKSI 5: CATATAN TAMBAHAN -->
+                    <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:8px;">
+                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
+                            <i data-lucide="file-text" style="width:14px;height:14px;"></i>
+                            <span>5. Catatan / Ketentuan Vendor (Opsional)</span>
+                        </div>
+                        <textarea name="catatan" x-model="form.catatan" class="form-input" rows="2" placeholder="Contoh: Jam operasional gudang 08:00 - 16:00 WIB, Minimal order 50 kg, konfirmasi H-1 sebelum muat."></textarea>
+                    </div>
+
+                    <!-- STATUS AKTIF (KHUSUS EDIT) -->
+                    <template x-if="isEdit">
+                        <div style="display:flex;align-items:center;gap:8px;padding:4px 2px;">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
+                                <input type="checkbox" name="status_aktif" x-model="form.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                                <span>Status Pemasok Aktif (Siap menerima transaksi pembelian)</span>
                             </label>
-                            <template x-if="form.link_google_maps">
-                                <a :href="form.link_google_maps" target="_blank" rel="noopener noreferrer" style="font-size:11px;font-weight:700;color:#2563eb;display:inline-flex;align-items:center;gap:4px;text-decoration:none;">
-                                    <i data-lucide="external-link" style="width:11px;height:11px;"></i>
-                                    <span>Tes Buka Peta</span>
-                                </a>
-                            </template>
                         </div>
-                        <input type="text" name="link_google_maps" x-model="form.link_google_maps" class="form-input" placeholder="https://maps.app.goo.gl/... atau https://maps.google.com/?q=-6.2,106.8">
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;line-height:1.4;">
-                            <i data-lucide="info" style="width:12px;height:12px;display:inline-block;vertical-align:middle;margin-top:-2px;"></i>
-                            Salin link titik Google Maps agar armada driver belanja PO dapat langsung membuka rute navigasi menuju lokasi vendor.
-                        </div>
-                    </div>
+                    </template>
                 </div>
 
-                <!-- SEKSI 4: SYARAT PEMBAYARAN & REKENING BANK -->
-                <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
-                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
-                        <i data-lucide="credit-card" style="width:14px;height:14px;"></i>
-                        <span>4. Ketentuan Pembayaran &amp; Rekening Bank</span>
-                    </div>
-
-                    <div>
-                        <label class="form-label">Termin Pembayaran Standar</label>
-                        <select name="termin_bayar" x-model="form.termin_bayar" class="form-input">
-                            <option value="cash">Tunai / COD (Cash on Delivery)</option>
-                            <option value="transfer">Transfer Bank (Sebelum Kirim / CBD)</option>
-                            <option value="tempo_7_hari">Tempo 7 Hari</option>
-                            <option value="tempo_14_hari">Tempo 14 Hari</option>
-                            <option value="tempo_30_hari">Tempo 30 Hari</option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                        <div>
-                            <label class="form-label" style="font-size:11px;">Nama Bank</label>
-                            <input type="text" name="bank_nama" x-model="form.bank_nama" list="list-bank-supplier" class="form-input" placeholder="BCA / Mandiri / BRI / BSI">
-                            <datalist id="list-bank-supplier">
-                                <option value="BCA">
-                                <option value="BRI">
-                                <option value="Mandiri">
-                                <option value="BNI">
-                                <option value="BSI">
-                                <option value="CIMB Niaga">
-                                <option value="Permata">
-                                <option value="Danamon">
-                                <option value="Bank Jago">
-                                <option value="SeaBank">
-                            </datalist>
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size:11px;">No. Rekening</label>
-                            <input type="text" name="bank_rekening" x-model="form.bank_rekening"
-                                   @input="form.bank_rekening = $event.target.value.replace(/[^0-9-]/g, '').slice(0, 25)"
-                                   maxlength="25" class="form-input font-mono" placeholder="1234567890">
-                        </div>
-                        <div>
-                            <label class="form-label" style="font-size:11px;">Atas Nama Rekening <template x-if="form.bank_rekening"><span style="color:var(--color-danger);">*</span></template></label>
-                            <input type="text" name="bank_atas_nama" x-model="form.bank_atas_nama"
-                                   :required="!!form.bank_rekening"
-                                   class="form-input" placeholder="Nama Pemilik">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- SEKSI 5: CATATAN TAMBAHAN -->
-                <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:8px;">
-                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
-                        <i data-lucide="file-text" style="width:14px;height:14px;"></i>
-                        <span>5. Catatan / Ketentuan Vendor (Opsional)</span>
-                    </div>
-                    <textarea name="catatan" x-model="form.catatan" class="form-input" rows="2" placeholder="Contoh: Jam operasional gudang 08:00 - 16:00 WIB, Minimal order 50 kg, konfirmasi H-1 sebelum muat."></textarea>
-                </div>
-
-                <!-- STATUS AKTIF (KHUSUS EDIT) -->
-                <template x-if="isEdit">
-                    <div style="display:flex;align-items:center;gap:8px;padding:4px 2px;">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;">
-                            <input type="checkbox" name="status_aktif" x-model="form.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                            <span>Status Pemasok Aktif (Siap menerima transaksi pembelian)</span>
-                        </label>
-                    </div>
-                </template>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:10px;padding-top:12px;border-top:1px solid var(--color-hairline);">
-                    <button type="button" @click="showModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary" style="font-weight:700;">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEdit ? 'Simpan Perubahan' : 'Tambah Pemasok'"></span>
                     </button>
                 </div>

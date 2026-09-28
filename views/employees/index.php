@@ -977,19 +977,28 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (\App\Core\Auth::can('master.employees_manage')): ?>
     <template x-teleport="body">
-    <div x-show="showModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:640px;padding:24px;">
+    <div x-show="showModal" x-cloak class="modal-backdrop" @click="showModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:640px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:32px;height:32px;border-radius:var(--rounded-md);background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;">
-                        <i data-lucide="user-plus" style="width:16px;height:16px;"></i>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="user-plus" style="width:20px;height:20px;"></i>
                     </div>
-                    <div class="modal-title" x-text="isEdit ? 'Edit Data Karyawan' : 'Tambah Karyawan Baru'"></div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="isEdit ? 'Edit Data Karyawan' : 'Tambah Karyawan Baru'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Profil pegawai, penugasan peran, dan struktur gaji / komisi.</div>
+                    </div>
                 </div>
+                <button type="button" @click="showModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form :action="isEdit ? '<?= Router::url('/employees/update') ?>' : '<?= Router::url('/employees/store') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <input type="hidden" name="id" :value="form.id">
+            <form :action="isEdit ? '<?= Router::url('/employees/update') ?>' : '<?= Router::url('/employees/store') ?>'" method="POST">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="id" :value="form.id">
 
                 <!-- SECTION 1: BIODATA -->
                 <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-primary);border-bottom:1px solid var(--color-hairline);padding-bottom:4px;">
@@ -1354,10 +1363,12 @@ ob_start();
                     </label>
                 </template>
 
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;">
-                    <button type="button" @click="showModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" @click="showModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span x-text="isEdit ? 'Simpan Perubahan' : 'Tambah Karyawan'"></span>
                     </button>
                 </div>
@@ -1373,34 +1384,33 @@ ob_start();
     <div x-show="showTierModal" 
          x-cloak 
          class="modal-backdrop" 
-         
+         @click="showTierModal = false"
          @keydown.escape.window="showTierModal = false">
         
-        <div class="skema-modal-box" @click.stop>
-            
-            <!-- Mobile Pull Bar Indicator -->
-            <div class="skema-mobile-pull">
-                <div class="skema-mobile-pull-bar"></div>
-            </div>
+        <div class="modal-box modal-box-lg" style="max-width:880px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
 
             <!-- Modal Header -->
-            <div class="skema-modal-header">
-                <div class="skema-modal-header-left">
-                    <div class="skema-modal-header-icon">
-                        <i data-lucide="award"></i>
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(245,158,11,0.15);color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="award" style="width:20px;height:20px;"></i>
                     </div>
-                    <div class="skema-modal-header-text">
-                        <div class="skema-modal-title">
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title flex items-center gap-2">
                             <span>Pengaturan Skema Komisi Bertingkat</span>
                             <span class="badge badge-warning" style="font-size:10px;padding:1px 6px;font-weight:800;" x-text="editableTiers.length + ' Tier'"></span>
                         </div>
-                        <div class="skema-modal-subtitle">Konfigurasi ambang batas omzet bulanan &amp; simulasi komisi otomatis</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Konfigurasi ambang batas omzet bulanan &amp; simulasi komisi otomatis.</div>
                     </div>
                 </div>
+                <button type="button" @click="showTierModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
             <!-- Modal Body (Scrollable) -->
-            <div class="skema-modal-body">
+            <div class="modal-body custom-scrollbar space-y-3.5">
 
                 <!-- Alert Penjelasan Sistem (Edukasi Ketentuan Komisi) -->
                 <div class="skema-info-alert">
@@ -1626,15 +1636,15 @@ ob_start();
             </div>
 
             <!-- Modal Footer -->
-            <div class="skema-modal-footer">
-                <div class="skema-modal-footer-note">
+            <div class="modal-footer flex items-center justify-between flex-wrap gap-2">
+                <div style="font-size:11.5px;color:var(--color-ink-mute);font-weight:500;">
                     Perubahan langsung berlaku pada perhitungan di menu Rekap Komisi Sales.
                 </div>
-                <div class="skema-modal-footer-actions">
-                    <button type="button" @click="showTierModal = false" class="btn btn-secondary btn-sm" style="font-weight:700;padding:8px 16px;" :disabled="isSavingTiers">
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                    <button type="button" @click="showTierModal = false" class="btn btn-secondary modal-btn-cancel-desktop" :disabled="isSavingTiers">
                         Batal
                     </button>
-                    <button type="button" @click="saveTierConfig()" class="btn btn-primary btn-sm" :disabled="isSavingTiers" style="background:#f59e0b;border-color:#f59e0b;color:#090d16;font-weight:800;padding:8px 18px;display:inline-flex;align-items:center;gap:6px;">
+                    <button type="button" @click="saveTierConfig()" class="btn btn-primary w-full sm:w-auto" :disabled="isSavingTiers" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
                         <i data-lucide="check" style="width:16px;height:16px;"></i>
                         <span x-text="isSavingTiers ? 'Menyimpan...' : 'Simpan Skema Komisi'"></span>
                     </button>
@@ -1647,6 +1657,7 @@ ob_start();
 
     <!-- HIDDEN FORM FOR DEACTIVATING EMPLOYEE -->
     <form id="delete-employee-form" action="<?= Router::url('/employees/delete') ?>" method="POST" data-action-text="Menonaktifkan karyawan..." style="display:none;">
+        <?= \App\Helpers\CSRF::field() ?>
         <input type="hidden" name="id" id="delete-employee-id">
     </form>
     <?php endif; ?>
