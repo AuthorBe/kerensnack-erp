@@ -127,8 +127,9 @@ class PrintDocumentHelper
     public static function downloadPdf(string $html, string $baseFilename, string $format = 'standard'): void
     {
         $config = self::getPaperConfig($format);
-        $cleanName = preg_replace('/[\-_]+/', ' ', $baseFilename);
-        $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+        $rawName = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], ' ', $baseFilename);
+        $baseName = preg_replace('/\.pdf$/i', '', $rawName);
+        $cleanName = preg_replace('/[^A-Za-z0-9\(\)\.\-\s]+/', ' ', $baseName);
         $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
         $fmt = self::resolveFormat($format);
         
@@ -148,8 +149,9 @@ class PrintDocumentHelper
     public static function streamPdf(string $html, string $baseFilename, string $format = 'standard'): void
     {
         $config = self::getPaperConfig($format);
-        $cleanName = preg_replace('/[\-_]+/', ' ', $baseFilename);
-        $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+        $rawName = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], ' ', $baseFilename);
+        $baseName = preg_replace('/\.pdf$/i', '', $rawName);
+        $cleanName = preg_replace('/[^A-Za-z0-9\(\)\.\-\s]+/', ' ', $baseName);
         $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
         $fmt = self::resolveFormat($format);
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Services\Import;
 
 use App\Services\Import\Handlers\EntityImportHandlerInterface;
+use App\Helpers\Format;
 use PDO;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -694,9 +695,10 @@ class TemplateGenerator
         $cleanTitle = trim(preg_replace('/\s+/', ' ', $cleanTitle));
 
         // Output ke HTTP Response
+        $dateFormatted = Format::tanggal(date('Y-m-d'), false, true);
         $filename = ($mode === 'current_data')
-            ? "Data Terkini " . $cleanTitle . " " . date('Ymd His') . ".xlsx"
-            : "Template Impor " . $cleanTitle . ".xlsx";
+            ? "Data Terkini {$cleanTitle} ({$dateFormatted}).xlsx"
+            : "Template Impor {$cleanTitle}.xlsx";
 
         if (ob_get_level()) {
             ob_end_clean();

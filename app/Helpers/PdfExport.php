@@ -74,14 +74,13 @@ class PdfExport
     }
 
     /**
-     * Bersihkan nama berkas dari tanda hubung (-) dan garis bawah (_)
+     * Bersihkan nama berkas dari karakter ilegal OS dan standarisasi nama berkas PDF
      */
     private static function sanitizeFilename(string $filename): string
     {
-        $rawName = str_replace(['/', '\\'], ' ', $filename);
+        $rawName = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], ' ', $filename);
         $baseName = preg_replace('/\.pdf$/i', '', $rawName);
-        $cleanName = preg_replace('/[\-_]+/', ' ', $baseName);
-        $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+        $cleanName = preg_replace('/[^A-Za-z0-9\(\)\.\-\s]+/', ' ', $baseName);
         $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
         return ($cleanName !== '' ? $cleanName : 'Document') . '.pdf';
     }

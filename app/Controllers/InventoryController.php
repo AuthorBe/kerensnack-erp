@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\ActivityLog;
+use App\Helpers\Format;
 use App\Helpers\ExcelExport;
 use App\Helpers\PdfExport;
 use App\Helpers\CompanySetting;
@@ -315,7 +316,8 @@ class InventoryController extends Controller
 
             $rows[] = ['', '', '', '', '', 'TOTAL PERSINGGAHAN STOK GUDANG:', $totalPcs, '', '', 'TOTAL VALUASI (HPP):', $totalValuation];
 
-            ExcelExport::download("Katalog Stok Gudang " . date('Ymd') . ".xlsx", $headers, $rows, "Stok Gudang");
+            $dateFormatted = Format::tanggal(date('Y-m-d'), false, true);
+            ExcelExport::download("Katalog Stok Gudang ({$dateFormatted}).xlsx", $headers, $rows, "Stok Gudang");
         } catch (Throwable $e) {
             $this->flashError("Gagal export data stok gudang: " . $e->getMessage());
             $this->redirect('/inventory');
@@ -818,7 +820,11 @@ class InventoryController extends Controller
             $html = ob_get_clean();
 
             $cleanNomor = preg_replace('/[^A-Za-z0-9]/', ' ', (string)($opname['nomor_dokumen'] ?? ''));
-            $filename = trim("Opname {$cleanNomor}") . ".pdf";
+            $cleanNomor = trim(preg_replace('/\s+/', ' ', $cleanNomor));
+            $dateFormatted = !empty($opname['tanggal_opname']) 
+                ? Format::tanggal($opname['tanggal_opname'], false, true) 
+                : Format::tanggal(date('Y-m-d'), false, true);
+            $filename = ($cleanNomor !== '' ? "Opname {$cleanNomor} ({$dateFormatted})" : "Opname ({$dateFormatted})") . ".pdf";
             PdfExport::download($html, $filename, 'A4', 'portrait');
         } catch (Throwable $e) {
             $this->flashError("Gagal mencetak PDF opname: " . $e->getMessage());

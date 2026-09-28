@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\ActivityLog;
+use App\Helpers\Format;
 use App\Helpers\PdfExport;
 use App\Helpers\PrintDocumentHelper;
 use App\Helpers\ExcelExport;
@@ -1524,7 +1525,12 @@ class DeliveryController extends Controller
             $html = ob_get_clean();
 
             $cleanSj = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$delivery['nomor_surat_jalan']);
-            PrintDocumentHelper::downloadPdf($html, "Surat Jalan {$cleanSj}", $format);
+            $cleanSj = trim(preg_replace('/\s+/', ' ', $cleanSj));
+            $sjDate = !empty($delivery['dibuat_pada']) 
+                ? (string)$delivery['dibuat_pada'] 
+                : (!empty($delivery['tanggal_pesanan']) ? (string)$delivery['tanggal_pesanan'] : date('Y-m-d'));
+            $dateFormatted = Format::tanggal($sjDate, false, true);
+            PrintDocumentHelper::downloadPdf($html, "Surat Jalan {$cleanSj} ({$dateFormatted})", $format);
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF Surat Jalan: ' . $e->getMessage());
             $this->redirect('/deliveries/print?id=' . urlencode((string)$id));
@@ -1588,9 +1594,8 @@ class DeliveryController extends Controller
                 ];
             }
 
-            $cleanStart = str_replace('-', ' ', $startDate);
-            $cleanEnd = str_replace('-', ' ', $endDate);
-            ExcelExport::download("Daftar Surat Jalan {$cleanStart} sd {$cleanEnd}.xlsx", $headers, $rows, "Surat Jalan");
+            $dateRange = Format::tanggal($startDate, false, true) . ' sd ' . Format::tanggal($endDate, false, true);
+            ExcelExport::download("Daftar Surat Jalan ({$dateRange}).xlsx", $headers, $rows, "Surat Jalan");
         } catch (Throwable $e) {
             $this->flashError('Gagal export data surat jalan: ' . $e->getMessage());
             $this->redirect('/deliveries');

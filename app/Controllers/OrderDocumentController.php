@@ -8,6 +8,7 @@ use App\Core\Auth;
 use App\Helpers\PdfExport;
 use App\Helpers\PrintDocumentHelper;
 use App\Helpers\ExcelExport;
+use App\Helpers\Format;
 use Database;
 use Throwable;
 
@@ -166,7 +167,9 @@ class OrderDocumentController extends Controller
 
             $cleanNota = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$order['nomor_nota']);
             $cleanNota = trim(preg_replace('/\s+/', ' ', $cleanNota));
-            PrintDocumentHelper::downloadPdf($html, "Faktur {$cleanNota}", $format);
+            $orderDate = !empty($order['tanggal_pesanan']) ? (string)$order['tanggal_pesanan'] : date('Y-m-d');
+            $dateFormatted = Format::tanggal($orderDate, false, true);
+            PrintDocumentHelper::downloadPdf($html, "Faktur {$cleanNota} ({$dateFormatted})", $format);
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF: ' . $e->getMessage());
             $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));
@@ -267,7 +270,9 @@ class OrderDocumentController extends Controller
 
             $cleanNota = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$order['nomor_nota']);
             $cleanNota = trim(preg_replace('/\s+/', ' ', $cleanNota));
-            ExcelExport::download("Faktur {$cleanNota}.xlsx", $headers, $rows, "Faktur {$cleanNota}");
+            $orderDate = !empty($order['tanggal_pesanan']) ? (string)$order['tanggal_pesanan'] : date('Y-m-d');
+            $dateFormatted = Format::tanggal($orderDate, false, true);
+            ExcelExport::download("Faktur {$cleanNota} ({$dateFormatted}).xlsx", $headers, $rows, "Faktur {$cleanNota}");
         } catch (Throwable $e) {
             $this->flashError('Gagal export Excel: ' . $e->getMessage());
             $this->redirect('/customer-orders/invoice?id=' . urlencode((string)$id));
@@ -357,9 +362,8 @@ class OrderDocumentController extends Controller
                 ];
             }
 
-            $cleanStart = str_replace('-', ' ', $startDate);
-            $cleanEnd = str_replace('-', ' ', $endDate);
-            ExcelExport::download("Daftar Pesanan {$cleanStart} sd {$cleanEnd}.xlsx", $headers, $rows, "Daftar Pesanan");
+            $dateRange = Format::tanggal($startDate, false, true) . ' sd ' . Format::tanggal($endDate, false, true);
+            ExcelExport::download("Daftar Pesanan ({$dateRange}).xlsx", $headers, $rows, "Daftar Pesanan");
         } catch (Throwable $e) {
             $this->flashError('Gagal export data pesanan: ' . $e->getMessage());
             $this->redirect('/customer-orders');
@@ -427,7 +431,9 @@ class OrderDocumentController extends Controller
 
             $cleanNota = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$order['nomor_nota']);
             $cleanNota = trim(preg_replace('/\s+/', ' ', $cleanNota));
-            PdfExport::download($html, "Picking List {$cleanNota}.pdf", 'A4', 'portrait');
+            $orderDate = !empty($order['tanggal_pesanan']) ? (string)$order['tanggal_pesanan'] : date('Y-m-d');
+            $dateFormatted = Format::tanggal($orderDate, false, true);
+            PdfExport::download($html, "Picking List {$cleanNota} ({$dateFormatted}).pdf", 'A4', 'portrait');
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF Picking List: ' . $e->getMessage());
             $this->redirect('/customer-orders/picking-list?id=' . urlencode((string)$id));
@@ -562,9 +568,9 @@ class OrderDocumentController extends Controller
             require ROOT_PATH . '/views/customer_orders/batch_picking_list.php';
             $html = ob_get_clean();
 
-            $dateSuffix = date('Ymd Hi');
+            $dateFormatted = Format::tanggal(date('Y-m-d'), false, true);
             $countSuffix = count($orders);
-            PdfExport::download($html, "Batch PO {$countSuffix} Nota {$dateSuffix}.pdf", 'A4', 'portrait');
+            PdfExport::download($html, "Batch PO {$countSuffix} Nota ({$dateFormatted}).pdf", 'A4', 'portrait');
         } catch (Throwable $e) {
             $this->flashError('Gagal membuat PDF Batch PO: ' . $e->getMessage());
             $this->redirect('/customer-orders/po-list');

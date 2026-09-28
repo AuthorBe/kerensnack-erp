@@ -8,6 +8,7 @@ use App\Core\Auth;
 use App\Helpers\ActivityLog;
 use App\Helpers\CSRF;
 use App\Helpers\ExcelExport;
+use App\Helpers\Format;
 use Database;
 use Throwable;
 
@@ -247,7 +248,7 @@ class ActivityLogController extends Controller
                 ];
             }
 
-            $filename = 'Audit Trail Kerensnack ' . date('Ymd His') . '.xlsx';
+            $filename = 'Audit Trail Kerensnack (' . Format::tanggal(date('Y-m-d'), false, true) . ').xlsx';
             ExcelExport::download($filename, $headers, $rows, 'Audit Trail');
             exit;
 

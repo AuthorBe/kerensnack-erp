@@ -1028,9 +1028,8 @@ class CashController extends Controller
             $rows[] = ['', '', '', '', '', '', 'TOTAL KAS KELUAR (Rp):', $totalOut, '', ''];
             $rows[] = ['', '', '', '', '', '', 'ARUS KAS BERSIH (NET) (Rp):', ($totalIn - $totalOut), '', ''];
 
-            $cleanStart = str_replace('-', ' ', $startDate);
-            $cleanEnd = str_replace('-', ' ', $endDate);
-            ExcelExport::download("Mutasi Kas {$cleanStart} sd {$cleanEnd}.xlsx", $headers, $rows, "Mutasi Kas");
+            $dateRange = Format::tanggal($startDate, false, true) . ' sd ' . Format::tanggal($endDate, false, true);
+            ExcelExport::download("Mutasi Kas ({$dateRange}).xlsx", $headers, $rows, "Mutasi Kas");
         } catch (Throwable $e) {
             $this->flashError('Gagal export data transaksi kas: ' . $e->getMessage());
             $this->redirect('/cash/transactions');
@@ -1130,9 +1129,8 @@ class CashController extends Controller
             $rows[] = ['', '', 'TOTAL MUTASI PERIODE (Rp):', $totalIn, $totalOut, ($totalIn - $totalOut), ''];
             $rows[] = ['', '', 'SALDO KAS AKHIR PERIODE (Rp):', '', '', '', $endingBalance];
 
-            $cleanStart = str_replace('-', ' ', $startDate);
-            $cleanEnd = str_replace('-', ' ', $endDate);
-            ExcelExport::download("Laporan Arus Kas {$cleanStart} sd {$cleanEnd}.xlsx", $headers, $rows, "Laporan Arus Kas");
+            $dateRange = Format::tanggal($startDate, false, true) . ' sd ' . Format::tanggal($endDate, false, true);
+            ExcelExport::download("Laporan Arus Kas ({$dateRange}).xlsx", $headers, $rows, "Laporan Arus Kas");
         } catch (Throwable $e) {
             $this->flashError('Gagal export laporan kas: ' . $e->getMessage());
             $this->redirect('/cash/reports');

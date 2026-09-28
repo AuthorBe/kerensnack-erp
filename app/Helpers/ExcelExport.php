@@ -107,10 +107,9 @@ class ExcelExport
         }
 
         // 4. Output ke Browser untuk Download
-        $rawName = str_replace(['/', '\\'], ' ', $filename);
+        $rawName = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], ' ', $filename);
         $baseName = preg_replace('/\.xlsx$/i', '', $rawName);
-        $cleanName = preg_replace('/[\-_]+/', ' ', $baseName);
-        $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+        $cleanName = preg_replace('/[^A-Za-z0-9\(\)\.\-\s]+/', ' ', $baseName);
         $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
         $filename = ($cleanName !== '' ? $cleanName : 'Data Export') . '.xlsx';
 
@@ -393,10 +392,12 @@ class ExcelExport
 
         // 10. DOWNLOAD OUTPUT
         $rawDoc = (string)($opname['nomor_dokumen'] ?? '');
-        $cleanDoc = preg_replace('/[\-_]+/', ' ', $rawDoc);
-        $cleanDoc = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanDoc);
+        $cleanDoc = preg_replace('/[^A-Za-z0-9]/', ' ', $rawDoc);
         $cleanDoc = trim(preg_replace('/\s+/', ' ', $cleanDoc));
-        $filename = ($cleanDoc !== '' ? "Opname {$cleanDoc}" : 'Opname') . '.xlsx';
+        $dateFormatted = !empty($opname['tanggal_opname'])
+            ? Format::tanggal($opname['tanggal_opname'], false, true)
+            : Format::tanggal(date('Y-m-d'), false, true);
+        $filename = ($cleanDoc !== '' ? "Opname {$cleanDoc} ({$dateFormatted})" : "Opname ({$dateFormatted})") . '.xlsx';
 
         while (ob_get_level() > 0) {
             ob_end_clean();

@@ -54,14 +54,14 @@ $sanitizePdf = $pdfRef->getMethod('sanitizeFilename');
 $sanitizePdf->setAccessible(true);
 
 $testsPdf = [
-    'Faktur-INV-2026-001.pdf' => 'Faktur INV 2026 001.pdf',
-    'PickingList-PO_123_456.pdf' => 'PickingList PO 123 456.pdf',
-    'Batch_PO_5Nota_20260924_1200.pdf' => 'Batch PO 5Nota 20260924 1200.pdf',
-    'SURAT_PESANAN_PO-99.pdf' => 'SURAT PESANAN PO 99.pdf',
-    'Opname-Gudang-01.pdf' => 'Opname Gudang 01.pdf',
-    'Document--With___Many---Dashes.pdf' => 'Document With Many Dashes.pdf',
-    'Faktur/Nota#123_456-789.pdf' => 'Faktur Nota 123 456 789.pdf',
-    'Laporan-Penjualan_2026-09-24_Final-Banget---v1.pdf' => 'Laporan Penjualan 2026 09 24 Final Banget v1.pdf',
+    'Faktur INV 2026 001 (28 Sep 2026).pdf' => 'Faktur INV 2026 001 (28 Sep 2026).pdf',
+    'Picking List PO 123 (28 Sep 2026).pdf' => 'Picking List PO 123 (28 Sep 2026).pdf',
+    'Batch PO 5 Nota (28 Sep 2026).pdf' => 'Batch PO 5 Nota (28 Sep 2026).pdf',
+    'Surat Pesanan PO 99 (28 Sep 2026).pdf' => 'Surat Pesanan PO 99 (28 Sep 2026).pdf',
+    'Opname Gudang 01 (28 Sep 2026).pdf' => 'Opname Gudang 01 (28 Sep 2026).pdf',
+    'Document--With   Many   Spaces (28 Sep 2026).pdf' => 'Document--With Many Spaces (28 Sep 2026).pdf',
+    'Faktur/Nota:123*456? "789" <A> | (28 Sep 2026).pdf' => 'Faktur Nota 123 456 789 A (28 Sep 2026).pdf',
+    'Laporan Penjualan (01 Sep 2026 sd 28 Sep 2026).pdf' => 'Laporan Penjualan (01 Sep 2026 sd 28 Sep 2026).pdf',
 ];
 
 foreach ($testsPdf as $input => $expected) {
@@ -73,8 +73,9 @@ foreach ($testsPdf as $input => $expected) {
 echo "\n--- 2. PRINT DOCUMENT HELPER CLEANING ---\n";
 
 $cleanNameMethod = function(string $baseFilename, string $format = 'standard') {
-    $cleanName = preg_replace('/[\-_]+/', ' ', $baseFilename);
-    $cleanName = preg_replace('/[^A-Za-z0-9 ]+/', ' ', $cleanName);
+    $rawName = str_replace(['/', '\\', ':', '*', '?', '"', '<', '>', '|'], ' ', $baseFilename);
+    $baseName = preg_replace('/\.pdf$/i', '', $rawName);
+    $cleanName = preg_replace('/[^A-Za-z0-9\(\)\.\-\s]+/', ' ', $baseName);
     $cleanName = trim(preg_replace('/\s+/', ' ', $cleanName));
     $fmt = PrintDocumentHelper::resolveFormat($format);
     $suffix = match ($fmt) {
@@ -86,9 +87,9 @@ $cleanNameMethod = function(string $baseFilename, string $format = 'standard') {
 };
 
 $testsPrint = [
-    ['Faktur-INV-001', 'standard', 'Faktur INV 001.pdf'],
-    ['SuratJalan-SJ_2026_09', 'dotmatrix', 'SuratJalan SJ 2026 09 DotMatrix.pdf'],
-    ['SURAT_PESANAN_PO-123', 'dotmatrix_half', 'SURAT PESANAN PO 123 DotMatrixHalf.pdf'],
+    ['Faktur INV 001 (28 Sep 2026)', 'standard', 'Faktur INV 001 (28 Sep 2026).pdf'],
+    ['Surat Jalan SJ 2026 09 (28 Sep 2026)', 'dotmatrix', 'Surat Jalan SJ 2026 09 (28 Sep 2026) DotMatrix.pdf'],
+    ['Surat Pesanan PO 123 (28 Sep 2026)', 'dotmatrix_half', 'Surat Pesanan PO 123 (28 Sep 2026) DotMatrixHalf.pdf'],
 ];
 
 foreach ($testsPrint as $case) {
@@ -96,7 +97,7 @@ foreach ($testsPrint as $case) {
     assertTest("PrintDocumentHelper filename '{$case[0]}' [{$case[1]}]", $actual === $case[2], "Got: '{$actual}', Expected: '{$case[2]}'");
 }
 
-// 3. Static Audit of Controller Download Filenames
+// 3. Static Audit of Controller Download Filenames (No raw date('Ymd') or unformatted timestamps)
 echo "\n--- 3. CONTROLLER FILENAMES STATIC AUDIT ---\n";
 $root = ROOT_PATH;
 
@@ -109,34 +110,28 @@ $controllersToCheck = [
     'app/Controllers/OrderDocumentController.php',
     'app/Controllers/PurchaseController.php',
     'app/Services/Import/TemplateGenerator.php',
-    'views/settings/impor_data/index.php'
 ];
 
 foreach ($controllersToCheck as $relPath) {
     $fullPath = $root . '/' . $relPath;
     $content = file_get_contents($fullPath);
     
-    // Check for any remaining dash/underscore patterns in download filename arguments
     $lines = explode("\n", $content);
     $hasViolation = false;
     $violatingLine = '';
     
     foreach ($lines as $lineNum => $line) {
         if (
-            preg_match('/ExcelExport::download\s*\(\s*["\']([^"\']+)["\']/i', $line, $m) ||
-            preg_match('/PdfExport::download\s*\([^,]+,\s*["\']([^"\']+)["\']/i', $line, $m) ||
-            preg_match('/PrintDocumentHelper::downloadPdf\s*\([^,]+,\s*["\']([^"\']+)["\']/i', $line, $m)
+            preg_match('/date\s*\(\s*[\'"]Ymd/i', $line) &&
+            (str_contains($line, 'download') || str_contains($line, 'filename') || str_contains($line, 'ExcelExport') || str_contains($line, 'PdfExport') || str_contains($line, 'PrintDocumentHelper'))
         ) {
-            $fn = $m[1];
-            if (preg_match('/[-_]/', $fn)) {
-                $hasViolation = true;
-                $violatingLine = "L" . ($lineNum + 1) . ": " . trim($line);
-                break;
-            }
+            $hasViolation = true;
+            $violatingLine = "L" . ($lineNum + 1) . ": " . trim($line);
+            break;
         }
     }
     
-    assertTest("Static Audit: {$relPath} bebas dari '-' dan '_'", !$hasViolation, $violatingLine);
+    assertTest("Static Audit: {$relPath} bebas dari raw timestamp date('Ymd')", !$hasViolation, $violatingLine);
 }
 
 echo "\n====================================================================\n";

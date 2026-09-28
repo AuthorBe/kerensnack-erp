@@ -7,6 +7,7 @@ use App\Core\Controller;
 use App\Core\Auth;
 use App\Helpers\DocumentNumber;
 use App\Helpers\CashVoucher;
+use App\Helpers\Format;
 use App\Helpers\PrintDocumentHelper;
 use Database;
 use Throwable;
@@ -1218,7 +1219,11 @@ class PurchaseController extends Controller
 
             $cleanNomor = preg_replace('/[^A-Za-z0-9]/', ' ', (string)$purchase['nomor_faktur_pembelian']);
             $cleanNomor = trim(preg_replace('/\s+/', ' ', $cleanNomor));
-            PrintDocumentHelper::downloadPdf($html, "Surat Pesanan {$cleanNomor}", $format);
+            $purchaseDate = !empty($purchase['tanggal_pembelian']) 
+                ? (string)$purchase['tanggal_pembelian'] 
+                : date('Y-m-d');
+            $dateFormatted = Format::tanggal($purchaseDate, false, true);
+            PrintDocumentHelper::downloadPdf($html, "Surat Pesanan {$cleanNomor} ({$dateFormatted})", $format);
 
         } catch (Throwable $e) {
             $this->flashError("Gagal cetak PDF: " . $e->getMessage());

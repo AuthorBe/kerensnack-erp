@@ -1393,16 +1393,23 @@ class ConsignmentController extends Controller
             require ROOT_PATH . '/views/consignment/nota_konsinyasi.php';
             $html = ob_get_clean();
 
+            $visitDate = !empty($visit['tanggal_kunjungan']) 
+                ? (string)$visit['tanggal_kunjungan'] 
+                : (!empty($visit['tanggal_pesanan']) ? (string)$visit['tanggal_pesanan'] : date('Y-m-d'));
+            $dateFormatted = Format::tanggal($visitDate, false, true);
+
             if ($isInvoiced) {
                 $cleanNota = !empty($visit['nomor_nota']) 
                     ? preg_replace('/[^A-Za-z0-9]/', ' ', (string)$visit['nomor_nota']) 
-                    : 'FAKTUR ' . date('Ymd His');
-                $filename = "Faktur Konsinyasi {$cleanNota}";
+                    : 'KONSINYASI';
+                $cleanNota = trim(preg_replace('/\s+/', ' ', $cleanNota));
+                $filename = "Faktur Konsinyasi {$cleanNota} ({$dateFormatted})";
             } else {
                 $cleanKunj = !empty($visit['nomor_kunjungan'])
                     ? preg_replace('/[^A-Za-z0-9]/', ' ', (string)$visit['nomor_kunjungan'])
-                    : 'OPNAME ' . date('Ymd His');
-                $filename = "Berita Acara Opname {$cleanKunj}";
+                    : 'KUNJUNGAN';
+                $cleanKunj = trim(preg_replace('/\s+/', ' ', $cleanKunj));
+                $filename = "Berita Acara Opname {$cleanKunj} ({$dateFormatted})";
             }
 
             PrintDocumentHelper::downloadPdf($html, $filename, $format);
@@ -2499,8 +2506,8 @@ class ConsignmentController extends Controller
             }
 
             $rows[] = ['', '', '', '', '', '', '', 'GRAND TOTAL:', $totTotal, $totBayar, $totDiskon, $totSisa, ''];
-
-            ExcelExport::download("Tagihan Konsinyasi " . date('Ymd') . ".xlsx", $headers, $rows, "Tagihan Konsinyasi");
+            $dateFormatted = Format::tanggal(date('Y-m-d'), false, true);
+            ExcelExport::download("Tagihan Konsinyasi ({$dateFormatted}).xlsx", $headers, $rows, "Tagihan Konsinyasi");
         } catch (Throwable $e) {
             $this->flashError('Gagal export tagihan konsinyasi: ' . $e->getMessage());
             $this->redirect('/consignment/tagihan');
@@ -3227,7 +3234,8 @@ class ConsignmentController extends Controller
                     ];
                 }
                 $rows[] = ['', '', '', '', '', '', 'TOTAL BARANG HILANG GANTUNG:', $totalPcs, 'pcs', 'TOTAL ESTIMASI HPP:', $totalRp, ''];
-                \App\Helpers\ExcelExport::download("Laporan Barang Hilang Gantung " . date('Ymd') . ".xlsx", $headers, $rows, "Barang Hilang");
+                $dateFormatted = Format::tanggal(date('Y-m-d'), false, true);
+                \App\Helpers\ExcelExport::download("Laporan Barang Hilang Gantung ({$dateFormatted}).xlsx", $headers, $rows, "Barang Hilang");
                 return;
             }
 
@@ -3286,9 +3294,8 @@ class ConsignmentController extends Controller
 
             $rows[] = ['', '', '', '', '', '', '', 'TOTAL RETUR RUSAK:', $totalPcs, 'pcs', 'TOTAL VALUASI KERUGIAN:', $totalRp];
 
-            $cleanStart = str_replace('-', ' ', $startDate);
-            $cleanEnd = str_replace('-', ' ', $endDate);
-            \App\Helpers\ExcelExport::download("Laporan Kerugian Rusak {$cleanStart} sd {$cleanEnd}.xlsx", $headers, $rows, "Kerugian Rusak");
+            $dateRange = Format::tanggal($startDate, false, true) . ' sd ' . Format::tanggal($endDate, false, true);
+            \App\Helpers\ExcelExport::download("Laporan Kerugian Rusak ({$dateRange}).xlsx", $headers, $rows, "Kerugian Rusak");
 
         } catch (Throwable $e) {
             $this->flashError('Gagal export laporan kerugian: ' . $e->getMessage());
@@ -3580,9 +3587,8 @@ class ConsignmentController extends Controller
 
             $rows[] = ['', '', '', 'GRAND TOTAL:', '', $grandTotal, '', '100%', ''];
 
-            $cleanStart = str_replace('-', ' ', $startDate);
-            $cleanEnd = str_replace('-', ' ', $endDate);
-            ExcelExport::download("Laporan Penjualan KPI Toko {$cleanStart} sd {$cleanEnd}.xlsx", $headers, $rows, "KPI Penjualan Toko");
+            $dateRange = Format::tanggal($startDate, false, true) . ' sd ' . Format::tanggal($endDate, false, true);
+            ExcelExport::download("Laporan Penjualan KPI Toko ({$dateRange}).xlsx", $headers, $rows, "KPI Penjualan Toko");
         } catch (Throwable $e) {
             $this->flashError('Gagal export laporan penjualan: ' . $e->getMessage());
             $this->redirect('/consignment/laporan-penjualan');
