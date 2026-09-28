@@ -270,6 +270,12 @@ class TestRunnerService
             'category'    => 'Documentation & SOP',
             'description' => 'Validasi portal buku panduan mandiri (/guide), 10 bab operasional, Table of Contents sticky, deep links, dan eliminasi modal lama.'
         ],
+        'developer_dashboard_active_users' => [
+            'file'        => 'DeveloperDashboardActiveUsersTest.php',
+            'title'       => 'Developer Dashboard Active Users Presence & Status',
+            'category'    => 'Dashboard & Presence',
+            'description' => 'Validasi card Pengguna Aktif Saat Ini: nama lengkap, jam login, status online/offline, dan filter offline 5 menit.'
+        ],
     ];
 
     // -------------------------------------------------------------------------

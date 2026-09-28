@@ -432,47 +432,134 @@ class DashboardController extends Controller
                 ? count(\App\Services\TestRunnerService::SUITES) 
                 : 27;
 
-            // Pengguna Aktif Terkini (Active Users in last 5 minutes via audit logs)
-            $activeUsers = Database::fetchAll("
-                SELECT DISTINCT ON (COALESCE(la.pengguna_id::text, p.id::text, la.nama_aktor))
-                    COALESCE(p.nama_lengkap, la.nama_aktor, 'Pengguna') as nama_lengkap,
-                    COALESCE(pr.nama_peran, la.peran_aktor, p.posisi, 'user') as peran,
-                    p.nama_pengguna,
-                    la.jenis_aksi,
-                    la.deskripsi_aktivitas,
-                    la.waktu_kejadian,
-                    ROUND(EXTRACT(EPOCH FROM (NOW() - la.waktu_kejadian))) as detik_lalu
-                FROM public.log_aktivitas la
-                LEFT JOIN public.pengguna p ON p.id = la.pengguna_id
-                LEFT JOIN public.peran pr ON pr.id = p.peran_id
-                WHERE la.waktu_kejadian >= NOW() - INTERVAL '5 minutes'
-                ORDER BY COALESCE(la.pengguna_id::text, p.id::text, la.nama_aktor), la.waktu_kejadian DESC
-                LIMIT 6
-            ");
-
-            // Pastikan sesi pengguna saat ini yang sedang aktif selalu terdaftar
+            // Pengguna Aktif & Riwayat Sesi Terkini (Active & Recently Offline Users)
             $currentUser = Auth::user();
-            if ($currentUser && !empty($currentUser['nama_lengkap'])) {
-                $alreadyListed = false;
-                foreach ($activeUsers as $u) {
-                    if (strcasecmp((string)($u['nama_lengkap'] ?? ''), (string)$currentUser['nama_lengkap']) === 0
-                        || (!empty($u['nama_pengguna']) && !empty($currentUser['nama_pengguna']) && strcasecmp((string)$u['nama_pengguna'], (string)$currentUser['nama_pengguna']) === 0)) {
-                        $alreadyListed = true;
-                        break;
-                    }
+            $currentUserId = $currentUser['id'] ?? null;
+            $currentUserName = $currentUser['nama_lengkap'] ?? null;
+
+            $sql = "
+                WITH latest_logins AS (
+                    SELECT DISTINCT ON (la.pengguna_id)
+                        la.pengguna_id,
+                        COALESCE(p.nama_lengkap, la.nama_aktor) as nama_lengkap,
+                        p.nama_pengguna,
+                        COALESCE(pr.nama_peran, la.peran_aktor, p.posisi, 'user') as peran,
+                        la.waktu_kejadian as waktu_login
+                    FROM public.log_aktivitas la
+                    JOIN public.pengguna p ON p.id = la.pengguna_id
+                    LEFT JOIN public.peran pr ON pr.id = p.peran_id
+                    WHERE la.jenis_aksi = 'LOGIN'
+                      AND p.status_aktif = TRUE
+                    ORDER BY la.pengguna_id, la.waktu_kejadian DESC
+                ),
+                latest_logouts AS (
+                    SELECT DISTINCT ON (la.pengguna_id)
+                        la.pengguna_id,
+                        la.jenis_aksi as jenis_logout,
+                        la.waktu_kejadian as waktu_logout
+                    FROM public.log_aktivitas la
+                    WHERE la.pengguna_id IS NOT NULL
+                      AND la.jenis_aksi IN ('LOGOUT', 'LOGOUT_TIMEOUT')
+                    ORDER BY la.pengguna_id, la.waktu_kejadian DESC
+                ),
+                latest_activities AS (
+                    SELECT 
+                        la.pengguna_id,
+                        MAX(la.waktu_kejadian) as waktu_aktivitas_terakhir
+                    FROM public.log_aktivitas la
+                    WHERE la.pengguna_id IS NOT NULL
+                    GROUP BY la.pengguna_id
+                )
+                SELECT 
+                    ll.pengguna_id,
+                    ll.nama_lengkap,
+                    ll.nama_pengguna,
+                    ll.peran,
+                    ll.waktu_login,
+                    lo.waktu_logout,
+                    lo.jenis_logout,
+                    la.waktu_aktivitas_terakhir,
+                    CASE 
+                        -- Jika ada logout manual atau otomatis setelah login -> offline
+                        WHEN lo.waktu_logout IS NOT NULL AND lo.waktu_logout >= ll.waktu_login THEN 'offline'
+                        -- Jika tidak ada aktivitas lebih dari 1 jam (inactivity timeout) -> offline
+                        WHEN la.waktu_aktivitas_terakhir IS NOT NULL AND la.waktu_aktivitas_terakhir < (NOW() - INTERVAL '1 hour') AND ll.waktu_login < (NOW() - INTERVAL '1 hour') THEN 'offline'
+                        ELSE 'online'
+                    END as status,
+                    CASE 
+                        WHEN lo.waktu_logout IS NOT NULL AND lo.waktu_logout >= ll.waktu_login 
+                            THEN ROUND(EXTRACT(EPOCH FROM (NOW() - lo.waktu_logout)))
+                        WHEN la.waktu_aktivitas_terakhir IS NOT NULL AND la.waktu_aktivitas_terakhir < (NOW() - INTERVAL '1 hour') 
+                            THEN ROUND(EXTRACT(EPOCH FROM (NOW() - (la.waktu_aktivitas_terakhir + INTERVAL '1 hour'))))
+                        ELSE 0
+                    END as detik_offline
+                FROM latest_logins ll
+                LEFT JOIN latest_logouts lo ON lo.pengguna_id = ll.pengguna_id
+                LEFT JOIN latest_activities la ON la.pengguna_id = ll.pengguna_id
+                ORDER BY ll.waktu_login DESC
+            ";
+
+            $rawUsers = Database::fetchAll($sql);
+            $activeUsers = [];
+            $seenIds = [];
+
+            foreach ($rawUsers as $row) {
+                $uid = (string)$row['pengguna_id'];
+                $isCurrent = ($currentUserId && $uid === (string)$currentUserId);
+                $status = $isCurrent ? 'online' : ($row['status'] ?? 'offline');
+                $detikOffline = (int)($row['detik_offline'] ?? 0);
+
+                // Aturan: Jika offline lebih dari 5 menit (300 detik), hapus dari tampilan card
+                if ($status === 'offline' && $detikOffline > 300) {
+                    continue;
                 }
-                if (!$alreadyListed) {
-                    array_unshift($activeUsers, [
-                        'nama_lengkap'        => $currentUser['nama_lengkap'],
-                        'peran'               => $currentUser['peran'] ?? 'developer',
-                        'nama_pengguna'       => $currentUser['nama_pengguna'] ?? '',
-                        'jenis_aksi'          => 'ONLINE',
-                        'deskripsi_aktivitas' => 'Sedang aktif mengakses sistem',
-                        'waktu_kejadian'      => date('Y-m-d H:i:s'),
-                        'detik_lalu'          => 0
-                    ]);
+
+                $waktuLoginTs = !empty($row['waktu_login']) ? strtotime((string)$row['waktu_login']) : time();
+                $jamLogin = date('H:i', $waktuLoginTs) . ' WIB';
+
+                $jamLogout = null;
+                if (!empty($row['waktu_logout'])) {
+                    $jamLogout = date('H:i', strtotime((string)$row['waktu_logout'])) . ' WIB';
+                } elseif ($status === 'offline' && !empty($row['waktu_aktivitas_terakhir'])) {
+                    $jamLogout = date('H:i', strtotime((string)$row['waktu_aktivitas_terakhir']) + 3600) . ' WIB';
                 }
+
+                $activeUsers[] = [
+                    'pengguna_id'   => $uid,
+                    'nama_lengkap'  => $row['nama_lengkap'],
+                    'nama_pengguna' => $row['nama_pengguna'] ?? '',
+                    'peran'         => $row['peran'] ?? 'user',
+                    'status'        => $status, // 'online' | 'offline'
+                    'waktu_login'   => $row['waktu_login'],
+                    'jam_login'     => $jamLogin,
+                    'waktu_logout'  => $row['waktu_logout'] ?? null,
+                    'jam_logout'    => $jamLogout,
+                    'detik_offline' => $detikOffline,
+                    'is_current'    => $isCurrent
+                ];
+                $seenIds[$uid] = true;
             }
+
+            // Pastikan sesi pengguna saat ini yang sedang aktif selalu terdaftar sebagai Online
+            if ($currentUserId && !isset($seenIds[(string)$currentUserId]) && !empty($currentUserName)) {
+                $loginTs = isset($_SESSION['login_time']) ? (int)$_SESSION['login_time'] : time();
+                array_unshift($activeUsers, [
+                    'pengguna_id'   => (string)$currentUserId,
+                    'nama_lengkap'  => $currentUserName,
+                    'nama_pengguna' => $currentUser['nama_pengguna'] ?? '',
+                    'peran'         => $currentUser['peran'] ?? 'developer',
+                    'status'        => 'online',
+                    'waktu_login'   => date('Y-m-d H:i:s', $loginTs),
+                    'jam_login'     => date('H:i', $loginTs) . ' WIB',
+                    'waktu_logout'  => null,
+                    'jam_logout'    => null,
+                    'detik_offline' => 0,
+                    'is_current'    => true
+                ]);
+            }
+
+            // Hitung total pengguna online
+            $onlineUsersCount = count(array_filter($activeUsers, fn($u) => ($u['status'] ?? '') === 'online'));
 
             // 8 Log Aktivitas Terbaru
             $recentLogs = Database::fetchAll("
@@ -490,6 +577,7 @@ class DashboardController extends Controller
                 'permissionsCount' => $permissionsCount,
                 'testSuitesCount'  => $testSuitesCount,
                 'activeUsers'      => $activeUsers,
+                'onlineUsersCount' => $onlineUsersCount,
                 'recentLogs'       => $recentLogs
             ];
         } catch (Throwable $e) {
@@ -502,6 +590,7 @@ class DashboardController extends Controller
                 'permissionsCount' => 71,
                 'testSuitesCount'  => 27,
                 'activeUsers'      => [],
+                'onlineUsersCount' => 0,
                 'recentLogs'       => []
             ];
         }

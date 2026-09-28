@@ -16,6 +16,7 @@ $rolesCount = (int)($roleData['rolesCount'] ?? 6);
 $permissionsCount = (int)($roleData['permissionsCount'] ?? 71);
 $testSuitesCount = (int)($roleData['testSuitesCount'] ?? 27);
 $activeUsers = $roleData['activeUsers'] ?? [];
+$onlineUsersCount = (int)($roleData['onlineUsersCount'] ?? count(array_filter($activeUsers, fn($u) => ($u['status'] ?? '') === 'online')));
 $recentLogs = $roleData['recentLogs'] ?? [];
 $isDev = (Auth::user()['peran'] ?? '') === 'developer';
 ?>
@@ -80,7 +81,7 @@ $isDev = (Auth::user()['peran'] ?? '') === 'developer';
                 <i data-lucide="users" style="width:14px;height:14px;color:#a855f7;flex-shrink:0;"></i>
             </div>
             <div class="font-mono" style="font-size:clamp(15px, 2.6vw, 22px);font-weight:900;color:#a855f7;line-height:1.2;">
-                <?= count($activeUsers) ?> <span style="font-size:12px;font-weight:700;color:var(--color-ink-mute);">Online</span>
+                <?= $onlineUsersCount ?> <span style="font-size:12px;font-weight:700;color:var(--color-ink-mute);">Online</span>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:10px;color:var(--color-ink-mute);padding-top:4px;border-top:1px dashed var(--color-hairline);">
                 <span class="truncate" style="color:var(--color-success);font-weight:700;display:inline-flex;align-items:center;gap:3px;">
@@ -101,45 +102,59 @@ $isDev = (Auth::user()['peran'] ?? '') === 'developer';
                     <i data-lucide="activity" style="width:16px;height:16px;"></i>
                 </div>
                 <div class="min-w-0 flex-1">
-                    <h3 style="font-size:12.5px;sm:font-size:13.5px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Pengguna Aktif Saat <span style="white-space:nowrap;">Ini<span class="badge badge-success font-mono text-[9px] flex-shrink-0 align-middle" style="padding:1px 6px;vertical-align:middle;margin-left:4px;"><span style="width:4px;height:4px;border-radius:50%;background:currentColor;display:inline-block;margin-right:2px;"></span><?= count($activeUsers) ?> ONLINE</span></span></h3>
+                    <h3 style="font-size:12.5px;sm:font-size:13.5px;font-weight:800;color:var(--color-ink);line-height:1.25;margin:0;">Pengguna Aktif Saat <span style="white-space:nowrap;">Ini<span class="badge badge-success font-mono text-[9px] flex-shrink-0 align-middle" style="padding:1px 6px;vertical-align:middle;margin-left:4px;"><span style="width:4px;height:4px;border-radius:50%;background:currentColor;display:inline-block;margin-right:2px;"></span><?= $onlineUsersCount ?> ONLINE</span></span></h3>
                 </div>
             </div>
-            <span style="font-size:10.5px;color:var(--color-ink-mute);">Sesi aktif dalam 5 menit terakhir</span>
+            <span style="font-size:10.5px;color:var(--color-ink-mute);">Status login &amp; sesi pengguna</span>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
             <?php if (empty($activeUsers)): ?>
                 <div class="col-span-full py-4 text-center text-xs text-muted" style="background:var(--color-canvas-soft);border-radius:12px;border:1px dashed var(--color-hairline);">
-                    Tidak ada aktivitas pengguna lain dalam 5 menit terakhir.
+                    Tidak ada aktivitas pengguna yang aktif saat ini.
                 </div>
             <?php else: ?>
-                <?php foreach ($activeUsers as $u): ?>
-                <div class="p-2.5 rounded-xl flex flex-col justify-between gap-1.5" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);transition:border-color 0.15s ease;">
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="flex items-center gap-2 min-w-0">
-                            <div style="position:relative;flex-shrink:0;">
-                                <div style="width:28px;height:28px;border-radius:50%;background:var(--color-canvas);border:1.5px solid var(--color-hairline);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;color:var(--color-primary);">
-                                    <?= strtoupper(substr($u['nama_lengkap'] ?? 'U', 0, 1)) ?>
-                                </div>
-                                <span style="position:absolute;bottom:-1px;right:-1px;width:8px;height:8px;border-radius:50%;background:var(--color-success);border:1.5px solid var(--color-canvas);"></span>
+                <?php foreach ($activeUsers as $u): 
+                    $isOnline = ($u['status'] ?? 'offline') === 'online';
+                    $jamLogin = $u['jam_login'] ?? (!empty($u['waktu_login']) ? date('H:i', strtotime((string)$u['waktu_login'])) . ' WIB' : '-');
+                    $jamLogout = $u['jam_logout'] ?? (!empty($u['waktu_logout']) ? date('H:i', strtotime((string)$u['waktu_logout'])) . ' WIB' : null);
+                ?>
+                <div class="p-3 rounded-xl flex items-center justify-between gap-3" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);transition:border-color 0.15s ease;">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div style="position:relative;flex-shrink:0;">
+                            <div style="width:34px;height:34px;border-radius:50%;background:var(--color-canvas);border:1.5px solid var(--color-hairline);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:var(--color-primary);">
+                                <?= strtoupper(substr($u['nama_lengkap'] ?? 'U', 0, 1)) ?>
                             </div>
-                            <div class="min-w-0">
-                                <strong class="text-xs truncate block" style="color:var(--color-ink);" title="<?= htmlspecialchars($u['nama_lengkap']) ?>"><?= htmlspecialchars($u['nama_lengkap']) ?></strong>
-                                <span class="badge badge-mono text-[8.5px] uppercase" style="padding:0px 4px;"><?= htmlspecialchars($u['peran'] ?? 'user') ?></span>
+                            <span style="position:absolute;bottom:-1px;right:-1px;width:9px;height:9px;border-radius:50%;background:<?= $isOnline ? 'var(--color-success)' : 'var(--color-ink-mute)' ?>;border:2px solid var(--color-canvas);"></span>
+                        </div>
+                        <div class="min-w-0">
+                            <strong class="text-xs font-bold truncate block" style="color:var(--color-ink);" title="<?= htmlspecialchars($u['nama_lengkap'] ?? '') ?>"><?= htmlspecialchars($u['nama_lengkap'] ?? '') ?></strong>
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[10.5px] text-muted font-mono" style="color:var(--color-ink-mute);">
+                                <span class="inline-flex items-center gap-1">
+                                    <i data-lucide="clock" style="width:11px;height:11px;opacity:0.7;"></i>
+                                    Login: <?= htmlspecialchars($jamLogin) ?>
+                                </span>
+                                <?php if (!$isOnline && !empty($jamLogout)): ?>
+                                <span class="inline-flex items-center gap-1" style="color:#ef4444;">
+                                    <i data-lucide="log-out" style="width:11px;height:11px;opacity:0.7;"></i>
+                                    Logout: <?= htmlspecialchars($jamLogout) ?>
+                                </span>
+                                <?php endif; ?>
                             </div>
                         </div>
-                        <span class="text-[9.5px] font-mono text-muted flex-shrink-0" style="background:var(--color-canvas);padding:1px 5px;border-radius:4px;border:1px solid var(--color-hairline);">
-                            <?php
-                            $detik = (int)($u['detik_lalu'] ?? 0);
-                            if ($detik < 60) echo 'Baru saja';
-                            elseif ($detik < 3600) echo floor($detik / 60) . 'm lalu';
-                            elseif ($detik < 86400) echo floor($detik / 3600) . 'j lalu';
-                            else echo floor($detik / 86400) . 'h lalu';
-                            ?>
-                        </span>
                     </div>
-                    <div class="text-[10.5px] text-muted line-clamp-1" style="line-height:1.3;" title="<?= htmlspecialchars($u['deskripsi_aktivitas'] ?? '') ?>">
-                        <span class="font-semibold text-primary"><?= htmlspecialchars($u['jenis_aksi'] ?? 'AKTIF') ?></span>: <?= htmlspecialchars($u['deskripsi_aktivitas'] ?? '') ?>
+                    <div class="flex-shrink-0">
+                        <?php if ($isOnline): ?>
+                            <span class="badge badge-success font-mono text-[9.5px] font-bold inline-flex items-center gap-1" style="padding:2px 7px;">
+                                <span style="width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block;"></span>
+                                Online
+                            </span>
+                        <?php else: ?>
+                            <span class="badge badge-slate font-mono text-[9.5px] font-medium inline-flex items-center gap-1" style="padding:2px 7px;background:var(--color-canvas);border:1px solid var(--color-hairline);color:var(--color-ink-mute);">
+                                <span style="width:5px;height:5px;border-radius:50%;background:var(--color-ink-mute);display:inline-block;"></span>
+                                Offline
+                            </span>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
