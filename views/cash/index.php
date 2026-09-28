@@ -279,66 +279,79 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can('cash.manage_accounts')): ?>
     <template x-teleport="body">
-    <div x-show="showAccountModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
-            <div class="modal-header">
-                <div class="modal-title" x-text="isEditAccount ? 'Edit Akun Kas / Bank' : 'Tambah Akun Kas / Bank Baru'"></div>
+    <div x-show="showAccountModal" x-cloak class="modal-backdrop" @click="showAccountModal = false">
+        <div class="modal-box modal-box-md" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form :action="isEditAccount ? '<?= Router::url('/cash/update-account') ?>' : '<?= Router::url('/cash/store-account') ?>'" method="POST" style="display:flex;flex-direction:column;gap:14px;">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div class="modal-title" x-text="isEditAccount ? 'Edit Akun Kas / Bank' : 'Tambah Akun Kas / Bank Baru'"></div>
+                <button type="button" @click="showAccountModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form :action="isEditAccount ? '<?= Router::url('/cash/update-account') ?>' : '<?= Router::url('/cash/store-account') ?>'" method="POST" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
                 <input type="hidden" name="id" :value="accountForm.id">
 
-                <div>
-                    <label class="form-label">Nama Akun Kas / Bank *</label>
-                    <input type="text" name="nama_akun" x-model="accountForm.nama_akun" required class="form-input" placeholder="Contoh: BCA Bisnis KEREN Snack">
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Modal Body -->
+                <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
                     <div>
-                        <label class="form-label">Tipe Akun Kas *</label>
-                        <select name="tipe_akun" x-model="accountForm.tipe_akun" required class="form-input font-semibold">
-                            <option value="kas_tunai">💵 Kas Tunai (Laci / Toko)</option>
-                            <option value="qris">📱 QRIS / E-Wallet (Digital)</option>
-                            <option value="bank">🏦 Rekening Bank (Transfer)</option>
-                            <option value="kas_operasional">💼 Kas Operasional (Petty Cash)</option>
-                        </select>
+                        <label class="form-label">Nama Akun Kas / Bank *</label>
+                        <input type="text" name="nama_akun" x-model="accountForm.nama_akun" required class="form-input" placeholder="Contoh: BCA Bisnis KEREN Snack">
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Tipe Akun Kas *</label>
+                            <select name="tipe_akun" x-model="accountForm.tipe_akun" required class="form-input font-semibold">
+                                <option value="kas_tunai">💵 Kas Tunai (Laci / Toko)</option>
+                                <option value="qris">📱 QRIS / E-Wallet (Digital)</option>
+                                <option value="bank">🏦 Rekening Bank (Transfer)</option>
+                                <option value="kas_operasional">💼 Kas Operasional (Petty Cash)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Nomor Rekening (Jika Bank)</label>
+                            <input type="text" name="nomor_rekening" x-model="accountForm.nomor_rekening" class="form-input font-mono" placeholder="1234567890">
+                        </div>
                     </div>
 
                     <div>
-                        <label class="form-label">Nomor Rekening (Jika Bank)</label>
-                        <input type="text" name="nomor_rekening" x-model="accountForm.nomor_rekening" class="form-input font-mono" placeholder="1234567890">
+                        <label class="form-label">Atas Nama Rekening</label>
+                        <input type="text" name="atas_nama" x-model="accountForm.atas_nama" class="form-input" placeholder="Contoh: Owner KEREN Snack">
                     </div>
-                </div>
 
-                <div>
-                    <label class="form-label">Atas Nama Rekening</label>
-                    <input type="text" name="atas_nama" x-model="accountForm.atas_nama" class="form-input" placeholder="Contoh: Owner KEREN Snack">
-                </div>
-
-                <template x-if="!isEditAccount">
-                    <div>
-                        <label class="form-label">Saldo Awal (Rp)</label>
-                        <input type="text" name="saldo_awal" x-model="accountForm.saldo_awal" class="form-input font-mono input-rupiah" placeholder="0">
-                        <span style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;display:block;">Saldo awal akan otomatis dicatat sebagai voucher kas masuk modal awal resmi.</span>
-                    </div>
-                </template>
-
-                <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px;">
-                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
-                        <input type="checkbox" name="is_default_pos" x-model="accountForm.is_default_pos" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                        <span>Gunakan sebagai Default Kasir POS (Penerimaan Penjualan)</span>
-                    </label>
-
-                    <template x-if="isEditAccount">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
-                            <input type="checkbox" name="status_aktif" x-model="accountForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                            <span>Status Akun Aktif</span>
-                        </label>
+                    <template x-if="!isEditAccount">
+                        <div>
+                            <label class="form-label">Saldo Awal (Rp)</label>
+                            <input type="text" name="saldo_awal" x-model="accountForm.saldo_awal" class="form-input font-mono input-rupiah" placeholder="0">
+                            <span style="font-size:11px;color:var(--color-ink-mute);margin-top:3px;display:block;">Saldo awal akan otomatis dicatat sebagai voucher kas masuk modal awal resmi.</span>
+                        </div>
                     </template>
+
+                    <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
+                            <input type="checkbox" name="is_default_pos" x-model="accountForm.is_default_pos" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                            <span>Gunakan sebagai Default Kasir POS (Penerimaan Penjualan)</span>
+                        </label>
+
+                        <template x-if="isEditAccount">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
+                                <input type="checkbox" name="status_aktif" x-model="accountForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                                <span>Status Akun Aktif</span>
+                            </label>
+                        </template>
+                    </div>
                 </div>
 
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showAccountModal = false" class="btn btn-secondary">Batal</button>
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" @click="showAccountModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
                     <button type="submit" class="btn btn-primary">
                         <i data-lucide="save"></i>
                         <span x-text="isEditAccount ? 'Simpan Perubahan' : 'Tambah Akun'"></span>
@@ -353,8 +366,14 @@ ob_start();
     <!-- MODAL 2: KONFIRMASI HAPUS AKUN KAS                                        -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDeleteModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:420px;padding:24px;" @click.stop>
+    <div x-show="showDeleteModal" x-cloak class="modal-backdrop" @click="showDeleteModal = false">
+        <div class="modal-box modal-box-sm" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
+            </div>
+
+            <!-- Modal Header -->
             <div class="modal-header">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <div style="width:32px;height:32px;border-radius:var(--rounded-md);background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;">
@@ -362,20 +381,30 @@ ob_start();
                     </div>
                     <div class="modal-title">Hapus Akun Kas</div>
                 </div>
+                <button type="button" @click="showDeleteModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <p style="font-size:13px; color:var(--color-ink); line-height:1.5;">
-                Apakah Anda yakin ingin menghapus akun <strong x-text="deleteAccountData.nama_akun"></strong> secara permanen?
-                <br><span style="font-size:11.5px; color:var(--color-ink-mute);">Akun ini belum memiliki transaksi mutasi di buku besar. Tindakan ini tidak dapat dibatalkan.</span>
-            </p>
-
-            <form action="<?= Router::url('/cash/delete-account') ?>" method="POST" style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+            <form action="<?= Router::url('/cash/delete-account') ?>" method="POST" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
                 <input type="hidden" name="id" :value="deleteAccountData.id">
-                <button type="button" @click="showDeleteModal = false" class="btn btn-secondary">Batal</button>
-                <button type="submit" class="btn btn-danger" style="background:#ef4444; color:#fff;">
-                    <i data-lucide="trash-2"></i>
-                    <span>Ya, Hapus Akun</span>
-                </button>
+
+                <!-- Modal Body -->
+                <div class="modal-body custom-scrollbar">
+                    <p style="font-size:13px; color:var(--color-ink); line-height:1.5; margin:0;">
+                        Apakah Anda yakin ingin menghapus akun <strong x-text="deleteAccountData.nama_akun"></strong> secara permanen?
+                        <br><span style="font-size:11.5px; color:var(--color-ink-mute); display:block; margin-top:6px;">Akun ini belum memiliki transaksi mutasi di buku besar. Tindakan ini tidak dapat dibatalkan.</span>
+                    </p>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" @click="showDeleteModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-danger" style="background:#ef4444; color:#fff;">
+                        <i data-lucide="trash-2"></i>
+                        <span>Ya, Hapus Akun</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>

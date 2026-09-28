@@ -316,78 +316,89 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
     <!-- MODAL 1: OPNAME TUNGGAL                                                   -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showAdjustModal" x-cloak class="modal-backdrop">
-        <div class="modal-box">
+    <div x-show="showAdjustModal" x-cloak class="modal-backdrop" @click="showAdjustModal = false">
+        <div class="modal-box" style="max-width:520px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title">Penyesuaian Stok (Opname Tunggal)</div>
-                    <div style="font-size:11px; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;"
-                         x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="sliders" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Penyesuaian Stok (Opname Tunggal)</div>
+                        <div style="font-size:12px; font-family:var(--font-mono); color:var(--color-primary); margin-top:1px;"
+                             x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
+                    </div>
                 </div>
+                <button type="button" @click="showAdjustModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form action="<?= Router::url('/inventory/adjust') ?>" method="POST" data-action-text="Menyimpan penyesuaian stok..." style="display:flex;flex-direction:column;gap:14px; padding:18px 22px;">
-                <?= \App\Helpers\CSRF::field() ?>
-                <input type="hidden" name="item_id" :value="selectedItem.id">
+            <form action="<?= Router::url('/inventory/adjust') ?>" method="POST" data-action-text="Menyimpan penyesuaian stok...">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="item_id" :value="selectedItem.id">
 
-                <div style="padding:10px 12px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-radius:10px; display:flex; align-items:center; justify-content:space-between;">
-                    <span style="font-size:12px; color:var(--color-ink-mute);">Stok Fisik Saat Ini:</span>
-                    <strong class="font-mono" style="font-size:14px;" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
-                </div>
-
-                <div>
-                    <label class="form-label font-semibold">Jenis Penyesuaian</label>
-                    <select name="tipe_penyesuaian" x-model="adjustType" class="form-select">
-                        <option value="opname_lebih">Opname Lebih (Tambah Stok Masuk)</option>
-                        <option value="opname_hilang">Opname Hilang / Selisih Fisik (Potong Stok Keluar)</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="form-label font-semibold">Jumlah Kuantitas Penyesuaian *</label>
-                    <input type="number" step="any" name="kuantitas" x-model="adjustQty" @wheel="$event.target.blur()" required min="0.0001" placeholder="Masukkan jumlah selisih pcs..."
-                           class="form-input font-mono" style="font-weight:700;">
-                </div>
-
-                <!-- Live Calculation Preview -->
-                <div style="padding:10px 14px; background:rgba(99,102,241,0.06); border:1px dashed var(--color-primary); border-radius:10px; display:flex; flex-direction:column; gap:4px;">
-                    <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--color-ink-mute);">
-                        <span>Stok Sistem Saat Ini:</span>
-                        <span class="font-mono" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+                    <div style="padding:10px 12px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-radius:10px; display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-size:12px; color:var(--color-ink-mute);">Stok Fisik Saat Ini:</span>
+                        <strong class="font-mono" style="font-size:14px;" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--color-ink-mute);">
-                        <span>Perubahan Mutasi:</span>
-                        <span class="font-mono" :style="adjustType === 'opname_lebih' ? 'color:#059669; font-weight:700;' : 'color:#dc2626; font-weight:700;'"
-                              x-text="(adjustType === 'opname_lebih' ? '+' : '-') + (adjustQty || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+
+                    <div>
+                        <label class="form-label font-semibold">Jenis Penyesuaian</label>
+                        <select name="tipe_penyesuaian" x-model="adjustType" class="form-select">
+                            <option value="opname_lebih">Opname Lebih (Tambah Stok Masuk)</option>
+                            <option value="opname_hilang">Opname Hilang / Selisih Fisik (Potong Stok Keluar)</option>
+                        </select>
                     </div>
-                    <div style="height:1px; background:var(--color-hairline); margin:2px 0;"></div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:12.5px; font-weight:700; color:var(--color-ink);">Estimasi Stok Baru:</span>
-                        <strong class="font-mono" style="font-size:14.5px; color:var(--color-primary);"
-                                x-text="calculateAdjustPreview() + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
+
+                    <div>
+                        <label class="form-label font-semibold">Jumlah Kuantitas Penyesuaian *</label>
+                        <input type="number" step="any" name="kuantitas" x-model="adjustQty" @wheel="$event.target.blur()" required min="0.0001" placeholder="Masukkan jumlah selisih pcs..."
+                               class="form-input font-mono" style="font-weight:700;">
+                    </div>
+
+                    <!-- Live Calculation Preview -->
+                    <div style="padding:10px 14px; background:rgba(99,102,241,0.06); border:1px dashed var(--color-primary); border-radius:10px; display:flex; flex-direction:column; gap:4px;">
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--color-ink-mute);">
+                            <span>Stok Sistem Saat Ini:</span>
+                            <span class="font-mono" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--color-ink-mute);">
+                            <span>Perubahan Mutasi:</span>
+                            <span class="font-mono" :style="adjustType === 'opname_lebih' ? 'color:#059669; font-weight:700;' : 'color:#dc2626; font-weight:700;'"
+                                  x-text="(adjustType === 'opname_lebih' ? '+' : '-') + (adjustQty || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+                        </div>
+                        <div style="height:1px; background:var(--color-hairline); margin:2px 0;"></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:12.5px; font-weight:700; color:var(--color-ink);">Estimasi Stok Baru:</span>
+                            <strong class="font-mono" style="font-size:14.5px; color:var(--color-primary);"
+                                    x-text="calculateAdjustPreview() + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
+                        </div>
+                    </div>
+
+                    <div x-show="adjustType === 'opname_hilang' && parseFloat(adjustQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
+                         style="padding:8px 12px; background:#fee2e2; border:1px solid #fecaca; border-radius:8px; font-size:12px; color:#b91c1c; font-weight:600; display:flex; align-items:center; gap:6px;">
+                        <i data-lucide="alert-triangle" style="width:14px; height:14px; flex-shrink:0;"></i>
+                        <span>Pengurangan opname melebihi sisa stok fisik saat ini!</span>
+                    </div>
+
+                    <div>
+                        <label class="form-label font-semibold">Catatan / Alasan *</label>
+                        <input type="text" name="alasan" required placeholder="Contoh: Hasil hitung fisik rak A2"
+                               class="form-input">
                     </div>
                 </div>
 
-                <div x-show="adjustType === 'opname_hilang' && parseFloat(adjustQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
-                     style="padding:8px 12px; background:#fee2e2; border:1px solid #fecaca; border-radius:8px; font-size:12px; color:#b91c1c; font-weight:600; display:flex; align-items:center; gap:6px;">
-                    <i data-lucide="alert-triangle" style="width:14px; height:14px; flex-shrink:0;"></i>
-                    <span>Pengurangan opname melebihi sisa stok fisik saat ini!</span>
-                </div>
-
-                <div>
-                    <label class="form-label font-semibold">Catatan / Alasan *</label>
-                    <input type="text" name="alasan" required placeholder="Contoh: Hasil hitung fisik rak A2"
-                           class="form-input">
-                </div>
-
-                <div style="display:flex; gap:8px; padding-top:4px;">
-                    <button type="button" @click="showAdjustModal = false" class="btn btn-secondary" style="flex:1; justify-content:center;">Batal</button>
-                    <button type="submit" class="btn btn-primary"
+                <div class="modal-footer">
+                    <button type="button" @click="showAdjustModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto"
                             :disabled="adjustType === 'opname_hilang' && parseFloat(adjustQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
                             :style="(adjustType === 'opname_hilang' && parseFloat(adjustQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)) ? 'opacity:0.5; cursor:not-allowed;' : ''"
-                            style="flex:1; justify-content:center; font-weight:700;">
-                        <i data-lucide="save"></i>
-                        Simpan Opname
+                            style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
+                        <span>Simpan Opname</span>
                     </button>
                 </div>
             </form>
@@ -399,81 +410,92 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
     <!-- MODAL 2: WASTE / BARANG RUSAK                                             -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showWasteModal" x-cloak class="modal-backdrop">
-        <div class="modal-box">
+    <div x-show="showWasteModal" x-cloak class="modal-backdrop" @click="showWasteModal = false">
+        <div class="modal-box" style="max-width:520px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title" style="color:#b91c1c;">Catat Barang Rusak / Waste</div>
-                    <div style="font-size:11px; font-family:var(--font-mono); color:#dc2626; margin-top:2px;"
-                         x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(239,68,68,0.12);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="trash-2" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" style="color:#b91c1c;">Catat Barang Rusak / Waste</div>
+                        <div style="font-size:12px; font-family:var(--font-mono); color:#dc2626; margin-top:1px;"
+                             x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
+                    </div>
                 </div>
+                <button type="button" @click="showWasteModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form action="<?= Router::url('/inventory/waste') ?>" method="POST" data-action-text="Mencatat barang rusak / waste..." style="display:flex;flex-direction:column;gap:14px; padding:18px 22px;">
-                <?= \App\Helpers\CSRF::field() ?>
-                <input type="hidden" name="item_id" :value="selectedItem.id">
+            <form action="<?= Router::url('/inventory/waste') ?>" method="POST" data-action-text="Mencatat barang rusak / waste...">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="item_id" :value="selectedItem.id">
 
-                <div style="padding:10px 12px; background:#fef2f2; border:1px solid #fee2e2; border-radius:10px; font-size:12px; color:#991b1b; display:flex; align-items:center; justify-content:space-between;">
-                    <span>Sisa Stok Fisik Saat Ini:</span>
-                    <strong class="font-mono" style="font-size:14px;" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
-                </div>
-
-                <div>
-                    <label class="form-label font-semibold">Kategori Kerusakan / Waste *</label>
-                    <select name="kategori_waste" class="form-select font-semibold" required>
-                        <option value="kemasan_rusak">Kemasan Rusak / Gagal Segel</option>
-                        <option value="remuk_hancur">Produk Remuk / Hancur</option>
-                        <option value="expired_kadaluarsa">Kadaluarsa / Expired</option>
-                        <option value="sampel_promosi">Sampel Uji Rasa / Promosi</option>
-                        <option value="lainnya">Lain-lain</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="form-label font-semibold">Jumlah Kuantitas Rusak / Dibuang *</label>
-                    <input type="number" step="any" name="kuantitas" x-model="wasteQty" @wheel="$event.target.blur()" required min="0.0001" :max="selectedItem.stok_fisik_saat_ini" placeholder="1"
-                           class="form-input font-mono" style="font-weight:700;">
-                </div>
-
-                <!-- Live Calculation Preview for Waste -->
-                <div style="padding:10px 14px; background:#fef2f2; border:1px dashed #f87171; border-radius:10px; display:flex; flex-direction:column; gap:4px;">
-                    <div style="display:flex; justify-content:space-between; font-size:12px; color:#991b1b;">
-                        <span>Sisa Stok Sebelum Waste:</span>
-                        <span class="font-mono" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+                    <div style="padding:10px 12px; background:#fef2f2; border:1px solid #fee2e2; border-radius:10px; font-size:12px; color:#991b1b; display:flex; align-items:center; justify-content:space-between;">
+                        <span>Sisa Stok Fisik Saat Ini:</span>
+                        <strong class="font-mono" style="font-size:14px;" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:12px; color:#991b1b;">
-                        <span>Pemotongan Waste (-):</span>
-                        <span class="font-mono" style="font-weight:700; color:#dc2626;"
-                              x-text="'-' + (wasteQty || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+
+                    <div>
+                        <label class="form-label font-semibold">Kategori Kerusakan / Waste *</label>
+                        <select name="kategori_waste" class="form-select font-semibold" required>
+                            <option value="kemasan_rusak">Kemasan Rusak / Gagal Segel</option>
+                            <option value="remuk_hancur">Produk Remuk / Hancur</option>
+                            <option value="expired_kadaluarsa">Kadaluarsa / Expired</option>
+                            <option value="sampel_promosi">Sampel Uji Rasa / Promosi</option>
+                            <option value="lainnya">Lain-lain</option>
+                        </select>
                     </div>
-                    <div style="height:1px; background:#fecaca; margin:2px 0;"></div>
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:12.5px; font-weight:700; color:#991b1b;">Estimasi Sisa Stok Akhir:</span>
-                        <strong class="font-mono" style="font-size:14.5px; color:#b91c1c;"
-                                x-text="calculateWastePreview() + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
+
+                    <div>
+                        <label class="form-label font-semibold">Jumlah Kuantitas Rusak / Dibuang *</label>
+                        <input type="number" step="any" name="kuantitas" x-model="wasteQty" @wheel="$event.target.blur()" required min="0.0001" :max="selectedItem.stok_fisik_saat_ini" placeholder="1"
+                               class="form-input font-mono" style="font-weight:700;">
+                    </div>
+
+                    <!-- Live Calculation Preview for Waste -->
+                    <div style="padding:10px 14px; background:#fef2f2; border:1px dashed #f87171; border-radius:10px; display:flex; flex-direction:column; gap:4px;">
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#991b1b;">
+                            <span>Sisa Stok Sebelum Waste:</span>
+                            <span class="font-mono" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#991b1b;">
+                            <span>Pemotongan Waste (-):</span>
+                            <span class="font-mono" style="font-weight:700; color:#dc2626;"
+                                  x-text="'-' + (wasteQty || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+                        </div>
+                        <div style="height:1px; background:#fecaca; margin:2px 0;"></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-size:12.5px; font-weight:700; color:#991b1b;">Estimasi Sisa Stok Akhir:</span>
+                            <strong class="font-mono" style="font-size:14.5px; color:#b91c1c;"
+                                    x-text="calculateWastePreview() + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
+                        </div>
+                    </div>
+
+                    <div x-show="parseFloat(wasteQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
+                         style="padding:8px 12px; background:#fee2e2; border:1px solid #fecaca; border-radius:8px; font-size:12px; color:#b91c1c; font-weight:600; display:flex; align-items:center; gap:6px;">
+                        <i data-lucide="alert-triangle" style="width:14px; height:14px; flex-shrink:0;"></i>
+                        <span>Jumlah waste melebihi sisa stok fisik saat ini!</span>
+                    </div>
+
+                    <div>
+                        <label class="form-label font-semibold">Keterangan / Kronologi *</label>
+                        <input type="text" name="keterangan" required placeholder="Contoh: Plastik bocor saat packing"
+                               class="form-input">
                     </div>
                 </div>
 
-                <div x-show="parseFloat(wasteQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
-                     style="padding:8px 12px; background:#fee2e2; border:1px solid #fecaca; border-radius:8px; font-size:12px; color:#b91c1c; font-weight:600; display:flex; align-items:center; gap:6px;">
-                    <i data-lucide="alert-triangle" style="width:14px; height:14px; flex-shrink:0;"></i>
-                    <span>Jumlah waste melebihi sisa stok fisik saat ini!</span>
-                </div>
-
-                <div>
-                    <label class="form-label font-semibold">Keterangan / Kronologi *</label>
-                    <input type="text" name="keterangan" required placeholder="Contoh: Plastik bocor saat packing"
-                           class="form-input">
-                </div>
-
-                <div style="display:flex; gap:8px; padding-top:4px;">
-                    <button type="button" @click="showWasteModal = false" class="btn btn-secondary" style="flex:1; justify-content:center;">Batal</button>
-                    <button type="submit" class="btn btn-danger-solid"
+                <div class="modal-footer">
+                    <button type="button" @click="showWasteModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-danger w-full sm:w-auto"
                             :disabled="parseFloat(wasteQty) <= 0 || parseFloat(wasteQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
                             :style="(parseFloat(wasteQty) <= 0 || parseFloat(wasteQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)) ? 'opacity:0.5; cursor:not-allowed;' : ''"
-                            style="flex:1; justify-content:center; background:#dc2626; color:#fff; font-weight:700;">
-                        <i data-lucide="trash-2"></i>
-                        Potong Stok Waste
+                            style="display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#dc2626;color:#fff;">
+                        <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+                        <span>Potong Stok Waste</span>
                     </button>
                 </div>
             </form>
@@ -485,17 +507,23 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
     <!-- MODAL 3: KARTU STOK & RIWAYAT MUTASI TERAKHIR                             -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showHistoryModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:760px; width:95%;">
+    <div x-show="showHistoryModal" x-cloak class="modal-backdrop" @click="showHistoryModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:760px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
-                        <i data-lucide="activity" style="color:var(--color-primary); width:18px; height:18px;"></i>
-                        <span>Kartu Stok &amp; Riwayat Mutasi</span>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="activity" style="width:20px;height:20px;"></i>
                     </div>
-                    <div style="font-size:12px; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;"
-                         x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Kartu Stok &amp; Riwayat Mutasi</div>
+                        <div style="font-size:12px; font-family:var(--font-mono); color:var(--color-primary); margin-top:1px;"
+                             x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
+                    </div>
                 </div>
+                <button type="button" @click="showHistoryModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
             <!-- Loading State -->
@@ -505,59 +533,61 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
             </div>
 
             <!-- Content State -->
-            <div x-show="!historyLoading" class="space-y-4" style="padding:16px 20px 20px 20px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--color-canvas-soft); border-radius:12px; border:1px solid var(--color-hairline);">
-                    <div>
-                        <div style="font-size:11px; color:var(--color-ink-mute); text-transform:uppercase; letter-spacing:0.04em;">Stok Fisik Gudang Saat Ini</div>
-                        <div style="font-size:18px; font-weight:800; font-family:var(--font-mono); color:var(--color-ink);"
-                             x-text="formatQty(selectedItem.stok_fisik_saat_ini) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></div>
+            <div x-show="!historyLoading">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--color-canvas-soft); border-radius:12px; border:1px solid var(--color-hairline);">
+                        <div>
+                            <div style="font-size:11px; color:var(--color-ink-mute); text-transform:uppercase; letter-spacing:0.04em;">Stok Fisik Gudang Saat Ini</div>
+                            <div style="font-size:18px; font-weight:800; font-family:var(--font-mono); color:var(--color-ink);"
+                                 x-text="formatQty(selectedItem.stok_fisik_saat_ini) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="badge badge-mono" x-text="selectedItem.barcode || selectedItem.barcode_universal || 'No Barcode'"></span>
+                        </div>
                     </div>
-                    <div style="text-align:right;">
-                        <span class="badge badge-mono" x-text="selectedItem.barcode || selectedItem.barcode_universal || 'No Barcode'"></span>
+
+                    <div class="table-wrapper" style="max-height:360px; overflow-y:auto; border-radius:10px;">
+                        <table class="data-table" style="font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th>Waktu &amp; Tanggal</th>
+                                    <th>Tipe Mutasi</th>
+                                    <th style="text-align:right;">Perubahan</th>
+                                    <th style="text-align:right;">Stok Akhir</th>
+                                    <th>Keterangan / Oleh</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="itemHistoryList.length === 0">
+                                    <tr>
+                                        <td colspan="5" style="text-align:center; padding:24px; color:var(--color-ink-mute);">
+                                            Belum ada riwayat mutasi tercatat untuk produk ini.
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-for="log in itemHistoryList" :key="log.id">
+                                    <tr>
+                                        <td style="font-family:var(--font-mono); font-size:11px; color:var(--color-ink-mute);" x-text="formatDate(log.dibuat_pada)"></td>
+                                        <td>
+                                            <span class="badge" :class="getMutationBadgeClass(log.tipe_mutasi)" x-text="formatMutationType(log.tipe_mutasi)"></span>
+                                        </td>
+                                        <td style="text-align:right; font-family:var(--font-mono); font-weight:700;"
+                                            :style="isStockIn(log.tipe_mutasi) ? 'color:#059669;' : 'color:#dc2626;'"
+                                            x-text="(isStockIn(log.tipe_mutasi) ? '+' : '-') + formatQty(log.jumlah_perubahan) + ' pcs'"></td>
+                                        <td style="text-align:right; font-family:var(--font-mono); color:var(--color-ink);" x-text="formatQty(log.stok_sesudah) + ' pcs'"></td>
+                                        <td>
+                                            <div style="font-size:11.5px; color:var(--color-ink);" x-text="log.keterangan || '—'"></div>
+                                            <div x-show="log.nama_user" style="font-size:10px; color:var(--color-ink-mute); font-style:italic;" x-text="'Oleh: ' + log.nama_user"></div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div class="table-wrapper" style="max-height:360px; overflow-y:auto; border-radius:10px;">
-                    <table class="data-table" style="font-size:12px;">
-                        <thead>
-                            <tr>
-                                <th>Waktu &amp; Tanggal</th>
-                                <th>Tipe Mutasi</th>
-                                <th style="text-align:right;">Perubahan</th>
-                                <th style="text-align:right;">Stok Akhir</th>
-                                <th>Keterangan / Oleh</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-if="itemHistoryList.length === 0">
-                                <tr>
-                                    <td colspan="5" style="text-align:center; padding:24px; color:var(--color-ink-mute);">
-                                        Belum ada riwayat mutasi tercatat untuk produk ini.
-                                    </td>
-                                </tr>
-                            </template>
-                            <template x-for="log in itemHistoryList" :key="log.id">
-                                <tr>
-                                    <td style="font-family:var(--font-mono); font-size:11px; color:var(--color-ink-mute);" x-text="formatDate(log.dibuat_pada)"></td>
-                                    <td>
-                                        <span class="badge" :class="getMutationBadgeClass(log.tipe_mutasi)" x-text="formatMutationType(log.tipe_mutasi)"></span>
-                                    </td>
-                                    <td style="text-align:right; font-family:var(--font-mono); font-weight:700;"
-                                        :style="isStockIn(log.tipe_mutasi) ? 'color:#059669;' : 'color:#dc2626;'"
-                                        x-text="(isStockIn(log.tipe_mutasi) ? '+' : '-') + formatQty(log.jumlah_perubahan) + ' pcs'"></td>
-                                    <td style="text-align:right; font-family:var(--font-mono); color:var(--color-ink);" x-text="formatQty(log.stok_sesudah) + ' pcs'"></td>
-                                    <td>
-                                        <div style="font-size:11.5px; color:var(--color-ink);" x-text="log.keterangan || '—'"></div>
-                                        <div x-show="log.nama_user" style="font-size:10px; color:var(--color-ink-mute); font-style:italic;" x-text="'Oleh: ' + log.nama_user"></div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="text-align:right; padding-top:4px;">
-                    <button type="button" @click="showHistoryModal = false" class="btn btn-secondary">Tutup</button>
+                <div class="modal-footer">
+                    <button type="button" @click="showHistoryModal = false" class="btn btn-secondary w-full sm:w-auto">Tutup</button>
                 </div>
             </div>
         </div>

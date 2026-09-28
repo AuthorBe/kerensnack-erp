@@ -588,32 +588,46 @@ ob_start();
     <!-- 6. MODAL RINCIAN VALUASI KAS PERSEDIAAN (HPP POPUP)                       -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showHppModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:540px;width:92vw;padding:20px;" @click.stop>
-            <div class="modal-header">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:32px;height:32px;border-radius:var(--rounded-md);background:rgba(59,130,246,0.1);color:#3b82f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="boxes" style="width:16px;height:16px;"></i>
-                    </div>
-                    <div>
-                        <div class="modal-title" style="font-size:14px;font-weight:800;">Rincian Valuasi Kas Persediaan</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);">Kalkulasi Berdasarkan Harga Pokok Pembelian (HPP) Murni</div>
-                    </div>
-                </div>
+    <!-- ========================================================================= -->
+    <!-- 6. MODAL RINCIAN VALUASI KAS PERSEDIAAN (HPP POPUP)                       -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="showHppModal" x-cloak class="modal-backdrop" @click="showHppModal = false">
+        <div class="modal-box modal-box-md" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:12px;margin-top:12px;">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.12);color:#3b82f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="boxes" style="width:18px;height:18px;"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <div class="modal-title">Rincian Valuasi Kas Persediaan</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Kalkulasi Berdasarkan Harga Pokok Pembelian (HPP) Murni</div>
+                    </div>
+                </div>
+                <button type="button" @click="showHppModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:12px;">
                 <!-- Formula Card -->
-                <div style="padding:10px 12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);font-size:11px;line-height:1.5;">
+                <div style="padding:12px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:12px;font-size:11.5px;line-height:1.5;">
                     💡 <strong>Rumus Akuntansi:</strong><br>
-                    <code>Kas Persediaan = ∑ (Stok Fisik di Gudang × HPP Beli)</code><br>
+                    <code style="font-size:11px;">Kas Persediaan = ∑ (Stok Fisik di Gudang × HPP Beli)</code><br>
                     <span style="color:var(--color-ink-mute);">Mencerminkan nilai uang modal usaha yang saat ini berwujud persediaan fisik di gudang.</span>
                 </div>
 
                 <!-- 3 Category Breakdown -->
                 <div class="space-y-2">
                     <!-- 1. Bahan Mentah -->
-                    <div style="padding:10px 12px;border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--color-canvas);">
+                    <div style="padding:11px 14px;border:1px solid var(--color-hairline);border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--color-canvas);">
                         <div style="min-width:0;flex:1;">
                             <div style="font-weight:700;font-size:12px;color:var(--color-ink);">1. Bahan Mentah Curah (Bal / Kg)</div>
                             <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">
@@ -629,7 +643,7 @@ ob_start();
                     </div>
 
                     <!-- 2. Bahan Kemasan -->
-                    <div style="padding:10px 12px;border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--color-canvas);">
+                    <div style="padding:11px 14px;border:1px solid var(--color-hairline);border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--color-canvas);">
                         <div style="min-width:0;flex:1;">
                             <div style="font-weight:700;font-size:12px;color:var(--color-ink);">2. Bahan Kemasan (Plastik &amp; Label)</div>
                             <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">
@@ -645,7 +659,7 @@ ob_start();
                     </div>
 
                     <!-- 3. Barang Jadi -->
-                    <div style="padding:10px 12px;border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--color-canvas);">
+                    <div style="padding:11px 14px;border:1px solid var(--color-hairline);border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--color-canvas);">
                         <div style="min-width:0;flex:1;">
                             <div style="font-weight:700;font-size:12px;color:var(--color-ink);">3. Barang Jadi Siap Jual (Bungkus)</div>
                             <div style="font-size:10.5px;color:var(--color-ink-mute);margin-top:2px;">
@@ -662,16 +676,17 @@ ob_start();
                 </div>
 
                 <!-- Total Summary -->
-                <div style="padding:12px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:var(--rounded-md);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                <div style="padding:12px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
                     <div style="font-weight:800;font-size:12.5px;color:var(--color-ink);">Total Valuasi Kas Persediaan:</div>
                     <div style="font-size:15px;font-weight:900;font-family:var(--font-mono);color:#3b82f6;flex-shrink:0;">
                         <?= Format::rupiah($inventoryTotal) ?>
                     </div>
                 </div>
+            </div>
 
-                <div style="display:flex;justify-content:flex-end;margin-top:4px;">
-                    <button type="button" @click="showHppModal = false" class="btn btn-secondary btn-sm" style="min-width:80px;justify-content:center;">Tutup</button>
-                </div>
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button type="button" @click="showHppModal = false" class="btn btn-secondary btn-sm modal-btn-cancel-desktop" style="min-width:90px;justify-content:center;">Tutup</button>
             </div>
         </div>
     </div>

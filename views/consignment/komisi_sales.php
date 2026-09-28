@@ -1230,15 +1230,15 @@ ob_start();
 
             <div class="modal-box modal-box-lg" @click.stop>
 
-                <!-- MOBILE PULL HANDLE -->
-                <div class="sm:hidden w-full flex justify-center pt-3 pb-1 flex-shrink-0" style="background:var(--color-canvas);">
-                    <div style="width:40px;height:4px;border-radius:2px;background:var(--color-hairline-strong);"></div>
+                <!-- Mobile Pull Handle -->
+                <div class="modal-handle">
+                    <div class="modal-handle-bar"></div>
                 </div>
 
                 <!-- ============================================================ -->
                 <!-- 1. MODAL HEADER                                               -->
                 <!-- ============================================================ -->
-                <div class="modal-header-sales">
+                <div class="modal-header">
                     <!-- Kiri: Icon + Judul + Meta -->
                     <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
                         <div style="width:38px;height:38px;border-radius:11px;background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -1285,8 +1285,8 @@ ob_start();
                             </div>
                         </div>
                         <button type="button" @click="showBreakdownModal = false"
-                                class="btn btn-ghost btn-sm"
-                                style="width:34px;height:34px;padding:0;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--color-ink-mute);"
+                                class="modal-close-x"
+                                title="Tutup Modal"
                                 aria-label="Tutup">
                             <i data-lucide="x" style="width:18px;height:18px;"></i>
                         </button>
@@ -1719,7 +1719,12 @@ ob_start();
 
                 </div><!-- /modal-tab-body -->
 
-
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" @click="showBreakdownModal = false" class="btn btn-secondary btn-sm modal-btn-cancel-desktop" style="min-width:90px;justify-content:center;">
+                        Tutup
+                    </button>
+                </div>
 
             </div><!-- /modal-box -->
         </div><!-- /modal-backdrop -->

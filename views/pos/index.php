@@ -866,33 +866,45 @@ document.addEventListener('alpine:init', () => {
     <!-- ====================================================================== -->
     <!-- MODAL 1: DISAMBIGUASI BARCODE                                          -->
     <!-- ====================================================================== -->
-    <div x-show="showBarcodeModal" x-cloak class="modal-backdrop" style="display:none;">
-        <div class="modal-box">
+    <div x-show="showBarcodeModal" x-cloak class="modal-backdrop" @click="showBarcodeModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title">Pilih Varian Rasa</div>
-                    <div style="font-size:11.5px;font-family:var(--font-mono);font-weight:700;color:var(--color-primary-deep);margin-top:2px;" x-text="'Barcode: ' + currentScannedBarcode"></div>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(136,19,55,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="barcode" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Pilih Varian Rasa</div>
+                        <div style="font-size:12px;font-family:var(--font-mono);font-weight:700;color:var(--color-primary);margin-top:1px;" x-text="'Barcode: ' + currentScannedBarcode"></div>
+                    </div>
                 </div>
-                <button @click="showBarcodeModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
+                <button type="button" @click="showBarcodeModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
                 </button>
             </div>
 
-            <p style="font-size:12.5px;font-weight:500;color:var(--color-ink-secondary);margin-bottom:12px;">Barcode ini digunakan bersama. Pilih varian yang di-scan:</p>
+            <div class="modal-body custom-scrollbar space-y-3">
+                <p style="font-size:12.5px;font-weight:500;color:var(--color-ink-secondary);">Barcode ini digunakan bersama. Pilih varian yang di-scan:</p>
 
-            <div style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;" class="custom-scrollbar">
-                <template x-for="(v, i) in multiVariants" :key="v.item_id">
-                    <button @click="selectVariant(v)"
-                            style="padding:12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;align-items:center;justify-content:space-between;text-align:left;cursor:pointer;transition:all 0.15s;"
-                            onmouseover="this.style.borderColor='var(--color-primary)';this.style.transform='translateY(-1px)'"
-                            onmouseout="this.style.borderColor='var(--color-hairline)';this.style.transform='none'">
-                        <div>
-                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);" x-text="v.nama_item"></div>
-                            <div style="font-size:11.5px;font-family:var(--font-mono);font-weight:500;color:var(--color-ink-mute);margin-top:1px;" x-text="v.grup_nama + ' • Stok: ' + v.stok_fisik + ' ' + v.satuan_dasar"></div>
-                        </div>
-<div style="font-size:12px;font-family:var(--font-mono);font-weight:800;color:var(--color-primary-deep);" x-text="'[' + (i+1) + ']'"></span>
-                    </button>
-                </template>
+                <div style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;" class="custom-scrollbar">
+                    <template x-for="(v, i) in multiVariants" :key="v.item_id">
+                        <button type="button" @click="selectVariant(v)"
+                                style="padding:12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;align-items:center;justify-content:space-between;text-align:left;cursor:pointer;transition:all 0.15s;"
+                                onmouseover="this.style.borderColor='var(--color-primary)';this.style.transform='translateY(-1px)'"
+                                onmouseout="this.style.borderColor='var(--color-hairline)';this.style.transform='none'">
+                            <div>
+                                <div style="font-size:13px;font-weight:700;color:var(--color-ink);" x-text="v.nama_item"></div>
+                                <div style="font-size:11.5px;font-family:var(--font-mono);font-weight:500;color:var(--color-ink-mute);margin-top:1px;" x-text="v.grup_nama + ' • Stok: ' + v.stok_fisik + ' ' + v.satuan_dasar"></div>
+                            </div>
+                            <span style="font-size:12px;font-family:var(--font-mono);font-weight:800;color:var(--color-primary);" x-text="'[' + (i+1) + ']'"></span>
+                        </button>
+                    </template>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" @click="showBarcodeModal = false" class="btn btn-secondary w-full sm:w-auto">Batal</button>
             </div>
         </div>
     </div>
@@ -900,19 +912,24 @@ document.addEventListener('alpine:init', () => {
     <!-- ====================================================================== -->
     <!-- MODAL 2: PEMBAYARAN KASIR POS (OFFICIAL MATERIAL DESIGN 3 DIALOG)       -->
     <!-- ====================================================================== -->
-    <div x-show="showPaymentModal" x-cloak class="modal-backdrop m3-payment-backdrop" style="display:none;">
+    <div x-show="showPaymentModal" x-cloak class="modal-backdrop m3-payment-backdrop" @click="showPaymentModal = false" style="display:none;">
         <div class="m3-dialog" @click.stop>
             <div class="m3-drag-handle"></div>
             
             <!-- M3 Dialog Header -->
-            <div class="m3-dialog-header">
-                <div class="m3-dialog-icon">
-                    <i data-lucide="wallet" style="width: 22px; height: 22px;"></i>
+            <div class="m3-dialog-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <div style="display:flex;align-items:center;gap:12px;min-width:0;flex-1;">
+                    <div class="m3-dialog-icon">
+                        <i data-lucide="wallet" style="width: 22px; height: 22px;"></i>
+                    </div>
+                    <div class="m3-dialog-title-group">
+                        <h2 class="m3-dialog-title">Pembayaran Transaksi</h2>
+                        <p class="m3-dialog-subtitle">Kasir Ritel Keren Snack</p>
+                    </div>
                 </div>
-                <div class="m3-dialog-title-group">
-                    <h2 class="m3-dialog-title">Pembayaran Transaksi</h2>
-                    <p class="m3-dialog-subtitle">Kasir Ritel Keren Snack</p>
-                </div>
+                <button type="button" @click="showPaymentModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
             <!-- M3 Total Headline Display (Tonal Hero Card) -->
@@ -1064,12 +1081,12 @@ document.addEventListener('alpine:init', () => {
 
             <!-- M3 Dialog Actions Footer -->
             <div class="m3-dialog-actions">
-                <button type="button" @click="showPaymentModal = false" class="m3-btn-outlined">
+                <button type="button" @click="showPaymentModal = false" class="m3-btn-outlined modal-btn-cancel-desktop">
                     Batal
                 </button>
                 <button type="button" @click="submitCheckout()"
                         :disabled="isSubmitting || (paymentType === 'cash' && paidAmount < grandTotal) || (paymentType === 'cash' && isCashDrawerInsufficient && !forceCashChange)"
-                        class="m3-btn-filled">
+                        class="m3-btn-filled w-full sm:w-auto">
                     <i data-lucide="check" style="width: 18px; height: 18px;"></i>
                     <span x-show="!isSubmitting">Selesaikan Transaksi</span>
                     <span x-show="isSubmitting">Memproses...</span>
@@ -1082,97 +1099,100 @@ document.addEventListener('alpine:init', () => {
     <!-- ====================================================================== -->
     <!-- MODAL 3: STRUK NOTA PEMBAYARAN & CETAK THERMAL                         -->
     <!-- ====================================================================== -->
-    <div x-show="showReceiptModal" x-cloak class="modal-backdrop" style="display:none;">
-        <div class="modal-box" style="max-width:420px;padding:20px;">
-            <div class="modal-header" style="padding-bottom:12px;margin-bottom:12px;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:28px;height:28px;border-radius:50%;background:rgba(62,207,142,0.15);color:var(--color-primary);display:flex;align-items:center;justify-content:center;">
-                        <i data-lucide="check" style="width:16px;height:16px;"></i>
+    <div x-show="showReceiptModal" x-cloak class="modal-backdrop" @click="showReceiptModal = false" style="display:none;">
+        <div class="modal-box" style="max-width:440px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:38px;height:38px;border-radius:12px;background:rgba(16,185,129,0.12);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="check-circle-2" style="width:20px;height:20px;"></i>
                     </div>
-                    <div>
-                        <div class="modal-title" style="font-size:15px;">Transaksi Sukses!</div>
-                        <div style="font-size:11.5px;color:var(--color-ink-mute);" x-text="receiptData?.nomor_nota"></div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Transaksi Sukses!</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);" x-text="receiptData?.nomor_nota"></div>
                     </div>
                 </div>
-                <button @click="showReceiptModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px;height:16px;"></i>
+                <button type="button" @click="showReceiptModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
                 </button>
             </div>
 
-            <!-- TAMPILAN FISIK STRUK NOTA (THERMAL PREVIEW) -->
-            <div id="printable-receipt" class="receipt-paper" style="background:#ffffff;color:#111827;padding:16px;border-radius:8px;font-family:'JetBrains Mono', monospace;font-size:11px;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,0.15);margin-bottom:16px;max-height:360px;overflow-y:auto;">
-                <div style="text-align:center;margin-bottom:10px;">
-                    <div style="font-size:14px;font-weight:800;letter-spacing:0.5px;" x-text="receiptData?.store?.nama || 'KEREN SNACK'"></div>
-                    <div style="font-size:9.5px;color:#4b5563;" x-text="receiptData?.store?.alamat || 'Distribusi Makanan Ringan'"></div>
-                    <div style="font-size:9.5px;color:#4b5563;" x-text="receiptData?.store?.kontak || ''"></div>
-                </div>
+            <div class="modal-body custom-scrollbar">
+                <!-- TAMPILAN FISIK STRUK NOTA (THERMAL PREVIEW) -->
+                <div id="printable-receipt" class="receipt-paper" style="background:#ffffff;color:#111827;padding:16px;border-radius:8px;font-family:'JetBrains Mono', monospace;font-size:11px;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,0.15);margin-bottom:6px;max-height:360px;overflow-y:auto;">
+                    <div style="text-align:center;margin-bottom:10px;">
+                        <div style="font-size:14px;font-weight:800;letter-spacing:0.5px;" x-text="receiptData?.store?.nama || 'KEREN SNACK'"></div>
+                        <div style="font-size:9.5px;color:#4b5563;" x-text="receiptData?.store?.alamat || 'Distribusi Makanan Ringan'"></div>
+                        <div style="font-size:9.5px;color:#4b5563;" x-text="receiptData?.store?.kontak || ''"></div>
+                    </div>
 
-                <div style="border-top:1px dashed #9ca3af;margin:8px 0;"></div>
+                    <div style="border-top:1px dashed #9ca3af;margin:8px 0;"></div>
 
-                <div style="display:flex;justify-content:space-between;font-size:10px;">
-                    <span>No: <strong x-text="receiptData?.nomor_nota"></strong></span>
-                    <span x-text="receiptData?.tanggal"></span>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:10px;">
-                    <span>Kasir: <span x-text="receiptData?.cashier_name"></span></span>
-                    <span>Tipe: <strong style="text-transform:uppercase;" x-text="receiptData?.payment_type === 'qris' ? 'QRIS' : 'TUNAI'"></strong></span>
-                </div>
-                <div style="font-size:10px;margin-top:2px;">
-                    <span>Customer: <strong x-text="receiptData?.customer_name"></strong></span>
-                </div>
+                    <div style="display:flex;justify-content:space-between;font-size:10px;">
+                        <span>No: <strong x-text="receiptData?.nomor_nota"></strong></span>
+                        <span x-text="receiptData?.tanggal"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:10px;">
+                        <span>Kasir: <span x-text="receiptData?.cashier_name"></span></span>
+                        <span>Tipe: <strong style="text-transform:uppercase;" x-text="receiptData?.payment_type === 'qris' ? 'QRIS' : 'TUNAI'"></strong></span>
+                    </div>
+                    <div style="font-size:10px;margin-top:2px;">
+                        <span>Customer: <strong x-text="receiptData?.customer_name"></strong></span>
+                    </div>
 
-                <div style="border-top:1px dashed #9ca3af;margin:8px 0;"></div>
+                    <div style="border-top:1px dashed #9ca3af;margin:8px 0;"></div>
 
-                <!-- ITEMS -->
-                <div style="display:flex;flex-direction:column;gap:6px;">
-                    <template x-for="it in (receiptData?.items || [])" :key="it.item_id">
-                        <div>
-                            <div style="font-weight:700;font-size:10.5px;" x-text="it.nama_item"></div>
-                            <div style="display:flex;justify-content:space-between;font-size:10px;color:#374151;">
-                                <span x-text="it.qty_pcs + ' pcs @ ' + formatRupiah(it.harga)"></span>
-                                <span style="font-weight:700;" x-text="formatRupiah(it.subtotal)"></span>
+                    <!-- ITEMS -->
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                        <template x-for="it in (receiptData?.items || [])" :key="it.item_id">
+                            <div>
+                                <div style="font-weight:700;font-size:10.5px;" x-text="it.nama_item"></div>
+                                <div style="display:flex;justify-content:space-between;font-size:10px;color:#374151;">
+                                    <span x-text="it.qty_pcs + ' pcs @ ' + formatRupiah(it.harga)"></span>
+                                    <span style="font-weight:700;" x-text="formatRupiah(it.subtotal)"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div style="border-top:1px dashed #9ca3af;margin:8px 0;"></div>
+
+                    <!-- TOTALS -->
+                    <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-top:4px;">
+                        <span>TOTAL NETTO:</span>
+                        <span style="font-size:12px;" x-text="formatRupiah(receiptData?.total_netto)"></span>
+                    </div>
+
+                    <template x-if="receiptData?.payment_type === 'cash'">
+                        <div style="font-size:10px;color:#374151;margin-top:4px;">
+                            <div style="display:flex;justify-content:space-between;">
+                                <span>TUNAI DITERIMA:</span>
+                                <span x-text="formatRupiah(receiptData?.paid_amount || receiptData?.total_netto)"></span>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;">
+                                <span>KEMBALIAN:</span>
+                                <span style="font-weight:700;" x-text="formatRupiah(receiptData?.kembalian !== undefined ? receiptData.kembalian : Math.max(0, (receiptData?.paid_amount || receiptData?.total_netto) - receiptData?.total_netto))"></span>
                             </div>
                         </div>
                     </template>
-                </div>
 
-                <div style="border-top:1px dashed #9ca3af;margin:8px 0;"></div>
-
-                <!-- TOTALS -->
-                <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:800;margin-top:4px;">
-                    <span>TOTAL NETTO:</span>
-                    <span style="font-size:12px;" x-text="formatRupiah(receiptData?.total_netto)"></span>
-                </div>
-
-                <template x-if="receiptData?.payment_type === 'cash'">
-                    <div style="font-size:10px;color:#374151;margin-top:4px;">
-                        <div style="display:flex;justify-content:space-between;">
-                            <span>TUNAI DITERIMA:</span>
-                            <span x-text="formatRupiah(receiptData?.paid_amount || receiptData?.total_netto)"></span>
-                        </div>
-                        <div style="display:flex;justify-content:space-between;">
-                            <span>KEMBALIAN:</span>
-                            <span style="font-weight:700;" x-text="formatRupiah(receiptData?.kembalian !== undefined ? receiptData.kembalian : Math.max(0, (receiptData?.paid_amount || receiptData?.total_netto) - receiptData?.total_netto))"></span>
-                        </div>
+                    <div style="border-top:1px dashed #9ca3af;margin:10px 0 6px 0;"></div>
+                    <div style="text-align:center;font-size:9.5px;color:#6b7280;">
+                        <div>Terima Kasih Atas Kunjungan Anda!</div>
+                        <div>Barang yang sudah dibeli tidak dapat ditukar</div>
                     </div>
-                </template>
-
-                <div style="border-top:1px dashed #9ca3af;margin:10px 0 6px 0;"></div>
-                <div style="text-align:center;font-size:9.5px;color:#6b7280;">
-                    <div>Terima Kasih Atas Kunjungan Anda!</div>
-                    <div>Barang yang sudah dibeli tidak dapat ditukar</div>
                 </div>
             </div>
 
             <!-- ACTION BUTTONS -->
-            <div style="display:flex;gap:8px;">
-                <button @click="printReceipt()" class="btn btn-primary btn-full" style="justify-content:center;height:40px;">
-                    <i data-lucide="printer"></i>
-                    <span>Cetak Struk [Enter]</span>
-                </button>
-                <button @click="resetForNewTransaction()" class="btn btn-secondary" style="justify-content:center;height:40px;white-space:nowrap;">
-                    <i data-lucide="plus"></i>
+            <div class="modal-footer">
+                <button type="button" @click="resetForNewTransaction()" class="btn btn-secondary modal-btn-cancel-desktop" style="display:inline-flex;align-items:center;gap:6px;">
+                    <i data-lucide="plus" style="width:16px;height:16px;"></i>
                     <span>Transaksi Baru [F2]</span>
+                </button>
+                <button type="button" @click="printReceipt()" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                    <i data-lucide="printer" style="width:16px;height:16px;"></i>
+                    <span>Cetak Struk [Enter]</span>
                 </button>
             </div>
         </div>

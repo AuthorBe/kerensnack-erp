@@ -385,17 +385,23 @@ ob_start();
     <!-- MODAL 1: INTIP RIWAYAT MUTASI (KARTU STOK MINI)                           -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showHistoryModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:760px; width:95%;">
+    <div x-show="showHistoryModal" x-cloak class="modal-backdrop" @click="showHistoryModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:760px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
-                        <i data-lucide="activity" style="color:var(--color-primary); width:18px; height:18px;"></i>
-                        <span>Kartu Stok &amp; Riwayat Mutasi Terakhir</span>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="activity" style="width:20px;height:20px;"></i>
                     </div>
-                    <div style="font-size:12px; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;"
-                         x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Kartu Stok &amp; Riwayat Mutasi Terakhir</div>
+                        <div style="font-size:12px; font-family:var(--font-mono); color:var(--color-primary); margin-top:1px;"
+                             x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
+                    </div>
                 </div>
+                <button type="button" @click="showHistoryModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
             <div x-show="historyLoading" style="padding:36px; text-align:center; color:var(--color-ink-mute);">
@@ -403,59 +409,61 @@ ob_start();
                 <div>Memuat riwayat pergerakan stok...</div>
             </div>
 
-            <div x-show="!historyLoading" class="space-y-4" style="padding:16px 20px 20px 20px;">
-                <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--color-canvas-soft); border-radius:12px; border:1px solid var(--color-hairline);">
-                    <div>
-                        <div style="font-size:11px; color:var(--color-ink-mute); text-transform:uppercase; letter-spacing:0.04em;">Stok Fisik Saat Ini (Sistem)</div>
-                        <div style="font-size:18px; font-weight:800; font-family:var(--font-mono); color:var(--color-ink);"
-                             x-text="formatQty(selectedItem.stok_sistem) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></div>
+            <div x-show="!historyLoading">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--color-canvas-soft); border-radius:12px; border:1px solid var(--color-hairline);">
+                        <div>
+                            <div style="font-size:11px; color:var(--color-ink-mute); text-transform:uppercase; letter-spacing:0.04em;">Stok Fisik Saat Ini (Sistem)</div>
+                            <div style="font-size:18px; font-weight:800; font-family:var(--font-mono); color:var(--color-ink);"
+                                 x-text="formatQty(selectedItem.stok_sistem) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="badge badge-mono" x-text="formatBarcode(selectedItem.barcode || selectedItem.barcode_universal) || 'No Barcode'"></span>
+                        </div>
                     </div>
-                    <div style="text-align:right;">
-                        <span class="badge badge-mono" x-text="formatBarcode(selectedItem.barcode || selectedItem.barcode_universal) || 'No Barcode'"></span>
+
+                    <div class="table-wrapper" style="max-height:360px; overflow-y:auto; border-radius:10px;">
+                        <table class="data-table" style="font-size:12px;">
+                            <thead>
+                                <tr>
+                                    <th>Waktu &amp; Tanggal</th>
+                                    <th>Tipe Mutasi</th>
+                                    <th style="text-align:right;">Perubahan</th>
+                                    <th style="text-align:right;">Stok Akhir</th>
+                                    <th>Keterangan / Oleh</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-if="itemHistoryList.length === 0">
+                                    <tr>
+                                        <td colspan="5" style="text-align:center; padding:24px; color:var(--color-ink-mute);">
+                                            Belum ada riwayat mutasi tercatat untuk produk ini.
+                                        </td>
+                                    </tr>
+                                </template>
+                                <template x-for="log in itemHistoryList" :key="log.id">
+                                    <tr>
+                                        <td style="font-family:var(--font-mono); font-size:11px; color:var(--color-ink-mute);" x-text="formatDate(log.dibuat_pada)"></td>
+                                        <td>
+                                            <span class="badge" :class="getMutationBadgeClass(log.tipe_mutasi)" x-text="formatMutationType(log.tipe_mutasi)"></span>
+                                        </td>
+                                        <td style="text-align:right; font-family:var(--font-mono); font-weight:700;"
+                                            :style="isStockIn(log.tipe_mutasi) ? 'color:#059669;' : 'color:#dc2626;'"
+                                            x-text="(isStockIn(log.tipe_mutasi) ? '+' : '-') + formatQty(log.jumlah_perubahan) + ' pcs'"></td>
+                                        <td style="text-align:right; font-family:var(--font-mono); color:var(--color-ink);" x-text="formatQty(log.stok_sesudah) + ' pcs'"></td>
+                                        <td>
+                                            <div style="font-size:11.5px; color:var(--color-ink);" x-text="log.keterangan || '—'"></div>
+                                            <div x-show="log.nama_user" style="font-size:10px; color:var(--color-ink-mute); font-style:italic;" x-text="'Oleh: ' + log.nama_user"></div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <div class="table-wrapper" style="max-height:360px; overflow-y:auto; border-radius:10px;">
-                    <table class="data-table" style="font-size:12px;">
-                        <thead>
-                            <tr>
-                                <th>Waktu &amp; Tanggal</th>
-                                <th>Tipe Mutasi</th>
-                                <th style="text-align:right;">Perubahan</th>
-                                <th style="text-align:right;">Stok Akhir</th>
-                                <th>Keterangan / Oleh</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-if="itemHistoryList.length === 0">
-                                <tr>
-                                    <td colspan="5" style="text-align:center; padding:24px; color:var(--color-ink-mute);">
-                                        Belum ada riwayat mutasi tercatat untuk produk ini.
-                                    </td>
-                                </tr>
-                            </template>
-                            <template x-for="log in itemHistoryList" :key="log.id">
-                                <tr>
-                                    <td style="font-family:var(--font-mono); font-size:11px; color:var(--color-ink-mute);" x-text="formatDate(log.dibuat_pada)"></td>
-                                    <td>
-                                        <span class="badge" :class="getMutationBadgeClass(log.tipe_mutasi)" x-text="formatMutationType(log.tipe_mutasi)"></span>
-                                    </td>
-                                    <td style="text-align:right; font-family:var(--font-mono); font-weight:700;"
-                                        :style="isStockIn(log.tipe_mutasi) ? 'color:#059669;' : 'color:#dc2626;'"
-                                        x-text="(isStockIn(log.tipe_mutasi) ? '+' : '-') + formatQty(log.jumlah_perubahan) + ' pcs'"></td>
-                                    <td style="text-align:right; font-family:var(--font-mono); color:var(--color-ink);" x-text="formatQty(log.stok_sesudah) + ' pcs'"></td>
-                                    <td>
-                                        <div style="font-size:11.5px; color:var(--color-ink);" x-text="log.keterangan || '—'"></div>
-                                        <div x-show="log.nama_user" style="font-size:10px; color:var(--color-ink-mute); font-style:italic;" x-text="'Oleh: ' + log.nama_user"></div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div style="text-align:right; padding-top:4px;">
-                    <button type="button" @click="showHistoryModal = false" class="btn btn-secondary">Tutup</button>
+                <div class="modal-footer">
+                    <button type="button" @click="showHistoryModal = false" class="btn btn-secondary w-full sm:w-auto">Tutup</button>
                 </div>
             </div>
         </div>
@@ -466,100 +474,104 @@ ob_start();
     <!-- MODAL 2: KONFIRMASI RINGKASAN MUTASI SEBELUM SIMPAN                       -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showConfirmModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:820px; width:95%;">
+    <div x-show="showConfirmModal" x-cloak class="modal-backdrop" @click="showConfirmModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:820px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
-                <div>
-                    <div class="modal-title" style="display:flex; align-items:center; gap:8px;">
-                        <i data-lucide="clipboard-check" style="color:var(--color-primary); width:20px; height:20px;"></i>
-                        <span>Konfirmasi Penyesuaian Mutasi Stok</span>
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="clipboard-check" style="width:20px;height:20px;"></i>
                     </div>
-                    <div style="font-size:12px; color:var(--color-ink-mute); margin-top:2px;">
-                        Periksa kembali ringkasan mutasi sebelum dicatat permanen ke buku besar gudang.
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Konfirmasi Penyesuaian Mutasi Stok</div>
+                        <div style="font-size:12px; color:var(--color-ink-mute); margin-top:1px;">
+                            Periksa kembali ringkasan mutasi sebelum dicatat permanen ke buku besar gudang.
+                        </div>
                     </div>
                 </div>
-                <button type="button" @click="showConfirmModal = false" class="btn btn-ghost btn-sm" style="padding:4px;">
-                    <i data-lucide="x" style="width:16px; height:16px;"></i>
+                <button type="button" @click="showConfirmModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
                 </button>
             </div>
 
             <form action="<?= Router::url('/inventory/bulk-opname/store') ?>" method="POST"
                   @submit="onFormSubmit($event)"
-                  data-action-text="Memproses dan menyimpan transaksi bulk opname..."
-                  style="display:flex; flex-direction:column; gap:16px; padding:18px 22px 22px 22px;">
+                  data-action-text="Memproses dan menyimpan transaksi bulk opname...">
                 
-                <?= \App\Helpers\CSRF::field() ?>
-                <input type="hidden" name="tanggal" :value="formTanggal">
-                <input type="hidden" name="catatan" :value="formCatatan">
-                <input type="hidden" name="total_katalog" :value="items.length">
-                <input type="hidden" name="items_json" :value="JSON.stringify(getChangedItemsPayload())">
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <?= \App\Helpers\CSRF::field() ?>
+                    <input type="hidden" name="tanggal" :value="formTanggal">
+                    <input type="hidden" name="catatan" :value="formCatatan">
+                    <input type="hidden" name="total_katalog" :value="items.length">
+                    <input type="hidden" name="items_json" :value="JSON.stringify(getChangedItemsPayload())">
 
-                <!-- Ringkasan Metrik Dokumen -->
-                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">
-                    <div style="background:var(--color-canvas-soft); padding:12px 14px; border-radius:12px; border:1px solid var(--color-hairline);">
-                        <span style="font-size:11px; text-transform:uppercase; color:var(--color-ink-mute); font-weight:700;">Tanggal Opname</span>
-                        <div style="font-size:14px; font-weight:700; font-family:var(--font-mono); color:var(--color-ink); margin-top:2px;" x-text="formTanggal"></div>
+                    <!-- Ringkasan Metrik Dokumen -->
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px;">
+                        <div style="background:var(--color-canvas-soft); padding:12px 14px; border-radius:12px; border:1px solid var(--color-hairline);">
+                            <span style="font-size:11px; text-transform:uppercase; color:var(--color-ink-mute); font-weight:700;">Tanggal Opname</span>
+                            <div style="font-size:14px; font-weight:700; font-family:var(--font-mono); color:var(--color-ink); margin-top:2px;" x-text="formTanggal"></div>
+                        </div>
+                        <div style="background:var(--color-canvas-soft); padding:12px 14px; border-radius:12px; border:1px solid var(--color-hairline);">
+                            <span style="font-size:11px; text-transform:uppercase; color:var(--color-ink-mute); font-weight:700;">Item Disesuaikan</span>
+                            <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;" x-text="totalModified + ' Produk'"></div>
+                        </div>
+                        <div style="background:#ecfdf5; padding:12px 14px; border-radius:12px; border:1px solid #a7f3d0;">
+                            <span style="font-size:11px; text-transform:uppercase; color:#047857; font-weight:700;">Total Stok Masuk</span>
+                            <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:#059669; margin-top:2px;" x-text="'+' + formatQty(totalQtyIn) + ' pcs'"></div>
+                        </div>
+                        <div style="background:#fef2f2; padding:12px 14px; border-radius:12px; border:1px solid #fecaca;">
+                            <span style="font-size:11px; text-transform:uppercase; color:#b91c1c; font-weight:700;">Total Stok Keluar</span>
+                            <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:#dc2626; margin-top:2px;" x-text="'-' + formatQty(totalQtyOut) + ' pcs'"></div>
+                        </div>
                     </div>
-                    <div style="background:var(--color-canvas-soft); padding:12px 14px; border-radius:12px; border:1px solid var(--color-hairline);">
-                        <span style="font-size:11px; text-transform:uppercase; color:var(--color-ink-mute); font-weight:700;">Item Disesuaikan</span>
-                        <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;" x-text="totalModified + ' Produk'"></div>
-                    </div>
-                    <div style="background:#ecfdf5; padding:12px 14px; border-radius:12px; border:1px solid #a7f3d0;">
-                        <span style="font-size:11px; text-transform:uppercase; color:#047857; font-weight:700;">Total Stok Masuk</span>
-                        <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:#059669; margin-top:2px;" x-text="'+' + formatQty(totalQtyIn) + ' pcs'"></div>
-                    </div>
-                    <div style="background:#fef2f2; padding:12px 14px; border-radius:12px; border:1px solid #fecaca;">
-                        <span style="font-size:11px; text-transform:uppercase; color:#b91c1c; font-weight:700;">Total Stok Keluar</span>
-                        <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:#dc2626; margin-top:2px;" x-text="'-' + formatQty(totalQtyOut) + ' pcs'"></div>
-                    </div>
-                </div>
 
-                <!-- Catatan Umum -->
-                <div style="background:var(--color-canvas-soft); padding:10px 14px; border-radius:10px; font-size:12.5px; color:var(--color-ink);">
-                    <strong style="color:var(--color-ink-mute);">Keterangan Dokumen:</strong>
-                    <span x-text="formCatatan || '—'"></span>
-                </div>
+                    <!-- Catatan Umum -->
+                    <div style="background:var(--color-canvas-soft); padding:10px 14px; border-radius:10px; font-size:12.5px; color:var(--color-ink);">
+                        <strong style="color:var(--color-ink-mute);">Keterangan Dokumen:</strong>
+                        <span x-text="formCatatan || '—'"></span>
+                    </div>
 
-                <!-- Tabel Rincian Perubahan -->
-                <div class="table-wrapper" style="max-height:300px; overflow-y:auto; border-radius:10px;">
-                    <table class="data-table" style="font-size:12px;">
-                        <thead>
-                            <tr>
-                                <th>Produk &amp; SKU</th>
-                                <th style="text-align:right;">Stok Lama</th>
-                                <th style="text-align:right;">Stok Baru</th>
-                                <th style="text-align:right;">Mutasi (+/-)</th>
-                                <th>Catatan Item</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-for="row in getChangedItemsPayload()" :key="row.item_id">
+                    <!-- Tabel Rincian Perubahan -->
+                    <div class="table-wrapper" style="max-height:300px; overflow-y:auto; border-radius:10px;">
+                        <table class="data-table" style="font-size:12px;">
+                            <thead>
                                 <tr>
-                                    <td>
-                                        <div style="font-weight:700; color:var(--color-ink);" x-text="row.nama_item"></div>
-                                        <div style="font-size:11px; font-family:var(--font-mono); color:var(--color-ink-mute);" x-text="row.kode_sku"></div>
-                                    </td>
-                                    <td style="text-align:right; font-family:var(--font-mono);" x-text="formatQty(row.stok_sistem) + ' pcs'"></td>
-                                    <td style="text-align:right; font-family:var(--font-mono); font-weight:700;" x-text="formatQty(row.stok_fisik) + ' pcs'"></td>
-                                    <td style="text-align:right; font-family:var(--font-mono); font-weight:800;"
-                                        :style="row.selisih > 0 ? 'color:#059669;' : 'color:#dc2626;'"
-                                        x-text="(row.selisih > 0 ? '+' : '') + formatQty(row.selisih) + ' pcs'"></td>
-                                    <td style="font-size:11.5px; color:var(--color-ink-mute);" x-text="row.catatan_item || '—'"></td>
+                                    <th>Produk &amp; SKU</th>
+                                    <th style="text-align:right;">Stok Lama</th>
+                                    <th style="text-align:right;">Stok Baru</th>
+                                    <th style="text-align:right;">Mutasi (+/-)</th>
+                                    <th>Catatan Item</th>
                                 </tr>
-                            </template>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <template x-for="row in getChangedItemsPayload()" :key="row.item_id">
+                                    <tr>
+                                        <td>
+                                            <div style="font-weight:700; color:var(--color-ink);" x-text="row.nama_item"></div>
+                                            <div style="font-size:11px; font-family:var(--font-mono); color:var(--color-ink-mute);" x-text="row.kode_sku"></div>
+                                        </td>
+                                        <td style="text-align:right; font-family:var(--font-mono);" x-text="formatQty(row.stok_sistem) + ' pcs'"></td>
+                                        <td style="text-align:right; font-family:var(--font-mono); font-weight:700;" x-text="formatQty(row.stok_fisik) + ' pcs'"></td>
+                                        <td style="text-align:right; font-family:var(--font-mono); font-weight:800;"
+                                            :style="row.selisih > 0 ? 'color:#059669;' : 'color:#dc2626;'"
+                                            x-text="(row.selisih > 0 ? '+' : '') + formatQty(row.selisih) + ' pcs'"></td>
+                                        <td style="font-size:11.5px; color:var(--color-ink-mute);" x-text="row.catatan_item || '—'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div style="display:flex; gap:10px; padding-top:6px;">
-                    <button type="button" @click="showConfirmModal = false" :disabled="isSubmitting" class="btn btn-secondary" style="flex:1; justify-content:center;">
+                <div class="modal-footer">
+                    <button type="button" @click="showConfirmModal = false" :disabled="isSubmitting" class="btn btn-secondary modal-btn-cancel-desktop">
                         Periksa Kembali
                     </button>
-                    <button type="submit" class="btn btn-primary" :disabled="isSubmitting"
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" :disabled="isSubmitting"
                             :style="isSubmitting ? 'opacity:0.6; cursor:not-allowed;' : ''"
-                            style="flex:1.5; justify-content:center; font-weight:700; display:inline-flex; align-items:center; gap:8px;">
-                        <i data-lucide="check" x-show="!isSubmitting"></i>
+                            style="display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+                        <i data-lucide="check" x-show="!isSubmitting" style="width:16px;height:16px;"></i>
                         <span x-text="isSubmitting ? 'Memproses Transaksi...' : 'Konfirmasi & Simpan Permanen'"></span>
                     </button>
                 </div>

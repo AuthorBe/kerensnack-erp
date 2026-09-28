@@ -1037,29 +1037,6 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
         padding: 10px 14px !important;
         padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
     }
-    .tagihan-modal-backdrop,
-    .tagihan-modal-overlay {
-        padding: 12px !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-    .tagihan-modal-shell {
-        width: 100% !important;
-        max-width: 100% !important;
-        max-height: 92vh !important;
-        max-height: 92dvh !important;
-        border-radius: 18px !important;
-        margin: auto !important;
-    }
-    .tagihan-modal-header {
-        padding: 14px 16px !important;
-    }
-    .tagihan-modal-body {
-        padding: 16px 14px !important;
-    }
-    .tagihan-modal-footer {
-        padding: 12px 16px !important;
-    }
 }
 </style>
 
@@ -2204,6 +2181,11 @@ document.addEventListener('alpine:init', () => {
         
         <div class="tagihan-modal-shell" @click.stop>
             
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
+            </div>
+            
             <!-- LAYER 1: MODAL HEADER (STICKY) -->
             <div class="tagihan-modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -2480,7 +2462,7 @@ document.addEventListener('alpine:init', () => {
                 <div class="tagihan-modal-footer">
                     <button type="button" 
                             @click="closeBayarModal()" 
-                            class="btn btn-secondary btn-sm flex-1 sm:flex-initial justify-center" 
+                            class="btn btn-secondary btn-sm flex-1 sm:flex-initial justify-center modal-btn-cancel-desktop" 
                             style="font-weight:700;font-size:12.5px;padding:8px 18px;border-radius:10px;">
                         <span>Batal</span>
                     </button>
@@ -2508,6 +2490,11 @@ document.addEventListener('alpine:init', () => {
          @keydown.escape.window="closeBatchModal()">
         
         <div class="tagihan-modal-shell" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
+            </div>
+
             <div class="tagihan-modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                     <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -2606,7 +2593,7 @@ document.addEventListener('alpine:init', () => {
                 </div>
 
                 <div class="tagihan-modal-footer">
-                    <button type="button" @click="closeBatchModal()" class="btn btn-secondary btn-sm" style="font-weight:700;font-size:12.5px;padding:8px 18px;border-radius:10px;">
+                    <button type="button" @click="closeBatchModal()" class="btn btn-secondary btn-sm modal-btn-cancel-desktop" style="font-weight:700;font-size:12.5px;padding:8px 18px;border-radius:10px;">
                         <span>Batal</span>
                     </button>
                     <button type="submit" class="btn btn-primary btn-sm" style="font-weight:800;font-size:12.5px;padding:8px 20px;border-radius:10px;background:#10b981;border-color:#059669;">

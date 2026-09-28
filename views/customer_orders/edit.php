@@ -854,49 +854,51 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
     <!-- MODAL KONFIRMASI REFUND DANA KELEBIHAN BAYAR                              -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-        <div x-show="showRefundModal" x-cloak class="modal-backdrop"
-             style="position:fixed;inset:0;background:rgba(15,23,42,0.65);backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;">
-            <div
-                 class="card shadow-2xl bg-card border border-hairline animate-scale-in"
-                 style="max-width:480px;width:100%;border-radius:20px;padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px;">
-                
-                <div style="display:flex;align-items:center;gap:14px;">
-                    <div style="width:48px;height:48px;border-radius:14px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="wallet-cards" style="width:24px;height:24px;"></i>
+        <div x-show="showRefundModal" x-cloak class="modal-backdrop" @click="showRefundModal = false">
+            <div class="modal-box modal-box-sm" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+                <div class="modal-header">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(239,68,68,0.12);color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="wallet-cards" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="modal-title">Konfirmasi Refund Dana</div>
+                            <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Kelebihan pembayaran akibat pengurangan item</div>
+                        </div>
                     </div>
-                    <div>
-                        <h3 style="font-size:16px;font-weight:900;color:var(--color-ink);margin:0;">Konfirmasi Pengembalian Dana (Refund)</h3>
-                        <p style="font-size:12px;color:var(--color-ink-mute);margin:2px 0 0 0;">Kelebihan pembayaran akibat pengurangan item pesanan</p>
-                    </div>
-                </div>
-
-                <div style="padding:14px;background:rgba(239,68,68,0.05);border:1.5px solid rgba(239,68,68,0.2);border-radius:12px;font-size:13px;color:var(--color-ink);line-height:1.5;">
-                    <div style="margin-bottom:8px;">
-                        Total tagihan baru (<strong x-text="formatRupiah(calcNetto())"></strong>) lebih kecil daripada total yang telah dibayar toko (<strong x-text="formatRupiah(order.total_dibayar || 0)"></strong>).
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--color-canvas);border-radius:8px;border:1px solid rgba(239,68,68,0.15);font-size:13px;">
-                        <span style="font-weight:700;color:#991b1b;">Nominal Refund Kasir:</span>
-                        <span class="font-mono font-black" style="font-size:15px;color:#ef4444;" x-text="formatRupiah(refundForm.nominal)"></span>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="form-label" style="font-size:12px;font-weight:700;margin-bottom:6px;display:block;">Pilih Akun Kas Pengeluaran Refund:</label>
-                    <select x-model="refundForm.akun_kas_id" class="form-input font-semibold w-full" style="height:42px;border-radius:10px;font-size:13px;">
-                        <template x-for="acc in cashAccounts" :key="acc.id">
-                            <option :value="acc.id" x-text="acc.nama_akun + ' (Saldo: ' + formatRupiah(acc.saldo_saat_ini) + ')'"></option>
-                        </template>
-                    </select>
-                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:5px;">
-                        Sistem akan otomatis mencatat arus kas keluar kategori <strong>Koreksi / Refund</strong> dan menyinkronkan saldo kas.
-                    </div>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
-                    <button type="button" @click="showRefundModal = false" class="btn btn-secondary" style="border-radius:10px;font-weight:700;padding:9px 16px;">
-                        Batal &amp; Periksa
+                    <button type="button" @click="showRefundModal = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
                     </button>
-                    <button type="button" @click="confirmAndSubmitRefund()" class="btn btn-danger" style="border-radius:10px;font-weight:700;padding:9px 18px;display:flex;align-items:center;gap:6px;">
+                </div>
+                
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <div style="padding:14px;background:rgba(239,68,68,0.05);border:1.5px solid rgba(239,68,68,0.2);border-radius:12px;font-size:13px;color:var(--color-ink);line-height:1.5;">
+                        <div style="margin-bottom:8px;">
+                            Total tagihan baru (<strong x-text="formatRupiah(calcNetto())"></strong>) lebih kecil daripada total yang telah dibayar toko (<strong x-text="formatRupiah(order.total_dibayar || 0)"></strong>).
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--color-canvas);border-radius:8px;border:1px solid rgba(239,68,68,0.15);font-size:13px;">
+                            <span style="font-weight:700;color:#991b1b;">Nominal Refund Kasir:</span>
+                            <span class="font-mono font-black" style="font-size:15px;color:#ef4444;" x-text="formatRupiah(refundForm.nominal)"></span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Pilih Akun Kas Pengeluaran Refund:</label>
+                        <select x-model="refundForm.akun_kas_id" class="form-input font-semibold">
+                            <template x-for="acc in cashAccounts" :key="acc.id">
+                                <option :value="acc.id" x-text="acc.nama_akun + ' (Saldo: ' + formatRupiah(acc.saldo_saat_ini) + ')'"></option>
+                            </template>
+                        </select>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:5px;">
+                            Sistem akan otomatis mencatat arus kas keluar kategori <strong>Koreksi / Refund</strong> dan menyinkronkan saldo kas.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" @click="showRefundModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal &amp; Periksa</button>
+                    <button type="button" @click="confirmAndSubmitRefund()" class="btn btn-danger w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
                         <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
                         <span>Konfirmasi Refund &amp; Simpan</span>
                     </button>

@@ -256,25 +256,8 @@ $trendOmzet  = array_map(fn($t) => (float)$t['total_omzet_hari'], $trendData);
     font-size: 12px;
 }
 
-/* Responsive Modal Rules for Mobile Devices (Anti-Cutoff & Maximum Usable Width) */
+/* Responsive Modal Rules for Mobile Devices */
 @media (max-width: 640px) {
-    .detail-modal-shell {
-        width: 100% !important;
-        height: 94vh !important;
-        max-height: none !important;
-        border-radius: 18px 18px 0 0 !important;
-        margin-top: auto !important;
-        margin-bottom: 0 !important;
-    }
-    .detail-modal-header {
-        padding: 12px 14px !important;
-    }
-    .detail-modal-body {
-        padding: 12px 10px !important;
-    }
-    .detail-modal-footer {
-        padding: 12px 14px !important;
-    }
     .modal-invoice-list {
         padding: 8px !important;
         gap: 8px !important;
@@ -1338,6 +1321,11 @@ document.addEventListener('alpine:init', () => {
         
         <div class="detail-modal-shell" @click.stop>
             
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
+            </div>
+
             <!-- LAYER 1: MODAL HEADER (STICKY) -->
             <div class="detail-modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -1369,6 +1357,9 @@ document.addEventListener('alpine:init', () => {
                         </template>
                     </div>
                 </div>
+                <button type="button" @click="closeModal()" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
             <!-- LAYER 2: MODAL BODY (SCROLLABLE & TOUCH FRIENDLY) -->
@@ -1651,7 +1642,7 @@ document.addEventListener('alpine:init', () => {
                         <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
                         <span>Kelola Tagihan</span>
                     </a>
-                    <button type="button" @click="closeModal()" class="btn btn-primary btn-sm flex-1 sm:flex-initial justify-center" style="font-weight:700;font-size:11.5px;">
+                    <button type="button" @click="closeModal()" class="btn btn-primary btn-sm flex-1 sm:flex-initial justify-center modal-btn-cancel-desktop" style="font-weight:700;font-size:11.5px;">
                         <span>Tutup</span>
                     </button>
                 </div>

@@ -275,16 +275,29 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can('purchases.create')): ?>
     <template x-teleport="body">
-    <div x-show="showModal" x-cloak class="modal-backdrop" @keydown.window="handleModalKeydown($event)">
-        <div class="modal-box purchase-modal-box" style="max-width:740px;">
-            <div class="modal-header pb-2.5 mb-1 border-b border-hairline">
-                <div>
-                    <div class="modal-title" style="font-size:15px;" x-text="form.jenis_dokumen === 'po' ? 'Buat PO Pembelian Bahan (Purchase Order)' : 'Catat Faktur Pembelian Bahan Vendor (Langsung)'"></div>
-                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;" x-text="form.jenis_dokumen === 'po' ? 'Penerbitan surat pesanan ke vendor &amp; penugasan armada logistik driver' : 'Penerimaan stok bahan baku mentah &amp; kemasan langsung masuk ke gudang'"></div>
-                </div>
+    <div x-show="showModal" x-cloak class="modal-backdrop" @click="showModal = false" @keydown.window="handleModalKeydown($event)">
+        <div class="modal-box purchase-modal-box" style="max-width:740px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="shopping-cart" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" x-text="form.jenis_dokumen === 'po' ? 'Buat PO Pembelian Bahan (Purchase Order)' : 'Catat Faktur Pembelian Bahan Vendor (Langsung)'"></div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;" x-text="form.jenis_dokumen === 'po' ? 'Penerbitan surat pesanan ke vendor &amp; penugasan armada logistik driver' : 'Penerimaan stok bahan baku mentah &amp; kemasan langsung masuk ke gudang'"></div>
+                    </div>
+                </div>
+                <button type="button" @click="showModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
 
                 <!-- LANGKAH 1: VENDOR & DATA DOKUMEN -->
                 <div style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);padding:12px 14px;">
@@ -808,14 +821,15 @@ ob_start();
                     <input type="text" x-model="form.catatan" class="form-input" placeholder="Contoh: Pengiriman via armada vendor, barang diterima dalam kondisi baik...">
                 </div>
 
-                <div class="purchase-modal-footer flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-hairline">
-                    <button type="button" @click="showModal = false" class="btn btn-secondary w-full sm:w-auto">Batal</button>
-                    <button type="button" @click="submitPurchase()" :disabled="isSubmitting" class="btn btn-primary w-full sm:w-auto justify-center" style="font-weight:700;">
-                        <i data-lucide="save"></i>
-                        <span x-show="!isSubmitting" x-text="form.jenis_dokumen === 'po' ? 'Terbitkan PO Pembelian (Ctrl+Enter)' : 'Simpan Faktur (Ctrl+Enter)'"></span>
-                        <span x-show="isSubmitting">Menyimpan...</span>
-                    </button>
-                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" @click="showModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                <button type="button" @click="submitPurchase()" :disabled="isSubmitting" class="btn btn-primary w-full sm:w-auto justify-center" style="font-weight:700;">
+                    <i data-lucide="save"></i>
+                    <span x-show="!isSubmitting" x-text="form.jenis_dokumen === 'po' ? 'Terbitkan PO (Ctrl+Enter)' : 'Simpan Faktur (Ctrl+Enter)'"></span>
+                    <span x-show="isSubmitting">Menyimpan...</span>
+                </button>
             </div>
         </div>
     </div>
@@ -826,12 +840,12 @@ ob_start();
     <!-- MODAL DETAIL PEMBELIAN / PO (TABBED - MATCHING CUSTOMER ORDERS)          -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDetailModal" x-cloak class="modal-backdrop">
+    <div x-show="showDetailModal" x-cloak class="modal-backdrop" @click="showDetailModal = false">
         <div class="modal-box modal-box-lg" style="max-width:960px;width:94vw;padding:0;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;max-height:90vh;" @click.stop>
             
-            <!-- MOBILE PULL HANDLE -->
-            <div class="sm:hidden w-full flex justify-center pt-3 pb-1 flex-shrink-0" style="background:var(--color-canvas);">
-                <div style="width:40px;height:4px;border-radius:2px;background:var(--color-hairline-strong);"></div>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
             <!-- 1. MODAL HEADER -->
@@ -917,7 +931,7 @@ ob_start();
                         <span class="font-mono font-black" style="font-size:16px;color:var(--color-primary-deep);line-height:1.2;margin-top:2px;" x-text="formatRupiah(activeDetail?.purchase?.total_biaya)"></span>
                     </div>
 
-                    <!-- Tombol Cepat Terima Barang di Header Modal Detail (Tanpa Tombol X Duplikat) -->
+                    <!-- Tombol Cepat Terima Barang di Header Modal Detail -->
                     <template x-if="activeDetail?.purchase?.status_penerimaan !== 'diterima' && activeDetail?.purchase?.status_pembayaran !== 'batal' && activeDetail?.purchase?.status_penerimaan !== 'kendala_batal'">
                         <button type="button" @click="openReceiveModal(activeDetail)" class="btn btn-sm" style="background:#059669;color:#ffffff;border-color:#059669;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 3px rgba(5,150,105,0.25);flex-shrink:0;">
                             <i data-lucide="package-check" style="width:14px;height:14px;"></i>
@@ -925,6 +939,10 @@ ob_start();
                             <span class="md:hidden">Terima</span>
                         </button>
                     </template>
+
+                    <button type="button" @click="showDetailModal = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
             </div>
 
@@ -1497,14 +1515,30 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can(['purchases.edit', 'cash.outflow'])): ?>
     <template x-teleport="body">
-    <div x-show="showPayModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:480px;padding:24px;">
-            <div class="modal-header">
-                <div class="modal-title">Pelunasan Hutang Faktur Vendor</div>
+    <div x-show="showPayModal" x-cloak class="modal-backdrop" @click="showPayModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:14px;">
-                <div style="background:var(--color-canvas-soft);padding:12px;border-radius:8px;font-size:12px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(245,158,11,0.12);color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="credit-card" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Pelunasan Hutang Vendor</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Pembayaran Faktur Tagihan</div>
+                    </div>
+                </div>
+                <button type="button" @click="showPayModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body custom-scrollbar space-y-4">
+                <div style="background:var(--color-canvas-soft);padding:12px;border-radius:10px;font-size:12px;border:1px solid var(--color-hairline);">
                     <div style="color:var(--color-ink-mute);font-size:11px;">Nomor Faktur:</div>
                     <strong class="font-mono" style="font-size:13px;color:var(--color-ink);" x-text="activePay?.nomor_faktur_pembelian"></strong>
                     <div style="color:var(--color-ink);margin-top:2px;" x-text="'Vendor: ' + (activePay?.nama_pemasok || '-')"></div>
@@ -1514,12 +1548,12 @@ ob_start();
                 </div>
 
                 <div>
-                    <label class="form-label">Tanggal Pembayaran *</label>
+                    <label class="form-label font-bold">Tanggal Pembayaran *</label>
                     <input type="date" x-model="payForm.tanggal_bayar" class="form-input font-mono">
                 </div>
 
                 <div>
-                    <label class="form-label">Akun Kas Sumber Dana *</label>
+                    <label class="form-label font-bold">Akun Kas Sumber Dana *</label>
                     <select x-model="payForm.akun_kas_id" class="form-input" style="font-weight:600;">
                         <?php foreach ($cashAccounts as $ca): ?>
                         <option value="<?= $ca['id'] ?>">
@@ -1530,18 +1564,18 @@ ob_start();
                 </div>
 
                 <div>
-                    <label class="form-label">Catatan Pembayaran (Opsional)</label>
+                    <label class="form-label font-bold">Catatan Pembayaran (Opsional)</label>
                     <input type="text" x-model="payForm.catatan" class="form-input" placeholder="Contoh: Transfer via m-Banking, ref #123...">
                 </div>
+            </div>
 
-                <div class="purchase-modal-action-row" style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
-                    <button type="button" @click="showPayModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="button" @click="submitPayment()" :disabled="isSubmitting" class="btn btn-primary" style="background:#f59e0b;border-color:#f59e0b;font-weight:700;">
-                        <i data-lucide="check-circle"></i>
-                        <span x-show="!isSubmitting">Konfirmasi Bayar</span>
-                        <span x-show="isSubmitting">Memproses...</span>
-                    </button>
-                </div>
+            <div class="modal-footer">
+                <button type="button" @click="showPayModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                <button type="button" @click="submitPayment()" :disabled="isSubmitting" class="btn btn-primary w-full sm:w-auto" style="background:#f59e0b;border-color:#f59e0b;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                    <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
+                    <span x-show="!isSubmitting">Konfirmasi Bayar</span>
+                    <span x-show="isSubmitting">Memproses...</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1553,14 +1587,30 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can('purchases.edit')): ?>
     <template x-teleport="body">
-    <div x-show="showCancelModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:460px;padding:24px;">
-            <div class="modal-header">
-                <div class="modal-title" style="color:var(--color-danger);">Batalkan Faktur Pembelian</div>
+    <div x-show="showCancelModal" x-cloak class="modal-backdrop" @click="showCancelModal = false">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:14px;">
-                <div style="padding:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;font-size:12px;color:var(--color-danger);">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(239,68,68,0.1);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="alert-triangle" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" style="color:var(--color-danger);">Batalkan Faktur Pembelian</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Pembatalan Dokumen Transaksi</div>
+                    </div>
+                </div>
+                <button type="button" @click="showCancelModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body custom-scrollbar space-y-4">
+                <div style="padding:12px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;font-size:12px;color:var(--color-danger);">
                     <div style="font-weight:700;display:flex;align-items:center;gap:6px;">
                         <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
                         <span>Peringatan Pembatalan:</span>
@@ -1570,15 +1620,15 @@ ob_start();
                     </div>
                 </div>
 
-                <div style="font-size:12px;">
+                <div style="background:var(--color-canvas-soft);padding:12px;border-radius:10px;font-size:12px;border:1px solid var(--color-hairline);">
                     <div>Faktur: <strong class="font-mono" x-text="activeCancel?.nomor_faktur_pembelian"></strong></div>
-                    <div>Vendor: <strong x-text="activeCancel?.nama_pemasok"></strong></div>
-                    <div>Total Nominal: <strong x-text="formatRupiah(activeCancel?.total_biaya)"></strong></div>
+                    <div style="margin-top:2px;">Vendor: <strong x-text="activeCancel?.nama_pemasok"></strong></div>
+                    <div style="margin-top:2px;">Total Nominal: <strong x-text="formatRupiah(activeCancel?.total_biaya)"></strong></div>
                 </div>
 
                 <div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                        <label class="form-label" style="margin-bottom:0;">Alasan Pembatalan <span style="color:var(--color-danger);">*</span></label>
+                        <label class="form-label font-bold" style="margin-bottom:0;">Alasan Pembatalan <span style="color:var(--color-danger);">*</span></label>
                         <span x-show="cancelError" x-cloak style="color:var(--color-danger);font-size:11px;font-weight:600;">Wajib diisi</span>
                     </div>
                     <input type="text" 
@@ -1595,15 +1645,15 @@ ob_start();
                         <span x-text="cancelError"></span>
                     </div>
                 </div>
+            </div>
 
-                <div class="purchase-modal-action-row" style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
-                    <button type="button" @click="showCancelModal = false" class="btn btn-secondary">Kembali</button>
-                    <button type="button" @click="submitCancel()" :disabled="isSubmitting" class="btn btn-danger" style="font-weight:700;">
-                        <i data-lucide="ban"></i>
-                        <span x-show="!isSubmitting">Batalkan Faktur</span>
-                        <span x-show="isSubmitting">Memproses...</span>
-                    </button>
-                </div>
+            <div class="modal-footer">
+                <button type="button" @click="showCancelModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Kembali</button>
+                <button type="button" @click="submitCancel()" :disabled="isSubmitting" class="btn btn-danger w-full sm:w-auto" style="font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                    <i data-lucide="ban" style="width:16px;height:16px;"></i>
+                    <span x-show="!isSubmitting">Batalkan Faktur</span>
+                    <span x-show="isSubmitting">Memproses...</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1615,19 +1665,32 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can(['purchases.edit', 'purchases.create'])): ?>
     <template x-teleport="body">
-    <div x-show="showEditPoModal" x-cloak class="modal-backdrop">
+    <div x-show="showEditPoModal" x-cloak class="modal-backdrop" @click="showEditPoModal = false">
         <div class="modal-box purchase-modal-box" style="max-width:760px;" @click.stop>
-            <div class="modal-header pb-2.5 mb-1 border-b border-hairline">
-                <div>
-                    <div class="modal-title" style="font-size:15px;display:flex;align-items:center;gap:8px;">
-                        <span>Edit PO Pembelian</span>
-                        <span class="badge badge-mono font-bold" style="color:var(--color-primary-deep);" x-text="editPoForm.nomor_faktur"></span>
-                    </div>
-                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Sesuaikan vendor, metode logistik driver, jadwal, instruksi, dan daftar bahan</div>
-                </div>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
+                            <span>Edit PO Pembelian</span>
+                            <span class="badge badge-mono font-bold" style="color:var(--color-primary-deep);" x-text="editPoForm.nomor_faktur"></span>
+                        </div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Sesuaikan vendor, metode logistik driver, jadwal, instruksi, dan daftar bahan</div>
+                    </div>
+                </div>
+                <button type="button" @click="showEditPoModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
                 <!-- 1. VENDOR & LOGISTIK -->
                 <div style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);padding:12px 14px;display:flex;flex-direction:column;gap:10px;">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1828,18 +1891,19 @@ ob_start();
 
                 <!-- CATATAN -->
                 <div>
-                    <label class="form-label">Catatan PO</label>
+                    <label class="form-label font-bold">Catatan PO</label>
                     <input type="text" x-model="editPoForm.catatan" class="form-input" placeholder="Catatan tambahan...">
                 </div>
 
-                <div class="flex items-center justify-end gap-2 pt-3 border-t border-hairline" style="display:flex; justify-content:flex-end; align-items:center; gap:8px;">
-                    <button type="button" @click="showEditPoModal = false" class="btn btn-secondary w-full sm:w-auto" style="font-weight:600;">Batal</button>
-                    <button type="button" @click="submitEditPo()" :disabled="isSubmitting" class="btn btn-primary w-full sm:w-auto justify-center" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;">
-                        <i data-lucide="check" style="width:15px;height:15px;"></i>
-                        <span x-show="!isSubmitting">Simpan Perubahan PO</span>
-                        <span x-show="isSubmitting">Menyimpan...</span>
-                    </button>
-                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" @click="showEditPoModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                <button type="button" @click="submitEditPo()" :disabled="isSubmitting" class="btn btn-primary w-full sm:w-auto" style="font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                    <i data-lucide="check" style="width:15px;height:15px;"></i>
+                    <span x-show="!isSubmitting">Simpan Perubahan PO</span>
+                    <span x-show="isSubmitting">Menyimpan...</span>
+                </button>
             </div>
         </div>
     </div>
@@ -1851,21 +1915,34 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can('purchases.receive')): ?>
     <template x-teleport="body">
-    <div x-show="showReceiveModal" x-cloak class="modal-backdrop">
+    <div x-show="showReceiveModal" x-cloak class="modal-backdrop" @click="showReceiveModal = false">
         <div class="modal-box purchase-modal-box" style="max-width:900px;width:95vw;" @click.stop>
-            <div class="modal-header pb-2.5 mb-1 border-b border-hairline">
-                <div>
-                    <div class="modal-title" style="font-size:15px;display:flex;align-items:center;gap:8px;">
-                        <span>Verifikasi &amp; Penerimaan Barang Gudang</span>
-                        <span class="badge badge-mono font-bold" style="color:#059669;" x-text="receiveForm.nomor_faktur_pembelian"></span>
-                    </div>
-                    <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">
-                        Vendor: <strong style="color:var(--color-ink);" x-text="receiveForm.nama_pemasok"></strong> &bull; Periksa kuantiti fisik &amp; harga faktur sebelum stok dimasukkan ke gudang
-                    </div>
-                </div>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <div style="display:flex;flex-direction:column;gap:14px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="package-check" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title" style="display:flex;align-items:center;gap:8px;">
+                            <span>Verifikasi &amp; Terima Barang Gudang</span>
+                            <span class="badge badge-mono font-bold" style="color:#059669;" x-text="receiveForm.nomor_faktur_pembelian"></span>
+                        </div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">
+                            Vendor: <strong style="color:var(--color-ink);" x-text="receiveForm.nama_pemasok"></strong> &bull; Periksa kuantiti fisik &amp; harga faktur sebelum stok masuk
+                        </div>
+                    </div>
+                </div>
+                <button type="button" @click="showReceiveModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
                 <!-- 1. TABEL PENERIMAAN ITEM & SUBSTITUSI -->
                 <div style="border:1px solid var(--color-hairline);border-radius:12px;overflow:hidden;background:var(--color-canvas-soft);">
                     <div style="padding:10px 14px;background:var(--color-canvas);border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
@@ -2041,7 +2118,7 @@ ob_start();
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <div class="flex items-center justify-between mb-1">
-                                <label class="form-label mb-0">Nomor Nota / Faktur Fisik Vendor *</label>
+                                <label class="form-label font-bold mb-0">Nomor Nota / Faktur Fisik Vendor *</label>
                                 <button type="button" @click="receiveForm.nomor_nota_vendor = receiveForm.nomor_faktur_pembelian" class="btn btn-secondary btn-sm" style="padding:1px 6px;font-size:10.5px;color:var(--color-primary);" title="Salin No. PO jika vendor tidak menerbitkan nomor faktur fisik terpisah">
                                     + Salin No. PO
                                 </button>
@@ -2050,7 +2127,7 @@ ob_start();
                         </div>
                         <div>
                             <div class="flex items-center justify-between mb-1">
-                                <label class="form-label mb-0">Status Pembayaran Faktur *</label>
+                                <label class="form-label font-bold mb-0">Status Pembayaran Faktur *</label>
                                 <span class="badge badge-secondary" style="font-size:10px;font-weight:600;display:inline-flex;align-items:center;gap:3px;background:var(--color-canvas);border:1px solid var(--color-hairline);color:var(--color-ink-mute);">
                                     <i data-lucide="lock" style="width:11px;height:11px;"></i> Terkunci Sesuai PO
                                 </span>
@@ -2063,7 +2140,7 @@ ob_start();
                     </div>
 
                     <div x-show="receiveForm.status_pembayaran === 'lunas'">
-                        <label class="form-label">
+                        <label class="form-label font-bold">
                             <span x-show="receiveForm.nominal_sudah_dibayar > 0 && receiveTotal <= receiveForm.nominal_sudah_dibayar">Akun Kas Penampung Refund / Referensi *</span>
                             <span x-show="!receiveForm.nominal_sudah_dibayar || receiveTotal > receiveForm.nominal_sudah_dibayar">Akun Kas Sumber Dana *</span>
                         </label>
@@ -2078,7 +2155,7 @@ ob_start();
 
                     <!-- Upload Foto Nota Fisik -->
                     <div>
-                        <label class="form-label">
+                        <label class="form-label font-bold">
                             Foto Bukti Nota Fisik Vendor / Surat Jalan (Wajib / Dianjurkan)
                             <template x-if="receiveForm.driver_nota_photo">
                                 <span style="font-weight:normal;color:#059669;font-size:11px;">(Foto dari driver sudah tersimpan)</span>
@@ -2098,20 +2175,21 @@ ob_start();
                     </div>
 
                     <div>
-                        <label class="form-label">Catatan Penerimaan Gudang (Opsional)</label>
+                        <label class="form-label font-bold">Catatan Penerimaan Gudang (Opsional)</label>
                         <input type="text" x-model="receiveForm.catatan" class="form-input" placeholder="Contoh: Barang diperiksa tim gudang dalam kondisi mulus...">
                     </div>
                 </div>
 
-                <!-- Footer Buttons -->
-                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2 border-t border-hairline">
-                    <button type="button" @click="showReceiveModal = false" class="btn btn-secondary w-full sm:w-auto">Batal</button>
-                    <button type="button" @click="submitReceiveGoods()" :disabled="isSubmitting" class="btn btn-primary w-full sm:w-auto justify-center" style="font-weight:700;background:#059669;border-color:#059669;">
-                        <i data-lucide="package-check"></i>
-                        <span x-show="!isSubmitting">Konfirmasi Terima &amp; Tambah Stok</span>
-                        <span x-show="isSubmitting">Menyimpan...</span>
-                    </button>
-                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="modal-footer">
+                <button type="button" @click="showReceiveModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                <button type="button" @click="submitReceiveGoods()" :disabled="isSubmitting" class="btn btn-primary w-full sm:w-auto" style="font-weight:700;background:#059669;border-color:#059669;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                    <i data-lucide="package-check" style="width:16px;height:16px;"></i>
+                    <span x-show="!isSubmitting">Konfirmasi Terima &amp; Tambah Stok</span>
+                    <span x-show="isSubmitting">Menyimpan...</span>
+                </button>
             </div>
         </div>
     </div>

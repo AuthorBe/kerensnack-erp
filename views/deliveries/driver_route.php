@@ -1279,16 +1279,16 @@ ob_start();
     <!-- 5. POP-UP MODAL DETAIL LENGKAP BERTAB (SPACIOUS & BEAUTIFULLY SPACED)      -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDetailModal" x-cloak class="modal-backdrop" style="z-index: 9999;">
+    <div x-show="showDetailModal" x-cloak class="modal-backdrop" @click="closeDetailModal()" style="z-index: 9999;">
         <div class="modal-box modal-box-lg" style="max-width: 760px; padding: 0; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;" @click.stop>
             
-            <!-- MOBILE PULL HANDLE -->
-            <div class="sm:hidden w-full flex justify-center pt-3 pb-1 flex-shrink-0" style="background:var(--color-canvas);">
-                <div style="width:40px;height:4px;border-radius:2px;background:var(--color-hairline-strong);"></div>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
             <!-- 1. MODAL HEADER (SPACIOUS PADDING) -->
-            <div style="padding: 22px 28px; border-bottom: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; background: var(--color-canvas); flex-shrink: 0; gap: 16px;">
+            <div class="modal-header" style="border-bottom: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; background: var(--color-canvas); flex-shrink: 0; gap: 16px;">
                 <div style="display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1;">
                     <div style="width: 48px; height: 48px; border-radius: 15px; background: #eff6ff; color: #1e3a8a; border: 1px solid rgba(30,58,138,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i data-lucide="truck" style="width: 24px; height: 24px;"></i>
@@ -1333,8 +1333,8 @@ ob_start();
                         <span style="font-size: 10.5px; color: var(--color-ink-mute); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Total Tagihan</span>
                         <span class="font-black text-blue-600 dark:text-blue-400 font-sans" style="font-size: 17px;" x-text="'Rp ' + formatRupiah(activeDelivery?.total_netto)"></span>
                     </div>
-                    <button type="button" @click="closeDetailModal()" class="btn btn-ghost btn-sm" style="width: 38px; height: 38px; padding: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--color-ink-mute);" aria-label="Tutup">
-                        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                    <button type="button" @click="closeDetailModal()" class="modal-close-x" aria-label="Tutup" title="Tutup Modal">
+                        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                     </button>
                 </div>
             </div>
@@ -2048,16 +2048,16 @@ ob_start();
     <!-- 6. POP-UP MODAL DETAIL LENGKAP TUGAS BELANJA PO (BERTAB & MULTI-MODE)     -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showShoppingDetailModal" x-cloak class="modal-backdrop" style="z-index: 9999;">
+    <div x-show="showShoppingDetailModal" x-cloak class="modal-backdrop" @click="closeShoppingDetailModal()" style="z-index: 9999;">
         <div class="modal-box modal-box-lg" style="max-width: 760px; padding: 0; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;" @click.stop>
             
-            <!-- MOBILE PULL HANDLE -->
-            <div class="sm:hidden w-full flex justify-center pt-3 pb-1 flex-shrink-0" style="background:var(--color-canvas);">
-                <div style="width:40px;height:4px;border-radius:2px;background:var(--color-hairline-strong);"></div>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
             <!-- 1. MODAL HEADER -->
-            <div style="padding: 22px 28px; border-bottom: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; background: var(--color-canvas); flex-shrink: 0; gap: 16px;">
+            <div class="modal-header" style="border-bottom: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; background: var(--color-canvas); flex-shrink: 0; gap: 16px;">
                 <div style="display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1;">
                     <div style="width: 48px; height: 48px; border-radius: 15px; background: #fef3c7; color: #b45309; border: 1px solid rgba(180,83,9,0.18); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                         <i data-lucide="shopping-cart" style="width: 24px; height: 24px;"></i>
@@ -2107,8 +2107,8 @@ ob_start();
                         <span style="font-size: 10.5px; color: var(--color-ink-mute); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Estimasi Belanja</span>
                         <span class="font-black text-amber-600 dark:text-amber-400 font-sans" style="font-size: 17px;" x-text="'Rp ' + formatRupiah(activeShoppingTask?.total_biaya)"></span>
                     </div>
-                    <button type="button" @click="closeShoppingDetailModal()" class="btn btn-ghost btn-sm" style="width: 38px; height: 38px; padding: 0; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: var(--color-ink-mute);" aria-label="Tutup">
-                        <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                    <button type="button" @click="closeShoppingDetailModal()" class="modal-close-x" aria-label="Tutup" title="Tutup Modal">
+                        <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                     </button>
                 </div>
             </div>

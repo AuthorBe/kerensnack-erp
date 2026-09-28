@@ -226,10 +226,14 @@ ob_start();
         <div x-show="showAssignModal" 
              x-cloak 
              class="modal-backdrop"
-            
+             @click="showAssignModal = false"
              @keydown.escape.window="showAssignModal = false">
             
-            <div class="modal-box" style="max-width: 680px; width: 100%; padding: 24px;">
+            <div class="modal-box modal-box-lg" @click.stop>
+                <!-- Mobile Pull Handle -->
+                <div class="modal-handle">
+                    <div class="modal-handle-bar"></div>
+                </div>
                 
                 <!-- Modal Header -->
                 <div class="modal-header">
@@ -243,6 +247,9 @@ ob_start();
                             <span class="font-bold" style="color:#8b5cf6;" x-text="selectedStoreIds.length + ' Toko Terpilih'"></span>
                         </div>
                     </div>
+                    <button type="button" @click="showAssignModal = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
 
                 <!-- Info Callout Banner -->
@@ -383,12 +390,12 @@ ob_start();
                     </div>
 
                     <!-- Modal Action Footer -->
-                    <div style="display:flex;justify-content:space-between;align-items:center;padding-top:14px;margin-top:14px;border-top:1px solid var(--color-hairline);">
+                    <div class="modal-footer" style="justify-content:space-between;">
                         <span style="font-size:12px;font-weight:600;color:var(--color-ink-secondary);">
                             Terpilih: <strong style="color:#8b5cf6;" x-text="selectedStoreIds.length"></strong> Toko
                         </span>
                         <div style="display:flex;gap:8px;">
-                            <button type="button" @click="showAssignModal = false" class="btn btn-secondary">
+                            <button type="button" @click="showAssignModal = false" class="btn btn-secondary modal-btn-cancel-desktop">
                                 Batal
                             </button>
                             <button type="submit" class="btn btn-primary" style="background:#8b5cf6;border-color:#8b5cf6;">
@@ -409,11 +416,15 @@ ob_start();
         <div x-show="showUnassignedModal" 
              x-cloak 
              class="modal-backdrop"
-            
+             @click="showUnassignedModal = false"
              @keydown.escape.window="showUnassignedModal = false">
             
-            <div class="modal-box" style="max-width: 580px; width: 100%; padding: 24px;">
-                
+            <div class="modal-box modal-box-md" @click.stop>
+                <!-- Mobile Pull Handle -->
+                <div class="modal-handle">
+                    <div class="modal-handle-bar"></div>
+                </div>
+
                 <!-- Modal Header -->
                 <div class="modal-header">
                     <div>
@@ -425,53 +436,59 @@ ob_start();
                             Daftar toko mitra konsinyasi aktif yang belum memiliki penanggung jawab tetap.
                         </div>
                     </div>
+                    <button type="button" @click="showUnassignedModal = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
 
-                <!-- Search Unassigned -->
-                <div class="mb-3">
-                    <div class="form-input-icon">
-                        <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
-                        <input type="text" 
-                               x-model="unassignedSearchQuery" 
-                               placeholder="Cari nama toko / kode / alamat..." 
-                               class="form-input" 
-                               style="height:36px;font-size:12.5px;">
+                <!-- Modal Body -->
+                <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:12px;">
+                    <!-- Search Unassigned -->
+                    <div>
+                        <div class="form-input-icon">
+                            <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+                            <input type="text" 
+                                   x-model="unassignedSearchQuery" 
+                                   placeholder="Cari nama toko / kode / alamat..." 
+                                   class="form-input" 
+                                   style="height:36px;font-size:12.5px;">
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Unassigned Stores List (Flex Column with 10px Gap) -->
+                    <div class="custom-scrollbar overflow-y-auto" style="max-height: 380px; display: flex; flex-direction: column; gap: 10px; padding: 2px;">
+                        <template x-for="st in filteredUnassignedStores()" :key="st.id">
+                            <div class="p-3 rounded-xl border" style="border-color:var(--color-hairline);background:var(--color-surface);">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="badge badge-mono text-[10px]" x-text="st.kode_pelanggan"></span>
+                                            <span class="text-xs font-bold" style="color:var(--color-ink);" x-text="st.nama_toko"></span>
+                                        </div>
+                                        <div class="text-[11px] mt-1" style="color:var(--color-ink-mute);" x-text="st.alamat_lengkap || '-'"></div>
+                                    </div>
+                                    <span class="badge badge-warning text-[10px] flex-shrink-0" x-text="st.nama_wilayah"></span>
+                                </div>
+                                <div class="flex items-center justify-between text-[11px] mt-2 pt-2 border-t" style="border-color:var(--color-hairline);color:var(--color-ink-secondary);">
+                                    <div>Pemilik: <strong style="color:var(--color-ink);" x-text="st.nama_pemilik || '-'"></strong></div>
+                                    <div class="font-mono text-[10.5px]" x-text="st.nomor_whatsapp || '-'"></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Empty State -->
+                        <template x-if="filteredUnassignedStores().length === 0">
+                            <div class="py-10 text-center" style="color:var(--color-ink-mute);">
+                                <i data-lucide="check-circle" style="width:36px;height:36px;margin:0 auto 8px auto;color:#10b981;"></i>
+                                <div style="font-weight:700;color:var(--color-ink);font-size:13px;">Semua Toko Terpasang!</div>
+                                <div style="font-size:11.5px;margin-top:2px;">Seluruh toko konsinyasi aktif telah memiliki sales penanggung jawab.</div>
+                            </div>
+                        </template>
                     </div>
                 </div>
 
-                <!-- Scrollable Unassigned Stores List (Flex Column with 10px Gap) -->
-                <div class="custom-scrollbar overflow-y-auto" style="max-height: 380px; display: flex; flex-direction: column; gap: 10px; padding: 2px;">
-                    <template x-for="st in filteredUnassignedStores()" :key="st.id">
-                        <div class="p-3 rounded-xl border" style="border-color:var(--color-hairline);background:var(--color-surface);">
-                            <div class="flex items-start justify-between gap-2">
-                                <div>
-                                    <div class="flex items-center gap-1.5">
-                                        <span class="badge badge-mono text-[10px]" x-text="st.kode_pelanggan"></span>
-                                        <span class="text-xs font-bold" style="color:var(--color-ink);" x-text="st.nama_toko"></span>
-                                    </div>
-                                    <div class="text-[11px] mt-1" style="color:var(--color-ink-mute);" x-text="st.alamat_lengkap || '-'"></div>
-                                </div>
-                                <span class="badge badge-warning text-[10px] flex-shrink-0" x-text="st.nama_wilayah"></span>
-                            </div>
-                            <div class="flex items-center justify-between text-[11px] mt-2 pt-2 border-t" style="border-color:var(--color-hairline);color:var(--color-ink-secondary);">
-                                <div>Pemilik: <strong style="color:var(--color-ink);" x-text="st.nama_pemilik || '-'"></strong></div>
-                                <div class="font-mono text-[10.5px]" x-text="st.nomor_whatsapp || '-'"></div>
-                            </div>
-                        </div>
-                    </template>
-
-                    <!-- Empty State -->
-                    <template x-if="filteredUnassignedStores().length === 0">
-                        <div class="py-10 text-center" style="color:var(--color-ink-mute);">
-                            <i data-lucide="check-circle" style="width:36px;height:36px;margin:0 auto 8px auto;color:#10b981;"></i>
-                            <div style="font-weight:700;color:var(--color-ink);font-size:13px;">Semua Toko Terpasang!</div>
-                            <div style="font-size:11.5px;margin-top:2px;">Seluruh toko konsinyasi aktif telah memiliki sales penanggung jawab.</div>
-                        </div>
-                    </template>
-                </div>
-
                 <!-- Modal Footer -->
-                <div style="display:flex;justify-content:flex-end;padding-top:14px;margin-top:14px;border-top:1px solid var(--color-hairline);">
+                <div class="modal-footer">
                     <button type="button" @click="showUnassignedModal = false" class="btn btn-secondary">
                         Tutup
                     </button>

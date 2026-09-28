@@ -2365,31 +2365,34 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
     <template x-teleport="body">
         <div x-show="showConfirmModal" 
              x-cloak 
-             class="modal-backdrop is-confirm-backdrop"
-             style="display:flex;align-items:flex-end;justify-content:center;"
+             class="modal-backdrop"
+             @click="showConfirmModal = false"
              @keydown.escape.window="showConfirmModal = false">
             
-            <div class="modal-box is-confirm-box" 
-                 style="width:100%;max-width:500px;border-top-left-radius:24px;border-top-right-radius:24px;padding:20px;box-shadow:0 -10px 40px rgba(0,0,0,0.2);background:var(--color-surface);border:1px solid var(--color-hairline);box-sizing:border-box;">
-                
-                <!-- Drag handle for mobile gesture recognition -->
-                <div style="width:40px;height:5px;background:var(--color-hairline-strong);border-radius:9999px;margin:0 auto 14px;"></div>
+            <div class="modal-box modal-box-md" @click.stop>
+                <!-- Mobile Pull Handle -->
+                <div class="modal-handle">
+                    <div class="modal-handle-bar"></div>
+                </div>
 
                 <!-- Modal Header -->
-                <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--color-hairline);margin-bottom:14px;">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <div style="width:34px;height:34px;border-radius:10px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <div class="modal-header">
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                             <i data-lucide="clipboard-check" style="width:18px;height:18px;"></i>
                         </div>
-                        <div>
-                            <h3 style="font-size:16px;font-weight:900;color:var(--color-ink);margin:0;">Konfirmasi Opname</h3>
-                            <span style="font-size:11px;color:var(--color-ink-mute);display:block;"><?= htmlspecialchars($customer['nama_toko']) ?></span>
+                        <div style="min-width:0;">
+                            <div class="modal-title">Konfirmasi Opname</div>
+                            <span style="font-size:11px;color:var(--color-ink-mute);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($customer['nama_toko']) ?></span>
                         </div>
                     </div>
-                    <button type="button" @click="showConfirmModal = false" style="background:transparent;border:none;color:var(--color-ink-mute);cursor:pointer;padding:4px;">
-                        <i data-lucide="x" style="width:16px;height:16px;"></i>
+                    <button type="button" @click="showConfirmModal = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
                     </button>
                 </div>
+
+                <!-- Modal Body -->
+                <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:12px;">
 
                 <!-- Nihil Warning Notice -->
                 <template x-if="grandTotalLakuPcs === 0 && grandTotalRusakPcs === 0">
@@ -2509,18 +2512,20 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                     </div>
                 </template>
 
+                </div><!-- /modal-body -->
+
                 <!-- Modal Actions -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="modal-footer">
                     <button type="button" 
                             @click="showConfirmModal = false" 
-                            class="btn btn-secondary"
-                            style="padding:12px;border-radius:12px;font-weight:700;font-size:12px;justify-content:center;">
+                            class="btn btn-secondary modal-btn-cancel-desktop"
+                            style="justify-content:center;">
                         Periksa Lagi
                     </button>
                     <button type="button" 
                             @click="submitForm()" 
                             class="btn btn-primary" 
-                            style="padding:12px;border-radius:12px;font-weight:900;font-size:12px;background:#10b981;border-color:#10b981;color:#fff;justify-content:center;box-shadow:0 3px 10px rgba(16,185,129,0.3);"
+                            style="background:#10b981;border-color:#10b981;color:#fff;justify-content:center;box-shadow:0 3px 10px rgba(16,185,129,0.3);"
                             x-text="tipeKonsinyasi === 'kolektif_tagihan' ? 'Konfirmasi & Simpan Opname' : 'Simpan & Cetak Nota'">
                     </button>
                 </div>

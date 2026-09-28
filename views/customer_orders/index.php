@@ -982,16 +982,16 @@ ob_start();
     <!-- MODAL: POP-UP DETAIL PESANAN LENGKAP (MODERN & RESPONSIF)                 -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDetailModal" x-cloak class="modal-backdrop">
+    <div x-show="showDetailModal" x-cloak class="modal-backdrop" @click="showDetailModal = false">
         <div class="modal-box modal-box-lg" @click.stop>
             
-            <!-- MOBILE PULL HANDLE -->
-            <div class="sm:hidden w-full flex justify-center pt-3 pb-1 flex-shrink-0" style="background:var(--color-canvas);">
-                <div style="width:40px;height:4px;border-radius:2px;background:var(--color-hairline-strong);"></div>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
             <!-- 1. MODAL HEADER -->
-            <div style="padding:16px 20px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between;background:var(--color-canvas);flex-shrink:0;gap:12px;">
+            <div class="modal-header">
                 <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
                     <div style="width:42px;height:42px;border-radius:12px;background:#eff6ff;color:#1e3a8a;border:1px solid rgba(30,58,138,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i data-lucide="file-text" style="width:20px;height:20px;"></i>
@@ -1031,7 +1031,7 @@ ob_start();
                         <span style="font-size:10.5px;color:var(--color-ink-mute);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Grand Total</span>
                         <span class="font-mono font-black" style="font-size:16px;color:var(--color-ink);" x-text="formatRupiah(orderDetail?.total_netto)"></span>
                     </div>
-                    <button type="button" @click="showDetailModal = false" class="btn btn-ghost btn-sm" style="width:34px;height:34px;padding:0;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--color-ink-mute);" aria-label="Tutup">
+                    <button type="button" @click="showDetailModal = false" class="modal-close-x" title="Tutup Modal" aria-label="Tutup">
                         <i data-lucide="x" style="width:18px;height:18px;"></i>
                     </button>
                 </div>
@@ -2502,6 +2502,11 @@ ob_start();
 
             </div>
 
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button type="button" @click="showDetailModal = false" class="btn btn-secondary modal-btn-cancel-desktop" style="min-width:90px;justify-content:center;">Tutup</button>
+            </div>
+
         </div>
     </div>
     </template>
@@ -2511,79 +2516,92 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can('orders.retry_delivery')): ?>
     <template x-teleport="body">
-    <div x-show="showRetryModal" x-cloak class="modal-backdrop" style="z-index: 10050;">
-        <div class="modal-box" style="max-width: 480px; padding: 24px; border-radius: 20px; text-align: left;" @click.stop>
-            
-            <!-- JIKA KEDALUWARSA (> 7 HARI) -->
-            <template x-if="retryExpired">
-                <div style="display:flex;flex-direction:column;gap:16px;">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:48px;height:48px;border-radius:14px;background:rgba(239,68,68,0.12);color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="alert-octagon" style="width:26px;height:26px;"></i>
+    <div x-show="showRetryModal" x-cloak class="modal-backdrop" style="z-index: 10050;" @click="showRetryModal = false">
+        <div class="modal-box modal-box-sm" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
+            </div>
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div class="modal-title" x-text="retryExpired ? 'Masa Tenggang Habis' : 'Kirim Ulang Pesanan'"></div>
+                <button type="button" @click="showRetryModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body custom-scrollbar">
+                <!-- JIKA KEDALUWARSA (> 7 HARI) -->
+                <template x-if="retryExpired">
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div style="width:40px;height:40px;border-radius:12px;background:rgba(239,68,68,0.12);color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="alert-octagon" style="width:22px;height:22px;"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-size:15px;font-weight:900;color:var(--color-ink);margin:0;">Masa Tenggang Habis</h3>
+                                <p style="font-size:11.5px;color:var(--color-ink-mute);margin:2px 0 0 0;">Pesanan Kedaluwarsa (&gt; 7 Hari)</p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 style="font-size:16px;font-weight:900;color:var(--color-ink);margin:0;">Masa Tenggang Habis</h3>
-                            <p style="font-size:12px;color:var(--color-ink-mute);margin:2px 0 0 0;">Pesanan Kedaluwarsa (&gt; 7 Hari)</p>
+
+                        <div style="padding:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;font-size:12.5px;color:#991b1b;line-height:1.5;">
+                            Pesanan <strong>#<span x-text="retryOrder?.nomor_nota"></span></strong> telah melewati batas maksimal <strong>7 hari</strong> sejak dinyatakan gagal kirim.
+                            <div style="margin-top:6px;font-size:12px;color:#b91c1c;">
+                                Sesuai kebijakan sistem, pesanan ini sudah kedaluwarsa dan <strong>otomatis dibatalkan</strong>. Seluruh stok produk telah aman berada di rak gudang.
+                            </div>
+                        </div>
+
+                        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;">
+                            <button type="button" @click="handleAutoCancelExpired()" :disabled="isSubmittingRetry" class="btn btn-danger w-full sm:w-auto" style="border-radius:10px;font-weight:700;padding:9px 18px;justify-content:center;">
+                                <span x-text="isSubmittingRetry ? 'Memproses...' : 'Tutup &amp; Batalkan Pesanan'"></span>
+                            </button>
                         </div>
                     </div>
+                </template>
 
-                    <div style="padding:14px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;font-size:12.5px;color:#991b1b;line-height:1.5;">
-                        Pesanan <strong>#<span x-text="retryOrder?.nomor_nota"></span></strong> telah melewati batas maksimal <strong>7 hari</strong> sejak dinyatakan gagal kirim.
-                        <div style="margin-top:6px;font-size:12px;color:#b91c1c;">
-                            Sesuai kebijakan sistem, pesanan ini sudah kedaluwarsa dan <strong>otomatis dibatalkan</strong>. Seluruh stok produk telah aman berada di rak gudang.
+                <!-- JIKA MASIH DALAM TENGGANG WAKTU (<= 7 HARI) -->
+                <template x-if="!retryExpired">
+                    <div style="display:flex;flex-direction:column;gap:14px;">
+                        <div style="display:flex;align-items:center;gap:12px;">
+                            <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                <i data-lucide="rotate-cw" style="width:20px;height:20px;"></i>
+                            </div>
+                            <div>
+                                <h3 style="font-size:15px;font-weight:900;color:var(--color-ink);margin:0;">Kirim Ulang Pesanan</h3>
+                                <p style="font-size:11.5px;color:var(--color-ink-mute);margin:2px 0 0 0;" x-text="'Nota #' + (retryOrder?.nomor_nota || '') + ' - ' + (retryOrder?.nama_toko || '')"></p>
+                            </div>
+                        </div>
+
+                        <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:12px;font-size:12.5px;color:var(--color-ink);line-height:1.5;">
+                            Apakah rincian item produk pada pesanan ini <strong>perlu diedit / disesuaikan</strong> terlebih dahulu sebelum dikirim ulang ke gudang?
+                        </div>
+
+                        <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+                            <!-- Opsi 1: Ya, Edit Dulu -->
+                            <a :href="'<?= Router::url('/customer-orders/edit?id=') ?>' + (retryOrder?.id || '') + '&retry=1'"
+                               class="btn btn-secondary w-full"
+                               style="padding:11px 16px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:13px;color:#2563eb;background:#eff6ff;border:1.5px solid #bfdbfe;text-decoration:none;">
+                                <i data-lucide="edit-3" style="width:16px;height:16px;"></i>
+                                <span>Ya, Edit Pesanan Dulu</span>
+                            </a>
+
+                            <!-- Opsi 2: Tidak, Langsung Kirim Ulang -->
+                            <button type="button" @click="submitDirectRetry()" :disabled="isSubmittingRetry"
+                                    class="btn btn-primary w-full"
+                                    style="padding:11px 16px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:13px;background:#1e3a8a;border-color:#1e3a8a;">
+                                <i data-lucide="package-check" style="width:16px;height:16px;"></i>
+                                <span x-text="isSubmittingRetry ? 'Menjadwalkan...' : 'Tidak, Langsung Kirim Ulang'"></span>
+                            </button>
                         </div>
                     </div>
-
-                    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px;">
-                        <button type="button" @click="handleAutoCancelExpired()" :disabled="isSubmittingRetry" class="btn btn-danger" style="border-radius:10px;font-weight:700;padding:9px 18px;">
-                            <span x-text="isSubmittingRetry ? 'Memproses...' : 'Tutup &amp; Batalkan Pesanan'"></span>
-                        </button>
-                    </div>
-                </div>
-            </template>
-
-            <!-- JIKA MASIH DALAM TENGGANG WAKTU (<= 7 HARI) -->
-            <template x-if="!retryExpired">
-                <div style="display:flex;flex-direction:column;gap:18px;">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:48px;height:48px;border-radius:14px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="rotate-cw" style="width:24px;height:24px;"></i>
-                        </div>
-                        <div>
-                            <h3 style="font-size:16px;font-weight:900;color:var(--color-ink);margin:0;">Kirim Ulang Pesanan</h3>
-                            <p style="font-size:12px;color:var(--color-ink-mute);margin:2px 0 0 0;" x-text="'Nota #' + (retryOrder?.nomor_nota || '') + ' - ' + (retryOrder?.nama_toko || '')"></p>
-                        </div>
-                    </div>
-
-                    <div style="padding:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:12px;font-size:13px;color:var(--color-ink);line-height:1.5;">
-                        Apakah rincian item produk pada pesanan ini <strong>perlu diedit / disesuaikan</strong> terlebih dahulu sebelum dikirim ulang ke gudang?
-                    </div>
-
-                    <div style="display:flex;flex-direction:column;gap:10px;">
-                        <!-- Opsi 1: Ya, Edit Dulu -->
-                        <a :href="'<?= Router::url('/customer-orders/edit?id=') ?>' + (retryOrder?.id || '') + '&retry=1'"
-                           class="btn btn-secondary w-full"
-                           style="padding:11px 16px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:13px;color:#2563eb;background:#eff6ff;border:1.5px solid #bfdbfe;text-decoration:none;">
-                            <i data-lucide="edit-3" style="width:16px;height:16px;"></i>
-                            <span>Ya, Edit Pesanan Dulu</span>
-                        </a>
-
-                        <!-- Opsi 2: Tidak, Langsung Kirim Ulang -->
-                        <button type="button" @click="submitDirectRetry()" :disabled="isSubmittingRetry"
-                                class="btn btn-primary w-full"
-                                style="padding:11px 16px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:13px;background:#1e3a8a;border-color:#1e3a8a;">
-                            <i data-lucide="package-check" style="width:16px;height:16px;"></i>
-                            <span x-text="isSubmittingRetry ? 'Menjadwalkan...' : 'Tidak, Langsung Kirim Ulang'"></span>
-                        </button>
-                        
-                        <!-- Batal -->
-                        <button type="button" @click="showRetryModal = false" class="btn btn-ghost w-full" style="font-size:12px;font-weight:600;color:var(--color-ink-mute);padding:6px;">
-                            Tutup / Batalkan Dialog
-                        </button>
-                    </div>
-                </div>
-            </template>
-
+                </template>
+            </div>
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button type="button" @click="showRetryModal = false" class="btn btn-secondary modal-btn-cancel-desktop" style="min-width:90px;justify-content:center;">Batal</button>
+            </div>
         </div>
     </div>
     </template>

@@ -236,58 +236,76 @@ ob_start();
     <!-- MODAL 1: BUAT SURAT JALAN -->
     <?php if (Auth::can('deliveries.create')): ?>
     <template x-teleport="body">
-    <div x-show="showAddModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:500px;padding:24px;">
-            <div class="modal-header">
-                <div class="modal-title">Terbitkan Surat Jalan Pengiriman</div>
+    <div x-show="showAddModal" x-cloak class="modal-backdrop" @click="showAddModal = false" style="z-index:9999;">
+        <div class="modal-box" style="max-width:520px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form action="<?= Router::url('/deliveries/store') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <div>
-                    <label class="form-label">Pilih Nota Pesanan Toko *</label>
-                    <select name="pesanan_id" x-model="addSelectedPesananId" @change="onPesananChange()" required class="form-input searchable-select">
-                        <option value="">-- Pilih Pesanan Menunggu Kirim --</option>
-                        <?php foreach ($pendingOrders as $po): 
-                            $isKonsinyasiPo = ($po['tipe_pembayaran'] === 'konsinyasi') || !empty($po['is_konsinyasi']);
-                        ?>
-                        <option value="<?= $po['id'] ?>">
-                            <?= htmlspecialchars($po['nomor_nota']) ?> - <?= htmlspecialchars($po['nama_toko']) ?> <?= $isKonsinyasiPo ? '(Konsinyasi)' : '(Rp ' . number_format((float)$po['total_netto'], 0, ',', '.') . ')' ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label font-bold">Tanggal Kirim / Surat Jalan *</label>
-                        <input type="date" name="tanggal_surat_jalan" x-model="defaultDeliveryDate" required class="form-input font-medium" style="height:40px;">
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(59,130,246,0.12);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="truck" style="width:20px;height:20px;"></i>
                     </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Terbitkan Surat Jalan</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Manifest Pengiriman Toko</div>
+                    </div>
+                </div>
+                <button type="button" @click="showAddModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form action="<?= Router::url('/deliveries/store') ?>" method="POST">
+                <div class="modal-body custom-scrollbar space-y-4">
                     <div>
-                        <label class="form-label font-bold">Driver / Petugas Pengantar *</label>
-                        <select name="sales_driver_id" x-model="addSelectedDriverId" required class="form-input" style="height:40px;">
-                            <option value="">-- Pilih Driver / Petugas Pengantar --</option>
-                            <?php foreach ($drivers as $d): ?>
-                            <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?><?= !empty($d['nomor_polisi_kendaraan']) ? ' (' . htmlspecialchars($d['nomor_polisi_kendaraan']) . ')' : '' ?></option>
+                        <label class="form-label font-bold">Pilih Nota Pesanan Toko *</label>
+                        <select name="pesanan_id" x-model="addSelectedPesananId" @change="onPesananChange()" required class="form-input searchable-select">
+                            <option value="">-- Pilih Pesanan Menunggu Kirim --</option>
+                            <?php foreach ($pendingOrders as $po): 
+                                $isKonsinyasiPo = ($po['tipe_pembayaran'] === 'konsinyasi') || !empty($po['is_konsinyasi']);
+                            ?>
+                            <option value="<?= $po['id'] ?>">
+                                <?= htmlspecialchars($po['nomor_nota']) ?> - <?= htmlspecialchars($po['nama_toko']) ?> <?= $isKonsinyasiPo ? '(Konsinyasi)' : '(Rp ' . number_format((float)$po['total_netto'], 0, ',', '.') . ')' ?>
+                            </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label font-bold">Tanggal Kirim / SJ *</label>
+                            <input type="date" name="tanggal_surat_jalan" x-model="defaultDeliveryDate" required class="form-input font-medium" style="height:40px;">
+                        </div>
+                        <div>
+                            <label class="form-label font-bold">Driver / Petugas Pengantar *</label>
+                            <select name="sales_driver_id" x-model="addSelectedDriverId" required class="form-input" style="height:40px;">
+                                <option value="">-- Pilih Driver / Petugas Pengantar --</option>
+                                <?php foreach ($drivers as $d): ?>
+                                <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?><?= !empty($d['nomor_polisi_kendaraan']) ? ' (' . htmlspecialchars($d['nomor_polisi_kendaraan']) . ')' : '' ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="font-size:11.5px;color:var(--color-ink-mute);display:flex;align-items:center;gap:6px;padding:0 2px;">
+                        <i data-lucide="clock" style="width:13px;height:13px;color:var(--color-primary);flex-shrink:0;"></i>
+                        <span x-text="isAfternoon ? 'Dibuat siang/sore (>= 12:00 WIB): default tanggal diset untuk BESOK.' : 'Dibuat pagi (< 12:00 WIB): default tanggal diset untuk HARI INI.'"></span>
+                    </div>
+
+                    <div style="padding:10px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;font-size:12px;color:#1e40af;display:flex;align-items:center;gap:8px;">
+                        <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
+                        <span>Surat Jalan otomatis berstatus <strong>Siap Dikirim</strong> dan langsung dialokasikan ke jadwal rute driver.</span>
+                    </div>
+                    <input type="hidden" name="status_surat_jalan" value="siap_kirim">
                 </div>
 
-                <div style="font-size:11.5px;color:var(--color-ink-mute);display:flex;align-items:center;gap:6px;padding:0 2px;">
-                    <i data-lucide="clock" style="width:13px;height:13px;color:var(--color-primary);flex-shrink:0;"></i>
-                    <span x-text="isAfternoon ? 'Dibuat siang/sore (>= 12:00 WIB): default tanggal otomatis diset untuk pengiriman BESOK.' : 'Dibuat pagi (< 12:00 WIB): default tanggal otomatis diset untuk pengiriman HARI INI.'"></span>
-                </div>
-
-                <div style="padding:10px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;font-size:12px;color:#1e40af;display:flex;align-items:center;gap:8px;">
-                    <i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i>
-                    <span>Surat Jalan otomatis berstatus <strong>Siap Dikirim</strong> dan langsung dialokasikan ke jadwal rute driver.</span>
-                </div>
-                <input type="hidden" name="status_surat_jalan" value="siap_kirim">
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showAddModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i data-lucide="save"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showAddModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span>Terbitkan Dokumen</span>
                     </button>
                 </div>
@@ -302,54 +320,64 @@ ob_start();
     <!-- ========================================================================= -->
     <?php if (Auth::can(['deliveries.create', 'deliveries.update_all'])): ?>
     <template x-teleport="body">
-    <div x-show="showEditModal" x-cloak class="modal-backdrop" @keydown.escape.window="showEditModal = false" style="z-index:9999;">
-        <div class="modal-box" style="max-width:500px;padding:24px;">
-            <div class="modal-header" style="margin-bottom:16px;">
-                <div class="flex items-center gap-3">
-                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="edit-3" style="width:18px;height:18px;"></i>
+    <div x-show="showEditModal" x-cloak class="modal-backdrop" @click="showEditModal = false" @keydown.escape.window="showEditModal = false" style="z-index:9999;">
+        <div class="modal-box" style="max-width:520px;" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
+            </div>
+
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
                     </div>
-                    <div>
-                        <div class="modal-title" style="font-size:16px;font-weight:800;color:var(--color-ink);">Ubah Surat Jalan</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Ubah Surat Jalan</div>
                         <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Ubah Pengemudi/Sales &amp; Tanggal Pengiriman</div>
                     </div>
                 </div>
+                <button type="button" @click="showEditModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
             </div>
 
-            <form action="<?= Router::url('/deliveries/update') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <input type="hidden" name="id" :value="editData.id">
+            <form action="<?= Router::url('/deliveries/update') ?>" method="POST">
+                <div class="modal-body custom-scrollbar space-y-4">
+                    <input type="hidden" name="id" :value="editData.id">
 
-                <!-- Ringkasan Toko & Dokumen (Read-Only) -->
-                <div style="background:var(--color-canvas-soft);padding:12px 14px;border-radius:12px;border:1px solid var(--color-hairline);font-size:12px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <span class="badge badge-mono font-bold" x-text="editData.nomor_surat_jalan"></span>
-                        <span class="font-mono text-ink-mute" style="font-size:11.5px;font-weight:700;" x-text="editData.nomor_nota"></span>
+                    <!-- Ringkasan Toko & Dokumen (Read-Only) -->
+                    <div style="background:var(--color-canvas-soft);padding:12px 14px;border-radius:12px;border:1px solid var(--color-hairline);font-size:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span class="badge badge-mono font-bold" x-text="editData.nomor_surat_jalan"></span>
+                            <span class="font-mono text-ink-mute" style="font-size:11.5px;font-weight:700;" x-text="editData.nomor_nota"></span>
+                        </div>
+                        <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);margin-top:6px;" x-text="editData.nama_toko"></div>
+                        <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="editData.alamat_toko"></div>
                     </div>
-                    <div style="font-weight:800;font-size:13.5px;color:var(--color-ink);margin-top:6px;" x-text="editData.nama_toko"></div>
-                    <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="editData.alamat_toko"></div>
+
+                    <!-- Tanggal Pengiriman -->
+                    <div>
+                        <label class="form-label font-bold">Tanggal Pengiriman / Surat Jalan *</label>
+                        <input type="date" name="tanggal_surat_jalan" x-model="editData.tanggal_surat_jalan" required class="form-input font-medium" style="height:40px;">
+                    </div>
+
+                    <!-- Driver / Petugas Pengantar -->
+                    <div>
+                        <label class="form-label font-bold">Driver / Petugas Pengantar *</label>
+                        <select name="sales_driver_id" required class="form-input" x-model="editData.sales_driver_id" style="height:40px;">
+                            <option value="">-- Pilih Driver / Petugas Pengantar --</option>
+                            <?php foreach ($drivers as $d): ?>
+                            <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?><?= !empty($d['nomor_polisi_kendaraan']) ? ' (' . htmlspecialchars($d['nomor_polisi_kendaraan']) . ')' : '' ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Tanggal Pengiriman -->
-                <div>
-                    <label class="form-label font-bold">Tanggal Pengiriman / Surat Jalan *</label>
-                    <input type="date" name="tanggal_surat_jalan" x-model="editData.tanggal_surat_jalan" required class="form-input font-medium" style="height:40px;">
-                </div>
-
-                <!-- Driver / Petugas Pengantar -->
-                <div>
-                    <label class="form-label font-bold">Driver / Petugas Pengantar *</label>
-                    <select name="sales_driver_id" required class="form-input" x-model="editData.sales_driver_id" style="height:40px;">
-                        <option value="">-- Pilih Driver / Petugas Pengantar --</option>
-                        <?php foreach ($drivers as $d): ?>
-                        <option value="<?= $d['id'] ?>"><?= htmlspecialchars($d['nama_karyawan']) ?><?= !empty($d['nomor_polisi_kendaraan']) ? ' (' . htmlspecialchars($d['nomor_polisi_kendaraan']) . ')' : '' ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px;">
-                    <button type="button" @click="showEditModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">
-                        <i data-lucide="save" style="width:15px;height:15px;"></i>
+                <div class="modal-footer">
+                    <button type="button" @click="showEditModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
                         <span>Simpan Perubahan</span>
                     </button>
                 </div>

@@ -309,60 +309,73 @@ ob_start();
     <!-- MODAL 1: CATAT KAS MASUK -->
     <?php if (Auth::can('cash.inflow')): ?>
     <template x-teleport="body">
-    <div x-show="showInflowModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
-            <div class="modal-header">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:32px;height:32px;border-radius:var(--rounded-md);background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;">
-                        <i data-lucide="arrow-down-left" style="width:16px;height:16px;"></i>
-                    </div>
-                    <div>
-                        <div class="modal-title">Catat Kas Masuk</div>
-                        <div style="font-size:11.5px;color:var(--color-ink-mute);">Penerimaan modal, pendapatan lain-lain</div>
-                    </div>
-                </div>
+    <div x-show="showInflowModal" x-cloak class="modal-backdrop" @click="showInflowModal = false">
+        <div class="modal-box modal-box-md" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form action="<?= Router::url('/cash/store-inflow') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <div>
-                    <label class="form-label">Masuk ke Akun Kas / Bank *</label>
-                    <select name="akun_kas_id" required class="form-input">
-                        <option value="">-- Pilih Akun Kas Penerima --</option>
-                        <?php foreach ($accounts as $a): ?>
-                        <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Nominal Masuk (Rp) *</label>
-                        <input type="text" name="nominal" required class="form-input font-mono input-rupiah" placeholder="500.000">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="arrow-down-left" style="width:18px;height:18px;"></i>
                     </div>
-                    <div>
-                        <label class="form-label">Tanggal Transaksi *</label>
-                        <input type="date" name="tanggal_transaksi" value="<?= date('Y-m-d') ?>" required class="form-input">
+                    <div style="min-width:0;">
+                        <div class="modal-title">Catat Kas Masuk</div>
+                        <div style="font-size:11.5px;color:var(--color-ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Penerimaan modal & pendapatan lain-lain</div>
                     </div>
                 </div>
+                <button type="button" @click="showInflowModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
 
-                <div>
-                    <label class="form-label">Kategori Pemasukan *</label>
-                    <select name="kategori" required class="form-input">
-                        <option value="Tambahan Modal Owner">Tambahan Modal Owner</option>
-                        <option value="Pendapatan Bunga Bank">Pendapatan Bunga Bank / Jasa Giro</option>
-                        <option value="Penjualan Non-Sistem">Penjualan Non-Sistem / Scrap</option>
-                        <option value="Pendapatan Lain-lain">Pendapatan Lain-lain</option>
-                    </select>
+            <form action="<?= Router::url('/cash/store-inflow') ?>" method="POST" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+                <!-- Modal Body -->
+                <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <label class="form-label">Masuk ke Akun Kas / Bank *</label>
+                        <select name="akun_kas_id" required class="form-input">
+                            <option value="">-- Pilih Akun Kas Penerima --</option>
+                            <?php foreach ($accounts as $a): ?>
+                            <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Nominal Masuk (Rp) *</label>
+                            <input type="text" name="nominal" required class="form-input font-mono input-rupiah" placeholder="500.000">
+                        </div>
+                        <div>
+                            <label class="form-label">Tanggal Transaksi *</label>
+                            <input type="date" name="tanggal_transaksi" value="<?= date('Y-m-d') ?>" required class="form-input">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Kategori Pemasukan *</label>
+                        <select name="kategori" required class="form-input">
+                            <option value="Tambahan Modal Owner">Tambahan Modal Owner</option>
+                            <option value="Pendapatan Bunga Bank">Pendapatan Bunga Bank / Jasa Giro</option>
+                            <option value="Penjualan Non-Sistem">Penjualan Non-Sistem / Scrap</option>
+                            <option value="Pendapatan Lain-lain">Pendapatan Lain-lain</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Keterangan Transaksi *</label>
+                        <textarea name="keterangan" required class="form-input" rows="2" placeholder="Contoh: Suntikan modal tambahan operasional packing"></textarea>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Keterangan Transaksi *</label>
-                    <textarea name="keterangan" required class="form-input" rows="2" placeholder="Contoh: Suntikan modal tambahan operasional packing"></textarea>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showInflowModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary" style="background:#059669;">
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" @click="showInflowModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="background:#059669; border-color:#059669;">
                         <i data-lucide="save"></i>
                         <span>Simpan Kas Masuk</span>
                     </button>
@@ -376,60 +389,73 @@ ob_start();
     <!-- MODAL 2: CATAT KAS KELUAR (BEBAN OPERASIONAL) -->
     <?php if (Auth::can('cash.outflow')): ?>
     <template x-teleport="body">
-    <div x-show="showOutflowModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:480px;padding:24px;" @click.stop>
-            <div class="modal-header">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:32px;height:32px;border-radius:var(--rounded-md);background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;">
-                        <i data-lucide="arrow-up-right" style="width:16px;height:16px;"></i>
-                    </div>
-                    <div>
-                        <div class="modal-title">Catat Kas Keluar (Beban)</div>
-                        <div style="font-size:11.5px;color:var(--color-ink-mute);">Pengeluaran operasional toko, bensin, listrik, dll</div>
-                    </div>
-                </div>
+    <div x-show="showOutflowModal" x-cloak class="modal-backdrop" @click="showOutflowModal = false">
+        <div class="modal-box modal-box-md" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form action="<?= Router::url('/cash/store-outflow') ?>" method="POST" style="display:flex;flex-direction:column;gap:14px;">
-                <div>
-                    <label class="form-label">Potong dari Akun Kas / Bank *</label>
-                    <select name="akun_kas_id" required class="form-input">
-                        <option value="">-- Pilih Akun Kas Sumber --</option>
-                        <?php foreach ($accounts as $a): ?>
-                        <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Nominal Keluar (Rp) *</label>
-                        <input type="text" name="nominal" required class="form-input font-mono input-rupiah" placeholder="150.000">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.12);color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="arrow-up-right" style="width:18px;height:18px;"></i>
                     </div>
-                    <div>
-                        <label class="form-label">Tanggal Transaksi *</label>
-                        <input type="date" name="tanggal_transaksi" value="<?= date('Y-m-d') ?>" required class="form-input">
+                    <div style="min-width:0;">
+                        <div class="modal-title">Catat Kas Keluar (Beban)</div>
+                        <div style="font-size:11.5px;color:var(--color-ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Pengeluaran operasional toko, bensin, listrik, dll</div>
                     </div>
                 </div>
+                <button type="button" @click="showOutflowModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
 
-                <div>
-                    <label class="form-label">Kategori Beban / Biaya *</label>
-                    <select name="kategori" required class="form-input">
-                        <?php foreach ($categories as $cat): ?>
-                        <option value="<?= htmlspecialchars($cat['nama_kategori']) ?>"><?= htmlspecialchars($cat['nama_kategori']) ?></option>
-                        <?php endforeach; ?>
-                        <option value="Lain-lain">Lain-lain</option>
-                    </select>
+            <form action="<?= Router::url('/cash/store-outflow') ?>" method="POST" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+                <!-- Modal Body -->
+                <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
+                    <div>
+                        <label class="form-label">Potong dari Akun Kas / Bank *</label>
+                        <select name="akun_kas_id" required class="form-input">
+                            <option value="">-- Pilih Akun Kas Sumber --</option>
+                            <?php foreach ($accounts as $a): ?>
+                            <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Nominal Keluar (Rp) *</label>
+                            <input type="text" name="nominal" required class="form-input font-mono input-rupiah" placeholder="150.000">
+                        </div>
+                        <div>
+                            <label class="form-label">Tanggal Transaksi *</label>
+                            <input type="date" name="tanggal_transaksi" value="<?= date('Y-m-d') ?>" required class="form-input">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Kategori Beban / Biaya *</label>
+                        <select name="kategori" required class="form-input">
+                            <?php foreach ($categories as $cat): ?>
+                            <option value="<?= htmlspecialchars($cat['nama_kategori']) ?>"><?= htmlspecialchars($cat['nama_kategori']) ?></option>
+                            <?php endforeach; ?>
+                            <option value="Lain-lain">Lain-lain</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="form-label">Keterangan Pengeluaran *</label>
+                        <textarea name="keterangan" required class="form-input" rows="2" placeholder="Contoh: Beli bensin mobil delivery kanvas rute Tangerang"></textarea>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="form-label">Keterangan Pengeluaran *</label>
-                    <textarea name="keterangan" required class="form-input" rows="2" placeholder="Contoh: Beli bensin mobil delivery kanvas rute Tangerang"></textarea>
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showOutflowModal = false" class="btn btn-secondary">Batal</button>
-                    <button type="submit" class="btn btn-primary" style="background:#ef4444;">
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" @click="showOutflowModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary" style="background:#ef4444; border-color:#ef4444;">
                         <i data-lucide="save"></i>
                         <span>Simpan Kas Keluar</span>
                     </button>
@@ -443,77 +469,89 @@ ob_start();
     <!-- MODAL 3: TRANSFER ANTAR KAS (MUTASI DANA) -->
     <?php if (Auth::can('cash.transfer')): ?>
     <template x-teleport="body">
-    <div x-show="showTransferModal" x-cloak class="modal-backdrop">
-        <div class="modal-box" style="max-width:500px;padding:24px;" @click.stop>
-            <div class="modal-header">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <div style="width:32px;height:32px;border-radius:var(--rounded-md);background:rgba(59,130,246,0.1);color:#3b82f6;display:flex;align-items:center;justify-content:center;">
-                        <i data-lucide="arrow-left-right" style="width:16px;height:16px;"></i>
-                    </div>
-                    <div>
-                        <div class="modal-title">Transfer Dana Antar Kas</div>
-                        <div style="font-size:11.5px;color:var(--color-ink-mute);">Setor uang kasir ke bank / mutasi dana antar rekening</div>
-                    </div>
-                </div>
+    <div x-show="showTransferModal" x-cloak class="modal-backdrop" @click="showTransferModal = false">
+        <div class="modal-box modal-box-md" @click.stop>
+            <!-- Mobile Pull Handle -->
+            <div class="modal-handle">
+                <div class="modal-handle-bar"></div>
             </div>
 
-            <form action="<?= Router::url('/cash/store-transfer') ?>" method="POST" @submit="submitTransferForm($event)" style="display:flex;flex-direction:column;gap:14px;">
-                
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Dari Akun Kas (Sumber) *</label>
-                        <select name="source_account_id" x-model="transferForm.source_account_id" @change="onSourceChange()" required class="form-input">
-                            <option value="">-- Pilih Akun Sumber --</option>
-                            <?php foreach ($accounts as $a): ?>
-                            <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                    <div style="width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.12);color:#3b82f6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="arrow-left-right" style="width:18px;height:18px;"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <div class="modal-title">Transfer Dana Antar Kas</div>
+                        <div style="font-size:11.5px;color:var(--color-ink-mute);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Setor uang kasir ke bank / mutasi dana</div>
+                    </div>
+                </div>
+                <button type="button" @click="showTransferModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form action="<?= Router::url('/cash/store-transfer') ?>" method="POST" @submit="submitTransferForm($event)" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+                <!-- Modal Body -->
+                <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Dari Akun Kas (Sumber) *</label>
+                            <select name="source_account_id" x-model="transferForm.source_account_id" @change="onSourceChange()" required class="form-input">
+                                <option value="">-- Pilih Akun Sumber --</option>
+                                <?php foreach ($accounts as $a): ?>
+                                <option value="<?= $a['id'] ?>"><?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="form-label">Ke Akun Kas (Tujuan) *</label>
+                            <select name="dest_account_id" x-model="transferForm.dest_account_id" @change="onDestChange()" required class="form-input">
+                                <option value="">-- Pilih Akun Tujuan --</option>
+                                <?php foreach ($accounts as $a): ?>
+                                <option value="<?= $a['id'] ?>" :disabled="transferForm.source_account_id === '<?= $a['id'] ?>'">
+                                    <?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Peringatan Anti-Transfer ke Akun yang Sama -->
+                    <template x-if="transferForm.source_account_id && transferForm.dest_account_id && transferForm.source_account_id === transferForm.dest_account_id">
+                        <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:8px; color:#dc2626; font-size:12px; font-weight:700;">
+                            <i data-lucide="alert-circle" style="width:16px;height:16px;flex-shrink:0;"></i>
+                            <span>Transfer Ditolak: Akun kas sumber dan tujuan tidak boleh sama! Silakan pilih akun yang berbeda.</span>
+                        </div>
+                    </template>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="form-label">Nominal Transfer (Rp) *</label>
+                            <input type="text" name="nominal" x-model="transferForm.nominal" required class="form-input font-mono input-rupiah" placeholder="1.000.000">
+                        </div>
+
+                        <div>
+                            <label class="form-label">Tanggal Transaksi *</label>
+                            <input type="date" name="tanggal_transaksi" x-model="transferForm.tanggal_transaksi" required class="form-input">
+                        </div>
                     </div>
 
                     <div>
-                        <label class="form-label">Ke Akun Kas (Tujuan) *</label>
-                        <select name="dest_account_id" x-model="transferForm.dest_account_id" @change="onDestChange()" required class="form-input">
-                            <option value="">-- Pilih Akun Tujuan --</option>
-                            <?php foreach ($accounts as $a): ?>
-                            <option value="<?= $a['id'] ?>" :disabled="transferForm.source_account_id === '<?= $a['id'] ?>'">
-                                <?= htmlspecialchars($a['nama_akun']) ?> (Rp <?= number_format((float)$a['saldo_saat_ini'], 0, ',', '.') ?>)
-                            </option>
-                            <?php endforeach; ?>
-                        </select>
+                        <label class="form-label">Keterangan Transfer</label>
+                        <input type="text" name="keterangan" x-model="transferForm.keterangan" class="form-input" placeholder="Contoh: Setoran hasil penjualan POS kasir shift siang">
                     </div>
                 </div>
 
-                <!-- Peringatan Anti-Transfer ke Akun yang Sama -->
-                <template x-if="transferForm.source_account_id && transferForm.dest_account_id && transferForm.source_account_id === transferForm.dest_account_id">
-                    <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:8px; color:#dc2626; font-size:12px; font-weight:700;">
-                        <i data-lucide="alert-circle" style="width:16px;height:16px;flex-shrink:0;"></i>
-                        <span>Transfer Ditolak: Akun kas sumber dan tujuan tidak boleh sama! Silakan pilih akun yang berbeda.</span>
-                    </div>
-                </template>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="form-label">Nominal Transfer (Rp) *</label>
-                        <input type="text" name="nominal" x-model="transferForm.nominal" required class="form-input font-mono input-rupiah" placeholder="1.000.000">
-                    </div>
-
-                    <div>
-                        <label class="form-label">Tanggal Transaksi *</label>
-                        <input type="date" name="tanggal_transaksi" x-model="transferForm.tanggal_transaksi" required class="form-input">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="form-label">Keterangan Transfer</label>
-                    <input type="text" name="keterangan" x-model="transferForm.keterangan" class="form-input" placeholder="Contoh: Setoran hasil penjualan POS kasir shift siang">
-                </div>
-
-                <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;">
-                    <button type="button" @click="showTransferModal = false" class="btn btn-secondary">Batal</button>
+                <!-- Modal Footer -->
+                <div class="modal-footer">
+                    <button type="button" @click="showTransferModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
                     <button type="submit" 
                             class="btn btn-primary" 
                             :disabled="!transferForm.source_account_id || !transferForm.dest_account_id || transferForm.source_account_id === transferForm.dest_account_id"
-                            :style="(transferForm.source_account_id === transferForm.dest_account_id || !transferForm.source_account_id || !transferForm.dest_account_id) ? 'background:#9ca3af; cursor:not-allowed; opacity:0.7;' : 'background:#3b82f6;'">
+                            :style="(transferForm.source_account_id === transferForm.dest_account_id || !transferForm.source_account_id || !transferForm.dest_account_id) ? 'background:#9ca3af; border-color:#9ca3af; cursor:not-allowed; opacity:0.7;' : 'background:#3b82f6; border-color:#3b82f6;'">
                         <i data-lucide="send"></i>
                         <span>Proses Transfer Dana</span>
                     </button>
