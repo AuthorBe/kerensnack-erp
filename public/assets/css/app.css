@@ -2486,7 +2486,12 @@ body.ksnack-popup-freeze .app-header {
 
 /* Di Layar HP (< 768px): Sembunyikan tombol Batal di footer dan gunakan ikon X di header */
 @media (max-width: 767px) {
-  .modal-btn-cancel-desktop {
+  .modal-btn-cancel-desktop,
+  .modal-footer > .modal-btn-cancel-desktop,
+  .modal-footer > .btn.modal-btn-cancel-desktop,
+  .tagihan-modal-footer > .btn.modal-btn-cancel-desktop,
+  .detail-modal-footer > .btn.modal-btn-cancel-desktop,
+  .skema-modal-footer > .btn.modal-btn-cancel-desktop {
     display: none !important;
   }
   .modal-close-x,
@@ -2612,7 +2617,6 @@ body.ksnack-popup-freeze .app-header {
   .tagihan-modal-backdrop,
   .tagihan-modal-overlay,
   .receipt-backdrop,
-  .confirm-overlay,
   .popup-blur-backdrop,
   [data-popup-backdrop] {
     position: fixed !important;
@@ -2625,10 +2629,38 @@ body.ksnack-popup-freeze .app-header {
     height: 100vh !important;
     height: 100dvh !important;
     padding: 0 !important;
-    align-items: flex-end !important; /* Menempel ke dasar layar */
+    align-items: flex-end !important; /* Form & Data Modal: Menempel ke dasar layar di HP */
     justify-content: center !important;
     overscroll-behavior-y: contain !important;
     -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* POP-UP NOTIFIKASI, KONFIRMASI LOGOUT, & DIALOG ALERT TETAP DI TENGAH LAYAR (CENTERED) */
+  .confirm-overlay,
+  .alert-overlay,
+  .toast-overlay,
+  .logout-confirm-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    padding: 16px !important;
+    display: flex !important;
+    align-items: center !important; /* TETAP DI TENGAH LAYAR DI SEMUA PERANGKAT */
+    justify-content: center !important;
+    z-index: 999999 !important;
+    overscroll-behavior-y: contain !important;
+  }
+
+  .confirm-modal,
+  .alert-modal,
+  .logout-confirm-modal {
+    margin: auto !important;
+    width: calc(100% - 24px) !important;
+    max-width: 420px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35) !important;
   }
 
   .modal-box,
@@ -2709,15 +2741,10 @@ body.ksnack-popup-freeze .app-header {
     gap: 10px !important;
   }
 
-  /* Sembunyikan tombol teks Batal di HP jika menggunakan class modal-btn-cancel-desktop */
-  .modal-btn-cancel-desktop {
-    display: none !important;
-  }
-
   /* Tombol aksi utama (Simpan/Bayar/Konfirmasi) di HP menjadi Full-Width & Touch-Friendly */
-  .modal-footer > .btn,
-  .modal-footer > form,
-  .modal-footer > form > .btn,
+  .modal-footer > .btn:not(.modal-btn-cancel-desktop),
+  .modal-footer > form:not(.modal-btn-cancel-desktop),
+  .modal-footer > form > .btn:not(.modal-btn-cancel-desktop),
   .modal-footer > .btn-primary,
   .modal-footer > .btn-danger,
   .modal-footer > .btn-success,
@@ -2735,6 +2762,23 @@ body.ksnack-popup-freeze .app-header {
     justify-content: center !important;
     display: flex !important;
     align-items: center !important;
+  }
+
+  /* Sembunyikan tombol teks Batal di HP secara mutlak (Gunakan tombol X di header) */
+  .modal-btn-cancel-desktop,
+  .modal-footer > .modal-btn-cancel-desktop,
+  .modal-footer > .btn.modal-btn-cancel-desktop,
+  .tagihan-modal-footer > .btn.modal-btn-cancel-desktop,
+  .detail-modal-footer > .btn.modal-btn-cancel-desktop,
+  .skema-modal-footer > .btn.modal-btn-cancel-desktop {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
   }
 }
 
