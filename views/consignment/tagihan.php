@@ -180,18 +180,259 @@ $countLunas              = count(array_filter($tagihan, fn($t) => $t['status_pem
     }
 }
 
-.tagihan-filter-status-chip {
-    height: 36px;
+.tagihan-filter-grid .form-input,
+.tagihan-filter-grid .form-select {
+    height: 38px;
+    border-radius: 10px;
+    border: 1.5px solid var(--color-hairline);
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-size: 12.5px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tagihan-filter-grid .form-input:focus,
+.tagihan-filter-grid .form-select:focus {
+    border-color: #881337;
+    box-shadow: 0 0 0 3px rgba(136, 19, 55, 0.15);
+}
+
+.dark .tagihan-filter-grid .form-input:focus,
+.dark .tagihan-filter-grid .form-select:focus {
+    border-color: #fb7185;
+    box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.2);
+}
+
+/* ========================================================================= */
+/* 3B. MODERN FILTER TOOLBAR & SEARCH (Keren One DNA Standard)              */
+/* ========================================================================= */
+.tagihan-toolbar-card {
+    background-color: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    border-radius: 16px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.tagihan-toolbar-flex {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+@media (min-width: 1024px) {
+    .tagihan-toolbar-flex {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+}
+
+.tagihan-filters-cluster {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tagihan-filters-cluster::-webkit-scrollbar {
+    display: none;
+}
+
+.tagihan-segmented-group {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    padding: 0 14px;
-    font-size: 12px;
+    gap: 3px;
+    padding: 3.5px;
+    background-color: var(--color-canvas-soft);
+    border: 1px solid var(--color-hairline);
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.tagihan-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    font-size: 11.5px;
     font-weight: 700;
-    border-radius: 10px;
+    border-radius: 9px;
+    color: var(--color-ink-secondary);
     text-decoration: none;
     transition: all 0.15s ease;
     user-select: none;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.tagihan-filter-pill:hover {
+    color: var(--color-ink);
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.dark .tagihan-filter-pill:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.tagihan-filter-pill.is-active {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    border-color: var(--color-hairline);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.dark .tagihan-filter-pill.is-active {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    border-color: var(--color-hairline-strong);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.tagihan-filter-pill.is-active-primary {
+    background-color: #881337;
+    color: #ffffff !important;
+    border-color: #700f2b;
+    box-shadow: 0 2px 8px rgba(136, 19, 55, 0.25);
+}
+
+.dark .tagihan-filter-pill.is-active-primary {
+    background-color: #fb7185;
+    color: #881337 !important;
+    border-color: #f43f5e;
+    box-shadow: 0 2px 8px rgba(251, 113, 133, 0.3);
+}
+
+.tagihan-filter-pill.is-active-danger {
+    background-color: rgba(244, 63, 94, 0.12);
+    color: #e11d48 !important;
+    border-color: rgba(244, 63, 94, 0.3);
+}
+
+.dark .tagihan-filter-pill.is-active-danger {
+    background-color: rgba(244, 63, 94, 0.2);
+    color: #fda4af !important;
+    border-color: rgba(244, 63, 94, 0.4);
+}
+
+.tagihan-filter-pill.is-active-warning {
+    background-color: rgba(245, 158, 11, 0.12);
+    color: #d97706 !important;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.dark .tagihan-filter-pill.is-active-warning {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #fcd34d !important;
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+.tagihan-filter-pill.is-active-success {
+    background-color: rgba(16, 185, 129, 0.12);
+    color: #059669 !important;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.dark .tagihan-filter-pill.is-active-success {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #6ee7b7 !important;
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.tagihan-filter-pill.is-active-violet {
+    background-color: rgba(124, 58, 237, 0.12);
+    color: #7c3aed !important;
+    border-color: rgba(124, 58, 237, 0.3);
+}
+
+.dark .tagihan-filter-pill.is-active-violet {
+    background-color: rgba(124, 58, 237, 0.2);
+    color: #c4b5fd !important;
+    border-color: rgba(124, 58, 237, 0.4);
+}
+
+.tagihan-filter-pill.is-active-sky {
+    background-color: rgba(2, 132, 199, 0.12);
+    color: #0284c7 !important;
+    border-color: rgba(2, 132, 199, 0.3);
+}
+
+.dark .tagihan-filter-pill.is-active-sky {
+    background-color: rgba(2, 132, 199, 0.2);
+    color: #7dd3fc !important;
+    border-color: rgba(2, 132, 199, 0.4);
+}
+
+/* Modern Dedicated Search Box */
+.tagihan-search-wrapper {
+    position: relative;
+    width: 100%;
+    min-width: 260px;
+    max-width: 360px;
+}
+
+.tagihan-search-input {
+    width: 100%;
+    height: 38px;
+    padding-left: 36px;
+    padding-right: 32px;
+    border-radius: 11px;
+    background: var(--color-canvas);
+    border: 1.5px solid var(--color-hairline);
+    color: var(--color-ink);
+    font-size: 12.5px;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tagihan-search-input:focus {
+    border-color: #881337;
+    box-shadow: 0 0 0 3px rgba(136, 19, 55, 0.15);
+}
+
+.dark .tagihan-search-input:focus {
+    border-color: #fb7185;
+    box-shadow: 0 0 0 3px rgba(251, 113, 133, 0.2);
+}
+
+.tagihan-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 15px;
+    height: 15px;
+    color: var(--color-ink-mute);
+    pointer-events: none;
+}
+
+.tagihan-search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: var(--color-ink-mute);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.tagihan-search-clear:hover {
+    color: var(--color-ink);
+    background: var(--color-canvas-soft);
 }
 
 /* ========================================================================= */
@@ -1596,57 +1837,77 @@ document.addEventListener('alpine:init', () => {
             </div>
         </div>
 
-        <!-- Filter Status & Tipe Chips & Search Input Bar -->
-        <div class="tagihan-card">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
-                <!-- Status & Tipe Filter Chips -->
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-xs font-bold mr-1" style="color:var(--color-ink-mute);">Status:</span>
-                    <a href="?tab=daftar<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
-                       class="tagihan-filter-status-chip <?= $filterStatus === '' ? 'btn-primary' : 'btn-secondary' ?>">
-                        Semua
-                    </a>
-                    <a href="?tab=daftar&status=belum_lunas<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
-                       class="tagihan-filter-status-chip <?= $filterStatus === 'belum_lunas' ? 'btn-danger' : 'btn-secondary' ?>">
-                        Belum Lunas
-                    </a>
-                    <a href="?tab=daftar&status=sebagian<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
-                       class="tagihan-filter-status-chip <?= $filterStatus === 'sebagian' ? 'btn-warning' : 'btn-secondary' ?>">
-                        Sebagian
-                    </a>
-                    <a href="?tab=daftar&status=lunas<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
-                       class="tagihan-filter-status-chip <?= $filterStatus === 'lunas' ? 'btn-success' : 'btn-secondary' ?>">
-                        Lunas
-                    </a>
+        <!-- MODERN FILTER & SEARCH TOOLBAR -->
+        <div class="tagihan-toolbar-card">
+            <div class="tagihan-toolbar-flex">
+                
+                <!-- Left: Status & Tipe Segmented Control Clusters -->
+                <div class="tagihan-filters-cluster">
+                    
+                    <!-- 1. Status Filter Group -->
+                    <div class="tagihan-segmented-group">
+                        <a href="?tab=daftar<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
+                           class="tagihan-filter-pill <?= $filterStatus === '' ? 'is-active-primary' : '' ?>">
+                            <span>Semua</span>
+                            <span class="opacity-75 text-[10px] font-mono">(<?= count($tagihan) ?>)</span>
+                        </a>
+                        <a href="?tab=daftar&status=belum_lunas<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
+                           class="tagihan-filter-pill <?= $filterStatus === 'belum_lunas' ? 'is-active-danger' : '' ?>">
+                            <span>Belum Lunas</span>
+                            <?php if ($countBelumLunas > 0): ?>
+                            <span class="opacity-75 text-[10px] font-mono">(<?= $countBelumLunas ?>)</span>
+                            <?php endif; ?>
+                        </a>
+                        <a href="?tab=daftar&status=sebagian<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
+                           class="tagihan-filter-pill <?= $filterStatus === 'sebagian' ? 'is-active-warning' : '' ?>">
+                            <span>Sebagian</span>
+                        </a>
+                        <a href="?tab=daftar&status=lunas<?= !empty($filterTipeKonsinyasi) ? '&tipe_konsinyasi=' . urlencode($filterTipeKonsinyasi) : '' ?>" 
+                           class="tagihan-filter-pill <?= $filterStatus === 'lunas' ? 'is-active-success' : '' ?>">
+                            <span>Lunas</span>
+                            <?php if ($countLunas > 0): ?>
+                            <span class="opacity-75 text-[10px] font-mono">(<?= $countLunas ?>)</span>
+                            <?php endif; ?>
+                        </a>
+                    </div>
 
-                    <span class="text-xs font-bold ml-1.5 mr-1" style="color:var(--color-ink-mute);border-left:1px solid var(--color-hairline);padding-left:8px;">Tipe:</span>
-                    <a href="?tab=daftar<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
-                       class="tagihan-filter-status-chip <?= $filterTipeKonsinyasi === '' ? 'btn-primary' : 'btn-secondary' ?>">
-                        Semua Tipe
-                    </a>
-                    <a href="?tab=daftar&tipe_konsinyasi=rolling_nota<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
-                       class="tagihan-filter-status-chip <?= $filterTipeKonsinyasi === 'rolling_nota' ? 'btn-primary' : 'btn-secondary' ?>"
-                       style="<?= $filterTipeKonsinyasi === 'rolling_nota' ? 'background:#7c3aed;border-color:#6d28d9;color:#fff;' : '' ?>">
-                        <i data-lucide="repeat" class="w-3.5 h-3.5 mr-1 inline"></i>
-                        Rolling Nota
-                    </a>
-                    <a href="?tab=daftar&tipe_konsinyasi=kolektif_toko<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
-                       class="tagihan-filter-status-chip <?= $filterTipeKonsinyasi === 'kolektif_toko' ? 'btn-primary' : 'btn-secondary' ?>"
-                       style="<?= $filterTipeKonsinyasi === 'kolektif_toko' ? 'background:#0284c7;border-color:#0369a1;color:#fff;' : '' ?>">
-                        <i data-lucide="layers" class="w-3.5 h-3.5 mr-1 inline"></i>
-                        Kolektif Toko
-                    </a>
+                    <!-- 2. Tipe Konsinyasi Filter Group -->
+                    <div class="tagihan-segmented-group">
+                        <a href="?tab=daftar<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
+                           class="tagihan-filter-pill <?= $filterTipeKonsinyasi === '' ? 'is-active' : '' ?>">
+                            <span>Semua Tipe</span>
+                        </a>
+                        <a href="?tab=daftar&tipe_konsinyasi=rolling_nota<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
+                           class="tagihan-filter-pill <?= $filterTipeKonsinyasi === 'rolling_nota' ? 'is-active-violet' : '' ?>">
+                            <i data-lucide="repeat" style="width:12px;height:12px;"></i>
+                            <span>Rolling Nota</span>
+                        </a>
+                        <a href="?tab=daftar&tipe_konsinyasi=kolektif_toko<?= !empty($filterStatus) ? '&status=' . urlencode($filterStatus) : '' ?>" 
+                           class="tagihan-filter-pill <?= $filterTipeKonsinyasi === 'kolektif_toko' ? 'is-active-sky' : '' ?>">
+                            <i data-lucide="layers" style="width:12px;height:12px;"></i>
+                            <span>Kolektif Toko</span>
+                        </a>
+                    </div>
+
                 </div>
 
-                <!-- Instant Search Input -->
-                <div class="form-input-icon w-full lg:w-auto" style="min-width:280px;">
-                    <i data-lucide="search" class="icon-left"></i>
+                <!-- Right: Sleek Dedicated Instant Search Input -->
+                <div class="tagihan-search-wrapper">
+                    <i data-lucide="search" class="tagihan-search-icon"></i>
                     <input type="text" 
                            x-model="searchQuery" 
                            placeholder="Cari toko, nota, tipe, sales..." 
-                           class="form-input" 
-                           style="height:36px;font-size:12.5px;border-radius:10px;width:100%;">
+                           class="tagihan-search-input">
+                    <button type="button" 
+                            x-show="searchQuery" 
+                            @click="searchQuery = ''" 
+                            class="tagihan-search-clear" 
+                            title="Hapus pencarian" 
+                            x-cloak>
+                        <i data-lucide="x" style="width:13px;height:13px;"></i>
+                    </button>
                 </div>
+
             </div>
         </div>
 
