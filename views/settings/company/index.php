@@ -1681,10 +1681,13 @@ $cLogoUrl       = $company['logo_url'] ?? '';
         <div x-show="previewModalOpen"
              x-cloak
              class="modal-backdrop"
-            
-             @keydown.escape.window="closePreviewModal()">
-            <div class="modal-box modal-box-lg company-preview-modal-box">
+             @click="closePreviewModal()"
+             @keydown.escape.window="closePreviewModal()"
+             style="display:none;">
+            <div class="modal-box modal-box-lg company-preview-modal-box" @click.stop>
                 
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+
                 <!-- Modal Top Header -->
                 <div class="company-preview-modal-header">
                     <div class="preview-header-main">
@@ -1701,7 +1704,7 @@ $cLogoUrl       = $company['logo_url'] ?? '';
                         <!-- Close Button on Mobile (Header Row 1) -->
                         <button type="button"
                                 @click="closePreviewModal()"
-                                class="btn btn-ghost btn-sm preview-close-btn-mobile"
+                                class="modal-close-x preview-close-btn-mobile"
                                 title="Tutup Pratinjau (Esc)">
                             <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                         </button>
@@ -1729,7 +1732,7 @@ $cLogoUrl       = $company['logo_url'] ?? '';
                         <!-- Close Button on Desktop -->
                         <button type="button"
                                 @click="closePreviewModal()"
-                                class="btn btn-ghost btn-sm preview-close-btn-desktop"
+                                class="modal-close-x preview-close-btn-desktop"
                                 title="Tutup Pratinjau (Esc)">
                             <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                         </button>
@@ -2040,7 +2043,7 @@ $cLogoUrl       = $company['logo_url'] ?? '';
                         <span class="preview-footer-text-desktop">Live Sync: Data di pratinjau ini berubah otomatis mengikuti formulir. Tekan <strong>Esc</strong> untuk menutup.</span>
                         <span class="preview-footer-text-mobile">Live Sync: Pratinjau sinkron otomatis dengan formulir.</span>
                     </div>
-                    <button type="button" @click="closePreviewModal()" class="btn btn-secondary btn-sm company-preview-close-footer-btn">
+                    <button type="button" @click="closePreviewModal()" class="btn btn-secondary btn-sm company-preview-close-footer-btn modal-btn-cancel-desktop">
                         Tutup Pratinjau
                     </button>
                 </div>

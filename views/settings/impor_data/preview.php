@@ -588,23 +588,29 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
     <input type="hidden" name="action" value="confirm">
 </form>
 
-<div id="importConfirmModal" class="modal-backdrop" style="display: none;" aria-modal="true" role="dialog">
-    <div class="modal-box" style="max-width: 440px; border-radius: var(--rounded-lg, 16px); overflow: hidden;">
+<div id="importConfirmModal" class="modal-backdrop" style="display: none;" onclick="if(event.target===this) closeImportConfirmModal()" aria-modal="true" role="dialog">
+    <div class="modal-box" onclick="event.stopPropagation()" style="max-width: 460px;">
+        <div class="modal-handle"><div class="modal-handle-bar"></div></div>
         
         <!-- Header Modal -->
-        <div class="modal-header" style="display: flex; align-items: center; justify-content: flex-start !important; gap: 12px; padding: 18px 20px 14px 20px; margin-bottom: 0; border-bottom: 1px solid var(--color-hairline);">
-            <div style="width: 36px; height: 36px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.14); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i data-lucide="check-circle-2" style="width: 20px; height: 20px;"></i>
+        <div class="modal-header">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(37, 99, 235, 0.12); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i data-lucide="check-circle-2" style="width: 20px; height: 20px;"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="modal-title">Terapkan Sinkronisasi?</div>
+                    <div style="font-size: 12px; color: var(--color-ink-mute); margin-top: 1px;">Konfirmasi penyimpanan perubahan data</div>
+                </div>
             </div>
-            <div style="min-width: 0;">
-                <h3 class="modal-title" style="font-size: 15.5px; font-weight: 800; margin: 0; color: var(--color-ink); line-height: 1.25;">Terapkan Sinkronisasi?</h3>
-                <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 2px;">Konfirmasi penyimpanan perubahan data</div>
-            </div>
+            <button type="button" onclick="closeImportConfirmModal()" class="modal-close-x" title="Tutup Modal">
+                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+            </button>
         </div>
 
         <!-- Body Modal -->
-        <div class="modal-body" style="padding: 20px;">
-            <p style="font-size: 13px; color: var(--color-ink); margin-bottom: 14px; line-height: 1.45;">
+        <div class="modal-body custom-scrollbar space-y-3.5">
+            <p style="font-size: 13px; color: var(--color-ink); margin: 0; line-height: 1.45;">
                 Apakah Anda yakin ingin menerapkan perubahan data <strong><?= htmlspecialchars($typeLabel) ?></strong> ke database?
             </p>
 
@@ -617,7 +623,7 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
             if ($cnt_fatal > 0)  $rekapList[] = ['label' => 'Konflik ID (Generate Baru)', 'badge' => 'badge badge-danger', 'val' => '!' . $cnt_fatal, 'color' => 'var(--color-danger)'];
             ?>
             <?php if (!empty($rekapList)): ?>
-                <div style="border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); background: var(--color-canvas-soft); overflow: hidden; margin-bottom: 14px;">
+                <div style="border: 1px solid var(--color-hairline); border-radius: var(--rounded-md); background: var(--color-canvas-soft); overflow: hidden; margin-bottom: 4px;">
                     <?php foreach ($rekapList as $idx => $item): ?>
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 9px 14px; <?= $idx < count($rekapList) - 1 ? 'border-bottom: 1px solid var(--color-hairline);' : '' ?>">
                             <span style="font-size: 12px; font-weight: 600; color: <?= $item['color'] ?>;"><?= $item['label'] ?></span>
@@ -634,11 +640,11 @@ $totalRows = is_array($previewData) ? count($previewData) : 0;
         </div>
 
         <!-- Footer Modal -->
-        <div class="modal-footer" style="padding: 14px 20px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--color-hairline); background-color: var(--color-canvas-soft);">
-            <button type="button" class="btn btn-secondary" onclick="closeImportConfirmModal()" style="font-weight: 700; height: 38px; padding: 0 18px;">
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary modal-btn-cancel-desktop" onclick="closeImportConfirmModal()">
                 Batal
             </button>
-            <button type="button" class="btn btn-primary" onclick="executeSyncConfirm()" style="font-weight: 700; height: 38px; padding: 0 18px; display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn btn-primary w-full sm:w-auto" onclick="executeSyncConfirm()" style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
                 <i data-lucide="check" style="width: 16px; height: 16px;"></i>
                 <span>Terapkan Sekarang</span>
             </button>

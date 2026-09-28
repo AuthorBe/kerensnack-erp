@@ -228,57 +228,53 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
     <!-- MODAL TAMBAH ROLE                                                     -->
     <!-- ===================================================================== -->
     <template x-teleport="body">
-        <div x-show="addRoleModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
-            <div class="modal-box" style="max-width:540px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
+        <div x-show="addRoleModalOpen" x-cloak class="modal-backdrop" @click="addRoleModalOpen = false" style="display:none;">
+            <div class="modal-box" style="max-width:540px;" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
                 
-                <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1.5px solid #f1f5f9;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:#eff6ff;color:var(--iz-primary, #2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="shield-plus" style="width:22px;height:22px;"></i>
+                <div class="modal-header">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--iz-primary, #2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="shield-plus" style="width:20px;height:20px;"></i>
                         </div>
-                        <div>
-                            <h4 style="font-size:1.18rem;font-weight:700;color:#0f172a;margin:0 0 3px 0;">Tambah Role Baru</h4>
-                            <p style="font-size:0.82rem;color:#64748b;margin:0;">Definisikan nama jabatan dan hak wewenang baru dalam sistem</p>
+                        <div class="min-w-0 flex-1">
+                            <div class="modal-title">Tambah Role Baru</div>
+                            <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Definisikan nama jabatan dan hak wewenang baru dalam sistem</div>
                         </div>
                     </div>
+                    <button type="button" @click="addRoleModalOpen = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
 
                 <form action="<?= Router::url('/permissions/store-role') ?>" method="POST" data-action-text="Menyimpan role baru...">
-                    <div style="display:flex;flex-direction:column;gap:18px;">
+                    <div class="modal-body custom-scrollbar space-y-4">
                         <div>
-                            <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
+                            <label style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-ink);margin-bottom:7px;">
                                 Nama Jabatan / Role <span style="color:#e11d48;">*</span>
                             </label>
                             <input type="text" name="nama_peran" placeholder="Contoh: auditor, kasir_cabang" required 
-                                   style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;font-family:monospace;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                   onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                   onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
-                            <div style="font-size:0.78rem;color:#64748b;margin-top:6px;display:flex;align-items:center;gap:5px;">
+                                   style="width:100%;height:44px;padding:0 14px;border:1px solid var(--color-hairline);border-radius:12px;background:var(--color-canvas);font-size:0.88rem;color:var(--color-ink);font-family:monospace;outline:none;">
+                            <div style="font-size:0.78rem;color:var(--color-ink-mute);margin-top:6px;display:flex;align-items:center;gap:5px;">
                                 <i data-lucide="info" style="width:13px;height:13px;color:var(--iz-primary, #2563eb);flex-shrink:0;"></i>
                                 <span>Sistem akan membuat slug teknis otomatis (huruf kecil & underscore).</span>
                             </div>
                         </div>
 
                         <div>
-                            <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
-                                Deskripsi Wewenang <span style="font-size:0.78rem;color:#64748b;font-weight:400;">(Opsional)</span>
+                            <label style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-ink);margin-bottom:7px;">
+                                Deskripsi Wewenang <span style="font-size:0.78rem;color:var(--color-ink-mute);font-weight:400;">(Opsional)</span>
                             </label>
                             <textarea name="deskripsi" rows="3" placeholder="Keterangan singkat cakupan tanggung jawab peran ini..." 
-                                      style="width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;resize:vertical;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                      onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                      onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';"></textarea>
+                                      style="width:100%;padding:12px 14px;border:1px solid var(--color-hairline);border-radius:12px;background:var(--color-canvas);font-size:0.88rem;color:var(--color-ink);outline:none;resize:vertical;"></textarea>
                         </div>
                     </div>
 
-                    <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;padding-top:20px;margin-top:26px;border-top:1.5px solid #f1f5f9;">
-                        <button type="button" @click="addRoleModalOpen = false" 
-                                style="height:42px;padding:0 20px;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;font-size:0.88rem;border:none;cursor:pointer;transition:all 0.15s;"
-                                onmouseover="this.style.background='#e2e8f0';" onmouseout="this.style.background='#f1f5f9';">
+                    <div class="modal-footer">
+                        <button type="button" @click="addRoleModalOpen = false" class="btn btn-secondary modal-btn-cancel-desktop">
                             Batal
                         </button>
-                        <button type="submit"
-                                style="height:42px;padding:0 24px;border-radius:10px;background:var(--iz-primary, #2563eb);color:#ffffff;font-weight:700;font-size:0.88rem;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.25);display:inline-flex;align-items:center;gap:8px;transition:all 0.15s;"
-                                onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='none';">
+                        <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;">
                             <i data-lucide="check" style="width:16px;height:16px;"></i>
                             <span>Simpan Role</span>
                         </button>
@@ -293,31 +289,35 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
     <!-- MODAL EDIT ROLE                                                       -->
     <!-- ===================================================================== -->
     <template x-teleport="body">
-        <div x-show="editRoleModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
-            <div class="modal-box" style="max-width:540px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
+        <div x-show="editRoleModalOpen" x-cloak class="modal-backdrop" @click="editRoleModalOpen = false" style="display:none;">
+            <div class="modal-box" style="max-width:540px;" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
                 
-                <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1.5px solid #f1f5f9;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:#eff6ff;color:var(--iz-primary, #2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="edit-3" style="width:22px;height:22px;"></i>
+                <div class="modal-header">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--iz-primary, #2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
                         </div>
-                        <div>
-                            <h4 style="font-size:1.18rem;font-weight:700;color:#0f172a;margin:0 0 3px 0;">Edit Deskripsi Role</h4>
-                            <p style="font-size:0.82rem;color:#64748b;margin:0;">Perbarui keterangan wewenang dan cakupan fungsi jabatan</p>
+                        <div class="min-w-0 flex-1">
+                            <div class="modal-title">Edit Deskripsi Role</div>
+                            <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Perbarui keterangan wewenang dan cakupan fungsi jabatan</div>
                         </div>
                     </div>
+                    <button type="button" @click="editRoleModalOpen = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
 
                 <form action="<?= Router::url('/permissions/update-role') ?>" method="POST" data-action-text="Memperbarui deskripsi role...">
                     <input type="hidden" name="id" :value="editRole.id">
 
-                    <div style="display:flex;flex-direction:column;gap:18px;">
+                    <div class="modal-body custom-scrollbar space-y-4">
                         <div>
-                            <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
-                                ID Sistem Role <span style="font-size:0.76rem;color:#64748b;font-weight:400;">(Terkunci)</span>
+                            <label style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-ink);margin-bottom:7px;">
+                                ID Sistem Role <span style="font-size:0.76rem;color:var(--color-ink-mute);font-weight:400;">(Terkunci)</span>
                             </label>
                             <input type="text" :value="editRole.nama_peran" readonly 
-                                   style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f8fafc;font-size:0.88rem;color:#64748b;font-family:monospace;outline:none;cursor:not-allowed;">
+                                   style="width:100%;height:44px;padding:0 14px;border:1px solid var(--color-hairline);border-radius:12px;background:var(--color-canvas-soft);font-size:0.88rem;color:var(--color-ink-mute);font-family:monospace;outline:none;cursor:not-allowed;">
                             <div style="font-size:0.78rem;color:#e11d48;margin-top:6px;display:flex;align-items:center;gap:5px;">
                                 <i data-lucide="lock" style="width:13px;height:13px;flex-shrink:0;"></i>
                                 <span>ID teknis tidak dapat diubah untuk menjaga integritas relasi basis data.</span>
@@ -325,25 +325,19 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                         </div>
 
                         <div>
-                            <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
-                                Deskripsi Wewenang <span style="font-size:0.78rem;color:#64748b;font-weight:400;">(Opsional)</span>
+                            <label style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-ink);margin-bottom:7px;">
+                                Deskripsi Wewenang <span style="font-size:0.78rem;color:var(--color-ink-mute);font-weight:400;">(Opsional)</span>
                             </label>
                             <textarea name="deskripsi" rows="3" x-model="editRole.deskripsi" placeholder="Keterangan cakupan tanggung jawab peran ini..." 
-                                      style="width:100%;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;resize:vertical;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                      onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                      onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';"></textarea>
+                                      style="width:100%;padding:12px 14px;border:1px solid var(--color-hairline);border-radius:12px;background:var(--color-canvas);font-size:0.88rem;color:var(--color-ink);outline:none;resize:vertical;"></textarea>
                         </div>
                     </div>
 
-                    <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;padding-top:20px;margin-top:26px;border-top:1.5px solid #f1f5f9;">
-                        <button type="button" @click="editRoleModalOpen = false" 
-                                style="height:42px;padding:0 20px;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;font-size:0.88rem;border:none;cursor:pointer;transition:all 0.15s;"
-                                onmouseover="this.style.background='#e2e8f0';" onmouseout="this.style.background='#f1f5f9';">
+                    <div class="modal-footer">
+                        <button type="button" @click="editRoleModalOpen = false" class="btn btn-secondary modal-btn-cancel-desktop">
                             Batal
                         </button>
-                        <button type="submit"
-                                style="height:42px;padding:0 24px;border-radius:10px;background:var(--iz-primary, #2563eb);color:#ffffff;font-weight:700;font-size:0.88rem;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.25);display:inline-flex;align-items:center;gap:8px;transition:all 0.15s;"
-                                onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='none';">
+                        <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;">
                             <i data-lucide="check" style="width:16px;height:16px;"></i>
                             <span>Simpan Perubahan</span>
                         </button>
@@ -358,45 +352,48 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
     <!-- MODAL KONFIRMASI HAPUS ROLE                                           -->
     <!-- ===================================================================== -->
     <template x-teleport="body">
-        <div x-show="deleteRoleModalOpen" x-cloak class="modal-backdrop"
-             style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;"
-            >
-            <div class="modal-box" style="max-width:460px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #fecaca;box-shadow:0 25px 50px -12px rgba(239,68,68,0.15);" @click.stop>
+        <div x-show="deleteRoleModalOpen" x-cloak class="modal-backdrop" @click="deleteRoleModalOpen = false" style="display:none;">
+            <div class="modal-box" style="max-width:460px;" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
 
-                <!-- Header -->
-                <div style="display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;">
-                    <div style="width:48px;height:48px;border-radius:14px;background:#fef2f2;color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="trash-2" style="width:24px;height:24px;"></i>
+                <div class="modal-header">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(239,68,68,0.12);color:#ef4444;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="trash-2" style="width:20px;height:20px;"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="modal-title" style="color:var(--color-danger);">Hapus Role?</div>
+                            <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Penghapusan jabatan sistem secara permanen</div>
+                        </div>
                     </div>
-                    <div style="flex:1;min-width:0;">
-                        <h4 style="font-size:1.12rem;font-weight:700;color:#0f172a;margin:0 0 6px 0;">Hapus Role?</h4>
-                        <p style="font-size:0.86rem;color:#64748b;margin:0;line-height:1.55;">
-                            Role <strong style="color:#0f172a;" x-text="'«' + deleteRoleTarget.nama_peran + '»'"></strong> akan dihapus permanen dari sistem.
-                            User yang sudah terlanjur memakai role ini bisa kehilangan akses standarnya.
-                        </p>
-                    </div>
+                    <button type="button" @click="deleteRoleModalOpen = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
 
-                <!-- Warning box -->
-                <div style="background:#fef9ec;border:1.5px solid #fde68a;border-radius:12px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:24px;">
-                    <i data-lucide="alert-triangle" style="width:17px;height:17px;color:#d97706;flex-shrink:0;margin-top:1px;"></i>
-                    <p style="font-size:0.82rem;color:#92400e;margin:0;line-height:1.5;">
-                        Tindakan ini <strong>tidak dapat dibatalkan</strong>. Pastikan tidak ada user aktif yang bergantung pada role ini sebelum menghapus.
+                <div class="modal-body custom-scrollbar space-y-4">
+                    <p style="font-size:0.86rem;color:var(--color-ink-mute);margin:0;line-height:1.55;">
+                        Role <strong style="color:var(--color-ink);" x-text="'«' + deleteRoleTarget.nama_peran + '»'"></strong> akan dihapus permanen dari sistem.
+                        User yang sudah terlanjur memakai role ini bisa kehilangan akses standarnya.
                     </p>
+
+                    <!-- Warning box -->
+                    <div style="background:#fef9ec;border:1.5px solid #fde68a;border-radius:12px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;">
+                        <i data-lucide="alert-triangle" style="width:17px;height:17px;color:#d97706;flex-shrink:0;margin-top:1px;"></i>
+                        <p style="font-size:0.82rem;color:#92400e;margin:0;line-height:1.5;">
+                            Tindakan ini <strong>tidak dapat dibatalkan</strong>. Pastikan tidak ada user aktif yang bergantung pada role ini sebelum menghapus.
+                        </p>
+                    </div>
                 </div>
 
                 <!-- Action buttons -->
                 <form action="<?= Router::url('/permissions/delete-role') ?>" method="POST" data-action-text="Menghapus role...">
                     <input type="hidden" name="id" :value="deleteRoleTarget.id">
-                    <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;">
-                        <button type="button" @click="deleteRoleModalOpen = false"
-                                style="height:42px;padding:0 22px;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;font-size:0.88rem;border:none;cursor:pointer;transition:all 0.15s;"
-                                onmouseover="this.style.background='#e2e8f0';" onmouseout="this.style.background='#f1f5f9';">
+                    <div class="modal-footer">
+                        <button type="button" @click="deleteRoleModalOpen = false" class="btn btn-secondary modal-btn-cancel-desktop">
                             Batal
                         </button>
-                        <button type="submit"
-                                style="height:42px;padding:0 22px;border-radius:10px;background:#ef4444;color:#ffffff;font-weight:700;font-size:0.88rem;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(239,68,68,0.3);display:inline-flex;align-items:center;gap:8px;transition:all 0.15s;"
-                                onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='none';">
+                        <button type="submit" class="btn btn-danger w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;">
                             <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
                             <span>Ya, Hapus Role</span>
                         </button>
@@ -411,58 +408,56 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
     <!-- MODAL DAFTAR PENGGUNA ROLE (minimalis)                               -->
     <!-- ===================================================================== -->
     <template x-teleport="body">
-        <div x-show="viewUsersRoleModalOpen" x-cloak class="modal-backdrop"
-             style="background:rgba(15,23,42,0.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;"
-            
-             @keydown.escape.window="viewUsersRoleModalOpen = false">
-            <div style="max-width:380px;width:100%;border-radius:16px;background:#ffffff;border:1px solid #e2e8f0;box-shadow:0 8px 30px rgba(15,23,42,0.12);display:flex;flex-direction:column;max-height:80vh;overflow:hidden;" @click.stop>
+        <div x-show="viewUsersRoleModalOpen" x-cloak class="modal-backdrop" @click="viewUsersRoleModalOpen = false" style="display:none;" @keydown.escape.window="viewUsersRoleModalOpen = false">
+            <div class="modal-box" style="max-width:440px;" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
 
                 <!-- Header -->
-                <div style="padding:16px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-                    <div>
-                        <p style="font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:#94a3b8;margin:0 0 2px 0;">Pengguna Role</p>
-                        <h5 style="font-size:0.98rem;font-weight:700;color:#0f172a;margin:0;" x-text="viewUsersRoleTarget.nama_peran"></h5>
+                <div class="modal-header">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div style="width:38px;height:38px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="users" style="width:18px;height:18px;"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="modal-title" x-text="'Pengguna: ' + viewUsersRoleTarget.nama_peran"></div>
+                            <div style="font-size:11.5px;color:var(--color-ink-mute);" x-text="viewUsersRoleTarget.users.length + ' akun terdaftar'"></div>
+                        </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:0.75rem;font-weight:600;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:20px;padding:3px 10px;" x-text="viewUsersRoleTarget.users.length + ' akun'"></span>
-                        <button type="button" @click="viewUsersRoleModalOpen = false"
-                                style="width:28px;height:28px;border-radius:8px;background:none;border:none;color:#94a3b8;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s;"
-                                onmouseover="this.style.background='#f1f5f9';this.style.color='#475569';"
-                                onmouseout="this.style.background='none';this.style.color='#94a3b8';">
-                            <i data-lucide="x" style="width:14px;height:14px;"></i>
-                        </button>
-                    </div>
+                    <button type="button" @click="viewUsersRoleModalOpen = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
 
                 <!-- List (scrollable) -->
-                <div style="overflow-y:auto;flex:1;">
+                <div class="modal-body custom-scrollbar" style="max-height:360px;padding:8px 16px;">
 
                     <!-- Empty -->
                     <template x-if="viewUsersRoleTarget.users.length === 0">
                         <div style="padding:32px 20px;text-align:center;">
-                            <p style="font-size:0.85rem;color:#94a3b8;margin:0;">Tidak ada pengguna.</p>
+                            <i data-lucide="user-x" style="width:28px;height:28px;margin:0 auto 8px auto;color:var(--color-ink-mute);opacity:0.5;"></i>
+                            <p style="font-size:0.85rem;color:var(--color-ink-mute);margin:0;">Tidak ada pengguna aktif pada role ini.</p>
                         </div>
                     </template>
 
                     <!-- Rows -->
                     <template x-if="viewUsersRoleTarget.users.length > 0">
-                        <div>
+                        <div class="divide-y divide-[var(--color-hairline)]">
                             <template x-for="(user, i) in viewUsersRoleTarget.users" :key="user.id">
-                                <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid #f8fafc;">
+                                <div style="display:flex;align-items:center;gap:10px;padding:10px 0;">
                                     <!-- Avatar -->
-                                    <div style="width:32px;height:32px;border-radius:8px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;flex-shrink:0;"
+                                    <div style="width:32px;height:32px;border-radius:8px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:0.82rem;font-weight:700;flex-shrink:0;"
                                          x-text="user.nama_lengkap ? user.nama_lengkap.charAt(0).toUpperCase() : '?'"></div>
                                     <!-- Info -->
                                     <div style="flex:1;min-width:0;">
-                                        <div style="font-size:0.85rem;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="user.nama_lengkap"></div>
-                                        <div style="font-size:0.74rem;color:#94a3b8;font-family:monospace;" x-text="'@' + user.nama_pengguna"></div>
+                                        <div style="font-size:0.85rem;font-weight:600;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="user.nama_lengkap"></div>
+                                        <div style="font-size:0.74rem;color:var(--color-ink-mute);font-family:var(--font-mono);" x-text="'@' + user.nama_pengguna"></div>
                                     </div>
                                     <!-- Status dot -->
                                     <template x-if="user.status_aktif">
-                                        <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;flex-shrink:0;" title="Aktif"></span>
+                                        <span class="badge" style="background:rgba(16,185,129,0.12);color:#059669;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">Aktif</span>
                                     </template>
                                     <template x-if="!user.status_aktif">
-                                        <span style="width:7px;height:7px;border-radius:50%;background:#f87171;flex-shrink:0;" title="Nonaktif"></span>
+                                        <span class="badge" style="background:rgba(239,68,68,0.12);color:#dc2626;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;">Nonaktif</span>
                                     </template>
                                 </div>
                             </template>
@@ -472,13 +467,18 @@ window._roleUsersMap = <?= json_encode($usersPerRole ?? [], JSON_UNESCAPED_UNICO
                 </div>
 
                 <!-- Footer legend -->
-                <div style="padding:10px 18px;border-top:1px solid #f1f5f9;display:flex;align-items:center;gap:12px;flex-shrink:0;">
-                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.73rem;color:#64748b;">
-                        <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;"></span> Aktif
-                    </span>
-                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.73rem;color:#64748b;">
-                        <span style="width:7px;height:7px;border-radius:50%;background:#f87171;"></span> Nonaktif
-                    </span>
+                <div class="modal-footer" style="justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.73rem;color:var(--color-ink-mute);">
+                            <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;"></span> Aktif
+                        </span>
+                        <span style="display:inline-flex;align-items:center;gap:5px;font-size:0.73rem;color:var(--color-ink-mute);">
+                            <span style="width:7px;height:7px;border-radius:50%;background:#f87171;"></span> Nonaktif
+                        </span>
+                    </div>
+                    <button type="button" @click="viewUsersRoleModalOpen = false" class="btn btn-secondary btn-sm">
+                        Tutup
+                    </button>
                 </div>
 
             </div>

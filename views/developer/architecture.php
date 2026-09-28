@@ -337,62 +337,66 @@ ob_start();
         <div x-show="selectedFolder !== null" 
              x-cloak 
              class="modal-backdrop" 
-             style="position:fixed !important;inset:0 !important;width:100vw !important;height:100vh !important;height:100dvh !important;margin:0 !important;padding:16px !important;z-index:999999 !important;background:rgba(0,0,0,0.85) !important;backdrop-filter:blur(10px) !important;display:flex !important;align-items:center !important;justify-content:center !important;" 
-             @keydown.escape.window="closeFolder()">
+             @click="closeFolder()"
+             @keydown.escape.window="closeFolder()"
+             style="display:none;">
             
-            <div class="modal-box space-y-4" 
-                 style="width:100%;max-width:680px;max-height:88vh;max-height:88dvh;border-radius:20px;background:var(--color-canvas);border:1.5px solid var(--color-hairline-strong);box-shadow:0 25px 50px -12px rgba(0, 0, 0, 0.7);padding:20px;margin:auto;display:flex;flex-direction:column;position:relative;z-index:1000000;" 
-                 @click.outside="closeFolder()">
+            <div class="modal-box modal-box-lg" 
+                 style="max-width:680px;" 
+                 @click.stop>
                 
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+
                 <template x-if="selectedFolder">
-                    <div class="space-y-4 flex-1 flex flex-col min-h-0">
+                    <div class="flex-1 flex flex-col min-h-0">
                         <!-- Modal Header -->
-                        <div class="modal-header pb-3 border-b flex items-center justify-between gap-2 flex-shrink-0" style="border-color:var(--color-hairline);">
-                            <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="modal-header">
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
                                 <span style="font-size:24px;flex-shrink:0;" x-text="selectedFolder.icon"></span>
-                                <div class="min-w-0">
-                                    <h3 class="font-mono truncate" style="font-size:15px;font-weight:900;color:var(--color-ink);" x-text="selectedFolder.name"></h3>
-                                    <p style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.3;" x-text="selectedFolder.desc"></p>
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="modal-title font-mono truncate" x-text="selectedFolder.name"></h3>
+                                    <p style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.3;margin-top:1px;" x-text="selectedFolder.desc"></p>
                                 </div>
                             </div>
-                            <button type="button" @click="closeFolder()" class="modal-close-btn flex-shrink-0" style="width:32px;height:32px;border-radius:8px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:center;color:var(--color-ink);cursor:pointer;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
+                            <button type="button" @click="closeFolder()" class="modal-close-x" title="Tutup Modal">
+                                <i data-lucide="x" style="width:18px;height:18px;"></i>
                             </button>
                         </div>
 
-                        <!-- Search within folder -->
-                        <div class="flex-shrink-0">
-                            <input type="text" x-model="searchFileInModal" placeholder="Filter nama file dalam folder ini..." class="form-input text-xs" style="height:38px;border-radius:10px;">
-                        </div>
+                        <!-- Modal Body -->
+                        <div class="modal-body custom-scrollbar space-y-3.5">
+                            <!-- Search within folder -->
+                            <div>
+                                <input type="text" x-model="searchFileInModal" placeholder="Filter nama file dalam folder ini..." class="form-input text-xs" style="height:38px;border-radius:10px;">
+                            </div>
 
-                        <!-- Files List (Scrollable) -->
-                        <div class="space-y-2 overflow-y-auto flex-1 min-h-0 pr-1 no-scrollbar" style="max-height:50vh;">
-                            <template x-for="file in filteredModalFiles" :key="file.name">
-                                <div class="p-3 rounded-xl space-y-1.5 transition-all" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                                    <div class="flex items-center justify-between gap-2">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-primary);flex-shrink:0;">
-                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                                <polyline points="14 2 14 8 20 8"></polyline>
-                                            </svg>
-                                            <span class="font-mono font-bold text-xs truncate" style="color:var(--color-ink);" x-text="file.name"></span>
+                            <!-- Files List (Scrollable) -->
+                            <div class="space-y-2">
+                                <template x-for="file in filteredModalFiles" :key="file.name">
+                                    <div class="p-3 rounded-xl space-y-1.5 transition-all" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <i data-lucide="file-text" style="width:14px;height:14px;color:var(--color-primary);flex-shrink:0;"></i>
+                                                <span class="font-mono font-bold text-xs truncate" style="color:var(--color-ink);" x-text="file.name"></span>
+                                            </div>
+                                            <button type="button" @click="copyFilePath(selectedFolder.name + file.name)" class="btn btn-secondary btn-sm flex-shrink-0" style="font-size:10.5px;padding:3px 8px;border-radius:6px;">
+                                                Salin Path
+                                            </button>
                                         </div>
-                                        <button type="button" @click="copyFilePath(selectedFolder.name + file.name)" class="btn btn-secondary btn-sm flex-shrink-0" style="font-size:10.5px;padding:3px 8px;border-radius:6px;">
-                                            Salin Path
-                                        </button>
+                                        <p style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.4;padding-left:22px;" x-text="file.desc"></p>
                                     </div>
-                                    <p style="font-size:11.5px;color:var(--color-ink-mute);line-height:1.4;padding-left:22px;" x-text="file.desc"></p>
-                                </div>
-                            </template>
+                                </template>
+                            </div>
                         </div>
 
-                        <!-- Footer Actions -->
-                        <div class="pt-3 border-t flex-shrink-0" style="border-color:var(--color-hairline);">
-                            <button type="button" @click="copyFolderContext(selectedFolder)" class="btn btn-primary w-full py-3 font-bold text-xs" style="background:var(--color-primary);border-color:var(--color-primary);border-radius:10px;box-shadow:var(--shadow-1);">
-                                <span>📋 Salin Ringkasan Seluruh File Folder Ini</span>
+                        <!-- Modal Footer -->
+                        <div class="modal-footer">
+                            <button type="button" @click="closeFolder()" class="btn btn-secondary modal-btn-cancel-desktop">
+                                Tutup
+                            </button>
+                            <button type="button" @click="copyFolderContext(selectedFolder)" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                                <i data-lucide="clipboard-copy" style="width:16px;height:16px;"></i>
+                                <span>Salin Ringkasan File</span>
                             </button>
                         </div>
 

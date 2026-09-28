@@ -617,23 +617,28 @@ $totalMasterRows = array_sum($entityStats ?? []);
 <!-- 5. MODAL KAMUS & PENCARIAN REFERENSI WILAYAH (MULTI-FIELD LOOKUP)         -->
 <!-- ========================================================================= -->
 <div id="importTerritoryLookupModal" class="modal-backdrop" style="display: none;" aria-modal="true" role="dialog" onclick="if(event.target === this) closeTerritoryLookupModal()">
-    <div class="modal-box modal-box-lg" style="max-width: 840px; width: 95%; display: flex; flex-direction: column; max-height: 88vh; padding: 0; overflow: hidden;" onclick="event.stopPropagation()">
+    <div class="modal-box modal-box-lg" style="max-width: 840px;" onclick="event.stopPropagation()">
         
+        <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+
         <!-- Header Modal -->
-        <div class="modal-header" style="padding: 16px 22px; margin-bottom: 0; border-bottom: 1px solid var(--color-hairline); display: flex; align-items: center; justify-content: space-between; background: var(--color-canvas);">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 38px; height: 38px; border-radius: var(--rounded-xs); background: rgba(37, 99, 235, 0.12); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <div class="modal-header">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div style="width: 38px; height: 38px; border-radius: 12px; background: rgba(37, 99, 235, 0.12); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                     <i data-lucide="map-pin" style="width: 20px; height: 20px;"></i>
                 </div>
-                <div>
-                    <h3 class="modal-title" style="font-size: 15px; font-weight: 800; color: var(--color-ink); margin: 0; line-height: 1.3;">Kamus Referensi Master Wilayah &amp; Rute</h3>
-                    <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 2px;">Cari nama wilayah, kode rute, kota, atau kecamatan yang valid di database untuk disalin ke Excel</div>
+                <div class="min-w-0 flex-1">
+                    <h3 class="modal-title">Kamus Referensi Master Wilayah &amp; Rute</h3>
+                    <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 1px;">Cari nama wilayah, kode rute, kota, atau kecamatan yang valid di database</div>
                 </div>
             </div>
+            <button type="button" onclick="closeTerritoryLookupModal()" class="modal-close-x" title="Tutup Modal">
+                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+            </button>
         </div>
 
         <!-- Filter & Search Toolbar -->
-        <div style="padding: 14px 20px; border-bottom: 1px solid var(--color-hairline); background-color: var(--color-canvas-soft); display: flex; flex-direction: column; gap: 10px;">
+        <div style="padding: 12px 20px; border-bottom: 1px solid var(--color-hairline); background-color: var(--color-canvas-soft); display: flex; flex-direction: column; gap: 8px;">
             <div style="display: flex; gap: 10px; align-items: center;">
                 <div class="form-input-icon" style="flex: 1;">
                     <i data-lucide="search" class="icon-left" style="color: var(--color-ink-mute); width: 15px; height: 15px;"></i>
@@ -650,12 +655,12 @@ $totalMasterRows = array_sum($entityStats ?? []);
             </div>
             <div style="display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: var(--color-ink-mute); flex-wrap: wrap; gap: 6px;">
                 <span id="territorySearchCount" style="font-weight: 700; color: var(--color-ink);">Menampilkan <?= count($activeTerritories ?? []) ?> wilayah terdaftar</span>
-                <span style="font-style: italic;">Klik tombol "Salin" untuk menyalin teks yang sah langsung ke clipboard</span>
+                <span style="font-style: italic;">Klik tombol "Salin" untuk menyalin teks langsung ke clipboard</span>
             </div>
         </div>
 
         <!-- Body Modal (Scrollable List) -->
-        <div class="modal-body custom-scrollbar" style="padding: 16px 20px; overflow-y: auto; flex: 1; min-height: 280px; max-height: calc(88vh - 210px);">
+        <div class="modal-body custom-scrollbar" style="padding: 16px 20px; min-height: 280px; max-height: calc(88vh - 210px);">
             <div id="territoryResultsList" style="display: flex; flex-direction: column; gap: 8px;">
                 <!-- Rendered dynamically by JavaScript -->
             </div>
@@ -674,11 +679,11 @@ $totalMasterRows = array_sum($entityStats ?? []);
         </div>
 
         <!-- Footer Modal -->
-        <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--color-hairline); background-color: var(--color-canvas); display: flex; align-items: center; justify-content: space-between;">
+        <div class="modal-footer" style="display: flex; align-items: center; justify-content: space-between;">
             <a href="<?= Router::url('/customers?tab=territories') ?>" class="text-xs text-blue-600 dark:text-blue-400 font-semibold inline-flex items-center gap-1.5 hover:underline">
                 <i data-lucide="map-pin" style="width: 13px; height: 13px;"></i> Kelola Master Wilayah Lengkap
             </a>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeTerritoryLookupModal()">Tutup</button>
+            <button type="button" class="btn btn-secondary btn-sm modal-btn-cancel-desktop" onclick="closeTerritoryLookupModal()">Tutup</button>
         </div>
 
     </div>

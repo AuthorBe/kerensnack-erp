@@ -540,26 +540,23 @@ $roleThemes = [
     <!-- 5. MODAL SIDE-BY-SIDE VISUAL DIFF INSPECTOR                               -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-    <div x-show="showDiffModal" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
-        <div class="modal-box modal-box-lg" style="max-width:760px;width:94vw;max-height:90vh;padding:0;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;background:var(--color-canvas);border:1.5px solid var(--color-hairline);box-shadow:0 25px 60px -15px rgba(0,0,0,0.25);" @click.stop>
+    <div x-show="showDiffModal" x-cloak class="modal-backdrop" @click="showDiffModal = false" style="display:none;">
+        <div class="modal-box modal-box-lg" style="max-width:760px;" @click.stop>
             
-            <!-- Mobile Pull Handle -->
-            <div class="sm:hidden w-full flex justify-center pt-3 pb-1 flex-shrink-0" style="background:var(--color-canvas);">
-                <div style="width:40px;height:4px;border-radius:2px;background:var(--color-hairline);"></div>
-            </div>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
 
-            <!-- 1. MODAL HEADER (Mengikuti Standar Modul Detail ERP) -->
-            <div style="padding:18px 22px;border-bottom:1px solid var(--color-hairline);display:flex;align-items:center;justify-content:space-between;background:var(--color-canvas);flex-shrink:0;gap:16px;">
-                <div style="display:flex;align-items:center;gap:14px;min-width:0;flex:1;">
+            <!-- 1. MODAL HEADER -->
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
                     <!-- Ikon Modul -->
-                    <div style="width:44px;height:44px;border-radius:12px;background:#eff6ff;color:#1e3a8a;border:1px solid rgba(30,58,138,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="git-commit" style="width:22px;height:22px;"></i>
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(30,58,138,0.12);color:#1e3a8a;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="git-commit" style="width:20px;height:20px;"></i>
                     </div>
                     
                     <!-- Info Aktivitas & Meta -->
-                    <div style="min-width:0;flex:1;">
+                    <div class="min-w-0 flex-1">
                         <!-- Baris 1: Action Badge & Target Chip -->
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px;">
                             <span class="badge" 
                                   :style="getActionBadgeStyle(selectedLog?.jenis_aksi)"
                                   style="font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:6px;letter-spacing:0.02em;"
@@ -576,24 +573,24 @@ $roleThemes = [
                         </div>
                         
                         <!-- Baris 2: Deskripsi Aksi -->
-                        <h4 style="font-size:14px;font-weight:700;color:var(--color-ink);margin:0;line-height:1.4;word-break:break-word;" x-text="selectedLog?.deskripsi_aktivitas || 'Inspeksi Detail Perubahan Data'"></h4>
+                        <h4 class="modal-title" style="font-size:13.5px;" x-text="selectedLog?.deskripsi_aktivitas || 'Inspeksi Detail Perubahan Data'"></h4>
                         
                         <!-- Baris 3: Meta Info Lengkap (Aktor, Waktu WIB, IP) -->
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--color-ink-mute);margin-top:5px;">
+                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--color-ink-mute);margin-top:2px;">
                             <span style="display:inline-flex;align-items:center;gap:4px;">
-                                <i data-lucide="user" style="width:12px;height:12px;color:var(--color-ink-mute);"></i>
+                                <i data-lucide="user" style="width:11px;height:11px;color:var(--color-ink-mute);"></i>
                                 <span>Aktor: <strong style="color:var(--color-ink);" x-text="selectedLog?.nama_aktor || 'Sistem'"></strong></span>
                             </span>
                             <span style="color:var(--color-hairline);">&bull;</span>
                             <span style="display:inline-flex;align-items:center;gap:4px;">
-                                <i data-lucide="calendar" style="width:12px;height:12px;color:var(--color-ink-mute);"></i>
+                                <i data-lucide="calendar" style="width:11px;height:11px;color:var(--color-ink-mute);"></i>
                                 <span class="font-mono" style="font-weight:600;color:var(--color-ink);" x-text="formatDateShort(selectedLog?.waktu_kejadian)"></span>
                             </span>
                             <template x-if="selectedLog?.ip_address">
                                 <span style="display:inline-flex;align-items:center;gap:10px;">
                                     <span style="color:var(--color-hairline);">&bull;</span>
                                     <span style="display:inline-flex;align-items:center;gap:4px;">
-                                        <i data-lucide="network" style="width:12px;height:12px;color:var(--color-ink-mute);"></i>
+                                        <i data-lucide="network" style="width:11px;height:11px;color:var(--color-ink-mute);"></i>
                                         <span class="font-mono" x-text="selectedLog?.ip_address"></span>
                                     </span>
                                 </span>
@@ -606,10 +603,13 @@ $roleThemes = [
                 <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
                     <button type="button" @click="copyJson()" 
                             class="btn btn-secondary btn-sm" 
-                            style="height:36px;padding:0 12px;font-size:11.5px;font-weight:600;border-radius:10px;display:inline-flex;align-items:center;gap:5px;"
+                            style="height:32px;padding:0 10px;font-size:11.5px;font-weight:600;border-radius:8px;display:inline-flex;align-items:center;gap:5px;"
                             title="Salin rekaman ini dalam format JSON">
                         <i data-lucide="copy" style="width:13px;height:13px;"></i>
                         <span x-text="copiedJson ? 'Tersalin!' : 'Salin JSON'"></span>
+                    </button>
+                    <button type="button" @click="showDiffModal = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
                     </button>
                 </div>
             </div>
@@ -782,12 +782,12 @@ $roleThemes = [
             </div>
 
             <!-- 4. MODAL FOOTER -->
-            <div style="padding:14px 22px;border-top:1px solid var(--color-hairline);background:var(--color-canvas-soft);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <div class="modal-footer" style="justify-content:space-between;">
                 <div style="font-size:11.5px;color:var(--color-ink-mute);display:flex;align-items:center;gap:6px;">
                     <i data-lucide="shield-check" style="width:14px;height:14px;color:#10b981;"></i>
                     <span>Audit Trail terverifikasi &amp; tersimpan aman di database</span>
                 </div>
-                <button type="button" @click="showDiffModal = false" class="btn btn-secondary btn-sm" style="height:36px;padding:0 20px;font-size:12px;font-weight:700;border-radius:8px;">
+                <button type="button" @click="showDiffModal = false" class="btn btn-secondary w-full sm:w-auto">
                     Tutup
                 </button>
             </div>
@@ -801,77 +801,83 @@ $roleThemes = [
     <!-- ========================================================================= -->
     <?php if ($isDeveloper): ?>
     <template x-teleport="body">
-    <div x-show="showPruneModal" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.65);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
-        <div class="modal-box" style="max-width:480px;width:94vw;border-radius:20px;padding:24px;background:var(--color-canvas);border:1.5px solid var(--color-hairline);box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
+    <div x-show="showPruneModal" x-cloak class="modal-backdrop" @click="showPruneModal = false" style="display:none;">
+        <div class="modal-box" style="max-width:480px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             
             <form method="POST" action="<?= Router::url('/settings/activity-logs/prune') ?>">
                 <input type="hidden" name="csrf_token" value="<?= CSRF::token() ?>">
 
                 <!-- Modal Header Standar ERP -->
-                <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;padding-bottom:16px;border-bottom:1.5px solid var(--color-hairline);gap:12px;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:42px;height:42px;border-radius:12px;background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="shield-alert" style="width:22px;height:22px;"></i>
+                <div class="modal-header">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(225,29,72,0.12);color:#e11d48;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="shield-alert" style="width:20px;height:20px;"></i>
                         </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="modal-title" style="color:var(--color-danger);">Pembersihan &amp; Retensi Log</div>
+                            <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Fitur proteksi developer untuk merampingkan database</div>
+                        </div>
+                    </div>
+                    <button type="button" @click="showPruneModal = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
+                </div>
+
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <!-- Alert Callout Box -->
+                    <div style="padding:12px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;display:flex;align-items:flex-start;gap:10px;font-size:12px;color:#92400e;line-height:1.5;">
+                        <i data-lucide="alert-triangle" style="width:16px;height:16px;color:#d97706;flex-shrink:0;margin-top:2px;"></i>
                         <div>
-                            <h4 style="font-size:1.05rem;font-weight:700;color:var(--color-ink);margin:0 0 2px 0;">Pembersihan &amp; Retensi Log Usang</h4>
-                            <p style="font-size:0.8rem;color:var(--color-ink-mute);margin:0;">Fitur proteksi developer untuk merampingkan database</p>
+                            <strong>Penting:</strong> Seluruh rekaman audit trail yang lebih tua dari batas retensi yang dipilih akan <strong>dihapus permanen</strong> dari basis data PostgreSQL.
                         </div>
                     </div>
-                </div>
 
-                <!-- Alert Callout Box -->
-                <div style="padding:12px 14px;border-radius:10px;background:#fffbeb;border:1px solid #fde68a;display:flex;align-items:flex-start;gap:10px;font-size:12px;color:#92400e;line-height:1.5;margin-bottom:16px;">
-                    <i data-lucide="alert-triangle" style="width:16px;height:16px;color:#d97706;flex-shrink:0;margin-top:2px;"></i>
+                    <!-- Pilihan Batas Hari -->
                     <div>
-                        <strong>Penting:</strong> Seluruh rekaman audit trail yang lebih tua dari batas retensi yang dipilih akan <strong>dihapus permanen</strong> dari basis data PostgreSQL.
+                        <label class="form-label" style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">
+                            Pilih Batas Usia Log yang Dihapus:
+                        </label>
+                        <select name="days" class="form-input" style="height:38px;font-size:12.5px;width:100%;border-radius:8px;">
+                            <option value="30">Lebih dari 30 hari yang lalu</option>
+                            <option value="90" selected>Lebih dari 90 hari (Direkomendasikan)</option>
+                            <option value="180">Lebih dari 180 hari (6 bulan)</option>
+                            <option value="365">Lebih dari 365 hari (1 tahun)</option>
+                        </select>
                     </div>
-                </div>
 
-                <!-- Pilihan Batas Hari (Concise & Mobile-friendly) -->
-                <div style="margin-bottom:14px;">
-                    <label class="form-label" style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">
-                        Pilih Batas Usia Log yang Dihapus:
-                    </label>
-                    <select name="days" class="form-input" style="height:38px;font-size:12.5px;width:100%;border-radius:8px;">
-                        <option value="30">Lebih dari 30 hari yang lalu</option>
-                        <option value="90" selected>Lebih dari 90 hari (Direkomendasikan)</option>
-                        <option value="180">Lebih dari 180 hari (6 bulan)</option>
-                        <option value="365">Lebih dari 365 hari (1 tahun)</option>
-                    </select>
-                </div>
-
-                <!-- Konfirmasi Kata Sandi Developer -->
-                <div style="margin-bottom:20px;" x-data="{ showPrunePass: false }">
-                    <label class="form-label" style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">
-                        Konfirmasi Kata Sandi Developer: <span style="color:#e11d48;">*</span>
-                    </label>
-                    <div style="position:relative;display:flex;align-items:center;">
-                        <i data-lucide="lock" style="width:14px;height:14px;color:var(--color-ink-mute);position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;"></i>
-                        <input :type="showPrunePass ? 'text' : 'password'" 
-                               name="developer_password" 
-                               required 
-                               placeholder="Masukkan kata sandi akun Developer..." 
-                               autocomplete="current-password"
-                               class="form-input" 
-                               style="height:38px;padding-left:36px;padding-right:38px;font-size:12.5px;width:100%;border-radius:8px;">
-                        <button type="button" @click="showPrunePass = !showPrunePass" :title="showPrunePass ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
-                                style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-                            <span x-show="!showPrunePass" style="display:flex;align-items:center;"><i data-lucide="eye" style="width:15px;height:15px;"></i></span>
-                            <span x-show="showPrunePass" style="display:flex;align-items:center;" x-cloak><i data-lucide="eye-off" style="width:15px;height:15px;"></i></span>
-                        </button>
+                    <!-- Konfirmasi Kata Sandi Developer -->
+                    <div x-data="{ showPrunePass: false }">
+                        <label class="form-label" style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;">
+                            Konfirmasi Kata Sandi Developer: <span style="color:#e11d48;">*</span>
+                        </label>
+                        <div style="position:relative;display:flex;align-items:center;">
+                            <i data-lucide="lock" style="width:14px;height:14px;color:var(--color-ink-mute);position:absolute;left:12px;top:50%;transform:translateY(-50%);pointer-events:none;"></i>
+                            <input :type="showPrunePass ? 'text' : 'password'" 
+                                   name="developer_password" 
+                                   required 
+                                   placeholder="Masukkan kata sandi akun Developer..." 
+                                   autocomplete="current-password"
+                                   class="form-input" 
+                                   style="height:38px;padding-left:36px;padding-right:38px;font-size:12.5px;width:100%;border-radius:8px;">
+                            <button type="button" @click="showPrunePass = !showPrunePass" :title="showPrunePass ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
+                                    style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+                                <span x-show="!showPrunePass" style="display:flex;align-items:center;"><i data-lucide="eye" style="width:15px;height:15px;"></i></span>
+                                <span x-show="showPrunePass" style="display:flex;align-items:center;" x-cloak><i data-lucide="eye-off" style="width:15px;height:15px;"></i></span>
+                            </button>
+                        </div>
+                        <span style="font-size:11px;color:var(--color-ink-mute);margin-top:5px;display:block;">
+                            Kata sandi akan diverifikasi secara aman ke database sebelum perintah delete dieksekusi.
+                        </span>
                     </div>
-                    <span style="font-size:11px;color:var(--color-ink-mute);margin-top:5px;display:block;">
-                        Kata sandi akan diverifikasi secara aman ke database sebelum perintah delete dieksekusi.
-                    </span>
                 </div>
 
                 <!-- Actions Footer -->
-                <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding-top:16px;border-top:1px solid var(--color-hairline);">
-                    <button type="button" @click="showPruneModal = false" class="btn btn-secondary btn-sm" style="height:36px;padding:0 16px;font-weight:600;font-size:12px;border-radius:8px;">
+                <div class="modal-footer">
+                    <button type="button" @click="showPruneModal = false" class="btn btn-secondary modal-btn-cancel-desktop">
                         Batal
                     </button>
-                    <button type="submit" class="btn btn-sm" style="height:36px;padding:0 16px;font-weight:700;font-size:12px;border-radius:8px;background:#e11d48;color:#ffffff;border:1px solid #be123c;display:inline-flex;align-items:center;gap:6px;">
+                    <button type="submit" class="btn btn-danger w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
                         <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                         <span>Konfirmasi &amp; Bersihkan</span>
                     </button>

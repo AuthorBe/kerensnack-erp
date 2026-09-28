@@ -260,59 +260,61 @@ ob_start();
     <!-- MODAL TAMBAH PENGGUNA (TELEPORTED TO BODY)                                -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-        <div x-show="addModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
-            <div class="modal-box" style="max-width:620px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
+        <div x-show="addModalOpen" x-cloak class="modal-backdrop" @click="addModalOpen = false" style="display:none;">
+            <div class="modal-box" style="max-width:620px;" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
                 
                 <!-- Modal Header -->
-                <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1.5px solid #f1f5f9;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:#eff6ff;color:var(--color-primary, #2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="user-plus" style="width:22px;height:22px;"></i>
+                <div class="modal-header">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="user-plus" style="width:20px;height:20px;"></i>
                         </div>
-                        <div>
-                            <h4 style="font-size:1.18rem;font-weight:700;color:#0f172a;margin:0 0 3px 0;">Tambah Pengguna Baru</h4>
-                            <p style="font-size:0.82rem;color:#64748b;margin:0;">Buat akun login sistem baru untuk karyawan atau staf operasional</p>
+                        <div class="min-w-0 flex-1">
+                            <div class="modal-title">Tambah Pengguna Baru</div>
+                            <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Buat akun login sistem baru untuk karyawan atau staf operasional</div>
                         </div>
                     </div>
+                    <button type="button" @click="addModalOpen = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
 
                 <!-- Modal Body / Form -->
                 <template x-if="availableEmployees.length === 0">
-                    <div style="padding:28px 20px;text-align:center;background:#f8fafc;border-radius:14px;border:1.5px dashed #cbd5e1;margin-bottom:12px;">
-                        <div style="width:48px;height:48px;border-radius:12px;background:#eff6ff;color:#2563eb;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
-                            <i data-lucide="check-circle-2" style="width:24px;height:24px;"></i>
-                        </div>
-                        <h5 style="font-size:1rem;font-weight:700;color:#0f172a;margin:0 0 6px 0;">Semua Karyawan Sudah Punya Akun</h5>
-                        <p style="font-size:0.84rem;color:#64748b;margin:0 auto 18px auto;max-width:380px;line-height:1.5;">
-                            Seluruh karyawan aktif saat ini telah memiliki akun login sistem. Untuk membuat akun baru, silakan daftarkan karyawan baru terlebih dahulu di modul Data Karyawan.
-                        </p>
-                        <div style="display:flex;justify-content:center;gap:10px;">
-                            <button type="button" @click="addModalOpen = false" 
-                                    style="height:38px;padding:0 18px;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;font-size:0.84rem;border:none;cursor:pointer;">
-                                Tutup
-                            </button>
-                            <a href="<?= Router::url('/employees') ?>" 
-                               style="height:38px;padding:0 18px;border-radius:10px;background:var(--color-primary, #2563eb);color:#ffffff;font-weight:600;font-size:0.84rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
-                                <i data-lucide="users" style="width:14px;height:14px;"></i>
-                                <span>Buka Data Karyawan &rarr;</span>
-                            </a>
+                    <div class="modal-body custom-scrollbar">
+                        <div style="padding:28px 20px;text-align:center;background:var(--color-canvas-soft);border-radius:14px;border:1.5px dashed var(--color-hairline);margin-bottom:12px;">
+                            <div style="width:48px;height:48px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">
+                                <i data-lucide="check-circle-2" style="width:24px;height:24px;"></i>
+                            </div>
+                            <h5 style="font-size:1rem;font-weight:700;color:var(--color-ink);margin:0 0 6px 0;">Semua Karyawan Sudah Punya Akun</h5>
+                            <p style="font-size:0.84rem;color:var(--color-ink-mute);margin:0 auto 18px auto;max-width:380px;line-height:1.5;">
+                                Seluruh karyawan aktif saat ini telah memiliki akun login sistem. Untuk membuat akun baru, silakan daftarkan karyawan baru terlebih dahulu di modul Data Karyawan.
+                            </p>
+                            <div style="display:flex;justify-content:center;gap:10px;">
+                                <button type="button" @click="addModalOpen = false" class="btn btn-secondary">
+                                    Tutup
+                                </button>
+                                <a href="<?= Router::url('/employees') ?>" class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;">
+                                    <i data-lucide="users" style="width:14px;height:14px;"></i>
+                                    <span>Buka Data Karyawan &rarr;</span>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </template>
 
                 <form x-show="availableEmployees.length > 0" action="<?= Router::url('/users/store') ?>" method="POST" data-action-text="Mengaktifkan akses login pengguna...">
-                    <div style="display:flex;flex-direction:column;gap:18px;">
+                    <div class="modal-body custom-scrollbar space-y-4">
                         
                         <!-- Step 1: Pilih Karyawan -->
                         <div>
-                            <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
+                            <label style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-ink);margin-bottom:7px;">
                                 Pilih Karyawan <span style="color:#e11d48;">*</span>
                             </label>
                             <select name="pengguna_id" required 
                                     @change="onEmployeeSelect($event.target.value)"
-                                    style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                    onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                    onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
+                                    style="width:100%;height:44px;padding:0 14px;border:1px solid var(--color-hairline);border-radius:12px;background:var(--color-canvas);font-size:0.88rem;color:var(--color-ink);outline:none;cursor:pointer;">
                                 <option value="">-- Pilih Karyawan yang Ingin Diberi Akses Login --</option>
                                 <?php foreach ($availableEmployees as $emp): ?>
                                     <option value="<?= htmlspecialchars((string)$emp['id']) ?>">
@@ -320,21 +322,21 @@ ob_start();
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <p style="font-size:0.75rem;color:#64748b;margin:5px 0 0 0;">
+                            <p style="font-size:0.75rem;color:var(--color-ink-mute);margin:5px 0 0 0;">
                                 Hanya menampilkan data karyawan aktif yang belum memiliki akses login sistem.
                             </p>
                         </div>
 
                         <!-- Live Preview Card Karyawan -->
                         <template x-if="selectedEmployee">
-                            <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                            <div style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
                                 <div style="display:flex;align-items:center;gap:12px;">
-                                    <div style="width:38px;height:38px;border-radius:10px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;flex-shrink:0;"
+                                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.95rem;flex-shrink:0;"
                                          x-text="selectedEmployee.nama_lengkap ? selectedEmployee.nama_lengkap.charAt(0).toUpperCase() : '?'">
                                     </div>
                                     <div>
-                                        <div style="font-weight:700;font-size:0.92rem;color:#0f172a;" x-text="selectedEmployee.nama_lengkap"></div>
-                                        <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:#64748b;margin-top:2px;">
+                                        <div style="font-weight:700;font-size:0.92rem;color:var(--color-ink);" x-text="selectedEmployee.nama_lengkap"></div>
+                                        <div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;color:var(--color-ink-mute);margin-top:2px;">
                                             <span class="badge" style="background:#e0e7ff;color:#3730a3;padding:2px 7px;border-radius:6px;font-weight:600;" x-text="'Jabatan: ' + (selectedEmployee.posisi ? selectedEmployee.posisi.toUpperCase() : 'KARYAWAN')"></span>
                                             <span style="font-family:monospace;font-size:0.75rem;" x-text="selectedEmployee.nomor_whatsapp ? ('WA: ' + selectedEmployee.nomor_whatsapp) : 'WA: -'"></span>
                                         </div>
@@ -347,29 +349,24 @@ ob_start();
                         </template>
 
                         <!-- Step 2: Kredensial Login (Username & Password) -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
+                                <label style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-ink);margin-bottom:7px;">
                                     Username Login <span style="color:#e11d48;">*</span>
                                 </label>
                                 <input type="text" name="nama_pengguna" placeholder="misal: asep_sales" required 
-                                       style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;font-family:monospace;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                       onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                       onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
+                                       style="width:100%;height:44px;padding:0 14px;border:1px solid var(--color-hairline);border-radius:12px;background:var(--color-canvas);font-size:0.88rem;color:var(--color-ink);font-family:monospace;outline:none;">
                             </div>
 
                             <div>
-                                <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
+                                <label style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-ink);margin-bottom:7px;">
                                     Kata Sandi <span style="color:#e11d48;">*</span>
                                 </label>
                                 <div style="position:relative;display:flex;align-items:center;">
                                     <input :type="showAddPass ? 'text' : 'password'" name="password" placeholder="Minimal 4 karakter" required autocomplete="new-password" 
-                                           style="width:100%;height:44px;padding:0 42px 0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                           onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                           onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
+                                           style="width:100%;height:44px;padding:0 42px 0 14px;border:1px solid var(--color-hairline);border-radius:12px;background:var(--color-canvas);font-size:0.88rem;color:var(--color-ink);outline:none;">
                                     <button type="button" @click="showAddPass = !showAddPass" :title="showAddPass ? 'Sembunyikan Kata Sandi' : 'Lihat Kata Sandi'"
-                                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:#64748b;cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;transition:color 0.15s;"
-                                            onmouseover="this.style.color='#0f172a';" onmouseout="this.style.color='#64748b';">
+                                            style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--color-ink-mute);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;">
                                         <span x-show="!showAddPass" style="display:flex;align-items:center;">
                                             <i data-lucide="eye" style="width:18px;height:18px;"></i>
                                         </span>
@@ -383,13 +380,11 @@ ob_start();
 
                         <!-- Step 3: Peran Akses Sistem (Role) -->
                         <div>
-                            <label style="display:block;font-size:0.85rem;font-weight:700;color:#1e293b;margin-bottom:7px;">
+                            <label style="display:block;font-size:0.85rem;font-weight:700;color:var(--color-ink);margin-bottom:7px;">
                                 Peran Hak Akses (Role) <span style="color:#e11d48;">*</span>
                             </label>
                             <select name="peran_id" required 
-                                    style="width:100%;height:44px;padding:0 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#ffffff;font-size:0.88rem;color:#0f172a;outline:none;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.02);transition:all 0.15s;"
-                                    onfocus="this.style.borderColor='#2563eb';this.style.boxShadow='0 0 0 3px rgba(37,99,235,0.12)';"
-                                    onblur="this.style.borderColor='#e2e8f0';this.style.boxShadow='0 1px 2px rgba(0,0,0,0.02)';">
+                                    style="width:100%;height:44px;padding:0 14px;border:1px solid var(--color-hairline);border-radius:12px;background:var(--color-canvas);font-size:0.88rem;color:var(--color-ink);outline:none;cursor:pointer;">
                                 <option value="">-- Pilih Peran Hak Akses --</option>
                                 <?php foreach ($roles as $r): 
                                     if ($r['nama_peran'] === 'developer') continue; // Proteksi: Developer tunggal
@@ -399,7 +394,7 @@ ob_start();
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <p style="font-size:0.75rem;color:#64748b;margin:5px 0 0 0;">
+                            <p style="font-size:0.75rem;color:var(--color-ink-mute);margin:5px 0 0 0;">
                                 Menentukan modul dan hak akses operasional pengguna di dalam sistem. Tidak mengubah jabatan kerja karyawan di master data.
                             </p>
                         </div>
@@ -407,15 +402,11 @@ ob_start();
                     </div>
 
                     <!-- Modal Footer Buttons -->
-                    <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;padding-top:20px;margin-top:26px;border-top:1.5px solid #f1f5f9;">
-                        <button type="button" @click="addModalOpen = false" 
-                                style="height:42px;padding:0 20px;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;font-size:0.88rem;border:none;cursor:pointer;transition:all 0.15s;"
-                                onmouseover="this.style.background='#e2e8f0';" onmouseout="this.style.background='#f1f5f9';">
+                    <div class="modal-footer">
+                        <button type="button" @click="addModalOpen = false" class="btn btn-secondary modal-btn-cancel-desktop">
                             Batal
                         </button>
-                        <button type="submit" 
-                                style="height:42px;padding:0 24px;border-radius:10px;background:var(--color-primary, #2563eb);color:#ffffff;font-weight:700;font-size:0.88rem;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.25);display:inline-flex;align-items:center;gap:8px;transition:all 0.15s;"
-                                onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='none';">
+                        <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;">
                             <i data-lucide="check" style="width:16px;height:16px;"></i>
                             <span>Aktifkan Akses Login</span>
                         </button>
@@ -430,29 +421,33 @@ ob_start();
     <!-- MODAL EDIT PENGGUNA (TELEPORTED TO BODY)                                  -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
-        <div x-show="editModalOpen" x-cloak class="modal-backdrop" style="background:rgba(15,23,42,0.55);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9999;">
-            <div class="modal-box" style="max-width:620px;width:100%;border-radius:20px;padding:28px 32px;background:#ffffff;border:1.5px solid #e2e8f0;box-shadow:0 25px 50px -12px rgba(15,23,42,0.25);" @click.stop>
+        <div x-show="editModalOpen" x-cloak class="modal-backdrop" @click="editModalOpen = false" style="display:none;">
+            <div class="modal-box" style="max-width:620px;" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
                 
                 <!-- Modal Header -->
-                <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1.5px solid #f1f5f9;">
-                    <div style="display:flex;align-items:center;gap:12px;">
-                        <div style="width:44px;height:44px;border-radius:12px;background:#eff6ff;color:var(--color-primary, #2563eb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                            <i data-lucide="user-cog" style="width:22px;height:22px;"></i>
+                <div class="modal-header">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i data-lucide="user-cog" style="width:20px;height:20px;"></i>
                         </div>
-                        <div>
-                            <h4 style="font-size:1.18rem;font-weight:700;color:#0f172a;margin:0 0 3px 0;">
+                        <div class="min-w-0 flex-1">
+                            <div class="modal-title">
                                 Edit Akun: <span style="color:#2563eb;" x-text="'@' + editUser.nama_pengguna"></span>
-                            </h4>
-                            <p style="font-size:0.82rem;color:#64748b;margin:0;" x-text="editUser.is_developer ? 'Pengaturan Profil Utama Developer (Super Admin Root)' : 'Ubah data profil, peran wewenang, dan status akses pengguna'"></p>
+                            </div>
+                            <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;" x-text="editUser.is_developer ? 'Pengaturan Profil Utama Developer (Super Admin Root)' : 'Ubah data profil, peran wewenang, dan status akses pengguna'"></div>
                         </div>
                     </div>
+                    <button type="button" @click="editModalOpen = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
                 </div>
 
                 <!-- Modal Body / Form -->
                 <form action="<?= Router::url('/users/update') ?>" method="POST" data-action-text="Memperbarui data pengguna...">
                     <input type="hidden" name="id" :value="editUser.id">
 
-                    <div style="display:flex;flex-direction:column;gap:18px;">
+                    <div class="modal-body custom-scrollbar space-y-4">
                         
                         <!-- Row 1: Nama & Username -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));gap:16px;">
@@ -670,15 +665,11 @@ ob_start();
                     </div>
 
                     <!-- Modal Footer Buttons -->
-                    <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;padding-top:20px;margin-top:26px;border-top:1.5px solid #f1f5f9;">
-                        <button type="button" @click="editModalOpen = false" 
-                                style="height:42px;padding:0 20px;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;font-size:0.88rem;border:none;cursor:pointer;transition:all 0.15s;"
-                                onmouseover="this.style.background='#e2e8f0';" onmouseout="this.style.background='#f1f5f9';">
+                    <div class="modal-footer">
+                        <button type="button" @click="editModalOpen = false" class="btn btn-secondary modal-btn-cancel-desktop">
                             Batal
                         </button>
-                        <button type="submit" 
-                                style="height:42px;padding:0 24px;border-radius:10px;background:var(--color-primary, #2563eb);color:#ffffff;font-weight:700;font-size:0.88rem;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(37,99,235,0.25);display:inline-flex;align-items:center;gap:8px;transition:all 0.15s;"
-                                onmouseover="this.style.transform='translateY(-1px)';" onmouseout="this.style.transform='none';">
+                        <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;">
                             <i data-lucide="check" style="width:16px;height:16px;"></i>
                             <span>Simpan Perubahan</span>
                         </button>
