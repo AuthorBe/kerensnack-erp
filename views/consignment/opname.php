@@ -2112,7 +2112,6 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                        id="foto_kunjungan" 
                        name="foto_kunjungan" 
                        accept="image/*" 
-                       capture="environment" 
                        class="hidden" 
                        @change="handlePhotoChange($event)">
 
@@ -2965,19 +2964,67 @@ function opnameApp() {
         // Photo Upload Handler
         handlePhotoChange(event) {
             const file = event.target.files[0];
-            if (file) {
-                if (file.size > 5 * 1024 * 1024) {
-                    if (window.toast) window.toast.error('Ukuran file foto maksimal 5MB.');
-                    event.target.value = '';
-                    return;
-                }
-                this.photoName = file.name;
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    this.photoPreview = e.target.result;
-                };
-                reader.readAsDataURL(file);
+            if (!file) return;
+            if (!file.type.match(/^image\//i)) {
+                if (window.toast) window.toast.error('Format file harus berupa gambar (JPG, PNG, atau WebP).');
+                event.target.value = '';
+                return;
             }
+            if (file.size > 15 * 1024 * 1024) {
+                if (window.toast) window.toast.error('Ukuran file foto maksimal 15MB.');
+                event.target.value = '';
+                return;
+            }
+            this.photoName = file.name;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const maxDim = 1600;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxDim || h > maxDim) {
+                        if (w >= h) {
+                            h = Math.round((h / w) * maxDim);
+                            w = maxDim;
+                        } else {
+                            w = Math.round((w / h) * maxDim);
+                            h = maxDim;
+                        }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            try {
+                                const dt = new DataTransfer();
+                                const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
+                                dt.items.add(newFile);
+                                event.target.files = dt.files;
+                            } catch (err) {}
+                            this.photoPreview = canvas.toDataURL('image/jpeg', 0.82);
+                        } else {
+                            this.photoPreview = e.target.result;
+                        }
+                    }, 'image/jpeg', 0.82);
+                };
+                img.onerror = () => {
+                    if (window.toast) window.toast.error('Berkas tidak dapat dimuat sebagai gambar.');
+                    this.clearPhoto();
+                };
+                img.src = e.target.result;
+            };
+            reader.onerror = () => {
+                this.clearPhoto();
+            };
+            reader.readAsDataURL(file);
         },
 
         clearPhoto() {

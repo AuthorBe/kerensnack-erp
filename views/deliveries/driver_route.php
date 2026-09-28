@@ -1653,7 +1653,7 @@ ob_start();
                             <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
                                 Foto Bukti Serah Terima Toko
                             </label>
-                            <input type="file" name="bukti_foto" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleCompletePhotoChange($event)" x-ref="completePhotoInput">
+                            <input type="file" name="bukti_foto" accept="image/*" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleCompletePhotoChange($event)" x-ref="completePhotoInput">
                             
                             <!-- Thumbnail Preview & Clear Button Card -->
                             <template x-if="completePhotoPreview">
@@ -1732,7 +1732,7 @@ ob_start();
                             <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
                                 Foto Bukti Kendala (Kamera / Galeri HP)
                             </label>
-                            <input type="file" name="foto_bukti_gagal" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleFailPhotoChange($event)" x-ref="failPhotoInput">
+                            <input type="file" name="foto_bukti_gagal" accept="image/*" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleFailPhotoChange($event)" x-ref="failPhotoInput">
                             
                             <!-- Thumbnail Preview & Clear Button Card -->
                             <template x-if="failPhotoPreview">
@@ -2539,7 +2539,7 @@ ob_start();
                             <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
                                 Foto Bukti Nota / Bon Fisik Vendor (Kamera / Galeri)
                             </label>
-                            <input type="file" name="foto_nota" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleShoppingPhotoChange($event)" x-ref="shoppingPhotoInput">
+                            <input type="file" name="foto_nota" accept="image/*" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleShoppingPhotoChange($event)" x-ref="shoppingPhotoInput">
                             
                             <!-- Thumbnail preview -->
                             <template x-if="shoppingCompletePreview">
@@ -2625,7 +2625,7 @@ ob_start();
                             <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
                                 Foto Bukti Kendala (Kamera / Galeri HP)
                             </label>
-                            <input type="file" name="foto_kendala" accept="image/*" capture="environment" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleShoppingIssuePhotoChange($event)" x-ref="shoppingIssuePhotoInput">
+                            <input type="file" name="foto_kendala" accept="image/*" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleShoppingIssuePhotoChange($event)" x-ref="shoppingIssuePhotoInput">
                             
                             <template x-if="shoppingIssuePreview">
                                 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
@@ -3118,14 +3118,16 @@ function driverDeliveryApp() {
         },
 
         // Client-side canvas image compression helper
-        compressImage(file, callback) {
+        compressImage(file, callback, errorCallback) {
             if (!file) return;
             if (file.size > 15 * 1024 * 1024) {
                 if (typeof toast !== 'undefined') toast.warning('Ukuran file foto maksimal 15MB!');
+                if (errorCallback) errorCallback();
                 return;
             }
             if (!file.type.match(/^image\//i)) {
                 if (typeof toast !== 'undefined') toast.warning('Format file harus berupa gambar (JPG, PNG, atau WebP)!');
+                if (errorCallback) errorCallback();
                 return;
             }
 
@@ -3162,7 +3164,14 @@ function driverDeliveryApp() {
                         }
                     }, 'image/jpeg', 0.82);
                 };
+                img.onerror = () => {
+                    if (typeof toast !== 'undefined') toast.warning('Berkas tidak dapat dimuat sebagai gambar.');
+                    if (errorCallback) errorCallback();
+                };
                 img.src = e.target.result;
+            };
+            reader.onerror = () => {
+                if (errorCallback) errorCallback();
             };
             reader.readAsDataURL(file);
         },
@@ -3181,6 +3190,9 @@ function driverDeliveryApp() {
                 this.$nextTick(() => {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 });
+            }, () => {
+                event.target.value = '';
+                this.clearCompletePhoto();
             });
         },
 
@@ -3206,6 +3218,9 @@ function driverDeliveryApp() {
                 this.$nextTick(() => {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 });
+            }, () => {
+                event.target.value = '';
+                this.clearFailPhoto();
             });
         },
 
@@ -3330,6 +3345,9 @@ function driverDeliveryApp() {
                 this.$nextTick(() => {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 });
+            }, () => {
+                event.target.value = '';
+                this.clearShoppingPhoto();
             });
         },
 
@@ -3355,6 +3373,9 @@ function driverDeliveryApp() {
                 this.$nextTick(() => {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 });
+            }, () => {
+                event.target.value = '';
+                this.clearShoppingIssuePhoto();
             });
         },
 

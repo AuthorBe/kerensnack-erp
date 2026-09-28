@@ -584,7 +584,7 @@ ob_start();
                             <div style="margin-top:10px;">
                                 <label class="form-label">Upload Foto Nota Fisik / Surat Jalan Vendor (Opsional)</label>
                                 <div style="display:flex;align-items:center;gap:10px;">
-                                    <input type="file" x-ref="photoFileInput" @change="handleFileChange($event)" accept="image/*" capture="environment" class="form-input" style="padding:6px 10px;font-size:12px;flex:1;min-width:0;">
+                                    <input type="file" x-ref="photoFileInput" @change="handleFileChange($event)" accept="image/*" class="form-input" style="padding:6px 10px;font-size:12px;flex:1;min-width:0;">
                                     <template x-if="photoPreview">
                                         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
                                             <img :src="photoPreview" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--color-hairline);" alt="Preview">
@@ -2085,7 +2085,7 @@ ob_start();
                             </template>
                         </label>
                         <div style="display:flex;align-items:center;gap:10px;">
-                            <input type="file" x-ref="receivePhotoInput" @change="handleReceiveFileChange($event)" accept="image/*" capture="environment" class="form-input" style="padding:6px 10px;font-size:12px;flex:1;min-width:0;">
+                            <input type="file" x-ref="receivePhotoInput" @change="handleReceiveFileChange($event)" accept="image/*" class="form-input" style="padding:6px 10px;font-size:12px;flex:1;min-width:0;">
                             <template x-if="receivePhotoPreview">
                                 <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
                                     <img :src="receivePhotoPreview" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--color-hairline);" alt="Preview">
@@ -3342,7 +3342,14 @@ function purchaseApp() {
                         }
                     }, 'image/jpeg', 0.82);
                 };
+                img.onerror = () => {
+                    toast.warning('Berkas tidak dapat dimuat sebagai gambar.');
+                    this.clearPhoto();
+                };
                 img.src = e.target.result;
+            };
+            reader.onerror = () => {
+                this.clearPhoto();
             };
             reader.readAsDataURL(file);
         },
@@ -4004,7 +4011,14 @@ function purchaseApp() {
                         }
                     }, 'image/jpeg', 0.82);
                 };
+                img.onerror = () => {
+                    toast.warning('Berkas tidak dapat dimuat sebagai gambar.');
+                    this.clearReceivePhoto();
+                };
                 img.src = e.target.result;
+            };
+            reader.onerror = () => {
+                this.clearReceivePhoto();
             };
             reader.readAsDataURL(file);
         },
