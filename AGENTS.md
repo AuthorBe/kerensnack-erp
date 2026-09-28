@@ -99,3 +99,18 @@ Jika pengujian memanggil metode Controller yang secara internal mengeksekusi `$p
 - Kredensial sensitif, kunci API, kata sandi, dan token koneksi wajib dikelola secara ketat melalui berkas `.env` dan tidak boleh di-hardcode ke dalam kode sumber maupun diekspos ke log publik.
 - Seluruh endpoint mutasi data (`POST`, `PUT`, `DELETE`) dan formulir wajib dilindungi oleh verifikasi Anti-CSRF (`App\Helpers\CSRF`).
 - Pembatasan hak akses wajib menggunakan otorisasi RBAC berlapis (`Auth::requirePermission()`, `Auth::requireRole()`, dan `Auth::requireDeveloper()`).
+
+---
+
+## 7. Protokol Git Commit & Push (Hanya Jika Diminta Eksplisit)
+1. **Larangan Commit/Push Otomatis Tanpa Permintaan**:
+   - AI **dilarang keras** melakukan `git commit` maupun `git push` secara otomatis atau atas inisiatif sendiri setelah menyelesaikan modifikasi/perbaikan kode.
+   - Operasi Git commit & push hanya boleh dilakukan jika pengguna **secara eksplisit meminta** AI untuk melakukannya.
+2. **Jaminan Identitas Pengguna & Nol Jejak AI (*Zero AI Footprint*)**:
+   - Jika diminta melakukan commit, wajib menggunakan identitas lokal repositori pengguna (`user.name` & `user.email`).
+   - **Dilarang Keras** menyematkan tanda pengenal AI, bot signature, watermark, maupun footer *co-author* (seperti `Co-authored-by: ...`) pada pesan commit maupun metadata git. Jejak commit di GitHub harus 100% murni atas nama akun pengguna.
+3. **Protokol Penyerahan Manual (*Manual Execution Fallback*)**:
+   - Jika lingkungan eksekusi atau konfigurasi tidak dapat menjamin commit 100% murni atas nama pengguna tanpa atribusi/jejak AI:
+     - AI **Dilarang** mengeksekusi perintah `git commit` dan `git push` langsung.
+     - AI wajib menyajikan status berkas yang dimodifikasi, rekomendasi **pesan commit (*commit message*) yang rapi, terstruktur, dan sesuai standar Conventional Commits**, serta blok perintah CLI siap salin (`git add ...`, `git commit -m "..."`, `git push`) agar dieksekusi sendiri secara langsung oleh pengguna di terminalnya.
+
