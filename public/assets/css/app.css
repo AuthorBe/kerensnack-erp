@@ -2501,6 +2501,26 @@ body.ksnack-popup-freeze .app-header {
   }
 }
 
+/* 5.1 Modal Form Wrapper (Prevents Form from breaking flex scroll height) */
+.modal-box > form,
+.modal-box form,
+.tagihan-modal-shell > form,
+.tagihan-modal-shell form,
+.detail-modal-shell > form,
+.detail-modal-shell form,
+.skema-modal-box > form,
+.skema-modal-box form,
+.purchase-modal-box > form,
+.purchase-modal-box form,
+.company-preview-modal-box > form,
+.company-preview-modal-box form {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
 /* 6. Modal Body & Custom Scrollable Area */
 .modal-body,
 .tagihan-modal-body,
@@ -2510,7 +2530,9 @@ body.ksnack-popup-freeze .app-header {
   padding: 20px !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
+  overscroll-behavior: contain !important;
   flex: 1 1 auto !important;
+  min-height: 0 !important;
 }
 
 /* 7. Modal Footer & Responsive Action Buttons */
@@ -2687,6 +2709,26 @@ body.ksnack-popup-freeze .app-header {
     overscroll-behavior-y: contain !important;
     display: flex !important;
     flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .modal-box > form,
+  .modal-box form,
+  .tagihan-modal-shell > form,
+  .tagihan-modal-shell form,
+  .detail-modal-shell > form,
+  .detail-modal-shell form,
+  .skema-modal-box > form,
+  .skema-modal-box form,
+  .purchase-modal-box > form,
+  .purchase-modal-box form,
+  .company-preview-modal-box > form,
+  .company-preview-modal-box form {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
   }
 
   /* Munculkan Handle Bar di Mobile */
@@ -2722,6 +2764,8 @@ body.ksnack-popup-freeze .app-header {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     overscroll-behavior: contain !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
   }
 
   .modal-tab-body {

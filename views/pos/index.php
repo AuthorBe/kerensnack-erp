@@ -904,7 +904,7 @@ document.addEventListener('alpine:init', () => {
             </div>
 
             <div class="modal-footer">
-                <button type="button" @click="showBarcodeModal = false" class="btn btn-secondary w-full sm:w-auto">Batal</button>
+                <button type="button" @click="showBarcodeModal = false" class="btn btn-secondary modal-btn-cancel-desktop w-full sm:w-auto">Batal</button>
             </div>
         </div>
     </div>

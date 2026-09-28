@@ -463,7 +463,7 @@ ob_start();
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" @click="showHistoryModal = false" class="btn btn-secondary w-full sm:w-auto">Tutup</button>
+                    <button type="button" @click="showHistoryModal = false" class="btn btn-secondary modal-btn-cancel-desktop w-full sm:w-auto">Tutup</button>
                 </div>
             </div>
         </div>

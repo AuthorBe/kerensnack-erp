@@ -1500,8 +1500,8 @@ ob_start();
             </div>
 
             <!-- MODAL FOOTER -->
-            <div style="padding:12px 20px;border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;background:var(--color-canvas-soft);flex-shrink:0;">
-                <button type="button" @click="showDetailModal = false" class="btn btn-secondary btn-sm">Tutup</button>
+            <div class="modal-footer" style="padding:12px 20px;border-top:1px solid var(--color-hairline);display:flex;justify-content:space-between;align-items:center;background:var(--color-canvas-soft);flex-shrink:0;">
+                <button type="button" @click="showDetailModal = false" class="btn btn-secondary btn-sm modal-btn-cancel-desktop">Tutup</button>
                 <div style="font-size:11.5px;color:var(--color-ink-mute);">
                     Dibuat oleh: <strong style="color:var(--color-ink);" x-text="activeDetail?.purchase?.pembuat || 'Sistem'"></strong>
                 </div>

@@ -587,7 +587,7 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" @click="showHistoryModal = false" class="btn btn-secondary w-full sm:w-auto">Tutup</button>
+                    <button type="button" @click="showHistoryModal = false" class="btn btn-secondary modal-btn-cancel-desktop w-full sm:w-auto">Tutup</button>
                 </div>
             </div>
         </div>
