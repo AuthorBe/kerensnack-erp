@@ -403,10 +403,16 @@ class CustomerOrderController extends Controller
             // Generate presigned/proxy URLs untuk foto pengiriman di setiap riwayat surat jalan
             foreach ($shippingHistory as &$sj) {
                 if (!empty($sj['bukti_terima_foto'])) {
-                    $sj['bukti_terima_foto'] = \App\Helpers\Upload::presignedUrl($sj['bukti_terima_foto']) ?: $sj['bukti_terima_foto'];
+                    $sj['bukti_terima_urls'] = \App\Helpers\Upload::presignedUrls($sj['bukti_terima_foto']);
+                    $sj['bukti_terima_foto'] = $sj['bukti_terima_urls'][0] ?? (\App\Helpers\Upload::presignedUrl($sj['bukti_terima_foto']) ?: $sj['bukti_terima_foto']);
+                } else {
+                    $sj['bukti_terima_urls'] = [];
                 }
                 if (!empty($sj['foto_bukti_gagal'])) {
-                    $sj['foto_bukti_gagal'] = \App\Helpers\Upload::presignedUrl($sj['foto_bukti_gagal']) ?: $sj['foto_bukti_gagal'];
+                    $sj['foto_gagal_urls'] = \App\Helpers\Upload::presignedUrls($sj['foto_bukti_gagal']);
+                    $sj['foto_bukti_gagal'] = $sj['foto_gagal_urls'][0] ?? (\App\Helpers\Upload::presignedUrl($sj['foto_bukti_gagal']) ?: $sj['foto_bukti_gagal']);
+                } else {
+                    $sj['foto_gagal_urls'] = [];
                 }
             }
             unset($sj);
