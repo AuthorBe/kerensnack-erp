@@ -1034,22 +1034,27 @@ ob_start();
                 </div>
 
                 <!-- Tombol Aksi Cepat & Detail Rute -->
-                <div class="flex items-center gap-2">
-                    <?php if ($isCompleted && !empty($deliv['bukti_terima_foto'])): ?>
+                    <?php if ($isCompleted && (!empty($deliv['bukti_terima_foto']) || !empty($deliv['bukti_terima_urls']))): 
+                        $urls = !empty($deliv['bukti_terima_urls']) ? $deliv['bukti_terima_urls'] : [$deliv['bukti_terima_foto']];
+                        $pCount = count($urls);
+                    ?>
                         <button type="button" 
                                 class="btn btn-secondary btn-sm" 
                                 style="font-size: 12px; font-weight: 700; border-radius: 11px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 5px; color: #059669; border-color: #a7f3d0; background: #ecfdf5;"
-                                @click.stop="openPhotoViewer('<?= htmlspecialchars($deliv['bukti_terima_foto']) ?>', 'Bukti Serah Terima - <?= htmlspecialchars(addslashes($deliv['nama_toko'])) ?>')">
+                                @click.stop="openPhotoViewer(<?= htmlspecialchars(json_encode($urls)) ?>, 'Bukti Serah Terima - <?= htmlspecialchars(addslashes($deliv['nama_toko'])) ?>')">
                             <i data-lucide="image" style="width: 14px; height: 14px;"></i>
-                            <span>Foto Bukti</span>
+                            <span>Foto Bukti<?= $pCount > 1 ? ' (' . $pCount . ')' : '' ?></span>
                         </button>
-                    <?php elseif ($isFailed && !empty($deliv['foto_bukti_gagal'])): ?>
+                    <?php elseif ($isFailed && (!empty($deliv['foto_bukti_gagal']) || !empty($deliv['foto_gagal_urls']))): 
+                        $urls = !empty($deliv['foto_gagal_urls']) ? $deliv['foto_gagal_urls'] : [$deliv['foto_bukti_gagal']];
+                        $pCount = count($urls);
+                    ?>
                         <button type="button" 
                                 class="btn btn-secondary btn-sm" 
                                 style="font-size: 12px; font-weight: 700; border-radius: 11px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 5px; color: #e11d48; border-color: #fecaca; background: #fff1f2;"
-                                @click.stop="openPhotoViewer('<?= htmlspecialchars($deliv['foto_bukti_gagal']) ?>', 'Bukti Gagal Kirim - <?= htmlspecialchars(addslashes($deliv['nama_toko'])) ?>')">
+                                @click.stop="openPhotoViewer(<?= htmlspecialchars(json_encode($urls)) ?>, 'Bukti Gagal Kirim - <?= htmlspecialchars(addslashes($deliv['nama_toko'])) ?>')">
                             <i data-lucide="image" style="width: 14px; height: 14px;"></i>
-                            <span>Foto Gagal</span>
+                            <span>Foto Gagal<?= $pCount > 1 ? ' (' . $pCount . ')' : '' ?></span>
                         </button>
                     <?php endif; ?>
 
@@ -1247,19 +1252,25 @@ ob_start();
 
                     <!-- Tombol Aksi Cepat & Detail Belanja -->
                     <div class="flex items-center gap-2">
-                        <?php if (!empty($task['url_foto_nota'])): ?>
+                        <?php if (!empty($task['url_foto_nota']) || !empty($task['foto_nota_urls'])): 
+                            $urls = !empty($task['foto_nota_urls']) ? $task['foto_nota_urls'] : [$task['url_foto_nota']];
+                            $pCount = count($urls);
+                        ?>
                             <button type="button" 
                                     class="btn-shopping-photo is-nota" 
-                                    @click.stop="openPhotoViewer('<?= htmlspecialchars($task['url_foto_nota']) ?>', 'Nota Belanja - <?= htmlspecialchars(addslashes($task['nama_pemasok'])) ?>')">
+                                    @click.stop="openPhotoViewer(<?= htmlspecialchars(json_encode($urls)) ?>, 'Nota Belanja - <?= htmlspecialchars(addslashes($task['nama_pemasok'])) ?>')">
                                 <i data-lucide="image" style="width: 13px; height: 13px;"></i>
-                                <span>Foto Nota</span>
+                                <span>Foto Nota<?= $pCount > 1 ? ' (' . $pCount . ')' : '' ?></span>
                             </button>
-                        <?php elseif (!empty($task['foto_bukti_kendala'])): ?>
+                        <?php elseif (!empty($task['foto_bukti_kendala']) || !empty($task['bukti_kendala_urls'])): 
+                            $urls = !empty($task['bukti_kendala_urls']) ? $task['bukti_kendala_urls'] : [$task['foto_bukti_kendala']];
+                            $pCount = count($urls);
+                        ?>
                             <button type="button" 
                                     class="btn-shopping-photo is-kendala" 
-                                    @click.stop="openPhotoViewer('<?= htmlspecialchars($task['foto_bukti_kendala']) ?>', 'Bukti Kendala Belanja - <?= htmlspecialchars(addslashes($task['nama_pemasok'])) ?>')">
+                                    @click.stop="openPhotoViewer(<?= htmlspecialchars(json_encode($urls)) ?>, 'Bukti Kendala Belanja - <?= htmlspecialchars(addslashes($task['nama_pemasok'])) ?>')">
                                 <i data-lucide="image" style="width: 13px; height: 13px;"></i>
-                                <span>Foto Kendala</span>
+                                <span>Foto Kendala<?= $pCount > 1 ? ' (' . $pCount . ')' : '' ?></span>
                             </button>
                         <?php endif; ?>
 
@@ -1652,35 +1663,63 @@ ob_start();
                             </div>
                         </template>
 
-                        <!-- 3. Upload Foto Bukti Serah Terima (Kamera / Galeri HP) -->
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
-                                Foto Bukti Serah Terima Toko
-                            </label>
-                            <input type="file" name="bukti_foto" accept="image/*" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleCompletePhotoChange($event)" x-ref="completePhotoInput">
+                        <!-- 3. Upload Foto Bukti Serah Terima (Kamera / Galeri HP - Maksimal 5 Foto) -->
+                        <div class="photo-uploader-wrap">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                    Foto Bukti Serah Terima Toko (Maks. 5 Foto)
+                                </label>
+                                <span class="photo-uploader-counter" x-text="completePhotos.length + ' / 5 Foto'"></span>
+                            </div>
                             
-                            <!-- Thumbnail Preview & Clear Button Card -->
-                            <template x-if="completePhotoPreview">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
-                                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-                                        <img :src="completePhotoPreview" alt="Preview Foto Serah Terima" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;">
-                                        <div style="min-width:0;">
-                                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Siap Diunggah</div>
-                                            <div style="font-size:11.5px;color:#059669;font-weight:600;display:flex;align-items:center;gap:4px;">
-                                                <i data-lucide="check" style="width:13px;height:13px;"></i>
-                                                <span>Terkompresi Otomatis</span>
-                                            </div>
+                            <!-- Hidden input array untuk transfer file form submit -->
+                            <input type="file" name="bukti_foto[]" x-ref="completeFileInput" multiple style="display:none;">
+                            
+                            <!-- Hidden input trigger kamera & galeri -->
+                            <input type="file" x-ref="completeCameraInput" accept="image/*" capture="environment" multiple style="display:none;" @change="handleMultiPhotos($event, 'completePhotos', 'completeFileInput')">
+                            <input type="file" x-ref="completeGalleryInput" accept="image/*" multiple style="display:none;" @change="handleMultiPhotos($event, 'completePhotos', 'completeFileInput')">
+                            
+                            <!-- Action Buttons -->
+                            <div class="photo-uploader-actions">
+                                <button type="button" 
+                                        @click="$refs.completeCameraInput.click()" 
+                                        :disabled="completePhotos.length >= 5"
+                                        class="photo-uploader-btn photo-uploader-btn-camera">
+                                    <i data-lucide="camera" style="width:15px;height:15px;"></i>
+                                    <span>Ambil Kamera</span>
+                                </button>
+                                <button type="button" 
+                                        @click="$refs.completeGalleryInput.click()" 
+                                        :disabled="completePhotos.length >= 5"
+                                        class="photo-uploader-btn">
+                                    <i data-lucide="image-plus" style="width:15px;height:15px;"></i>
+                                    <span>Pilih Galeri</span>
+                                </button>
+                                <button type="button" 
+                                        x-show="completePhotos.length > 0"
+                                        @click="clearAllPhotos('completePhotos', 'completeFileInput')" 
+                                        class="btn btn-ghost btn-sm" 
+                                        style="color:var(--color-danger);font-size:11.5px;padding:4px 8px;">
+                                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                    <span>Hapus Semua</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Multi-Photo Queue Grid -->
+                            <template x-if="completePhotos.length > 0">
+                                <div class="photo-uploader-queue">
+                                    <template x-for="(item, idx) in completePhotos" :key="idx">
+                                        <div class="photo-uploader-card">
+                                            <img :src="item.preview" @click="openPhotoViewer([item.preview], 'Preview Foto ' + (idx + 1))" class="photo-uploader-thumb" alt="Preview">
+                                            <button type="button" @click.stop="removePhotoAt(idx, 'completePhotos', 'completeFileInput')" class="photo-uploader-remove-btn" title="Hapus foto ini">×</button>
+                                            <span class="photo-uploader-badge" x-text="idx + 1"></span>
                                         </div>
-                                    </div>
-                                    <button type="button" @click="clearCompletePhoto()" class="btn btn-ghost btn-sm" style="padding:6px 12px;border-radius:10px;color:#e11d48;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.2);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex-shrink:0;" title="Hapus Foto">
-                                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
-                                        <span>Hapus</span>
-                                    </button>
+                                    </template>
                                 </div>
                             </template>
 
-                            <div style="font-size: 12px; color: var(--color-ink-mute);">
-                                Ambil foto serah terima barang di toko atau nota bertanda tangan.
+                            <div style="font-size: 11.5px; color: var(--color-ink-mute);">
+                                Ambil foto serah terima barang atau nota bertanda tangan (bisa bertahap kamera/galeri, kompresi otomatis).
                             </div>
                         </div>
 
@@ -1731,34 +1770,62 @@ ob_start();
                             </select>
                         </div>
 
-                        <!-- Upload Foto Bukti Kendala Gagal Kirim -->
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
-                                Foto Bukti Kendala (Kamera / Galeri HP)
-                            </label>
-                            <input type="file" name="foto_bukti_gagal" accept="image/*" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleFailPhotoChange($event)" x-ref="failPhotoInput">
+                        <!-- Upload Foto Bukti Kendala Gagal Kirim (Maksimal 5 Foto) -->
+                        <div class="photo-uploader-wrap">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                    Foto Bukti Kendala (Maks. 5 Foto)
+                                </label>
+                                <span class="photo-uploader-counter" x-text="failPhotos.length + ' / 5 Foto'"></span>
+                            </div>
                             
-                            <!-- Thumbnail Preview & Clear Button Card -->
-                            <template x-if="failPhotoPreview">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
-                                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-                                        <img :src="failPhotoPreview" alt="Preview Foto Kendala" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;">
-                                        <div style="min-width:0;">
-                                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Kendala Dipilih</div>
-                                            <div style="font-size:11.5px;color:#059669;font-weight:600;display:flex;align-items:center;gap:4px;">
-                                                <i data-lucide="check" style="width:13px;height:13px;"></i>
-                                                <span>Terkompresi Otomatis</span>
-                                            </div>
+                            <!-- Hidden input array untuk transfer file form submit -->
+                            <input type="file" name="foto_bukti_gagal[]" x-ref="failFileInput" multiple style="display:none;">
+                            
+                            <!-- Hidden input trigger kamera & galeri -->
+                            <input type="file" x-ref="failCameraInput" accept="image/*" capture="environment" multiple style="display:none;" @change="handleMultiPhotos($event, 'failPhotos', 'failFileInput')">
+                            <input type="file" x-ref="failGalleryInput" accept="image/*" multiple style="display:none;" @change="handleMultiPhotos($event, 'failPhotos', 'failFileInput')">
+                            
+                            <!-- Action Buttons -->
+                            <div class="photo-uploader-actions">
+                                <button type="button" 
+                                        @click="$refs.failCameraInput.click()" 
+                                        :disabled="failPhotos.length >= 5"
+                                        class="photo-uploader-btn photo-uploader-btn-camera">
+                                    <i data-lucide="camera" style="width:15px;height:15px;"></i>
+                                    <span>Ambil Kamera</span>
+                                </button>
+                                <button type="button" 
+                                        @click="$refs.failGalleryInput.click()" 
+                                        :disabled="failPhotos.length >= 5"
+                                        class="photo-uploader-btn">
+                                    <i data-lucide="image-plus" style="width:15px;height:15px;"></i>
+                                    <span>Pilih Galeri</span>
+                                </button>
+                                <button type="button" 
+                                        x-show="failPhotos.length > 0"
+                                        @click="clearAllPhotos('failPhotos', 'failFileInput')" 
+                                        class="btn btn-ghost btn-sm" 
+                                        style="color:var(--color-danger);font-size:11.5px;padding:4px 8px;">
+                                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                    <span>Hapus Semua</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Multi-Photo Queue Grid -->
+                            <template x-if="failPhotos.length > 0">
+                                <div class="photo-uploader-queue">
+                                    <template x-for="(item, idx) in failPhotos" :key="idx">
+                                        <div class="photo-uploader-card">
+                                            <img :src="item.preview" @click="openPhotoViewer([item.preview], 'Preview Foto Kendala ' + (idx + 1))" class="photo-uploader-thumb" alt="Preview">
+                                            <button type="button" @click.stop="removePhotoAt(idx, 'failPhotos', 'failFileInput')" class="photo-uploader-remove-btn" title="Hapus foto ini">×</button>
+                                            <span class="photo-uploader-badge" x-text="idx + 1"></span>
                                         </div>
-                                    </div>
-                                    <button type="button" @click="clearFailPhoto()" class="btn btn-ghost btn-sm" style="padding:6px 12px;border-radius:10px;color:#e11d48;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.2);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex-shrink:0;" title="Hapus Foto">
-                                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
-                                        <span>Hapus</span>
-                                    </button>
+                                    </template>
                                 </div>
                             </template>
 
-                            <div style="font-size: 12px; color: var(--color-ink-mute);">
+                            <div style="font-size: 11.5px; color: var(--color-ink-mute);">
                                 Ambil foto kondisi toko (tutup / akses terhalang) sebagai bukti otentik lapangan.
                             </div>
                         </div>
@@ -1820,24 +1887,26 @@ ob_start();
                             </template>
 
                             <!-- Tombol Lihat Foto Bukti Selesai (Jika Selesai) -->
-                            <template x-if="activeDelivery?.status_surat_jalan === 'selesai_diterima' && activeDelivery?.bukti_terima_foto">
+                            <template x-if="activeDelivery?.status_surat_jalan === 'selesai_diterima' && (activeDelivery?.bukti_terima_urls?.length || activeDelivery?.bukti_terima_foto)">
                                 <button type="button" 
-                                        @click="openPhotoViewer(activeDelivery.bukti_terima_foto, 'Bukti Serah Terima - ' + (activeDelivery?.nama_toko || ''))"
+                                        @click="openPhotoViewer(activeDelivery.bukti_terima_urls || activeDelivery.bukti_terima_foto, 'Bukti Serah Terima - ' + (activeDelivery?.nama_toko || ''))"
                                         class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
                                         style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #059669; border-color: #a7f3d0; background: #ecfdf5; display: inline-flex; align-items: center; gap: 6px;">
                                     <i data-lucide="image" style="width: 15px; height: 15px;"></i>
                                     <span>Lihat Foto Bukti</span>
+                                    <span x-show="activeDelivery?.bukti_terima_urls?.length > 1" class="badge badge-success" style="font-size:10px;padding:1px 5px;" x-text="activeDelivery.bukti_terima_urls.length"></span>
                                 </button>
                             </template>
 
                             <!-- Tombol Lihat Foto Bukti Gagal (Jika Gagal) -->
-                            <template x-if="activeDelivery?.status_surat_jalan === 'gagal_kirim' && activeDelivery?.foto_bukti_gagal">
+                            <template x-if="activeDelivery?.status_surat_jalan === 'gagal_kirim' && (activeDelivery?.foto_gagal_urls?.length || activeDelivery?.foto_bukti_gagal)">
                                 <button type="button" 
-                                        @click="openPhotoViewer(activeDelivery.foto_bukti_gagal, 'Bukti Gagal Kirim - ' + (activeDelivery?.nama_toko || ''))"
+                                        @click="openPhotoViewer(activeDelivery.foto_gagal_urls || activeDelivery.foto_bukti_gagal, 'Bukti Gagal Kirim - ' + (activeDelivery?.nama_toko || ''))"
                                         class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
                                         style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #e11d48; border-color: #fecaca; background: #fff1f2; display: inline-flex; align-items: center; gap: 6px;">
                                     <i data-lucide="image" style="width: 15px; height: 15px;"></i>
                                     <span>Lihat Foto Gagal</span>
+                                    <span x-show="activeDelivery?.foto_gagal_urls?.length > 1" class="badge badge-danger" style="font-size:10px;padding:1px 5px;" x-text="activeDelivery.foto_gagal_urls.length"></span>
                                 </button>
                             </template>
 
@@ -1933,7 +2002,7 @@ ob_start();
     </template>
 
     <!-- ========================================================================= -->
-    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI PENGIRIMAN (TOUCH PINCH & PAN VIEWER) -->
+    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI (INTERACTIVE CAROUSEL LIGHTBOX VIEWER) -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showPhotoModal" 
@@ -1949,18 +2018,21 @@ ob_start();
                         <i data-lucide="image" style="width:18px;height:18px;"></i>
                     </div>
                     <div style="min-width:0;">
-                        <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Pengiriman</h3>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Pengiriman</h3>
+                            <span x-show="photoModalList.length > 1" class="receipt-counter-badge" x-text="(photoModalIndex + 1) + ' / ' + photoModalList.length"></span>
+                        </div>
                         <div style="font-size:11px;color:var(--color-ink-mute);font-family:monospace;" x-text="photoModalSubtitle"></div>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-                    <button type="button" @click="closePhotoViewer()" class="btn btn-ghost btn-sm" style="padding:6px;border-radius:8px;" title="Tutup">
+                    <button type="button" @click="closePhotoViewer()" class="btn btn-ghost btn-sm" style="padding:6px;border-radius:8px;" title="Tutup (Esc)">
                         <i data-lucide="x" style="width:20px;height:20px;"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport) -->
+            <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport with Carousel) -->
             <div class="receipt-viewport" 
                  x-ref="photoViewport"
                  @wheel.prevent="handleWheel($event)"
@@ -1982,10 +2054,28 @@ ob_start();
                     </div>
                 </div>
 
+                <!-- Carousel Navigation Controls (Floating Prev & Next Arrows) -->
+                <button type="button" 
+                        x-show="photoModalList.length > 1" 
+                        @click.stop="prevPhoto()" 
+                        :disabled="photoModalIndex <= 0" 
+                        class="receipt-carousel-nav receipt-carousel-prev" 
+                        title="Foto Sebelumnya (←)">
+                    <i data-lucide="chevron-left" style="width:22px;height:22px;"></i>
+                </button>
+                <button type="button" 
+                        x-show="photoModalList.length > 1" 
+                        @click.stop="nextPhoto()" 
+                        :disabled="photoModalIndex >= photoModalList.length - 1" 
+                        class="receipt-carousel-nav receipt-carousel-next" 
+                        title="Foto Selanjutnya (→)">
+                    <i data-lucide="chevron-right" style="width:22px;height:22px;"></i>
+                </button>
+
                 <!-- Gambar Bukti Utama (Hardware-Accelerated CSS Transform) -->
                 <template x-if="photoModalUrl">
                     <img :src="photoModalUrl" 
-                         alt="Foto Bukti Pengiriman" 
+                         alt="Foto Bukti" 
                          loading="lazy"
                          decoding="async"
                          x-show="!photoLoadError"
@@ -2005,6 +2095,16 @@ ob_start();
                              webkitUserDrag: 'none'
                          }">
                 </template>
+
+                <!-- Thumbnail Carousel Strip -->
+                <div x-show="photoModalList.length > 1 && !photoLoadError" class="receipt-thumb-strip">
+                    <template x-for="(thumb, idx) in photoModalList" :key="idx">
+                        <img :src="thumb" 
+                             :class="['receipt-thumb-item', photoModalIndex === idx ? 'is-active' : '']" 
+                             @click.stop="selectPhoto(idx)" 
+                             alt="Thumbnail">
+                    </template>
+                </div>
 
                 <!-- Floating Glassmorphism Controls (Bar Alat Sentuh Mengambang) -->
                 <div x-show="!photoLoadError" class="receipt-floating-toolbar">
@@ -2026,23 +2126,23 @@ ob_start();
                     <div class="receipt-tool-divider"></div>
 
                     <!-- Rotate 90° Clockwise -->
-                    <button type="button" @click="rotateClockwise()" class="receipt-tool-btn" title="Putar Posisi 90°">
+                    <button type="button" @click="rotateClockwise()" class="receipt-tool-btn" title="Putar Posisi 90° (R)">
                         <i data-lucide="rotate-cw" style="width:16px;height:16px;"></i>
                     </button>
 
                     <!-- Fit / Reset -->
-                    <button type="button" @click="resetZoom()" class="receipt-tool-btn" title="Reset Ukuran Normal (Fit Layar)">
+                    <button type="button" @click="resetZoom()" class="receipt-tool-btn" title="Reset Ukuran Normal (0)">
                         <i data-lucide="maximize-2" style="width:15px;height:15px;"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Footer Modal (Petunjuk Gestur - Cukup petunjuk, tanpa tombol tutup redundant) -->
+            <!-- Footer Modal (Petunjuk Gestur & Navigasi Panah) -->
             <div class="receipt-footer" style="display:flex;align-items:center;justify-content:center;padding:10px 18px;border-top:1px solid var(--color-hairline);background:var(--color-canvas-soft);font-size:11.5px;color:var(--color-ink-mute);z-index:10;text-align:center;">
                 <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                     <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
-                    <span class="hidden sm:inline">Geser untuk memindahkan foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x untuk zoom cepat</span>
-                    <span class="inline sm:hidden">Cubit 2 jari untuk zoom • Geser foto • Ketuk 2x zoom</span>
+                    <span class="hidden sm:inline">Gunakan tombol panah &larr; / &rarr; untuk ganti foto • Geser foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x untuk zoom cepat</span>
+                    <span class="inline sm:hidden">Panah &larr; / &rarr; ganti foto • Cubit 2 jari zoom • Geser foto</span>
                 </div>
             </div>
         </div>
@@ -2445,47 +2545,57 @@ ob_start();
                         </div>
 
                         <!-- Box Bukti Foto Nota Vendor -->
-                        <template x-if="activeShoppingTask?.url_foto_nota">
+                        <template x-if="activeShoppingTask?.foto_nota_urls?.length || activeShoppingTask?.url_foto_nota">
                             <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 20px; padding: 20px 24px;" class="space-y-3">
                                 <div class="flex items-center justify-between">
                                     <div class="text-xs font-bold uppercase tracking-wider text-ink-mute flex items-center gap-2">
                                         <i data-lucide="file-check" style="width: 15px; height: 15px; color: #059669;"></i>
                                         <span>Foto Bukti Nota / Bon Fisik Vendor:</span>
                                     </div>
-                                    <button type="button" @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 10px; border-radius: 8px;">
+                                    <button type="button" @click="openPhotoViewer(activeShoppingTask.foto_nota_urls || activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 10px; border-radius: 8px;">
                                         <i data-lucide="zoom-in" style="width: 13px; height: 13px;"></i>
                                         <span>Perbesar</span>
+                                        <span x-show="activeShoppingTask?.foto_nota_urls?.length > 1" class="badge badge-success" style="font-size:10px;padding:1px 5px;" x-text="activeShoppingTask.foto_nota_urls.length"></span>
                                     </button>
                                 </div>
-                                <div style="max-width: 320px; border-radius: 14px; overflow: hidden; border: 1px solid var(--color-hairline); cursor: pointer;" @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))">
-                                    <img :src="(activeShoppingTask.url_foto_nota || '').startsWith('http') ? activeShoppingTask.url_foto_nota : ('<?= Router::url('/') ?>' + (activeShoppingTask.url_foto_nota || '').replace(/^\//, ''))" 
-                                         alt="Nota Vendor" 
-                                         loading="lazy" 
-                                         decoding="async" 
-                                         style="width: 100%; height: auto; max-height: 200px; object-fit: cover;">
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <template x-for="(imgUrl, idx) in (activeShoppingTask.foto_nota_urls || [activeShoppingTask.url_foto_nota])" :key="idx">
+                                        <div style="width: 90px; height: 90px; border-radius: 12px; overflow: hidden; border: 1px solid var(--color-hairline); cursor: pointer;" @click="openPhotoViewer(activeShoppingTask.foto_nota_urls || activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))">
+                                            <img :src="imgUrl.startsWith('http') ? imgUrl : ('<?= Router::url('/') ?>' + imgUrl.replace(/^\//, ''))" 
+                                                 alt="Nota Vendor" 
+                                                 loading="lazy" 
+                                                 decoding="async" 
+                                                 style="width: 100%; height: 100%; object-fit: cover;">
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
 
                         <!-- Display Existing Issue Photo If Any -->
-                        <template x-if="activeShoppingTask?.foto_bukti_kendala">
+                        <template x-if="activeShoppingTask?.bukti_kendala_urls?.length || activeShoppingTask?.foto_bukti_kendala">
                             <div class="mt-3 p-3 bg-red-50/80 rounded-xl border border-red-200">
                                 <div class="flex items-center justify-between mb-2">
                                     <span class="text-xs font-semibold text-red-800 flex items-center gap-1.5">
                                         <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-red-600"></i>
                                         Foto Bukti Kendala Belanja
                                     </span>
-                                    <button type="button" @click="openPhotoViewer(activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala - ' + (activeShoppingTask?.nama_pemasok || ''))" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 10px; border-radius: 8px; color: #e11d48; border-color: #fecaca;">
+                                    <button type="button" @click="openPhotoViewer(activeShoppingTask.bukti_kendala_urls || activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala - ' + (activeShoppingTask?.nama_pemasok || ''))" class="btn btn-secondary btn-sm" style="font-size: 11.5px; padding: 4px 10px; border-radius: 8px; color: #e11d48; border-color: #fecaca;">
                                         <i data-lucide="maximize-2" class="w-3 h-3"></i>
                                         Perbesar
+                                        <span x-show="activeShoppingTask?.bukti_kendala_urls?.length > 1" class="badge badge-danger" style="font-size:10px;padding:1px 5px;" x-text="activeShoppingTask.bukti_kendala_urls.length"></span>
                                     </button>
                                 </div>
-                                <div style="max-width: 320px; border-radius: 14px; overflow: hidden; border: 1px solid #fca5a5; cursor: pointer;" @click="openPhotoViewer(activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala - ' + (activeShoppingTask?.nama_pemasok || ''))">
-                                    <img :src="(activeShoppingTask.foto_bukti_kendala || '').startsWith('http') ? activeShoppingTask.foto_bukti_kendala : ('<?= Router::url('/') ?>' + (activeShoppingTask.foto_bukti_kendala || '').replace(/^\//, ''))" 
-                                         alt="Foto Kendala" 
-                                         loading="lazy" 
-                                         decoding="async" 
-                                         style="width: 100%; height: auto; max-height: 200px; object-fit: cover;">
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <template x-for="(imgUrl, idx) in (activeShoppingTask.bukti_kendala_urls || [activeShoppingTask.foto_bukti_kendala])" :key="idx">
+                                        <div style="width: 90px; height: 90px; border-radius: 12px; overflow: hidden; border: 1px solid #fca5a5; cursor: pointer;" @click="openPhotoViewer(activeShoppingTask.bukti_kendala_urls || activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala - ' + (activeShoppingTask?.nama_pemasok || ''))">
+                                            <img :src="imgUrl.startsWith('http') ? imgUrl : ('<?= Router::url('/') ?>' + imgUrl.replace(/^\//, ''))" 
+                                                 alt="Foto Kendala" 
+                                                 loading="lazy" 
+                                                 decoding="async" 
+                                                 style="width: 100%; height: 100%; object-fit: cover;">
+                                        </div>
+                                    </template>
                                 </div>
                             </div>
                         </template>
@@ -2538,34 +2648,62 @@ ob_start();
                             </div>
                         </div>
 
-                        <!-- 3. Foto Bukti Nota -->
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
-                                Foto Bukti Nota / Bon Fisik Vendor (Kamera / Galeri)
-                            </label>
-                            <input type="file" name="foto_nota" accept="image/*" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleShoppingPhotoChange($event)" x-ref="shoppingPhotoInput">
+                        <!-- 3. Foto Bukti Nota (Maksimal 5 Foto) -->
+                        <div class="photo-uploader-wrap">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                    Foto Bukti Nota / Bon Fisik Vendor (Maks. 5 Foto)
+                                </label>
+                                <span class="photo-uploader-counter" x-text="shoppingPhotos.length + ' / 5 Foto'"></span>
+                            </div>
                             
-                            <!-- Thumbnail preview -->
-                            <template x-if="shoppingCompletePreview">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
-                                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-                                        <img :src="shoppingCompletePreview" alt="Preview Foto Nota" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;">
-                                        <div style="min-width:0;">
-                                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Nota Siap Diunggah</div>
-                                            <div style="font-size:11.5px;color:#059669;font-weight:600;display:flex;align-items:center;gap:4px;">
-                                                <i data-lucide="check" style="width:13px;height:13px;"></i>
-                                                <span>Terkompresi Otomatis</span>
-                                            </div>
+                            <!-- Hidden input array untuk transfer file form submit -->
+                            <input type="file" name="foto_nota[]" x-ref="shoppingFileInput" multiple style="display:none;">
+                            
+                            <!-- Hidden input trigger kamera & galeri -->
+                            <input type="file" x-ref="shoppingCameraInput" accept="image/*" capture="environment" multiple style="display:none;" @change="handleMultiPhotos($event, 'shoppingPhotos', 'shoppingFileInput')">
+                            <input type="file" x-ref="shoppingGalleryInput" accept="image/*" multiple style="display:none;" @change="handleMultiPhotos($event, 'shoppingPhotos', 'shoppingFileInput')">
+                            
+                            <!-- Action Buttons -->
+                            <div class="photo-uploader-actions">
+                                <button type="button" 
+                                        @click="$refs.shoppingCameraInput.click()" 
+                                        :disabled="shoppingPhotos.length >= 5"
+                                        class="photo-uploader-btn photo-uploader-btn-camera">
+                                    <i data-lucide="camera" style="width:15px;height:15px;"></i>
+                                    <span>Ambil Kamera</span>
+                                </button>
+                                <button type="button" 
+                                        @click="$refs.shoppingGalleryInput.click()" 
+                                        :disabled="shoppingPhotos.length >= 5"
+                                        class="photo-uploader-btn">
+                                    <i data-lucide="image-plus" style="width:15px;height:15px;"></i>
+                                    <span>Pilih Galeri</span>
+                                </button>
+                                <button type="button" 
+                                        x-show="shoppingPhotos.length > 0"
+                                        @click="clearAllPhotos('shoppingPhotos', 'shoppingFileInput')" 
+                                        class="btn btn-ghost btn-sm" 
+                                        style="color:var(--color-danger);font-size:11.5px;padding:4px 8px;">
+                                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                    <span>Hapus Semua</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Multi-Photo Queue Grid -->
+                            <template x-if="shoppingPhotos.length > 0">
+                                <div class="photo-uploader-queue">
+                                    <template x-for="(item, idx) in shoppingPhotos" :key="idx">
+                                        <div class="photo-uploader-card">
+                                            <img :src="item.preview" @click="openPhotoViewer([item.preview], 'Preview Foto Nota ' + (idx + 1))" class="photo-uploader-thumb" alt="Preview">
+                                            <button type="button" @click.stop="removePhotoAt(idx, 'shoppingPhotos', 'shoppingFileInput')" class="photo-uploader-remove-btn" title="Hapus foto ini">×</button>
+                                            <span class="photo-uploader-badge" x-text="idx + 1"></span>
                                         </div>
-                                    </div>
-                                    <button type="button" @click="clearShoppingPhoto()" class="btn btn-ghost btn-sm" style="padding:6px 12px;border-radius:10px;color:#e11d48;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.2);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex-shrink:0;" title="Hapus Foto">
-                                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
-                                        <span>Hapus</span>
-                                    </button>
+                                    </template>
                                 </div>
                             </template>
 
-                            <div style="font-size: 12px; color: var(--color-ink-mute);">
+                            <div style="font-size: 11.5px; color: var(--color-ink-mute);">
                                 Foto bon atau nota fisik dari kasir vendor sebagai bukti validasi pencatatan pembukuan.
                             </div>
                         </div>
@@ -2624,33 +2762,62 @@ ob_start();
                             <textarea x-model="shoppingIssueForm.alasan_detail" required rows="3" placeholder="Jelaskan kondisi di lokasi vendor..." class="form-input font-medium" style="border-radius: 14px; font-size: 13.5px; padding: 12px;"></textarea>
                         </div>
 
-                        <!-- 3. Foto Bukti Kendala -->
-                        <div class="space-y-2">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
-                                Foto Bukti Kendala (Kamera / Galeri HP)
-                            </label>
-                            <input type="file" name="foto_kendala" accept="image/*" class="form-input" style="padding: 9px; border-radius: 14px; font-size: 13px;" @change="handleShoppingIssuePhotoChange($event)" x-ref="shoppingIssuePhotoInput">
+                        <!-- 3. Foto Bukti Kendala (Maksimal 5 Foto) -->
+                        <div class="photo-uploader-wrap">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold uppercase tracking-wider text-ink-mute">
+                                    Foto Bukti Kendala (Maks. 5 Foto)
+                                </label>
+                                <span class="photo-uploader-counter" x-text="shoppingIssuePhotos.length + ' / 5 Foto'"></span>
+                            </div>
                             
-                            <template x-if="shoppingIssuePreview">
-                                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:14px;margin-top:8px;">
-                                    <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-                                        <img :src="shoppingIssuePreview" alt="Preview Foto Kendala" style="width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;">
-                                        <div style="min-width:0;">
-                                            <div style="font-size:13px;font-weight:700;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Kendala Terpilih</div>
-                                            <div style="font-size:11.5px;color:#059669;font-weight:600;display:flex;align-items:center;gap:4px;">
-                                                <i data-lucide="check" style="width:13px;height:13px;"></i>
-                                                <span>Terkompresi Otomatis</span>
-                                            </div>
+                            <!-- Hidden input array untuk transfer file form submit -->
+                            <input type="file" name="foto_kendala[]" x-ref="shoppingIssueFileInput" multiple style="display:none;">
+                            
+                            <!-- Hidden input trigger kamera & galeri -->
+                            <input type="file" x-ref="shoppingIssueCameraInput" accept="image/*" capture="environment" multiple style="display:none;" @change="handleMultiPhotos($event, 'shoppingIssuePhotos', 'shoppingIssueFileInput')">
+                            <input type="file" x-ref="shoppingIssueGalleryInput" accept="image/*" multiple style="display:none;" @change="handleMultiPhotos($event, 'shoppingIssuePhotos', 'shoppingIssueFileInput')">
+                            
+                            <!-- Action Buttons -->
+                            <div class="photo-uploader-actions">
+                                <button type="button" 
+                                        @click="$refs.shoppingIssueCameraInput.click()" 
+                                        :disabled="shoppingIssuePhotos.length >= 5"
+                                        class="photo-uploader-btn photo-uploader-btn-camera">
+                                    <i data-lucide="camera" style="width:15px;height:15px;"></i>
+                                    <span>Ambil Kamera</span>
+                                </button>
+                                <button type="button" 
+                                        @click="$refs.shoppingIssueGalleryInput.click()" 
+                                        :disabled="shoppingIssuePhotos.length >= 5"
+                                        class="photo-uploader-btn">
+                                    <i data-lucide="image-plus" style="width:15px;height:15px;"></i>
+                                    <span>Pilih Galeri</span>
+                                </button>
+                                <button type="button" 
+                                        x-show="shoppingIssuePhotos.length > 0"
+                                        @click="clearAllPhotos('shoppingIssuePhotos', 'shoppingIssueFileInput')" 
+                                        class="btn btn-ghost btn-sm" 
+                                        style="color:var(--color-danger);font-size:11.5px;padding:4px 8px;">
+                                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                    <span>Hapus Semua</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Multi-Photo Queue Grid -->
+                            <template x-if="shoppingIssuePhotos.length > 0">
+                                <div class="photo-uploader-queue">
+                                    <template x-for="(item, idx) in shoppingIssuePhotos" :key="idx">
+                                        <div class="photo-uploader-card">
+                                            <img :src="item.preview" @click="openPhotoViewer([item.preview], 'Preview Foto Kendala ' + (idx + 1))" class="photo-uploader-thumb" alt="Preview">
+                                            <button type="button" @click.stop="removePhotoAt(idx, 'shoppingIssuePhotos', 'shoppingIssueFileInput')" class="photo-uploader-remove-btn" title="Hapus foto ini">×</button>
+                                            <span class="photo-uploader-badge" x-text="idx + 1"></span>
                                         </div>
-                                    </div>
-                                    <button type="button" @click="clearShoppingIssuePhoto()" class="btn btn-ghost btn-sm" style="padding:6px 12px;border-radius:10px;color:#e11d48;background:rgba(225,29,72,0.08);border:1px solid rgba(225,29,72,0.2);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;flex-shrink:0;" title="Hapus Foto">
-                                        <i data-lucide="trash-2" style="width:15px;height:15px;"></i>
-                                        <span>Hapus</span>
-                                    </button>
+                                    </template>
                                 </div>
                             </template>
 
-                            <div style="font-size: 12px; color: var(--color-ink-mute);">
+                            <div style="font-size: 11.5px; color: var(--color-ink-mute);">
                                 Ambil foto kondisi toko (tutup / banner / akses) sebagai bukti kendala.
                             </div>
                         </div>
@@ -2701,13 +2868,14 @@ ob_start();
                             <!-- Jika Sudah Diambil Driver -->
                             <template x-if="activeShoppingTask?.status_penerimaan === 'sudah_diambil'">
                                 <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                                    <template x-if="activeShoppingTask?.url_foto_nota">
+                                    <template x-if="activeShoppingTask?.foto_nota_urls?.length || activeShoppingTask?.url_foto_nota">
                                         <button type="button" 
-                                                @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
+                                                @click="openPhotoViewer(activeShoppingTask.foto_nota_urls || activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
                                                 class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
                                                 style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #059669; border-color: #a7f3d0; background: #ecfdf5; display: inline-flex; align-items: center; gap: 6px;">
                                             <i data-lucide="image" style="width: 15px; height: 15px;"></i>
                                             <span>Lihat Foto Nota</span>
+                                            <span x-show="activeShoppingTask?.foto_nota_urls?.length > 1" class="badge badge-success" style="font-size:10px;padding:1px 5px;" x-text="activeShoppingTask.foto_nota_urls.length"></span>
                                         </button>
                                     </template>
                                     <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 px-3 py-2 bg-blue-50 dark:bg-blue-950/40 rounded-xl">
@@ -2720,13 +2888,14 @@ ob_start();
                             <!-- Jika Selesai Diterima Gudang -->
                             <template x-if="activeShoppingTask?.status_penerimaan === 'diterima'">
                                 <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                                    <template x-if="activeShoppingTask?.url_foto_nota">
+                                    <template x-if="activeShoppingTask?.foto_nota_urls?.length || activeShoppingTask?.url_foto_nota">
                                         <button type="button" 
-                                                @click="openPhotoViewer(activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
+                                                @click="openPhotoViewer(activeShoppingTask.foto_nota_urls || activeShoppingTask.url_foto_nota, 'Nota Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
                                                 class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
                                                 style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #059669; border-color: #a7f3d0; background: #ecfdf5; display: inline-flex; align-items: center; gap: 6px;">
                                             <i data-lucide="image" style="width: 15px; height: 15px;"></i>
                                             <span>Lihat Foto Nota</span>
+                                            <span x-show="activeShoppingTask?.foto_nota_urls?.length > 1" class="badge badge-success" style="font-size:10px;padding:1px 5px;" x-text="activeShoppingTask.foto_nota_urls.length"></span>
                                         </button>
                                     </template>
                                     <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl">
@@ -2739,13 +2908,14 @@ ob_start();
                             <!-- Jika Kendala Batal -->
                             <template x-if="activeShoppingTask?.status_penerimaan === 'kendala_batal'">
                                 <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                                    <template x-if="activeShoppingTask?.foto_bukti_kendala">
+                                    <template x-if="activeShoppingTask?.bukti_kendala_urls?.length || activeShoppingTask?.foto_bukti_kendala">
                                         <button type="button" 
-                                                @click="openPhotoViewer(activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
+                                                @click="openPhotoViewer(activeShoppingTask.bukti_kendala_urls || activeShoppingTask.foto_bukti_kendala, 'Bukti Kendala Belanja - ' + (activeShoppingTask?.nama_pemasok || ''))"
                                                 class="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center"
                                                 style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 16px; color: #e11d48; border-color: #fecaca; background: #fff1f2; display: inline-flex; align-items: center; gap: 6px;">
                                             <i data-lucide="image" style="width: 15px; height: 15px;"></i>
                                             <span>Lihat Foto Kendala</span>
+                                            <span x-show="activeShoppingTask?.bukti_kendala_urls?.length > 1" class="badge badge-danger" style="font-size:10px;padding:1px 5px;" x-text="activeShoppingTask.bukti_kendala_urls.length"></span>
                                         </button>
                                     </template>
                                     <span class="text-xs font-semibold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 px-3 py-2 bg-rose-50 dark:bg-rose-950/40 rounded-xl">
@@ -2811,9 +2981,11 @@ function driverDeliveryApp() {
         activeTab: 'info', // 'info', 'items', 'payment'
         viewMode: 'detail', // 'detail', 'complete_form', 'fail_form'
 
-        // Photo viewer states
+        // Photo viewer states (Carousel Lightbox)
         showPhotoModal: false,
         photoModalUrl: '',
+        photoModalList: [],
+        photoModalIndex: 0,
         photoModalTitle: '',
         photoModalSubtitle: '',
         photoLoadError: false,
@@ -2829,11 +3001,11 @@ function driverDeliveryApp() {
         pinchStartScale: 1.0,
         lastTapTime: 0,
 
-        // Upload previews
-        completePhotoFile: null,
-        completePhotoPreview: null,
-        failPhotoFile: null,
-        failPhotoPreview: null,
+        // Upload multi-photo queues (up to 5 photos)
+        completePhotos: [],
+        failPhotos: [],
+        shoppingPhotos: [],
+        shoppingIssuePhotos: [],
 
         // Shopping tasks modal states
         showShoppingDetailModal: false,
@@ -2848,15 +3020,11 @@ function driverDeliveryApp() {
             nominal_dibayar_driver: '',
             catatan_driver: ''
         },
-        shoppingCompletePhoto: null,
-        shoppingCompletePreview: null,
         shoppingIssueForm: {
             purchase_id: '',
             alasan_kategori: 'Toko / Vendor Tutup',
             alasan_detail: ''
         },
-        shoppingIssuePhoto: null,
-        shoppingIssuePreview: null,
 
         get combinedShoppingIssueReason() {
             const cat = this.shoppingIssueForm.alasan_kategori || 'Kendala';
@@ -2928,8 +3096,8 @@ function driverDeliveryApp() {
             this.activeDelivery = deliv;
             this.activeTab = 'info';
             this.viewMode = 'detail';
-            this.clearCompletePhoto();
-            this.clearFailPhoto();
+            this.clearAllPhotos('completePhotos', 'completeFileInput');
+            this.clearAllPhotos('failPhotos', 'failFileInput');
             this.showDetailModal = true;
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -2941,25 +3109,54 @@ function driverDeliveryApp() {
             this.viewMode = 'detail';
         },
 
-        // Photo viewer methods
-        openPhotoViewer(url, title, subtitle) {
-            if (!url) return;
-            this.resetZoom();
-            const cleanUrl = String(url).trim();
-            if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
-                this.photoModalUrl = cleanUrl;
-            } else if (cleanUrl.startsWith('/media/view') || cleanUrl.startsWith('media/view')) {
-                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
-            } else if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('/favicon/')) {
-                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
-            } else {
-                const storagePath = cleanUrl.replace(/^\/?(public\/)?(uploads\/)?/, '');
-                this.photoModalUrl = '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
+        // Helper normalisasi URL media
+        formatMediaUrl(raw) {
+            if (!raw) return '';
+            const clean = String(raw).trim();
+            if (clean.startsWith('http://') || clean.startsWith('https://') || clean.startsWith('data:') || clean.startsWith('blob:')) {
+                return clean;
             }
-            this.photoModalTitle = title || 'Foto Bukti Pengiriman';
+            if (clean.startsWith('/media/view') || clean.startsWith('media/view')) {
+                return '<?= Router::url('/') ?>' + clean.replace(/^\//, '');
+            }
+            if (clean.startsWith('/assets/') || clean.startsWith('assets/') || clean.startsWith('/favicon/')) {
+                return '<?= Router::url('/') ?>' + clean.replace(/^\//, '');
+            }
+            const storagePath = clean.replace(/^\/?(public\/)?(uploads\/)?/, '');
+            return '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
+        },
+
+        // Photo viewer methods (Interactive Carousel Lightbox)
+        openPhotoViewer(images, title, subtitle) {
+            if (!images) return;
+            let list = [];
+            if (Array.isArray(images)) {
+                list = images.filter(Boolean);
+            } else if (typeof images === 'string') {
+                const s = images.trim();
+                if (s.startsWith('[') && s.endsWith(']')) {
+                    try {
+                        const parsed = JSON.parse(s);
+                        if (Array.isArray(parsed)) list = parsed.filter(Boolean);
+                    } catch (e) {
+                        list = [s];
+                    }
+                } else if (s) {
+                    list = [s];
+                }
+            }
+
+            if (!list.length) return;
+
+            this.photoModalList = list.map(img => this.formatMediaUrl(img));
+            this.photoModalIndex = 0;
+            this.photoModalUrl = this.photoModalList[0] || '';
+            this.photoModalTitle = title || 'Foto Bukti';
             this.photoModalSubtitle = subtitle || '';
             this.photoLoadError = false;
+            this.resetZoom();
             this.showPhotoModal = true;
+
             document.body.style.overflow = 'hidden';
             document.documentElement.style.overflow = 'hidden';
             this.$nextTick(() => {
@@ -2967,9 +3164,47 @@ function driverDeliveryApp() {
             });
         },
 
+        nextPhoto() {
+            if (this.photoModalIndex < this.photoModalList.length - 1) {
+                this.photoModalIndex++;
+                this.photoModalUrl = this.photoModalList[this.photoModalIndex];
+                this.resetZoom();
+                this.photoLoadError = false;
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            }
+        },
+
+        prevPhoto() {
+            if (this.photoModalIndex > 0) {
+                this.photoModalIndex--;
+                this.photoModalUrl = this.photoModalList[this.photoModalIndex];
+                this.resetZoom();
+                this.photoLoadError = false;
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            }
+        },
+
+        selectPhoto(idx) {
+            if (idx >= 0 && idx < this.photoModalList.length) {
+                this.photoModalIndex = idx;
+                this.photoModalUrl = this.photoModalList[idx];
+                this.resetZoom();
+                this.photoLoadError = false;
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            }
+        },
+
         closePhotoViewer() {
             this.showPhotoModal = false;
             this.photoModalUrl = '';
+            this.photoModalList = [];
+            this.photoModalIndex = 0;
             this.resetZoom();
             this.photoLoadError = false;
             document.body.style.overflow = '';
@@ -3113,8 +3348,17 @@ function driverDeliveryApp() {
         },
 
         handleViewerKeydown(e) {
-            if (!this.showPhotoModal || this.photoLoadError) return;
-            if (e.key === '+' || e.key === '=') {
+            if (!this.showPhotoModal) return;
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.closePhotoViewer();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                this.prevPhoto();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.nextPhoto();
+            } else if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
                 this.zoomStep(0.3);
             } else if (e.key === '-' || e.key === '_') {
@@ -3188,60 +3432,85 @@ function driverDeliveryApp() {
             reader.readAsDataURL(file);
         },
 
-        handleCompletePhotoChange(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            this.compressImage(file, (compressedFile, previewDataUrl) => {
-                this.completePhotoFile = compressedFile;
-                this.completePhotoPreview = previewDataUrl;
-                try {
-                    const dt = new DataTransfer();
-                    dt.items.add(compressedFile);
-                    event.target.files = dt.files;
-                } catch (e) {}
-                this.$nextTick(() => {
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                });
-            }, () => {
+        // Universal Multi-Photo Upload Queue Handler
+        handleMultiPhotos(event, photoArrayKey, inputRefKey, maxPhotos = 5) {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+            
+            const currentCount = this[photoArrayKey].length;
+            const remainingSlots = maxPhotos - currentCount;
+            if (remainingSlots <= 0) {
+                if (typeof toast !== 'undefined') toast.warning(`Maksimal ${maxPhotos} foto yang dapat diunggah!`);
                 event.target.value = '';
-                this.clearCompletePhoto();
+                return;
+            }
+            
+            const filesToProcess = files.slice(0, remainingSlots);
+            if (files.length > remainingSlots) {
+                if (typeof toast !== 'undefined') toast.info(`Hanya ${remainingSlots} foto pertama yang ditambahkan (batas ${maxPhotos} foto).`);
+            }
+
+            let processed = 0;
+            filesToProcess.forEach(file => {
+                this.compressImage(file, (compressedFile, previewDataUrl) => {
+                    if (this[photoArrayKey].length < maxPhotos) {
+                        this[photoArrayKey].push({
+                            file: compressedFile,
+                            preview: previewDataUrl,
+                            name: file.name
+                        });
+                        this.syncFileInputDataTransfer(photoArrayKey, inputRefKey);
+                    }
+                    processed++;
+                    if (processed === filesToProcess.length) {
+                        this.$nextTick(() => {
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        });
+                    }
+                }, () => {
+                    processed++;
+                });
+            });
+            event.target.value = '';
+        },
+
+        removePhotoAt(idx, photoArrayKey, inputRefKey) {
+            this[photoArrayKey].splice(idx, 1);
+            this.syncFileInputDataTransfer(photoArrayKey, inputRefKey);
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
             });
         },
 
+        clearAllPhotos(photoArrayKey, inputRefKey) {
+            this[photoArrayKey] = [];
+            this.syncFileInputDataTransfer(photoArrayKey, inputRefKey);
+        },
+
+        syncFileInputDataTransfer(photoArrayKey, inputRefKey) {
+            try {
+                const inputEl = this.$refs[inputRefKey];
+                if (!inputEl) return;
+                const dt = new DataTransfer();
+                (this[photoArrayKey] || []).forEach(item => {
+                    if (item.file) dt.items.add(item.file);
+                });
+                inputEl.files = dt.files;
+            } catch (e) {}
+        },
+
+        // Backward-compat aliases
         clearCompletePhoto() {
-            this.completePhotoFile = null;
-            this.completePhotoPreview = null;
-            if (this.$refs.completePhotoInput) {
-                this.$refs.completePhotoInput.value = '';
-            }
+            this.clearAllPhotos('completePhotos', 'completeFileInput');
         },
-
-        handleFailPhotoChange(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            this.compressImage(file, (compressedFile, previewDataUrl) => {
-                this.failPhotoFile = compressedFile;
-                this.failPhotoPreview = previewDataUrl;
-                try {
-                    const dt = new DataTransfer();
-                    dt.items.add(compressedFile);
-                    event.target.files = dt.files;
-                } catch (e) {}
-                this.$nextTick(() => {
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                });
-            }, () => {
-                event.target.value = '';
-                this.clearFailPhoto();
-            });
-        },
-
         clearFailPhoto() {
-            this.failPhotoFile = null;
-            this.failPhotoPreview = null;
-            if (this.$refs.failPhotoInput) {
-                this.$refs.failPhotoInput.value = '';
-            }
+            this.clearAllPhotos('failPhotos', 'failFileInput');
+        },
+        clearShoppingPhoto() {
+            this.clearAllPhotos('shoppingPhotos', 'shoppingFileInput');
+        },
+        clearShoppingIssuePhoto() {
+            this.clearAllPhotos('shoppingIssuePhotos', 'shoppingIssueFileInput');
         },
 
         cleanWa(raw) {
@@ -3299,14 +3568,14 @@ function driverDeliveryApp() {
                 nominal_dibayar_driver: defaultNominal,
                 catatan_driver: ''
             };
-            this.clearShoppingPhoto();
+            this.clearAllPhotos('shoppingPhotos', 'shoppingFileInput');
 
             this.shoppingIssueForm = {
                 purchase_id: task.id,
                 alasan_kategori: 'Toko / Vendor Tutup',
                 alasan_detail: ''
             };
-            this.clearShoppingIssuePhoto();
+            this.clearAllPhotos('shoppingIssuePhotos', 'shoppingIssueFileInput');
 
             this.showShoppingDetailModal = true;
             this.$nextTick(() => {
@@ -3341,62 +3610,6 @@ function driverDeliveryApp() {
         openShoppingIssueModal(task) {
             this.openShoppingDetailModal(task);
             this.openShoppingIssueInModal();
-        },
-
-        handleShoppingPhotoChange(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            this.compressImage(file, (compressedFile, previewDataUrl) => {
-                this.shoppingCompletePhoto = compressedFile;
-                this.shoppingCompletePreview = previewDataUrl;
-                try {
-                    const dt = new DataTransfer();
-                    dt.items.add(compressedFile);
-                    event.target.files = dt.files;
-                } catch (e) {}
-                this.$nextTick(() => {
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                });
-            }, () => {
-                event.target.value = '';
-                this.clearShoppingPhoto();
-            });
-        },
-
-        clearShoppingPhoto() {
-            this.shoppingCompletePhoto = null;
-            this.shoppingCompletePreview = null;
-            if (this.$refs.shoppingPhotoInput) {
-                this.$refs.shoppingPhotoInput.value = '';
-            }
-        },
-
-        handleShoppingIssuePhotoChange(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            this.compressImage(file, (compressedFile, previewDataUrl) => {
-                this.shoppingIssuePhoto = compressedFile;
-                this.shoppingIssuePreview = previewDataUrl;
-                try {
-                    const dt = new DataTransfer();
-                    dt.items.add(compressedFile);
-                    event.target.files = dt.files;
-                } catch (e) {}
-                this.$nextTick(() => {
-                    if (typeof lucide !== 'undefined') lucide.createIcons();
-                });
-            }, () => {
-                event.target.value = '';
-                this.clearShoppingIssuePhoto();
-            });
-        },
-
-        clearShoppingIssuePhoto() {
-            this.shoppingIssuePhoto = null;
-            this.shoppingIssuePreview = null;
-            if (this.$refs.shoppingIssuePhotoInput) {
-                this.$refs.shoppingIssuePhotoInput.value = '';
-            }
         }
     };
 }

@@ -89,14 +89,12 @@ class DeliveryController extends Controller
             $isAfternoon = ($nowHour >= 12);
             $defaultDeliveryDate = $isAfternoon ? date('Y-m-d', strtotime('+1 day')) : date('Y-m-d');
 
-            // Injeksi Cloudflare R2 Presigned URLs (10 Menit)
+            // Injeksi Cloudflare R2 Presigned URLs (10 Menit) - Multi Photo Array & Single String
             foreach ($deliveries as &$deliv) {
-                if (!empty($deliv['bukti_terima_foto'])) {
-                    $deliv['bukti_terima_foto'] = \App\Helpers\Upload::presignedUrl($deliv['bukti_terima_foto'], 10);
-                }
-                if (!empty($deliv['foto_bukti_gagal'])) {
-                    $deliv['foto_bukti_gagal'] = \App\Helpers\Upload::presignedUrl($deliv['foto_bukti_gagal'], 10);
-                }
+                $deliv['bukti_terima_urls'] = \App\Helpers\Upload::presignedUrls($deliv['bukti_terima_foto'] ?? null, 10);
+                $deliv['foto_gagal_urls'] = \App\Helpers\Upload::presignedUrls($deliv['foto_bukti_gagal'] ?? null, 10);
+                $deliv['bukti_terima_foto'] = $deliv['bukti_terima_urls'][0] ?? null;
+                $deliv['foto_bukti_gagal'] = $deliv['foto_gagal_urls'][0] ?? null;
             }
             unset($deliv);
 
@@ -973,22 +971,22 @@ class DeliveryController extends Controller
                 unset($st);
             }
 
-            // Injeksi Cloudflare R2 Presigned URLs (10 Menit) untuk Pengiriman & Tugas Belanja
+            // Injeksi Cloudflare R2 Presigned URLs (10 Menit) untuk Pengiriman & Tugas Belanja (Multi Photo Support)
             foreach ($deliveries as &$deliv) {
-                $deliv['presigned_bukti_terima'] = \App\Helpers\Upload::presignedUrl($deliv['bukti_terima_foto'] ?? null, 10);
-                $deliv['presigned_bukti_gagal'] = \App\Helpers\Upload::presignedUrl($deliv['foto_bukti_gagal'] ?? null, 10);
-                if (!empty($deliv['presigned_bukti_terima'])) {
-                    $deliv['bukti_terima_foto'] = $deliv['presigned_bukti_terima'];
-                }
-                if (!empty($deliv['presigned_bukti_gagal'])) {
-                    $deliv['foto_bukti_gagal'] = $deliv['presigned_bukti_gagal'];
-                }
+                $deliv['bukti_terima_urls'] = \App\Helpers\Upload::presignedUrls($deliv['bukti_terima_foto'] ?? null, 10);
+                $deliv['foto_gagal_urls'] = \App\Helpers\Upload::presignedUrls($deliv['foto_bukti_gagal'] ?? null, 10);
+                $deliv['presigned_bukti_terima'] = $deliv['bukti_terima_urls'][0] ?? null;
+                $deliv['presigned_bukti_gagal'] = $deliv['foto_gagal_urls'][0] ?? null;
+                $deliv['bukti_terima_foto'] = $deliv['presigned_bukti_terima'];
+                $deliv['foto_bukti_gagal'] = $deliv['presigned_bukti_gagal'];
             }
             unset($deliv);
 
             foreach ($shoppingTasks as &$st) {
-                $st['presigned_foto_nota'] = \App\Helpers\Upload::presignedUrl($st['path_foto_nota'] ?? null, 10);
-                $st['presigned_bukti_kendala'] = \App\Helpers\Upload::presignedUrl($st['path_bukti_kendala'] ?? null, 10);
+                $st['foto_nota_urls'] = \App\Helpers\Upload::presignedUrls($st['path_foto_nota'] ?? null, 10);
+                $st['bukti_kendala_urls'] = \App\Helpers\Upload::presignedUrls($st['path_bukti_kendala'] ?? null, 10);
+                $st['presigned_foto_nota'] = $st['foto_nota_urls'][0] ?? null;
+                $st['presigned_bukti_kendala'] = $st['bukti_kendala_urls'][0] ?? null;
                 $st['url_foto_nota'] = $st['presigned_foto_nota'] ?: ($st['path_foto_nota'] ?? '');
                 $st['foto_bukti_kendala'] = $st['presigned_bukti_kendala'] ?: ($st['path_bukti_kendala'] ?? '');
             }
@@ -1180,10 +1178,10 @@ class DeliveryController extends Controller
                 return;
             }
 
-            // Handle Upload Foto Bukti Serah Terima via Upload Helper (Anti Dobel Folder & Validasi Gambar)
+            // Handle Upload Foto Bukti Serah Terima via Upload Helper (Multi-Foto hingga 5 Foto, Anti Dobel Folder & Validasi Gambar)
             $fotoPath = null;
-            if (isset($_FILES['bukti_foto']) && $_FILES['bukti_foto']['error'] !== UPLOAD_ERR_NO_FILE) {
-                $uploadRes = \App\Helpers\Upload::storeImage($_FILES['bukti_foto'], 'delivery_proofs', 'PROOF');
+            if (isset($_FILES['bukti_foto']) && (is_array($_FILES['bukti_foto']['error']) ? count(array_filter($_FILES['bukti_foto']['name'])) > 0 : $_FILES['bukti_foto']['error'] !== UPLOAD_ERR_NO_FILE)) {
+                $uploadRes = \App\Helpers\Upload::storeMultipleImages($_FILES['bukti_foto'], 'delivery_proofs', 'PROOF', 10485760, 5);
                 if (!$uploadRes['success']) {
                     $this->flashError($uploadRes['error']);
                     $this->redirectDriverDeliveries();
@@ -1387,11 +1385,11 @@ class DeliveryController extends Controller
                 return;
             }
 
-            // Handle Upload Foto Bukti Gagal Kirim via Upload Helper (Anti Dobel Folder, Kompresi WebP & Acak Hash)
+            // Handle Upload Foto Bukti Gagal Kirim via Upload Helper (Multi-Foto hingga 5 Foto, Anti Dobel Folder, Kompresi WebP & Acak Hash)
             $fotoGagalPath = null;
             $fileInput = $_FILES['foto_bukti_gagal'] ?? $_FILES['bukti_foto_gagal'] ?? null;
-            if ($fileInput && ($fileInput['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
-                $uploadRes = \App\Helpers\Upload::storeImage($fileInput, 'delivery_proofs', 'FAIL');
+            if ($fileInput && (is_array($fileInput['error']) ? count(array_filter($fileInput['name'])) > 0 : ($fileInput['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) {
+                $uploadRes = \App\Helpers\Upload::storeMultipleImages($fileInput, 'delivery_proofs', 'FAIL', 10485760, 5);
                 if (!$uploadRes['success']) {
                     $this->flashError($uploadRes['error']);
                     $this->redirectDriverDeliveries();
@@ -1679,8 +1677,8 @@ class DeliveryController extends Controller
             }
 
             $fotoPath = null;
-            if (isset($_FILES['foto_nota']) && $_FILES['foto_nota']['error'] !== UPLOAD_ERR_NO_FILE) {
-                $uploadRes = \App\Helpers\Upload::storeImage($_FILES['foto_nota'], 'purchases', 'NOTA_DRIVER');
+            if (isset($_FILES['foto_nota']) && (is_array($_FILES['foto_nota']['error']) ? count(array_filter($_FILES['foto_nota']['name'])) > 0 : $_FILES['foto_nota']['error'] !== UPLOAD_ERR_NO_FILE)) {
+                $uploadRes = \App\Helpers\Upload::storeMultipleImages($_FILES['foto_nota'], 'purchases', 'NOTA_DRIVER', 10485760, 5);
                 if (!$uploadRes['success']) {
                     $this->flashError($uploadRes['error']);
                     $this->redirect('/driver-deliveries');
@@ -1775,8 +1773,8 @@ class DeliveryController extends Controller
             }
 
             $fotoPath = null;
-            if (isset($_FILES['foto_kendala']) && $_FILES['foto_kendala']['error'] !== UPLOAD_ERR_NO_FILE) {
-                $uploadRes = \App\Helpers\Upload::storeImage($_FILES['foto_kendala'], 'purchases', 'KENDALA_PO');
+            if (isset($_FILES['foto_kendala']) && (is_array($_FILES['foto_kendala']['error']) ? count(array_filter($_FILES['foto_kendala']['name'])) > 0 : $_FILES['foto_kendala']['error'] !== UPLOAD_ERR_NO_FILE)) {
+                $uploadRes = \App\Helpers\Upload::storeMultipleImages($_FILES['foto_kendala'], 'purchases', 'KENDALA_PO', 10485760, 5);
                 if (!$uploadRes['success']) {
                     $this->flashError($uploadRes['error']);
                     $this->redirect('/driver-deliveries');

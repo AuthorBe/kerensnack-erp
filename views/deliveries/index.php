@@ -207,24 +207,30 @@ ob_start();
                                     <?php endif; ?>
 
                                     <!-- Foto Bukti Serah Terima (Selesai) -->
-                                    <template x-if="d.bukti_terima_foto">
+                                    <template x-if="(d.bukti_terima_urls && d.bukti_terima_urls.length > 0) || d.bukti_terima_foto">
                                         <button type="button" 
-                                                @click="openPhotoViewer(d.bukti_terima_foto, 'Bukti Serah Terima - #' + d.nomor_surat_jalan, (d.nama_toko || '') + (d.nama_driver ? ' • Driver: ' + d.nama_driver : ''))" 
-                                                class="btn btn-ghost btn-sm" 
+                                                @click="openPhotoViewer(d.bukti_terima_urls || [d.bukti_terima_foto], 'Bukti Serah Terima - #' + d.nomor_surat_jalan, (d.nama_toko || '') + (d.nama_driver ? ' • Driver: ' + d.nama_driver : ''))" 
+                                                class="btn btn-ghost btn-sm relative" 
                                                 style="padding:6px 8px;color:#059669;" 
                                                 title="Lihat Foto Bukti Serah Terima">
                                             <i data-lucide="image" style="width:14px;height:14px;"></i>
+                                            <template x-if="d.bukti_terima_urls && d.bukti_terima_urls.length > 1">
+                                                <span class="receipt-counter-badge" x-text="d.bukti_terima_urls.length"></span>
+                                            </template>
                                         </button>
                                     </template>
 
                                     <!-- Foto Bukti Gagal Kirim -->
-                                    <template x-if="d.foto_bukti_gagal">
+                                    <template x-if="(d.foto_gagal_urls && d.foto_gagal_urls.length > 0) || d.foto_bukti_gagal">
                                         <button type="button" 
-                                                @click="openPhotoViewer(d.foto_bukti_gagal, 'Bukti Gagal Kirim - #' + d.nomor_surat_jalan, (d.nama_toko || '') + (d.alasan_gagal ? ' • Kendala: ' + d.alasan_gagal : ''))" 
-                                                class="btn btn-ghost btn-sm" 
+                                                @click="openPhotoViewer(d.foto_gagal_urls || [d.foto_bukti_gagal], 'Bukti Gagal Kirim - #' + d.nomor_surat_jalan, (d.nama_toko || '') + (d.alasan_gagal ? ' • Kendala: ' + d.alasan_gagal : ''))" 
+                                                class="btn btn-ghost btn-sm relative" 
                                                 style="padding:6px 8px;color:#e11d48;" 
                                                 title="Lihat Foto Bukti Kendala">
                                             <i data-lucide="image" style="width:14px;height:14px;"></i>
+                                            <template x-if="d.foto_gagal_urls && d.foto_gagal_urls.length > 1">
+                                                <span class="receipt-counter-badge" x-text="d.foto_gagal_urls.length"></span>
+                                            </template>
                                         </button>
                                     </template>
 
@@ -410,7 +416,7 @@ ob_start();
     <?php endif; ?>
 
     <!-- ========================================================================= -->
-    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI PENGIRIMAN (TOUCH PINCH & PAN VIEWER) -->
+    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI PENGIRIMAN (CAROUSEL TOUCH PINCH & PAN) -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showPhotoModal" 
@@ -426,7 +432,12 @@ ob_start();
                         <i data-lucide="image" style="width:18px;height:18px;"></i>
                     </div>
                     <div style="min-width:0;">
-                        <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Pengiriman</h3>
+                        <div class="flex items-center gap-2">
+                            <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Pengiriman</h3>
+                            <template x-if="photoModalList.length > 1">
+                                <span class="badge badge-primary text-xs" x-text="(photoModalIndex + 1) + ' / ' + photoModalList.length"></span>
+                            </template>
+                        </div>
                         <div style="font-size:11px;color:var(--color-ink-mute);font-family:monospace;" x-text="photoModalSubtitle"></div>
                     </div>
                 </div>
@@ -438,7 +449,7 @@ ob_start();
             </div>
 
             <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport) -->
-            <div class="receipt-viewport" 
+            <div class="receipt-viewport relative" 
                  x-ref="photoViewport"
                  @wheel.prevent="handleWheel($event)"
                  @mousedown="handleMouseDown($event)"
@@ -447,6 +458,26 @@ ob_start();
                  @touchend="handleTouchEnd($event)"
                  @touchcancel="handleTouchEnd($event)"
                  @dblclick="toggleDoubleTap($event.clientX, $event.clientY)">
+
+                <!-- Carousel Navigation Button Prev -->
+                <template x-if="photoModalList.length > 1">
+                    <button type="button" 
+                            @click="prevPhoto()" 
+                            class="receipt-carousel-nav is-prev" 
+                            title="Foto Sebelumnya (Panah Kiri)">
+                        <i data-lucide="chevron-left" style="width:22px;height:22px;"></i>
+                    </button>
+                </template>
+
+                <!-- Carousel Navigation Button Next -->
+                <template x-if="photoModalList.length > 1">
+                    <button type="button" 
+                            @click="nextPhoto()" 
+                            class="receipt-carousel-nav is-next" 
+                            title="Foto Selanjutnya (Panah Kanan)">
+                        <i data-lucide="chevron-right" style="width:22px;height:22px;"></i>
+                    </button>
+                </template>
 
                 <!-- State Error jika file fisik tidak ditemukan / dibersihkan -->
                 <div x-show="photoLoadError" style="margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:440px;width:100%;padding:32px 16px;z-index:5;">
@@ -476,7 +507,7 @@ ob_start();
                              objectFit: 'contain',
                              transform: 'translate3d(' + zoomPanX + 'px, ' + zoomPanY + 'px, 0) scale(' + zoomScale + ') rotate(' + zoomRotate + 'deg)',
                              transformOrigin: 'center center',
-                             transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)',
+                             transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 1)',
                              cursor: zoomScale > 1.05 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
                              userSelect: 'none',
                              webkitUserDrag: 'none'
@@ -514,12 +545,25 @@ ob_start();
                 </div>
             </div>
 
+            <!-- Thumbnail Carousel Strip (Multi-Foto) -->
+            <template x-if="photoModalList.length > 1">
+                <div class="receipt-thumb-strip custom-scrollbar">
+                    <template x-for="(thumb, idx) in photoModalList" :key="idx">
+                        <div class="receipt-thumb-item" 
+                             :class="{'is-active': idx === photoModalIndex}"
+                             @click="selectPhoto(idx)">
+                            <img :src="resolvePhotoUrl(thumb)" alt="Thumbnail" loading="lazy">
+                        </div>
+                    </template>
+                </div>
+            </template>
+
             <!-- Footer Modal (Petunjuk Gestur) -->
             <div class="receipt-footer" style="display:flex;align-items:center;justify-content:center;padding:10px 18px;border-top:1px solid var(--color-hairline);background:var(--color-canvas-soft);font-size:11.5px;color:var(--color-ink-mute);z-index:10;text-align:center;">
                 <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                     <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
-                    <span class="hidden sm:inline">Geser untuk memindahkan foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x untuk zoom cepat</span>
-                    <span class="inline sm:hidden">Cubit 2 jari untuk zoom • Geser foto • Ketuk 2x zoom</span>
+                    <span class="hidden sm:inline">Panah Kiri/Kanan untuk ganti foto • Geser foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x zoom</span>
+                    <span class="inline sm:hidden">Geser/panah ganti foto • Cubit 2 jari zoom • Ketuk 2x zoom</span>
                 </div>
             </div>
         </div>
@@ -634,9 +678,11 @@ function deliveryApp() {
         },
 
         // =====================================================================
-        // PHOTO VIEWER LIGHTBOX (DNA ALIGNED WITH ERP ECOSYSTEM)
+        // PHOTO VIEWER CAROUSEL LIGHTBOX (DNA ALIGNED WITH ERP ECOSYSTEM)
         // =====================================================================
         showPhotoModal: false,
+        photoModalList: [],
+        photoModalIndex: 0,
         photoModalUrl: '',
         photoModalTitle: 'Foto Bukti Pengiriman',
         photoModalSubtitle: '',
@@ -653,20 +699,31 @@ function deliveryApp() {
         pinchStartScale: 1.0,
         lastTapTime: 0,
 
-        openPhotoViewer(url, title, subtitle) {
-            if (!url) return;
-            this.resetZoom();
+        resolvePhotoUrl(url) {
+            if (!url) return '';
             const cleanUrl = String(url).trim();
             if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
-                this.photoModalUrl = cleanUrl;
+                return cleanUrl;
             } else if (cleanUrl.startsWith('/media/view') || cleanUrl.startsWith('media/view')) {
-                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+                return '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
             } else if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('/favicon/')) {
-                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+                return '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
             } else {
                 const storagePath = cleanUrl.replace(/^\/?(public\/)?(uploads\/)?/, '');
-                this.photoModalUrl = '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
+                return '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
             }
+        },
+
+        openPhotoViewer(urls, title, subtitle, startIndex = 0) {
+            if (!urls) return;
+            const list = Array.isArray(urls) ? urls : [urls];
+            const filteredList = list.filter(u => !!u);
+            if (filteredList.length === 0) return;
+
+            this.resetZoom();
+            this.photoModalList = filteredList;
+            this.photoModalIndex = (startIndex >= 0 && startIndex < filteredList.length) ? startIndex : 0;
+            this.photoModalUrl = this.resolvePhotoUrl(this.photoModalList[this.photoModalIndex]);
             this.photoModalTitle = title || 'Foto Bukti Pengiriman';
             this.photoModalSubtitle = subtitle || '';
             this.photoLoadError = false;
@@ -678,8 +735,33 @@ function deliveryApp() {
             });
         },
 
+        selectPhoto(index) {
+            if (index < 0 || index >= this.photoModalList.length) return;
+            this.photoModalIndex = index;
+            this.resetZoom();
+            this.photoLoadError = false;
+            this.photoModalUrl = this.resolvePhotoUrl(this.photoModalList[this.photoModalIndex]);
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        prevPhoto() {
+            if (this.photoModalList.length <= 1) return;
+            const newIndex = (this.photoModalIndex - 1 + this.photoModalList.length) % this.photoModalList.length;
+            this.selectPhoto(newIndex);
+        },
+
+        nextPhoto() {
+            if (this.photoModalList.length <= 1) return;
+            const newIndex = (this.photoModalIndex + 1) % this.photoModalList.length;
+            this.selectPhoto(newIndex);
+        },
+
         closePhotoViewer() {
             this.showPhotoModal = false;
+            this.photoModalList = [];
+            this.photoModalIndex = 0;
             this.photoModalUrl = '';
             this.resetZoom();
             this.photoLoadError = false;
@@ -826,6 +908,10 @@ function deliveryApp() {
             if (!this.showPhotoModal) return;
             if (e.key === 'Escape') {
                 this.closePhotoViewer();
+            } else if (e.key === 'ArrowLeft') {
+                this.prevPhoto();
+            } else if (e.key === 'ArrowRight') {
+                this.nextPhoto();
             } else if (e.key === '+' || e.key === '=') {
                 this.zoomStep(0.3);
             } else if (e.key === '-' || e.key === '_') {
