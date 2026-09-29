@@ -1552,26 +1552,52 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
             <div class="oh-wa-box" id="waMessageContent"><?= htmlspecialchars($fullWaMessage) ?></div>
         </div>
 
-        <?php if (!empty($visit['foto_kunjungan'])): 
-            $presignedVisitPhoto = \App\Helpers\Upload::presignedUrl($visit['foto_kunjungan'], 10) ?: $visit['foto_kunjungan'];
+        <?php 
+            $visitPhotoUrls = !empty($visit['foto_kunjungan_urls']) ? $visit['foto_kunjungan_urls'] : (!empty($visit['foto_kunjungan']) ? [$visit['foto_kunjungan']] : []);
+            if (!empty($visitPhotoUrls)): 
         ?>
         <div class="pt-3 border-t border-hairline">
-            <div class="text-xs font-bold mb-2 flex items-center gap-1.5" style="color:var(--color-ink);">
-                <i data-lucide="camera" class="w-4 h-4 text-sky-600"></i>
-                <span>Foto Bukti Kunjungan / Barang Retur:</span>
+            <div class="text-xs font-bold mb-2 flex items-center justify-between" style="color:var(--color-ink);">
+                <div class="flex items-center gap-1.5">
+                    <i data-lucide="camera" class="w-4 h-4 text-sky-600"></i>
+                    <span>Foto Bukti Kunjungan / Barang Retur:</span>
+                </div>
+                <?php if (count($visitPhotoUrls) > 1): ?>
+                    <span class="badge badge-primary text-xs"><?= count($visitPhotoUrls) ?> Foto</span>
+                <?php endif; ?>
             </div>
+            
+            <?php if (count($visitPhotoUrls) === 1): ?>
             <div class="inline-block rounded-xl overflow-hidden border border-hairline bg-slate-50 dark:bg-slate-800">
                 <button type="button" 
-                        @click="openPhotoViewer('<?= htmlspecialchars($presignedVisitPhoto, ENT_QUOTES) ?>', 'Foto Kunjungan Toko', '<?= htmlspecialchars(addslashes($visit['nama_toko']), ENT_QUOTES) ?> • <?= htmlspecialchars(addslashes($visit['nomor_kunjungan']), ENT_QUOTES) ?>')"
+                        @click="openPhotoViewer(<?= htmlspecialchars(json_encode($visitPhotoUrls), ENT_QUOTES) ?>, 'Foto Kunjungan Toko', '<?= htmlspecialchars(addslashes($visit['nama_toko']), ENT_QUOTES) ?> • <?= htmlspecialchars(addslashes($visit['nomor_kunjungan']), ENT_QUOTES) ?>', 0)"
                         class="group relative block cursor-pointer text-left" 
                         title="Klik untuk memperbesar foto pop-up">
-                    <img src="<?= htmlspecialchars($presignedVisitPhoto) ?>" alt="Bukti Kunjungan" style="max-height:220px;max-width:100%;object-fit:cover;display:block;" class="group-hover:opacity-90 group-hover:scale-[1.01] transition-all duration-200">
+                    <img src="<?= htmlspecialchars($visitPhotoUrls[0]) ?>" alt="Bukti Kunjungan" style="max-height:220px;max-width:100%;object-fit:cover;display:block;" class="group-hover:opacity-90 group-hover:scale-[1.01] transition-all duration-200">
                     <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 text-white font-bold text-xs">
                         <i data-lucide="maximize-2" class="w-4 h-4"></i>
                         <span>Lihat Pop-up Foto</span>
                     </div>
                 </button>
             </div>
+            <?php else: ?>
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                <?php foreach ($visitPhotoUrls as $pIdx => $pUrl): ?>
+                <div class="relative rounded-xl overflow-hidden border border-hairline bg-slate-50 dark:bg-slate-800 aspect-square">
+                    <button type="button" 
+                            @click="openPhotoViewer(<?= htmlspecialchars(json_encode($visitPhotoUrls), ENT_QUOTES) ?>, 'Foto Kunjungan Toko', '<?= htmlspecialchars(addslashes($visit['nama_toko']), ENT_QUOTES) ?> • <?= htmlspecialchars(addslashes($visit['nomor_kunjungan']), ENT_QUOTES) ?>', <?= $pIdx ?>)"
+                            class="group relative w-full h-full block cursor-pointer text-left" 
+                            title="Klik untuk melihat foto <?= $pIdx + 1 ?>">
+                        <img src="<?= htmlspecialchars($pUrl) ?>" alt="Bukti Kunjungan <?= $pIdx + 1 ?>" style="width:100%;height:100%;object-fit:cover;display:block;" class="group-hover:opacity-90 group-hover:scale-[1.03] transition-all duration-200">
+                        <span class="photo-uploader-badge" style="z-index:2;"><?= $pIdx + 1 ?></span>
+                        <div class="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                        </div>
+                    </button>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -1655,7 +1681,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI KUNJUNGAN (TOUCH PINCH & PAN VIEWER)  -->
+    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI KUNJUNGAN (CAROUSEL TOUCH PINCH & PAN) -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showPhotoModal" 
@@ -1671,7 +1697,12 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                         <i data-lucide="image" style="width:18px;height:18px;"></i>
                     </div>
                     <div style="min-width:0;">
-                        <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Kunjungan</h3>
+                        <div class="flex items-center gap-2">
+                            <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Kunjungan</h3>
+                            <template x-if="photoModalList.length > 1">
+                                <span class="badge badge-primary text-xs" x-text="(photoModalIndex + 1) + ' / ' + photoModalList.length"></span>
+                            </template>
+                        </div>
                         <div style="font-size:11px;color:var(--color-ink-mute);font-family:monospace;" x-text="photoModalSubtitle"></div>
                     </div>
                 </div>
@@ -1683,7 +1714,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
             </div>
 
             <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport) -->
-            <div class="receipt-viewport" 
+            <div class="receipt-viewport relative" 
                  x-ref="photoViewport"
                  @wheel.prevent="handleWheel($event)"
                  @mousedown="handleMouseDown($event)"
@@ -1692,6 +1723,26 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                  @touchend="handleTouchEnd($event)"
                  @touchcancel="handleTouchEnd($event)"
                  @dblclick="toggleDoubleTap($event.clientX, $event.clientY)">
+
+                <!-- Carousel Navigation Button Prev -->
+                <template x-if="photoModalList.length > 1">
+                    <button type="button" 
+                            @click="prevPhoto()" 
+                            class="receipt-carousel-nav is-prev" 
+                            title="Foto Sebelumnya (Panah Kiri)">
+                        <i data-lucide="chevron-left" style="width:22px;height:22px;"></i>
+                    </button>
+                </template>
+
+                <!-- Carousel Navigation Button Next -->
+                <template x-if="photoModalList.length > 1">
+                    <button type="button" 
+                            @click="nextPhoto()" 
+                            class="receipt-carousel-nav is-next" 
+                            title="Foto Selanjutnya (Panah Kanan)">
+                        <i data-lucide="chevron-right" style="width:22px;height:22px;"></i>
+                    </button>
+                </template>
 
                 <!-- State Error jika file fisik tidak ditemukan / dibersihkan -->
                 <div x-show="photoLoadError" style="margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:440px;width:100%;padding:32px 16px;z-index:5;">
@@ -1721,7 +1772,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                              objectFit: 'contain',
                              transform: 'translate3d(' + zoomPanX + 'px, ' + zoomPanY + 'px, 0) scale(' + zoomScale + ') rotate(' + zoomRotate + 'deg)',
                              transformOrigin: 'center center',
-                             transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)',
+                             transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 1)',
                              cursor: zoomScale > 1.05 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
                              userSelect: 'none',
                              webkitUserDrag: 'none'
@@ -1759,12 +1810,25 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                 </div>
             </div>
 
+            <!-- Thumbnail Carousel Strip (Multi-Foto) -->
+            <template x-if="photoModalList.length > 1">
+                <div class="receipt-thumb-strip custom-scrollbar">
+                    <template x-for="(thumb, idx) in photoModalList" :key="idx">
+                        <div class="receipt-thumb-item" 
+                             :class="{'is-active': idx === photoModalIndex}"
+                             @click="selectPhoto(idx)">
+                            <img :src="resolvePhotoUrl(thumb)" alt="Thumbnail" loading="lazy">
+                        </div>
+                    </template>
+                </div>
+            </template>
+
             <!-- Footer Modal (Petunjuk Gestur) -->
             <div class="receipt-footer" style="display:flex;align-items:center;justify-content:center;padding:10px 18px;border-top:1px solid var(--color-hairline);background:var(--color-canvas-soft);font-size:11.5px;color:var(--color-ink-mute);z-index:10;text-align:center;">
                 <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                     <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
-                    <span class="hidden sm:inline">Geser untuk memindahkan foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x untuk zoom cepat</span>
-                    <span class="inline sm:hidden">Cubit 2 jari untuk zoom • Geser foto • Ketuk 2x zoom</span>
+                    <span class="hidden sm:inline">Panah Kiri/Kanan untuk ganti foto • Geser foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x zoom</span>
+                    <span class="inline sm:hidden">Geser/panah ganti foto • Cubit 2 jari zoom • Ketuk 2x zoom</span>
                 </div>
             </div>
         </div>
@@ -1857,9 +1921,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         // =====================================================================
-        // PHOTO VIEWER LIGHTBOX (DNA ALIGNED WITH ERP ECOSYSTEM)
+        // PHOTO VIEWER CAROUSEL LIGHTBOX (DNA ALIGNED WITH ERP ECOSYSTEM)
         // =====================================================================
         showPhotoModal: false,
+        photoModalList: [],
+        photoModalIndex: 0,
         photoModalUrl: '',
         photoModalTitle: 'Foto Bukti Kunjungan',
         photoModalSubtitle: '',
@@ -1876,20 +1942,31 @@ document.addEventListener('alpine:init', () => {
         pinchStartScale: 1.0,
         lastTapTime: 0,
 
-        openPhotoViewer(url, title, subtitle) {
-            if (!url) return;
-            this.resetZoom();
+        resolvePhotoUrl(url) {
+            if (!url) return '';
             const cleanUrl = String(url).trim();
             if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
-                this.photoModalUrl = cleanUrl;
+                return cleanUrl;
             } else if (cleanUrl.startsWith('/media/view') || cleanUrl.startsWith('media/view')) {
-                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+                return '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
             } else if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('/favicon/')) {
-                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+                return '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
             } else {
                 const storagePath = cleanUrl.replace(/^\/?(public\/)?(uploads\/)?/, '');
-                this.photoModalUrl = '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
+                return '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
             }
+        },
+
+        openPhotoViewer(urls, title, subtitle, startIndex = 0) {
+            if (!urls) return;
+            const list = Array.isArray(urls) ? urls : [urls];
+            const filteredList = list.filter(u => !!u);
+            if (filteredList.length === 0) return;
+
+            this.resetZoom();
+            this.photoModalList = filteredList;
+            this.photoModalIndex = (startIndex >= 0 && startIndex < filteredList.length) ? startIndex : 0;
+            this.photoModalUrl = this.resolvePhotoUrl(this.photoModalList[this.photoModalIndex]);
             this.photoModalTitle = title || 'Foto Bukti Kunjungan';
             this.photoModalSubtitle = subtitle || '';
             this.photoLoadError = false;
@@ -1901,8 +1978,33 @@ document.addEventListener('alpine:init', () => {
             });
         },
 
+        selectPhoto(index) {
+            if (index < 0 || index >= this.photoModalList.length) return;
+            this.photoModalIndex = index;
+            this.resetZoom();
+            this.photoLoadError = false;
+            this.photoModalUrl = this.resolvePhotoUrl(this.photoModalList[this.photoModalIndex]);
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        prevPhoto() {
+            if (this.photoModalList.length <= 1) return;
+            const newIndex = (this.photoModalIndex - 1 + this.photoModalList.length) % this.photoModalList.length;
+            this.selectPhoto(newIndex);
+        },
+
+        nextPhoto() {
+            if (this.photoModalList.length <= 1) return;
+            const newIndex = (this.photoModalIndex + 1) % this.photoModalList.length;
+            this.selectPhoto(newIndex);
+        },
+
         closePhotoViewer() {
             this.showPhotoModal = false;
+            this.photoModalList = [];
+            this.photoModalIndex = 0;
             this.photoModalUrl = '';
             this.resetZoom();
             this.photoLoadError = false;
@@ -2049,6 +2151,10 @@ document.addEventListener('alpine:init', () => {
             if (!this.showPhotoModal) return;
             if (e.key === 'Escape') {
                 this.closePhotoViewer();
+            } else if (e.key === 'ArrowLeft') {
+                this.prevPhoto();
+            } else if (e.key === 'ArrowRight') {
+                this.nextPhoto();
             } else if (e.key === '+' || e.key === '=') {
                 this.zoomStep(0.3);
             } else if (e.key === '-' || e.key === '_') {

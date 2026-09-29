@@ -567,10 +567,10 @@ class ConsignmentController extends Controller
             }
         }
 
-        // Simpan foto bukti kunjungan/retur jika diunggah (opsional)
+        // Simpan foto bukti kunjungan/retur jika diunggah (opsional) - Multi-Foto Support
         $fotoUrl = null;
-        if (!empty($_FILES['foto_kunjungan']) && ($_FILES['foto_kunjungan']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
-            $uploadRes = \App\Helpers\Upload::storeImage($_FILES['foto_kunjungan'], 'consignment_returns');
+        if (!empty($_FILES['foto_kunjungan'])) {
+            $uploadRes = \App\Helpers\Upload::storeMultipleImages($_FILES['foto_kunjungan'], 'consignment_returns');
             if ($uploadRes['success']) {
                 $fotoUrl = $uploadRes['path'];
             }
@@ -825,6 +825,14 @@ class ConsignmentController extends Controller
                 WHERE rkk.kunjungan_id = :id
                 ORDER BY rkk.subtotal_laku DESC, i.nama_item ASC
             ", ['id' => $kunjunganId]);
+
+            // Presign visit multi-photo URLs (R2 / Local)
+            if (!empty($visit['foto_kunjungan'])) {
+                $visit['foto_kunjungan_urls'] = \App\Helpers\Upload::presignedUrls($visit['foto_kunjungan'], 10);
+                $visit['foto_kunjungan'] = $visit['foto_kunjungan_urls'][0] ?? (\App\Helpers\Upload::presignedUrl($visit['foto_kunjungan'], 10) ?: $visit['foto_kunjungan']);
+            } else {
+                $visit['foto_kunjungan_urls'] = [];
+            }
 
             $canManageTagihan = Auth::can('consignment.piutang');
             $canSpotBill = Auth::can(['consignment.opname_all', 'consignment.opname_assigned', 'consignment.piutang']);

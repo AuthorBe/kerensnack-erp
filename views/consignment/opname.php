@@ -2102,71 +2102,54 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
                 <div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;">
                     <i data-lucide="camera" style="width:16px;height:16px;color:#0284c7;flex-shrink:0;"></i>
                     <span style="font-size:12px;font-weight:800;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Bukti Kunjungan / BS</span>
-                    <span style="font-size:10.5px;font-weight:600;color:var(--color-ink-mute);flex-shrink:0;">(Opsional)</span>
+                    <span style="font-size:10.5px;font-weight:600;color:var(--color-ink-mute);flex-shrink:0;">(Maks 5 Foto)</span>
                 </div>
+                <template x-if="photosKunjungan.length > 0">
+                    <span class="badge badge-primary text-xs" x-text="photosKunjungan.length + ' / 5 Foto'"></span>
+                </template>
             </div>
 
-            <!-- Drop / Capture Zone -->
-            <div>
-                <input type="file" 
-                       id="foto_kunjungan" 
-                       name="foto_kunjungan" 
-                       accept="image/*" 
-                       class="hidden" 
-                       @change="handlePhotoChange($event)">
+            <!-- Hidden Sync File Input for Standard Form POST -->
+            <input type="file" id="foto_kunjungan_main" name="foto_kunjungan[]" multiple class="hidden">
 
-                <div x-show="!photoPreview">
-                    <label for="foto_kunjungan" 
-                           style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 16px;border:1.5px dashed var(--color-hairline-strong);border-radius:14px;background:var(--color-canvas-soft);cursor:pointer;transition:all 0.15s ease;"
-                           class="hover:border-sky-500 active:scale-[0.99]">
-                        <div style="width:44px;height:44px;border-radius:12px;background:rgba(2,132,199,0.1);color:#0284c7;display:flex;align-items:center;justify-content:center;">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
-                                <circle cx="12" cy="13" r="3"/>
-                            </svg>
-                        </div>
-                        <div style="text-align:center;">
-                            <strong style="font-size:12.5px;color:var(--color-ink);display:block;">Ambil Foto Kamera / Galeri</strong>
-                            <span style="font-size:11px;color:var(--color-ink-mute);">Format JPG, PNG, WEBP (Maksimal 5MB)</span>
-                        </div>
-                    </label>
-                </div>
+            <!-- Dual Action Picker: Kamera & Galeri -->
+            <div class="photo-uploader-wrap">
+                <template x-if="photosKunjungan.length < 5">
+                    <div class="grid grid-cols-2 gap-2">
+                        <!-- Tombol Ambil Kamera -->
+                        <label class="btn btn-secondary flex flex-col items-center justify-center p-3 text-center cursor-pointer border-dashed hover:border-sky-500 transition-all active:scale-[0.98]" style="border-radius:12px;background:var(--color-canvas-soft);">
+                            <input type="file" accept="image/*" capture="environment" class="hidden" @change="handleMultiPhoto($event, 'foto_kunjungan')">
+                            <i data-lucide="camera" class="w-5 h-5 text-sky-600 mb-1"></i>
+                            <span class="text-xs font-bold text-ink">Buka Kamera</span>
+                            <span class="text-[10px] text-ink-mute">Foto Langsung</span>
+                        </label>
+                        <!-- Tombol Pilih Galeri -->
+                        <label class="btn btn-secondary flex flex-col items-center justify-center p-3 text-center cursor-pointer border-dashed hover:border-sky-500 transition-all active:scale-[0.98]" style="border-radius:12px;background:var(--color-canvas-soft);">
+                            <input type="file" accept="image/*" multiple class="hidden" @change="handleMultiPhoto($event, 'foto_kunjungan')">
+                            <i data-lucide="image-plus" class="w-5 h-5 text-emerald-600 mb-1"></i>
+                            <span class="text-xs font-bold text-ink">Pilih Galeri</span>
+                            <span class="text-[10px] text-ink-mute">Bisa Pilih Banyak</span>
+                        </label>
+                    </div>
+                </template>
 
-                <div x-show="photoPreview" x-cloak>
-                    <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);position:relative;overflow:hidden;">
-                        <img :src="photoPreview" alt="Preview Foto" style="width:58px;height:58px;object-fit:cover;border-radius:10px;border:1px solid var(--color-hairline);flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-                        <div style="min-width:0;flex:1;overflow:hidden;">
-                            <div style="font-size:12px;font-weight:800;color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;" x-text="photoName || 'Foto Terpilih'"></div>
-                            <div style="font-size:11px;font-weight:700;color:#10b981;display:flex;align-items:center;gap:4px;margin-top:2px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                    <polyline points="22 4 12 14.01 9 11.01"/>
-                                </svg>
-                                <span>Foto siap diunggah</span>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
-                                <label for="foto_kunjungan" style="font-size:11px;font-weight:700;color:#0284c7;cursor:pointer;display:inline-flex;align-items:center;gap:3px;margin:0;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M21 2v6h-6"/>
-                                        <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-                                        <path d="M3 22v-6h6"/>
-                                        <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-                                    </svg>
-                                    <span>Ganti</span>
-                                </label>
-                                <button type="button" @click="clearPhoto()" style="background:transparent;border:none;color:#f43f5e;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:3px;padding:0;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="3 6 5 6 21 6"/>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                        <line x1="10" y1="11" x2="10" y2="17"/>
-                                        <line x1="14" y1="11" x2="14" y2="17"/>
-                                    </svg>
-                                    <span>Hapus</span>
+                <!-- Queue Grid Preview (Maksimal 5 Foto) -->
+                <template x-if="photosKunjungan.length > 0">
+                    <div class="photo-uploader-queue">
+                        <template x-for="(photo, idx) in photosKunjungan" :key="idx">
+                            <div class="photo-uploader-card">
+                                <img :src="photo.preview" alt="Preview Foto" class="photo-uploader-thumb">
+                                <span class="photo-uploader-badge" x-text="idx + 1"></span>
+                                <button type="button" 
+                                        @click="removePhoto('foto_kunjungan', idx)" 
+                                        class="photo-uploader-remove-btn" 
+                                        title="Hapus foto ini">
+                                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
                                 </button>
                             </div>
-                        </div>
+                        </template>
                     </div>
-                </div>
+                </template>
             </div>
         </div>
 
@@ -2548,8 +2531,7 @@ function opnameApp() {
         searchQuery: '',
         activeTab: 'all',
         showConfirmModal: false,
-        photoPreview: null,
-        photoName: '',
+        photosKunjungan: [],
         nominal_bayar: 0,
         nominal_bayar_formatted: '0',
         akun_kas_id: '<?= !empty($cashAccounts) ? htmlspecialchars((string)$cashAccounts[0]['id']) : '' ?>',
@@ -2966,77 +2948,103 @@ function opnameApp() {
             if (window.toast) window.toast.info('Hitungan opname telah di-reset ke kondisi awal.');
         },
 
-        // Photo Upload Handler
-        handlePhotoChange(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            if (!file.type.match(/^image\//i)) {
-                if (window.toast) window.toast.error('Format file harus berupa gambar (JPG, PNG, atau WebP).');
-                event.target.value = '';
-                return;
-            }
-            if (file.size > 15 * 1024 * 1024) {
-                if (window.toast) window.toast.error('Ukuran file foto maksimal 15MB.');
-                event.target.value = '';
-                return;
-            }
-            this.photoName = file.name;
+        // Multi-Photo Upload Handlers (Kamera + Galeri max 5)
+        handleMultiPhoto(event, fieldName) {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const maxDim = 1600;
-                    let w = img.width;
-                    let h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w >= h) {
-                            h = Math.round((h / w) * maxDim);
-                            w = maxDim;
-                        } else {
-                            w = Math.round((w / h) * maxDim);
-                            h = maxDim;
+            let targetList = this.photosKunjungan;
+
+            const remainingSlot = 5 - targetList.length;
+            if (remainingSlot <= 0) {
+                if (window.toast) window.toast.warning('Maksimal 5 foto per bukti kunjungan.');
+                event.target.value = '';
+                return;
+            }
+
+            const filesToProcess = files.slice(0, remainingSlot);
+
+            filesToProcess.forEach(file => {
+                if (!file.type.match(/^image\//i)) {
+                    if (window.toast) window.toast.error('Format file harus gambar (JPG, PNG, WebP).');
+                    return;
+                }
+                if (file.size > 20 * 1024 * 1024) {
+                    if (window.toast) window.toast.error('Ukuran file maksimal 20MB.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const maxDim = 1600;
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > maxDim || h > maxDim) {
+                            if (w >= h) {
+                                h = Math.round((h / w) * maxDim);
+                                w = maxDim;
+                            } else {
+                                w = Math.round((w / h) * maxDim);
+                                h = maxDim;
+                            }
                         }
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, w, h);
-                    ctx.drawImage(img, 0, 0, w, h);
 
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            try {
-                                const dt = new DataTransfer();
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+
+                        canvas.toBlob((blob) => {
+                            if (blob) {
                                 const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
-                                dt.items.add(newFile);
-                                event.target.files = dt.files;
-                            } catch (err) {}
-                            this.photoPreview = canvas.toDataURL('image/jpeg', 0.82);
-                        } else {
-                            this.photoPreview = e.target.result;
-                        }
-                    }, 'image/jpeg', 0.82);
+                                const previewUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+                                targetList.push({
+                                    file: newFile,
+                                    preview: previewUrl,
+                                    name: newFile.name
+                                });
+
+                                this.syncFileInput(fieldName);
+                                this.$nextTick(() => {
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                                });
+                            }
+                        }, 'image/jpeg', 0.82);
+                    };
+                    img.src = e.target.result;
                 };
-                img.onerror = () => {
-                    if (window.toast) window.toast.error('Berkas tidak dapat dimuat sebagai gambar.');
-                    this.clearPhoto();
-                };
-                img.src = e.target.result;
-            };
-            reader.onerror = () => {
-                this.clearPhoto();
-            };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            });
+
+            event.target.value = '';
         },
 
-        clearPhoto() {
-            this.photoPreview = null;
-            this.photoName = '';
-            const input = document.getElementById('foto_kunjungan');
-            if (input) input.value = '';
+        removePhoto(fieldName, index) {
+            this.photosKunjungan.splice(index, 1);
+            this.syncFileInput(fieldName);
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        syncFileInput(fieldName) {
+            const input = document.getElementById(fieldName + '_main');
+            if (!input) return;
+
+            const targetList = this.photosKunjungan;
+            const dt = new DataTransfer();
+            targetList.forEach(item => {
+                if (item.file) {
+                    dt.items.add(item.file);
+                }
+            });
+            input.files = dt.files;
         },
 
         // Validations
