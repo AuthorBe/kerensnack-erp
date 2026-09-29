@@ -122,7 +122,6 @@ use App\Controllers\DeliveryController;
 use App\Controllers\CashController;
 use App\Controllers\CustomerOrderController;
 use App\Controllers\OrderDocumentController;
-use App\Controllers\SalesOrderController;
 use App\Controllers\DeveloperController;
 use App\Controllers\UserController;
 use App\Controllers\PermissionController;
@@ -130,6 +129,7 @@ use App\Controllers\SettingsController;
 use App\Controllers\ActivityLogController;
 use App\Controllers\ImportDataController;
 use App\Controllers\MediaController;
+use App\Controllers\ReportHubController;
 
 // =========================================================================
 // ROUTE REGISTRATION (Enterprise Router)
@@ -196,23 +196,6 @@ Router::get('/customer-orders/print', [CustomerOrderController::class, 'invoice'
 Router::post('/customer-orders/pay', [CustomerOrderController::class, 'pay']);
 Router::post('/customer-orders/cancel', [CustomerOrderController::class, 'cancel']);
 Router::post('/customer-orders/update-delivery-status', [CustomerOrderController::class, 'updateDeliveryStatus']);
-
-// Alias / Compatibility Routes untuk Sales Orders
-Router::get('/sales-orders', [CustomerOrderController::class, 'index']);
-Router::get('/sales-orders/export/excel', [OrderDocumentController::class, 'exportExcel']);
-Router::get('/sales-orders/create', [CustomerOrderController::class, 'create']);
-Router::post('/sales-orders/store', [CustomerOrderController::class, 'store']);
-Router::get('/sales-orders/edit', [CustomerOrderController::class, 'edit']);
-Router::post('/sales-orders/update', [CustomerOrderController::class, 'update']);
-Router::get('/sales-orders/detail-ajax', [CustomerOrderController::class, 'detailAjax']);
-Router::get('/sales-orders/invoice', [CustomerOrderController::class, 'invoice']);
-Router::get('/sales-orders/invoice/pdf', [OrderDocumentController::class, 'invoicePdf']);
-Router::get('/sales-orders/invoice/excel', [OrderDocumentController::class, 'invoiceExcel']);
-Router::get('/sales-orders/picking-list/pdf', [OrderDocumentController::class, 'pickingListPdf']);
-Router::get('/sales-orders/print', [CustomerOrderController::class, 'invoice']);
-Router::post('/sales-orders/pay', [CustomerOrderController::class, 'pay']);
-Router::post('/sales-orders/cancel', [CustomerOrderController::class, 'cancel']);
-Router::post('/sales-orders/update-delivery-status', [CustomerOrderController::class, 'updateDeliveryStatus']);
 
 // --- TRANSAKSI 2: MATRIKS HARGA 30 LEVEL & TIER PELANGGAN ---
 Router::get('/pricing', [PricingController::class, 'index']);
@@ -368,8 +351,24 @@ Router::post('/products/store-borongan-group', [ProductController::class, 'store
 Router::post('/products/update-borongan-group', [ProductController::class, 'updateBoronganGroup']);
 Router::post('/products/delete-borongan-group', [ProductController::class, 'deleteBoronganGroup']);
 
-// --- MANAJEMEN 1: OWNER EXECUTIVE DASHBOARD (BUSINESS PERFORMANCE) ---
+// --- MANAJEMEN 1: OWNER EXECUTIVE DASHBOARD & PUSAT UNDUH LAPORAN ---
 Router::get('/owner', [OwnerController::class, 'index']);
+Router::get('/reports', [ReportHubController::class, 'index']);
+Router::get('/reports/export/pnl-excel', [ReportHubController::class, 'exportExecutivePnlExcel']);
+Router::get('/reports/export/pnl-pdf', [ReportHubController::class, 'exportExecutivePnlPdf']);
+Router::get('/reports/export/cash-flow', [ReportHubController::class, 'exportCashFlowExcel']);
+Router::get('/reports/export/cash-transactions', [ReportHubController::class, 'exportCashTransactionsExcel']);
+Router::get('/reports/export/customer-orders', [ReportHubController::class, 'exportCustomerOrdersExcel']);
+Router::get('/reports/export/consignment-sales', [ReportHubController::class, 'exportConsignmentSalesExcel']);
+Router::get('/reports/export/consignment-loss', [ReportHubController::class, 'exportConsignmentLossExcel']);
+Router::get('/reports/export/consignment-invoices', [ReportHubController::class, 'exportConsignmentInvoicesExcel']);
+Router::get('/reports/export/sales-commissions', [ReportHubController::class, 'exportSalesCommissionsExcel']);
+Router::get('/reports/export/sales-visits', [ReportHubController::class, 'exportSalesVisitsExcel']);
+Router::get('/reports/export/inventory-stock', [ReportHubController::class, 'exportInventoryStockExcel']);
+Router::get('/reports/export/opname-history', [ReportHubController::class, 'exportOpnameHistoryExcel']);
+Router::get('/reports/export/vendor-purchases', [ReportHubController::class, 'exportVendorPurchasesExcel']);
+Router::get('/reports/export/deliveries', [ReportHubController::class, 'exportDeliveriesExcel']);
+Router::get('/reports/export/activity-logs', [ReportHubController::class, 'exportActivityLogsExcel']);
 
 
 // --- MANAJEMEN 2: PROFIL PENGGUNA & PENGATURAN AKUN ---

@@ -282,6 +282,12 @@ class TestRunnerService
             'category'    => 'Master Data & Penjualan',
             'description' => 'Validasi multi-barcode grup produk, pemetaan barcode per toko mitra, snapshot immutability faktur pesanan, dan RPC scanner fn_cari_item_by_barcode.'
         ],
+        'report_hub' => [
+            'file'        => 'ReportHubTest.php',
+            'title'       => 'Centralized Report Download Hub & RBAC Guard (/reports)',
+            'category'    => 'Management & Reports',
+            'description' => 'Validasi izin RBAC reports.download_hub, perutean ReportHubController, penempatan menu Manajemen sidebar, tampilan 7 kategori laporan, dan pembersihan tombol ekspor operasional.'
+        ],
     ];
 
     // -------------------------------------------------------------------------

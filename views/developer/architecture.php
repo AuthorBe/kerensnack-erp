@@ -726,7 +726,7 @@ function devArchitectureApp() {
             {
                 id: 'app_controllers',
                 name: 'app/Controllers/',
-                badge: '24 Controllers',
+                badge: '25 Controllers',
                 icon: '🕹️',
                 desc: 'Otak pengendali alur request HTTP, validasi bisnis, otorisasi RBAC, dan routing seluruh modul sistem.',
                 files: [
@@ -736,9 +736,11 @@ function devArchitectureApp() {
                     { name: 'ConsignmentController.php', desc: 'Portal konsinyasi terpadu: stok rak fisik toko, opname rak, hitung laku otomatis, faktur tagihan, dan komisi sales.' },
                     { name: 'CustomerController.php', desc: 'Master data toko mitra pelanggan, grup tier harga, katalog item toko, dan rute wilayah logistik.' },
                     { name: 'CustomerOrderController.php', desc: 'Pesanan grosir/B2B (PO Pelanggan), invoice penjualan tempo/tunai, alokasi stok, dan status kirim.' },
+                    { name: 'DashboardController.php', desc: 'Pusat kerja harian dan ringkasan operasional bisnis realtime untuk semua level hak akses.' },
                     { name: 'DeliveryController.php', desc: 'Manajemen surat jalan ekspedisi dan Driver Mobile (tugas antar tanpa bocor harga, update status, upload POD).' },
                     { name: 'DeveloperController.php', desc: 'Portal developer: visual blueprint arsitektur, diagnostik koneksi database Supabase, dan test runner.' },
                     { name: 'EmployeeController.php', desc: 'Master karyawan dengan pemisahan peran Sales (komisi %) vs Driver (nopol armada), kasbon, dan payroll.' },
+                    { name: 'GuideController.php', desc: 'Portal mandiri dokumentasi SOP, kamus istilah bisnis, dan petunjuk operasional lengkap sistem.' },
                     { name: 'ImportDataController.php', desc: 'Master Data Impor & Diffing Engine: upload file Excel 10 entitas, deteksi diff, dan verifikasi full-sync.' },
                     { name: 'InventoryController.php', desc: 'Inventaris fisik gudang, kartu stok, penyesuaian stok, pencatatan waste, dan bulk stock opname.' },
                     { name: 'MediaController.php', desc: 'Media proxy Cloudflare R2: streaming file privat/publik, presigned upload URLs, dan local disk cache management.' },
@@ -750,7 +752,7 @@ function devArchitectureApp() {
                     { name: 'ProductController.php', desc: 'Master produk jadi, brand/merek, bahan baku, kemasan, resep komposisi BOM (komposisi_item), dan upah borongan.' },
                     { name: 'ProfileController.php', desc: 'Manajemen akun pengguna login, pembaruan data profil, dan ubah kata sandi.' },
                     { name: 'PurchaseController.php', desc: 'Pengadaan bahan baku ke vendor (PO Vendor), penerimaan fisik gudang, dan pembayaran hutang.' },
-                    { name: 'SalesOrderController.php', desc: 'Controller alias kompatibilitas untuk transaksi pesanan penjualan grosir / B2B.' },
+                    { name: 'ReportHubController.php', desc: 'Pusat unduh laporan eksekutif terpadu: 7 kategori laporan terpusat (P&L, Cash Flow, Penjualan, Konsinyasi, HR, Stok, Logistik).' },
                     { name: 'SettingsController.php', desc: 'Pengaturan umum toko, identitas perusahaan, logo, rekening bank, dan konfigurasi master sistem.' },
                     { name: 'SupplierController.php', desc: 'Master vendor pemasok bahan baku mentah, bumbu racik, dan plastik kemasan snack.' },
                     { name: 'UserController.php', desc: 'Manajemen pengguna sistem: buat akun, ganti role (owner, admin, sales, driver, mandor, developer), aktivasi status.' }
@@ -797,7 +799,7 @@ function devArchitectureApp() {
                 icon: '⚡',
                 desc: 'Layanan terpusat anti-duplikasi logika bisnis pengujian, media Cloudflare R2, dan engine impor data.',
                 files: [
-                    { name: 'TestRunnerService.php', desc: 'Master registry 27 test suites, execution timer, global concurrency lock, dan unified runner CLI/Web.' },
+                    { name: 'TestRunnerService.php', desc: 'Master registry 39 test suites, execution timer, global concurrency lock, dan unified runner CLI/Web.' },
                     { name: 'R2StorageService.php', desc: 'Layanan Cloudflare R2 Object Storage berbasis S3-compatible API untuk upload dan presigned URL media.' },
                     { name: 'MediaCacheService.php', desc: 'Layanan smart caching lokal media R2 di server untuk performa loading secepat kilat.' },
                     { name: 'Import/ImportProcessor.php', desc: 'Engine pemroses impor file Excel dengan validasi schema, smart reader, dan deteksi perbedaan (diffing).' },
@@ -809,11 +811,11 @@ function devArchitectureApp() {
             {
                 id: 'tests',
                 name: 'tests/',
-                badge: '35 Test Suites',
+                badge: '39 Test Suites',
                 icon: '🧪',
                 desc: 'Rangkaian pengujian integrasi otomatis menyeluruh yang memverifikasi 100% kesehatan kode ERP.',
                 files: [
-                    { name: 'run_all.php', desc: 'CLI runner wrapper tipis yang mengeksekusi seluruh 35 test suites terpadu.' },
+                    { name: 'run_all.php', desc: 'CLI runner wrapper tipis yang mengeksekusi seluruh 39 test suites terpadu.' },
                     { name: 'SalesDriverIntegrityTest.php', desc: 'Integritas pemisahan tugas ketat Sales (punya komisi) vs Driver (punya armada nopol).' },
                     { name: 'CustomerIntegrityTest.php', desc: 'Integritas master pelanggan, validasi NIK/WA, grup tier harga, dan assignment sales.' },
                     { name: 'MasterDataCoreTest.php', desc: 'Integritas master data inti (produk, pelanggan, supplier, kas, karyawan).' },
@@ -830,6 +832,7 @@ function devArchitectureApp() {
                     { name: 'CashLedgerFinancialTest.php', desc: 'Integritas buku kas: penerimaan, pengeluaran, transfer kas, dan saldo berjalan.' },
                     { name: 'ConsignmentFullCycleTest.php', desc: 'Siklus penuh titip jual konsinyasi: titip rak, opname sisa fisik, retur, faktur, pelunasan.' },
                     { name: 'ConsignmentConversionTest.php', desc: 'Pengujian formula konversi penjualan laku konsinyasi dan kalkulasi omzet toko.' },
+                    { name: 'ConsignmentBillingAndAdjustmentTest.php', desc: 'Gerbang tagihan konsinyasi, ledger pembayaran, potongan retur susulan & alokasi multi-faktur.' },
                     { name: 'TieredCommissionTest.php', desc: 'Pengujian skema komisi berjenjang (tiered commission) sales otomatis.' },
                     { name: 'UnifiedPrintingEngineTest.php', desc: 'Integritas engine cetak dokumen: Surat Jalan, Faktur, Struk Thermal, Picking List.' },
                     { name: 'AuthAndRbacLifecycleTest.php', desc: 'Siklus autentikasi login bcrypt dan guard 5-tab permission RBAC.' },
@@ -848,7 +851,10 @@ function devArchitectureApp() {
                     { name: 'DownloadFilenameSanitizationTest.php', desc: 'Audit pembersihan nama berkas unduhan dari tanda hubung & garis bawah.' },
                     { name: 'DriverAssignmentAtPoIntegrationTest.php', desc: 'Validasi pemilihan driver sejak PO dan alur rute pengiriman.' },
                     { name: 'HybridDocumentLifecycleTest.php', desc: 'Validasi dokumen gabungan Faktur & Surat Jalan serta proteksi cetak PO.' },
-                    { name: 'GuidePortalTest.php', desc: 'Verifikasi portal buku panduan mandiri (/guide), Table of Contents, dan pencarian teks.' }
+                    { name: 'GuidePortalTest.php', desc: 'Verifikasi portal buku panduan mandiri (/guide), Table of Contents, dan pencarian teks.' },
+                    { name: 'DeveloperDashboardActiveUsersTest.php', desc: 'Verifikasi monitoring pengguna aktif realtime, status online, dan timer logout.' },
+                    { name: 'MultiBarcodeIntegrityTest.php', desc: 'Verifikasi multi-barcode grup produk, mapping per toko mitra, dan snapshot faktur.' },
+                    { name: 'ReportHubTest.php', desc: 'Verifikasi Pusat Unduh Laporan (/reports), izin RBAC, dan sentralisasi berkas ekspor.' }
                 ]
             },
             {
@@ -975,6 +981,22 @@ function devArchitectureApp() {
             { url: '/driver-deliveries', method: 'GET', action: 'DeliveryController::driverRoute()', view: 'views/deliveries/driver.php', role: 'Driver' },
             { url: '/driver-deliveries/complete', method: 'POST', action: 'DeliveryController::completeDelivery()', view: 'JSON Response', role: 'Driver' },
             { url: '/owner', method: 'GET', action: 'OwnerController::index()', view: 'views/owner/index.php', role: 'Owner' },
+            { url: '/reports', method: 'GET', action: 'ReportHubController::index()', view: 'views/reports/index.php', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/pnl-excel', method: 'GET', action: 'ReportHubController::exportExecutivePnlExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/pnl-pdf', method: 'GET', action: 'ReportHubController::exportExecutivePnlPdf()', view: 'PDF Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/cash-flow', method: 'GET', action: 'ReportHubController::exportCashFlowExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/cash-transactions', method: 'GET', action: 'ReportHubController::exportCashTransactionsExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/customer-orders', method: 'GET', action: 'ReportHubController::exportCustomerOrdersExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/consignment-sales', method: 'GET', action: 'ReportHubController::exportConsignmentSalesExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/consignment-loss', method: 'GET', action: 'ReportHubController::exportConsignmentLossExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/consignment-invoices', method: 'GET', action: 'ReportHubController::exportConsignmentInvoicesExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/sales-commissions', method: 'GET', action: 'ReportHubController::exportSalesCommissionsExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/sales-visits', method: 'GET', action: 'ReportHubController::exportSalesVisitsExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/inventory-stock', method: 'GET', action: 'ReportHubController::exportInventoryStockExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/opname-history', method: 'GET', action: 'ReportHubController::exportOpnameHistoryExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/vendor-purchases', method: 'GET', action: 'ReportHubController::exportVendorPurchasesExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/deliveries', method: 'GET', action: 'ReportHubController::exportDeliveriesExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
+            { url: '/reports/export/activity-logs', method: 'GET', action: 'ReportHubController::exportActivityLogsExcel()', view: 'Excel Stream Response', role: 'Owner, Admin, reports.download_hub' },
             { url: '/cash', method: 'GET', action: 'CashController::index()', view: 'views/cash/index.php', role: 'Owner, Admin' },
             { url: '/cash/transactions', method: 'GET', action: 'CashController::transactions()', view: 'views/cash/transactions.php', role: 'Owner, Admin' },
             { url: '/cash/reports', method: 'GET', action: 'CashController::reports()', view: 'views/cash/reports.php', role: 'Owner, Admin' },
@@ -1328,16 +1350,18 @@ INSTRUKSI PENGERJAAN:
 \`\`\`text
 kerensnack-erp/
 ├── app/                                 # 🧠 Logika Aplikasi & Backend Core
-│   ├── Controllers/                     # 🕹️ 24 Application Controllers
+│   ├── Controllers/                     # 🕹️ 25 Application Controllers
 │   │   ├── ActivityLogController.php    # Audit jejak forensik, tracking IP, filter modul & ekspor Excel
 │   │   ├── AuthController.php           # Autentikasi multi-peran, verifikasi bcrypt, session heartbeat & logout
 │   │   ├── CashController.php           # Buku kas multi-akun, mutasi, transfer bank, dan laporan cash flow
 │   │   ├── ConsignmentController.php    # Konsinyasi terpadu: stok rak, opname, hitung laku, faktur tagihan & komisi
 │   │   ├── CustomerController.php       # Master toko pelanggan, grup tier harga, wilayah & katalog item khusus
 │   │   ├── CustomerOrderController.php  # Pesanan grosir B2B, invoice penjualan, alokasi stok & piutang tempo
+│   │   ├── DashboardController.php      # Ringkasan operasional dan pusat kerja harian pengguna sistem
 │   │   ├── DeliveryController.php       # Surat jalan ekspedisi, Driver Mobile tanpa bocor harga & upload bukti terima
 │   │   ├── DeveloperController.php      # Command center developer, blueprint visual, diagnostik DB & test runner
 │   │   ├── EmployeeController.php       # Master karyawan (Sales komisi vs Driver armada nopol), kasbon & payroll
+│   │   ├── GuideController.php          # Portal buku panduan operasional mandiri & dokumentasi SOP bisnis
 │   │   ├── ImportDataController.php     # Master Data Impor & Diffing Engine Excel 10 entitas & rekonsiliasi sync
 │   │   ├── InventoryController.php      # Stok fisik gudang, kartu stok, penyesuaian susut/waste & bulk opname
 │   │   ├── MediaController.php          # Media proxy Cloudflare R2, streaming file & manajemen cache lokal
@@ -1349,7 +1373,7 @@ kerensnack-erp/
 │   │   ├── ProductController.php        # Master produk, brand/merek, bahan baku, kemasan, resep BOM & upah borongan
 │   │   ├── ProfileController.php        # Manajemen profil akun pengguna login & ubah kata sandi
 │   │   ├── PurchaseController.php       # Pengadaan vendor (PO), penerimaan fisik gudang & hutang dagang
-│   │   ├── SalesOrderController.php     # Router compatibility wrapper untuk pesanan penjualan grosir B2B
+│   │   ├── ReportHubController.php      # Pusat unduh laporan eksekutif terpadu (7 kategori berkas ekspor)
 │   │   ├── SettingsController.php       # Konfigurasi identitas toko, nama perusahaan, rekening bank & logo
 │   │   ├── SupplierController.php       # Master vendor pemasok bahan mentah, bumbu racik & plastik kemasan
 │   │   └── UserController.php           # Manajemen akun pengguna sistem: buat user, aktivasi status & ubah role

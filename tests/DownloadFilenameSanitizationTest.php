@@ -109,6 +109,7 @@ $controllersToCheck = [
     'app/Controllers/InventoryController.php',
     'app/Controllers/OrderDocumentController.php',
     'app/Controllers/PurchaseController.php',
+    'app/Controllers/ReportHubController.php',
     'app/Services/Import/TemplateGenerator.php',
 ];
 
