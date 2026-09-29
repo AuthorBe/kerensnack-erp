@@ -66,7 +66,7 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
             'Kode Bahan bersifat unik (contoh: BAHAN-SINGKONG-CURAH). Kosongkan jika ingin auto-code.',
             'Nama Bahan dan Satuan Dasar WAJIB diisi (contoh satuan: kg, pcs, lembar, roll, bal, liter).',
             'Tipe Bahan: isi "bahan_mentah" (singkong, bumbu, minyak) atau "bahan_kemas" (plastik, kardus, lakban).',
-            'Pemasok Utama dapat diisi Nama atau Kode Pemasok terdaftar.'
+            'Pemasok Utama: isi Nama atau Kode Pemasok yang sudah terdaftar dan berstatus AKTIF di sistem (lihat Sheet 2).'
         ];
     }
 
@@ -85,7 +85,7 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
 
     public function previewRows(array $rows, array $header, PDO $pdo, string $mode): array
     {
-        $suppliers = $pdo->query("SELECT id, kode_pemasok, nama_pemasok FROM public.pemasok")->fetchAll(PDO::FETCH_ASSOC);
+        $suppliers = $pdo->query("SELECT id, kode_pemasok, nama_pemasok FROM public.pemasok WHERE status_aktif = TRUE")->fetchAll(PDO::FETCH_ASSOC);
         $supplierMap = [];
         foreach ($suppliers as $s) {
             $supplierMap[strtolower(trim($s['kode_pemasok']))] = $s['id'];
@@ -164,9 +164,17 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
             $pemasokId = null;
             if (!empty($pemasokRaw)) {
                 $pKey = strtolower(trim($pemasokRaw));
-                if (isset($supplierMap[$pKey])) {
-                    $pemasokId = $supplierMap[$pKey];
+                if (!isset($supplierMap[$pKey])) {
+                    $previewList[] = [
+                        'action'    => 'ERROR',
+                        'error_msg' => empty($suppliers)
+                            ? "Master Pemasok Vendor masih kosong di sistem. Harap daftarkan master pemasok terlebih dahulu."
+                            : "Pemasok '{$pemasokRaw}' pada baris {$lineNo} tidak ditemukan atau tidak aktif di sistem. Pastikan nama/kode pemasok sudah terdaftar dan berstatus aktif di menu Master Pemasok / Vendor.",
+                        'data'      => ['kode_sku' => $kode, 'nama_item' => $nama]
+                    ];
+                    continue;
                 }
+                $pemasokId = $supplierMap[$pKey];
             }
 
             $dbRow = null;

@@ -505,6 +505,86 @@ runTest("4.4 - CustomerImportHandler: Validasi eksklusif Tipe Konsinyasi (hanya 
     return true;
 });
 
+runTest("4.5 - MaterialItemImportHandler: Validasi Pemasok Aktif (Supplier valid terhubung, fiktif/nonaktif menghasilkan ERROR)", function() use ($pdo) {
+    $handler = new MaterialItemImportHandler();
+    $header = $handler->getTemplateHeaders();
+
+    $activeSupplier = $pdo->query("SELECT id, kode_pemasok, nama_pemasok FROM public.pemasok WHERE status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+
+    // 1. Kasus Sukses: Pemasok aktif terdaftar
+    if ($activeSupplier) {
+        $validRow = [
+            'RAW-MAT-TEST-OK', 'Bahan Uji Valid Supplier', 'bahan_mentah', 'kg',
+            $activeSupplier['nama_pemasok'], 5000, 10, 'Aktif'
+        ];
+        $prev1 = $handler->previewRows([$validRow], $header, $pdo, 'append');
+        if (empty($prev1) || $prev1[0]['action'] === 'ERROR' || ($prev1[0]['data']['pemasok_utama_id'] ?? null) !== $activeSupplier['id']) {
+            return "Active supplier was not resolved properly in MaterialItemImportHandler";
+        }
+    }
+
+    // 2. Kasus Error: Pemasok fiktif / tidak terdaftar
+    $invalidRow = [
+        'RAW-MAT-TEST-ERR', 'Bahan Uji Pemasok Gaib', 'bahan_mentah', 'kg',
+        'PT_SUPPLIER_GAIB_TIDAK_TERDAFTAR_12345', 5000, 10, 'Aktif'
+    ];
+    $prev2 = $handler->previewRows([$invalidRow], $header, $pdo, 'append');
+    if (empty($prev2) || $prev2[0]['action'] !== 'ERROR' || !str_contains($prev2[0]['error_msg'], 'tidak ditemukan atau tidak aktif')) {
+        return "Non-existent supplier was not rejected with ERROR in MaterialItemImportHandler";
+    }
+
+    // 3. Kasus Error: Pemasok nonaktif (status_aktif = FALSE) diisolasi dengan rollback
+    $pdo->beginTransaction();
+    try {
+        $dummyCode = 'SUPP-INACT-' . uniqid();
+        $dummyName = 'Pemasok Nonaktif Test ' . uniqid();
+        $stmt = $pdo->prepare("INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, status_aktif) VALUES (?, ?, FALSE) RETURNING id");
+        $stmt->execute([$dummyCode, $dummyName]);
+
+        $inactiveRow = [
+            'RAW-MAT-TEST-INACT', 'Bahan Uji Pemasok Nonaktif', 'bahan_mentah', 'kg',
+            $dummyName, 5000, 10, 'Aktif'
+        ];
+        $prev3 = $handler->previewRows([$inactiveRow], $header, $pdo, 'append');
+        if (empty($prev3) || $prev3[0]['action'] !== 'ERROR' || !str_contains($prev3[0]['error_msg'], 'tidak ditemukan atau tidak aktif')) {
+            return "Inactive supplier was not rejected with ERROR in MaterialItemImportHandler";
+        }
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+    }
+
+    return true;
+});
+
+runTest("4.6 - ProductItemImportHandler: Validasi Pemasok Aktif pada Barang Jadi", function() use ($pdo) {
+    $handler = new ProductItemImportHandler();
+    $header = $handler->getTemplateHeaders();
+
+    // 1. Kasus Error: Pemasok fiktif pada barang jadi
+    $invalidRow = [
+        'PROD-TEST-ERR-SUPP', 'Produk Maklon Pemasok Gaib', '', 'pcs', '',
+        'PT_VENDOR_MAKLON_TIDAK_ADA_99999', 15000, 20, 'Aktif', 'Aktif'
+    ];
+    $prev = $handler->previewRows([$invalidRow], $header, $pdo, 'append');
+    if (empty($prev) || $prev[0]['action'] !== 'ERROR' || !str_contains($prev[0]['error_msg'], 'tidak ditemukan atau tidak aktif')) {
+        return "Non-existent supplier in ProductItemImportHandler was not rejected with ERROR";
+    }
+
+    // 2. Kasus Kosong: Pemasok kosong (produksi internal) harus valid / tidak error
+    $validInternalRow = [
+        'PROD-TEST-INTERNAL', 'Produk Internal Tanpa Pemasok', '', 'pcs', '',
+        '', 12000, 10, 'Aktif', 'Aktif'
+    ];
+    $prevInternal = $handler->previewRows([$validInternalRow], $header, $pdo, 'append');
+    if (empty($prevInternal) || $prevInternal[0]['action'] === 'ERROR' || ($prevInternal[0]['data']['pemasok_utama_id'] ?? null) !== null) {
+        return "Internal product with empty supplier should be allowed";
+    }
+
+    return true;
+});
+
 // ==================================================================
 // 5. DIFFING ENGINE STATE CLASSIFICATION
 // ==================================================================

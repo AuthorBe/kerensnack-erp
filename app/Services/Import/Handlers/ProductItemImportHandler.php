@@ -68,7 +68,7 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
             'Nama Item Produk WAJIB diisi.',
             'Grup Produk dapat diisi Nama atau Kode Grup Produk yang sudah terdaftar di sistem.',
             'Kelompok Upah Borongan: isi nama kelompok (contoh: "Kelompok 600") atau kosongkan jika tidak ada upah borongan.',
-            'Pemasok Utama: isi nama pemasok atau kosongkan jika diproduksi repacking internal.'
+            'Pemasok Utama: isi nama/kode pemasok yang AKTIF di sistem jika diproduksi eksternal/maklon, atau kosongkan jika diproduksi repacking internal.'
         ];
     }
 
@@ -105,7 +105,7 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
             $boronganMap[strtolower(trim($b['nama_kelompok']))] = $b['id'];
         }
 
-        $suppliers = $pdo->query("SELECT id, kode_pemasok, nama_pemasok FROM public.pemasok")->fetchAll(PDO::FETCH_ASSOC);
+        $suppliers = $pdo->query("SELECT id, kode_pemasok, nama_pemasok FROM public.pemasok WHERE status_aktif = TRUE")->fetchAll(PDO::FETCH_ASSOC);
         $supplierMap = [];
         foreach ($suppliers as $s) {
             $supplierMap[strtolower(trim($s['kode_pemasok']))] = $s['id'];
@@ -202,9 +202,17 @@ class ProductItemImportHandler implements EntityImportHandlerInterface
             $pemasokId = null;
             if (!empty($pemasokRaw)) {
                 $pKey = strtolower(trim($pemasokRaw));
-                if (isset($supplierMap[$pKey])) {
-                    $pemasokId = $supplierMap[$pKey];
+                if (!isset($supplierMap[$pKey])) {
+                    $previewList[] = [
+                        'action'    => 'ERROR',
+                        'error_msg' => empty($suppliers)
+                            ? "Master Pemasok Vendor masih kosong di sistem. Harap daftarkan master pemasok terlebih dahulu."
+                            : "Pemasok '{$pemasokRaw}' pada baris {$lineNo} tidak ditemukan atau tidak aktif di sistem. Pastikan nama/kode pemasok sudah terdaftar dan berstatus aktif di menu Master Pemasok / Vendor.",
+                        'data'      => ['kode_sku' => $sku, 'nama_item' => $nama]
+                    ];
+                    continue;
                 }
+                $pemasokId = $supplierMap[$pKey];
             }
 
             $dbRow = null;

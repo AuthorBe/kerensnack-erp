@@ -2016,6 +2016,11 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                             <div class="step-content">
                                 <h4 class="step-title">Fase 3: Katalog Inventori &amp; Produksi</h4>
                                 <p class="step-desc">Langkah ketiga: <strong>9. Bahan Baku &amp; Kemas</strong> (singkong, bumbu, minyak, plastik dengan satuan standar: <code>kg</code>, <code>pcs</code>, <code>roll</code>, <code>lembar</code>, <code>liter</code>, serta <strong><code>bal</code></strong> untuk karung/kemasan bal mentah), dan <strong>10. Barang Jadi Siap Jual</strong> (SKU produk jadi yang mengikat Merek, Grup Kemasan, dan Upah Borongan).</p>
+                                <ul style="padding-left:18px; margin:6px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                    <li><strong>Relasi Pemasok Utama Aktif (Aturan Integritas):</strong> Nilai kolom <em>Pemasok Utama</em> pada bahan baku, bahan kemas, maupun produk jadi wajib mengacu pada master data Pemasok Vendor yang sudah terdaftar dan berstatus <strong>Aktif</strong> (lihat referensi Sheet 2).</li>
+                                    <li><strong>Penolakan Error Pemasok:</strong> Apabila nama atau kode pemasok tidak ditemukan di sistem atau berstatus nonaktif, baris data akan langsung ditolak dengan status <strong>ERROR</strong> untuk mencegah ketidaksinkronan data pembelian PO.</li>
+                                    <li><strong>Produksi Internal:</strong> Kolom Pemasok Utama pada Barang Jadi dapat dikosongkan apabila produk merupakan hasil produksi atau repacking mandiri.</li>
+                                </ul>
                             </div>
                         </div>
                         <div class="step-item">
