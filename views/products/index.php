@@ -141,11 +141,19 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
         </button>
 
         <button type="button"
+                @click="activeTab = 'product_groups'"
+                :class="activeTab === 'product_groups' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
+                style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
+            <i data-lucide="boxes" style="width:14px;height:14px;"></i>
+            <span>2. Grup Produk &amp; Barcode (<?= count($groups) ?>)</span>
+        </button>
+
+        <button type="button"
                 @click="activeTab = 'materials'"
                 :class="activeTab === 'materials' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
                 style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
-            <i data-lucide="boxes" style="width:14px;height:14px;"></i>
-            <span>2. Bahan &amp; Kemasan (<?= count($materials) ?>)</span>
+            <i data-lucide="layers" style="width:14px;height:14px;"></i>
+            <span>3. Bahan &amp; Kemasan (<?= count($materials) ?>)</span>
         </button>
 
         <?php if (\App\Core\Auth::can('production.bom_manage')): ?>
@@ -154,7 +162,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 :class="activeTab === 'recipes' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
                 style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
             <i data-lucide="git-merge" style="width:14px;height:14px;"></i>
-            <span>3. Resep / BOM Repacking</span>
+            <span>4. Resep / BOM Repacking</span>
         </button>
 
         <button type="button"
@@ -162,7 +170,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 :class="activeTab === 'borongan' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
                 style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
             <i data-lucide="badge-percent" style="width:14px;height:14px;"></i>
-            <span>4. Upah Borongan (<?= count($wageGroups) ?>)</span>
+            <span>5. Upah Borongan (<?= count($wageGroups) ?>)</span>
         </button>
         <?php endif; ?>
 
@@ -171,7 +179,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 :class="activeTab === 'brands' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
                 style="font-size:12px;font-weight:700;white-space:nowrap;padding:6px 12px;">
             <i data-lucide="tag" style="width:14px;height:14px;"></i>
-            <span>5. Merek Produk (<?= count($brands ?? []) ?>)</span>
+            <span>6. Merek Produk (<?= count($brands ?? []) ?>)</span>
         </button>
     </div>
 
@@ -237,9 +245,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
             <?php if (\App\Core\Auth::can('master.products_manage')): ?>
             <div class="flex items-center gap-2 flex-wrap">
-                <button type="button" @click="openManageGroupsModal()" class="btn btn-secondary flex-1 sm:flex-none" style="height:38px;justify-content:center;" title="Kelola / Edit Grup Kemasan">
-                    <i data-lucide="folder-cog" style="width:14px;height:14px;"></i>
-                    <span>Kelola Grup</span>
+                <button type="button" @click="activeTab = 'product_groups'" class="btn btn-secondary flex-1 sm:flex-none" style="height:38px;justify-content:center;" title="Buka Tab Kelola Grup & Multi-Barcode">
+                    <i data-lucide="boxes" style="width:14px;height:14px;"></i>
+                    <span>Kelola Grup &amp; Barcode</span>
                 </button>
                 <button type="button" @click="openAddItemModal()" class="btn btn-primary flex-1 sm:flex-none" style="height:38px;justify-content:center;">
                     <i data-lucide="plus" style="width:14px;height:14px;"></i>
@@ -427,7 +435,131 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     </div>
 
     <!-- ========================================================================= -->
-    <!-- TAB 2: MASTER BAHAN BAKU & KEMASAN (RAW MATERIALS & PACKAGING)            -->
+    <!-- TAB 2: GRUP PRODUK & MULTI-BARCODE KEMASAN                                -->
+    <!-- ========================================================================= -->
+    <div x-show="activeTab === 'product_groups'" class="card" style="padding:0;overflow:hidden;">
+        <!-- ACTION & FILTER BAR -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b" style="border-color:var(--color-hairline);background-color:var(--color-canvas);">
+            <div class="flex items-center gap-2 flex-1 sm:max-w-md w-full">
+                <div class="form-input-icon flex-1 relative">
+                    <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+                    <input type="search" x-model="searchGroup"
+                           placeholder="Cari grup, kode, merek, barcode..."
+                           class="form-input" style="height:38px;font-size:13px;padding-right:32px;">
+                    <button type="button" x-cloak x-show="searchGroup" @click="searchGroup = ''" class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;" title="Bersihkan Pencarian">
+                        <i data-lucide="x" style="width:14px;height:14px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+            <div class="flex items-center gap-2">
+                <button type="button" @click="openAddGroupModal()" class="btn btn-primary flex-1 sm:flex-none" style="height:38px;justify-content:center;">
+                    <i data-lucide="plus" style="width:14px;height:14px;"></i>
+                    <span>Tambah Grup Kemasan</span>
+                </button>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- TABLE LIST GRUP PRODUK -->
+        <div class="relative overflow-x-auto custom-scrollbar">
+            <table class="data-table" style="min-width: 920px;">
+                <thead>
+                    <tr>
+                        <th style="width:100px;">Kode Grup</th>
+                        <th style="width:140px;">Merek</th>
+                        <th style="min-width:200px;">Nama Kelompok Kemasan</th>
+                        <th style="min-width:280px;">Daftar Barcode Kemasan (Universal)</th>
+                        <th class="cell-center" style="width:80px;">Satuan</th>
+                        <th class="cell-center" style="width:90px;">Total SKU</th>
+                        <th class="cell-center" style="width:85px;">Status</th>
+                        <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                        <th class="cell-center" style="width:90px;">Aksi</th>
+                        <?php endif; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="g in filteredGroups" :key="g.id">
+                        <tr :style="!g.status_aktif ? 'opacity:0.5;' : ''">
+                            <td class="cell-nowrap">
+                                <span class="badge badge-mono font-bold" x-text="g.kode_grup"></span>
+                            </td>
+                            <td class="cell-nowrap">
+                                <span class="badge badge-secondary font-bold" x-text="g.nama_merek || 'KEREN SNACK'"></span>
+                            </td>
+                            <td>
+                                <div class="font-bold" style="color:var(--color-ink);" x-text="g.nama_grup"></div>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <template x-for="bc in (g.barcodes || [])" :key="bc.id || bc.barcode">
+                                        <span class="inline-flex items-center gap-1 font-mono"
+                                              :style="bc.is_default 
+                                                ? 'padding: 2.5px 8px; border-radius: 9999px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); color: #065f46; font-size: 11px; font-weight: 700;' 
+                                                : 'padding: 2.5px 8px; border-radius: 9999px; background: rgba(100, 116, 139, 0.08); border: 1px solid rgba(100, 116, 139, 0.22); color: #334155; font-size: 11px; font-weight: 600;'">
+                                            <span x-text="bc.barcode"></span>
+                                            <template x-if="bc.is_default">
+                                                <span style="font-size: 9px; background: #059669; color: #ffffff; padding: 0 4px; border-radius: 3px; font-weight: 800; letter-spacing: 0.02em;">DEFAULT</span>
+                                            </template>
+                                            <template x-if="!bc.is_default && bc.label_barcode">
+                                                <span style="font-size: 9.5px; opacity: 0.75;" x-text="'• ' + bc.label_barcode"></span>
+                                            </template>
+                                        </span>
+                                    </template>
+                                    <template x-if="!g.barcodes || g.barcodes.length === 0">
+                                        <template x-if="g.barcode_universal">
+                                            <span class="badge badge-mono font-bold" x-text="g.barcode_universal"></span>
+                                        </template>
+                                        <template x-if="!g.barcode_universal">
+                                            <span style="color:var(--color-ink-mute);font-size:11px;font-style:italic;">Belum ada barcode</span>
+                                        </template>
+                                    </template>
+                                </div>
+                            </td>
+                            <td class="cell-center cell-nowrap font-mono" style="font-size:11.5px;" x-text="g.satuan_dasar || 'pcs'"></td>
+                            <td class="cell-center cell-nowrap">
+                                <span class="badge badge-primary" style="font-weight:700;" x-text="(g.total_sku || 0) + ' SKU'"></span>
+                            </td>
+                            <td class="cell-center cell-nowrap">
+                                <template x-if="g.status_aktif">
+                                    <span class="badge badge-success">Aktif</span>
+                                </template>
+                                <template x-if="!g.status_aktif">
+                                    <span class="badge badge-danger">Nonaktif</span>
+                                </template>
+                            </td>
+                            <?php if (\App\Core\Auth::can('master.products_manage')): ?>
+                            <td class="cell-center cell-nowrap">
+                                <div class="flex items-center justify-center gap-1">
+                                    <button @click="openEditGroupModal(g)" class="btn btn-ghost btn-sm" style="padding:6px 8px;" title="Edit Grup &amp; Multi-Barcode">
+                                        <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                                    </button>
+                                    <template x-if="!g.total_sku || g.total_sku == 0">
+                                        <button @click="deleteGroup(g.id, g.nama_grup)" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#ef4444;" title="Hapus Grup">
+                                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
+                                </div>
+                            </td>
+                            <?php endif; ?>
+                        </tr>
+                    </template>
+                    <template x-if="filteredGroups.length === 0">
+                        <tr>
+                            <td colspan="8" style="text-align:center;padding:36px;color:var(--color-ink-mute);">
+                                <i data-lucide="search-x" style="width:36px;height:36px;margin:0 auto 8px auto;opacity:0.5;"></i>
+                                <div style="font-weight:600;font-size:13px;">Tidak ada grup produk yang cocok dengan pencarian</div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: MASTER BAHAN BAKU & KEMASAN (RAW MATERIALS & PACKAGING)            -->
     <!-- ========================================================================= -->
     <div x-show="activeTab === 'materials'" class="card" style="padding:0;overflow:hidden;">
         <!-- ACTION & FILTER BAR -->
@@ -1108,23 +1240,21 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     </div>
     </template>
 
-    <!-- MODAL 2: TAMBAH GRUP KEMASAN -->
+    <!-- MODAL 2A: TAMBAH GRUP KEMASAN DENGAN MULTI-BARCODE -->
     <template x-teleport="body">
     <div x-show="showGroupModal" x-cloak class="modal-backdrop" @click="showGroupModal = false">
-        <div class="modal-box" style="max-width:480px;" @click.stop>
+        <div class="modal-box modal-box-lg" style="max-width:580px;" @click.stop>
             <!-- Mobile Pull Handle -->
-            <div class="modal-handle">
-                <div class="modal-handle-bar"></div>
-            </div>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
 
             <div class="modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
                     <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="box" style="width:20px;height:20px;"></i>
+                        <i data-lucide="boxes" style="width:20px;height:20px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <div class="modal-title">Tambah Grup Kemasan Baru</div>
-                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Kelompok Kemasan &amp; Barcode Pabrik</div>
+                        <div class="modal-title">Tambah Kelompok Kemasan (Grup)</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Setup Master Grup Kemasan &amp; Multi-Barcode Universal</div>
                     </div>
                 </div>
                 <button type="button" @click="showGroupModal = false" class="modal-close-x" title="Tutup Modal">
@@ -1134,7 +1264,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
 
             <form action="<?= Router::url('/products/store-group') ?>" method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
-                <div class="modal-body custom-scrollbar space-y-3.5">
+                <input type="hidden" name="barcodes_data" :value="JSON.stringify(groupBarcodes)">
+                
+                <div class="modal-body custom-scrollbar space-y-4">
                     <div>
                         <label class="form-label font-bold">Merek Dagang *</label>
                         <select name="merek_id" required class="form-input">
@@ -1145,20 +1277,57 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     </div>
 
                     <div>
-                        <label class="form-label font-bold">Nama Grup Kemasan *</label>
+                        <label class="form-label font-bold">Nama Kelompok Kemasan (Grup) *</label>
                         <input type="text" name="nama_grup" required class="form-input" placeholder="Contoh: KEREN SNACK SINGKONG 250GR">
                     </div>
 
-                    <div>
-                        <label class="form-label font-bold">Barcode Universal Kemasan (Pabrik)</label>
-                        <input type="text" name="barcode_universal" 
-                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 13)"
-                               maxlength="13" class="form-input font-mono" placeholder="88030173 (8–13 Digit Angka)">
-                    </div>
+                    <!-- DYNAMIC MULTI-BARCODE SECTION -->
+                    <div style="background:var(--color-canvas-soft, #f8fafc);border:1px solid var(--color-hairline);border-radius:10px;padding:12px;" class="space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="form-label font-bold" style="margin-bottom:0;">Daftar Barcode Kemasan (Universal)</label>
+                                <div style="font-size:11px;color:var(--color-ink-mute);">Pilih 1 barcode utama (Default) yang otomatis tercetak di nota.</div>
+                            </div>
+                            <button type="button" @click="addBarcodeRow()" class="btn btn-secondary btn-xs" style="font-size:11px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;">
+                                <i data-lucide="plus" style="width:12px;height:12px;"></i>
+                                <span>Tambah Barcode</span>
+                            </button>
+                        </div>
 
-                    <div>
-                        <label class="form-label font-bold">Harga Ritel Standar (L1) (Rp/pcs) *</label>
-                        <input type="text" name="harga_ritel_l1" required class="form-input font-mono input-rupiah" placeholder="15.000" value="15.000">
+                        <div class="space-y-2">
+                            <template x-for="(bc, idx) in groupBarcodes" :key="idx">
+                                <div style="display:flex;align-items:center;gap:6px;background:var(--color-canvas, #ffffff);padding:6px 8px;border:1px solid var(--color-hairline);border-radius:8px;">
+                                    <!-- Radio Default -->
+                                    <label style="display:flex;align-items:center;cursor:pointer;padding:0 2px;" title="Pilih sebagai Barcode Default">
+                                        <input type="radio" name="barcode_default_radio_add" :checked="bc.is_default" @change="setDefaultBarcode(idx)"
+                                               style="width:15px;height:15px;accent-color:var(--color-primary);cursor:pointer;">
+                                    </label>
+                                    
+                                    <!-- Input Barcode -->
+                                    <input type="text" x-model="bc.barcode"
+                                           @input="bc.barcode = $event.target.value.replace(/[^0-9]/g, '').slice(0, 13)"
+                                           maxlength="13" class="form-input font-mono" style="height:32px;font-size:12px;width:130px;flex-shrink:0;" placeholder="8-13 Digit">
+
+                                    <!-- Input Label -->
+                                    <input type="text" x-model="bc.label_barcode" class="form-input" style="height:32px;font-size:11.5px;flex:1;" placeholder="Label (Standar, Alfamart, dll)">
+
+                                    <!-- Badge Default -->
+                                    <template x-if="bc.is_default">
+                                        <span class="badge badge-success" style="font-size:10px;padding:2px 5px;flex-shrink:0;">Default</span>
+                                    </template>
+
+                                    <!-- Delete Button -->
+                                    <button type="button" @click="removeBarcodeRow(idx)" class="btn btn-ghost btn-xs text-red-500 hover:bg-red-50" style="padding:4px;flex-shrink:0;" title="Hapus Baris Barcode">
+                                        <i data-lucide="x" style="width:14px;height:14px;"></i>
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="groupBarcodes.length === 0">
+                                <div style="text-align:center;padding:12px;font-size:11.5px;color:var(--color-ink-mute);background:#fff;border-radius:6px;border:1px dashed var(--color-hairline);">
+                                    Belum ada barcode. Klik tombol <strong>Tambah Barcode</strong> di atas.
+                                </div>
+                            </template>
+                        </div>
                     </div>
                 </div>
 
@@ -1174,111 +1343,12 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     </div>
     </template>
 
-    <!-- MODAL 2B: KELOLA DAFTAR GRUP KEMASAN -->
-    <template x-teleport="body">
-    <div x-show="showManageGroupsModal" x-cloak class="modal-backdrop" @click="showManageGroupsModal = false">
-        <div class="modal-box modal-box-lg" style="max-width:780px;" @click.stop>
-            <!-- Mobile Pull Handle -->
-            <div class="modal-handle">
-                <div class="modal-handle-bar"></div>
-            </div>
-
-            <div class="modal-header">
-                <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(59,130,246,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="boxes" style="width:20px;height:20px;"></i>
-                    </div>
-                    <div class="min-w-0 flex-1">
-                        <div class="modal-title">Kelola Grup Kemasan Luar</div>
-                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;">Daftar seluruh grup kemasan dan barcode universal kemasan pabrik</div>
-                    </div>
-                </div>
-                <button type="button" @click="showManageGroupsModal = false" class="modal-close-x" title="Tutup Modal">
-                    <i data-lucide="x" style="width:18px;height:18px;"></i>
-                </button>
-            </div>
-
-            <div class="modal-body custom-scrollbar space-y-3">
-                <div style="display:flex;justify-content:flex-end;">
-                    <button type="button" @click="openAddGroupModal()" class="btn btn-primary btn-sm" style="height:34px;">
-                        <i data-lucide="plus" style="width:14px;height:14px;"></i>
-                        <span>Tambah Grup Baru</span>
-                    </button>
-                </div>
-
-                <div class="overflow-x-auto custom-scrollbar" style="max-height:380px;border:1px solid var(--color-hairline);border-radius:10px;">
-                    <table class="data-table" style="width:100%;font-size:12.5px;">
-                        <thead>
-                            <tr>
-                                <th style="width:85px;">Kode</th>
-                                <th style="width:120px;">Merek</th>
-                                <th>Nama Grup Kemasan</th>
-                                <th style="width:120px;">Barcode Pabrik</th>
-                                <th class="cell-center" style="width:85px;">Total SKU</th>
-                                <th class="cell-center" style="width:75px;">Status</th>
-                                <th class="cell-center" style="width:85px;">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-for="g in groups" :key="g.id">
-                                <tr :style="!g.status_aktif ? 'opacity:0.5;' : ''">
-                                    <td class="cell-nowrap">
-                                        <span class="badge badge-mono" x-text="g.kode_grup"></span>
-                                    </td>
-                                    <td class="cell-nowrap">
-                                        <span class="badge badge-mono" style="font-weight:700;" x-text="g.nama_merek || 'KEREN SNACK'"></span>
-                                    </td>
-                                    <td>
-                                        <div style="font-weight:700;" x-text="g.nama_grup"></div>
-                                    </td>
-                                    <td class="cell-nowrap">
-                                        <span class="badge badge-mono" x-text="g.barcode_universal || '-'"></span>
-                                    </td>
-                                    <td class="cell-center cell-nowrap">
-                                        <span class="badge badge-secondary" x-text="(g.total_sku || 0) + ' SKU'"></span>
-                                    </td>
-                                    <td class="cell-center cell-nowrap">
-                                        <template x-if="g.status_aktif">
-                                            <span class="badge badge-success">Aktif</span>
-                                        </template>
-                                        <template x-if="!g.status_aktif">
-                                            <span class="badge badge-danger">Nonaktif</span>
-                                        </template>
-                                    </td>
-                                    <td class="cell-center cell-nowrap">
-                                        <div class="flex items-center justify-center gap-1">
-                                            <button @click="openEditGroupModal(g)" class="btn btn-ghost btn-sm" style="padding:4px 6px;" title="Edit Grup">
-                                                <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
-                                            </button>
-                                            <template x-if="!g.total_sku || g.total_sku == 0">
-                                                <button @click="deleteGroup(g.id, g.nama_grup)" class="btn btn-ghost btn-sm" style="padding:4px 6px;color:#ef4444;" title="Hapus Grup">
-                                                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                                </button>
-                                            </template>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" @click="showManageGroupsModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Tutup</button>
-            </div>
-        </div>
-    </div>
-    </template>
-
-    <!-- MODAL 2C: EDIT GRUP KEMASAN -->
+    <!-- MODAL 2B: EDIT GRUP KEMASAN & MULTI-BARCODE -->
     <template x-teleport="body">
     <div x-show="showEditGroupModal" x-cloak class="modal-backdrop" @click="showEditGroupModal = false">
-        <div class="modal-box" style="max-width:480px;" @click.stop>
+        <div class="modal-box modal-box-lg" style="max-width:580px;" @click.stop>
             <!-- Mobile Pull Handle -->
-            <div class="modal-handle">
-                <div class="modal-handle-bar"></div>
-            </div>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
 
             <div class="modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -1286,7 +1356,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                         <i data-lucide="edit-3" style="width:20px;height:20px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <div class="modal-title">Edit Grup Kemasan</div>
+                        <div class="modal-title">Edit Kelompok Kemasan (Grup)</div>
                         <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;" x-text="editGroupForm.kode_grup"></div>
                     </div>
                 </div>
@@ -1298,8 +1368,9 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
             <form action="<?= Router::url('/products/update-group') ?>" method="POST">
                 <?= \App\Helpers\CSRF::field() ?>
                 <input type="hidden" name="id" :value="editGroupForm.id">
+                <input type="hidden" name="barcodes_data" :value="JSON.stringify(groupBarcodes)">
 
-                <div class="modal-body custom-scrollbar space-y-3.5">
+                <div class="modal-body custom-scrollbar space-y-4">
                     <div>
                         <label class="form-label font-bold">Merek Dagang *</label>
                         <select name="merek_id" x-model="editGroupForm.merek_id" required class="form-input">
@@ -1310,21 +1381,63 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                     </div>
 
                     <div>
-                        <label class="form-label font-bold">Nama Grup Kemasan *</label>
+                        <label class="form-label font-bold">Nama Kelompok Kemasan (Grup) *</label>
                         <input type="text" name="nama_grup" x-model="editGroupForm.nama_grup" required class="form-input" placeholder="Contoh: KEREN SNACK SINGKONG 250GR">
                     </div>
 
-                    <div>
-                        <label class="form-label font-bold">Barcode Universal Kemasan (Pabrik)</label>
-                        <input type="text" name="barcode_universal" x-model="editGroupForm.barcode_universal"
-                               @input="editGroupForm.barcode_universal = $event.target.value.replace(/[^0-9]/g, '').slice(0, 13)"
-                               maxlength="13" class="form-input font-mono" placeholder="88030173 (8–13 Digit Angka)">
+                    <!-- DYNAMIC MULTI-BARCODE SECTION -->
+                    <div style="background:var(--color-canvas-soft, #f8fafc);border:1px solid var(--color-hairline);border-radius:10px;padding:12px;" class="space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <label class="form-label font-bold" style="margin-bottom:0;">Daftar Barcode Kemasan (Universal)</label>
+                                <div style="font-size:11px;color:var(--color-ink-mute);">Pilih 1 barcode utama (Default) yang otomatis tercetak di nota.</div>
+                            </div>
+                            <button type="button" @click="addBarcodeRow()" class="btn btn-secondary btn-xs" style="font-size:11px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;">
+                                <i data-lucide="plus" style="width:12px;height:12px;"></i>
+                                <span>Tambah Barcode</span>
+                            </button>
+                        </div>
+
+                        <div class="space-y-2">
+                            <template x-for="(bc, idx) in groupBarcodes" :key="idx">
+                                <div style="display:flex;align-items:center;gap:6px;background:var(--color-canvas, #ffffff);padding:6px 8px;border:1px solid var(--color-hairline);border-radius:8px;">
+                                    <!-- Radio Default -->
+                                    <label style="display:flex;align-items:center;cursor:pointer;padding:0 2px;" title="Pilih sebagai Barcode Default">
+                                        <input type="radio" name="barcode_default_radio_edit" :checked="bc.is_default" @change="setDefaultBarcode(idx)"
+                                               style="width:15px;height:15px;accent-color:var(--color-primary);cursor:pointer;">
+                                    </label>
+                                    
+                                    <!-- Input Barcode -->
+                                    <input type="text" x-model="bc.barcode"
+                                           @input="bc.barcode = $event.target.value.replace(/[^0-9]/g, '').slice(0, 13)"
+                                           maxlength="13" class="form-input font-mono" style="height:32px;font-size:12px;width:130px;flex-shrink:0;" placeholder="8-13 Digit">
+
+                                    <!-- Input Label -->
+                                    <input type="text" x-model="bc.label_barcode" class="form-input" style="height:32px;font-size:11.5px;flex:1;" placeholder="Label (Standar, Alfamart, dll)">
+
+                                    <!-- Badge Default -->
+                                    <template x-if="bc.is_default">
+                                        <span class="badge badge-success" style="font-size:10px;padding:2px 5px;flex-shrink:0;">Default</span>
+                                    </template>
+
+                                    <!-- Delete Button -->
+                                    <button type="button" @click="removeBarcodeRow(idx)" class="btn btn-ghost btn-xs text-red-500 hover:bg-red-50" style="padding:4px;flex-shrink:0;" title="Hapus Baris Barcode">
+                                        <i data-lucide="x" style="width:14px;height:14px;"></i>
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="groupBarcodes.length === 0">
+                                <div style="text-align:center;padding:12px;font-size:11.5px;color:var(--color-ink-mute);background:#fff;border-radius:6px;border:1px dashed var(--color-hairline);">
+                                    Belum ada barcode. Klik tombol <strong>Tambah Barcode</strong> di atas.
+                                </div>
+                            </template>
+                        </div>
                     </div>
 
                     <div>
                         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;font-weight:600;">
                             <input type="checkbox" name="status_aktif" x-model="editGroupForm.status_aktif" style="width:15px;height:15px;accent-color:var(--color-primary);">
-                            <span>Status Grup Aktif</span>
+                            <span>Status Kelompok Kemasan Aktif</span>
                         </label>
                     </div>
                 </div>
@@ -1916,6 +2029,8 @@ function productApp(initialTab, initialRecipeItemId) {
         isSearchingFg: false,
         serverPaginationFg: <?= json_encode($paginationFg ?? ['page' => 1, 'totalPages' => 1, 'total' => count($finishedGoods), 'perPage' => 50, 'q' => '', 'groupId' => 'all']) ?>,
         selectedGroupFilter: <?= json_encode($selectedGroupId ?? 'all') ?>,
+        searchGroup: '',
+        groupBarcodes: [],
         searchMat: '',
         materialTypeFilter: 'all',
         selectedRecipeProductId: initialRecipeItemId || '',
@@ -2062,6 +2177,18 @@ function productApp(initialTab, initialRecipeItemId) {
 
                 const matchGroup = this.selectedGroupFilter === 'all' || i.grup_id === this.selectedGroupFilter;
                 return matchQuery && matchGroup;
+            });
+        },
+
+        get filteredGroups() {
+            const q = (this.searchGroup || '').toLowerCase().trim();
+            if (!q) return this.groups;
+            return this.groups.filter(g => {
+                const matchName = g.nama_grup && g.nama_grup.toLowerCase().includes(q);
+                const matchCode = g.kode_grup && g.kode_grup.toLowerCase().includes(q);
+                const matchBrand = (g.nama_merek && g.nama_merek.toLowerCase().includes(q)) || (g.kode_merek && g.kode_merek.toLowerCase().includes(q));
+                const matchBarcode = (g.barcodes || []).some(b => b.barcode && b.barcode.includes(q)) || (g.barcode_universal && g.barcode_universal.includes(q));
+                return matchName || matchCode || matchBrand || matchBarcode;
             });
         },
 
@@ -2296,12 +2423,7 @@ function productApp(initialTab, initialRecipeItemId) {
         },
 
         openManageGroupsModal() {
-            this.showItemModal = false;
-            this.showGroupModal = false;
-            this.showMaterialModal = false;
-            this.showRecipeModal = false;
-            this.showCopyRecipeModal = false;
-            this.showManageGroupsModal = true;
+            this.activeTab = 'product_groups';
             this.$nextTick(() => lucide.createIcons());
         },
 
@@ -2312,11 +2434,33 @@ function productApp(initialTab, initialRecipeItemId) {
             this.showCopyRecipeModal = false;
             this.showManageGroupsModal = false;
             this.showEditGroupModal = false;
+            this.groupBarcodes = [
+                { barcode: '', label_barcode: 'Standar / Pabrik', is_default: true }
+            ];
             this.showGroupModal = true;
             this.$nextTick(() => lucide.createIcons());
         },
 
         openEditGroupModal(g) {
+            this.showItemModal = false;
+            this.showMaterialModal = false;
+            this.showRecipeModal = false;
+            this.showCopyRecipeModal = false;
+            this.showManageGroupsModal = false;
+            this.showGroupModal = false;
+
+            let bcs = (g.barcodes || []).map(b => ({
+                barcode: b.barcode,
+                label_barcode: b.label_barcode || 'Standar / Pabrik',
+                is_default: Boolean(b.is_default)
+            }));
+            if (bcs.length === 0 && g.barcode_universal) {
+                bcs = [{ barcode: g.barcode_universal, label_barcode: 'Standar / Pabrik', is_default: true }];
+            } else if (bcs.length === 0) {
+                bcs = [{ barcode: '', label_barcode: 'Standar / Pabrik', is_default: true }];
+            }
+            this.groupBarcodes = bcs;
+
             this.editGroupForm = {
                 id: g.id,
                 kode_grup: g.kode_grup,
@@ -2325,9 +2469,33 @@ function productApp(initialTab, initialRecipeItemId) {
                 merek_id: g.merek_id || (this.brands[0]?.id || ''),
                 status_aktif: Boolean(g.status_aktif)
             };
-            this.showManageGroupsModal = false;
             this.showEditGroupModal = true;
             this.$nextTick(() => lucide.createIcons());
+        },
+
+        addBarcodeRow() {
+            const isFirst = this.groupBarcodes.length === 0;
+            this.groupBarcodes.push({
+                barcode: '',
+                label_barcode: 'Standar / Pabrik',
+                is_default: isFirst
+            });
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        removeBarcodeRow(idx) {
+            const wasDefault = this.groupBarcodes[idx]?.is_default;
+            this.groupBarcodes.splice(idx, 1);
+            if (wasDefault && this.groupBarcodes.length > 0) {
+                this.groupBarcodes[0].is_default = true;
+            }
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        setDefaultBarcode(idx) {
+            this.groupBarcodes.forEach((b, i) => {
+                b.is_default = (i === idx);
+            });
         },
 
         async deleteGroup(id, name) {

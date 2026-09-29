@@ -35,18 +35,46 @@ class ProductController extends Controller
                 ORDER BY m.status_aktif DESC, m.kode_merek ASC
             ");
 
-            // 1. Grup Kemasan Luar (Barcode Universal)
+            // 1. Grup Kemasan Luar (Multi-Barcode Universal)
             $groups = Database::fetchAll("
                 SELECT gp.id, gp.kode_grup, gp.nama_grup, gp.barcode_universal,
                        gp.satuan_dasar, gp.status_aktif, gp.merek_id,
                        m.kode_merek, m.nama_merek,
-                       COUNT(i.id) as total_sku
+                       COUNT(DISTINCT i.id) as total_sku,
+                       COALESCE(
+                           (
+                               SELECT json_agg(
+                                   json_build_object(
+                                       'id', gpb.id,
+                                       'barcode', gpb.barcode,
+                                       'label_barcode', gpb.label_barcode,
+                                       'is_default', gpb.is_default,
+                                       'status_aktif', gpb.status_aktif
+                                   ) ORDER BY gpb.is_default DESC, gpb.dibuat_pada ASC
+                               )
+                               FROM public.grup_produk_barcode gpb
+                               WHERE gpb.grup_produk_id = gp.id
+                           ),
+                           '[]'::json
+                       ) as barcodes_json
                 FROM public.grup_produk gp
                 LEFT JOIN public.merek m ON gp.merek_id = m.id
                 LEFT JOIN public.item i ON gp.id = i.grup_id AND i.status_aktif = TRUE AND i.tipe_item = 'barang_jadi'
                 GROUP BY gp.id, m.id, m.kode_merek, m.nama_merek
                 ORDER BY gp.status_aktif DESC, gp.kode_grup ASC
             ");
+
+            // Format barcodes array untuk kemudahan view & Alpine.js
+            foreach ($groups as &$grp) {
+                if (is_string($grp['barcodes_json'] ?? null)) {
+                    $grp['barcodes'] = json_decode($grp['barcodes_json'], true) ?: [];
+                } elseif (is_array($grp['barcodes_json'] ?? null)) {
+                    $grp['barcodes'] = $grp['barcodes_json'];
+                } else {
+                    $grp['barcodes'] = [];
+                }
+            }
+            unset($grp);
 
             // 2. Katalog Barang Jadi (Finished Goods dengan Paginasi Server)
             $qFg = trim((string)$this->input('q_fg', $this->input('q', '')));
@@ -385,25 +413,37 @@ class ProductController extends Controller
     }
 
     // ==========================================
-    // 1. GRUP KEMASAN (BARCODE UNIVERSAL)
+    // 1. GRUP KEMASAN (MULTI-BARCODE UNIVERSAL)
     // ==========================================
     public function storeGroup(): void
     {
         Auth::requirePermission('master.products_manage');
 
         $nama = trim((string)$this->input('nama_grup'));
-        $barcode = trim((string)$this->input('barcode_universal'));
         $merekId = trim((string)$this->input('merek_id')) ?: null;
-        $rawHarga = $this->input('harga_ritel_l1', $this->input('harga_jual_pcs', '15000'));
-        $hargaL1 = (float)preg_replace('/[^0-9]/', '', (string)$rawHarga);
-        if ($hargaL1 <= 0) {
-            $hargaL1 = 15000.0;
-        }
+        $rawBarcodes = $this->input('barcodes_data', $this->input('barcodes_json', ''));
+        $legacyBarcode = trim((string)$this->input('barcode_universal'));
 
         if (empty($nama)) {
             $this->flashError('Nama grup kemasan wajib diisi.');
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
             return;
+        }
+
+        // Parse list barcode
+        $barcodeList = [];
+        if (!empty($rawBarcodes)) {
+            $decoded = is_string($rawBarcodes) ? json_decode($rawBarcodes, true) : $rawBarcodes;
+            if (is_array($decoded)) {
+                $barcodeList = $decoded;
+            }
+        }
+        if (empty($barcodeList) && !empty($legacyBarcode)) {
+            $barcodeList[] = [
+                'barcode' => $legacyBarcode,
+                'label_barcode' => 'Standar / Pabrik',
+                'is_default' => true
+            ];
         }
 
         try {
@@ -419,6 +459,36 @@ class ProductController extends Controller
             ")['max_num'] ?? 0);
             $kode = 'GRP-' . str_pad((string)($maxNum + 1), 3, '0', STR_PAD_LEFT);
 
+            // Tentukan barcode default
+            $defaultBarcode = null;
+            $cleanBarcodes = [];
+            $hasDefault = false;
+
+            foreach ($barcodeList as $bItem) {
+                $code = trim((string)($bItem['barcode'] ?? ''));
+                if ($code === '') continue;
+                $label = trim((string)($bItem['label_barcode'] ?? 'Standar / Pabrik')) ?: 'Standar / Pabrik';
+                $isDef = !empty($bItem['is_default']);
+
+                if ($isDef && !$hasDefault) {
+                    $hasDefault = true;
+                    $defaultBarcode = $code;
+                }
+
+                $cleanBarcodes[$code] = [
+                    'barcode' => $code,
+                    'label_barcode' => $label,
+                    'is_default' => $isDef
+                ];
+            }
+
+            // Jika belum ada yang default tapi ada barcode, jadikan yang pertama default
+            if (!$hasDefault && !empty($cleanBarcodes)) {
+                $firstKey = array_key_first($cleanBarcodes);
+                $cleanBarcodes[$firstKey]['is_default'] = true;
+                $defaultBarcode = $cleanBarcodes[$firstKey]['barcode'];
+            }
+
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
@@ -429,19 +499,37 @@ class ProductController extends Controller
                     :kode, :nama, :barcode, 'pcs', TRUE, :merek_id
                 ) RETURNING id
             ");
-            $stmt->execute(['kode' => $kode, 'nama' => $nama, 'barcode' => $barcode ?: null, 'merek_id' => $merekId]);
+            $stmt->execute(['kode' => $kode, 'nama' => $nama, 'barcode' => $defaultBarcode, 'merek_id' => $merekId]);
+            $newGroupId = $stmt->fetchColumn();
+
+            // Insert ke tabel grup_produk_barcode
+            $stmtBarcode = $pdo->prepare("
+                INSERT INTO public.grup_produk_barcode (
+                    grup_produk_id, barcode, label_barcode, is_default, status_aktif
+                ) VALUES (
+                    :grup_id, :barcode, :label, :is_def, TRUE
+                )
+            ");
+            foreach ($cleanBarcodes as $b) {
+                $stmtBarcode->execute([
+                    'grup_id' => $newGroupId,
+                    'barcode' => $b['barcode'],
+                    'label' => $b['label_barcode'],
+                    'is_def' => $b['is_default'] ? 'true' : 'false'
+                ]);
+            }
 
             $pdo->commit();
 
-            ActivityLog::log('master_data', 'Tambah Grup Kemasan', "Grup kemasan {$nama} ({$kode}) berhasil ditambahkan.");
+            ActivityLog::log('master_data', 'Tambah Grup Kemasan', "Grup kemasan {$nama} ({$kode}) berhasil ditambahkan dengan " . count($cleanBarcodes) . " barcode.");
 
             $this->flashSuccess("Grup kemasan {$nama} ({$kode}) berhasil ditambahkan!");
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
 
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
             $this->flashError('Gagal menambahkan grup: ' . $e->getMessage());
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
         }
     }
 
@@ -451,14 +539,31 @@ class ProductController extends Controller
 
         $id = $this->input('id');
         $nama = trim((string)$this->input('nama_grup'));
-        $barcode = trim((string)$this->input('barcode_universal'));
         $merekId = trim((string)$this->input('merek_id')) ?: null;
         $statusAktif = !empty($this->input('status_aktif'));
+        $rawBarcodes = $this->input('barcodes_data', $this->input('barcodes_json', ''));
+        $legacyBarcode = trim((string)$this->input('barcode_universal'));
 
         if (empty($id) || empty($nama)) {
             $this->flashError('ID dan Nama grup kemasan wajib diisi.');
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
             return;
+        }
+
+        // Parse list barcode
+        $barcodeList = [];
+        if (!empty($rawBarcodes)) {
+            $decoded = is_string($rawBarcodes) ? json_decode($rawBarcodes, true) : $rawBarcodes;
+            if (is_array($decoded)) {
+                $barcodeList = $decoded;
+            }
+        }
+        if (empty($barcodeList) && !empty($legacyBarcode)) {
+            $barcodeList[] = [
+                'barcode' => $legacyBarcode,
+                'label_barcode' => 'Standar / Pabrik',
+                'is_default' => true
+            ];
         }
 
         try {
@@ -466,6 +571,38 @@ class ProductController extends Controller
                 $defaultBrand = Database::fetchOne("SELECT id FROM public.merek WHERE status_aktif = TRUE ORDER BY kode_merek ASC LIMIT 1");
                 $merekId = $defaultBrand['id'] ?? null;
             }
+
+            // Tentukan barcode default
+            $defaultBarcode = null;
+            $cleanBarcodes = [];
+            $hasDefault = false;
+
+            foreach ($barcodeList as $bItem) {
+                $code = trim((string)($bItem['barcode'] ?? ''));
+                if ($code === '') continue;
+                $label = trim((string)($bItem['label_barcode'] ?? 'Standar / Pabrik')) ?: 'Standar / Pabrik';
+                $isDef = !empty($bItem['is_default']);
+
+                if ($isDef && !$hasDefault) {
+                    $hasDefault = true;
+                    $defaultBarcode = $code;
+                }
+
+                $cleanBarcodes[$code] = [
+                    'barcode' => $code,
+                    'label_barcode' => $label,
+                    'is_default' => $isDef
+                ];
+            }
+
+            if (!$hasDefault && !empty($cleanBarcodes)) {
+                $firstKey = array_key_first($cleanBarcodes);
+                $cleanBarcodes[$firstKey]['is_default'] = true;
+                $defaultBarcode = $cleanBarcodes[$firstKey]['barcode'];
+            }
+
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
 
             Database::execute("
                 UPDATE public.grup_produk SET
@@ -478,18 +615,40 @@ class ProductController extends Controller
             ", [
                 'id' => $id,
                 'nama' => $nama,
-                'barcode' => $barcode ?: null,
+                'barcode' => $defaultBarcode,
                 'aktif' => $statusAktif ? 'true' : 'false',
                 'merek_id' => $merekId
             ]);
 
-            ActivityLog::log('master_data', 'Update Grup Kemasan', "Grup kemasan {$nama} berhasil diperbarui.");
+            // Sync grup_produk_barcode: Hapus yang lama lalu masukkan yang baru
+            $pdo->prepare("DELETE FROM public.grup_produk_barcode WHERE grup_produk_id = :id")->execute(['id' => $id]);
+
+            $stmtBarcode = $pdo->prepare("
+                INSERT INTO public.grup_produk_barcode (
+                    grup_produk_id, barcode, label_barcode, is_default, status_aktif
+                ) VALUES (
+                    :grup_id, :barcode, :label, :is_def, TRUE
+                )
+            ");
+            foreach ($cleanBarcodes as $b) {
+                $stmtBarcode->execute([
+                    'grup_id' => $id,
+                    'barcode' => $b['barcode'],
+                    'label' => $b['label_barcode'],
+                    'is_def' => $b['is_default'] ? 'true' : 'false'
+                ]);
+            }
+
+            $pdo->commit();
+
+            ActivityLog::log('master_data', 'Update Grup Kemasan', "Grup kemasan {$nama} berhasil diperbarui dengan " . count($cleanBarcodes) . " barcode.");
             $this->flashSuccess("Grup kemasan {$nama} berhasil diperbarui!");
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
 
         } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
             $this->flashError('Gagal memperbarui grup: ' . $e->getMessage());
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
         }
     }
 
@@ -500,7 +659,7 @@ class ProductController extends Controller
         $id = $this->input('id');
         if (empty($id)) {
             $this->flashError('ID grup tidak valid.');
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
             return;
         }
 
@@ -511,7 +670,7 @@ class ProductController extends Controller
 
             if ($linkedItems > 0) {
                 $this->flashError("Grup kemasan ini tidak dapat dihapus karena masih menaungi {$linkedItems} SKU barang jadi.");
-                $this->redirect('/products');
+                $this->redirect('/products?tab=product_groups');
                 return;
             }
 
@@ -525,14 +684,14 @@ class ProductController extends Controller
 
             ActivityLog::log('master_data', 'Hapus Grup Kemasan', "Grup kemasan ID {$id} berhasil dihapus.");
             $this->flashSuccess('Grup kemasan berhasil dihapus.');
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
 
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             $this->flashError('Gagal menghapus grup: ' . $e->getMessage());
-            $this->redirect('/products');
+            $this->redirect('/products?tab=product_groups');
         }
     }
 
