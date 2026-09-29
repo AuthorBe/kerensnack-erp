@@ -1144,11 +1144,11 @@ document.addEventListener('alpine:init', () => {
 
                     <!-- ITEMS -->
                     <div style="display:flex;flex-direction:column;gap:6px;">
-                        <template x-for="it in (receiptData?.items || [])" :key="it.item_id">
+                        <template x-for="it in (receiptData?.items || [])" :key="it.grup_id || it.item_id || it.kode_sku">
                             <div>
-                                <div style="font-weight:700;font-size:10.5px;" x-text="it.nama_item"></div>
+                                <div style="font-weight:700;font-size:10.5px;" x-text="it.nama_grup || it.nama_item"></div>
                                 <div style="display:flex;justify-content:space-between;font-size:10px;color:#374151;">
-                                    <span x-text="it.qty_pcs + ' pcs @ ' + formatRupiah(it.harga)"></span>
+                                    <span x-text="it.qty_pcs + ' ' + (it.satuan_dasar || 'pcs') + ' @ ' + formatRupiah(it.harga)"></span>
                                     <span style="font-weight:700;" x-text="formatRupiah(it.subtotal)"></span>
                                 </div>
                             </div>

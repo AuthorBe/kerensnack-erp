@@ -323,7 +323,7 @@ $comp = CompanySetting::getAll();
             <thead>
                 <tr>
                     <th style="width:30px;" class="text-center">No</th>
-                    <th>Kode SKU &amp; Nama Produk</th>
+                    <th>Kode / Barcode &amp; Nama Produk (Grup)</th>
                     <th class="text-center" style="width:85px;">Retur (Pcs)</th>
                     <th class="text-center" style="width:95px;">Laku (Pcs)</th>
                     <th class="text-right" style="width:120px;">Harga Deal</th>
@@ -342,8 +342,8 @@ $comp = CompanySetting::getAll();
                 <tr>
                     <td class="text-center" style="color:#94a3b8;"><?= $idx + 1 ?></td>
                     <td>
-                        <strong style="color:#0f172a;"><?= htmlspecialchars($it['nama_item']) ?></strong>
-                        <div style="font-size:10.5px;color:#64748b;" class="font-mono"><?= htmlspecialchars($it['kode_sku']) ?></div>
+                        <strong style="color:#0f172a;"><?= htmlspecialchars($it['nama_grup'] ?? $it['nama_item'] ?? '-') ?></strong>
+                        <div style="font-size:10.5px;color:#64748b;" class="font-mono"><?= htmlspecialchars($it['barcode_universal'] ?? $it['kode_sku'] ?? '-') ?></div>
                     </td>
                     <td class="text-center font-mono" style="color:#dc2626;">
                         <?php 

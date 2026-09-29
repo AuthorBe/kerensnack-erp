@@ -1038,10 +1038,9 @@ class ConsignmentController extends Controller
                     SELECT COALESCE(gp.id, i.id) as grup_id,
                            COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                            COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                           COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
-                           COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                           COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
+                           COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
                            COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
-                           array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
                            SUM(rkk.stok_titip_awal) as stok_titip_awal,
                            SUM(rkk.tambah_titip_baru) as tambah_titip_baru,
                            SUM(rkk.sisa_fisik_di_rak) as sisa_fisik_di_rak,
@@ -1056,7 +1055,7 @@ class ConsignmentController extends Controller
                     JOIN public.item i ON rkk.item_id = i.id
                     LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                     WHERE tk.pesanan_id = :id
-                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                     HAVING (
                         SUM(rkk.stok_titip_awal) > 0 
                         OR SUM(rkk.tambah_titip_baru) > 0 
@@ -1073,10 +1072,9 @@ class ConsignmentController extends Controller
                         SELECT COALESCE(gp.id, i.id) as grup_id,
                                COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                                COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                               COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
-                               COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                               COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
+                               COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
                                COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
-                               array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
                                0 as stok_titip_awal,
                                0 as tambah_titip_baru,
                                0 as sisa_fisik_di_rak,
@@ -1090,7 +1088,7 @@ class ConsignmentController extends Controller
                         JOIN public.item i ON ip.item_id = i.id
                         LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                         WHERE ip.pesanan_id = :id
-                        GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                        GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                         ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
                     ", ['id' => $pesananId]);
                 }
@@ -1131,10 +1129,9 @@ class ConsignmentController extends Controller
                     SELECT COALESCE(gp.id, i.id) as grup_id,
                            COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                            COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                           COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
-                           COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                           COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
+                           COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
                            COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
-                           array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
                            SUM(rkk.stok_titip_awal) as stok_titip_awal,
                            SUM(rkk.tambah_titip_baru) as tambah_titip_baru,
                            SUM(rkk.sisa_fisik_di_rak) as sisa_fisik_di_rak,
@@ -1148,7 +1145,7 @@ class ConsignmentController extends Controller
                     JOIN public.item i ON rkk.item_id = i.id
                     LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                     WHERE rkk.kunjungan_id = :id
-                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                     HAVING (
                         SUM(rkk.stok_titip_awal) > 0 
                         OR SUM(rkk.tambah_titip_baru) > 0 
@@ -1261,10 +1258,9 @@ class ConsignmentController extends Controller
                     SELECT COALESCE(gp.id, i.id) as grup_id,
                            COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                            COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                           COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
-                           COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                           COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
+                           COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
                            COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
-                           array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
                            SUM(COALESCE(rkk.stok_titip_awal, 0)) as stok_titip_awal,
                            SUM(COALESCE(rkk.tambah_titip_baru, 0)) as tambah_titip_baru,
                            SUM(COALESCE(rkk.sisa_fisik_di_rak, 0)) as sisa_fisik_di_rak,
@@ -1291,7 +1287,7 @@ class ConsignmentController extends Controller
                         GROUP BY r.item_id
                     ) rkk ON rkk.item_id = ip.item_id
                     WHERE ip.pesanan_id = :id
-                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                     ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
                 ", ['id' => $pesananId]);
 
@@ -1331,10 +1327,9 @@ class ConsignmentController extends Controller
                     SELECT COALESCE(gp.id, i.id) as grup_id,
                            COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                            COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                           COALESCE(gp.barcode_universal, i.kode_sku) as kode_sku,
-                           COALESCE(gp.barcode_universal, i.kode_sku) as barcode_universal,
+                           COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
+                           COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
                            COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
-                           array_to_string(array_agg(DISTINCT i.nama_item), ', ') as varian_list,
                            SUM(rkk.stok_titip_awal) as stok_titip_awal,
                            SUM(rkk.tambah_titip_baru) as tambah_titip_baru,
                            SUM(rkk.sisa_fisik_di_rak) as sisa_fisik_di_rak,
@@ -1348,7 +1343,7 @@ class ConsignmentController extends Controller
                     JOIN public.item i ON rkk.item_id = i.id
                     LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                     WHERE rkk.kunjungan_id = :id
-                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                    GROUP BY COALESCE(gp.id, i.id), COALESCE(gp.nama_grup, i.nama_item), COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku), COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                     HAVING (
                         SUM(rkk.stok_titip_awal) > 0 
                         OR SUM(rkk.tambah_titip_baru) > 0 

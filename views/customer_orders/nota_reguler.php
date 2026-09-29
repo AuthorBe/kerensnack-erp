@@ -162,8 +162,8 @@ ob_start();
         <thead>
             <tr>
                 <th class="text-center" style="width:30px;">No</th>
-                <th style="width:110px;">Kode SKU</th>
-                <th>Nama Produk / Varian Snack</th>
+                <th style="width:125px;">Kode / Barcode</th>
+                <th>Nama Produk (Grup)</th>
                 <th class="text-center" style="width:60px;">Satuan</th>
                 <th class="text-center" style="width:55px;">Qty</th>
                 <th class="text-right" style="width:105px;">Harga Satuan</th>
@@ -182,7 +182,7 @@ ob_start();
                 <td class="text-center" style="color:#64748b;"><?= $idx + 1 ?></td>
                 <td class="font-mono" style="font-size:11px; color:#475569;"><?= htmlspecialchars($it['kode_sku'] ?? '-') ?></td>
                 <td>
-                    <div class="font-bold" style="color:#0f172a;"><?= htmlspecialchars($it['nama_item'] ?? '-') ?></div>
+                    <div class="font-bold" style="color:#0f172a;"><?= htmlspecialchars($it['nama_grup'] ?? $it['nama_item'] ?? '-') ?></div>
                 </td>
                 <td class="text-center"><?= htmlspecialchars($it['satuan_dasar'] ?: 'pcs') ?></td>
                 <td class="text-center font-bold font-mono"><?= number_format($qtyVal, 0, ',', '.') ?></td>
@@ -403,8 +403,8 @@ ob_start();
             <thead>
                 <tr>
                     <th style="width: 4%; text-align: center;">NO</th>
-                    <th style="width: 14%; text-align: left;">KODE SKU</th>
-                    <th style="text-align: left;">NAMA BARANG / PRODUK</th>
+                    <th style="width: 15%; text-align: left;">KODE/BARCODE</th>
+                    <th style="text-align: left;">NAMA PRODUK (GRUP)</th>
                     <th style="width: 7%; text-align: right;">QTY</th>
                     <th style="width: 7%; text-align: center;">SAT</th>
                     <th style="width: 15%; text-align: right;">HARGA (Rp)</th>
@@ -427,7 +427,7 @@ ob_start();
                     <td style="text-align: center;"><?= $no++ ?></td>
                     <td><?= htmlspecialchars($it['kode_sku'] ?? '-') ?></td>
                     <td>
-                        <strong><?= htmlspecialchars($it['nama_item'] ?? '-') ?></strong>
+                        <strong><?= htmlspecialchars($it['nama_grup'] ?? $it['nama_item'] ?? '-') ?></strong>
                     </td>
                     <td style="text-align: right;"><strong><?= number_format($qtyItem, 0, ',', '.') ?></strong></td>
                     <td style="text-align: center;"><?= htmlspecialchars($it['satuan_dasar'] ?: 'Pcs') ?></td>

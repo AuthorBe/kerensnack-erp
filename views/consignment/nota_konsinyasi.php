@@ -182,11 +182,6 @@ ob_start();
                             <span style="font-size: 7pt; color: #475569; font-weight: 600; font-family: var(--font-mono, monospace);">[<?= htmlspecialchars($barcode) ?>]</span>
                         <?php endif; ?>
                     </div>
-                    <?php if (!empty($d['varian_list'])): ?>
-                        <div style="font-size: 6.5pt; color: #64748b; line-height: 1.25; margin-top: 1px;">
-                            Varian: <?= htmlspecialchars($d['varian_list']) ?>
-                        </div>
-                    <?php endif; ?>
                 </td>
                 <td style="text-align: center; font-weight: 600;"><?= $kirimLalu > 0 ? number_format($kirimLalu, 0, ',', '.') : '0' ?></td>
                 <td style="text-align: center; font-weight: 700; background: rgba(16,185,129,0.04);"><?= $kirimBaru > 0 ? number_format($kirimBaru, 0, ',', '.') : '-' ?></td>
@@ -339,9 +334,6 @@ ob_start();
                         <strong><?= htmlspecialchars($d['nama_item'] ?? $d['nama_grup']) ?></strong>
                         <?php if (!empty($barcode)): ?>
                             <span style="font-size: 6.5pt;">[<?= htmlspecialchars($barcode) ?>]</span>
-                        <?php endif; ?>
-                        <?php if (!empty($d['varian_list'])): ?>
-                            <div style="font-size: 6pt; color: #333333;">Varian: <?= htmlspecialchars($d['varian_list']) ?></div>
                         <?php endif; ?>
                     </td>
                     <td style="text-align: center;"><?= $kirimLalu ?></td>

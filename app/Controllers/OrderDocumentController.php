@@ -152,12 +152,27 @@ class OrderDocumentController extends Controller
             }
 
             $items = Database::fetchAll("
-                SELECT ip.*, i.nama_item, i.kode_sku, i.satuan_dasar, gp.nama_grup
+                SELECT COALESCE(gp.id, i.id) as grup_id,
+                       COALESCE(gp.nama_grup, i.nama_item) as nama_item,
+                       COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
+                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
+                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
+                       SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
+                       MAX(ip.harga_satuan) as harga_satuan,
+                       MAX(ip.harga_satuan_deal) as harga_satuan_deal,
+                       SUM(ip.diskon_item_nominal) as diskon_item_nominal,
+                       SUM(ip.subtotal) as subtotal
                 FROM public.item_pesanan ip
                 JOIN public.item i ON ip.item_id = i.id
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 WHERE ip.pesanan_id = :id
-                ORDER BY ip.dibuat_pada ASC
+                  AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
+                GROUP BY COALESCE(gp.id, i.id),
+                         COALESCE(gp.nama_grup, i.nama_item),
+                         COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['id' => $id]);
 
             ob_start();
@@ -234,27 +249,39 @@ class OrderDocumentController extends Controller
             }
 
             $items = Database::fetchAll("
-                SELECT ip.*, i.nama_item, i.kode_sku, i.satuan_dasar, gp.nama_grup
+                SELECT COALESCE(gp.id, i.id) as grup_id,
+                       COALESCE(gp.nama_grup, i.nama_item) as nama_item,
+                       COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
+                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
+                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
+                       SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
+                       MAX(ip.harga_satuan) as harga_satuan,
+                       MAX(ip.harga_satuan_deal) as harga_satuan_deal,
+                       SUM(ip.diskon_item_nominal) as diskon_nominal,
+                       SUM(ip.subtotal) as subtotal
                 FROM public.item_pesanan ip
                 JOIN public.item i ON ip.item_id = i.id
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 WHERE ip.pesanan_id = :id
-                ORDER BY ip.dibuat_pada ASC
+                  AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
+                GROUP BY COALESCE(gp.id, i.id),
+                         COALESCE(gp.nama_grup, i.nama_item),
+                         COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+                ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['id' => $id]);
 
-            // Filter out bonus items for customer-facing invoice Excel
-            $items = array_values(array_filter($items, fn($it) => empty($it['is_bonus'])));
-
-            $headers = ['No', 'Kode SKU', 'Nama Produk Snack', 'Kategori Kemasan', 'Harga Satuan (Rp)', 'Qty (Pcs)', 'Diskon (Rp)', 'Subtotal (Rp)'];
+            $headers = ['No', 'Kode / Barcode', 'Nama Produk (Grup)', 'Satuan', 'Harga Satuan (Rp)', 'Qty (Pcs)', 'Diskon (Rp)', 'Subtotal (Rp)'];
             $rows = [];
             $no = 1;
             foreach ($items as $it) {
                 $rows[] = [
                     $no++,
                     $it['kode_sku'] ?? '-',
-                    $it['nama_item'] ?? '-',
-                    $it['nama_grup'] ?? '-',
-                    (float)($it['harga_satuan'] ?? 0),
+                    $it['nama_grup'] ?? $it['nama_item'] ?? '-',
+                    $it['satuan_dasar'] ?? 'pcs',
+                    (float)($it['harga_satuan_deal'] ?? $it['harga_satuan'] ?? 0),
                     (int)($it['kuantitas_satuan_dasar'] ?? 0),
                     (float)($it['diskon_nominal'] ?? 0),
                     (float)($it['subtotal'] ?? 0)
