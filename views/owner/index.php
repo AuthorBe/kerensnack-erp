@@ -75,6 +75,65 @@ ob_start();
     display: inline-block !important;
 }
 
+/* Executive Dashboard Header System */
+.owner-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 8px;
+}
+@media (min-width: 1200px) {
+    .owner-page-header {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+    }
+}
+.owner-page-header-body {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
+}
+.owner-page-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px 12px;
+    flex-wrap: wrap;
+}
+.owner-page-title {
+    font-size: clamp(1.2rem, 3.2vw, 1.55rem);
+    font-weight: 800;
+    color: var(--color-ink);
+    letter-spacing: -0.025em;
+    line-height: 1.25;
+    margin: 0;
+}
+.owner-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    width: 100%;
+}
+.owner-header-actions::-webkit-scrollbar {
+    display: none;
+}
+@media (min-width: 1200px) {
+    .owner-header-actions {
+        width: auto;
+        justify-content: flex-end;
+        flex-shrink: 0;
+        overflow-x: visible;
+        flex-wrap: wrap;
+    }
+}
+
 .period-filter-header {
     display: flex;
     flex-direction: column;
@@ -89,6 +148,104 @@ ob_start();
         justify-content: space-between;
         flex-wrap: wrap;
     }
+}
+
+/* Segmented Executive Tab Navigation */
+.owner-tab-nav {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    background-color: var(--color-canvas-soft);
+    border: 1px solid var(--color-hairline);
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.owner-tab-nav::-webkit-scrollbar {
+    display: none;
+}
+@media (min-width: 768px) {
+    .owner-tab-nav {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        overflow-x: visible;
+    }
+}
+
+.owner-tab-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 9px 15px;
+    min-height: 42px;
+    font-size: 12.5px;
+    font-weight: 700;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    color: var(--color-ink-mute);
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+    white-space: nowrap;
+    text-decoration: none;
+}
+@media (min-width: 768px) {
+    .owner-tab-btn {
+        flex: 1 1 0%;
+        padding: 9px 12px;
+    }
+}
+.owner-tab-btn:hover {
+    color: var(--color-ink);
+    background-color: rgba(0, 0, 0, 0.03);
+}
+.dark .owner-tab-btn:hover {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+.owner-tab-btn.is-active {
+    background-color: var(--color-canvas) !important;
+    color: var(--color-ink) !important;
+    border-color: var(--color-hairline) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+.dark .owner-tab-btn.is-active {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Quick Period Preset Buttons */
+.owner-preset-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 11px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 8px;
+    border: 1px solid var(--color-hairline);
+    white-space: nowrap;
+    flex-shrink: 0;
+    height: 30px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    background: transparent;
+    color: var(--color-ink-mute);
+    text-decoration: none;
+}
+.owner-preset-btn:hover {
+    color: var(--color-ink);
+    background: var(--color-canvas-soft);
+}
+.owner-preset-btn.is-active {
+    background-color: var(--color-primary) !important;
+    color: #fff !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12) !important;
 }
 
 @media print {
@@ -119,6 +276,16 @@ ob_start();
     filterPreset: '<?= htmlspecialchars($preset ?? 'this_month') ?>',
     filterStart: '<?= htmlspecialchars($startDate ?? '') ?>',
     filterEnd: '<?= htmlspecialchars($endDate ?? '') ?>',
+    switchTab(tab, event = null) {
+        this.activeTab = tab;
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState({}, '', url.toString());
+        if (event && event.currentTarget) {
+            event.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+        this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+    },
     setPreset(p) {
         this.filterPreset = p;
         const form = this.$refs.filterForm;
@@ -131,12 +298,12 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- 1. PAGE HEADER (Pola Kanonikal dari /dashboard)                           -->
     <!-- ========================================================================= -->
-    <div class="page-header">
-        <div class="page-header-body">
+    <div class="owner-page-header">
+        <div class="owner-page-header-body">
             <div class="page-header-icon is-amber">
                 <i data-lucide="crown"></i>
             </div>
-            <div class="page-header-text min-w-0">
+            <div class="min-w-0 flex-1">
                 <div class="page-header-tag">
                     <span class="tag-dot" style="background-color:#f59e0b;"></span>
                     <span>Executive Command Center</span>
@@ -180,34 +347,34 @@ ob_start();
                     $healthBorder = 'rgba(16, 185, 129, 0.25)';
                 }
                 ?>
-                <h1 class="page-title">
-                    <span><?= htmlspecialchars($pageTitle ?? 'Owner Executive Dashboard') ?></span>
+                <div class="owner-page-title-row">
+                    <h1 class="owner-page-title"><?= htmlspecialchars($pageTitle ?? 'Owner Executive Dashboard') ?></h1>
                     <span class="health-status-badge" 
                           style="background:<?= $healthBg ?>;color:<?= $healthColor ?>;border:1px solid <?= $healthBorder ?>;"
                           title="<?= htmlspecialchars($healthTitle) ?>">
                         <span class="health-dot" style="background:<?= $healthColor ?>;box-shadow:0 0 6px <?= $healthColor ?>;animation:pulse 1.8s infinite;"></span>
                         <span>Kesehatan Bisnis: <?= $healthLabel ?></span>
                     </span>
-                </h1>
+                </div>
                 <p class="page-subtitle"><?= htmlspecialchars($pageSubtitle ?? 'Pusat Analisis Performa Finansial & Bisnis Perusahaan') ?></p>
             </div>
         </div>
 
-        <!-- Quick Top Links -->
-        <div class="page-header-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <button type="button" onclick="window.print()" class="btn btn-secondary btn-sm" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:36px;" title="Cetak atau Simpan PDF Laporan Eksekutif">
+        <!-- Quick Top Links (Scrollable pill dock on mobile, flex on desktop) -->
+        <div class="owner-header-actions">
+            <button type="button" onclick="window.print()" class="btn btn-secondary btn-sm flex-shrink-0" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:35px;font-size:12px;white-space:nowrap;" title="Cetak atau Simpan PDF Laporan Eksekutif">
                 <i data-lucide="printer" style="width:14px;height:14px;color:var(--color-ink);"></i>
                 <span>Cetak Ringkasan</span>
             </button>
-            <a href="<?= Router::url('/cash/reports') ?>" class="btn btn-secondary btn-sm" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:36px;">
+            <a href="<?= Router::url('/cash/reports') ?>" class="btn btn-secondary btn-sm flex-shrink-0" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:35px;font-size:12px;white-space:nowrap;">
                 <i data-lucide="wallet" style="width:14px;height:14px;color:#3b82f6;"></i>
                 <span>Laporan Arus Kas</span>
             </a>
-            <a href="<?= Router::url('/inventory') ?>" class="btn btn-secondary btn-sm" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:36px;">
+            <a href="<?= Router::url('/inventory') ?>" class="btn btn-secondary btn-sm flex-shrink-0" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:35px;font-size:12px;white-space:nowrap;">
                 <i data-lucide="boxes" style="width:14px;height:14px;color:#10b981;"></i>
                 <span>Gudang Stok</span>
             </a>
-            <a href="<?= Router::url('/consignment') ?>" class="btn btn-secondary btn-sm" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:36px;">
+            <a href="<?= Router::url('/consignment') ?>" class="btn btn-secondary btn-sm flex-shrink-0" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;height:35px;font-size:12px;white-space:nowrap;">
                 <i data-lucide="store" style="width:14px;height:14px;color:#f59e0b;"></i>
                 <span>Konsinyasi Hub</span>
             </a>
@@ -239,28 +406,28 @@ ob_start();
                 <!-- Preset Buttons (Responsif horizontal scrollable dock) -->
                 <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 -mx-1 px-1 sm:mx-0 sm:px-0" style="-webkit-overflow-scrolling:touch;">
                     <button type="button" @click="setPreset('today')" 
-                            :class="filterPreset === 'today' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
-                            style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:7px;border:1px solid var(--color-hairline);white-space:nowrap;flex-shrink:0;height:30px;">
+                            class="owner-preset-btn"
+                            :class="{ 'is-active': filterPreset === 'today' }">
                         Hari Ini
                     </button>
                     <button type="button" @click="setPreset('7days')" 
-                            :class="filterPreset === '7days' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
-                            style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:7px;border:1px solid var(--color-hairline);white-space:nowrap;flex-shrink:0;height:30px;">
+                            class="owner-preset-btn"
+                            :class="{ 'is-active': filterPreset === '7days' }">
                         7 Hari Terakhir
                     </button>
                     <button type="button" @click="setPreset('this_month')" 
-                            :class="filterPreset === 'this_month' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
-                            style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:7px;border:1px solid var(--color-hairline);white-space:nowrap;flex-shrink:0;height:30px;">
+                            class="owner-preset-btn"
+                            :class="{ 'is-active': filterPreset === 'this_month' }">
                         Bulan Ini
                     </button>
                     <button type="button" @click="setPreset('last_month')" 
-                            :class="filterPreset === 'last_month' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
-                            style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:7px;border:1px solid var(--color-hairline);white-space:nowrap;flex-shrink:0;height:30px;">
+                            class="owner-preset-btn"
+                            :class="{ 'is-active': filterPreset === 'last_month' }">
                         Bulan Lalu
                     </button>
                     <button type="button" @click="setPreset('this_year')" 
-                            :class="filterPreset === 'this_year' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'"
-                            style="padding:4px 10px;font-size:11px;font-weight:700;border-radius:7px;border:1px solid var(--color-hairline);white-space:nowrap;flex-shrink:0;height:30px;">
+                            class="owner-preset-btn"
+                            :class="{ 'is-active': filterPreset === 'this_year' }">
                         Tahun Ini
                     </button>
                 </div>
@@ -291,61 +458,51 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- 3. TAB SWITCHER EKSEKUTIF (4 PILAR PERFORMA PERUSAHAAN)                    -->
     <!-- ========================================================================= -->
-    <div class="card p-1.5 sm:p-2 rounded-2xl" style="background:var(--color-canvas);border:1px solid var(--color-hairline);box-shadow:var(--shadow-1);">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2">
-            <!-- Tab 1: Finansial -->
-            <button type="button" 
-                    @click="activeTab = 'finance'; $nextTick(() => { if (window.lucide) lucide.createIcons(); })"
-                    :class="activeTab === 'finance' ? 'btn btn-primary shadow-sm' : 'btn btn-ghost hover:bg-canvas-soft'"
-                    style="display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;padding:8px 10px;border-radius:10px;font-size:12px;white-space:nowrap;height:38px;border:1px solid transparent;width:100%;"
-                    :style="activeTab !== 'finance' ? 'border-color:var(--color-hairline);color:var(--color-ink);' : ''">
-                <i data-lucide="trending-up" style="width:15px;height:15px;flex-shrink:0;"></i>
-                <span>Laba Rugi</span>
-            </button>
+    <div class="owner-tab-nav">
+        <!-- Tab 1: Finansial -->
+        <button type="button" 
+                @click="switchTab('finance', $event)"
+                class="owner-tab-btn" 
+                :class="{ 'is-active': activeTab === 'finance' }">
+            <i data-lucide="trending-up" class="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0"></i>
+            <span>Laba Rugi</span>
+        </button>
 
-            <!-- Tab 2: Penjualan -->
-            <button type="button" 
-                    @click="activeTab = 'sales'; $nextTick(() => { if (window.lucide) lucide.createIcons(); })"
-                    :class="activeTab === 'sales' ? 'btn btn-primary shadow-sm' : 'btn btn-ghost hover:bg-canvas-soft'"
-                    style="display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;padding:8px 10px;border-radius:10px;font-size:12px;white-space:nowrap;height:38px;border:1px solid transparent;width:100%;"
-                    :style="activeTab !== 'sales' ? 'border-color:var(--color-hairline);color:var(--color-ink);' : ''">
-                <i data-lucide="shopping-bag" style="width:15px;height:15px;flex-shrink:0;"></i>
-                <span>Penjualan</span>
-            </button>
+        <!-- Tab 2: Penjualan -->
+        <button type="button" 
+                @click="switchTab('sales', $event)"
+                class="owner-tab-btn" 
+                :class="{ 'is-active': activeTab === 'sales' }">
+            <i data-lucide="shopping-bag" class="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0"></i>
+            <span>Penjualan</span>
+        </button>
 
-            <!-- Tab 3: Produksi -->
-            <button type="button" 
-                    @click="activeTab = 'factory'; $nextTick(() => { if (window.lucide) lucide.createIcons(); })"
-                    :class="activeTab === 'factory' ? 'btn btn-primary shadow-sm' : 'btn btn-ghost hover:bg-canvas-soft'"
-                    style="display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;padding:8px 10px;border-radius:10px;font-size:12px;white-space:nowrap;height:38px;border:1px solid transparent;width:100%;"
-                    :style="activeTab !== 'factory' ? 'border-color:var(--color-hairline);color:var(--color-ink);' : ''">
-                <i data-lucide="factory" style="width:15px;height:15px;flex-shrink:0;"></i>
-                <span>Produksi</span>
-                <span class="badge badge-primary font-bold text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                      style="font-family:inherit;line-height:1;margin-left:2px;letter-spacing:0.01em;"
-                      :style="activeTab === 'factory' ? 'background:rgba(255,255,255,0.22) !important;color:#fff !important;border-color:rgba(255,255,255,0.35) !important;' : ''">
-                    <?= number_format((int)($productionSummary['total_pcs'] ?? 0)) ?> pcs
-                </span>
-            </button>
+        <!-- Tab 3: Produksi -->
+        <button type="button" 
+                @click="switchTab('factory', $event)"
+                class="owner-tab-btn" 
+                :class="{ 'is-active': activeTab === 'factory' }">
+            <i data-lucide="factory" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0"></i>
+            <span>Produksi</span>
+            <span class="badge badge-mono font-mono text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 font-bold">
+                <?= number_format((int)($productionSummary['total_pcs'] ?? 0)) ?> pcs
+            </span>
+        </button>
 
-            <!-- Tab 4: Konsinyasi -->
-            <button type="button" 
-                    @click="activeTab = 'consignment'; $nextTick(() => { if (window.lucide) lucide.createIcons(); })"
-                    :class="activeTab === 'consignment' ? 'btn btn-primary shadow-sm' : 'btn btn-ghost hover:bg-canvas-soft'"
-                    style="display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;padding:8px 10px;border-radius:10px;font-size:12px;white-space:nowrap;height:38px;border:1px solid transparent;width:100%;"
-                    :style="activeTab !== 'consignment' ? 'border-color:var(--color-hairline);color:var(--color-ink);' : ''">
-                <i data-lucide="store" style="width:15px;height:15px;flex-shrink:0;"></i>
-                <span>Konsinyasi</span>
-                <?php if (!empty($overdueStores)): ?>
-                <span class="badge badge-warning font-bold text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
-                      style="font-family:inherit;line-height:1;margin-left:2px;letter-spacing:0.01em;"
-                      :style="activeTab === 'consignment' ? 'background:rgba(255,255,255,0.22) !important;color:#fff !important;border-color:rgba(255,255,255,0.35) !important;' : ''"
-                      title="<?= count($overdueStores) ?> Toko Overdue">
-                    <?= count($overdueStores) ?> Overdue
-                </span>
-                <?php endif; ?>
-            </button>
-        </div>
+        <!-- Tab 4: Konsinyasi -->
+        <button type="button" 
+                @click="switchTab('consignment', $event)"
+                class="owner-tab-btn" 
+                :class="{ 'is-active': activeTab === 'consignment' }">
+            <i data-lucide="store" class="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0"></i>
+            <span>Konsinyasi</span>
+            <?php if (!empty($overdueStores)): ?>
+            <span class="badge badge-warning font-bold text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0"
+                  title="<?= count($overdueStores) ?> Toko Overdue">
+                <?= count($overdueStores) ?> Overdue
+            </span>
+            <?php endif; ?>
+        </button>
     </div>
 
     <!-- ========================================================================= -->
