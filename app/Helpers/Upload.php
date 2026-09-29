@@ -334,6 +334,169 @@ class Upload
     }
 
     /**
+     * Parse raw string/JSON kolom DB menjadi array of photo paths.
+     * Kompatibel penuh dengan format JSON Array string ["path1", "path2"] maupun legacy single string "path1".
+     *
+     * @param string|array|null $raw Nilai kolom database atau array path
+     * @return array<int, string> List path relatif foto bersih
+     */
+    public static function parsePhotoUrls(string|array|null $raw): array
+    {
+        if (empty($raw)) {
+            return [];
+        }
+
+        if (is_array($raw)) {
+            $cleaned = [];
+            foreach ($raw as $item) {
+                if (is_string($item) && trim($item) !== '') {
+                    $cleaned[] = trim($item);
+                }
+            }
+            return array_values($cleaned);
+        }
+
+        $rawStr = trim($raw);
+        if ($rawStr === '') {
+            return [];
+        }
+
+        // Cek jika formatnya JSON array (misal: '["path/1.webp", "path/2.webp"]')
+        if (str_starts_with($rawStr, '[') && str_ends_with($rawStr, ']')) {
+            $decoded = json_decode($rawStr, true);
+            if (is_array($decoded)) {
+                $cleaned = [];
+                foreach ($decoded as $item) {
+                    if (is_string($item) && trim($item) !== '') {
+                        $cleaned[] = trim($item);
+                    }
+                }
+                return array_values($cleaned);
+            }
+        }
+
+        // Single string legacy (misal: "receipts/2026/09/abc.webp")
+        return [$rawStr];
+    }
+
+    /**
+     * Dapatkan daftar URL penyajian media yang siap dikonsumsi frontend dari raw DB value atau array path.
+     *
+     * @param string|array|null $raw Nilai string/JSON/array path dari database
+     * @param int $minutes Disimpan untuk kompatibilitas fungsi
+     * @return array<int, string> Daftar URL /media/view?path=...
+     */
+    public static function presignedUrls(string|array|null $raw, int $minutes = 10): array
+    {
+        $paths = self::parsePhotoUrls($raw);
+        $urls = [];
+
+        foreach ($paths as $path) {
+            $url = self::presignedUrl($path, $minutes);
+            if (!empty($url)) {
+                $urls[] = $url;
+            }
+        }
+
+        return $urls;
+    }
+
+    /**
+     * Simpan multiple file unggahan gambar (hingga max 5 foto) dan kembalikan JSON array string.
+     * Mendukung struktur $_FILES['name'][] (multi) maupun $_FILES['name'] (single).
+     *
+     * @param array $files Struktur array dari $_FILES['input_name']
+     * @param string $subdir Subdirektori target ('purchases', 'delivery_proofs', 'consignments', dll)
+     * @param string $prefix Prefix penamaan (opsional)
+     * @param int $maxBytes Ukuran maksimal per berkas dalam bytes (default 10MB)
+     * @param int $maxPhotos Batas maksimal jumlah foto per aksi (default 5)
+     * @return array ['success' => bool, 'path' => string|null, 'paths' => array, 'error' => string|null]
+     */
+    public static function storeMultipleImages(array $files, string $subdir, string $prefix = 'FILE', int $maxBytes = 10485760, int $maxPhotos = 5): array
+    {
+        if (empty($files)) {
+            return ['success' => false, 'path' => null, 'paths' => [], 'error' => 'Tidak ada berkas yang diunggah.'];
+        }
+
+        // Normalisasi struktur $_FILES menjadi list array individual
+        $fileList = [];
+
+        if (isset($files['name']) && is_array($files['name'])) {
+            // Format multi-upload: $_FILES['foto']['name'][0], $_FILES['foto']['tmp_name'][0], dst
+            $count = count($files['name']);
+            for ($i = 0; $i < $count; $i++) {
+                $err = $files['error'][$i] ?? UPLOAD_ERR_NO_FILE;
+                if ($err === UPLOAD_ERR_NO_FILE || empty($files['name'][$i])) {
+                    continue;
+                }
+                $fileList[] = [
+                    'name'     => $files['name'][$i],
+                    'type'     => $files['type'][$i] ?? '',
+                    'tmp_name' => $files['tmp_name'][$i],
+                    'error'    => $err,
+                    'size'     => $files['size'][$i] ?? 0,
+                ];
+            }
+        } elseif (isset($files['name']) && is_string($files['name'])) {
+            // Format single-upload standar: $_FILES['foto']['name']
+            if (($files['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE && !empty($files['name'])) {
+                $fileList[] = $files;
+            }
+        } elseif (is_array($files) && isset($files[0]['name'])) {
+            // Array of files: [ ['name' => ..., 'tmp_name' => ...], ... ]
+            foreach ($files as $f) {
+                if (($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE && !empty($f['name'])) {
+                    $fileList[] = $f;
+                }
+            }
+        }
+
+        if (empty($fileList)) {
+            return ['success' => false, 'path' => null, 'paths' => [], 'error' => 'Tidak ada berkas yang diunggah.'];
+        }
+
+        if (count($fileList) > $maxPhotos) {
+            return [
+                'success' => false,
+                'path'    => null,
+                'paths'   => [],
+                'error'   => "Maksimal {$maxPhotos} foto yang dapat diunggah sekaligus (terdeteksi " . count($fileList) . " foto)."
+            ];
+        }
+
+        $uploadedPaths = [];
+
+        foreach ($fileList as $index => $singleFile) {
+            $uploadResult = self::storeImage($singleFile, $subdir, $prefix, $maxBytes);
+            if (!$uploadResult['success']) {
+                $photoNum = $index + 1;
+                return [
+                    'success' => false,
+                    'path'    => null,
+                    'paths'   => $uploadedPaths,
+                    'error'   => "Gagal pada foto ke-{$photoNum}: " . ($uploadResult['error'] ?? 'Terjadi kesalahan sistem.')
+                ];
+            }
+            if (!empty($uploadResult['path'])) {
+                $uploadedPaths[] = $uploadResult['path'];
+            }
+        }
+
+        if (empty($uploadedPaths)) {
+            return ['success' => false, 'path' => null, 'paths' => [], 'error' => 'Gagal memproses berkas foto.'];
+        }
+
+        $jsonEncoded = json_encode($uploadedPaths, JSON_UNESCAPED_SLASHES);
+
+        return [
+            'success' => true,
+            'path'    => $jsonEncoded,
+            'paths'   => $uploadedPaths,
+            'error'   => null,
+        ];
+    }
+
+    /**
      * Shortcut alias untuk presignedUrl.
      */
     public static function url(?string $path): ?string
