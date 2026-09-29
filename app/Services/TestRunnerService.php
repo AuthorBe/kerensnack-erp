@@ -276,6 +276,12 @@ class TestRunnerService
             'category'    => 'Dashboard & Presence',
             'description' => 'Validasi card Pengguna Aktif Saat Ini: nama lengkap, jam login, status online/offline, dan filter offline 5 menit.'
         ],
+        'multi_barcode_integrity' => [
+            'file'        => 'MultiBarcodeIntegrityTest.php',
+            'title'       => 'Multi-Barcode Product Groups, Customer Mapping & Invoice Snapshot',
+            'category'    => 'Master Data & Penjualan',
+            'description' => 'Validasi multi-barcode grup produk, pemetaan barcode per toko mitra, snapshot immutability faktur pesanan, dan RPC scanner fn_cari_item_by_barcode.'
+        ],
     ];
 
     // -------------------------------------------------------------------------
