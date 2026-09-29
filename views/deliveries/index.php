@@ -95,10 +95,6 @@ ob_start();
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="<?= Router::url('/deliveries/export/excel') ?>" class="btn btn-secondary" style="height:38px;white-space:nowrap;background:#10b981;color:#fff;border-color:#059669;font-weight:700;">
-                    <i data-lucide="file-spreadsheet"></i>
-                    <span>Export Excel</span>
-                </a>
                 <?php if (Auth::can('deliveries.create')): ?>
                 <button @click="openAddModal()" :disabled="pendingOrders.length === 0" class="btn btn-primary" style="height:38px;white-space:nowrap;">
                     <i data-lucide="plus"></i>

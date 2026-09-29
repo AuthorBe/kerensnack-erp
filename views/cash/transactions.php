@@ -157,16 +157,12 @@ ob_start();
                     <i data-lucide="search" style="position:absolute;left:9px;top:10px;width:14px;height:14px;color:var(--color-ink-mute);pointer-events:none;"></i>
                 </div>
 
-                <!-- Action Buttons: Filter & Export -->
+                <!-- Action Buttons: Filter -->
                 <div class="flex items-center gap-2">
                     <button type="submit" class="btn btn-secondary btn-sm" style="height:36px;font-weight:700;">
                         <i data-lucide="filter" style="width:14px;height:14px;"></i>
                         <span>Filter</span>
                     </button>
-                    <a href="<?= Router::url('/cash/transactions/export-excel?' . http_build_query($filters)) ?>" class="btn btn-secondary btn-sm" style="height:36px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:5px;" title="Unduh data transaksi kas yang difilter ke Excel">
-                        <i data-lucide="file-spreadsheet" style="width:14px;height:14px;"></i>
-                        <span>Excel</span>
-                    </a>
                 </div>
             </form>
         </div>

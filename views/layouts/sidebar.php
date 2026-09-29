@@ -74,7 +74,7 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
 
         <?php if (Auth::can(['orders.view_all', 'orders.view_assigned'])): ?>
         <a href="<?= Router::url('/customer-orders') ?>"
-           class="sidebar-link <?= (($currentPath !== $base . '/customer-orders/po-list' && $currentPath !== '/customer-orders/po-list') && (isActiveSection('/customer-orders', $currentPath, $base) || isActiveSection('/sales-orders', $currentPath, $base))) ? 'is-active' : '' ?>"
+           class="sidebar-link <?= (($currentPath !== $base . '/customer-orders/po-list' && $currentPath !== '/customer-orders/po-list') && isActiveSection('/customer-orders', $currentPath, $base)) ? 'is-active' : '' ?>"
            data-tooltip="Pesanan Pelanggan">
             <i data-lucide="shopping-bag"></i>
             <span>Pesanan Pelanggan</span>
@@ -228,16 +228,27 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
         <?php endif; ?>
         <?php endif; ?>
 
-        <!-- MANAJEMEN EKSEKUTIF -->
-        <?php if (Auth::can('owner.dashboard')): ?>
-        <div class="sidebar-section-label">Manajemen</div>
+        <!-- EXECUTIVE MENU -->
+        <?php if (Auth::can(['owner.dashboard', 'reports.download_hub'])): ?>
+        <div class="sidebar-section-label">Executive Menu</div>
 
+        <?php if (Auth::can('owner.dashboard')): ?>
         <a href="<?= Router::url('/owner') ?>"
            class="sidebar-link <?= isActive('/owner', $currentPath, $base) ? 'is-active' : '' ?>"
            data-tooltip="Executive Dashboard">
             <i data-lucide="gauge"></i>
             <span>Executive Dashboard</span>
         </a>
+        <?php endif; ?>
+
+        <?php if (Auth::can('reports.download_hub')): ?>
+        <a href="<?= Router::url('/reports') ?>"
+           class="sidebar-link <?= isActiveSection('/reports', $currentPath, $base) ? 'is-active' : '' ?>"
+           data-tooltip="Pusat Unduh Laporan">
+            <i data-lucide="folder-down"></i>
+            <span>Pusat Unduh Laporan</span>
+        </a>
+        <?php endif; ?>
         <?php endif; ?>
 
         <!-- SISTEM & PENGATURAN -->

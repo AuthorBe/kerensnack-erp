@@ -78,15 +78,6 @@ $roleThemes = [
                 <span style="color:var(--color-ink-mute);font-size:11px;">Storage DB</span>
             </div>
 
-            <!-- Ekspor Excel Button -->
-            <a href="<?= Router::url('/settings/activity-logs/export?' . http_build_query($_GET)) ?>" 
-               class="btn btn-secondary btn-sm" 
-               style="height:36px;font-size:12px;font-weight:700;border-radius:8px;padding:0 14px;"
-               title="Unduh data audit trail ke berkas Excel (.xlsx) sesuai filter aktif">
-                <i data-lucide="download" style="width:14px;height:14px;color:#10b981;"></i>
-                <span>Ekspor Excel</span>
-            </a>
-
             <!-- Developer Prune Modal Button -->
             <?php if ($isDeveloper): ?>
             <button type="button" 

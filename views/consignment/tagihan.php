@@ -1388,14 +1388,6 @@ document.addEventListener('alpine:init', () => {
                 <i data-lucide="book-open" class="w-4 h-4 text-amber-500"></i>
                 <span class="tagihan-guide-btn-text">Panduan SOP Tagihan</span>
             </a>
-            <a href="<?= Router::url('/consignment/tagihan/export-excel') ?>?status=<?= urlencode($filterStatus ?? '') ?>&tipe_konsinyasi=<?= urlencode($filterTipeKonsinyasi ?? '') ?>" 
-               class="btn btn-secondary"
-               style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:6px; border-radius:12px;"
-               x-show="activeTab === 'daftar'" 
-               x-cloak>
-                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                <span>Export Excel</span>
-            </a>
         </div>
     </div>
 

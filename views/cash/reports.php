@@ -28,18 +28,11 @@ ob_start();
             </div>
         </div>
 
-        <!-- Quick Top Actions: Lihat Transaksi & Export Excel -->
+        <!-- Quick Top Actions: Lihat Transaksi -->
         <div class="page-header-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <a href="<?= Router::url('/cash/transactions') ?>" class="btn btn-secondary btn-sm flex-1 sm:flex-initial" style="font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:36px;">
                 <i data-lucide="arrow-left-right" style="width:14px; height:14px;"></i>
                 <span>Transaksi Kas</span>
-            </a>
-            <a href="<?= Router::url('/cash/reports/export-excel?start_date=' . urlencode($startDate) . '&end_date=' . urlencode($endDate) . '&account_id=' . urlencode($accountId ?? 'all')) ?>" 
-               class="btn btn-secondary btn-sm flex-1 sm:flex-initial" 
-               style="height:36px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; justify-content:center; gap:6px;"
-               title="Unduh Rekapitulasi Laporan Arus Kas ke Excel">
-                <i data-lucide="file-spreadsheet" style="width:15px;height:15px;"></i>
-                <span>Export Excel</span>
             </a>
         </div>
     </div>
@@ -584,10 +577,6 @@ ob_start();
         </div>
     </div>
 
-    <!-- ========================================================================= -->
-    <!-- 6. MODAL RINCIAN VALUASI KAS PERSEDIAAN (HPP POPUP)                       -->
-    <!-- ========================================================================= -->
-    <template x-teleport="body">
     <!-- ========================================================================= -->
     <!-- 6. MODAL RINCIAN VALUASI KAS PERSEDIAAN (HPP POPUP)                       -->
     <!-- ========================================================================= -->

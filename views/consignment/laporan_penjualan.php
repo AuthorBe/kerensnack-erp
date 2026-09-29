@@ -880,15 +880,6 @@ document.addEventListener('alpine:init', () => {
                 <p class="page-subtitle text-xs sm:text-sm"><?= htmlspecialchars($pageSubtitle ?? 'Dashboard Performa Penjualan Semua Toko Konsinyasi') ?></p>
             </div>
         </div>
-        
-        <div class="page-header-actions" style="display:flex; gap:8px; align-items:center;">
-            <a href="<?= Router::url('/consignment/laporan-penjualan/export-excel') ?>?start_date=<?= urlencode($startDate) ?>&end_date=<?= urlencode($endDate) ?>&pelanggan_id=<?= urlencode($selectedStoreId) ?>&sales_id=<?= urlencode($selectedSalesId) ?>" 
-               class="btn btn-secondary"
-               style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
-                <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                <span>Export Excel</span>
-            </a>
-        </div>
     </div>
 
     <!-- ========================================================================= -->

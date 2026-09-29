@@ -380,15 +380,6 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
                 <p class="page-subtitle text-xs sm:text-sm">Audit HPP resmi barang retur rusak/BS ditarik &amp; monitoring saldo selisih hilang gantung di toko mitra.</p>
             </div>
         </div>
-        <div class="page-header-actions flex items-center gap-2 flex-wrap">
-            <a :href="getExportUrl()" 
-               class="btn btn-secondary btn-sm flex items-center gap-2" 
-               style="border-radius:12px;font-weight:700;border-color:rgba(16,185,129,0.4);color:#10b981;background:rgba(16,185,129,0.06);height:38px;padding:0 14px;" 
-               title="Download Laporan Format Excel (.xlsx)">
-                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
-                <span x-text="activeTab === 'hilang' ? 'Export Excel (Barang Hilang)' : 'Export Excel (Retur Rusak)'">Export Excel</span>
-            </a>
-        </div>
     </div>
 
     <!-- ZERO HPP NOTICE BANNER (IF ANY) -->

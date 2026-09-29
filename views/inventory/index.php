@@ -47,10 +47,6 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                 <span>Riwayat Opname</span>
             </a>
             <?php endif; ?>
-            <a href="<?= Router::url('/inventory/export-excel') ?>" class="btn btn-secondary" style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:7px;">
-                <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i>
-                <span>Export Excel</span>
-            </a>
         </div>
     </div>
 

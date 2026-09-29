@@ -569,10 +569,6 @@ ob_start();
                 <i data-lucide="book-open" class="text-blue-500"></i>
                 <span class="hide-mobile">Panduan SOP B2B</span>
             </a>
-            <a href="<?= Router::url('/customer-orders/export/excel?' . http_build_query($filter)) ?>" class="btn btn-secondary" style="font-weight:700; background:#10b981; color:#fff; border-color:#059669;">
-                <i data-lucide="file-spreadsheet"></i>
-                <span>Export Excel</span>
-            </a>
             <?php if (Auth::can('orders.create')): ?>
             <a href="<?= Router::url('/customer-orders/create') ?>" class="btn btn-primary" style="font-weight:700;">
                 <i data-lucide="plus"></i>
