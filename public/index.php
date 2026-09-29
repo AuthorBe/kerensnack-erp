@@ -325,6 +325,7 @@ Router::post('/customers/store', [CustomerController::class, 'store']);
 Router::post('/customers/update', [CustomerController::class, 'update']);
 Router::post('/customers/delete', [CustomerController::class, 'delete']);
 Router::post('/customers/save-items', [CustomerController::class, 'saveCustomerItems']);
+Router::post('/customers/save-barcodes', [CustomerController::class, 'saveBarcodes']);
 Router::post('/customers/store-territory', [CustomerController::class, 'storeTerritory']);
 Router::post('/customers/update-territory', [CustomerController::class, 'updateTerritory']);
 Router::post('/customers/delete-territory', [CustomerController::class, 'deleteTerritory']);

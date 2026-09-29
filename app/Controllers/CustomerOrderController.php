@@ -540,6 +540,30 @@ class CustomerOrderController extends Controller
                 $whitelistMap[$w['pelanggan_id']][] = $w['item_id'];
             }
 
+            // 6b. Ambil Multi Barcode per Grup Produk & Preferensi Toko Pelanggan
+            $rawGroupBarcodes = Database::fetchAll("
+                SELECT grup_produk_id, barcode, label_barcode, is_default
+                FROM public.grup_produk_barcode
+                ORDER BY grup_produk_id, is_default DESC, dibuat_pada ASC
+            ");
+            $groupBarcodesMap = [];
+            foreach ($rawGroupBarcodes as $gb) {
+                $groupBarcodesMap[$gb['grup_produk_id']][] = [
+                    'barcode' => $gb['barcode'],
+                    'label_barcode' => $gb['label_barcode'],
+                    'is_default' => (bool)$gb['is_default']
+                ];
+            }
+
+            $rawCustBarcodes = Database::fetchAll("
+                SELECT pelanggan_id, grup_produk_id, barcode
+                FROM public.pelanggan_grup_barcode
+            ");
+            $customerBarcodesMap = [];
+            foreach ($rawCustBarcodes as $cb) {
+                $customerBarcodesMap[$cb['pelanggan_id']][$cb['grup_produk_id']] = $cb['barcode'];
+            }
+
             // 7. Auto Generate Nomor Faktur Format: KRS-YYMM-XXXX
             $autoNota = DocumentNumber::suggestOrderNumber();
 
@@ -553,6 +577,8 @@ class CustomerOrderController extends Controller
                 'priceMatrix' => $priceMatrix,
                 'groupBrandLevelsMap' => $groupBrandLevelsMap,
                 'whitelistMap' => $whitelistMap,
+                'groupBarcodesMap' => $groupBarcodesMap,
+                'customerBarcodesMap' => $customerBarcodesMap,
                 'autoNota' => $autoNota,
             ]);
 
@@ -790,12 +816,15 @@ class CustomerOrderController extends Controller
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
                     pesanan_id, item_id, kuantitas_satuan_dasar,
-                    harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan, dibuat_pada
+                    harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan, barcode_universal, dibuat_pada
                 ) VALUES (
                     :pesanan_id, :item_id, :qty_dasar,
-                    :harga, :diskon, :bonus, :subtotal, :hpp, NOW()
+                    :harga, :diskon, :bonus, :subtotal, :hpp, :barcode_universal, NOW()
                 )
             ");
+
+            // Cache fallback barcode untuk item
+            $resolvedItemBarcodes = [];
 
             foreach ($items as $it) {
                 $itemId = $it['item_id'];
@@ -806,6 +835,25 @@ class CustomerOrderController extends Controller
                 $isBonus = !empty($it['is_bonus']);
                 $hpp = (float)($it['hpp'] ?? 0);
 
+                $barcode = !empty($it['barcode_universal']) ? trim((string)$it['barcode_universal']) : null;
+                if (empty($barcode)) {
+                    if (!isset($resolvedItemBarcodes[$itemId])) {
+                        $bcRow = Database::fetchOne("
+                            SELECT COALESCE(
+                                (SELECT pgb.barcode FROM public.pelanggan_grup_barcode pgb WHERE pgb.pelanggan_id = :pelanggan_id AND pgb.grup_produk_id = i.grup_id LIMIT 1),
+                                (SELECT gpb.barcode FROM public.grup_produk_barcode gpb WHERE gpb.grup_produk_id = i.grup_id AND gpb.is_default = TRUE LIMIT 1),
+                                gp.barcode_universal,
+                                (SELECT gpb2.barcode FROM public.grup_produk_barcode gpb2 WHERE gpb2.grup_produk_id = i.grup_id LIMIT 1)
+                            ) as resolved_barcode
+                            FROM public.item i
+                            LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                            WHERE i.id = :item_id
+                        ", ['pelanggan_id' => $pelangganId, 'item_id' => $itemId]);
+                        $resolvedItemBarcodes[$itemId] = $bcRow['resolved_barcode'] ?? null;
+                    }
+                    $barcode = $resolvedItemBarcodes[$itemId];
+                }
+
                 $stmtItem->execute([
                     'pesanan_id' => $orderId,
                     'item_id' => $itemId,
@@ -815,7 +863,33 @@ class CustomerOrderController extends Controller
                     'bonus' => $isBonus ? 'true' : 'false',
                     'subtotal' => $subtotal,
                     'hpp' => $hpp,
+                    'barcode_universal' => $barcode,
                 ]);
+            }
+
+            // Simpan preferensi barcode pelanggan jika opsi dicentang
+            if (!empty($this->input('save_customer_barcode_pref')) && !empty($pelangganId)) {
+                $savedGroups = [];
+                foreach ($items as $it) {
+                    $bCode = !empty($it['barcode_universal']) ? trim((string)$it['barcode_universal']) : null;
+                    if ($bCode) {
+                        $grpRow = Database::fetchOne("SELECT grup_id FROM public.item WHERE id = :id", ['id' => $it['item_id']]);
+                        $grpId = $grpRow['grup_id'] ?? null;
+                        if ($grpId && !isset($savedGroups[$grpId])) {
+                            $savedGroups[$grpId] = true;
+                            $pdo->prepare("
+                                INSERT INTO public.pelanggan_grup_barcode (pelanggan_id, grup_produk_id, barcode, dibuat_pada, diubah_pada)
+                                VALUES (:pelanggan_id, :grup_id, :barcode, NOW(), NOW())
+                                ON CONFLICT (pelanggan_id, grup_produk_id)
+                                DO UPDATE SET barcode = EXCLUDED.barcode, diubah_pada = NOW()
+                            ")->execute([
+                                'pelanggan_id' => $pelangganId,
+                                'grup_id' => $grpId,
+                                'barcode' => $bCode
+                            ]);
+                        }
+                    }
+                }
             }
 
             // 5. Catat Penerimaan Kas Masuk (Uang Muka / Pelunasan Langsung) ke Buku Kas Arus Kas
@@ -948,9 +1022,9 @@ class CustomerOrderController extends Controller
             // Ambil Detail Items yang sudah ada
             $existingItems = Database::fetchAll("
                 SELECT ip.id, ip.item_id, ip.kuantitas_satuan_dasar as qty, ip.harga_satuan_deal as harga,
-                       ip.diskon_item_nominal as diskon, ip.subtotal, ip.is_bonus,
+                       ip.diskon_item_nominal as diskon, ip.subtotal, ip.is_bonus, ip.barcode_universal,
                        i.nama_item, i.kode_sku, i.stok_fisik_saat_ini,
-                       gp.nama_grup, gp.kode_grup, gp.barcode_universal
+                       gp.id as grup_id, gp.nama_grup, gp.kode_grup, gp.barcode_universal as grup_barcode_universal
                 FROM public.item_pesanan ip
                 JOIN public.item i ON ip.item_id = i.id
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
@@ -1018,6 +1092,30 @@ class CustomerOrderController extends Controller
             $rawWhitelist = Database::fetchAll("SELECT pelanggan_id, item_id FROM public.pelanggan_item WHERE pelanggan_id = :pid", ['pid' => $order['pelanggan_id']]);
             $whitelistMap = [$order['pelanggan_id'] => array_column($rawWhitelist, 'item_id')];
 
+            // Ambil Multi Barcode per Grup Produk & Preferensi Toko Pelanggan
+            $rawGroupBarcodes = Database::fetchAll("
+                SELECT grup_produk_id, barcode, label_barcode, is_default
+                FROM public.grup_produk_barcode
+                ORDER BY grup_produk_id, is_default DESC, dibuat_pada ASC
+            ");
+            $groupBarcodesMap = [];
+            foreach ($rawGroupBarcodes as $gb) {
+                $groupBarcodesMap[$gb['grup_produk_id']][] = [
+                    'barcode' => $gb['barcode'],
+                    'label_barcode' => $gb['label_barcode'],
+                    'is_default' => (bool)$gb['is_default']
+                ];
+            }
+
+            $rawCustBarcodes = Database::fetchAll("
+                SELECT pelanggan_id, grup_produk_id, barcode
+                FROM public.pelanggan_grup_barcode
+            ");
+            $customerBarcodesMap = [];
+            foreach ($rawCustBarcodes as $cb) {
+                $customerBarcodesMap[$cb['pelanggan_id']][$cb['grup_produk_id']] = $cb['barcode'];
+            }
+
             $isRetryEdit = ($order['status_pemrosesan'] === 'gagal_dikirim') || ($this->input('retry') === '1');
 
             $this->view('customer_orders.edit', [
@@ -1031,6 +1129,8 @@ class CustomerOrderController extends Controller
                 'priceMatrix' => $priceMatrix,
                 'groupBrandLevelsMap' => $groupBrandLevelsMap,
                 'whitelistMap' => $whitelistMap,
+                'groupBarcodesMap' => $groupBarcodesMap,
+                'customerBarcodesMap' => $customerBarcodesMap,
                 'isRetryEdit' => $isRetryEdit,
             ]);
 
@@ -1343,12 +1443,14 @@ class CustomerOrderController extends Controller
             $stmtItem = $pdo->prepare("
                 INSERT INTO public.item_pesanan (
                     pesanan_id, item_id, kuantitas_satuan_dasar,
-                    harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan, dibuat_pada
+                    harga_satuan_deal, diskon_item_nominal, is_bonus, subtotal, harga_pokok_satuan, barcode_universal, dibuat_pada
                 ) VALUES (
                     :pesanan_id, :item_id, :qty_dasar,
-                    :harga, :diskon, :bonus, :subtotal, :hpp, NOW()
+                    :harga, :diskon, :bonus, :subtotal, :hpp, :barcode_universal, NOW()
                 )
             ");
+
+            $resolvedItemBarcodes = [];
 
             foreach ($items as $it) {
                 $itemId = $it['item_id'];
@@ -1359,6 +1461,25 @@ class CustomerOrderController extends Controller
                 $isBonus = !empty($it['is_bonus']);
                 $hpp = (float)($it['hpp'] ?? 0);
 
+                $barcode = !empty($it['barcode_universal']) ? trim((string)$it['barcode_universal']) : null;
+                if (empty($barcode)) {
+                    if (!isset($resolvedItemBarcodes[$itemId])) {
+                        $bcRow = Database::fetchOne("
+                            SELECT COALESCE(
+                                (SELECT pgb.barcode FROM public.pelanggan_grup_barcode pgb WHERE pgb.pelanggan_id = :pelanggan_id AND pgb.grup_produk_id = i.grup_id LIMIT 1),
+                                (SELECT gpb.barcode FROM public.grup_produk_barcode gpb WHERE gpb.grup_produk_id = i.grup_id AND gpb.is_default = TRUE LIMIT 1),
+                                gp.barcode_universal,
+                                (SELECT gpb2.barcode FROM public.grup_produk_barcode gpb2 WHERE gpb2.grup_produk_id = i.grup_id LIMIT 1)
+                            ) as resolved_barcode
+                            FROM public.item i
+                            LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                            WHERE i.id = :item_id
+                        ", ['pelanggan_id' => $order['pelanggan_id'], 'item_id' => $itemId]);
+                        $resolvedItemBarcodes[$itemId] = $bcRow['resolved_barcode'] ?? null;
+                    }
+                    $barcode = $resolvedItemBarcodes[$itemId];
+                }
+
                 $stmtItem->execute([
                     'pesanan_id' => $id,
                     'item_id' => $itemId,
@@ -1368,7 +1489,33 @@ class CustomerOrderController extends Controller
                     'bonus' => $isBonus ? 'true' : 'false',
                     'subtotal' => $subtotal,
                     'hpp' => $hpp,
+                    'barcode_universal' => $barcode,
                 ]);
+            }
+
+            // Simpan preferensi barcode pelanggan jika opsi dicentang
+            if (!empty($this->input('save_customer_barcode_pref')) && !empty($order['pelanggan_id'])) {
+                $savedGroups = [];
+                foreach ($items as $it) {
+                    $bCode = !empty($it['barcode_universal']) ? trim((string)$it['barcode_universal']) : null;
+                    if ($bCode) {
+                        $grpRow = Database::fetchOne("SELECT grup_id FROM public.item WHERE id = :id", ['id' => $it['item_id']]);
+                        $grpId = $grpRow['grup_id'] ?? null;
+                        if ($grpId && !isset($savedGroups[$grpId])) {
+                            $savedGroups[$grpId] = true;
+                            $pdo->prepare("
+                                INSERT INTO public.pelanggan_grup_barcode (pelanggan_id, grup_produk_id, barcode, dibuat_pada, diubah_pada)
+                                VALUES (:pelanggan_id, :grup_id, :barcode, NOW(), NOW())
+                                ON CONFLICT (pelanggan_id, grup_produk_id)
+                                DO UPDATE SET barcode = EXCLUDED.barcode, diubah_pada = NOW()
+                            ")->execute([
+                                'pelanggan_id' => $order['pelanggan_id'],
+                                'grup_id' => $grpId,
+                                'barcode' => $bCode
+                            ]);
+                        }
+                    }
+                }
             }
 
             $pdo->commit();
@@ -1461,8 +1608,8 @@ class CustomerOrderController extends Controller
                 SELECT COALESCE(gp.id, i.id) as grup_id,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
                        COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
                        SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
                        MAX(ip.harga_satuan) as harga_satuan,
@@ -1476,7 +1623,7 @@ class CustomerOrderController extends Controller
                   AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
                 GROUP BY COALESCE(gp.id, i.id),
                          COALESCE(gp.nama_grup, i.nama_item),
-                         COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
                          COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                 ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['id' => $id]);

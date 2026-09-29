@@ -483,6 +483,26 @@ ob_start();
                                                   x-text="getSelectedProductName(row.item_id)"></span>
                                             <i data-lucide="chevron-down" style="width:14px;height:14px;flex-shrink:0;transition:transform 0.2s;" :style="activeDropdownRow === row ? 'transform:rotate(180deg)' : ''"></i>
                                         </button>
+                                        <!-- Multi-Barcode Selection / Badge Per Grup -->
+                                        <template x-if="row.item_id && row.grup_id">
+                                            <div style="margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                <span style="font-size:10px;color:var(--color-ink-mute);font-weight:700;letter-spacing:0.02em;text-transform:uppercase;">Barcode:</span>
+                                                <template x-if="(groupBarcodesMap[row.grup_id] || []).length > 1">
+                                                    <select x-model="row.barcode_universal"
+                                                            @change="syncGroupBarcode(row.grup_id, row.barcode_universal)"
+                                                            class="form-select font-mono"
+                                                            style="height:24px;padding:0 22px 0 6px;font-size:11px;font-weight:700;border-radius:6px;background-color:var(--color-canvas-soft);border:1px solid var(--color-hairline);color:var(--color-ink);cursor:pointer;"
+                                                            title="Pilih barcode grup untuk dicetak di nota">
+                                                        <template x-for="bc in (groupBarcodesMap[row.grup_id] || [])" :key="bc.barcode">
+                                                            <option :value="bc.barcode" x-text="bc.barcode + (bc.label_barcode ? (' - ' + bc.label_barcode) : '') + (bc.is_default ? ' [Default]' : '')"></option>
+                                                        </template>
+                                                    </select>
+                                                </template>
+                                                <template x-if="(groupBarcodesMap[row.grup_id] || []).length <= 1">
+                                                    <span class="badge badge-mono font-mono" style="font-size:11px;padding:2px 6px;border-radius:5px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);color:var(--color-ink-secondary);" x-text="row.barcode_universal || '-'"></span>
+                                                </template>
+                                            </div>
+                                        </template>
                                     </td>
 
                                     <!-- Stok Gudang -->
@@ -855,6 +875,14 @@ ob_start();
                         </div>
                     </div>
 
+                    <!-- Preferensi Barcode Toko -->
+                    <template x-if="selectedCustomer">
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 rounded-xl hover:bg-canvas-soft transition-colors" style="font-size:12px;font-weight:600;color:var(--color-ink-secondary);user-select:none;border:1px dashed var(--color-hairline);background:var(--color-canvas);">
+                            <input type="checkbox" name="save_customer_barcode_pref" value="1" class="form-checkbox" style="border-radius:4px;width:16px;height:16px;cursor:pointer;">
+                            <span>Simpan barcode terpilih sebagai preferensi default toko ini</span>
+                        </label>
+                    </template>
+
                     <!-- Action Button -->
                     <div class="pt-2">
                         <button type="button" @click="submitOrder()" :disabled="isSubmitting || !selectedCustomer || items.length === 0" class="btn btn-primary w-full" style="font-weight:700;height:42px;border-radius:10px;">
@@ -877,6 +905,8 @@ function createSalesOrderApp() {
     const priceMatrix = <?= json_encode($priceMatrix) ?>;
     const groupBrandLevelsMap = <?= json_encode($groupBrandLevelsMap ?? []) ?>;
     const whitelistMap = <?= json_encode($whitelistMap) ?>;
+    const groupBarcodesMap = <?= json_encode($groupBarcodesMap ?? []) ?>;
+    const customerBarcodesMap = <?= json_encode($customerBarcodesMap ?? []) ?>;
 
     return {
         customers: rawCustomers,
@@ -884,6 +914,8 @@ function createSalesOrderApp() {
         priceMatrix: priceMatrix,
         groupBrandLevelsMap: groupBrandLevelsMap,
         whitelistMap: whitelistMap,
+        groupBarcodesMap: groupBarcodesMap,
+        customerBarcodesMap: customerBarcodesMap,
 
         header: {
             nomor_nota: '<?= $autoNota ?>',
@@ -1307,14 +1339,27 @@ function createSalesOrderApp() {
                 if (this.items.length === 0) {
                     this.addItemRow();
                 } else {
-                    // Cek apakah item yang sudah ada di baris sesuai dengan whitelist toko baru
+                    // Cek apakah item yang sudah ada di baris sesuai dengan whitelist toko baru & preferensi barcode
                     const wl = this.whitelistMap[this.selectedCustomer.id];
                     this.items.forEach(row => {
                         if (row.item_id) {
                             if (wl && wl.length > 0 && !wl.includes(row.item_id)) {
                                 row.item_id = '';
+                                row.grup_id = '';
+                                row.barcode_universal = '';
                                 row.stok_tersedia = 0;
                             } else {
+                                const prod = this.products.find(p => p.id === row.item_id);
+                                if (prod) {
+                                    row.grup_id = prod.grup_id;
+                                    if (this.customerBarcodesMap[this.selectedCustomer.id]?.[prod.grup_id]) {
+                                        row.barcode_universal = this.customerBarcodesMap[this.selectedCustomer.id][prod.grup_id];
+                                    } else {
+                                        const gBarcodes = this.groupBarcodesMap[prod.grup_id] || [];
+                                        const defBc = gBarcodes.find(b => b.is_default);
+                                        row.barcode_universal = defBc ? defBc.barcode : (gBarcodes[0]?.barcode || prod.barcode_universal || '');
+                                    }
+                                }
                                 row.harga = this.getPriceForProduct(row.item_id);
                                 this.calcRow(row);
                             }
@@ -1513,6 +1558,8 @@ function createSalesOrderApp() {
             this.items.push({
                 uid: Date.now() + Math.random().toString(36).substr(2, 5),
                 item_id: '',
+                grup_id: '',
+                barcode_universal: '',
                 stok_tersedia: 0,
                 qty: 1,
                 harga: 0,
@@ -1530,8 +1577,19 @@ function createSalesOrderApp() {
             this.validateDpLimit();
         },
 
+        syncGroupBarcode(grupId, barcode) {
+            if (!grupId) return;
+            this.items.forEach(r => {
+                if (r.grup_id === grupId) {
+                    r.barcode_universal = barcode;
+                }
+            });
+        },
+
         onProductSelect(row) {
             if (!row.item_id) {
+                row.grup_id = '';
+                row.barcode_universal = '';
                 row.stok_tersedia = 0;
                 row.harga = 0;
                 row.diskon = 0;
@@ -1541,7 +1599,24 @@ function createSalesOrderApp() {
             }
             const product = this.products.find(p => p.id === row.item_id);
             if (product) {
+                row.grup_id = product.grup_id;
                 row.stok_tersedia = Number(product.stok_fisik_saat_ini || 0);
+
+                // Auto resolve barcode:
+                // 1. Cek apakah ada baris lain dalam pesanan ini dengan grup yang sama sudah memilih barcode
+                const sameGrpRow = this.items.find(r => r !== row && r.grup_id === product.grup_id && r.barcode_universal);
+                if (sameGrpRow) {
+                    row.barcode_universal = sameGrpRow.barcode_universal;
+                } else if (this.customerBarcodesMap[this.header.pelanggan_id]?.[product.grup_id]) {
+                    // 2. Cek preferensi toko mitra
+                    row.barcode_universal = this.customerBarcodesMap[this.header.pelanggan_id][product.grup_id];
+                } else {
+                    // 3. Fallback ke barcode default grup
+                    const gBarcodes = this.groupBarcodesMap[product.grup_id] || [];
+                    const defBc = gBarcodes.find(b => b.is_default);
+                    row.barcode_universal = defBc ? defBc.barcode : (gBarcodes[0]?.barcode || product.barcode_universal || '');
+                }
+
                 const rawPrice = this.getPriceForProduct(product.id);
                 const bDisc = this.getBrandDiscountForProduct(product.id);
 
