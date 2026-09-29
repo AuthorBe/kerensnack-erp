@@ -206,6 +206,28 @@ ob_start();
                                     </template>
                                     <?php endif; ?>
 
+                                    <!-- Foto Bukti Serah Terima (Selesai) -->
+                                    <template x-if="d.bukti_terima_foto">
+                                        <button type="button" 
+                                                @click="openPhotoViewer(d.bukti_terima_foto, 'Bukti Serah Terima - #' + d.nomor_surat_jalan, (d.nama_toko || '') + (d.nama_driver ? ' • Driver: ' + d.nama_driver : ''))" 
+                                                class="btn btn-ghost btn-sm" 
+                                                style="padding:6px 8px;color:#059669;" 
+                                                title="Lihat Foto Bukti Serah Terima">
+                                            <i data-lucide="image" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
+
+                                    <!-- Foto Bukti Gagal Kirim -->
+                                    <template x-if="d.foto_bukti_gagal">
+                                        <button type="button" 
+                                                @click="openPhotoViewer(d.foto_bukti_gagal, 'Bukti Gagal Kirim - #' + d.nomor_surat_jalan, (d.nama_toko || '') + (d.alasan_gagal ? ' • Kendala: ' + d.alasan_gagal : ''))" 
+                                                class="btn btn-ghost btn-sm" 
+                                                style="padding:6px 8px;color:#e11d48;" 
+                                                title="Lihat Foto Bukti Kendala">
+                                            <i data-lucide="image" style="width:14px;height:14px;"></i>
+                                        </button>
+                                    </template>
+
                                     <?php if (Auth::can('deliveries.print')): ?>
                                     <a :href="'<?= Router::url('/deliveries/print') ?>?id=' + d.id" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#0284c7;" title="Cetak Surat Jalan (Standar / Dot Matrix)">
                                         <i data-lucide="printer" style="width:14px;height:14px;"></i>
@@ -387,6 +409,123 @@ ob_start();
     </template>
     <?php endif; ?>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL RESPONSIVE PREVIEW FOTO BUKTI PENGIRIMAN (TOUCH PINCH & PAN VIEWER) -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="showPhotoModal" 
+         x-cloak 
+         class="receipt-backdrop" 
+         @keydown.window="handleViewerKeydown($event)">
+        
+        <div class="receipt-container" @click.stop>
+            <!-- Header Modal -->
+            <div class="receipt-header" style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--color-hairline);background:var(--color-surface, #ffffff);z-index:10;">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;color:#3b82f6;flex-shrink:0;">
+                        <i data-lucide="image" style="width:18px;height:18px;"></i>
+                    </div>
+                    <div style="min-width:0;">
+                        <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="photoModalTitle">Foto Bukti Pengiriman</h3>
+                        <div style="font-size:11px;color:var(--color-ink-mute);font-family:monospace;" x-text="photoModalSubtitle"></div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                    <button type="button" @click="closePhotoViewer()" class="btn btn-ghost btn-sm" style="padding:6px;border-radius:8px;" title="Tutup">
+                        <i data-lucide="x" style="width:20px;height:20px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport) -->
+            <div class="receipt-viewport" 
+                 x-ref="photoViewport"
+                 @wheel.prevent="handleWheel($event)"
+                 @mousedown="handleMouseDown($event)"
+                 @touchstart="handleTouchStart($event)"
+                 @touchmove.prevent="handleTouchMove($event)"
+                 @touchend="handleTouchEnd($event)"
+                 @touchcancel="handleTouchEnd($event)"
+                 @dblclick="toggleDoubleTap($event.clientX, $event.clientY)">
+
+                <!-- State Error jika file fisik tidak ditemukan / dibersihkan -->
+                <div x-show="photoLoadError" style="margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:440px;width:100%;padding:32px 16px;z-index:5;">
+                    <div style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;color:#ef4444;margin:0 auto 16px auto;box-shadow:0 4px 12px rgba(239,68,68,0.12);">
+                        <i data-lucide="image-off" style="width:28px;height:28px;display:block;"></i>
+                    </div>
+                    <div style="font-size:15px;font-weight:700;color:#f8fafc;margin-bottom:6px;text-align:center;width:100%;">Foto Bukti Tidak Ditemukan</div>
+                    <div style="font-size:12.5px;color:#94a3b8;max-width:380px;line-height:1.6;margin:0 auto;text-align:center;width:100%;">
+                        Berkas foto bukti ini tidak ditemukan di server atau Cloudflare Storage. Kemungkinan merupakan berkas lama yang telah dibersihkan atau belum berhasil terunggah.
+                    </div>
+                </div>
+
+                <!-- Gambar Bukti Utama (Hardware-Accelerated CSS Transform) -->
+                <template x-if="photoModalUrl">
+                    <img :src="photoModalUrl" 
+                         alt="Foto Bukti Pengiriman" 
+                         loading="lazy"
+                         decoding="async"
+                         x-show="!photoLoadError"
+                         @load="onPhotoImageLoaded()"
+                         @error="photoLoadError = true; $nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });"
+                         draggable="false"
+                         :style="{
+                             display: photoLoadError ? 'none' : 'block',
+                             maxWidth: '100%',
+                             maxHeight: '100%',
+                             objectFit: 'contain',
+                             transform: 'translate3d(' + zoomPanX + 'px, ' + zoomPanY + 'px, 0) scale(' + zoomScale + ') rotate(' + zoomRotate + 'deg)',
+                             transformOrigin: 'center center',
+                             transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)',
+                             cursor: zoomScale > 1.05 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
+                             userSelect: 'none',
+                             webkitUserDrag: 'none'
+                         }">
+                </template>
+
+                <!-- Floating Glassmorphism Controls -->
+                <div x-show="!photoLoadError" class="receipt-floating-toolbar">
+                    <!-- Zoom Out -->
+                    <button type="button" @click="zoomStep(-0.3)" class="receipt-tool-btn" title="Perkecil Zoom (-)" :disabled="zoomScale <= 0.6">
+                        <i data-lucide="minus" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <!-- Persentase & Reset -->
+                    <button type="button" @click="resetZoom()" class="receipt-tool-badge" title="Klik untuk Reset Tampilan Fit">
+                        <span x-text="Math.round(zoomScale * 100) + '%'"></span>
+                    </button>
+
+                    <!-- Zoom In -->
+                    <button type="button" @click="zoomStep(0.3)" class="receipt-tool-btn" title="Perbesar Zoom (+)" :disabled="zoomScale >= 5.0">
+                        <i data-lucide="plus" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <div class="receipt-tool-divider"></div>
+
+                    <!-- Rotate 90° Clockwise -->
+                    <button type="button" @click="rotateClockwise()" class="receipt-tool-btn" title="Putar Posisi 90°">
+                        <i data-lucide="rotate-cw" style="width:16px;height:16px;"></i>
+                    </button>
+
+                    <!-- Fit / Reset -->
+                    <button type="button" @click="resetZoom()" class="receipt-tool-btn" title="Reset Ukuran Normal (Fit Layar)">
+                        <i data-lucide="maximize-2" style="width:15px;height:15px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Footer Modal (Petunjuk Gestur) -->
+            <div class="receipt-footer" style="display:flex;align-items:center;justify-content:center;padding:10px 18px;border-top:1px solid var(--color-hairline);background:var(--color-canvas-soft);font-size:11.5px;color:var(--color-ink-mute);z-index:10;text-align:center;">
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
+                    <span class="hidden sm:inline">Geser untuk memindahkan foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x untuk zoom cepat</span>
+                    <span class="inline sm:hidden">Cubit 2 jari untuk zoom • Geser foto • Ketuk 2x zoom</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    </template>
+
 </div>
 
 <script>
@@ -492,6 +631,210 @@ function deliveryApp() {
             };
             this.showEditModal = true;
             this.$nextTick(() => lucide.createIcons());
+        },
+
+        // =====================================================================
+        // PHOTO VIEWER LIGHTBOX (DNA ALIGNED WITH ERP ECOSYSTEM)
+        // =====================================================================
+        showPhotoModal: false,
+        photoModalUrl: '',
+        photoModalTitle: 'Foto Bukti Pengiriman',
+        photoModalSubtitle: '',
+        photoLoadError: false,
+        zoomScale: 1.0,
+        zoomPanX: 0,
+        zoomPanY: 0,
+        zoomRotate: 0,
+        isDragging: false,
+        isPinching: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        pinchStartDist: 0,
+        pinchStartScale: 1.0,
+        lastTapTime: 0,
+
+        openPhotoViewer(url, title, subtitle) {
+            if (!url) return;
+            this.resetZoom();
+            const cleanUrl = String(url).trim();
+            if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
+                this.photoModalUrl = cleanUrl;
+            } else if (cleanUrl.startsWith('/media/view') || cleanUrl.startsWith('media/view')) {
+                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+            } else if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('/favicon/')) {
+                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+            } else {
+                const storagePath = cleanUrl.replace(/^\/?(public\/)?(uploads\/)?/, '');
+                this.photoModalUrl = '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
+            }
+            this.photoModalTitle = title || 'Foto Bukti Pengiriman';
+            this.photoModalSubtitle = subtitle || '';
+            this.photoLoadError = false;
+            this.showPhotoModal = true;
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        closePhotoViewer() {
+            this.showPhotoModal = false;
+            this.photoModalUrl = '';
+            this.resetZoom();
+            this.photoLoadError = false;
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+        },
+
+        resetZoom() {
+            this.zoomScale = 1.0;
+            this.zoomPanX = 0;
+            this.zoomPanY = 0;
+            this.zoomRotate = 0;
+            this.isDragging = false;
+            this.isPinching = false;
+        },
+
+        zoomStep(step) {
+            const next = Math.min(5.0, Math.max(0.6, Number((this.zoomScale + step).toFixed(2))));
+            this.zoomScale = next;
+            if (next <= 1.0) {
+                this.zoomPanX = 0;
+                this.zoomPanY = 0;
+            } else {
+                this.clampPan();
+            }
+        },
+
+        rotateClockwise() {
+            this.zoomRotate = (this.zoomRotate + 90) % 360;
+        },
+
+        clampPan() {
+            if (this.zoomScale <= 1.0) {
+                this.zoomPanX = 0;
+                this.zoomPanY = 0;
+                return;
+            }
+            const bound = Math.max(100, 480 * (this.zoomScale - 0.7));
+            this.zoomPanX = Math.max(-bound, Math.min(bound, this.zoomPanX));
+            this.zoomPanY = Math.max(-bound, Math.min(bound, this.zoomPanY));
+        },
+
+        onPhotoImageLoaded() {
+            this.photoLoadError = false;
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        toggleDoubleTap(clientX, clientY) {
+            if (this.photoLoadError) return;
+            if (this.zoomScale > 1.2) {
+                this.resetZoom();
+            } else {
+                this.zoomScale = 2.4;
+                this.zoomPanX = 0;
+                this.zoomPanY = 0;
+            }
+        },
+
+        handleMouseDown(e) {
+            if (e.button !== 0 || this.photoLoadError) return;
+            this.isDragging = true;
+            this.dragStartX = e.clientX - this.zoomPanX;
+            this.dragStartY = e.clientY - this.zoomPanY;
+
+            const onMouseMove = (ev) => {
+                if (!this.isDragging) return;
+                this.zoomPanX = ev.clientX - this.dragStartX;
+                this.zoomPanY = ev.clientY - this.dragStartY;
+                this.clampPan();
+            };
+
+            const onMouseUp = () => {
+                this.isDragging = false;
+                this.clampPan();
+                window.removeEventListener('mousemove', onMouseMove);
+                window.removeEventListener('mouseup', onMouseUp);
+            };
+
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
+        },
+
+        handleTouchStart(e) {
+            if (this.photoLoadError) return;
+            if (e.touches.length === 2) {
+                this.isPinching = true;
+                this.isDragging = false;
+                this.pinchStartDist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                this.pinchStartScale = this.zoomScale;
+            } else if (e.touches.length === 1) {
+                const now = Date.now();
+                if (now - this.lastTapTime < 300) {
+                    this.toggleDoubleTap(e.touches[0].clientX, e.touches[0].clientY);
+                    this.lastTapTime = 0;
+                    return;
+                }
+                this.lastTapTime = now;
+                this.isDragging = true;
+                this.dragStartX = e.touches[0].clientX - this.zoomPanX;
+                this.dragStartY = e.touches[0].clientY - this.zoomPanY;
+            }
+        },
+
+        handleTouchMove(e) {
+            if (this.photoLoadError) return;
+            if (this.isPinching && e.touches.length === 2) {
+                const dist = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                if (this.pinchStartDist > 0) {
+                    const factor = dist / this.pinchStartDist;
+                    this.zoomScale = Math.min(5.0, Math.max(0.6, Number((this.pinchStartScale * factor).toFixed(2))));
+                }
+            } else if (this.isDragging && e.touches.length === 1) {
+                this.zoomPanX = e.touches[0].clientX - this.dragStartX;
+                this.zoomPanY = e.touches[0].clientY - this.dragStartY;
+                this.clampPan();
+            }
+        },
+
+        handleTouchEnd(e) {
+            if (e.touches.length < 2) {
+                this.isPinching = false;
+            }
+            if (e.touches.length === 0) {
+                this.isDragging = false;
+                this.clampPan();
+            }
+        },
+
+        handleWheel(e) {
+            if (this.photoLoadError) return;
+            const delta = e.deltaY < 0 ? 0.25 : -0.25;
+            this.zoomStep(delta);
+        },
+
+        handleViewerKeydown(e) {
+            if (!this.showPhotoModal) return;
+            if (e.key === 'Escape') {
+                this.closePhotoViewer();
+            } else if (e.key === '+' || e.key === '=') {
+                this.zoomStep(0.3);
+            } else if (e.key === '-' || e.key === '_') {
+                this.zoomStep(-0.3);
+            } else if (e.key === 'r' || e.key === 'R') {
+                this.rotateClockwise();
+            } else if (e.key === '0') {
+                this.resetZoom();
+            }
         }
     }
 }

@@ -689,28 +689,32 @@ ob_start();
 
 @media (max-width: 640px) {
     .receipt-backdrop {
-        padding: 0 !important;
+        padding: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     .receipt-container {
-        max-width: 100vw !important;
-        width: 100vw !important;
-        height: 100dvh !important;
-        max-height: 100dvh !important;
-        border-radius: 0 !important;
-        border: none !important;
+        max-width: calc(100vw - 24px) !important;
+        width: calc(100vw - 24px) !important;
+        height: 84dvh !important;
+        max-height: 84dvh !important;
+        border-radius: 18px !important;
+        border: 1px solid var(--color-hairline) !important;
+        margin: auto !important;
     }
     .receipt-floating-toolbar {
-        bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-        gap: 6px;
-        padding: 6px 12px;
+        bottom: 14px !important;
+        gap: 6px !important;
+        padding: 6px 12px !important;
     }
     .receipt-tool-btn {
-        width: 40px;
-        height: 40px;
+        width: 38px !important;
+        height: 38px !important;
     }
     .receipt-tool-badge {
-        padding: 5px 12px;
-        font-size: 12px;
+        padding: 5px 10px !important;
+        font-size: 11.5px !important;
     }
 }
 </style>
@@ -2942,11 +2946,19 @@ function driverDeliveryApp() {
             if (!url) return;
             this.resetZoom();
             const cleanUrl = String(url).trim();
-            this.photoModalUrl = (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) 
-                ? cleanUrl 
-                : ('<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, ''));
+            if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
+                this.photoModalUrl = cleanUrl;
+            } else if (cleanUrl.startsWith('/media/view') || cleanUrl.startsWith('media/view')) {
+                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+            } else if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('/favicon/')) {
+                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+            } else {
+                const storagePath = cleanUrl.replace(/^\/?(public\/)?(uploads\/)?/, '');
+                this.photoModalUrl = '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
+            }
             this.photoModalTitle = title || 'Foto Bukti Pengiriman';
             this.photoModalSubtitle = subtitle || '';
+            this.photoLoadError = false;
             this.showPhotoModal = true;
             document.body.style.overflow = 'hidden';
             document.documentElement.style.overflow = 'hidden';

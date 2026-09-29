@@ -39,6 +39,7 @@ class DeliveryController extends Controller
 
             $sqlDeliveries = "
                 SELECT sj.id, sj.nomor_surat_jalan, sj.tanggal_surat_jalan, sj.sales_driver_id, sj.status_surat_jalan, sj.bukti_terima_foto,
+                       sj.foto_bukti_gagal, sj.alasan_gagal,
                        sj.nama_penerima_toko, sj.waktu_berangkat, sj.waktu_sampai, sj.dibuat_pada,
                        p.nomor_nota, p.tanggal_pesanan, p.total_netto, p.tipe_pembayaran,
                        cust.nama_toko, cust.alamat_lengkap as alamat_toko, cust.nomor_whatsapp, cust.is_konsinyasi,
@@ -92,6 +93,9 @@ class DeliveryController extends Controller
             foreach ($deliveries as &$deliv) {
                 if (!empty($deliv['bukti_terima_foto'])) {
                     $deliv['bukti_terima_foto'] = \App\Helpers\Upload::presignedUrl($deliv['bukti_terima_foto'], 10);
+                }
+                if (!empty($deliv['foto_bukti_gagal'])) {
+                    $deliv['foto_bukti_gagal'] = \App\Helpers\Upload::presignedUrl($deliv['foto_bukti_gagal'], 10);
                 }
             }
             unset($deliv);

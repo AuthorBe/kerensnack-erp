@@ -2712,6 +2712,14 @@ ob_start();
                 </div>
             </div>
 
+            <!-- Footer Modal (Petunjuk Gestur) -->
+            <div class="receipt-footer" style="display:flex;align-items:center;justify-content:center;padding:10px 18px;border-top:1px solid var(--color-hairline);background:var(--color-canvas-soft);font-size:11.5px;color:var(--color-ink-mute);z-index:10;text-align:center;">
+                <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
+                    <span class="hidden sm:inline">Geser untuk memindahkan foto • Scroll mouse / Cubit 2 jari untuk zoom • Ketuk 2x untuk zoom cepat</span>
+                    <span class="inline sm:hidden">Cubit 2 jari untuk zoom • Geser foto • Ketuk 2x zoom</span>
+                </div>
+            </div>
         </div>
     </div>
     </template>
@@ -3224,9 +3232,16 @@ function salesOrderListApp() {
             if (!url) return;
             this.coResetZoom();
             const cleanUrl = String(url).trim();
-            this.photoModalUrl = (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://'))
-                ? cleanUrl
-                : ('<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, ''));
+            if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
+                this.photoModalUrl = cleanUrl;
+            } else if (cleanUrl.startsWith('/media/view') || cleanUrl.startsWith('media/view')) {
+                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+            } else if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('/favicon/')) {
+                this.photoModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+            } else {
+                const storagePath = cleanUrl.replace(/^\/?(public\/)?(uploads\/)?/, '');
+                this.photoModalUrl = '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
+            }
             this.photoModalTitle = title || 'Foto Bukti Pengiriman';
             this.photoModalSubtitle = subtitle || '';
             this.photoLoadError = false;
