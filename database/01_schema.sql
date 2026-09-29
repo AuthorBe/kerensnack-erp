@@ -319,11 +319,24 @@ CREATE TABLE IF NOT EXISTS public.grup_produk (
     kode_grup VARCHAR(50) NOT NULL UNIQUE, -- 'GRP-SINGKONG-250', 'GRP-BRND-135'
     nama_grup VARCHAR(150) NOT NULL,
     merek_id UUID REFERENCES public.merek(id) ON UPDATE CASCADE ON DELETE RESTRICT,
-    barcode_universal VARCHAR(100), -- Barcode kemasan luar yang dipakai bersama oleh varian rasa
+    barcode_universal VARCHAR(100), -- Barcode kemasan luar yang dipakai bersama oleh varian rasa (Default / Primary)
     satuan_dasar VARCHAR(30) NOT NULL DEFAULT 'pcs',
     status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Master Multi-Barcode per Kelompok Kemasan (Grup Produk)
+CREATE TABLE IF NOT EXISTS public.grup_produk_barcode (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    grup_produk_id UUID NOT NULL REFERENCES public.grup_produk(id) ON DELETE CASCADE,
+    barcode VARCHAR(100) NOT NULL,
+    label_barcode VARCHAR(100) NOT NULL DEFAULT 'Standar / Pabrik',
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    status_aktif BOOLEAN NOT NULL DEFAULT TRUE,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_grup_barcode UNIQUE (grup_produk_id, barcode)
 );
 
 -- Tabel Matriks Harga Jual per Grup Produk (Level Harga 1 s/d 30 Terpusat & Murni Pcs)
@@ -375,6 +388,17 @@ CREATE TABLE IF NOT EXISTS public.pelanggan_item (
     item_id UUID NOT NULL REFERENCES public.item(id) ON DELETE RESTRICT,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_pelanggan_item UNIQUE (pelanggan_id, item_id)
+);
+
+-- Preferensi Barcode Khusus Toko / Pelanggan per Grup Produk
+CREATE TABLE IF NOT EXISTS public.pelanggan_grup_barcode (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pelanggan_id UUID NOT NULL REFERENCES public.pelanggan(id) ON DELETE CASCADE,
+    grup_produk_id UUID NOT NULL REFERENCES public.grup_produk(id) ON DELETE CASCADE,
+    barcode VARCHAR(100) NOT NULL,
+    dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_pelanggan_grup_barcode UNIQUE (pelanggan_id, grup_produk_id)
 );
 
 -- Bill of Materials / Resep Repacking (Bal Curah -> Pcs Jadi)
@@ -534,6 +558,7 @@ CREATE TABLE IF NOT EXISTS public.item_pesanan (
     catatan_bonus VARCHAR(255) NULL,
     subtotal NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     harga_pokok_satuan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    barcode_universal VARCHAR(100), -- Snapshot barcode kemasan terpilih saat transaksi dibuat
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

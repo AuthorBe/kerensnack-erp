@@ -230,7 +230,16 @@ BEGIN
     ) INTO v_items
     FROM public.item i
     JOIN public.grup_produk gp ON i.grup_id = gp.id
-    WHERE gp.barcode_universal = p_barcode
+    WHERE (
+        gp.barcode_universal = p_barcode 
+        OR i.kode_sku = p_barcode 
+        OR EXISTS (
+            SELECT 1 FROM public.grup_produk_barcode gpb 
+            WHERE gpb.grup_produk_id = gp.id 
+              AND gpb.barcode = p_barcode 
+              AND gpb.status_aktif = TRUE
+        )
+    )
       AND i.status_aktif = TRUE;
 
     IF v_items IS NULL THEN
