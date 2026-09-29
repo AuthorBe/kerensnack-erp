@@ -261,6 +261,46 @@ class CustomerController extends Controller
                 ];
             }
 
+            // 9. Ambil master grup produk & multi-barcode untuk modal preferensi barcode toko
+            $productGroups = Database::fetchAll("
+                SELECT gp.id, gp.kode_grup, gp.nama_grup, gp.barcode_universal,
+                       COALESCE(
+                           (
+                               SELECT json_agg(
+                                   json_build_object(
+                                       'id', gpb.id,
+                                       'barcode', gpb.barcode,
+                                       'label_barcode', gpb.label_barcode,
+                                       'is_default', gpb.is_default
+                                   ) ORDER BY gpb.is_default DESC, gpb.dibuat_pada ASC
+                               )
+                               FROM public.grup_produk_barcode gpb
+                               WHERE gpb.grup_produk_id = gp.id AND gpb.status_aktif = TRUE
+                           ),
+                           '[]'::json
+                       ) as barcodes_json
+                FROM public.grup_produk gp
+                WHERE gp.status_aktif = TRUE
+                ORDER BY gp.kode_grup ASC
+            ");
+            foreach ($productGroups as &$pg) {
+                if (is_string($pg['barcodes_json'] ?? null)) {
+                    $pg['barcodes'] = json_decode($pg['barcodes_json'], true) ?: [];
+                } elseif (is_array($pg['barcodes_json'] ?? null)) {
+                    $pg['barcodes'] = $pg['barcodes_json'];
+                } else {
+                    $pg['barcodes'] = [];
+                }
+            }
+            unset($pg);
+
+            // 10. Ambil pemetaan preferensi barcode per toko
+            $rawCustomerBarcodes = Database::fetchAll("SELECT pelanggan_id, grup_produk_id, barcode FROM public.pelanggan_grup_barcode");
+            $customerBarcodesMap = [];
+            foreach ($rawCustomerBarcodes as $cb) {
+                $customerBarcodesMap[$cb['pelanggan_id']][$cb['grup_produk_id']] = $cb['barcode'];
+            }
+
             $this->view('customers.index', [
                 'pageTitle' => 'Master Toko Pelanggan & Wilayah',
                 'pageSubtitle' => 'Kelola Data Toko, Tier Harga, Rute Logistik & Item Khusus Toko',
@@ -271,7 +311,9 @@ class CustomerController extends Controller
                 'masterLevels' => $masterLevels,
                 'territories' => $territories,
                 'finishedGoods' => $finishedGoods,
+                'productGroups' => $productGroups,
                 'customerItemsMap' => $customerItemsMap,
+                'customerBarcodesMap' => $customerBarcodesMap,
                 'salesEmployees' => $salesEmployees,
                 'cashAccounts' => $cashAccounts,
                 'shelfItemsMap' => $shelfItemsMap,
@@ -292,6 +334,62 @@ class CustomerController extends Controller
         } catch (Throwable $e) {
             $this->flashError("Gagal memuat data pelanggan: " . $e->getMessage());
             $this->redirect('/dashboard');
+        }
+    }
+
+    /**
+     * Simpan Preferensi Barcode Khusus Toko per Kelompok Kemasan
+     */
+    public function saveBarcodes(): void
+    {
+        Auth::requirePermission(['master.customers_manage', 'master.products_manage']);
+
+        $pelangganId = $this->input('pelanggan_id');
+        $barcodes = $this->input('barcodes', []); // associative array [grup_produk_id => barcode]
+
+        if (empty($pelangganId)) {
+            $this->flashError('ID Pelanggan tidak valid.');
+            $this->redirect('/customers');
+            return;
+        }
+
+        try {
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
+
+            $pdo->prepare("DELETE FROM public.pelanggan_grup_barcode WHERE pelanggan_id = :pid")->execute(['pid' => $pelangganId]);
+
+            $stmt = $pdo->prepare("
+                INSERT INTO public.pelanggan_grup_barcode (
+                    pelanggan_id, grup_produk_id, barcode, dibuat_pada, diubah_pada
+                ) VALUES (
+                    :pid, :gid, :barcode, NOW(), NOW()
+                )
+            ");
+
+            if (is_array($barcodes)) {
+                foreach ($barcodes as $gid => $bc) {
+                    $bc = trim((string)$bc);
+                    if ($bc !== '') {
+                        $stmt->execute([
+                            'pid' => $pelangganId,
+                            'gid' => $gid,
+                            'barcode' => $bc
+                        ]);
+                    }
+                }
+            }
+
+            $pdo->commit();
+
+            ActivityLog::log('master_data', 'Atur Barcode Toko', "Preferensi barcode untuk pelanggan ID {$pelangganId} berhasil disimpan.");
+            $this->flashSuccess('Preferensi barcode toko berhasil diperbarui!');
+            $this->redirect('/customers');
+
+        } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+            $this->flashError('Gagal menyimpan preferensi barcode: ' . $e->getMessage());
+            $this->redirect('/customers');
         }
     }
 

@@ -389,6 +389,9 @@ $activeTab = $_GET['tab'] ?? 'customers';
                                     <button @click="openCustomerItemsModal(c)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Atur Item Khusus Toko">
                                         <i data-lucide="list-checks" style="width:15px;height:15px;color:var(--color-ink-secondary);"></i>
                                     </button>
+                                    <button @click="openCustomerBarcodesModal(c)" class="btn btn-ghost btn-sm" style="padding:6px;color:#059669;" title="Atur Preferensi Barcode Toko">
+                                        <i data-lucide="barcode" style="width:15px;height:15px;"></i>
+                                    </button>
                                     <button @click="openEditModal(c)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Data Toko">
                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                                     </button>
@@ -1445,6 +1448,86 @@ $activeTab = $_GET['tab'] ?? 'customers';
     </div>
     </template>
 
+    <!-- MODAL 2B: ATUR PREFERENSI BARCODE TOKO PER KELOMPOK KEMASAN -->
+    <template x-teleport="body">
+    <div x-show="showBarcodesModal" x-cloak class="modal-backdrop" @click="showBarcodesModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:640px;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+            <div class="modal-header">
+                <div class="flex items-center gap-3 min-w-0 flex-1">
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(16,185,129,0.12);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="barcode" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="modal-title">Preferensi Barcode Toko</div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:1px;" x-text="selectedCustomer?.nama_toko + ' (' + selectedCustomer?.kode_pelanggan + ')'"></div>
+                    </div>
+                </div>
+                <button type="button" @click="showBarcodesModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <form action="<?= Router::url('/customers/save-barcodes') ?>" method="POST">
+                <?= \App\Helpers\CSRF::field() ?>
+                <div class="modal-body custom-scrollbar space-y-3.5">
+                    <input type="hidden" name="pelanggan_id" :value="selectedCustomer?.id">
+
+                    <div style="padding:10px 12px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);font-size:12px;color:var(--color-ink-mute);">
+                        💡 <em>Pilih barcode khusus yang akan otomatis digunakan saat mencetak nota untuk toko ini. Jika tidak disetel khusus, sistem otomatis memakai <strong>Barcode Default Pabrik</strong>.</em>
+                    </div>
+
+                    <!-- SEARCH FILTER GRUP -->
+                    <div>
+                        <input type="text" x-model="searchBarcodeModal" placeholder="Cari nama kelompok kemasan / kode grup..." class="form-input" style="height:36px;font-size:12.5px;">
+                    </div>
+
+                    <!-- BARCODE SELECTION PER GROUP -->
+                    <div style="max-height:340px;overflow-y:auto;border:1px solid var(--color-hairline);border-radius:var(--rounded-md);padding:8px;" class="custom-scrollbar space-y-2">
+                        <template x-for="grp in filteredModalProductGroups" :key="grp.id">
+                            <div style="display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:var(--rounded-sm);background:var(--color-canvas);border:1px solid var(--color-hairline);">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span class="badge badge-mono font-bold" style="font-size:10.5px;" x-text="grp.kode_grup"></span>
+                                        <span class="font-bold" style="font-size:12.5px;color:var(--color-ink);margin-left:6px;" x-text="grp.nama_grup"></span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <select :name="'barcodes[' + grp.id + ']'"
+                                            x-model="selectedCustomerBarcodes[grp.id]"
+                                            class="form-input" style="height:34px;font-size:12px;">
+                                        <option value="">-- Gunakan Barcode Default Pabrik --</option>
+                                        <template x-for="bc in (grp.barcodes || [])" :key="bc.barcode">
+                                            <option :value="bc.barcode" x-text="bc.barcode + ' (' + (bc.label_barcode || 'Standar') + ')' + (bc.is_default ? ' [DEFAULT PABRIK]' : '')"></option>
+                                        </template>
+                                        <template x-if="(!grp.barcodes || grp.barcodes.length === 0) && grp.barcode_universal">
+                                            <option :value="grp.barcode_universal" x-text="grp.barcode_universal + ' (Standar / Pabrik) [DEFAULT]'"></option>
+                                        </template>
+                                    </select>
+                                </div>
+                            </div>
+                        </template>
+                        <template x-if="filteredModalProductGroups.length === 0">
+                            <div style="text-align:center;padding:20px;font-size:12px;color:var(--color-ink-mute);">
+                                Tidak ada kelompok kemasan yang cocok dengan pencarian
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" @click="showBarcodesModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+                        <i data-lucide="save" style="width:16px;height:16px;"></i>
+                        <span>Simpan Preferensi Barcode</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    </template>
+
     <!-- MODAL 3: TAMBAH / EDIT GRUP PELANGGAN -->
     <template x-teleport="body">
     <div x-show="showCustomerGroupModal" x-cloak class="modal-backdrop" @click="showCustomerGroupModal = false">
@@ -1709,7 +1792,9 @@ function customerApp(initialTab) {
         brands: <?= json_encode($brands ?? []) ?>,
         territories: <?= json_encode($territories) ?>,
         finishedGoods: <?= json_encode($finishedGoods) ?>,
+        productGroups: <?= json_encode($productGroups ?? []) ?>,
         customerItemsMap: <?= json_encode($customerItemsMap) ?>,
+        customerBarcodesMap: <?= json_encode($customerBarcodesMap ?? []) ?>,
         salesEmployees: <?= json_encode($salesEmployees ?? []) ?>,
         cashAccounts: <?= json_encode($cashAccounts ?? []) ?>,
         shelfItemsMap: <?= json_encode($shelfItemsMap ?? []) ?>,
@@ -1722,9 +1807,11 @@ function customerApp(initialTab) {
         searchCustomerGroup: '',
         searchTerritory: '',
         searchItemModal: '',
+        searchBarcodeModal: '',
 
         showModal: false,
         showItemsModal: false,
+        showBarcodesModal: false,
         showCustomerGroupModal: false,
         showTerritoryModal: false,
 
@@ -1734,6 +1821,7 @@ function customerApp(initialTab) {
 
         selectedCustomer: null,
         selectedItemIds: [],
+        selectedCustomerBarcodes: {},
 
         form: {
             id: '',
@@ -1914,6 +2002,17 @@ function customerApp(initialTab) {
                     i.nama_item.toLowerCase().includes(q) ||
                     i.kode_sku.toLowerCase().includes(q) ||
                     (i.nama_grup && i.nama_grup.toLowerCase().includes(q));
+            });
+        },
+
+        get filteredModalProductGroups() {
+            const q = (this.searchBarcodeModal || '').toLowerCase().trim();
+            if (!q) return this.productGroups;
+            return this.productGroups.filter(grp => {
+                return (grp.nama_grup && grp.nama_grup.toLowerCase().includes(q)) ||
+                       (grp.kode_grup && grp.kode_grup.toLowerCase().includes(q)) ||
+                       (grp.barcode_universal && grp.barcode_universal.includes(q)) ||
+                       ((grp.barcodes || []).some(b => b.barcode && b.barcode.includes(q)));
             });
         },
 
@@ -2409,6 +2508,20 @@ function customerApp(initialTab) {
                 document.getElementById('delete-territory-id').value = id;
                 document.getElementById('delete-territory-form').submit();
             }
+        },
+
+        // --- CUSTOMER BARCODE PREFERENCES MODAL ---
+        openCustomerBarcodesModal(c) {
+            this.showModal = false;
+            this.showItemsModal = false;
+            this.showCustomerGroupModal = false;
+            this.showTerritoryModal = false;
+            this.selectedCustomer = c;
+            this.searchBarcodeModal = '';
+            const map = this.customerBarcodesMap[c.id] || {};
+            this.selectedCustomerBarcodes = { ...map };
+            this.showBarcodesModal = true;
+            this.$nextTick(() => lucide.createIcons());
         }
     }
 }
