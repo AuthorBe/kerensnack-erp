@@ -46,10 +46,12 @@ class PurchaseController extends Controller
                 ORDER BY pb.tanggal_pembelian DESC, pb.dibuat_pada DESC
             ");
 
-            // Injeksi Cloudflare R2 Presigned URLs (10 Menit)
+            // Injeksi Cloudflare R2 Presigned URLs (10 Menit) - Multi-Foto Support
             foreach ($purchases as &$pb) {
-                $pb['presigned_foto_nota'] = \App\Helpers\Upload::presignedUrl($pb['path_foto_nota'] ?? null, 10);
-                $pb['presigned_bukti_kendala'] = \App\Helpers\Upload::presignedUrl($pb['path_bukti_kendala'] ?? null, 10);
+                $pb['foto_nota_urls'] = \App\Helpers\Upload::presignedUrls($pb['path_foto_nota'] ?? null, 10);
+                $pb['bukti_kendala_urls'] = \App\Helpers\Upload::presignedUrls($pb['path_bukti_kendala'] ?? null, 10);
+                $pb['presigned_foto_nota'] = $pb['foto_nota_urls'][0] ?? (\App\Helpers\Upload::presignedUrl($pb['path_foto_nota'] ?? null, 10) ?: null);
+                $pb['presigned_bukti_kendala'] = $pb['bukti_kendala_urls'][0] ?? (\App\Helpers\Upload::presignedUrl($pb['path_bukti_kendala'] ?? null, 10) ?: null);
                 $pb['url_foto_nota'] = $pb['presigned_foto_nota'] ?: ($pb['path_foto_nota'] ?? '');
                 $pb['foto_bukti_kendala'] = $pb['presigned_bukti_kendala'] ?: ($pb['path_bukti_kendala'] ?? '');
             }
@@ -185,9 +187,11 @@ class PurchaseController extends Controller
                 'faktur_match' => '%' . ($purchase['nomor_faktur_pembelian'] ?? '---') . '%'
             ]);
 
-            // Injeksi Cloudflare R2 Presigned URLs (10 Menit)
-            $purchase['presigned_foto_nota'] = \App\Helpers\Upload::presignedUrl($purchase['path_foto_nota'] ?? null, 10);
-            $purchase['presigned_bukti_kendala'] = \App\Helpers\Upload::presignedUrl($purchase['path_bukti_kendala'] ?? null, 10);
+            // Injeksi Cloudflare R2 Presigned URLs (10 Menit) - Multi-Foto Support
+            $purchase['foto_nota_urls'] = \App\Helpers\Upload::presignedUrls($purchase['path_foto_nota'] ?? null, 10);
+            $purchase['bukti_kendala_urls'] = \App\Helpers\Upload::presignedUrls($purchase['path_bukti_kendala'] ?? null, 10);
+            $purchase['presigned_foto_nota'] = $purchase['foto_nota_urls'][0] ?? (\App\Helpers\Upload::presignedUrl($purchase['path_foto_nota'] ?? null, 10) ?: null);
+            $purchase['presigned_bukti_kendala'] = $purchase['bukti_kendala_urls'][0] ?? (\App\Helpers\Upload::presignedUrl($purchase['path_bukti_kendala'] ?? null, 10) ?: null);
             $purchase['url_foto_nota'] = $purchase['presigned_foto_nota'] ?: ($purchase['path_foto_nota'] ?? '');
             $purchase['foto_bukti_kendala'] = $purchase['presigned_bukti_kendala'] ?: ($purchase['path_bukti_kendala'] ?? '');
 
@@ -325,10 +329,10 @@ class PurchaseController extends Controller
             }
         }
 
-        // 4. Handle Upload Foto Bukti Nota Fisik via Upload Helper
+        // 4. Handle Upload Foto Bukti Nota Fisik via Upload Helper (Multi-Foto Support)
         $fotoPath = null;
-        if (isset($_FILES['foto_nota']) && $_FILES['foto_nota']['error'] !== UPLOAD_ERR_NO_FILE) {
-            $uploadRes = \App\Helpers\Upload::storeImage($_FILES['foto_nota'], 'purchases', 'NOTA');
+        if (isset($_FILES['foto_nota'])) {
+            $uploadRes = \App\Helpers\Upload::storeMultipleImages($_FILES['foto_nota'], 'purchases', 'NOTA');
             if (!$uploadRes['success']) {
                 $this->json(['success' => false, 'message' => $uploadRes['error']], 400);
                 return;
@@ -741,10 +745,10 @@ class PurchaseController extends Controller
         }
 
         try {
-            // Upload Foto Nota Fisik terlebih dahulu jika diunggah baru
+            // Upload Foto Nota Fisik terlebih dahulu jika diunggah baru (Multi-Foto Support)
             $fotoPath = null;
-            if (isset($_FILES['foto_nota']) && $_FILES['foto_nota']['error'] !== UPLOAD_ERR_NO_FILE) {
-                $uploadRes = \App\Helpers\Upload::storeImage($_FILES['foto_nota'], 'purchases', 'NOTA');
+            if (isset($_FILES['foto_nota'])) {
+                $uploadRes = \App\Helpers\Upload::storeMultipleImages($_FILES['foto_nota'], 'purchases', 'NOTA');
                 if (!$uploadRes['success']) {
                     $this->json(['success' => false, 'message' => $uploadRes['error']], 400);
                     return;

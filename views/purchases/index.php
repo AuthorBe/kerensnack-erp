@@ -229,12 +229,19 @@ ob_start();
                                 </template>
                             </td>
                             <td class="cell-center cell-nowrap">
-                                <template x-if="pb.url_foto_nota">
-                                    <button type="button" @click="openReceiptPreview(pb.url_foto_nota, pb.nomor_faktur_pembelian)" class="btn btn-ghost btn-sm" style="padding:4px;color:#3b82f6;" title="Lihat Foto Bukti Nota">
+                                <template x-if="(pb.foto_nota_urls && pb.foto_nota_urls.length > 0) || pb.url_foto_nota">
+                                    <button type="button" 
+                                            @click="openReceiptPreview(pb.foto_nota_urls || [pb.url_foto_nota], pb.nomor_faktur_pembelian)" 
+                                            class="btn btn-ghost btn-sm relative" 
+                                            style="padding:4px;color:#3b82f6;" 
+                                            title="Lihat Foto Bukti Nota">
                                         <i data-lucide="image" style="width:16px;height:16px;"></i>
+                                        <template x-if="pb.foto_nota_urls && pb.foto_nota_urls.length > 1">
+                                            <span class="receipt-counter-badge" x-text="pb.foto_nota_urls.length"></span>
+                                        </template>
                                     </button>
                                 </template>
-                                <template x-if="!pb.url_foto_nota">
+                                <template x-if="!(pb.foto_nota_urls && pb.foto_nota_urls.length > 0) && !pb.url_foto_nota">
                                     <span style="color:var(--color-ink-mute-2);font-size:12px;">-</span>
                                 </template>
                             </td>
@@ -595,18 +602,39 @@ ob_start();
 
                             <!-- FOTO BUKTI NOTA FISIK -->
                             <div style="margin-top:10px;">
-                                <label class="form-label">Upload Foto Nota Fisik / Surat Jalan Vendor (Opsional)</label>
-                                <div style="display:flex;align-items:center;gap:10px;">
-                                    <input type="file" x-ref="photoFileInput" @change="handleFileChange($event)" accept="image/*" class="form-input" style="padding:6px 10px;font-size:12px;flex:1;min-width:0;">
-                                    <template x-if="photoPreview">
-                                        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                                            <img :src="photoPreview" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--color-hairline);" alt="Preview">
-                                            <button type="button" @click="clearPhoto()" class="btn btn-ghost btn-sm" style="color:var(--color-danger);padding:4px;">
-                                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                            </button>
-                                        </div>
-                                    </template>
+                                <div class="flex items-center justify-between gap-2 mb-1.5">
+                                    <label class="form-label font-bold mb-0">Upload Foto Nota Fisik / Surat Jalan Vendor (Maks. 5 Foto)</label>
+                                    <span class="text-xs text-ink-mute font-mono" x-text="photosPO.length + '/5 Foto'"></span>
                                 </div>
+                                
+                                <div class="multi-photo-dual-picker">
+                                    <input type="file" x-ref="cameraInputPO" @change="handleMultiPhoto($event, 'po')" accept="image/*" capture="environment" style="display:none;">
+                                    <input type="file" x-ref="galleryInputPO" @change="handleMultiPhoto($event, 'po')" accept="image/*" multiple style="display:none;">
+                                    
+                                    <button type="button" @click="$refs.cameraInputPO.click()" class="btn-picker-action is-camera" :disabled="photosPO.length >= 5">
+                                        <i data-lucide="camera" style="width:16px;height:16px;"></i>
+                                        <span>Ambil Foto (Kamera)</span>
+                                    </button>
+                                    <button type="button" @click="$refs.galleryInputPO.click()" class="btn-picker-action is-gallery" :disabled="photosPO.length >= 5">
+                                        <i data-lucide="image-plus" style="width:16px;height:16px;"></i>
+                                        <span>Pilih dari Galeri</span>
+                                    </button>
+                                </div>
+
+                                <!-- Grid Preview Antrean Foto -->
+                                <template x-if="photosPO.length > 0">
+                                    <div class="photo-queue-grid">
+                                        <template x-for="(p, idx) in photosPO" :key="idx">
+                                            <div class="photo-queue-item">
+                                                <img :src="p.preview" alt="Preview Foto">
+                                                <button type="button" @click="removePhoto('po', idx)" class="photo-queue-remove" title="Hapus Foto">
+                                                    <i data-lucide="x" style="width:12px;height:12px;"></i>
+                                                </button>
+                                                <div class="photo-queue-badge" x-text="'#' + (idx + 1)"></div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
                             </div>
                         </div>
                     </template>
@@ -1086,24 +1114,34 @@ ob_start();
                             </div>
 
                             <!-- FOTO BUKTI NOTA FISIK JIKA SUDAH ADA -->
-                            <template x-if="activeDetail.purchase.url_foto_nota">
+                            <template x-if="(activeDetail.purchase.foto_nota_urls && activeDetail.purchase.foto_nota_urls.length > 0) || activeDetail.purchase.url_foto_nota">
                                 <div style="border:1px solid var(--color-hairline);border-radius:14px;padding:16px;background:var(--color-canvas-soft);">
                                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
                                         <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--color-ink-mute);text-transform:uppercase;letter-spacing:0.04em;">
                                             <i data-lucide="file-check" style="width:14px;height:14px;color:var(--color-primary);"></i>
                                             <span>Foto Bukti Nota Fisik Vendor</span>
+                                            <template x-if="activeDetail.purchase.foto_nota_urls && activeDetail.purchase.foto_nota_urls.length > 1">
+                                                <span class="badge badge-primary text-xs" x-text="activeDetail.purchase.foto_nota_urls.length + ' Foto'"></span>
+                                            </template>
                                         </div>
-                                        <button type="button" @click="openReceiptPreview(activeDetail.purchase.url_foto_nota, activeDetail.purchase.nomor_faktur_pembelian)" class="btn btn-ghost btn-sm" style="font-size:11.5px;padding:4px 10px;color:var(--color-primary);display:inline-flex;align-items:center;gap:5px;">
+                                        <button type="button" @click="openReceiptPreview(activeDetail.purchase.foto_nota_urls || [activeDetail.purchase.url_foto_nota], activeDetail.purchase.nomor_faktur_pembelian, activeDetail.purchase.nama_pemasok)" class="btn btn-ghost btn-sm" style="font-size:11.5px;padding:4px 10px;color:var(--color-primary);display:inline-flex;align-items:center;gap:5px;">
                                             <i data-lucide="maximize-2" style="width:13px;height:13px;"></i>
                                             <span>Perbesar Nota</span>
                                         </button>
                                     </div>
-                                    <div style="cursor:pointer;display:inline-block;position:relative;border-radius:10px;overflow:hidden;" @click="openReceiptPreview(activeDetail.purchase.url_foto_nota, activeDetail.purchase.nomor_faktur_pembelian)" title="Klik untuk melihat foto nota dalam ukuran penuh">
-                                        <img :src="(activeDetail.purchase.url_foto_nota || '').startsWith('http') ? activeDetail.purchase.url_foto_nota : ('<?= Router::url('/') ?>' + (activeDetail.purchase.url_foto_nota || '').replace(/^\//, ''))" 
-                                             alt="Nota Vendor" 
-                                             loading="lazy"
-                                             decoding="async"
-                                             style="max-height:180px;max-width:100%;border-radius:10px;border:1px solid var(--color-hairline);display:block;transition:transform 0.2s ease;">
+                                    <div class="flex items-center gap-2.5 flex-wrap">
+                                        <template x-for="(imgUrl, imgIdx) in (activeDetail.purchase.foto_nota_urls && activeDetail.purchase.foto_nota_urls.length > 0 ? activeDetail.purchase.foto_nota_urls : [activeDetail.purchase.url_foto_nota])" :key="imgIdx">
+                                            <div style="cursor:pointer;position:relative;border-radius:10px;overflow:hidden;width:80px;height:80px;flex-shrink:0;border:1px solid var(--color-hairline);" 
+                                                 @click="openReceiptPreview(activeDetail.purchase.foto_nota_urls || [activeDetail.purchase.url_foto_nota], activeDetail.purchase.nomor_faktur_pembelian, activeDetail.purchase.nama_pemasok, imgIdx)" 
+                                                 :title="'Klik untuk melihat foto #' + (imgIdx + 1)">
+                                                <img :src="resolvePhotoUrl(imgUrl)" 
+                                                     alt="Nota Vendor" 
+                                                     loading="lazy"
+                                                     decoding="async"
+                                                     style="width:100%;height:100%;object-fit:cover;display:block;">
+                                                <div style="position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;font-size:9px;font-weight:700;padding:1px 4px;border-radius:4px;" x-text="'#' + (imgIdx + 1)"></div>
+                                            </div>
+                                        </template>
                                     </div>
                                 </div>
                             </template>
@@ -2156,23 +2194,44 @@ ob_start();
 
                     <!-- Upload Foto Nota Fisik -->
                     <div>
-                        <label class="form-label font-bold">
-                            Foto Bukti Nota Fisik Vendor / Surat Jalan (Wajib / Dianjurkan)
-                            <template x-if="receiveForm.driver_nota_photo">
-                                <span style="font-weight:normal;color:#059669;font-size:11px;">(Foto dari driver sudah tersimpan)</span>
-                            </template>
-                        </label>
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <input type="file" x-ref="receivePhotoInput" @change="handleReceiveFileChange($event)" accept="image/*" class="form-input" style="padding:6px 10px;font-size:12px;flex:1;min-width:0;">
-                            <template x-if="receivePhotoPreview">
-                                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                                    <img :src="receivePhotoPreview" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--color-hairline);" alt="Preview">
-                                    <button type="button" @click="clearReceivePhoto()" class="btn btn-ghost btn-sm" style="color:var(--color-danger);padding:4px;">
-                                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                    </button>
-                                </div>
-                            </template>
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
+                            <label class="form-label font-bold mb-0">
+                                Foto Bukti Nota Fisik Vendor / Surat Jalan (Maks. 5 Foto)
+                                <template x-if="receiveForm.driver_nota_photo">
+                                    <span style="font-weight:normal;color:#059669;font-size:11px;">(Foto dari driver sudah tersimpan)</span>
+                                </template>
+                            </label>
+                            <span class="text-xs text-ink-mute font-mono" x-text="photosReceive.length + '/5 Foto'"></span>
                         </div>
+                        
+                        <div class="multi-photo-dual-picker">
+                            <input type="file" x-ref="cameraInputReceive" @change="handleMultiPhoto($event, 'receive')" accept="image/*" capture="environment" style="display:none;">
+                            <input type="file" x-ref="galleryInputReceive" @change="handleMultiPhoto($event, 'receive')" accept="image/*" multiple style="display:none;">
+                            
+                            <button type="button" @click="$refs.cameraInputReceive.click()" class="btn-picker-action is-camera" :disabled="photosReceive.length >= 5">
+                                <i data-lucide="camera" style="width:16px;height:16px;"></i>
+                                <span>Ambil Foto (Kamera)</span>
+                            </button>
+                            <button type="button" @click="$refs.galleryInputReceive.click()" class="btn-picker-action is-gallery" :disabled="photosReceive.length >= 5">
+                                <i data-lucide="image-plus" style="width:16px;height:16px;"></i>
+                                <span>Pilih dari Galeri</span>
+                            </button>
+                        </div>
+
+                        <!-- Grid Preview Antrean Foto -->
+                        <template x-if="photosReceive.length > 0">
+                            <div class="photo-queue-grid">
+                                <template x-for="(p, idx) in photosReceive" :key="idx">
+                                    <div class="photo-queue-item">
+                                        <img :src="p.preview" alt="Preview Foto">
+                                        <button type="button" @click="removePhoto('receive', idx)" class="photo-queue-remove" title="Hapus Foto">
+                                            <i data-lucide="x" style="width:12px;height:12px;"></i>
+                                        </button>
+                                        <div class="photo-queue-badge" x-text="'#' + (idx + 1)"></div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
                     </div>
 
                     <div>
@@ -2737,7 +2796,7 @@ ob_start();
     </style>
 
     <!-- ========================================================================= -->
-    <!-- MODAL RESPONSIVE PREVIEW FOTO NOTA (TOUCH PINCH & PAN VIEWER)             -->
+    <!-- MODAL RESPONSIVE PREVIEW FOTO NOTA (LIGHTBOX CAROUSEL PINCH & PAN VIEWER) -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showReceiptModal" 
@@ -2753,7 +2812,12 @@ ob_start();
                         <i data-lucide="image" style="width:18px;height:18px;"></i>
                     </div>
                     <div style="min-width:0;">
-                        <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Bukti Nota Pembelian</h3>
+                        <div class="flex items-center gap-2">
+                            <h3 style="font-size:14px;font-weight:700;color:var(--color-ink-primary);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Foto Bukti Nota Pembelian</h3>
+                            <template x-if="receiptModalList.length > 1">
+                                <span class="badge badge-primary text-xs" x-text="(receiptModalIndex + 1) + ' / ' + receiptModalList.length"></span>
+                            </template>
+                        </div>
                         <div style="font-size:11px;color:var(--color-ink-mute);font-family:monospace;" x-text="receiptModalTitle"></div>
                     </div>
                 </div>
@@ -2765,7 +2829,7 @@ ob_start();
             </div>
 
             <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport) -->
-            <div class="receipt-viewport" 
+            <div class="receipt-viewport relative" 
                  x-ref="receiptViewport"
                  @wheel.prevent="handleWheel($event)"
                  @mousedown="handleMouseDown($event)"
@@ -2774,6 +2838,26 @@ ob_start();
                  @touchend="handleTouchEnd($event)"
                  @touchcancel="handleTouchEnd($event)"
                  @dblclick="toggleDoubleTap($event.clientX, $event.clientY)">
+
+                <!-- Carousel Navigation Button Prev -->
+                <template x-if="receiptModalList.length > 1">
+                    <button type="button" 
+                            @click="prevPhoto()" 
+                            class="receipt-carousel-nav is-prev" 
+                            title="Foto Sebelumnya (Panah Kiri)">
+                        <i data-lucide="chevron-left" style="width:22px;height:22px;"></i>
+                    </button>
+                </template>
+
+                <!-- Carousel Navigation Button Next -->
+                <template x-if="receiptModalList.length > 1">
+                    <button type="button" 
+                            @click="nextPhoto()" 
+                            class="receipt-carousel-nav is-next" 
+                            title="Foto Selanjutnya (Panah Kanan)">
+                        <i data-lucide="chevron-right" style="width:22px;height:22px;"></i>
+                    </button>
+                </template>
 
                 <!-- State Error jika file fisik tidak ditemukan / dibersihkan -->
                 <div x-show="receiptLoadError" style="margin:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;max-width:440px;width:100%;padding:32px 16px;z-index:5;">
@@ -2803,7 +2887,7 @@ ob_start();
                              objectFit: 'contain',
                              transform: 'translate3d(' + zoomPanX + 'px, ' + zoomPanY + 'px, 0) scale(' + zoomScale + ') rotate(' + zoomRotate + 'deg)',
                              transformOrigin: 'center center',
-                             transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)',
+                             transition: isDragging ? 'none' : 'transform 0.18s cubic-bezier(0.2, 0, 1)',
                              cursor: zoomScale > 1.05 ? (isDragging ? 'grabbing' : 'grab') : 'zoom-in',
                              userSelect: 'none',
                              webkitUserDrag: 'none'
@@ -2841,12 +2925,25 @@ ob_start();
                 </div>
             </div>
 
+            <!-- Thumbnail Carousel Strip (Multi-Foto) -->
+            <template x-if="receiptModalList.length > 1">
+                <div class="receipt-thumb-strip custom-scrollbar">
+                    <template x-for="(thumb, idx) in receiptModalList" :key="idx">
+                        <div class="receipt-thumb-item" 
+                             :class="{'is-active': idx === receiptModalIndex}"
+                             @click="selectPhoto(idx)">
+                            <img :src="resolvePhotoUrl(thumb)" alt="Thumbnail" loading="lazy">
+                        </div>
+                    </template>
+                </div>
+            </template>
+
             <!-- Footer Modal (Petunjuk Gestur & Navigasi) -->
             <div class="receipt-footer" style="display:flex;align-items:center;justify-content:center;padding:10px 18px;border-top:1px solid var(--color-hairline);background:var(--color-canvas-soft);font-size:11.5px;color:var(--color-ink-mute);z-index:10;text-align:center;">
                 <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
                     <i data-lucide="info" style="width:14px;height:14px;flex-shrink:0;"></i>
-                    <span class="hidden sm:inline">Geser untuk memindahkan foto &bull; Scroll mouse / Cubit 2 jari untuk zoom &bull; Ketuk 2x untuk zoom cepat</span>
-                    <span class="inline sm:hidden">Cubit 2 jari untuk zoom &bull; Geser foto &bull; Ketuk 2x zoom</span>
+                    <span class="hidden sm:inline">Panah Kiri/Kanan untuk ganti foto &bull; Geser foto &bull; Scroll mouse / Cubit 2 jari untuk zoom &bull; Ketuk 2x zoom</span>
+                    <span class="inline sm:hidden">Geser/panah ganti foto &bull; Cubit 2 jari zoom &bull; Ketuk 2x zoom</span>
                 </div>
             </div>
         </div>
@@ -2904,6 +3001,11 @@ function purchaseApp() {
         cancelError: '',
 
         showAllMaterials: false,
+        photosPO: [],
+        photosReceive: [],
+        receiptModalList: [],
+        receiptModalIndex: 0,
+        receiptModalSubtitle: '',
         photoFile: null,
         photoPreview: null,
         receivePhotoFile: null,
@@ -3376,73 +3478,125 @@ function purchaseApp() {
             row.subtotal = Number(row.qty || 0) * rawHarga;
         },
 
-        handleFileChange(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            if (file.size > 15 * 1024 * 1024) {
-                toast.warning('Ukuran file foto maksimal 15MB!');
-                event.target.value = '';
-                return;
+        resolvePhotoUrl(url) {
+            if (!url) return '';
+            const cleanUrl = String(url).trim();
+            if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
+                return cleanUrl;
+            } else if (cleanUrl.startsWith('/media/view') || cleanUrl.startsWith('media/view')) {
+                return '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+            } else if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('/favicon/')) {
+                return '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
+            } else {
+                const storagePath = cleanUrl.replace(/^\/?(public\/)?(uploads\/)?/, '');
+                return '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
             }
-            if (!file.type.match(/^image\//i)) {
-                toast.warning('Format file harus berupa gambar (JPG, PNG, atau WebP)!');
+        },
+
+        handleMultiPhoto(event, formType) {
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+
+            const targetArray = formType === 'po' ? this.photosPO : this.photosReceive;
+            const remainingSlots = 5 - targetArray.length;
+
+            if (remainingSlots <= 0) {
+                toast.warning('Maksimal 5 foto per transaksi!');
                 event.target.value = '';
                 return;
             }
 
-            // Kompresi sisi klien via HTML5 Canvas agar transfer upload cepat dan ringan
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const maxDim = 1600;
-                    let w = img.width;
-                    let h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w >= h) {
-                            h = Math.round((h / w) * maxDim);
-                            w = maxDim;
-                        } else {
-                            w = Math.round((w / h) * maxDim);
-                            h = maxDim;
-                        }
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, w, h);
-                    ctx.drawImage(img, 0, 0, w, h);
+            const filesToProcess = files.slice(0, remainingSlots);
+            if (files.length > remainingSlots) {
+                toast.warning(`Hanya ${remainingSlots} foto tambahan yang dapat diproses (maksimal 5 foto).`);
+            }
 
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            this.photoFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
-                            this.photoPreview = canvas.toDataURL('image/jpeg', 0.82);
-                        } else {
-                            this.photoFile = file;
-                            this.photoPreview = e.target.result;
+            filesToProcess.forEach(file => {
+                if (file.size > 15 * 1024 * 1024) {
+                    toast.warning(`Ukuran file "${file.name}" melebihi batas maksimal 15MB!`);
+                    return;
+                }
+                if (!file.type.match(/^image\//i)) {
+                    toast.warning(`File "${file.name}" bukan gambar yang valid!`);
+                    return;
+                }
+
+                // Kompresi Canvas Sisi Klien (Max Dimension 1600px, JPEG 0.82)
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const maxDim = 1600;
+                        let w = img.width;
+                        let h = img.height;
+                        if (w > maxDim || h > maxDim) {
+                            if (w >= h) {
+                                h = Math.round((h / w) * maxDim);
+                                w = maxDim;
+                            } else {
+                                w = Math.round((w / h) * maxDim);
+                                h = maxDim;
+                            }
                         }
-                    }, 'image/jpeg', 0.82);
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, w, h);
+                        ctx.drawImage(img, 0, 0, w, h);
+
+                        canvas.toBlob((blob) => {
+                            const finalFile = blob ? new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }) : file;
+                            const previewUrl = canvas.toDataURL('image/jpeg', 0.82);
+
+                            if (formType === 'po') {
+                                if (this.photosPO.length < 5) {
+                                    this.photosPO.push({ file: finalFile, preview: previewUrl });
+                                }
+                            } else {
+                                if (this.photosReceive.length < 5) {
+                                    this.photosReceive.push({ file: finalFile, preview: previewUrl });
+                                }
+                            }
+                            this.$nextTick(() => {
+                                if (typeof lucide !== 'undefined') lucide.createIcons();
+                            });
+                        }, 'image/jpeg', 0.82);
+                    };
+                    img.onerror = () => {
+                        toast.warning(`Gagal memuat gambar "${file.name}".`);
+                    };
+                    img.src = e.target.result;
                 };
-                img.onerror = () => {
-                    toast.warning('Berkas tidak dapat dimuat sebagai gambar.');
-                    this.clearPhoto();
-                };
-                img.src = e.target.result;
-            };
-            reader.onerror = () => {
-                this.clearPhoto();
-            };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            });
+
+            event.target.value = '';
+        },
+
+        removePhoto(formType, idx) {
+            if (formType === 'po') {
+                this.photosPO.splice(idx, 1);
+            } else {
+                this.photosReceive.splice(idx, 1);
+            }
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
         },
 
         clearPhoto() {
+            this.photosPO = [];
             this.photoFile = null;
             this.photoPreview = null;
-            if (this.$refs.photoFileInput) {
-                this.$refs.photoFileInput.value = '';
-            }
+        },
+
+        clearReceivePhoto() {
+            this.photosReceive = [];
+            this.receivePhotoFile = null;
+            this.receivePhotoPreview = null;
         },
 
         resetZoom() {
@@ -3487,22 +3641,33 @@ function purchaseApp() {
             });
         },
 
-        openReceiptPreview(url, title) {
-            if (!url) return;
-            this.resetZoom();
-            const cleanUrl = String(url).trim();
-            if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
-                this.receiptModalUrl = cleanUrl;
-            } else if (cleanUrl.startsWith('/media/view') || cleanUrl.startsWith('media/view')) {
-                this.receiptModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
-            } else if (cleanUrl.startsWith('/assets/') || cleanUrl.startsWith('assets/') || cleanUrl.startsWith('/favicon/')) {
-                this.receiptModalUrl = '<?= Router::url('/') ?>' + cleanUrl.replace(/^\//, '');
-            } else {
-                const storagePath = cleanUrl.replace(/^\/?(public\/)?(uploads\/)?/, '');
-                this.receiptModalUrl = '<?= Router::url('/media/view?path=') ?>' + encodeURIComponent(storagePath);
+        openReceiptPreview(urls, title, subtitle, startIndex = 0) {
+            if (!urls) return;
+            let list = [];
+            if (Array.isArray(urls)) {
+                list = urls.filter(u => !!u);
+            } else if (typeof urls === 'string') {
+                const trimmed = urls.trim();
+                if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                    try {
+                        const parsed = JSON.parse(trimmed);
+                        if (Array.isArray(parsed)) list = parsed.filter(u => !!u);
+                    } catch (e) {
+                        list = [trimmed];
+                    }
+                } else if (trimmed) {
+                    list = [trimmed];
+                }
             }
+            if (list.length === 0) return;
+
+            this.receiptModalList = list;
+            this.receiptModalIndex = (startIndex >= 0 && startIndex < list.length) ? startIndex : 0;
             this.receiptModalTitle = title ? ('No. Faktur: ' + title) : 'Foto Bukti Nota Pembelian';
+            this.receiptModalSubtitle = subtitle || '';
+            this.receiptModalUrl = this.resolvePhotoUrl(this.receiptModalList[this.receiptModalIndex]);
             this.receiptLoadError = false;
+            this.resetZoom();
             this.showReceiptModal = true;
             document.body.style.overflow = 'hidden';
             document.documentElement.style.overflow = 'hidden';
@@ -3511,9 +3676,31 @@ function purchaseApp() {
             });
         },
 
+        selectPhoto(index) {
+            if (index < 0 || index >= this.receiptModalList.length) return;
+            this.receiptModalIndex = index;
+            this.receiptModalUrl = this.resolvePhotoUrl(this.receiptModalList[index]);
+            this.receiptLoadError = false;
+            this.resetZoom();
+        },
+
+        prevPhoto() {
+            if (this.receiptModalList.length <= 1) return;
+            const newIdx = (this.receiptModalIndex - 1 + this.receiptModalList.length) % this.receiptModalList.length;
+            this.selectPhoto(newIdx);
+        },
+
+        nextPhoto() {
+            if (this.receiptModalList.length <= 1) return;
+            const newIdx = (this.receiptModalIndex + 1) % this.receiptModalList.length;
+            this.selectPhoto(newIdx);
+        },
+
         closeReceiptPreview() {
             this.showReceiptModal = false;
             this.receiptModalUrl = '';
+            this.receiptModalList = [];
+            this.receiptModalIndex = 0;
             this.resetZoom();
             this.receiptLoadError = false;
             document.body.style.overflow = '';
@@ -3615,7 +3802,12 @@ function purchaseApp() {
         },
 
         handleViewerKeydown(e) {
-            if (!this.showReceiptModal || this.receiptLoadError) return;
+            if (!this.showReceiptModal) return;
+            if (e.key === 'Escape') {
+                this.closeReceiptPreview();
+                return;
+            }
+            if (this.receiptLoadError) return;
             if (e.key === '+' || e.key === '=') {
                 e.preventDefault();
                 this.zoomStep(0.25);
@@ -3627,12 +3819,20 @@ function purchaseApp() {
                 this.resetZoom();
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
-                this.zoomPanX -= 35;
-                this.clampPan();
+                if (this.zoomScale > 1.05) {
+                    this.zoomPanX -= 35;
+                    this.clampPan();
+                } else if (this.receiptModalList.length > 1) {
+                    this.nextPhoto();
+                }
             } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
-                this.zoomPanX += 35;
-                this.clampPan();
+                if (this.zoomScale > 1.05) {
+                    this.zoomPanX += 35;
+                    this.clampPan();
+                } else if (this.receiptModalList.length > 1) {
+                    this.prevPhoto();
+                }
             } else if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 this.zoomPanY += 35;
@@ -4054,74 +4254,6 @@ function purchaseApp() {
             row.subtotal = Number(row.qty || 0) * rawHarga;
         },
 
-        handleReceiveFileChange(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            if (file.size > 15 * 1024 * 1024) {
-                toast.warning('Ukuran file foto maksimal 15MB!');
-                event.target.value = '';
-                return;
-            }
-            if (!file.type.match(/^image\//i)) {
-                toast.warning('Format file harus berupa gambar (JPG, PNG, atau WebP)!');
-                event.target.value = '';
-                return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const maxDim = 1600;
-                    let w = img.width;
-                    let h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w >= h) {
-                            h = Math.round((h / w) * maxDim);
-                            w = maxDim;
-                        } else {
-                            w = Math.round((w / h) * maxDim);
-                            h = maxDim;
-                        }
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, w, h);
-                    ctx.drawImage(img, 0, 0, w, h);
-
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            this.receivePhotoFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' });
-                            this.receivePhotoPreview = canvas.toDataURL('image/jpeg', 0.82);
-                        } else {
-                            this.receivePhotoFile = file;
-                            this.receivePhotoPreview = e.target.result;
-                        }
-                    }, 'image/jpeg', 0.82);
-                };
-                img.onerror = () => {
-                    toast.warning('Berkas tidak dapat dimuat sebagai gambar.');
-                    this.clearReceivePhoto();
-                };
-                img.src = e.target.result;
-            };
-            reader.onerror = () => {
-                this.clearReceivePhoto();
-            };
-            reader.readAsDataURL(file);
-        },
-
-        clearReceivePhoto() {
-            this.receivePhotoFile = null;
-            this.receivePhotoPreview = null;
-            if (this.$refs.receivePhotoInput) {
-                this.$refs.receivePhotoInput.value = '';
-            }
-        },
-
         async submitReceiveGoods() {
             if (!this.receiveForm.nomor_nota_vendor || !this.receiveForm.nomor_nota_vendor.trim()) {
                 // Auto-fallback jika nomor nota vendor tidak diisi manual
@@ -4164,8 +4296,12 @@ function purchaseApp() {
                 }));
                 formData.append('items', JSON.stringify(preparedItems));
 
-                if (this.receivePhotoFile) {
-                    formData.append('foto_nota', this.receivePhotoFile);
+                if (this.photosReceive.length > 0) {
+                    this.photosReceive.forEach(p => {
+                        formData.append('foto_nota[]', p.file);
+                    });
+                } else if (this.receivePhotoFile) {
+                    formData.append('foto_nota[]', this.receivePhotoFile);
                 }
 
                 const res = await fetch('<?= Router::url('/purchases/receive') ?>', {
@@ -4257,8 +4393,12 @@ function purchaseApp() {
                 }));
                 formData.append('items', JSON.stringify(preparedItems));
 
-                if (this.photoFile) {
-                    formData.append('foto_nota', this.photoFile);
+                if (this.photosPO.length > 0) {
+                    this.photosPO.forEach(p => {
+                        formData.append('foto_nota[]', p.file);
+                    });
+                } else if (this.photoFile) {
+                    formData.append('foto_nota[]', this.photoFile);
                 }
 
                 const res = await fetch('<?= Router::url('/purchases/store') ?>', {
