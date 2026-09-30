@@ -354,17 +354,22 @@ Router::post('/products/delete-borongan-group', [ProductController::class, 'dele
 // --- MANAJEMEN 1: OWNER EXECUTIVE DASHBOARD & PUSAT UNDUH LAPORAN ---
 Router::get('/owner', [OwnerController::class, 'index']);
 Router::get('/reports', [ReportHubController::class, 'index']);
+Router::get('/reports/export/sales-consolidated-excel', [ReportHubController::class, 'exportConsolidatedSalesExcel']);
+Router::get('/reports/export/sales-consolidated-pdf', [ReportHubController::class, 'exportConsolidatedSalesPdf']);
 Router::get('/reports/export/pnl-excel', [ReportHubController::class, 'exportExecutivePnlExcel']);
 Router::get('/reports/export/pnl-pdf', [ReportHubController::class, 'exportExecutivePnlPdf']);
 Router::get('/reports/export/cash-flow', [ReportHubController::class, 'exportCashFlowExcel']);
+Router::get('/reports/export/cash-flow-pdf', [ReportHubController::class, 'exportCashFlowPdf']);
 Router::get('/reports/export/cash-transactions', [ReportHubController::class, 'exportCashTransactionsExcel']);
 Router::get('/reports/export/customer-orders', [ReportHubController::class, 'exportCustomerOrdersExcel']);
 Router::get('/reports/export/consignment-sales', [ReportHubController::class, 'exportConsignmentSalesExcel']);
 Router::get('/reports/export/consignment-loss', [ReportHubController::class, 'exportConsignmentLossExcel']);
 Router::get('/reports/export/consignment-invoices', [ReportHubController::class, 'exportConsignmentInvoicesExcel']);
+Router::get('/reports/export/consignment-invoices-pdf', [ReportHubController::class, 'exportConsignmentInvoicesPdf']);
 Router::get('/reports/export/sales-commissions', [ReportHubController::class, 'exportSalesCommissionsExcel']);
 Router::get('/reports/export/sales-visits', [ReportHubController::class, 'exportSalesVisitsExcel']);
 Router::get('/reports/export/inventory-stock', [ReportHubController::class, 'exportInventoryStockExcel']);
+Router::get('/reports/export/inventory-stock-pdf', [ReportHubController::class, 'exportInventoryStockPdf']);
 Router::get('/reports/export/opname-history', [ReportHubController::class, 'exportOpnameHistoryExcel']);
 Router::get('/reports/export/vendor-purchases', [ReportHubController::class, 'exportVendorPurchasesExcel']);
 Router::get('/reports/export/deliveries', [ReportHubController::class, 'exportDeliveriesExcel']);

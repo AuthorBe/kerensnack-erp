@@ -99,6 +99,75 @@ class ReportHubController extends Controller
         $this->redirect('/reports');
     }
 
+    /**
+     * Helper sanitasi rentang tanggal yang paten & defensif
+     * @return array{0: string, 1: string} [startDate, endDate]
+     */
+    private function sanitizeDateRange(?string $start, ?string $end): array
+    {
+        $startDate = !empty($start) && strtotime($start) ? date('Y-m-d', strtotime($start)) : date('Y-m-01');
+        $endDate = !empty($end) && strtotime($end) ? date('Y-m-d', strtotime($end)) : date('Y-m-d');
+        
+        if ($startDate > $endDate) {
+            $tmp = $startDate;
+            $startDate = $endDate;
+            $endDate = $tmp;
+        }
+
+        return [$startDate, $endDate];
+    }
+
+    // =========================================================================
+    // 0. MASTER REKAP PENJUALAN MULTI-KANAL (POS, B2B, KONSINYASI)
+    // =========================================================================
+
+    public function exportConsolidatedSalesExcel(): void
+    {
+        try {
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
+
+            $summaryData = $this->fetchConsolidatedMetrics($startDate, $endDate);
+            $posRows = $this->fetchPosDetailRows($startDate, $endDate);
+            $b2bRows = $this->fetchB2bDetailRows($startDate, $endDate);
+            $consRows = $this->fetchConsignmentDetailRows($startDate, $endDate);
+
+            $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
+            $filename = "Rekapitulasi Penjualan Multi Kanal ({$dateRange}).xlsx";
+
+            ExcelExport::downloadConsolidatedSalesReport($filename, $summaryData, $posRows, $b2bRows, $consRows, [
+                'periode_label' => $dateRange
+            ]);
+        } catch (Throwable $e) {
+            $this->handleExportError("Gagal mengunduh rekapitulasi penjualan multi-kanal Excel", $e);
+        }
+    }
+
+    public function exportConsolidatedSalesPdf(): void
+    {
+        try {
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
+
+            $summaryData = $this->fetchConsolidatedMetrics($startDate, $endDate);
+            $company = CompanySetting::getAll();
+
+            ob_start();
+            extract([
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'summaryData' => $summaryData,
+                'company' => $company
+            ]);
+            require ROOT_PATH . '/views/reports/sales_consolidated_pdf.php';
+            $html = ob_get_clean();
+
+            $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
+            $filename = "Rekapitulasi Penjualan Multi Kanal ({$dateRange}).pdf";
+            PdfExport::download($html, $filename, 'A4', 'landscape');
+        } catch (Throwable $e) {
+            $this->handleExportError("Gagal membuat PDF rekapitulasi penjualan multi-kanal", $e);
+        }
+    }
+
     // =========================================================================
     // 1. EKSEKUTIF & LABA RUGI (P&L SUMMARY)
     // =========================================================================
@@ -106,109 +175,49 @@ class ReportHubController extends Controller
     public function exportExecutivePnlExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
 
-            // 1. Omzet Penjualan (POS & B2B) dari tabel pesanan
-            $salesRow = Database::fetchOne("
-                SELECT 
-                    COALESCE(SUM(CASE WHEN tipe_pembayaran IN ('cash', 'qris') THEN total_netto ELSE 0 END), 0) as pos_omzet,
-                    COALESCE(SUM(CASE WHEN tipe_pembayaran NOT IN ('cash', 'qris') THEN total_netto ELSE 0 END), 0) as b2b_omzet,
-                    COALESCE(SUM(total_netto), 0) as total_omzet
-                FROM public.pesanan
-                WHERE tanggal_pesanan BETWEEN :start AND :end
-                  AND status_pemrosesan != 'dibatalkan'
-                  AND status_pembayaran != 'dibatalkan'
-                  AND is_tagihan = TRUE
-            ", ['start' => $startDate, 'end' => $endDate]);
-
-            // 2. HPP Barang Terjual (COGS) dari item_pesanan
-            $cogsRow = Database::fetchOne("
-                SELECT 
-                    COALESCE(SUM(CASE WHEN p.tipe_pembayaran IN ('cash', 'qris') THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0) ELSE 0 END), 0) as pos_hpp,
-                    COALESCE(SUM(CASE WHEN p.tipe_pembayaran NOT IN ('cash', 'qris') THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0) ELSE 0 END), 0) as b2b_hpp,
-                    COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as total_hpp
-                FROM public.item_pesanan ip
-                JOIN public.pesanan p ON ip.pesanan_id = p.id
-                LEFT JOIN public.item i ON ip.item_id = i.id
-                WHERE p.tanggal_pesanan BETWEEN :start AND :end
-                  AND p.status_pemrosesan != 'dibatalkan'
-                  AND p.status_pembayaran != 'dibatalkan'
-                  AND p.is_tagihan = TRUE
-            ", ['start' => $startDate, 'end' => $endDate]);
-
-            // 3. Omzet & Kerugian Konsinyasi (Titip Jual Rak Toko)
-            $consRow = Database::fetchOne("
-                SELECT 
-                    COALESCE(SUM(rk.subtotal_laku), 0) as total_omzet, 
-                    COALESCE(SUM(rk.nilai_kerugian_rusak), 0) as total_kerugian
-                FROM public.kunjungan_konsinyasi kk
-                JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
-                WHERE kk.tanggal_kunjungan BETWEEN :start AND :end
-            ", ['start' => $startDate, 'end' => $endDate]);
-
-            // 4. Biaya Pengeluaran Kas (Beban Operasional)
-            $expenseRows = Database::fetchAll("
-                SELECT ark.kategori, COALESCE(SUM(ark.nominal), 0) as total_beban
-                FROM public.arus_kas ark
-                WHERE ark.jenis_kas = 'keluar' AND ark.tanggal_transaksi BETWEEN :start AND :end
-                GROUP BY ark.kategori
-                ORDER BY total_beban DESC
-            ", ['start' => $startDate, 'end' => $endDate]);
-
-            $posRevenue = (float)($salesRow['pos_omzet'] ?? 0);
-            $b2bRevenue = (float)($salesRow['b2b_omzet'] ?? 0);
-            $consRevenue = (float)($consRow['total_omzet'] ?? 0);
-
-            $posHpp = (float)($cogsRow['pos_hpp'] ?? 0);
-            $b2bHpp = (float)($cogsRow['b2b_hpp'] ?? 0);
-            $consLoss = (float)($consRow['total_kerugian'] ?? 0);
-
-            $totalRevenue = $posRevenue + $b2bRevenue + $consRevenue;
-            $totalCogs = $posHpp + $b2bHpp + $consLoss;
-            $grossProfit = $totalRevenue - $totalCogs;
-
-            $totalOperationalExpense = 0;
-            foreach ($expenseRows as $er) {
-                $totalOperationalExpense += (float)$er['total_beban'];
-            }
-
-            $netProfit = $grossProfit - $totalOperationalExpense;
+            $metrics = $this->fetchPnlData($startDate, $endDate);
 
             $headers = ['Kategori Akun / Metrik', 'Keterangan Analitik', 'Nominal (Rp)'];
             $rows = [
                 ['PENDAPATAN USAHA (REVENUE)', '', ''],
-                ['1. Penjualan Kasir POS', 'Penjualan ritel langsung kasir', $posRevenue],
-                ['2. Penjualan Pesanan Pelanggan (B2B)', 'Faktur penjualan grosir reguler', $b2bRevenue],
-                ['3. Penjualan Konsinyasi (Titip Jual)', 'Total barang laku di rak toko mitra', $consRevenue],
-                ['TOTAL PENDAPATAN (OMZET KOTOR)', 'Total seluruh kanal penjualan', $totalRevenue],
+                ['1. Penjualan Kasir POS', 'Penjualan ritel langsung kasir', $metrics['posRevenue']],
+                ['2. Penjualan Pesanan Pelanggan (B2B)', 'Faktur penjualan grosir reguler', $metrics['b2bRevenue']],
+                ['3. Penjualan Konsinyasi (Titip Jual)', 'Total barang laku di rak toko mitra', $metrics['consRevenue']],
+                ['TOTAL PENDAPATAN (OMZET KOTOR)', 'Total seluruh kanal penjualan', $metrics['totalRevenue']],
                 ['', '', ''],
                 ['HARGA POKOK PENJUALAN & KERUGIAN (HPP / COGS)', '', ''],
-                ['1. HPP Penjualan POS', 'Beban pokok produk kasir POS', $posHpp],
-                ['2. HPP Penjualan B2B', 'Beban pokok pesanan B2B', $b2bHpp],
-                ['3. Estimasi Kerugian Produk Rusak/Basi', 'Kerugian retur kedaluwarsa konsinyasi', $consLoss],
-                ['TOTAL BEBAN POKOK (HPP)', 'Total modal produk terjual', $totalCogs],
+                ['1. HPP Penjualan POS', 'Beban pokok produk kasir POS', $metrics['posHpp']],
+                ['2. HPP Penjualan B2B', 'Beban pokok pesanan B2B', $metrics['b2bHpp']],
+                ['3. Estimasi Kerugian Produk Rusak/Basi', 'Kerugian retur kedaluwarsa konsinyasi', $metrics['consLoss']],
+                ['TOTAL BEBAN POKOK (HPP)', 'Total modal produk terjual', $metrics['totalCogs']],
                 ['', '', ''],
-                ['LABA KOTOR (GROSS PROFIT)', 'Total Omzet dikurangi Total HPP', $grossProfit],
+                ['LABA KOTOR (GROSS PROFIT)', 'Total Omzet dikurangi Total HPP', $metrics['grossProfit']],
                 ['', '', ''],
                 ['BEBAN OPERASIONAL (EXPENSES)', '', ''],
             ];
 
-            if (!empty($expenseRows)) {
-                foreach ($expenseRows as $idx => $er) {
+            if (!empty($metrics['expenseRows'])) {
+                foreach ($metrics['expenseRows'] as $idx => $er) {
                     $rows[] = [($idx + 1) . '. Beban: ' . ucwords(str_replace('_', ' ', (string)$er['kategori'])), 'Pengeluaran kas operasional', (float)$er['total_beban']];
                 }
             } else {
                 $rows[] = ['Beban Operasional', 'Tidak ada pengeluaran kas pada periode ini', 0];
             }
 
-            $rows[] = ['TOTAL BEBAN OPERASIONAL', 'Total pengeluaran kas periode ini', $totalOperationalExpense];
+            $rows[] = ['TOTAL BEBAN OPERASIONAL', 'Total pengeluaran kas periode ini', $metrics['totalOperationalExpense']];
             $rows[] = ['', '', ''];
-            $rows[] = ['ESTIMASI LABA BERSIH (NET PROFIT)', 'Laba Kotor dikurangi Total Beban Operasional', $netProfit];
+            $rows[] = ['ESTIMASI LABA BERSIH (NET PROFIT)', 'Laba Kotor dikurangi Total Beban Operasional', $metrics['netProfit']];
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Laporan Laba Rugi Eksekutif ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Ringkasan PnL');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Ringkasan PnL', [
+                'report_title' => 'LAPORAN KINERJA KEUANGAN & LABA RUGI (P&L)',
+                'metadata' => ['Periode Analisis' => $dateRange, 'Status' => 'Dokumen Resmi Manajemen'],
+                'currency_cols' => ['Nominal (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh laporan laba rugi", $e);
         }
@@ -217,216 +226,19 @@ class ReportHubController extends Controller
     public function exportExecutivePnlPdf(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
 
-            $salesRow = Database::fetchOne("
-                SELECT 
-                    COALESCE(SUM(CASE WHEN tipe_pembayaran IN ('cash', 'qris') THEN total_netto ELSE 0 END), 0) as pos_omzet,
-                    COALESCE(SUM(CASE WHEN tipe_pembayaran NOT IN ('cash', 'qris') THEN total_netto ELSE 0 END), 0) as b2b_omzet,
-                    COALESCE(SUM(total_netto), 0) as total_omzet
-                FROM public.pesanan
-                WHERE tanggal_pesanan BETWEEN :start AND :end
-                  AND status_pemrosesan != 'dibatalkan'
-                  AND status_pembayaran != 'dibatalkan'
-                  AND is_tagihan = TRUE
-            ", ['start' => $startDate, 'end' => $endDate]);
-
-            $cogsRow = Database::fetchOne("
-                SELECT 
-                    COALESCE(SUM(CASE WHEN p.tipe_pembayaran IN ('cash', 'qris') THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0) ELSE 0 END), 0) as pos_hpp,
-                    COALESCE(SUM(CASE WHEN p.tipe_pembayaran NOT IN ('cash', 'qris') THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0) ELSE 0 END), 0) as b2b_hpp,
-                    COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as total_hpp
-                FROM public.item_pesanan ip
-                JOIN public.pesanan p ON ip.pesanan_id = p.id
-                LEFT JOIN public.item i ON ip.item_id = i.id
-                WHERE p.tanggal_pesanan BETWEEN :start AND :end
-                  AND p.status_pemrosesan != 'dibatalkan'
-                  AND p.status_pembayaran != 'dibatalkan'
-                  AND p.is_tagihan = TRUE
-            ", ['start' => $startDate, 'end' => $endDate]);
-
-            $consRow = Database::fetchOne("
-                SELECT 
-                    COALESCE(SUM(rk.subtotal_laku), 0) as total_omzet, 
-                    COALESCE(SUM(rk.nilai_kerugian_rusak), 0) as total_kerugian
-                FROM public.kunjungan_konsinyasi kk
-                JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
-                WHERE kk.tanggal_kunjungan BETWEEN :start AND :end
-            ", ['start' => $startDate, 'end' => $endDate]);
-
-            $expenseRows = Database::fetchAll("
-                SELECT ark.kategori, COALESCE(SUM(ark.nominal), 0) as total_beban
-                FROM public.arus_kas ark
-                WHERE ark.jenis_kas = 'keluar' AND ark.tanggal_transaksi BETWEEN :start AND :end
-                GROUP BY ark.kategori
-                ORDER BY total_beban DESC
-            ", ['start' => $startDate, 'end' => $endDate]);
-
-            $posRevenue = (float)($salesRow['pos_omzet'] ?? 0);
-            $b2bRevenue = (float)($salesRow['b2b_omzet'] ?? 0);
-            $consRevenue = (float)($consRow['total_omzet'] ?? 0);
-
-            $posHpp = (float)($cogsRow['pos_hpp'] ?? 0);
-            $b2bHpp = (float)($cogsRow['b2b_hpp'] ?? 0);
-            $consLoss = (float)($consRow['total_kerugian'] ?? 0);
-
-            $totalRevenue = $posRevenue + $b2bRevenue + $consRevenue;
-            $totalCogs = $posHpp + $b2bHpp + $consLoss;
-            $grossProfit = $totalRevenue - $totalCogs;
-
-            $totalOperationalExpense = 0;
-            foreach ($expenseRows as $er) {
-                $totalOperationalExpense += (float)$er['total_beban'];
-            }
-            $netProfit = $grossProfit - $totalOperationalExpense;
-
+            $metrics = $this->fetchPnlData($startDate, $endDate);
             $company = CompanySetting::getAll();
-            $companyName = $company['nama'] ?? 'KEREN SNACK INDONESIA';
-            $companyAddress = $company['alamat'] ?? 'Jl. Industri Snack No. 88, Jawa Barat';
 
-            $html = '
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <title>Laporan Kinerja Keuangan & Laba Rugi Eksekutif</title>
-                <style>
-                    body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #1e293b; line-height: 1.5; margin: 20px; }
-                    .header { text-align: center; border-bottom: 2px solid #881337; padding-bottom: 12px; margin-bottom: 20px; }
-                    .header h1 { margin: 0; font-size: 18px; color: #881337; text-transform: uppercase; }
-                    .header p { margin: 3px 0 0; font-size: 11px; color: #64748b; }
-                    .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 15px; margin-bottom: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                    th, td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
-                    th { background: #881337; color: #ffffff; text-align: left; font-size: 11px; text-transform: uppercase; }
-                    .section-title { font-weight: bold; background: #f1f5f9; color: #0f172a; }
-                    .total-row { font-weight: bold; background: #fff1f2; color: #881337; }
-                    .text-right { text-align: right; }
-                    .text-center { text-align: center; }
-                    .footer { text-align: right; font-size: 10px; color: #94a3b8; margin-top: 30px; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>' . htmlspecialchars($companyName) . '</h1>
-                    <p>' . htmlspecialchars($companyAddress) . '</p>
-                    <p style="margin-top: 6px; font-weight: bold; color: #0f172a;">RINGKASAN KINERJA KEUANGAN &amp; LABA RUGI (EXECUTIVE SUMMARY)</p>
-                </div>
-
-                <div class="meta-box">
-                    <table style="margin: 0; width: 100%; border: none;">
-                        <tr>
-                            <td style="border:none; padding:2px 0;"><strong>Periode Analisis:</strong> ' . date('d M Y', strtotime($startDate)) . ' s/d ' . date('d M Y', strtotime($endDate)) . '</td>
-                            <td style="border:none; padding:2px 0; text-align:right;"><strong>Dicetak Pada:</strong> ' . date('d M Y H:i') . ' WIB</td>
-                        </tr>
-                        <tr>
-                            <td style="border:none; padding:2px 0;"><strong>Dicetak Oleh:</strong> ' . htmlspecialchars(Auth::name()) . ' (' . ucfirst(Auth::role()) . ')</td>
-                            <td style="border:none; padding:2px 0; text-align:right;"><strong>Status:</strong> Dokumen Resmi Manajemen</td>
-                        </tr>
-                    </table>
-                </div>
-
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Keterangan Komponen Bisnis</th>
-                            <th class="text-right">Nominal (Rp)</th>
-                            <th class="text-right">Rasio (%)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr class="section-title">
-                            <td colspan="3">1. PENDAPATAN USAHA (REVENUE)</td>
-                        </tr>
-                        <tr>
-                            <td>&bull; Penjualan Kasir POS (Ritel Walk-in)</td>
-                            <td class="text-right">' . Format::rupiah($posRevenue) . '</td>
-                            <td class="text-right">' . ($totalRevenue > 0 ? number_format(($posRevenue / $totalRevenue) * 100, 1) : '0') . '%</td>
-                        </tr>
-                        <tr>
-                            <td>&bull; Penjualan Pesanan Pelanggan B2B / Grosir</td>
-                            <td class="text-right">' . Format::rupiah($b2bRevenue) . '</td>
-                            <td class="text-right">' . ($totalRevenue > 0 ? number_format(($b2bRevenue / $totalRevenue) * 100, 1) : '0') . '%</td>
-                        </tr>
-                        <tr>
-                            <td>&bull; Penjualan Konsinyasi (Titip Jual Rak)</td>
-                            <td class="text-right">' . Format::rupiah($consRevenue) . '</td>
-                            <td class="text-right">' . ($totalRevenue > 0 ? number_format(($consRevenue / $totalRevenue) * 100, 1) : '0') . '%</td>
-                        </tr>
-                        <tr class="total-row">
-                            <td>TOTAL PENDAPATAN (OMZET KOTOR)</td>
-                            <td class="text-right">' . Format::rupiah($totalRevenue) . '</td>
-                            <td class="text-right">100.0%</td>
-                        </tr>
-
-                        <tr class="section-title">
-                            <td colspan="3">2. BEBAN POKOK PRODUK &amp; KERUGIAN (HPP / COGS)</td>
-                        </tr>
-                        <tr>
-                            <td>&bull; HPP Penjualan POS</td>
-                            <td class="text-right">' . Format::rupiah($posHpp) . '</td>
-                            <td class="text-right">-</td>
-                        </tr>
-                        <tr>
-                            <td>&bull; HPP Penjualan Pesanan B2B</td>
-                            <td class="text-right">' . Format::rupiah($b2bHpp) . '</td>
-                            <td class="text-right">-</td>
-                        </tr>
-                        <tr>
-                            <td>&bull; Estimasi Kerugian Produk Rusak/Basi Konsinyasi</td>
-                            <td class="text-right">' . Format::rupiah($consLoss) . '</td>
-                            <td class="text-right">-</td>
-                        </tr>
-                        <tr class="total-row">
-                            <td>TOTAL BEBAN POKOK (HPP)</td>
-                            <td class="text-right">' . Format::rupiah($totalCogs) . '</td>
-                            <td class="text-right">' . ($totalRevenue > 0 ? number_format(($totalCogs / $totalRevenue) * 100, 1) : '0') . '%</td>
-                        </tr>
-
-                        <tr style="background:#f8fafc; font-weight:bold;">
-                            <td>MARGIN LABA KOTOR (GROSS PROFIT)</td>
-                            <td class="text-right" style="color:#059669;">' . Format::rupiah($grossProfit) . '</td>
-                            <td class="text-right" style="color:#059669;">' . ($totalRevenue > 0 ? number_format(($grossProfit / $totalRevenue) * 100, 1) : '0') . '%</td>
-                        </tr>
-
-                        <tr class="section-title">
-                            <td colspan="3">3. BEBAN OPERASIONAL KAS (EXPENSES)</td>
-                        </tr>';
-
-            if (!empty($expenseRows)) {
-                foreach ($expenseRows as $er) {
-                    $html .= '
-                    <tr>
-                        <td>&bull; Beban ' . htmlspecialchars(ucwords(str_replace('_', ' ', (string)$er['kategori']))) . '</td>
-                        <td class="text-right">' . Format::rupiah((float)$er['total_beban']) . '</td>
-                        <td class="text-right">' . ($totalRevenue > 0 ? number_format(((float)$er['total_beban'] / $totalRevenue) * 100, 1) : '0') . '%</td>
-                    </tr>';
-                }
-            } else {
-                $html .= '<tr><td colspan="3" class="text-center" style="color:#94a3b8;">Tidak ada pengeluaran kas pada periode ini</td></tr>';
-            }
-
-            $html .= '
-                        <tr class="total-row">
-                            <td>TOTAL BEBAN OPERASIONAL</td>
-                            <td class="text-right">' . Format::rupiah($totalOperationalExpense) . '</td>
-                            <td class="text-right">' . ($totalRevenue > 0 ? number_format(($totalOperationalExpense / $totalRevenue) * 100, 1) : '0') . '%</td>
-                        </tr>
-
-                        <tr style="background:' . ($netProfit >= 0 ? '#ecfdf5' : '#fef2f2') . '; font-weight:bold; font-size:13px;">
-                            <td>ESTIMASI LABA BERSIH (NET PROFIT)</td>
-                            <td class="text-right" style="color:' . ($netProfit >= 0 ? '#059669' : '#dc2626') . ';">' . Format::rupiah($netProfit) . '</td>
-                            <td class="text-right" style="color:' . ($netProfit >= 0 ? '#059669' : '#dc2626') . ';">' . ($totalRevenue > 0 ? number_format(($netProfit / $totalRevenue) * 100, 1) : '0') . '%</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="footer">
-                    Dokumen ini digenerate secara otomatis oleh sistem <strong>KEREN ONE ERP</strong> &bull; ' . date('Y-m-d H:i:s') . '
-                </div>
-            </body>
-            </html>';
+            ob_start();
+            extract(array_merge($metrics, [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'company' => $company
+            ]));
+            require ROOT_PATH . '/views/reports/pnl_pdf.php';
+            $html = ob_get_clean();
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Laporan Laba Rugi Eksekutif ({$dateRange}).pdf";
@@ -443,101 +255,80 @@ class ReportHubController extends Controller
     public function exportCashFlowExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
             $accountId = (string)$this->input('account_id', 'all');
 
-            $params = ['start' => $startDate, 'end' => $endDate];
-            $accSql = "";
-            if ($accountId !== 'all' && !empty($accountId)) {
-                $accSql = " AND ark.akun_kas_id = :acc";
-                $params['acc'] = $accountId;
-            }
-
-            // Saldo Awal
-            $startParams = ['start' => $startDate];
-            if ($accountId !== 'all' && !empty($accountId)) {
-                $startParams['acc'] = $accountId;
-            }
-            $begRow = Database::fetchOne("
-                SELECT COALESCE(SUM(CASE WHEN ark.jenis_kas IN ('masuk', 'transfer_masuk') THEN ark.nominal ELSE -ark.nominal END), 0) as saldo_awal
-                FROM public.arus_kas ark
-                WHERE ark.tanggal_transaksi < :start {$accSql}
-            ", $startParams);
-            $begBalance = (float)($begRow['saldo_awal'] ?? 0);
-
-            // Inflow, Outflow, Transfer
-            $txRows = Database::fetchAll("
-                SELECT ark.*, ak.nama_akun
-                FROM public.arus_kas ark
-                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
-                WHERE ark.tanggal_transaksi BETWEEN :start AND :end {$accSql}
-                ORDER BY ark.tanggal_transaksi ASC, ark.dibuat_pada ASC
-            ", $params);
-
-            $inflowBreakdown = Database::fetchAll("
-                SELECT ark.kategori, SUM(ark.nominal) as total, COUNT(*) as jml
-                FROM public.arus_kas ark
-                WHERE ark.tanggal_transaksi BETWEEN :start AND :end {$accSql} AND ark.jenis_kas = 'masuk'
-                GROUP BY ark.kategori ORDER BY total DESC
-            ", $params);
-
-            $outflowBreakdown = Database::fetchAll("
-                SELECT ark.kategori, SUM(ark.nominal) as total, COUNT(*) as jml
-                FROM public.arus_kas ark
-                WHERE ark.tanggal_transaksi BETWEEN :start AND :end {$accSql} AND ark.jenis_kas = 'keluar'
-                GROUP BY ark.kategori ORDER BY total DESC
-            ", $params);
-
-            $totalIn = 0; $totalOut = 0; $netTransfer = 0;
-            foreach ($txRows as $t) {
-                if ($t['jenis_kas'] === 'masuk') $totalIn += (float)$t['nominal'];
-                elseif ($t['jenis_kas'] === 'keluar') $totalOut += (float)$t['nominal'];
-                elseif ($t['jenis_kas'] === 'transfer_masuk') $netTransfer += (float)$t['nominal'];
-                elseif ($t['jenis_kas'] === 'transfer_keluar') $netTransfer -= (float)$t['nominal'];
-            }
-
-            $netCashFlow = $totalIn - $totalOut;
-            $endingBalance = $begBalance + $netCashFlow + ($accountId !== 'all' ? $netTransfer : 0);
+            $cfData = $this->fetchCashFlowData($startDate, $endDate, $accountId);
 
             $headers = ['Kategori / Deskripsi Arus Kas', 'Jumlah Transaksi', 'Nominal (Rp)'];
             $rows = [
-                ['SALDO AWAL KAS & BANK', '-', $begBalance],
+                ['SALDO AWAL KAS & BANK', '-', $cfData['begBalance']],
                 ['', '', ''],
                 ['PENERIMAAN KAS MASUK (INFLOW)', '', '']
             ];
 
-            foreach ($inflowBreakdown as $ib) {
+            foreach ($cfData['inflowBreakdown'] as $ib) {
                 $rows[] = ['Pemasukan: ' . ucwords(str_replace('_', ' ', (string)$ib['kategori'])), (int)$ib['jml'], (float)$ib['total']];
             }
-            $rows[] = ['TOTAL PENERIMAAN KAS', '-', $totalIn];
+            $rows[] = ['TOTAL PENERIMAAN KAS', '-', $cfData['totalIn']];
             $rows[] = ['', '', ''];
             $rows[] = ['PENGELUARAN KAS KELUAR (OUTFLOW)', '', ''];
 
-            foreach ($outflowBreakdown as $ob) {
+            foreach ($cfData['outflowBreakdown'] as $ob) {
                 $rows[] = ['Beban: ' . ucwords(str_replace('_', ' ', (string)$ob['kategori'])), (int)$ob['jml'], (float)$ob['total']];
             }
-            $rows[] = ['TOTAL PENGELUARAN KAS', '-', $totalOut];
+            $rows[] = ['TOTAL PENGELUARAN KAS', '-', $cfData['totalOut']];
             $rows[] = ['', '', ''];
-            $rows[] = ['ARUS KAS BERSIH (NET CASH FLOW)', '-', $netCashFlow];
+            $rows[] = ['ARUS KAS BERSIH (NET CASH FLOW)', '-', $cfData['netCashFlow']];
             if ($accountId !== 'all') {
-                $rows[] = ['MUTASI TRANSFER DANA BERSIH', '-', $netTransfer];
+                $rows[] = ['MUTASI TRANSFER DANA BERSIH', '-', $cfData['netTransfer']];
             }
-            $rows[] = ['SALDO AKHIR KAS & BANK', '-', $endingBalance];
+            $rows[] = ['SALDO AKHIR KAS & BANK', '-', $cfData['endingBalance']];
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Laporan Arus Kas ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Arus Kas');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Arus Kas', [
+                'report_title' => 'LAPORAN ARUS KAS (CASH FLOW STATEMENT)',
+                'metadata' => ['Periode' => $dateRange, 'Akun Kas' => $cfData['accountName']],
+                'currency_cols' => ['Nominal (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh arus kas", $e);
+        }
+    }
+
+    public function exportCashFlowPdf(): void
+    {
+        try {
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
+            $accountId = (string)$this->input('account_id', 'all');
+
+            $cfData = $this->fetchCashFlowData($startDate, $endDate, $accountId);
+            $company = CompanySetting::getAll();
+
+            ob_start();
+            extract(array_merge($cfData, [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'accountId' => $accountId,
+                'company' => $company
+            ]));
+            require ROOT_PATH . '/views/reports/cash_flow_pdf.php';
+            $html = ob_get_clean();
+
+            $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
+            $filename = "Laporan Arus Kas ({$dateRange}).pdf";
+            PdfExport::download($html, $filename, 'A4', 'portrait');
+        } catch (Throwable $e) {
+            $this->handleExportError("Gagal membuat PDF arus kas", $e);
         }
     }
 
     public function exportCashTransactionsExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
             $accountId = (string)$this->input('account_id', 'all');
             $type = (string)$this->input('type', 'all');
 
@@ -580,7 +371,13 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Rekap Mutasi Kas ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Mutasi Kas');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Mutasi Kas', [
+                'report_title' => 'REKAPITULASI MUTASI TRANSAKSI KAS & BANK',
+                'metadata' => ['Periode' => $dateRange, 'Filter' => "Akun: {$accountId}, Jenis: {$type}"],
+                'currency_cols' => ['Nominal (Rp)'],
+                'sum_cols' => ['Nominal (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh mutasi kas", $e);
         }
@@ -593,8 +390,7 @@ class ReportHubController extends Controller
     public function exportCustomerOrdersExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
             $statusBayar = (string)$this->input('status_bayar', 'all');
             $statusKirim = (string)$this->input('status_kirim', 'all');
 
@@ -642,7 +438,13 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Rekap Pesanan Pelanggan B2B ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Pesanan B2B');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Pesanan B2B', [
+                'report_title' => 'REKAPITULASI FAKTUR & PESANAN PELANGGAN B2B',
+                'metadata' => ['Periode' => $dateRange, 'Status' => "Bayar: {$statusBayar}, Kirim: {$statusKirim}"],
+                'currency_cols' => ['Subtotal Bruto (Rp)', 'Diskon (Rp)', 'Total Netto (Rp)', 'Total Bayar (Rp)', 'Sisa Piutang (Rp)'],
+                'sum_cols' => ['Subtotal Bruto (Rp)', 'Diskon (Rp)', 'Total Netto (Rp)', 'Total Bayar (Rp)', 'Sisa Piutang (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh pesanan", $e);
         }
@@ -655,8 +457,7 @@ class ReportHubController extends Controller
     public function exportConsignmentSalesExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
             $storeId = (string)$this->input('store_id', 'all');
 
             $params = ['start' => $startDate, 'end' => $endDate];
@@ -703,7 +504,13 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Laporan Penjualan Konsinyasi ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Penjualan Konsinyasi');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Penjualan Konsinyasi', [
+                'report_title' => 'LAPORAN PENJUALAN KONSINYASI (TITIP JUAL RAK)',
+                'metadata' => ['Periode' => $dateRange, 'Filter Toko' => $storeId],
+                'currency_cols' => ['Harga Satuan (Rp)', 'Total Penjualan (Rp)'],
+                'sum_cols' => ['Terjual (Pcs)', 'Total Penjualan (Rp)', 'Retur Rusak (Pcs)', 'Retur Bagus (Pcs)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh penjualan konsinyasi", $e);
         }
@@ -712,8 +519,7 @@ class ReportHubController extends Controller
     public function exportConsignmentLossExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
 
             $items = Database::fetchAll("
                 SELECT rk.*, kk.tanggal_kunjungan, kk.nomor_kunjungan, pel.nama_toko, it.nama_item, it.kode_sku
@@ -743,7 +549,13 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Laporan Kerugian Rusak Konsinyasi ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Kerugian Konsinyasi');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Kerugian Konsinyasi', [
+                'report_title' => 'LAPORAN KERUGIAN RETUR BARANG RUSAK & KEDALUWARSA KONSINYASI',
+                'metadata' => ['Periode' => $dateRange],
+                'currency_cols' => ['Nilai Kerugian (Rp)'],
+                'sum_cols' => ['Jumlah Rusak/Basi (Pcs)', 'Nilai Kerugian (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh laporan kerugian", $e);
         }
@@ -752,27 +564,9 @@ class ReportHubController extends Controller
     public function exportConsignmentInvoicesExcel(): void
     {
         try {
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
             $status = (string)$this->input('status', 'all');
-            $params = [];
-            $whereSql = "";
-            if ($status === 'belum_lunas') {
-                $whereSql = " AND pes.status_pembayaran IN ('belum_lunas', 'sebagian', 'tempo')";
-            } elseif ($status === 'lunas') {
-                $whereSql = " AND pes.status_pembayaran = 'lunas'";
-            }
-
-            $invoices = Database::fetchAll("
-                SELECT pes.*, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, 
-                       COALESCE(k.nama_karyawan, u.nama_lengkap, '-') as nama_sales
-                FROM public.pesanan pes
-                JOIN public.pelanggan pel ON pes.pelanggan_id = pel.id
-                LEFT JOIN public.v_karyawan_info k ON pes.sales_driver_id = k.id
-                LEFT JOIN public.pengguna u ON pes.sales_driver_id = u.id
-                WHERE (pes.tipe_pembayaran = 'konsinyasi' OR pel.is_konsinyasi = TRUE)
-                  AND pes.status_pemrosesan != 'dibatalkan'
-                  {$whereSql}
-                ORDER BY pes.tanggal_jatuh_tempo ASC NULLS LAST, pes.tanggal_pesanan DESC
-            ", $params);
+            $invoices = $this->fetchConsignmentInvoicesData($status, $startDate, $endDate);
 
             $headers = ['No', 'Nomor Faktur / Tagihan', 'Toko Mitra', 'Pemilik', 'No. WhatsApp', 'Sales Pembina', 'Tanggal Faktur', 'Jatuh Tempo', 'Total Tagihan (Rp)', 'Sudah Dibayar (Rp)', 'Sisa Piutang (Rp)', 'Status Pembayaran'];
             $rows = [];
@@ -793,36 +587,74 @@ class ReportHubController extends Controller
                 ];
             }
 
-            $dateFormatted = date('d M Y');
-            $filename = "Rekap Tagihan Piutang Konsinyasi ({$dateFormatted}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Piutang Konsinyasi');
+            $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
+            $filename = "Rekap Tagihan Piutang Konsinyasi ({$dateRange}).xlsx";
+            
+            ExcelExport::download($filename, $headers, $rows, 'Piutang Konsinyasi', [
+                'report_title' => 'REKAPITULASI TAGIHAN & AGING PIUTANG KONSINYASI',
+                'metadata' => ['Status Filter' => $status, 'Periode' => $dateRange],
+                'currency_cols' => ['Total Tagihan (Rp)', 'Sudah Dibayar (Rp)', 'Sisa Piutang (Rp)'],
+                'sum_cols' => ['Total Tagihan (Rp)', 'Sudah Dibayar (Rp)', 'Sisa Piutang (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh tagihan", $e);
+        }
+    }
+
+    public function exportConsignmentInvoicesPdf(): void
+    {
+        try {
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
+            $status = (string)$this->input('status', 'all');
+            $invoices = $this->fetchConsignmentInvoicesData($status, $startDate, $endDate);
+            $company = CompanySetting::getAll();
+
+            $totalPiutang = 0;
+            foreach ($invoices as $inv) {
+                $totalPiutang += (float)$inv['sisa_tagihan'];
+            }
+
+            ob_start();
+            extract([
+                'status' => $status,
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'invoices' => $invoices,
+                'totalPiutang' => $totalPiutang,
+                'company' => $company
+            ]);
+            require ROOT_PATH . '/views/reports/consignment_invoices_pdf.php';
+            $html = ob_get_clean();
+
+            $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
+            $filename = "Rekap Tagihan Piutang Konsinyasi ({$dateRange}).pdf";
+            PdfExport::download($html, $filename, 'A4', 'portrait');
+        } catch (Throwable $e) {
+            $this->handleExportError("Gagal membuat PDF tagihan piutang", $e);
         }
     }
 
     public function exportSalesCommissionsExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
 
             $salesList = Database::fetchAll("
                 SELECT p.id, p.nama_lengkap, p.nama_panggilan,
                        COALESCE((
-                           SELECT SUM(rk.subtotal_laku)
-                           FROM public.kunjungan_konsinyasi kk
-                           JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
-                           WHERE (kk.sales_driver_id = p.id OR kk.dibuat_oleh = p.id) 
-                             AND kk.tanggal_kunjungan BETWEEN :start AND :end
+                            SELECT SUM(rk.subtotal_laku)
+                            FROM public.kunjungan_konsinyasi kk
+                            JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
+                            WHERE (kk.sales_driver_id = p.id OR kk.dibuat_oleh = p.id) 
+                              AND kk.tanggal_kunjungan BETWEEN :start AND :end
                        ), 0) as total_omzet_konsinyasi,
                        COALESCE((
-                           SELECT SUM(pes.total_netto)
-                           FROM public.pesanan pes
-                           WHERE pes.sales_driver_id = p.id 
-                             AND pes.tanggal_pesanan BETWEEN :start AND :end
-                             AND pes.status_pemrosesan != 'dibatalkan'
-                             AND pes.status_pembayaran != 'dibatalkan'
+                            SELECT SUM(pes.total_netto)
+                            FROM public.pesanan pes
+                            WHERE pes.sales_driver_id = p.id 
+                              AND pes.tanggal_pesanan BETWEEN :start AND :end
+                              AND pes.status_pemrosesan != 'dibatalkan'
+                              AND pes.status_pembayaran != 'dibatalkan'
                        ), 0) as total_omzet_b2b
                 FROM public.pengguna p
                 JOIN public.peran pr ON p.peran_id = pr.id
@@ -836,7 +668,6 @@ class ReportHubController extends Controller
                 $omzetKons = (float)$s['total_omzet_konsinyasi'];
                 $omzetB2B = (float)$s['total_omzet_b2b'];
                 $totalOmzet = $omzetKons + $omzetB2B;
-                // Estimasi tier standar 2.5%
                 $komisiEst = $totalOmzet * 0.025;
 
                 $rows[] = [
@@ -852,7 +683,13 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Rekap Komisi Salesman ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Komisi Sales');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Komisi Sales', [
+                'report_title' => 'REKAPITULASI PERFORMA & ESTIMASI KOMISI SALESMAN',
+                'metadata' => ['Periode' => $dateRange],
+                'currency_cols' => ['Omzet Konsinyasi (Rp)', 'Omzet B2B (Rp)', 'Total Omzet (Rp)', 'Estimasi Komisi (Rp)'],
+                'sum_cols' => ['Omzet Konsinyasi (Rp)', 'Omzet B2B (Rp)', 'Total Omzet (Rp)', 'Estimasi Komisi (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh komisi", $e);
         }
@@ -861,8 +698,7 @@ class ReportHubController extends Controller
     public function exportSalesVisitsExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
             $salesId = (string)$this->input('sales_id', 'all');
 
             $params = ['start' => $startDate, 'end' => $endDate];
@@ -900,7 +736,13 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Rekap Riwayat Kunjungan Sales ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Riwayat Kunjungan');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Riwayat Kunjungan', [
+                'report_title' => 'LOG RIWAYAT KUNJUNGAN SALES LAPANGAN',
+                'metadata' => ['Periode' => $dateRange, 'Sales Filter' => $salesId],
+                'currency_cols' => ['Total Omzet Laku (Rp)'],
+                'sum_cols' => ['Total Omzet Laku (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh kunjungan", $e);
         }
@@ -914,30 +756,11 @@ class ReportHubController extends Controller
     {
         try {
             $kategori = (string)$this->input('kategori', 'all');
-            $params = [];
-            $whereSql = "WHERE i.status_aktif = TRUE";
-
-            if ($kategori !== 'all' && !empty($kategori)) {
-                if ($kategori === 'produk') {
-                    $whereSql .= " AND i.tipe_item = 'barang_jadi'";
-                } elseif ($kategori === 'bahan_baku') {
-                    $whereSql .= " AND i.tipe_item = 'bahan_mentah'";
-                } elseif ($kategori === 'kemasan') {
-                    $whereSql .= " AND i.tipe_item = 'bahan_kemas'";
-                }
-            }
-
-            $items = Database::fetchAll("
-                SELECT i.*, gp.nama_grup as nama_grup_produk
-                FROM public.item i
-                LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
-                {$whereSql}
-                ORDER BY i.tipe_item ASC, i.nama_item ASC
-            ", $params);
+            $stockData = $this->fetchInventoryStockData($kategori);
 
             $headers = ['No', 'Kode SKU', 'Nama Item / Produk', 'Tipe Item', 'Grup Produk', 'Satuan', 'Stok Fisik', 'Batas Min Stok', 'HPP Satuan (Rp)', 'Total Nilai Valuasi (Rp)', 'Status Stok'];
             $rows = [];
-            foreach ($items as $idx => $it) {
+            foreach ($stockData['items'] as $idx => $it) {
                 $stok = (float)$it['stok_fisik_saat_ini'];
                 $min = (float)$it['stok_minimum_peringatan'];
                 $hpp = (float)$it['harga_pokok_pembelian'];
@@ -961,17 +784,47 @@ class ReportHubController extends Controller
 
             $dateFormatted = date('d M Y');
             $filename = "Katalog dan Valuasi Stok Gudang ({$dateFormatted}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Valuasi Stok');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Valuasi Stok', [
+                'report_title' => 'KATALOG & VALUASI STOK PERSEDIAAN GUDANG PUSAT',
+                'metadata' => ['Kategori Filter' => $kategori, 'Per Tanggal' => $dateFormatted],
+                'currency_cols' => ['HPP Satuan (Rp)', 'Total Nilai Valuasi (Rp)'],
+                'sum_cols' => ['Stok Fisik', 'Total Nilai Valuasi (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh stok", $e);
+        }
+    }
+
+    public function exportInventoryStockPdf(): void
+    {
+        try {
+            $kategori = (string)$this->input('kategori', 'all');
+            $stockData = $this->fetchInventoryStockData($kategori);
+            $company = CompanySetting::getAll();
+
+            ob_start();
+            extract([
+                'kategori' => $kategori,
+                'items' => $stockData['items'],
+                'totalValuasi' => $stockData['totalValuasi'],
+                'company' => $company
+            ]);
+            require ROOT_PATH . '/views/reports/inventory_stock_pdf.php';
+            $html = ob_get_clean();
+
+            $dateFormatted = date('d M Y');
+            $filename = "Katalog dan Valuasi Stok Gudang ({$dateFormatted}).pdf";
+            PdfExport::download($html, $filename, 'A4', 'portrait');
+        } catch (Throwable $e) {
+            $this->handleExportError("Gagal membuat PDF valuasi stok", $e);
         }
     }
 
     public function exportOpnameHistoryExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
 
             $opnames = Database::fetchAll("
                 SELECT og.*, u.nama_lengkap as nama_petugas
@@ -999,7 +852,13 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Rekap Riwayat Stock Opname ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Riwayat Opname');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Riwayat Opname', [
+                'report_title' => 'REKAPITULASI RIWAYAT AUDIT STOCK OPNAME GUDANG',
+                'metadata' => ['Periode' => $dateRange],
+                'currency_cols' => ['Total Nilai Selisih HPP (Rp)'],
+                'sum_cols' => ['Total SKU Diperiksa', 'SKU Selisih', 'Total Nilai Selisih HPP (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh riwayat opname", $e);
         }
@@ -1008,8 +867,7 @@ class ReportHubController extends Controller
     public function exportVendorPurchasesExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
             $supplierId = (string)$this->input('supplier_id', 'all');
 
             $params = ['start' => $startDate, 'end' => $endDate];
@@ -1045,7 +903,13 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Rekap Pembelian Vendor ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Pembelian Vendor');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Pembelian Vendor', [
+                'report_title' => 'REKAPITULASI PEMBELIAN BAHAN BAKU & PENGADAAN VENDOR',
+                'metadata' => ['Periode' => $dateRange, 'Supplier Filter' => $supplierId],
+                'currency_cols' => ['Total Biaya (Rp)'],
+                'sum_cols' => ['Total Biaya (Rp)']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh pembelian vendor", $e);
         }
@@ -1058,8 +922,7 @@ class ReportHubController extends Controller
     public function exportDeliveriesExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
             $driverId = (string)$this->input('driver_id', 'all');
 
             $params = ['start' => $startDate, 'end' => $endDate];
@@ -1097,7 +960,11 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Rekap Surat Jalan Pengiriman ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Surat Jalan');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Surat Jalan', [
+                'report_title' => 'LOG REKAPITULASI SURAT JALAN & PENGIRIMAN ARMADA',
+                'metadata' => ['Periode' => $dateRange, 'Driver Filter' => $driverId]
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh surat jalan", $e);
         }
@@ -1110,15 +977,14 @@ class ReportHubController extends Controller
     public function exportActivityLogsExcel(): void
     {
         try {
-            $startDate = (string)$this->input('start_date', date('Y-m-01'));
-            $endDate = (string)$this->input('end_date', date('Y-m-d'));
+            [$startDate, $endDate] = $this->sanitizeDateRange((string)$this->input('start_date'), (string)$this->input('end_date'));
 
             $logs = Database::fetchAll("
                 SELECT la.*, u.nama_pengguna
                 FROM public.log_aktivitas la
                 LEFT JOIN public.pengguna u ON la.pengguna_id = u.id
-                WHERE DATE(la.dibuat_pada) BETWEEN :start AND :end
-                ORDER BY la.dibuat_pada DESC
+                WHERE DATE(la.waktu_kejadian) BETWEEN :start AND :end
+                ORDER BY la.waktu_kejadian DESC
                 LIMIT 5000
             ", ['start' => $startDate, 'end' => $endDate]);
 
@@ -1127,7 +993,7 @@ class ReportHubController extends Controller
             foreach ($logs as $idx => $l) {
                 $rows[] = [
                     $idx + 1,
-                    date('Y-m-d H:i:s', strtotime((string)$l['dibuat_pada'])),
+                    date('Y-m-d H:i:s', strtotime((string)$l['waktu_kejadian'])),
                     $l['nama_aktor'] ?? 'Sistem',
                     $l['nama_pengguna'] ?? '-',
                     strtoupper((string)($l['peran_aktor'] ?? '-')),
@@ -1141,9 +1007,488 @@ class ReportHubController extends Controller
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Log Aktivitas Sistem ({$dateRange}).xlsx";
-            ExcelExport::download($filename, $headers, $rows, 'Activity Logs');
+            
+            ExcelExport::download($filename, $headers, $rows, 'Activity Logs', [
+                'report_title' => 'LOG AUDIT AKTIVITAS & JEJAK DIGITAL PENGGUNA',
+                'metadata' => ['Periode' => $dateRange, 'Maksimal Ekspor' => '5.000 Rekaman']
+            ]);
         } catch (Throwable $e) {
             $this->handleExportError("Gagal mengunduh log", $e);
         }
+    }
+
+    // =========================================================================
+    // PRIVATE DATA FETCHER HELPERS
+    // =========================================================================
+
+    private function fetchPnlData(string $startDate, string $endDate): array
+    {
+        $salesRow = Database::fetchOne("
+            SELECT 
+                COALESCE(SUM(CASE WHEN tipe_pembayaran IN ('cash', 'qris') THEN total_netto ELSE 0 END), 0) as pos_omzet,
+                COALESCE(SUM(CASE WHEN tipe_pembayaran NOT IN ('cash', 'qris') THEN total_netto ELSE 0 END), 0) as b2b_omzet,
+                COALESCE(SUM(total_netto), 0) as total_omzet
+            FROM public.pesanan
+            WHERE tanggal_pesanan BETWEEN :start AND :end
+              AND status_pemrosesan != 'dibatalkan'
+              AND status_pembayaran != 'dibatalkan'
+              AND is_tagihan = TRUE
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $cogsRow = Database::fetchOne("
+            SELECT 
+                COALESCE(SUM(CASE WHEN p.tipe_pembayaran IN ('cash', 'qris') THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0) ELSE 0 END), 0) as pos_hpp,
+                COALESCE(SUM(CASE WHEN p.tipe_pembayaran NOT IN ('cash', 'qris') THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0) ELSE 0 END), 0) as b2b_hpp,
+                COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as total_hpp
+            FROM public.item_pesanan ip
+            JOIN public.pesanan p ON ip.pesanan_id = p.id
+            LEFT JOIN public.item i ON ip.item_id = i.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+              AND p.is_tagihan = TRUE
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $consRow = Database::fetchOne("
+            SELECT 
+                COALESCE(SUM(rk.subtotal_laku), 0) as total_omzet, 
+                COALESCE(SUM(rk.nilai_kerugian_rusak), 0) as total_kerugian
+            FROM public.kunjungan_konsinyasi kk
+            JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
+            WHERE kk.tanggal_kunjungan BETWEEN :start AND :end
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $expenseRows = Database::fetchAll("
+            SELECT ark.kategori, COALESCE(SUM(ark.nominal), 0) as total_beban
+            FROM public.arus_kas ark
+            WHERE ark.jenis_kas = 'keluar' AND ark.tanggal_transaksi BETWEEN :start AND :end
+            GROUP BY ark.kategori
+            ORDER BY total_beban DESC
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $posRevenue = (float)($salesRow['pos_omzet'] ?? 0);
+        $b2bRevenue = (float)($salesRow['b2b_omzet'] ?? 0);
+        $consRevenue = (float)($consRow['total_omzet'] ?? 0);
+
+        $posHpp = (float)($cogsRow['pos_hpp'] ?? 0);
+        $b2bHpp = (float)($cogsRow['b2b_hpp'] ?? 0);
+        $consLoss = (float)($consRow['total_kerugian'] ?? 0);
+
+        $totalRevenue = $posRevenue + $b2bRevenue + $consRevenue;
+        $totalCogs = $posHpp + $b2bHpp + $consLoss;
+        $grossProfit = $totalRevenue - $totalCogs;
+
+        $totalOperationalExpense = 0;
+        foreach ($expenseRows as $er) {
+            $totalOperationalExpense += (float)$er['total_beban'];
+        }
+
+        $netProfit = $grossProfit - $totalOperationalExpense;
+
+        return [
+            'posRevenue' => $posRevenue,
+            'b2bRevenue' => $b2bRevenue,
+            'consRevenue' => $consRevenue,
+            'totalRevenue' => $totalRevenue,
+            'posHpp' => $posHpp,
+            'b2bHpp' => $b2bHpp,
+            'consLoss' => $consLoss,
+            'totalCogs' => $totalCogs,
+            'grossProfit' => $grossProfit,
+            'expenseRows' => $expenseRows,
+            'totalOperationalExpense' => $totalOperationalExpense,
+            'netProfit' => $netProfit
+        ];
+    }
+
+    private function fetchCashFlowData(string $startDate, string $endDate, string $accountId): array
+    {
+        $params = ['start' => $startDate, 'end' => $endDate];
+        $accSql = "";
+        $accountName = 'Semua Rekening & Kas';
+
+        if ($accountId !== 'all' && !empty($accountId)) {
+            $accSql = " AND ark.akun_kas_id = :acc";
+            $params['acc'] = $accountId;
+            $accRow = Database::fetchOne("SELECT nama_akun FROM public.akun_kas WHERE id = :id", ['id' => $accountId]);
+            if ($accRow) {
+                $accountName = (string)$accRow['nama_akun'];
+            }
+        }
+
+        $startParams = ['start' => $startDate];
+        if ($accountId !== 'all' && !empty($accountId)) {
+            $startParams['acc'] = $accountId;
+        }
+
+        $begRow = Database::fetchOne("
+            SELECT COALESCE(SUM(CASE WHEN ark.jenis_kas IN ('masuk', 'transfer_masuk') THEN ark.nominal ELSE -ark.nominal END), 0) as saldo_awal
+            FROM public.arus_kas ark
+            WHERE ark.tanggal_transaksi < :start {$accSql}
+        ", $startParams);
+        $begBalance = (float)($begRow['saldo_awal'] ?? 0);
+
+        $txRows = Database::fetchAll("
+            SELECT ark.*, ak.nama_akun
+            FROM public.arus_kas ark
+            JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+            WHERE ark.tanggal_transaksi BETWEEN :start AND :end {$accSql}
+            ORDER BY ark.tanggal_transaksi ASC, ark.dibuat_pada ASC
+        ", $params);
+
+        $inflowBreakdown = Database::fetchAll("
+            SELECT ark.kategori, SUM(ark.nominal) as total, COUNT(*) as jml
+            FROM public.arus_kas ark
+            WHERE ark.tanggal_transaksi BETWEEN :start AND :end {$accSql} AND ark.jenis_kas = 'masuk'
+            GROUP BY ark.kategori ORDER BY total DESC
+        ", $params);
+
+        $outflowBreakdown = Database::fetchAll("
+            SELECT ark.kategori, SUM(ark.nominal) as total, COUNT(*) as jml
+            FROM public.arus_kas ark
+            WHERE ark.tanggal_transaksi BETWEEN :start AND :end {$accSql} AND ark.jenis_kas = 'keluar'
+            GROUP BY ark.kategori ORDER BY total DESC
+        ", $params);
+
+        $totalIn = 0; $totalOut = 0; $netTransfer = 0;
+        foreach ($txRows as $t) {
+            if ($t['jenis_kas'] === 'masuk') $totalIn += (float)$t['nominal'];
+            elseif ($t['jenis_kas'] === 'keluar') $totalOut += (float)$t['nominal'];
+            elseif ($t['jenis_kas'] === 'transfer_masuk') $netTransfer += (float)$t['nominal'];
+            elseif ($t['jenis_kas'] === 'transfer_keluar') $netTransfer -= (float)$t['nominal'];
+        }
+
+        $netCashFlow = $totalIn - $totalOut;
+        $endingBalance = $begBalance + $netCashFlow + ($accountId !== 'all' ? $netTransfer : 0);
+
+        return [
+            'accountName' => $accountName,
+            'begBalance' => $begBalance,
+            'inflowBreakdown' => $inflowBreakdown,
+            'outflowBreakdown' => $outflowBreakdown,
+            'totalIn' => $totalIn,
+            'totalOut' => $totalOut,
+            'netCashFlow' => $netCashFlow,
+            'netTransfer' => $netTransfer,
+            'endingBalance' => $endingBalance
+        ];
+    }
+
+    private function fetchConsignmentInvoicesData(string $status, ?string $startDate = null, ?string $endDate = null): array
+    {
+        $whereSql = "";
+        $params = [];
+
+        if ($status === 'belum_lunas') {
+            $whereSql .= " AND pes.status_pembayaran IN ('belum_lunas', 'sebagian', 'tempo')";
+        } elseif ($status === 'lunas') {
+            $whereSql .= " AND pes.status_pembayaran = 'lunas'";
+        }
+
+        if (!empty($startDate) && !empty($endDate)) {
+            $whereSql .= " AND pes.tanggal_pesanan BETWEEN :start AND :end";
+            $params['start'] = $startDate;
+            $params['end'] = $endDate;
+        }
+
+        return Database::fetchAll("
+            SELECT pes.*, pel.nama_toko, pel.nama_pemilik, pel.nomor_whatsapp, 
+                   COALESCE(k.nama_karyawan, u.nama_lengkap, '-') as nama_sales
+            FROM public.pesanan pes
+            JOIN public.pelanggan pel ON pes.pelanggan_id = pel.id
+            LEFT JOIN public.v_karyawan_info k ON pes.sales_driver_id = k.id
+            LEFT JOIN public.pengguna u ON pes.sales_driver_id = u.id
+            WHERE (pes.tipe_pembayaran = 'konsinyasi' OR pel.is_konsinyasi = TRUE)
+              AND pes.status_pemrosesan != 'dibatalkan'
+              {$whereSql}
+            ORDER BY pes.tanggal_jatuh_tempo ASC NULLS LAST, pes.tanggal_pesanan DESC
+        ", $params);
+    }
+
+    private function fetchInventoryStockData(string $kategori): array
+    {
+        $whereSql = "WHERE i.status_aktif = TRUE";
+        if ($kategori !== 'all' && !empty($kategori)) {
+            if ($kategori === 'produk') {
+                $whereSql .= " AND i.tipe_item = 'barang_jadi'";
+            } elseif ($kategori === 'bahan_baku') {
+                $whereSql .= " AND i.tipe_item = 'bahan_mentah'";
+            } elseif ($kategori === 'kemasan') {
+                $whereSql .= " AND i.tipe_item = 'bahan_kemas'";
+            }
+        }
+
+        $items = Database::fetchAll("
+            SELECT i.*, gp.nama_grup as nama_grup_produk
+            FROM public.item i
+            LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+            {$whereSql}
+            ORDER BY i.tipe_item ASC, i.nama_item ASC
+        ");
+
+        $totalValuasi = 0.0;
+        foreach ($items as $it) {
+            $stok = (float)$it['stok_fisik_saat_ini'];
+            $hpp = (float)$it['harga_pokok_pembelian'];
+            $totalValuasi += ($stok * $hpp);
+        }
+
+        return [
+            'items' => $items,
+            'totalValuasi' => $totalValuasi
+        ];
+    }
+
+    private function fetchConsolidatedMetrics(string $startDate, string $endDate): array
+    {
+        // 1. POS Metrics
+        $posRow = Database::fetchOne("
+            SELECT 
+                COALESCE(SUM(p.total_netto), 0) as omzet,
+                COALESCE(SUM(p.total_dibayar), 0) as terbayar,
+                COALESCE(SUM(p.sisa_tagihan), 0) as piutang,
+                COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
+            FROM public.pesanan p
+            LEFT JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
+            LEFT JOIN public.item i ON ip.item_id = i.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND p.tipe_pembayaran IN ('cash', 'qris')
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+              AND p.is_tagihan = TRUE
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        // 2. B2B Regular Store Metrics
+        $b2bRow = Database::fetchOne("
+            SELECT 
+                COALESCE(SUM(p.total_netto), 0) as omzet,
+                COALESCE(SUM(p.total_dibayar), 0) as terbayar,
+                COALESCE(SUM(p.sisa_tagihan), 0) as piutang,
+                COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
+            FROM public.pesanan p
+            JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            LEFT JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
+            LEFT JOIN public.item i ON ip.item_id = i.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND p.tipe_pembayaran NOT IN ('cash', 'qris', 'konsinyasi')
+              AND pel.is_konsinyasi = FALSE
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+              AND p.is_tagihan = TRUE
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        // 3. Consignment Metrics
+        $consRow = Database::fetchOne("
+            SELECT 
+                COALESCE(SUM(rk.subtotal_laku), 0) as omzet,
+                COALESCE(SUM(rk.nilai_kerugian_rusak), 0) as kerugian_rusak,
+                COALESCE(SUM(rk.jumlah_laku_terjual * COALESCE(rk.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
+            FROM public.kunjungan_konsinyasi kk
+            JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
+            LEFT JOIN public.item i ON rk.item_id = i.id
+            WHERE kk.tanggal_kunjungan BETWEEN :start AND :end
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        // Consignment Payment & AR from invoices generated
+        $consPayRow = Database::fetchOne("
+            SELECT 
+                COALESCE(SUM(p.total_dibayar), 0) as terbayar,
+                COALESCE(SUM(p.sisa_tagihan), 0) as piutang
+            FROM public.pesanan p
+            JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND (p.tipe_pembayaran = 'konsinyasi' OR pel.is_konsinyasi = TRUE)
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $posOmzet = (float)($posRow['omzet'] ?? 0);
+        $posTerbayar = (float)($posRow['terbayar'] ?? 0);
+        $posPiutang = (float)($posRow['piutang'] ?? 0);
+        $posHpp = (float)($posRow['hpp'] ?? 0);
+        $posLaba = $posOmzet - $posHpp;
+
+        $b2bOmzet = (float)($b2bRow['omzet'] ?? 0);
+        $b2bTerbayar = (float)($b2bRow['terbayar'] ?? 0);
+        $b2bPiutang = (float)($b2bRow['piutang'] ?? 0);
+        $b2bHpp = (float)($b2bRow['hpp'] ?? 0);
+        $b2bLaba = $b2bOmzet - $b2bHpp;
+
+        $consOmzet = (float)($consRow['omzet'] ?? 0);
+        $consTerbayar = (float)($consPayRow['terbayar'] ?? 0);
+        $consPiutang = (float)($consPayRow['piutang'] ?? 0);
+        $consHpp = (float)($consRow['hpp'] ?? 0);
+        $consLoss = (float)($consRow['kerugian_rusak'] ?? 0);
+        $consLaba = $consOmzet - ($consHpp + $consLoss);
+
+        $totalOmzet = $posOmzet + $b2bOmzet + $consOmzet;
+        $totalTerbayar = $posTerbayar + $b2bTerbayar + $consTerbayar;
+        $totalPiutang = $posPiutang + $b2bPiutang + $consPiutang;
+        $totalHpp = $posHpp + $b2bHpp + $consHpp;
+        $totalLaba = $posLaba + $b2bLaba + $consLaba;
+
+        return [
+            'pos_omzet' => $posOmzet,
+            'pos_terbayar' => $posTerbayar,
+            'pos_piutang' => $posPiutang,
+            'pos_hpp' => $posHpp,
+            'pos_laba' => $posLaba,
+
+            'b2b_omzet' => $b2bOmzet,
+            'b2b_terbayar' => $b2bTerbayar,
+            'b2b_piutang' => $b2bPiutang,
+            'b2b_hpp' => $b2bHpp,
+            'b2b_laba' => $b2bLaba,
+
+            'cons_omzet' => $consOmzet,
+            'cons_terbayar' => $consTerbayar,
+            'cons_piutang' => $consPiutang,
+            'cons_hpp' => $consHpp,
+            'cons_loss' => $consLoss,
+            'cons_laba' => $consLaba,
+
+            'total_omzet' => $totalOmzet,
+            'total_terbayar' => $totalTerbayar,
+            'total_piutang' => $totalPiutang,
+            'total_hpp' => $totalHpp,
+            'total_laba' => $totalLaba
+        ];
+    }
+
+    private function fetchPosDetailRows(string $startDate, string $endDate): array
+    {
+        $rows = Database::fetchAll("
+            SELECT p.nomor_nota, p.tanggal_pesanan, p.dibuat_pada, p.tipe_pembayaran, p.total_netto,
+                   u.nama_lengkap as nama_kasir, ak.nama_akun,
+                   COALESCE((
+                       SELECT SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, it.harga_pokok_pembelian, 0))
+                       FROM public.item_pesanan ip
+                       JOIN public.item it ON ip.item_id = it.id
+                       WHERE ip.pesanan_id = p.id
+                   ), 0) as total_hpp
+            FROM public.pesanan p
+            LEFT JOIN public.pengguna u ON p.dibuat_oleh = u.id
+            LEFT JOIN public.akun_kas ak ON p.akun_kas_id = ak.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND p.tipe_pembayaran IN ('cash', 'qris')
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+            ORDER BY p.tanggal_pesanan DESC, p.dibuat_pada DESC
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $formatted = [];
+        foreach ($rows as $idx => $r) {
+            $netto = (float)$r['total_netto'];
+            $hpp = (float)$r['total_hpp'];
+            $laba = $netto - $hpp;
+            $formatted[] = [
+                $idx + 1,
+                $r['nomor_nota'],
+                $r['tanggal_pesanan'],
+                date('H:i', strtotime((string)$r['dibuat_pada'])),
+                $r['nama_kasir'] ?? 'Kasir',
+                $r['nama_akun'] ?? 'Kas Utama',
+                strtoupper((string)$r['tipe_pembayaran']),
+                $netto,
+                $hpp,
+                $laba
+            ];
+        }
+        return $formatted;
+    }
+
+    private function fetchB2bDetailRows(string $startDate, string $endDate): array
+    {
+        $rows = Database::fetchAll("
+            SELECT p.*, pel.nama_toko, pel.kode_pelanggan, u.nama_lengkap as nama_sales,
+                   COALESCE((
+                       SELECT SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, it.harga_pokok_pembelian, 0))
+                       FROM public.item_pesanan ip
+                       JOIN public.item it ON ip.item_id = it.id
+                       WHERE ip.pesanan_id = p.id
+                   ), 0) as total_hpp
+            FROM public.pesanan p
+            JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            LEFT JOIN public.pengguna u ON p.sales_driver_id = u.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND p.tipe_pembayaran NOT IN ('cash', 'qris', 'konsinyasi')
+              AND pel.is_konsinyasi = FALSE
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+            ORDER BY p.tanggal_pesanan DESC, p.dibuat_pada DESC
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $formatted = [];
+        foreach ($rows as $idx => $r) {
+            $netto = (float)$r['total_netto'];
+            $hpp = (float)$r['total_hpp'];
+            $laba = $netto - $hpp;
+            $formatted[] = [
+                $idx + 1,
+                $r['nomor_nota'],
+                $r['tanggal_pesanan'],
+                $r['kode_pelanggan'] ?? '-',
+                $r['nama_toko'],
+                $r['nama_sales'] ?? '-',
+                strtoupper((string)$r['tipe_pembayaran']),
+                $r['tanggal_jatuh_tempo'] ?? '-',
+                (float)$r['total_bruto'],
+                (float)$r['total_diskon'],
+                $netto,
+                (float)$r['total_dibayar'],
+                (float)$r['sisa_tagihan'],
+                $hpp,
+                $laba,
+                strtoupper((string)$r['status_pembayaran'])
+            ];
+        }
+        return $formatted;
+    }
+
+    private function fetchConsignmentDetailRows(string $startDate, string $endDate): array
+    {
+        $rows = Database::fetchAll("
+            SELECT rk.*, kk.nomor_kunjungan, kk.tanggal_kunjungan, pel.nama_toko, it.nama_item, it.kode_sku,
+                   COALESCE(k.nama_karyawan, u.nama_lengkap, '-') as nama_sales,
+                   COALESCE(rk.harga_pokok_satuan, it.harga_pokok_pembelian, 0) as hpp_satuan
+            FROM public.rincian_kunjungan_konsinyasi rk
+            JOIN public.kunjungan_konsinyasi kk ON rk.kunjungan_id = kk.id
+            JOIN public.pelanggan pel ON kk.pelanggan_id = pel.id
+            JOIN public.item it ON rk.item_id = it.id
+            LEFT JOIN public.v_karyawan_info k ON kk.sales_driver_id = k.id
+            LEFT JOIN public.pengguna u ON kk.dibuat_oleh = u.id
+            WHERE kk.tanggal_kunjungan BETWEEN :start AND :end
+            ORDER BY kk.tanggal_kunjungan DESC, pel.nama_toko ASC
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $formatted = [];
+        foreach ($rows as $idx => $r) {
+            $qtyLaku = (int)$r['jumlah_laku_terjual'];
+            $hargaDeal = (float)$r['harga_satuan_deal'];
+            $subtotalLaku = (float)$r['subtotal_laku'];
+            $returRusak = (int)$r['retur_rusak'];
+            $rugiRusak = (float)$r['nilai_kerugian_rusak'];
+            $hppSatuan = (float)$r['hpp_satuan'];
+            $hppTotal = $qtyLaku * $hppSatuan;
+            $labaMurni = $subtotalLaku - ($hppTotal + $rugiRusak);
+
+            $formatted[] = [
+                $idx + 1,
+                $r['nomor_kunjungan'],
+                $r['tanggal_kunjungan'],
+                $r['nama_toko'],
+                $r['kode_sku'],
+                $r['nama_item'],
+                $qtyLaku,
+                $hargaDeal,
+                $subtotalLaku,
+                $returRusak,
+                $rugiRusak,
+                $hppTotal,
+                $labaMurni,
+                $r['nama_sales'] ?? '-'
+            ];
+        }
+        return $formatted;
     }
 }

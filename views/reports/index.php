@@ -41,32 +41,51 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- 2. GLOBAL PERIOD FILTER TOOLBAR (DNA RESPONSIVE CARD)                     -->
     <!-- ========================================================================= -->
-    <div class="card p-3 sm:p-4 rounded-xl" style="background:var(--color-canvas); border:1px solid var(--color-hairline); box-shadow:var(--shadow-1);">
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
-            <!-- Left: Preset Buttons -->
-            <div class="flex items-center gap-1.5 flex-wrap">
-                <div class="flex items-center gap-1.5 text-xs font-bold text-ink mr-1">
-                    <i data-lucide="calendar" class="w-4 h-4 text-primary" style="color:var(--primary, #881337);"></i>
-                    <span>Periode:</span>
+    <div class="report-filter-card">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 lg:gap-4">
+            <!-- Left: Preset Buttons (Segmented Grab-and-Scroll Dock) -->
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5 min-w-0">
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                    <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style="background:rgba(136,19,55,0.08); border:1px solid rgba(136,19,55,0.18); color:var(--primary, #881337);">
+                        <i data-lucide="calendar" style="width:13px; height:13px;"></i>
+                    </div>
+                    <span class="text-[11px] sm:text-xs font-bold text-ink uppercase tracking-wider">Periode:</span>
                 </div>
-                <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
-                    <button type="button" class="btn btn-sm shrink-0" :class="activePreset === 'today' ? 'btn-primary' : 'btn-secondary'" @click="setPreset('today')" style="height:32px; font-size:12px; font-weight:700; border-radius:8px;">Hari Ini</button>
-                    <button type="button" class="btn btn-sm shrink-0" :class="activePreset === '7days' ? 'btn-primary' : 'btn-secondary'" @click="setPreset('7days')" style="height:32px; font-size:12px; font-weight:700; border-radius:8px;">7 Hari</button>
-                    <button type="button" class="btn btn-sm shrink-0" :class="activePreset === 'this_month' ? 'btn-primary' : 'btn-secondary'" @click="setPreset('this_month')" style="height:32px; font-size:12px; font-weight:700; border-radius:8px;">Bulan Ini</button>
-                    <button type="button" class="btn btn-sm shrink-0" :class="activePreset === 'last_month' ? 'btn-primary' : 'btn-secondary'" @click="setPreset('last_month')" style="height:32px; font-size:12px; font-weight:700; border-radius:8px;">Bulan Lalu</button>
-                    <button type="button" class="btn btn-sm shrink-0" :class="activePreset === 'this_year' ? 'btn-primary' : 'btn-secondary'" @click="setPreset('this_year')" style="height:32px; font-size:12px; font-weight:700; border-radius:8px;">Tahun Ini</button>
+                <!-- Segmented Control Dock with Grab & Scroll + Touch Scroll -->
+                <div x-ref="presetTrack" class="report-filter-dock" title="Klik dan geser untuk melihat semua pilihan periode">
+                    <button type="button" class="report-filter-btn" :class="{ 'is-active': activePreset === 'today' }" @click="setPreset('today')">Hari Ini</button>
+                    <button type="button" class="report-filter-btn" :class="{ 'is-active': activePreset === '7days' }" @click="setPreset('7days')">7 Hari</button>
+                    <button type="button" class="report-filter-btn" :class="{ 'is-active': activePreset === 'this_month' }" @click="setPreset('this_month')">Bulan Ini</button>
+                    <button type="button" class="report-filter-btn" :class="{ 'is-active': activePreset === 'last_month' }" @click="setPreset('last_month')">Bulan Lalu</button>
+                    <button type="button" class="report-filter-btn" :class="{ 'is-active': activePreset === 'this_year' }" @click="setPreset('this_year')">Tahun Ini</button>
                 </div>
             </div>
 
-            <!-- Right: Date Pickers (Grid 2 Kolom di HP, Inline Flex di Laptop & Desktop) -->
-            <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5 w-full lg:w-auto">
-                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 min-w-0">
-                    <span class="text-xs font-semibold text-ink-mute flex-shrink-0">Dari:</span>
-                    <input type="date" class="form-input text-xs w-full sm:w-[135px]" x-model="startDate" @change="activePreset = 'custom'" style="height:32px; font-family:var(--font-mono); font-weight:600; padding:0 8px; border-radius:8px;">
+            <!-- Right: Integrated Custom Date Range Inputs -->
+            <div class="w-full lg:w-auto">
+                <!-- Desktop / Tablet Inline View (sm:flex) -->
+                <div class="hidden sm:flex items-center gap-1.5 report-date-range-box">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-ink-mute uppercase tracking-wider flex-shrink-0">Dari</span>
+                        <input type="date" class="report-date-input w-[130px]" x-model="startDate" @change="activePreset = 'custom'">
+                    </div>
+                    <span class="text-xs font-bold text-ink-mute flex-shrink-0 px-0.5">&ndash;</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[11px] font-bold text-ink-mute uppercase tracking-wider flex-shrink-0">S/D</span>
+                        <input type="date" class="report-date-input w-[130px]" x-model="endDate" @change="activePreset = 'custom'">
+                    </div>
                 </div>
-                <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 min-w-0">
-                    <span class="text-xs font-semibold text-ink-mute flex-shrink-0">S/D:</span>
-                    <input type="date" class="form-input text-xs w-full sm:w-[135px]" x-model="endDate" @change="activePreset = 'custom'" style="height:32px; font-family:var(--font-mono); font-weight:600; padding:0 8px; border-radius:8px;">
+
+                <!-- Mobile 2-Column Grid View (sm:hidden) - Bebas Tabrakan & Rapi -->
+                <div class="grid grid-cols-2 gap-2 sm:hidden w-full">
+                    <div class="report-date-range-box-mobile">
+                        <span class="text-[10px] font-bold text-ink-mute uppercase tracking-wider mb-1">Mulai Dari:</span>
+                        <input type="date" class="report-date-input w-full" x-model="startDate" @change="activePreset = 'custom'">
+                    </div>
+                    <div class="report-date-range-box-mobile">
+                        <span class="text-[10px] font-bold text-ink-mute uppercase tracking-wider mb-1">Sampai Dengan:</span>
+                        <input type="date" class="report-date-input w-full" x-model="endDate" @change="activePreset = 'custom'">
+                    </div>
                 </div>
             </div>
         </div>
@@ -87,6 +106,37 @@ ob_start();
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
+                <!-- Card Master Rekap Multi-Kanal -->
+                <div class="report-box" style="border-color:rgba(136,19,55,0.25);">
+                    <div class="report-box-top">
+                        <div class="report-box-icon" style="background:rgba(136,19,55,0.08); color:var(--primary, #881337); border:1px solid rgba(136,19,55,0.18);">
+                            <i data-lucide="layers"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="report-pill-badge">
+                                <span class="badge-dot"></span>
+                                <span>Master 3 Pilar Bisnis</span>
+                            </div>
+                            <h3 class="report-box-title">Rekap Penjualan Multi-Kanal (POS, B2B &amp; Konsinyasi)</h3>
+                            <p class="report-box-desc">Konsolidasi analitik penjualan 3 pilar kanal (Kasir POS, Faktur Grosir B2B, Titip Jual Konsinyasi Rak), omzet total, status pelunasan, sisa piutang, dan laba kotor murni.</p>
+                        </div>
+                    </div>
+                    <div class="report-box-meta">
+                        <span class="text-xs text-ink-mute">Format Dokumen: <strong>Excel (.xlsx 4-Sheet)</strong> &bull; <strong>PDF Eksekutif (.pdf)</strong></span>
+                    </div>
+                    <div class="report-box-actions">
+                        <button type="button" @click="downloadReport('/reports/export/sales-consolidated-excel', {}, 'Rekap Penjualan Multi-Kanal Excel')" class="btn btn-secondary btn-sm flex-1" style="height:34px; background:#10b981; color:#fff; border-color:#059669; font-weight:700;">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                            <span>Excel (4-Sheet)</span>
+                        </button>
+                        <button type="button" @click="downloadReport('/reports/export/sales-consolidated-pdf', {}, 'Rekap Penjualan Multi-Kanal PDF')" class="btn btn-secondary btn-sm flex-1" style="height:34px; background:var(--primary, #881337); color:#fff; border-color:#700f2b; font-weight:700;">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>PDF</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card Laba Rugi -->
                 <div class="report-box">
                     <div class="report-box-top">
                         <div class="report-box-icon" style="background:rgba(136,19,55,0.08); color:var(--primary, #881337); border:1px solid rgba(136,19,55,0.18);">
@@ -147,9 +197,13 @@ ob_start();
                         </div>
                     </div>
                     <div class="report-box-actions">
-                        <button type="button" @click="downloadReport('/reports/export/cash-flow', { account_id: cashFlowAccount }, 'Laporan Arus Kas')" class="btn btn-secondary btn-sm w-full" style="height:34px; background:#10b981; color:#fff; border-color:#059669; font-weight:700;">
+                        <button type="button" @click="downloadReport('/reports/export/cash-flow', { account_id: cashFlowAccount }, 'Laporan Arus Kas Excel')" class="btn btn-secondary btn-sm flex-1" style="height:34px; background:#10b981; color:#fff; border-color:#059669; font-weight:700;">
                             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                            <span>Download Excel (.xlsx)</span>
+                            <span>Excel</span>
+                        </button>
+                        <button type="button" @click="downloadReport('/reports/export/cash-flow-pdf', { account_id: cashFlowAccount }, 'Laporan Arus Kas PDF')" class="btn btn-secondary btn-sm flex-1" style="height:34px; background:var(--primary, #881337); color:#fff; border-color:#700f2b; font-weight:700;">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>PDF</span>
                         </button>
                     </div>
                 </div>
@@ -322,9 +376,13 @@ ob_start();
                         </div>
                     </div>
                     <div class="report-box-actions">
-                        <button type="button" @click="downloadReport('/reports/export/consignment-invoices', { status: invoiceStatus }, 'Rekap Tagihan Piutang Konsinyasi')" class="btn btn-secondary btn-sm w-full" style="height:34px; background:#10b981; color:#fff; border-color:#059669; font-weight:700;">
+                        <button type="button" @click="downloadReport('/reports/export/consignment-invoices', { status: invoiceStatus }, 'Rekap Tagihan Piutang Excel')" class="btn btn-secondary btn-sm flex-1" style="height:34px; background:#10b981; color:#fff; border-color:#059669; font-weight:700;">
                             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                            <span>Download Excel (.xlsx)</span>
+                            <span>Excel</span>
+                        </button>
+                        <button type="button" @click="downloadReport('/reports/export/consignment-invoices-pdf', { status: invoiceStatus }, 'Rekap Tagihan Piutang PDF')" class="btn btn-secondary btn-sm flex-1" style="height:34px; background:var(--primary, #881337); color:#fff; border-color:#700f2b; font-weight:700;">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>PDF</span>
                         </button>
                     </div>
                 </div>
@@ -416,9 +474,13 @@ ob_start();
                         </div>
                     </div>
                     <div class="report-box-actions">
-                        <button type="button" @click="downloadReport('/reports/export/inventory-stock', { kategori: stockCategory }, 'Katalog dan Valuasi Stok Gudang')" class="btn btn-secondary btn-sm w-full" style="height:34px; background:#10b981; color:#fff; border-color:#059669; font-weight:700;">
+                        <button type="button" @click="downloadReport('/reports/export/inventory-stock', { kategori: stockCategory }, 'Valuasi Stok Gudang Excel')" class="btn btn-secondary btn-sm flex-1" style="height:34px; background:#10b981; color:#fff; border-color:#059669; font-weight:700;">
                             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-                            <span>Download Excel (.xlsx)</span>
+                            <span>Excel</span>
+                        </button>
+                        <button type="button" @click="downloadReport('/reports/export/inventory-stock-pdf', { kategori: stockCategory }, 'Valuasi Stok Gudang PDF')" class="btn btn-secondary btn-sm flex-1" style="height:34px; background:var(--primary, #881337); color:#fff; border-color:#700f2b; font-weight:700;">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>PDF</span>
                         </button>
                     </div>
                 </div>
@@ -643,6 +705,145 @@ ob_start();
     border-color: rgba(148, 163, 184, 0.25);
 }
 
+/* Filter Toolbar Premium DNA */
+.report-filter-card {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--rounded-lg, 12px);
+    padding: 12px 14px;
+    box-shadow: var(--shadow-1);
+}
+.report-filter-dock {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px;
+    background: var(--color-canvas-soft, #f1f5f9);
+    border: 1px solid var(--color-hairline);
+    border-radius: 9px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    cursor: grab;
+    cursor: -webkit-grab;
+    user-select: none;
+}
+.report-filter-dock::-webkit-scrollbar {
+    display: none;
+}
+.report-filter-dock.is-dragging {
+    cursor: grabbing !important;
+    cursor: -webkit-grabbing !important;
+    user-select: none;
+}
+.report-filter-dock.is-dragging * {
+    cursor: grabbing !important;
+    cursor: -webkit-grabbing !important;
+    user-select: none;
+}
+.report-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 11px;
+    font-size: 11.5px;
+    font-weight: 700;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    cursor: pointer;
+    background: transparent;
+    color: var(--color-ink-mute);
+    transition: all 0.15s ease;
+    user-select: none;
+    height: 28px;
+    flex-shrink: 0;
+}
+.report-filter-btn:hover {
+    color: var(--color-ink);
+    background: rgba(255, 255, 255, 0.7);
+}
+.dark .report-filter-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+.report-filter-btn.is-active {
+    background: var(--primary, #881337) !important;
+    color: #ffffff !important;
+    border-color: var(--primary, #881337) !important;
+    box-shadow: 0 1px 4px rgba(136, 19, 55, 0.28) !important;
+}
+.report-date-range-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-canvas-soft, #f8fafc);
+    border: 1px solid var(--color-hairline);
+    border-radius: 9px;
+    padding: 3px 8px;
+}
+.report-date-range-box-mobile {
+    background: var(--color-canvas-soft, #f8fafc);
+    border: 1px solid var(--color-hairline);
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+}
+.report-date-input {
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    border-radius: 6px;
+    height: 28px;
+    padding: 0 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    font-family: var(--font-mono, monospace);
+    color: var(--color-ink);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.report-date-input:focus {
+    border-color: var(--primary, #881337);
+    box-shadow: 0 0 0 2px rgba(136, 19, 55, 0.15);
+}
+
+/* Badge Master Rekap */
+.report-pill-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    width: fit-content;
+    max-width: 100%;
+    margin-bottom: 6px;
+    background: rgba(136, 19, 55, 0.08);
+    border: 1px solid rgba(136, 19, 55, 0.2);
+    color: var(--primary, #881337);
+    box-sizing: border-box;
+}
+.report-pill-badge .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary, #881337);
+    flex-shrink: 0;
+}
+.dark .report-pill-badge {
+    background: rgba(251, 113, 133, 0.12);
+    border-color: rgba(251, 113, 133, 0.28);
+    color: #fb7185;
+}
+.dark .report-pill-badge .badge-dot {
+    background: #fb7185;
+}
+
 /* Card Boxes */
 .report-box {
     background: var(--color-canvas);
@@ -742,6 +943,65 @@ function reportHubApp() {
         purchaseSupplier: 'all',
         deliveryDriver: 'all',
 
+        init() {
+            this.setupPresetDragScroll();
+        },
+
+        setupPresetDragScroll() {
+            this.$nextTick(() => {
+                const track = this.$refs.presetTrack;
+                if (!track) return;
+
+                let isDown = false;
+                let startX = 0;
+                let scrollLeft = 0;
+                let hasMoved = false;
+
+                track.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    hasMoved = false;
+                    startX = e.pageX - track.offsetLeft;
+                    scrollLeft = track.scrollLeft;
+                    track.classList.add('is-dragging');
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    const x = e.pageX - track.offsetLeft;
+                    const walk = (x - startX) * 1.25;
+                    if (Math.abs(walk) > 3) {
+                        hasMoved = true;
+                        e.preventDefault();
+                        track.scrollLeft = scrollLeft - walk;
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    if (!isDown) return;
+                    isDown = false;
+                    track.classList.remove('is-dragging');
+                    if (hasMoved) {
+                        setTimeout(() => { hasMoved = false; }, 50);
+                    }
+                });
+
+                track.addEventListener('click', (e) => {
+                    if (hasMoved) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                    }
+                }, true);
+
+                // Mouse wheel horizontal scroll support
+                track.addEventListener('wheel', (e) => {
+                    if (e.deltaY !== 0 && track.scrollWidth > track.clientWidth) {
+                        e.preventDefault();
+                        track.scrollLeft += e.deltaY;
+                    }
+                }, { passive: false });
+            });
+        },
+
         setPreset(preset) {
             this.activePreset = preset;
             const today = '<?= $today ?>';
@@ -772,7 +1032,9 @@ function reportHubApp() {
                 end_date: this.endDate,
                 ...extraParams
             });
-            return '<?= Router::url("") ?>' + baseRoute + '?' + params.toString();
+            const base = '<?= rtrim(Router::url(""), "/") ?>';
+            const cleanRoute = '/' + String(baseRoute).replace(/^\/+/, '');
+            return (base ? base : '') + cleanRoute + '?' + params.toString();
         },
 
         async downloadReport(baseRoute, extraParams = {}, reportLabel = 'Laporan') {
