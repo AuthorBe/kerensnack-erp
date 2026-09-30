@@ -44,12 +44,12 @@ ob_start();
     <div class="card p-3 sm:p-4 rounded-xl" style="background:var(--color-canvas); border:1px solid var(--color-hairline); box-shadow:var(--shadow-1);">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
             <!-- Left: Preset Buttons -->
-            <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                <div class="flex items-center gap-1.5 text-xs font-bold text-ink">
+            <div class="flex items-center gap-1.5 flex-wrap">
+                <div class="flex items-center gap-1.5 text-xs font-bold text-ink mr-1">
                     <i data-lucide="calendar" class="w-4 h-4 text-primary" style="color:var(--primary, #881337);"></i>
                     <span>Periode:</span>
                 </div>
-                <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0">
+                <div class="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
                     <button type="button" class="btn btn-sm shrink-0" :class="activePreset === 'today' ? 'btn-primary' : 'btn-secondary'" @click="setPreset('today')" style="height:32px; font-size:12px; font-weight:700; border-radius:8px;">Hari Ini</button>
                     <button type="button" class="btn btn-sm shrink-0" :class="activePreset === '7days' ? 'btn-primary' : 'btn-secondary'" @click="setPreset('7days')" style="height:32px; font-size:12px; font-weight:700; border-radius:8px;">7 Hari</button>
                     <button type="button" class="btn btn-sm shrink-0" :class="activePreset === 'this_month' ? 'btn-primary' : 'btn-secondary'" @click="setPreset('this_month')" style="height:32px; font-size:12px; font-weight:700; border-radius:8px;">Bulan Ini</button>
@@ -58,15 +58,15 @@ ob_start();
                 </div>
             </div>
 
-            <!-- Right: Date Pickers (Grid 2 Kolom di HP, Inline Flex di Desktop) -->
-            <div class="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:gap-2.5 w-full lg:w-auto pt-2.5 lg:pt-0 border-t lg:border-t-0" style="border-color:var(--color-hairline);">
+            <!-- Right: Date Pickers (Grid 2 Kolom di HP, Inline Flex di Laptop & Desktop) -->
+            <div class="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-2.5 w-full lg:w-auto">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 min-w-0">
-                    <span class="text-[11px] sm:text-xs font-semibold text-ink-mute flex-shrink-0">Dari:</span>
-                    <input type="date" class="form-input text-xs w-full sm:w-[138px]" x-model="startDate" @change="activePreset = 'custom'" style="height:34px; font-family:var(--font-mono); font-weight:600; padding:0 8px; border-radius:8px;">
+                    <span class="text-xs font-semibold text-ink-mute flex-shrink-0">Dari:</span>
+                    <input type="date" class="form-input text-xs w-full sm:w-[135px]" x-model="startDate" @change="activePreset = 'custom'" style="height:32px; font-family:var(--font-mono); font-weight:600; padding:0 8px; border-radius:8px;">
                 </div>
                 <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 min-w-0">
-                    <span class="text-[11px] sm:text-xs font-semibold text-ink-mute flex-shrink-0">S/D:</span>
-                    <input type="date" class="form-input text-xs w-full sm:w-[138px]" x-model="endDate" @change="activePreset = 'custom'" style="height:34px; font-family:var(--font-mono); font-weight:600; padding:0 8px; border-radius:8px;">
+                    <span class="text-xs font-semibold text-ink-mute flex-shrink-0">S/D:</span>
+                    <input type="date" class="form-input text-xs w-full sm:w-[135px]" x-model="endDate" @change="activePreset = 'custom'" style="height:32px; font-family:var(--font-mono); font-weight:600; padding:0 8px; border-radius:8px;">
                 </div>
             </div>
         </div>
