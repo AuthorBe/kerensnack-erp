@@ -73,9 +73,9 @@ ob_start();
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 2. TIGA KARTU PORTAL UTAMA (ARSITEKTUR, TEST DB, TEST SOURCE)             -->
+    <!-- 2. EMPAT KARTU PORTAL UTAMA (ARSITEKTUR, TEST DB, TEST SOURCE, DATABASE)  -->
     <!-- ========================================================================= -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
 
         <!-- KARTU 1: ARSITEKTUR SISTEM & BLUEPRINT AI -->
         <div class="card flex flex-col justify-between p-6 transition-all duration-200 hover:shadow-lg" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);position:relative;overflow:hidden;">
@@ -87,23 +87,22 @@ ob_start();
                     </div>
                     <span class="badge badge-primary" style="font-size:10px;font-weight:700;">MENU 1</span>
                 </div>
-                <h3 style="font-size:17px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
-                    1. Arsitektur Sistem &amp; AI Studio
+                <h3 style="font-size:16px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
+                    1. Arsitektur &amp; AI Studio
                 </h3>
-                <p style="font-size:12.5px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:16px;">
-                    Peta relasi 45 tabel database PostgreSQL Supabase, kamus skema data, daftar stored procedures/triggers, dan generator prompt terpadu untuk AI coding assistant.
+                <p style="font-size:12px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:14px;">
+                    Peta relasi 50 tabel database, kamus skema data, daftar stored procedures, triggers, dan generator prompt AI.
                 </p>
 
-                <div class="flex flex-wrap gap-1.5 mb-6">
-                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_tables'] ?? 45 ?> Tabel Publik</span>
-                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_procedures'] ?? 30 ?> Prosedur RPC</span>
-                    <span class="badge badge-mono" style="font-size:10px;">AI Prompt Studio</span>
+                <div class="flex flex-wrap gap-1.5 mb-5">
+                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_tables'] ?? 50 ?> Tabel</span>
+                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_procedures'] ?? 30 ?> RPC</span>
                 </div>
             </div>
 
-            <a href="<?= Router::url('/developer/architecture') ?>" class="btn btn-primary w-full justify-center" style="font-size:13px;font-weight:700;padding:10px;border-radius:10px;">
-                <span>Buka Arsitektur Sistem</span>
-                <i data-lucide="arrow-right" style="width:16px;height:16px;margin-left:6px;"></i>
+            <a href="<?= Router::url('/developer/architecture') ?>" class="btn btn-primary w-full justify-center text-xs" style="font-weight:700;padding:9px;border-radius:10px;">
+                <span>Buka Arsitektur</span>
+                <i data-lucide="arrow-right" style="width:14px;height:14px;margin-left:4px;"></i>
             </a>
         </div>
 
@@ -113,32 +112,59 @@ ob_start();
             <div>
                 <div class="flex items-center justify-between mb-4">
                     <div style="width:44px;height:44px;border-radius:12px;background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;border:1px solid rgba(16,185,129,0.2);">
-                        <i data-lucide="database" style="width:22px;height:22px;"></i>
+                        <i data-lucide="activity" style="width:22px;height:22px;"></i>
                     </div>
                     <span class="badge badge-success" style="font-size:10px;font-weight:700;">MENU 2</span>
                 </div>
-                <h3 style="font-size:17px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
-                    2. Diagnostik Database (Test DB)
+                <h3 style="font-size:16px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
+                    2. Diagnostik Database
                 </h3>
-                <p style="font-size:12.5px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:16px;">
-                    Konsol healthcheck koneksi SSL pooler Supabase, pengukuran roundtrip latency ping, validasi RPC barcode universal, perhitungan harga bertingkat, dan status seeding master.
+                <p style="font-size:12px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:14px;">
+                    Konsol healthcheck koneksi SSL, latency ping realtime, RPC barcode, kalkulasi harga bertingkat, dan status seeder.
                 </p>
 
-                <div class="flex flex-wrap gap-1.5 mb-6">
-                    <span class="badge badge-mono" style="font-size:10px;">PostgreSQL 17</span>
-                    <span class="badge badge-mono" style="font-size:10px;">SSL Handshake</span>
-                    <span class="badge badge-mono" style="font-size:10px;">Ping &bull; JSON API</span>
-                    <span class="badge badge-mono" style="font-size:10px;">CLI Support</span>
+                <div class="flex flex-wrap gap-1.5 mb-5">
+                    <span class="badge badge-mono" style="font-size:10px;">Healthcheck</span>
+                    <span class="badge badge-mono" style="font-size:10px;">SSL Ping</span>
                 </div>
             </div>
 
-            <a href="<?= Router::url('/developer/test-db') ?>" class="btn w-full justify-center" style="font-size:13px;font-weight:700;padding:10px;border-radius:10px;background:#10b981;color:#fff;border:none;">
-                <span>Buka Konsol Test DB</span>
-                <i data-lucide="activity" style="width:16px;height:16px;margin-left:6px;"></i>
+            <a href="<?= Router::url('/developer/test-db') ?>" class="btn w-full justify-center text-xs" style="font-weight:700;padding:9px;border-radius:10px;background:#10b981;color:#fff;border:none;">
+                <span>Buka Test DB</span>
+                <i data-lucide="arrow-right" style="width:14px;height:14px;margin-left:4px;"></i>
             </a>
         </div>
 
-        <!-- KARTU 3: TEST SOURCE / RUN-ALL CONSOLE -->
+        <!-- KARTU 3: DATABASE ENGINE & REPLICATION MANAGER (MENU BARU) -->
+        <div class="card flex flex-col justify-between p-6 transition-all duration-200 hover:shadow-lg" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <div style="width:44px;height:44px;border-radius:12px;background:rgba(245,158,11,0.1);color:#f59e0b;display:flex;align-items:center;justify-content:center;border:1px solid rgba(245,158,11,0.2);">
+                        <i data-lucide="database" style="width:22px;height:22px;"></i>
+                    </div>
+                    <span class="badge badge-warning" style="font-size:10px;font-weight:700;">MENU 3</span>
+                </div>
+                <h3 style="font-size:16px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
+                    3. Database Sandbox &amp; Sync
+                </h3>
+                <p style="font-size:12px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:14px;">
+                    1-Click Switcher koneksi (Local Sandbox vs Live Supabase) &amp; Replikasi penuh 100% kloning data live ke lokal.
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 mb-5">
+                    <span class="badge badge-mono" style="font-size:10px;"><?= ($telemetry['db_info']['is_local'] ?? true) ? '🟢 LOCAL DB' : '🔴 LIVE SUPABASE' ?></span>
+                    <span class="badge badge-mono" style="font-size:10px;">1-Click Sync</span>
+                </div>
+            </div>
+
+            <a href="<?= Router::url('/developer/database') ?>" class="btn w-full justify-center text-xs" style="font-weight:700;padding:9px;border-radius:10px;background:#f59e0b;color:#fff;border:none;">
+                <span>Kelola Database</span>
+                <i data-lucide="arrow-right" style="width:14px;height:14px;margin-left:4px;"></i>
+            </a>
+        </div>
+
+        <!-- KARTU 4: TEST SOURCE / RUN-ALL CONSOLE -->
         <div class="card flex flex-col justify-between p-6 transition-all duration-200 hover:shadow-lg" style="border-radius:18px;border:1px solid var(--color-hairline-strong);background:var(--color-canvas);position:relative;overflow:hidden;">
             <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg, #8b5cf6, #a78bfa);"></div>
             <div>
@@ -146,26 +172,24 @@ ob_start();
                     <div style="width:44px;height:44px;border-radius:12px;background:rgba(139,92,246,0.1);color:#8b5cf6;display:flex;align-items:center;justify-content:center;border:1px solid rgba(139,92,246,0.2);">
                         <i data-lucide="check-circle-2" style="width:22px;height:22px;"></i>
                     </div>
-                    <span class="badge badge-purple" style="font-size:10px;font-weight:700;">MENU 3</span>
+                    <span class="badge badge-purple" style="font-size:10px;font-weight:700;">MENU 4</span>
                 </div>
-                <h3 style="font-size:17px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
-                    3. Test Source / Run-All Console
+                <h3 style="font-size:16px;font-weight:800;color:var(--color-ink);margin-bottom:6px;">
+                    4. Test Source Console
                 </h3>
-                <p style="font-size:12.5px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:16px;">
-                    Pengujian otomatis seluruh <?= $telemetry['total_suites'] ?? 27 ?> test suites lifecycle ERP (POS Kasir, Order B2B, Hutang Supplier, Surat Jalan POD, Buku Kas, Komisi &amp; RBAC). Menjamin 100% Zero Data Pollution.
+                <p style="font-size:12px;color:var(--color-ink-mute);line-height:1.5;margin-bottom:14px;">
+                    Pengujian otomatis seluruh <?= $telemetry['total_suites'] ?? 41 ?> test suites lifecycle ERP (POS, Order B2B, Hutang, Kas, RBAC).
                 </p>
 
-                <div class="flex flex-wrap gap-1.5 mb-6">
-                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_suites'] ?? 27 ?> Test Suites</span>
-                    <span class="badge badge-mono" style="font-size:10px;">Real-time AJAX</span>
+                <div class="flex flex-wrap gap-1.5 mb-5">
+                    <span class="badge badge-mono" style="font-size:10px;"><?= $telemetry['total_suites'] ?? 41 ?> Suites</span>
                     <span class="badge badge-mono" style="font-size:10px;">Auto Rollback</span>
-                    <span class="badge badge-mono" style="font-size:10px;">Anti-Timeout</span>
                 </div>
             </div>
 
-            <a href="<?= Router::url('/developer/tests') ?>" class="btn w-full justify-center" style="font-size:13px;font-weight:700;padding:10px;border-radius:10px;background:#8b5cf6;color:#fff;border:none;">
-                <span>Buka Test Runner Console</span>
-                <i data-lucide="play" style="width:16px;height:16px;margin-left:6px;"></i>
+            <a href="<?= Router::url('/developer/tests') ?>" class="btn w-full justify-center text-xs" style="font-weight:700;padding:9px;border-radius:10px;background:#8b5cf6;color:#fff;border:none;">
+                <span>Buka Test Runner</span>
+                <i data-lucide="play" style="width:14px;height:14px;margin-left:4px;"></i>
             </a>
         </div>
 

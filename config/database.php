@@ -14,6 +14,14 @@ class Database
     private static ?PDO $instance = null;
 
     /**
+     * Reset koneksi PDO singleton (misal saat beralih database live/local).
+     */
+    public static function resetConnection(): void
+    {
+        self::$instance = null;
+    }
+
+    /**
      * Dapatkan koneksi PDO PostgreSQL tunggal (Singleton) dengan Auto-Retry & Resilient Connection.
      */
     public static function getConnection(): PDO
@@ -182,5 +190,46 @@ class Database
         }
         $sql = "DELETE FROM {$table} WHERE " . implode(' AND ', $whereClauses);
         return self::execute($sql, $params);
+    }
+
+    /**
+     * Dapatkan ringkasan metadata status koneksi database aktif untuk Developer Header & Diagnostik
+     * @return array{is_local: bool, host: string, port: string, database: string, user: string, sslmode: string, driver: string, ping_ms: float, status_label: string, badge_color: string, is_healthy: bool}
+     */
+    public static function getConnectionInfo(): array
+    {
+        $host     = is_string($_ENV['DB_HOST'] ?? null) ? $_ENV['DB_HOST'] : (getenv('DB_HOST') ?: '127.0.0.1');
+        $port     = is_string($_ENV['DB_PORT'] ?? null) ? $_ENV['DB_PORT'] : (getenv('DB_PORT') ?: '5432');
+        $dbname   = is_string($_ENV['DB_DATABASE'] ?? null) ? $_ENV['DB_DATABASE'] : (getenv('DB_DATABASE') ?: 'postgres');
+        $user     = is_string($_ENV['DB_USERNAME'] ?? null) ? $_ENV['DB_USERNAME'] : (getenv('DB_USERNAME') ?: 'postgres');
+        $sslmode  = is_string($_ENV['DB_SSLMODE'] ?? null) ? $_ENV['DB_SSLMODE'] : (getenv('DB_SSLMODE') ?: 'prefer');
+
+        $isLocal = in_array(strtolower(trim($host)), ['127.0.0.1', 'localhost', '::1', '0.0.0.0', 'kerensnack-erp.test'], true)
+                   || str_starts_with($host, '192.168.')
+                   || str_starts_with($host, '10.')
+                   || str_starts_with($host, '172.');
+
+        $pingMs = 0.0;
+        try {
+            $start = microtime(true);
+            self::fetchOne("SELECT 1");
+            $pingMs = round((microtime(true) - $start) * 1000, 1);
+        } catch (\Throwable $e) {
+            $pingMs = -1.0;
+        }
+
+        return [
+            'is_local'     => $isLocal,
+            'host'         => $host,
+            'port'         => (string)$port,
+            'database'     => $dbname,
+            'user'         => $user,
+            'sslmode'      => $sslmode,
+            'driver'       => 'PostgreSQL',
+            'ping_ms'      => $pingMs,
+            'status_label' => $isLocal ? 'LOCAL DB' : 'LIVE SUPABASE',
+            'badge_color'  => $isLocal ? 'emerald' : 'rose',
+            'is_healthy'   => $pingMs >= 0,
+        ];
     }
 }
