@@ -33,7 +33,7 @@ class ReportHubController extends Controller
         try {
             // Master referensi untuk filter dinamis per kartu
             $stores = Database::fetchAll("SELECT id, nama_toko, kode_pelanggan FROM public.pelanggan WHERE status_aktif = TRUE ORDER BY nama_toko ASC");
-            $accounts = Database::fetchAll("SELECT id, nama_akun, tipe_akun FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY nama_akun ASC");
+            $accounts = Database::fetchAll("SELECT id, nama_akun, tipe_akun, COALESCE(is_escrow, FALSE) as is_escrow FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY COALESCE(is_escrow, FALSE) ASC, nama_akun ASC");
             $suppliers = Database::fetchAll("SELECT id, nama_pemasok, kode_pemasok FROM public.pemasok WHERE status_aktif = TRUE ORDER BY nama_pemasok ASC");
             $salesUsers = Database::fetchAll("
                 SELECT p.id, p.nama_lengkap, p.nama_panggilan
@@ -50,6 +50,8 @@ class ReportHubController extends Controller
                 ORDER BY p.nama_lengkap ASC
             ");
             $expenseCategories = Database::fetchAll("SELECT id, nama_kategori FROM public.kategori_biaya WHERE status_aktif = TRUE ORDER BY nama_kategori ASC");
+            $employees = Database::fetchAll("SELECT id, nama_karyawan, tipe_penggajian FROM public.v_karyawan_info WHERE status_aktif = TRUE ORDER BY nama_karyawan ASC");
+            $payrollRuns = Database::fetchAll("SELECT id, nomor_referensi, nama_payroll, periode_awal, periode_akhir, status FROM public.penggajian WHERE status IN ('disetujui', 'dibayarkan') ORDER BY periode_akhir DESC");
 
             $this->view('reports.index', [
                 'pageTitle' => 'Pusat Unduh Laporan',
@@ -60,6 +62,8 @@ class ReportHubController extends Controller
                 'salesUsers' => $salesUsers,
                 'driverUsers' => $driverUsers,
                 'expenseCategories' => $expenseCategories,
+                'employees' => $employees,
+                'payrollRuns' => $payrollRuns,
                 'today' => date('Y-m-d'),
                 'thisMonthStart' => date('Y-m-01'),
                 'thisMonthEnd' => date('Y-m-t'),
@@ -187,10 +191,10 @@ class ReportHubController extends Controller
                 ['3. Penjualan Konsinyasi (Titip Jual)', 'Total barang laku di rak toko mitra', $metrics['consRevenue']],
                 ['TOTAL PENDAPATAN (OMZET KOTOR)', 'Total seluruh kanal penjualan', $metrics['totalRevenue']],
                 ['', '', ''],
-                ['HARGA POKOK PENJUALAN & KERUGIAN (HPP / COGS)', '', ''],
+                ['HARGA POKOK PENJUALAN (HPP / COGS)', '', ''],
                 ['1. HPP Penjualan POS', 'Beban pokok produk kasir POS', $metrics['posHpp']],
                 ['2. HPP Penjualan B2B', 'Beban pokok pesanan B2B', $metrics['b2bHpp']],
-                ['3. Estimasi Kerugian Produk Rusak/Basi', 'Kerugian retur kedaluwarsa konsinyasi', $metrics['consLoss']],
+                ['3. HPP Penjualan Konsinyasi', 'Beban pokok barang laku konsinyasi', $metrics['consHpp']],
                 ['TOTAL BEBAN POKOK (HPP)', 'Total modal produk terjual', $metrics['totalCogs']],
                 ['', '', ''],
                 ['LABA KOTOR (GROSS PROFIT)', 'Total Omzet dikurangi Total HPP', $metrics['grossProfit']],
@@ -203,12 +207,17 @@ class ReportHubController extends Controller
                     $rows[] = [($idx + 1) . '. Beban: ' . ucwords(str_replace('_', ' ', (string)$er['kategori'])), 'Pengeluaran kas operasional', (float)$er['total_beban']];
                 }
             } else {
-                $rows[] = ['Beban Operasional', 'Tidak ada pengeluaran kas pada periode ini', 0];
+                $rows[] = ['Beban Operasional', 'Tidak ada pengeluaran kas operasional pada periode ini', 0];
             }
 
-            $rows[] = ['TOTAL BEBAN OPERASIONAL', 'Total pengeluaran kas periode ini', $metrics['totalOperationalExpense']];
+            $rows[] = ['TOTAL BEBAN OPERASIONAL', 'Total pengeluaran kas operasional periode ini', $metrics['totalOperationalExpense']];
             $rows[] = ['', '', ''];
             $rows[] = ['ESTIMASI LABA BERSIH (NET PROFIT)', 'Laba Kotor dikurangi Total Beban Operasional', $metrics['netProfit']];
+            if ($metrics['consLoss'] > 0) {
+                $rows[] = ['', '', ''];
+                $rows[] = ['CATATAN KHUSUS / ANALITIK', '', ''];
+                $rows[] = ['* Estimasi Kerugian Retur Rusak Konsinyasi', 'Kerugian produk rusak/kedaluwarsa di rak mitra', $metrics['consLoss']];
+            }
 
             $dateRange = date('d M Y', strtotime($startDate)) . ' sd ' . date('d M Y', strtotime($endDate));
             $filename = "Laporan Laba Rugi Eksekutif ({$dateRange}).xlsx";
@@ -334,11 +343,24 @@ class ReportHubController extends Controller
 
             $params = ['start' => $startDate, 'end' => $endDate];
             $whereSql = "WHERE ark.tanggal_transaksi BETWEEN :start AND :end";
+            $accountLabel = 'Semua Kas Operasional (Bebas Escrow)';
 
-            if ($accountId !== 'all' && !empty($accountId)) {
+            if ($accountId === 'all' || $accountId === 'all_with_escrow') {
+                $accountLabel = 'Konsolidasi Seluruh Akun (Termasuk Escrow)';
+            } elseif ($accountId === 'escrow') {
+                $whereSql .= " AND ak.is_escrow = TRUE";
+                $accountLabel = 'Khusus Kas Tabungan Karyawan (Escrow Terkunci)';
+            } elseif ($accountId !== 'operational' && !empty($accountId)) {
                 $whereSql .= " AND ark.akun_kas_id = :acc";
                 $params['acc'] = $accountId;
+                $accRow = Database::fetchOne("SELECT nama_akun, COALESCE(is_escrow, FALSE) as is_escrow FROM public.akun_kas WHERE id = :id", ['id' => $accountId]);
+                $accountLabel = $accRow ? (string)$accRow['nama_akun'] . (!empty($accRow['is_escrow']) ? ' [Escrow]' : '') : "Akun: {$accountId}";
+            } else {
+                // Default: kas operasional usaha (bebas escrow)
+                $whereSql .= " AND COALESCE(ak.is_escrow, FALSE) = FALSE";
+                $accountLabel = 'Semua Kas Operasional (Bebas Escrow)';
             }
+
             if ($type !== 'all' && !empty($type)) {
                 $whereSql .= " AND ark.jenis_kas = :type";
                 $params['type'] = $type;
@@ -374,7 +396,7 @@ class ReportHubController extends Controller
             
             ExcelExport::download($filename, $headers, $rows, 'Mutasi Kas', [
                 'report_title' => 'REKAPITULASI MUTASI TRANSAKSI KAS & BANK',
-                'metadata' => ['Periode' => $dateRange, 'Filter' => "Akun: {$accountId}, Jenis: {$type}"],
+                'metadata' => ['Periode' => $dateRange, 'Filter Akun' => $accountLabel, 'Jenis Mutasi' => strtoupper($type)],
                 'currency_cols' => ['Nominal (Rp)'],
                 'sum_cols' => ['Nominal (Rp)']
             ]);
@@ -662,13 +684,21 @@ class ReportHubController extends Controller
                 ORDER BY p.nama_lengkap ASC
             ", ['start' => $startDate, 'end' => $endDate]);
 
-            $headers = ['No', 'Nama Salesman', 'Panggilan', 'Omzet Konsinyasi (Rp)', 'Omzet B2B (Rp)', 'Total Omzet (Rp)', 'Estimasi Komisi (Rp)'];
+            $headers = ['No', 'Nama Salesman', 'Panggilan', 'Omzet Konsinyasi (Rp)', 'Omzet B2B (Rp)', 'Total Omzet (Rp)', 'Tier Komisi', 'Rate Komisi (%)', 'Estimasi Komisi (Rp)'];
             $rows = [];
             foreach ($salesList as $idx => $s) {
                 $omzetKons = (float)$s['total_omzet_konsinyasi'];
                 $omzetB2B = (float)$s['total_omzet_b2b'];
                 $totalOmzet = $omzetKons + $omzetB2B;
-                $komisiEst = $totalOmzet * 0.025;
+
+                $tierRpc = Database::fetchOne("
+                    SELECT public.fn_hitung_tier_komisi_sales(:omzet) as r
+                ", ['omzet' => $totalOmzet])['r'] ?? '{}';
+                $tierInfo = json_decode((string)$tierRpc, true) ?? [];
+
+                $tierName = $tierInfo['nama_tier'] ?? 'Tier 1';
+                $tierPct = (float)($tierInfo['persentase'] ?? 0);
+                $komisiEst = (float)($tierInfo['nominal_komisi'] ?? ($totalOmzet * ($tierPct / 100)));
 
                 $rows[] = [
                     $idx + 1,
@@ -677,6 +707,8 @@ class ReportHubController extends Controller
                     $omzetKons,
                     $omzetB2B,
                     $totalOmzet,
+                    $tierName,
+                    $tierPct,
                     $komisiEst
                 ];
             }
@@ -686,7 +718,7 @@ class ReportHubController extends Controller
             
             ExcelExport::download($filename, $headers, $rows, 'Komisi Sales', [
                 'report_title' => 'REKAPITULASI PERFORMA & ESTIMASI KOMISI SALESMAN',
-                'metadata' => ['Periode' => $dateRange],
+                'metadata' => ['Periode' => $dateRange, 'Metode Perhitungan' => 'Tier Progresif Resmi Sesuai Sistem'],
                 'currency_cols' => ['Omzet Konsinyasi (Rp)', 'Omzet B2B (Rp)', 'Total Omzet (Rp)', 'Estimasi Komisi (Rp)'],
                 'sum_cols' => ['Omzet Konsinyasi (Rp)', 'Omzet B2B (Rp)', 'Total Omzet (Rp)', 'Estimasi Komisi (Rp)']
             ]);
@@ -1023,62 +1055,110 @@ class ReportHubController extends Controller
 
     private function fetchPnlData(string $startDate, string $endDate): array
     {
-        $salesRow = Database::fetchOne("
+        // 1. Partisi Pendapatan Usaha (Revenue) 100% selaras dengan Owner Dashboard & Pesanan Bertagihan Riil
+        $channelRow = Database::fetchOne("
             SELECT 
-                COALESCE(SUM(CASE WHEN tipe_pembayaran IN ('cash', 'qris') THEN total_netto ELSE 0 END), 0) as pos_omzet,
-                COALESCE(SUM(CASE WHEN tipe_pembayaran NOT IN ('cash', 'qris') THEN total_netto ELSE 0 END), 0) as b2b_omzet,
-                COALESCE(SUM(total_netto), 0) as total_omzet
-            FROM public.pesanan
-            WHERE tanggal_pesanan BETWEEN :start AND :end
-              AND status_pemrosesan != 'dibatalkan'
-              AND status_pembayaran != 'dibatalkan'
-              AND is_tagihan = TRUE
-        ", ['start' => $startDate, 'end' => $endDate]);
+                COALESCE(SUM(CASE 
+                    WHEN (pl.is_konsinyasi = FALSE OR pl.is_konsinyasi IS NULL) 
+                         AND pes.tipe_pembayaran != 'konsinyasi'
+                         AND (pl.kode_pelanggan = 'CUST-001' OR pes.catatan ILIKE '%POS%' OR pes.catatan ILIKE '%kasir%' OR COALESCE(pes.uang_diterima, 0) > 0)
+                    THEN pes.total_netto 
+                    ELSE 0 
+                END), 0) as pos_omzet,
+                COALESCE(SUM(CASE 
+                    WHEN (pl.is_konsinyasi = FALSE OR pl.is_konsinyasi IS NULL) 
+                         AND pes.tipe_pembayaran != 'konsinyasi'
+                         AND (pl.kode_pelanggan != 'CUST-001' OR pl.kode_pelanggan IS NULL)
+                         AND (pes.catatan NOT ILIKE '%POS%' AND pes.catatan NOT ILIKE '%kasir%' OR pes.catatan IS NULL)
+                         AND COALESCE(pes.uang_diterima, 0) = 0
+                    THEN pes.total_netto 
+                    ELSE 0 
+                END), 0) as b2b_omzet,
+                COALESCE(SUM(CASE 
+                    WHEN pl.is_konsinyasi = TRUE OR pes.tipe_pembayaran = 'konsinyasi'
+                    THEN pes.total_netto 
+                    ELSE 0 
+                END), 0) as cons_omzet,
+                COALESCE(SUM(pes.total_netto), 0) as total_omzet
+            FROM public.pesanan pes
+            LEFT JOIN public.pelanggan pl ON pes.pelanggan_id = pl.id
+            WHERE pes.tanggal_pesanan BETWEEN :start AND :end
+              AND pes.status_pemrosesan != 'dibatalkan'
+              AND pes.status_pembayaran != 'dibatalkan'
+              AND pes.is_tagihan = TRUE
+        ", ['start' => $startDate, 'end' => $endDate]) ?? [];
 
+        // 2. Partisi HPP (COGS) Barang Terjual 100% selaras dengan Pesanan Bertagihan Riil
         $cogsRow = Database::fetchOne("
             SELECT 
-                COALESCE(SUM(CASE WHEN p.tipe_pembayaran IN ('cash', 'qris') THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0) ELSE 0 END), 0) as pos_hpp,
-                COALESCE(SUM(CASE WHEN p.tipe_pembayaran NOT IN ('cash', 'qris') THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0) ELSE 0 END), 0) as b2b_hpp,
+                COALESCE(SUM(CASE 
+                    WHEN (pl.is_konsinyasi = FALSE OR pl.is_konsinyasi IS NULL) 
+                         AND p.tipe_pembayaran != 'konsinyasi'
+                         AND (pl.kode_pelanggan = 'CUST-001' OR p.catatan ILIKE '%POS%' OR p.catatan ILIKE '%kasir%' OR COALESCE(p.uang_diterima, 0) > 0)
+                    THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)
+                    ELSE 0 
+                END), 0) as pos_hpp,
+                COALESCE(SUM(CASE 
+                    WHEN (pl.is_konsinyasi = FALSE OR pl.is_konsinyasi IS NULL) 
+                         AND p.tipe_pembayaran != 'konsinyasi'
+                         AND (pl.kode_pelanggan != 'CUST-001' OR pl.kode_pelanggan IS NULL)
+                         AND (p.catatan NOT ILIKE '%POS%' AND p.catatan NOT ILIKE '%kasir%' OR p.catatan IS NULL)
+                         AND COALESCE(p.uang_diterima, 0) = 0
+                    THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)
+                    ELSE 0 
+                END), 0) as b2b_hpp,
+                COALESCE(SUM(CASE 
+                    WHEN pl.is_konsinyasi = TRUE OR p.tipe_pembayaran = 'konsinyasi'
+                    THEN ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)
+                    ELSE 0 
+                END), 0) as cons_hpp,
                 COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as total_hpp
             FROM public.item_pesanan ip
             JOIN public.pesanan p ON ip.pesanan_id = p.id
+            LEFT JOIN public.pelanggan pl ON p.pelanggan_id = pl.id
             LEFT JOIN public.item i ON ip.item_id = i.id
             WHERE p.tanggal_pesanan BETWEEN :start AND :end
               AND p.status_pemrosesan != 'dibatalkan'
               AND p.status_pembayaran != 'dibatalkan'
               AND p.is_tagihan = TRUE
-        ", ['start' => $startDate, 'end' => $endDate]);
+        ", ['start' => $startDate, 'end' => $endDate]) ?? [];
 
-        $consRow = Database::fetchOne("
-            SELECT 
-                COALESCE(SUM(rk.subtotal_laku), 0) as total_omzet, 
-                COALESCE(SUM(rk.nilai_kerugian_rusak), 0) as total_kerugian
+        // 3. Estimasi Kerugian Produk Rusak/Kedaluwarsa Konsinyasi (Sebagai data analitik pelengkap)
+        $consLossRow = Database::fetchOne("
+            SELECT COALESCE(SUM(rk.nilai_kerugian_rusak), 0) as total_kerugian
             FROM public.kunjungan_konsinyasi kk
             JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
             WHERE kk.tanggal_kunjungan BETWEEN :start AND :end
-        ", ['start' => $startDate, 'end' => $endDate]);
+        ", ['start' => $startDate, 'end' => $endDate]) ?? [];
 
+        // 4. Beban Pengeluaran Operasional (Beban Kas Operasional Usaha Bersih)
+        // Mengecualikan transaksi akun tabungan escrow karyawan, penarikan tabungan, transfer keluar, dan pembelian bahan baku
         $expenseRows = Database::fetchAll("
             SELECT ark.kategori, COALESCE(SUM(ark.nominal), 0) as total_beban
             FROM public.arus_kas ark
-            WHERE ark.jenis_kas = 'keluar' AND ark.tanggal_transaksi BETWEEN :start AND :end
+            JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+            WHERE ark.tanggal_transaksi BETWEEN :start AND :end
+              AND ark.jenis_kas = 'keluar'
+              AND COALESCE(ak.is_escrow, FALSE) = FALSE
+              AND ark.kategori NOT IN ('penarikan_tabungan', 'transfer_keluar', 'pembelian_bahan')
             GROUP BY ark.kategori
             ORDER BY total_beban DESC
         ", ['start' => $startDate, 'end' => $endDate]);
 
-        $posRevenue = (float)($salesRow['pos_omzet'] ?? 0);
-        $b2bRevenue = (float)($salesRow['b2b_omzet'] ?? 0);
-        $consRevenue = (float)($consRow['total_omzet'] ?? 0);
+        $posRevenue = (float)($channelRow['pos_omzet'] ?? 0);
+        $b2bRevenue = (float)($channelRow['b2b_omzet'] ?? 0);
+        $consRevenue = (float)($channelRow['cons_omzet'] ?? 0);
+        $totalRevenue = (float)($channelRow['total_omzet'] ?? 0);
 
         $posHpp = (float)($cogsRow['pos_hpp'] ?? 0);
         $b2bHpp = (float)($cogsRow['b2b_hpp'] ?? 0);
-        $consLoss = (float)($consRow['total_kerugian'] ?? 0);
+        $consHpp = (float)($cogsRow['cons_hpp'] ?? 0);
+        $totalCogs = (float)($cogsRow['total_hpp'] ?? 0);
+        $consLoss = (float)($consLossRow['total_kerugian'] ?? 0);
 
-        $totalRevenue = $posRevenue + $b2bRevenue + $consRevenue;
-        $totalCogs = $posHpp + $b2bHpp + $consLoss;
         $grossProfit = $totalRevenue - $totalCogs;
 
-        $totalOperationalExpense = 0;
+        $totalOperationalExpense = 0.0;
         foreach ($expenseRows as $er) {
             $totalOperationalExpense += (float)$er['total_beban'];
         }
@@ -1092,6 +1172,7 @@ class ReportHubController extends Controller
             'totalRevenue' => $totalRevenue,
             'posHpp' => $posHpp,
             'b2bHpp' => $b2bHpp,
+            'consHpp' => $consHpp,
             'consLoss' => $consLoss,
             'totalCogs' => $totalCogs,
             'grossProfit' => $grossProfit,
@@ -1104,26 +1185,37 @@ class ReportHubController extends Controller
     private function fetchCashFlowData(string $startDate, string $endDate, string $accountId): array
     {
         $params = ['start' => $startDate, 'end' => $endDate];
+        $startParams = ['start' => $startDate];
         $accSql = "";
-        $accountName = 'Semua Rekening & Kas';
+        $joinAkun = "";
+        $accountName = 'Semua Kas Operasional Usaha (Tanpa Tabungan Escrow)';
 
-        if ($accountId !== 'all' && !empty($accountId)) {
+        if ($accountId === 'all' || $accountId === 'all_with_escrow') {
+            $accountName = 'Konsolidasi Seluruh Rekening & Kas (Termasuk Tabungan Escrow)';
+        } elseif ($accountId === 'escrow') {
+            $accountName = 'Kas Tabungan Karyawan (Rekening Escrow Terkunci)';
+            $joinAkun = " JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id ";
+            $accSql = " AND ak.is_escrow = TRUE ";
+        } elseif ($accountId !== 'operational' && !empty($accountId)) {
+            // Akun spesifik via UUID
             $accSql = " AND ark.akun_kas_id = :acc";
             $params['acc'] = $accountId;
-            $accRow = Database::fetchOne("SELECT nama_akun FROM public.akun_kas WHERE id = :id", ['id' => $accountId]);
-            if ($accRow) {
-                $accountName = (string)$accRow['nama_akun'];
-            }
-        }
-
-        $startParams = ['start' => $startDate];
-        if ($accountId !== 'all' && !empty($accountId)) {
             $startParams['acc'] = $accountId;
+            $accRow = Database::fetchOne("SELECT nama_akun, COALESCE(is_escrow, FALSE) as is_escrow FROM public.akun_kas WHERE id = :id", ['id' => $accountId]);
+            if ($accRow) {
+                $accountName = (string)$accRow['nama_akun'] . (!empty($accRow['is_escrow']) ? ' [Tabungan Escrow Terkunci]' : '');
+            }
+        } else {
+            // Default: 'operational'
+            $accountName = 'Seluruh Kas Operasional Usaha (Tanpa Tabungan Escrow)';
+            $joinAkun = " JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id ";
+            $accSql = " AND COALESCE(ak.is_escrow, FALSE) = FALSE ";
         }
 
         $begRow = Database::fetchOne("
             SELECT COALESCE(SUM(CASE WHEN ark.jenis_kas IN ('masuk', 'transfer_masuk') THEN ark.nominal ELSE -ark.nominal END), 0) as saldo_awal
             FROM public.arus_kas ark
+            {$joinAkun}
             WHERE ark.tanggal_transaksi < :start {$accSql}
         ", $startParams);
         $begBalance = (float)($begRow['saldo_awal'] ?? 0);
@@ -1139,6 +1231,7 @@ class ReportHubController extends Controller
         $inflowBreakdown = Database::fetchAll("
             SELECT ark.kategori, SUM(ark.nominal) as total, COUNT(*) as jml
             FROM public.arus_kas ark
+            JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
             WHERE ark.tanggal_transaksi BETWEEN :start AND :end {$accSql} AND ark.jenis_kas = 'masuk'
             GROUP BY ark.kategori ORDER BY total DESC
         ", $params);
@@ -1146,6 +1239,7 @@ class ReportHubController extends Controller
         $outflowBreakdown = Database::fetchAll("
             SELECT ark.kategori, SUM(ark.nominal) as total, COUNT(*) as jml
             FROM public.arus_kas ark
+            JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
             WHERE ark.tanggal_transaksi BETWEEN :start AND :end {$accSql} AND ark.jenis_kas = 'keluar'
             GROUP BY ark.kategori ORDER BY total DESC
         ", $params);
@@ -1159,7 +1253,8 @@ class ReportHubController extends Controller
         }
 
         $netCashFlow = $totalIn - $totalOut;
-        $endingBalance = $begBalance + $netCashFlow + ($accountId !== 'all' ? $netTransfer : 0);
+        $isSingleAccount = ($accountId !== 'all' && $accountId !== 'all_with_escrow' && $accountId !== 'operational' && !empty($accountId));
+        $endingBalance = $begBalance + $netCashFlow + ($isSingleAccount ? $netTransfer : 0);
 
         return [
             'accountName' => $accountName,
@@ -1241,7 +1336,7 @@ class ReportHubController extends Controller
 
     private function fetchConsolidatedMetrics(string $startDate, string $endDate): array
     {
-        // 1. POS Metrics
+        // 1. POS Metrics (Walk-in Kasir Ritel)
         $posRow = Database::fetchOne("
             SELECT 
                 COALESCE(SUM(p.total_netto), 0) as omzet,
@@ -1249,16 +1344,19 @@ class ReportHubController extends Controller
                 COALESCE(SUM(p.sisa_tagihan), 0) as piutang,
                 COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
             FROM public.pesanan p
+            LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
             LEFT JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
             LEFT JOIN public.item i ON ip.item_id = i.id
             WHERE p.tanggal_pesanan BETWEEN :start AND :end
-              AND p.tipe_pembayaran IN ('cash', 'qris')
               AND p.status_pemrosesan != 'dibatalkan'
               AND p.status_pembayaran != 'dibatalkan'
               AND p.is_tagihan = TRUE
+              AND (pel.is_konsinyasi = FALSE OR pel.is_konsinyasi IS NULL)
+              AND p.tipe_pembayaran != 'konsinyasi'
+              AND (pel.kode_pelanggan = 'CUST-001' OR p.catatan ILIKE '%POS%' OR p.catatan ILIKE '%kasir%' OR COALESCE(p.uang_diterima, 0) > 0)
         ", ['start' => $startDate, 'end' => $endDate]);
 
-        // 2. B2B Regular Store Metrics
+        // 2. B2B Regular Store Metrics (Grosir Direct)
         $b2bRow = Database::fetchOne("
             SELECT 
                 COALESCE(SUM(p.total_netto), 0) as omzet,
@@ -1266,40 +1364,44 @@ class ReportHubController extends Controller
                 COALESCE(SUM(p.sisa_tagihan), 0) as piutang,
                 COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
             FROM public.pesanan p
-            JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
             LEFT JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
             LEFT JOIN public.item i ON ip.item_id = i.id
             WHERE p.tanggal_pesanan BETWEEN :start AND :end
-              AND p.tipe_pembayaran NOT IN ('cash', 'qris', 'konsinyasi')
-              AND pel.is_konsinyasi = FALSE
               AND p.status_pemrosesan != 'dibatalkan'
               AND p.status_pembayaran != 'dibatalkan'
               AND p.is_tagihan = TRUE
+              AND (pel.is_konsinyasi = FALSE OR pel.is_konsinyasi IS NULL)
+              AND p.tipe_pembayaran != 'konsinyasi'
+              AND (pel.kode_pelanggan != 'CUST-001' OR pel.kode_pelanggan IS NULL)
+              AND (p.catatan NOT ILIKE '%POS%' AND p.catatan NOT ILIKE '%kasir%' OR p.catatan IS NULL)
+              AND COALESCE(p.uang_diterima, 0) = 0
         ", ['start' => $startDate, 'end' => $endDate]);
 
-        // 3. Consignment Metrics
+        // 3. Consignment Metrics (Titip Jual Rak Mitra Resmi Bertagihan)
         $consRow = Database::fetchOne("
             SELECT 
-                COALESCE(SUM(rk.subtotal_laku), 0) as omzet,
-                COALESCE(SUM(rk.nilai_kerugian_rusak), 0) as kerugian_rusak,
-                COALESCE(SUM(rk.jumlah_laku_terjual * COALESCE(rk.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
-            FROM public.kunjungan_konsinyasi kk
-            JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
-            LEFT JOIN public.item i ON rk.item_id = i.id
-            WHERE kk.tanggal_kunjungan BETWEEN :start AND :end
-        ", ['start' => $startDate, 'end' => $endDate]);
-
-        // Consignment Payment & AR from invoices generated
-        $consPayRow = Database::fetchOne("
-            SELECT 
+                COALESCE(SUM(p.total_netto), 0) as omzet,
                 COALESCE(SUM(p.total_dibayar), 0) as terbayar,
-                COALESCE(SUM(p.sisa_tagihan), 0) as piutang
+                COALESCE(SUM(p.sisa_tagihan), 0) as piutang,
+                COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
             FROM public.pesanan p
-            JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            LEFT JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
+            LEFT JOIN public.item i ON ip.item_id = i.id
             WHERE p.tanggal_pesanan BETWEEN :start AND :end
-              AND (p.tipe_pembayaran = 'konsinyasi' OR pel.is_konsinyasi = TRUE)
               AND p.status_pemrosesan != 'dibatalkan'
               AND p.status_pembayaran != 'dibatalkan'
+              AND p.is_tagihan = TRUE
+              AND (pel.is_konsinyasi = TRUE OR p.tipe_pembayaran = 'konsinyasi')
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        // Kerugian retur rusak dari kunjungan konsinyasi
+        $consLossRow = Database::fetchOne("
+            SELECT COALESCE(SUM(rk.nilai_kerugian_rusak), 0) as kerugian_rusak
+            FROM public.kunjungan_konsinyasi kk
+            JOIN public.rincian_kunjungan_konsinyasi rk ON kk.id = rk.kunjungan_id
+            WHERE kk.tanggal_kunjungan BETWEEN :start AND :end
         ", ['start' => $startDate, 'end' => $endDate]);
 
         $posOmzet = (float)($posRow['omzet'] ?? 0);
@@ -1315,17 +1417,17 @@ class ReportHubController extends Controller
         $b2bLaba = $b2bOmzet - $b2bHpp;
 
         $consOmzet = (float)($consRow['omzet'] ?? 0);
-        $consTerbayar = (float)($consPayRow['terbayar'] ?? 0);
-        $consPiutang = (float)($consPayRow['piutang'] ?? 0);
+        $consTerbayar = (float)($consRow['terbayar'] ?? 0);
+        $consPiutang = (float)($consRow['piutang'] ?? 0);
         $consHpp = (float)($consRow['hpp'] ?? 0);
-        $consLoss = (float)($consRow['kerugian_rusak'] ?? 0);
-        $consLaba = $consOmzet - ($consHpp + $consLoss);
+        $consLoss = (float)($consLossRow['kerugian_rusak'] ?? 0);
+        $consLaba = $consOmzet - $consHpp;
 
         $totalOmzet = $posOmzet + $b2bOmzet + $consOmzet;
         $totalTerbayar = $posTerbayar + $b2bTerbayar + $consTerbayar;
         $totalPiutang = $posPiutang + $b2bPiutang + $consPiutang;
         $totalHpp = $posHpp + $b2bHpp + $consHpp;
-        $totalLaba = $posLaba + $b2bLaba + $consLaba;
+        $totalLaba = $totalOmzet - $totalHpp;
 
         return [
             'pos_omzet' => $posOmzet,

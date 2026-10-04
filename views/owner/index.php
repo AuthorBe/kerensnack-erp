@@ -624,14 +624,20 @@ ob_start();
                 <div class="executive-card-body is-flex-col-centered space-y-4 sm:space-y-5" style="padding: 24px;">
                     <!-- 4 KARTU ASET & KEWAJIBAN -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3.5">
-                        <!-- Kas & Bank -->
+                        <!-- Kas & Bank Operasional -->
                         <div class="p-3.5 sm:p-4 rounded-xl space-y-1.5 flex flex-col justify-between" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-top:3px solid #3b82f6;">
                             <div class="flex items-center justify-between">
-                                <span style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;">Kas &amp; Bank</span>
+                                <span style="font-size:10.5px;font-weight:800;color:var(--color-ink-mute);text-transform:uppercase;">Kas Operasional</span>
                                 <i data-lucide="wallet" style="width:14px;height:14px;color:#3b82f6;"></i>
                             </div>
-                            <div class="font-mono text-sm sm:text-base font-black" style="color:#3b82f6;"><?= Format::rupiah($totalKasLikuid) ?></div>
-                            <div style="font-size:10px;color:var(--color-ink-mute);"><?= count($kasDetail) ?> Rekening Aktif</div>
+                            <div class="font-mono text-sm sm:text-base font-black" style="color:#3b82f6;"><?= Format::rupiah($totalKasOperasional ?? $totalKasLikuid) ?></div>
+                            <div style="font-size:10px;color:var(--color-ink-mute);">
+                                <?php if (($totalKasEscrow ?? 0) > 0): ?>
+                                    + Escrow: <?= Format::rupiah($totalKasEscrow) ?>
+                                <?php else: ?>
+                                    <?= count($kasDetail) ?> Rekening Aktif
+                                <?php endif; ?>
+                            </div>
                         </div>
 
                         <!-- Total Piutang -->
@@ -665,6 +671,37 @@ ob_start();
                         </div>
                     </div>
 
+                    <!-- RINCIAN KOMPOSISI KAS OPERASIONAL VS ESCROW TABUNGAN -->
+                    <div class="p-4 sm:p-4.5 rounded-xl space-y-2.5" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink-mute);display:flex;align-items:center;gap:6px;">
+                                <i data-lucide="shield-check" style="width:14px;height:14px;color:#10b981;"></i>
+                                <span>Komposisi Likuiditas Kas &amp; Bank:</span>
+                            </div>
+                            <span style="font-size:11px;color:var(--color-ink-mute);">
+                                Total Konsolidasi: <strong class="font-mono text-ink"><?= Format::rupiah($totalKasKonsolidasi ?? ($totalKasLikuid + ($totalKasEscrow ?? 0))) ?></strong>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                            <div class="p-2.5 sm:p-3 rounded-lg" style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-left:3px solid #3b82f6;">
+                                <div class="flex items-center justify-between">
+                                    <span style="color:var(--color-ink-mute);font-size:10.5px;font-weight:700;">Kas Operasional Usaha (Likuid Bebas)</span>
+                                    <span class="badge badge-primary font-bold text-[9.5px] px-2 py-0.5 rounded-full">Modal Kerja</span>
+                                </div>
+                                <div class="font-black font-mono text-sm sm:text-[14px]" style="color:#3b82f6;margin-top:2px;"><?= Format::rupiah($totalKasOperasional ?? $totalKasLikuid) ?></div>
+                                <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">Digunakan untuk operasional harian, belanja bahan, &amp; gaji</div>
+                            </div>
+                            <div class="p-2.5 sm:p-3 rounded-lg" style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-left:3px solid #10b981;">
+                                <div class="flex items-center justify-between">
+                                    <span style="color:var(--color-ink-mute);font-size:10.5px;font-weight:700;">Tabungan Karyawan (Escrow Terkunci)</span>
+                                    <span class="badge badge-success font-bold text-[9.5px] px-2 py-0.5 rounded-full">Titipan Aman</span>
+                                </div>
+                                <div class="font-black font-mono text-sm sm:text-[14px]" style="color:#059669;margin-top:2px;"><?= Format::rupiah($totalKasEscrow ?? 0) ?></div>
+                                <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">Dana titipan staf (Terkunci &amp; tidak dihitung modal kerja usaha)</div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- RINCIAN VALUASI PERSEDIAAN GUDANG VS RAK -->
                     <div class="p-4 sm:p-4.5 rounded-xl space-y-2.5" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
                         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink-mute);">
@@ -693,7 +730,7 @@ ob_start();
 
                 <!-- Footer Note -->
                 <div class="executive-card-footer px-5 py-3 sm:px-6 sm:py-3.5 border-t text-center text-xs sm:text-[12px] text-ink-mute" style="padding: 14px 24px; border-top: 1px solid var(--color-hairline); background: var(--color-canvas-soft);">
-                    Net Working Capital = (Kas + Piutang + Total Persediaan) &minus; Hutang Vendor
+                    Net Working Capital = (Kas Operasional + Piutang Usaha + Total Persediaan) &minus; Hutang Vendor (Dana Tabungan Escrow diproteksi terpisah)
                 </div>
             </div>
 
