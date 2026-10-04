@@ -333,6 +333,7 @@ runTest('Consignment Store with Active Shelf Stock Cannot be Converted to Non-Co
             $itemId = $tempItemId;
         }
 
+        $db->beginTransaction();
         try {
             $db->exec("
                 INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, alamat_lengkap, status_aktif)
@@ -382,6 +383,9 @@ runTest('Consignment Store with Active Shelf Stock Cannot be Converted to Non-Co
 
             return true;
         } finally {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$tempCustomerId}'");
             $db->exec("DELETE FROM public.pelanggan WHERE id = '{$tempCustomerId}'");
             if ($tempItemId) {

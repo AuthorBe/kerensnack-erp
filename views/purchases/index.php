@@ -32,11 +32,11 @@ ob_start();
             <?php if (Auth::can('purchases.create')): ?>
             <button @click="openAddModal('faktur')" class="btn btn-secondary" style="font-weight:700;">
                 <i data-lucide="receipt"></i>
-                <span>+ Catat Faktur Langsung</span>
+                <span>Catat Faktur Langsung</span>
             </button>
             <button @click="openAddModal('po')" class="btn btn-primary" style="font-weight:700;background:var(--color-primary-deep,#059669);border-color:var(--color-primary-deep,#059669);">
                 <i data-lucide="shopping-cart"></i>
-                <span>+ Buat PO Pembelian</span>
+                <span>Buat PO Pembelian</span>
             </button>
             <?php endif; ?>
         </div>
@@ -339,103 +339,112 @@ ob_start();
                         </div>
                     </div>
 
-                    <!-- KARTU DETAIL VENDOR TERPILIH -->
+                    <!-- KARTU DETAIL VENDOR TERPILIH (Executive Responsive Card) -->
                     <template x-if="selectedSupplier">
-                        <div style="margin-top:10px;padding:12px 14px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;font-size:11.5px;display:flex;flex-direction:column;gap:9px;color:var(--color-ink-secondary);">
-                            <!-- Baris 1: PIC, Kontak & Komunikasi -->
-                            <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;">
-                                <template x-if="selectedSupplier.nama_kontak">
-                                    <div style="display:flex;align-items:center;gap:4px;font-weight:700;color:var(--color-ink);">
-                                        <i data-lucide="user" style="width:13px;height:13px;color:var(--color-primary);flex-shrink:0;"></i>
-                                        <span x-text="'PIC: ' + selectedSupplier.nama_kontak"></span>
+                        <div style="margin-top:12px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-xs);">
+                            
+                            <!-- Top Bar: Avatar, Info Utama, & Action Badges -->
+                            <div class="flex flex-wrap items-center justify-between gap-2.5 p-3 sm:px-4 sm:py-3 border-b border-hairline" style="background:linear-gradient(to right, rgba(136,19,55,0.03), transparent);">
+                                <div class="flex items-center gap-2.5 min-w-0">
+                                    <div style="width:34px;height:34px;border-radius:10px;background:rgba(136,19,55,0.08);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(136,19,55,0.15);">
+                                        <i data-lucide="building-2" style="width:17px;height:17px;"></i>
                                     </div>
-                                </template>
-                                <template x-if="selectedSupplier.nomor_whatsapp">
-                                    <a :href="'https://wa.me/' + cleanWa(selectedSupplier.nomor_whatsapp)" target="_blank" class="badge" style="background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.25);padding:1.5px 7px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:4px;text-decoration:none;" title="Chat WhatsApp PIC Vendor">
-                                        <i data-lucide="message-circle" style="width:11px;height:11px;"></i>
-                                        <span x-text="selectedSupplier.nomor_whatsapp"></span>
-                                    </a>
-                                </template>
-                                <template x-if="selectedSupplier.nomor_telepon && selectedSupplier.nomor_telepon !== selectedSupplier.nomor_whatsapp">
-                                    <div style="display:flex;align-items:center;gap:4px;">
-                                        <i data-lucide="phone" style="width:12px;height:12px;color:var(--color-ink-mute);flex-shrink:0;"></i>
-                                        <span class="font-mono" x-text="selectedSupplier.nomor_telepon"></span>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 truncate" x-text="selectedSupplier.nama_pemasok"></span>
+                                            <span class="badge badge-mono text-[10px] font-bold" style="padding:1px 6px;" x-text="selectedSupplier.kode_pemasok"></span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                            <i data-lucide="user" style="width:11px;height:11px;color:var(--color-ink-mute);"></i>
+                                            <span>PIC: <strong class="text-slate-700 dark:text-slate-200" x-text="selectedSupplier.nama_kontak || 'PIC Utama'"></strong></span>
+                                        </div>
                                     </div>
-                                </template>
-                                <template x-if="selectedSupplier.email">
-                                    <div style="display:flex;align-items:center;gap:4px;">
-                                        <i data-lucide="mail" style="width:12px;height:12px;color:var(--color-ink-mute);flex-shrink:0;"></i>
-                                        <span x-text="selectedSupplier.email"></span>
-                                    </div>
-                                </template>
+                                </div>
+
+                                <div class="flex items-center gap-2 flex-wrap ml-auto">
+                                    <template x-if="selectedSupplier.nomor_whatsapp">
+                                        <a :href="'https://wa.me/' + cleanWa(selectedSupplier.nomor_whatsapp)" target="_blank" 
+                                           class="badge hover:opacity-90 transition-all" 
+                                           style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;padding:3px 8px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;text-decoration:none;" 
+                                           title="Hubungi WhatsApp PIC Vendor">
+                                            <i data-lucide="message-circle" style="width:12px;height:12px;"></i>
+                                            <span x-text="selectedSupplier.nomor_whatsapp"></span>
+                                        </a>
+                                    </template>
+                                    <span class="badge" style="background:rgba(136,19,55,0.08);color:var(--color-primary);border:1px solid rgba(136,19,55,0.25);font-size:10.5px;font-weight:700;padding:3px 8px;">
+                                        <i data-lucide="boxes" style="width:11px;height:11px;margin-right:4px;"></i>
+                                        <span x-text="supplierItems.length + ' Bahan'"></span>
+                                    </span>
+                                </div>
                             </div>
 
-                            <!-- Baris 2: Alamat Lengkap & Titik Google Maps Presisi -->
-                            <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding-top:4px;border-top:1px dashed var(--color-hairline);">
-                                <template x-if="selectedSupplier.alamat_lengkap && selectedSupplier.alamat_lengkap !== '-'">
-                                    <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:200px;">
-                                        <i data-lucide="map-pin" style="width:13px;height:13px;color:#f59e0b;flex-shrink:0;"></i>
-                                        <span class="truncate" style="max-width:320px;" x-text="selectedSupplier.alamat_lengkap"></span>
+                            <!-- 3-Pillar Clean Grid (Termin & Rekening, Lokasi & Alamat, Catatan) -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 p-3 sm:p-3.5 bg-slate-50/50 dark:bg-slate-900/30 text-xs">
+                                
+                                <!-- Pillar 1: Ketentuan Pembayaran -->
+                                <div class="flex flex-col gap-1 p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-hairline shadow-2xs">
+                                    <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+                                        <i data-lucide="wallet" style="width:11px;height:11px;color:#d97706;"></i>
+                                        <span>Ketentuan Bayar</span>
                                     </div>
-                                </template>
-                                <template x-if="selectedSupplier.link_google_maps">
-                                    <a :href="selectedSupplier.link_google_maps" target="_blank" class="badge" style="background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.25);padding:2px 8px;font-size:10.5px;font-weight:700;display:inline-flex;align-items:center;gap:4px;text-decoration:none;" title="Buka Titik Presisi Google Maps di Tab Baru">
-                                        <i data-lucide="map-pin" style="width:11px;height:11px;"></i>
-                                        <span>Titik Lokasi Maps</span>
-                                        <i data-lucide="external-link" style="width:10px;height:10px;"></i>
-                                    </a>
-                                </template>
-                            </div>
-
-                            <!-- Baris 3: Syarat Pembayaran & Rekening Bank -->
-                            <div style="display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding-top:4px;border-top:1px dashed var(--color-hairline);">
-                                <template x-if="selectedSupplier.termin_bayar">
-                                    <div style="display:flex;align-items:center;gap:4px;">
-                                        <span style="color:var(--color-ink-mute);">Termin Standar:</span>
+                                    <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                                         <span class="badge font-bold" :class="{
                                             'badge-success': selectedSupplier.termin_bayar === 'cash',
                                             'badge-info': selectedSupplier.termin_bayar === 'transfer',
                                             'badge-warning': selectedSupplier.termin_bayar && selectedSupplier.termin_bayar.startsWith('tempo_')
-                                        }" style="font-size:10px;padding:1px 6px;" x-text="formatTermin(selectedSupplier.termin_bayar)"></span>
+                                        }" style="font-size:10.5px;padding:2px 7px;" x-text="formatTermin(selectedSupplier.termin_bayar)"></span>
                                     </div>
-                                </template>
-                                <template x-if="selectedSupplier.nama_bank && selectedSupplier.nomor_rekening">
-                                    <div style="display:flex;align-items:center;gap:4px;">
-                                        <i data-lucide="credit-card" style="width:12px;height:12px;color:#3b82f6;flex-shrink:0;"></i>
-                                        <span x-text="selectedSupplier.nama_bank + ': ' + selectedSupplier.nomor_rekening + ' (a.n ' + (selectedSupplier.atas_nama_rekening || '-') + ')'"></span>
+                                </div>
+
+                                <!-- Pillar 2: Rekening Bank / Tujuan Transfer -->
+                                <div class="flex flex-col gap-1 p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-hairline shadow-2xs">
+                                    <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-1">
+                                        <i data-lucide="credit-card" style="width:11px;height:11px;color:#3b82f6;"></i>
+                                        <span>Rekening Vendor</span>
                                     </div>
-                                </template>
+                                    <template x-if="selectedSupplier.nama_bank && selectedSupplier.nomor_rekening">
+                                        <div class="flex items-center gap-1.5 font-mono text-[11px] font-bold text-slate-700 dark:text-slate-200 mt-0.5 truncate" :title="selectedSupplier.nama_bank + ': ' + selectedSupplier.nomor_rekening + ' a.n ' + (selectedSupplier.atas_nama_rekening || '-')">
+                                            <span class="badge badge-info" style="font-size:9.5px;padding:1px 5px;" x-text="selectedSupplier.nama_bank"></span>
+                                            <span class="truncate" x-text="selectedSupplier.nomor_rekening"></span>
+                                        </div>
+                                    </template>
+                                    <template x-if="!(selectedSupplier.nama_bank && selectedSupplier.nomor_rekening)">
+                                        <span class="text-[11px] text-slate-400 italic mt-0.5">Tidak ada rekening terdaftar</span>
+                                    </template>
+                                </div>
+
+                                <!-- Pillar 3: Lokasi Gudang / Titik Maps -->
+                                <div class="flex flex-col gap-1 p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-hairline shadow-2xs sm:col-span-2 lg:col-span-1">
+                                    <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center justify-between gap-1">
+                                        <div class="flex items-center gap-1">
+                                            <i data-lucide="map-pin" style="width:11px;height:11px;color:#ef4444;"></i>
+                                            <span>Lokasi / Alamat</span>
+                                        </div>
+                                        <template x-if="selectedSupplier.link_google_maps">
+                                            <a :href="selectedSupplier.link_google_maps" target="_blank" class="text-rose-600 dark:text-rose-400 hover:underline font-bold text-[10px] inline-flex items-center gap-0.5" title="Buka Titik Google Maps">
+                                                <span>Buka Maps</span>
+                                                <i data-lucide="external-link" style="width:9px;height:9px;"></i>
+                                            </a>
+                                        </template>
+                                    </div>
+                                    <template x-if="selectedSupplier.alamat_lengkap && selectedSupplier.alamat_lengkap !== '-'">
+                                        <div class="truncate text-[11px] text-slate-600 dark:text-slate-300 font-medium mt-0.5" :title="selectedSupplier.alamat_lengkap" x-text="selectedSupplier.alamat_lengkap"></div>
+                                    </template>
+                                    <template x-if="!(selectedSupplier.alamat_lengkap && selectedSupplier.alamat_lengkap !== '-')">
+                                        <span class="text-[11px] text-slate-400 italic mt-0.5">Alamat belum diatur</span>
+                                    </template>
+                                </div>
+
                             </div>
 
-                            <!-- Baris 4: Catatan Khusus Vendor (Jika Ada) -->
+                            <!-- Catatan Vendor (Jika Ada) -->
                             <template x-if="selectedSupplier.catatan">
-                                <div style="font-size:11px;color:#92400e;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);padding:5px 8px;border-radius:6px;display:flex;align-items:center;gap:5px;">
-                                    <i data-lucide="info" style="width:12px;height:12px;flex-shrink:0;color:#d97706;"></i>
-                                    <div><strong>Catatan Vendor:</strong> <span x-text="selectedSupplier.catatan"></span></div>
+                                <div style="font-size:11px;color:#92400e;background:rgba(245,158,11,0.08);border-top:1px solid rgba(245,158,11,0.2);padding:7px 12px;display:flex;align-items:center;gap:6px;">
+                                    <i data-lucide="info" style="width:13px;height:13px;flex-shrink:0;color:#d97706;"></i>
+                                    <div class="truncate"><strong>Catatan Vendor:</strong> <span x-text="selectedSupplier.catatan"></span></div>
                                 </div>
                             </template>
 
-                            <!-- Baris 5: Ringkasan Jumlah Item yang Dijual Pemasok -->
-                            <div style="padding-top:4px;border-top:1px dashed var(--color-hairline);display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:11px;">
-                                <div style="display:flex;align-items:center;gap:4px;font-weight:600;color:var(--color-ink);">
-                                    <i data-lucide="package" style="width:13px;height:13px;color:var(--color-primary);flex-shrink:0;"></i>
-                                    <span>Katalog Item Terdaftar:</span>
-                                </div>
-                                
-                                <template x-if="supplierItems.length > 0">
-                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                        <span class="badge badge-primary" style="font-size:10.5px;font-weight:600;" x-text="supplierItems.length + ' Item'"></span>
-                                        <span style="color:var(--color-ink-mute);font-size:10.5px;">(bahan baku / kemasan)</span>
-                                    </div>
-                                </template>
-
-                                <template x-if="supplierItems.length === 0">
-                                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                                        <span class="badge badge-warning" style="font-size:10px;">0 Item</span>
-                                        <span style="color:var(--color-ink-mute);font-size:10.5px;">(Gunakan centang <em>"Semua Bahan"</em> di bawah jika diperlukan)</span>
-                                    </div>
-                                </template>
-                            </div>
                         </div>
                     </template>
 
@@ -601,36 +610,45 @@ ob_start();
                             </div>
 
                             <!-- FOTO BUKTI NOTA FISIK -->
-                            <div style="margin-top:10px;">
-                                <div class="flex items-center justify-between gap-2 mb-1.5">
-                                    <label class="form-label font-bold mb-0">Upload Foto Nota Fisik / Surat Jalan Vendor (Maks. 5 Foto)</label>
-                                    <span class="text-xs text-ink-mute font-mono" x-text="photosPO.length + '/5 Foto'"></span>
+                            <div style="margin-top:12px;padding:12px 14px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;">
+                                <div class="flex items-center justify-between gap-2 mb-2">
+                                    <div class="flex items-center gap-1.5 font-bold text-xs" style="color:var(--color-ink);">
+                                        <i data-lucide="receipt" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                                        <span>Upload Foto Nota Fisik / Surat Jalan Vendor (Maks. 5 Foto)</span>
+                                    </div>
+                                    <span class="badge badge-mono text-[10.5px] font-bold" :class="photosPO.length >= 5 ? 'badge-warning' : 'badge-secondary'" x-text="photosPO.length + ' / 5 Foto'"></span>
                                 </div>
                                 
-                                <div class="multi-photo-dual-picker">
+                                <div class="photo-uploader-actions">
                                     <input type="file" x-ref="cameraInputPO" @change="handleMultiPhoto($event, 'po')" accept="image/*" capture="environment" style="display:none;">
                                     <input type="file" x-ref="galleryInputPO" @change="handleMultiPhoto($event, 'po')" accept="image/*" multiple style="display:none;">
                                     
-                                    <button type="button" @click="$refs.cameraInputPO.click()" class="btn-picker-action is-camera" :disabled="photosPO.length >= 5">
-                                        <i data-lucide="camera" style="width:16px;height:16px;"></i>
-                                        <span>Ambil Foto (Kamera)</span>
+                                    <button type="button" @click="$refs.cameraInputPO.click()" class="photo-uploader-btn photo-uploader-btn-camera" :disabled="photosPO.length >= 5">
+                                        <i data-lucide="camera" style="width:14px;height:14px;"></i>
+                                        <span>Ambil Kamera</span>
                                     </button>
-                                    <button type="button" @click="$refs.galleryInputPO.click()" class="btn-picker-action is-gallery" :disabled="photosPO.length >= 5">
-                                        <i data-lucide="image-plus" style="width:16px;height:16px;"></i>
+                                    <button type="button" @click="$refs.galleryInputPO.click()" class="photo-uploader-btn" :disabled="photosPO.length >= 5">
+                                        <i data-lucide="image-plus" style="width:14px;height:14px;"></i>
                                         <span>Pilih dari Galeri</span>
                                     </button>
+                                    <template x-if="photosPO.length > 0">
+                                        <button type="button" @click="photosPO = []" class="btn btn-ghost btn-sm" style="color:var(--color-danger);font-size:11px;padding:4px 8px;" title="Hapus Semua Foto">
+                                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                            <span>Hapus Semua</span>
+                                        </button>
+                                    </template>
                                 </div>
 
                                 <!-- Grid Preview Antrean Foto -->
                                 <template x-if="photosPO.length > 0">
-                                    <div class="photo-queue-grid">
+                                    <div class="photo-uploader-queue" style="margin-top:10px;">
                                         <template x-for="(p, idx) in photosPO" :key="idx">
-                                            <div class="photo-queue-item">
-                                                <img :src="p.preview" alt="Preview Foto">
-                                                <button type="button" @click="removePhoto('po', idx)" class="photo-queue-remove" title="Hapus Foto">
-                                                    <i data-lucide="x" style="width:12px;height:12px;"></i>
+                                            <div class="photo-uploader-card">
+                                                <img :src="p.preview" @click="openReceiptPreview(p.preview, 'Preview Foto Nota #' + (idx + 1))" class="photo-uploader-thumb" alt="Preview Foto">
+                                                <button type="button" @click.stop="removePhoto('po', idx)" class="photo-uploader-remove-btn" title="Hapus Foto">
+                                                    <i data-lucide="x" style="width:11px;height:11px;"></i>
                                                 </button>
-                                                <div class="photo-queue-badge" x-text="'#' + (idx + 1)"></div>
+                                                <span class="photo-uploader-badge" x-text="'#' + (idx + 1)"></span>
                                             </div>
                                         </template>
                                     </div>
@@ -684,7 +702,7 @@ ob_start();
                             </div>
 
                             <div style="display:flex;flex-direction:column;gap:8px;min-height:140px;overflow:visible;">
-                                <template x-for="(row, idx) in form.items" :key="idx">
+                                <template x-for="(row, idx) in form.items" :key="row.uid || idx">
                                     <div class="purchase-item-row">
                                         <!-- Mobile Card Top Bar (Item #, Subtotal, Delete) -->
                                         <div class="purchase-item-mobile-header">
@@ -706,6 +724,8 @@ ob_start();
                                                     @keydown.enter.stop.prevent="openItemDropdown(row, idx)"
                                                     @keydown.space.stop.prevent="openItemDropdown(row, idx)"
                                                     @keydown.down.stop.prevent="openItemDropdown(row, idx)"
+                                                    @keydown.right.prevent="focusRowField(idx, 'qty')"
+                                                    @keydown.up.prevent="moveRowField(idx, -1, 'btn')"
                                                     class="form-input flex items-center justify-between w-full text-left"
                                                     style="height:36px;font-size:12px;font-weight:600;border-radius:8px;cursor:pointer;background:var(--color-canvas);padding:0 8px;">
                                                 <span class="truncate" :style="!row.item_id ? 'color:var(--color-ink-mute);font-weight:500;' : 'color:var(--color-ink);'"
@@ -714,10 +734,13 @@ ob_start();
                                             </button>
 
                                             <div x-show="row.dropdownOpen" x-cloak
-                                                 class="dropdown-menu-searchable purchase-dropdown-menu">
-                                                <div style="padding:6px 8px;border-bottom:1px solid var(--color-hairline);background:var(--color-canvas-soft);">
+                                                 class="dropdown-menu-searchable purchase-dropdown-menu"
+                                                 style="box-shadow:0 12px 30px -6px rgba(0,0,0,0.22), 0 8px 12px -6px rgba(0,0,0,0.12);border-radius:12px;overflow:hidden;border:1px solid var(--color-hairline);background:var(--color-canvas);min-width:340px;z-index:90;">
+                                                
+                                                <!-- Search Input Header -->
+                                                <div style="padding:8px 10px;border-bottom:1px solid var(--color-hairline);background:var(--color-canvas-soft);">
                                                     <div style="position:relative;display:flex;align-items:center;">
-                                                        <i data-lucide="search" style="position:absolute;left:8px;width:13px;height:13px;color:var(--color-ink-mute);pointer-events:none;"></i>
+                                                        <i data-lucide="search" style="position:absolute;left:9px;width:13px;height:13px;color:var(--color-ink-mute);pointer-events:none;"></i>
                                                         <input type="text" 
                                                                :id="'item-search-' + idx"
                                                                x-model="row.search"
@@ -727,29 +750,48 @@ ob_start();
                                                                @keydown.enter.prevent.stop="selectActiveDropdownItem(row, idx)"
                                                                @keydown.escape.prevent.stop="closeItemDropdown(row, idx)"
                                                                @keydown.tab="closeItemDropdown(row, idx)"
-                                                               placeholder="Cari nama barang / SKU..."
-                                                               class="form-input"
-                                                               style="height:30px;padding-left:26px;font-size:11.5px;border-radius:6px;width:100%;background:var(--color-canvas);">
+                                                               placeholder="Ketik nama bahan atau kode SKU..."
+                                                               class="form-input text-xs"
+                                                               style="height:32px;padding-left:28px;padding-right:24px;border-radius:6px;width:100%;font-size:11.5px;">
                                                     </div>
                                                 </div>
-                                                <div :id="'item-opt-list-' + idx" style="max-height:180px;overflow-y:auto;" class="custom-scrollbar">
+
+                                                <!-- Option list -->
+                                                <div :id="'item-opt-list-' + idx" style="max-height:220px;overflow-y:auto;padding:6px;" class="custom-scrollbar space-y-1">
                                                     <template x-for="(it, optIdx) in getFilteredItems(row)" :key="it.id">
                                                         <div :id="'item-opt-' + idx + '-' + optIdx"
                                                              @click="selectItemRow(row, idx, it)"
-                                                             class="searchable-option"
-                                                             :class="{ 'is-selected': String(it.id) === String(row.item_id), 'is-active': optIdx === (row.activeIndex || 0) }"
-                                                             style="padding:8px 10px;font-size:11.5px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;border-bottom:1px solid var(--color-hairline-soft);">
-                                                            <div style="min-width:0;flex:1;">
-                                                                <div style="font-weight:700;color:var(--color-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" x-text="it.nama_item"></div>
-                                                                <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="(it.tipe_item === 'bahan_mentah' ? 'Bahan Mentah' : (it.tipe_item === 'bahan_kemas' ? 'Bahan Kemas' : 'Barang Jadi')) + ' • Satuan: ' + it.satuan_dasar"></div>
+                                                             class="purchase-item-opt"
+                                                             :class="{
+                                                                 'is-selected': String(it.id) === String(row.item_id),
+                                                                 'is-active': optIdx === (row.activeIndex || 0)
+                                                             }">
+                                                            
+                                                            <div class="truncate flex items-center gap-2 flex-1 min-w-0 pr-2">
+                                                                <span class="badge badge-mono text-[9.5px] font-bold flex-shrink-0" style="padding:1.5px 5px;" x-text="it.kode_sku"></span>
+                                                                <div class="truncate">
+                                                                    <div class="font-bold text-slate-800 dark:text-slate-100 truncate text-[12px]" :style="optIdx === (row.activeIndex || 0) ? 'color:var(--color-primary);' : ''" x-text="it.nama_item"></div>
+                                                                    <div class="text-[10px] text-slate-400" x-text="(it.tipe_item === 'bahan_mentah' ? 'Bahan Mentah' : (it.tipe_item === 'bahan_kemas' ? 'Bahan Kemas' : 'Barang Jadi')) + ' • ' + it.satuan_dasar"></div>
+                                                                </div>
                                                             </div>
-                                                            <span class="badge badge-mono" style="font-size:10px;" x-text="formatRupiah(it.harga_pokok_pembelian)"></span>
+
+                                                            <div class="flex-shrink-0 flex items-center gap-2">
+                                                                <span class="badge font-mono font-bold" 
+                                                                      :style="isItemInVendorCatalog(it.id, form.pemasok_id) ? 'background:rgba(16,185,129,0.1);color:#059669;border:1px solid rgba(16,185,129,0.25);font-size:10.5px;padding:2px 7px;' : 'font-size:10.5px;padding:2px 6px;'" 
+                                                                      x-text="formatRupiah(getItemCatalogPrice(it.id, form.pemasok_id) !== null ? getItemCatalogPrice(it.id, form.pemasok_id) : it.harga_pokok_pembelian)"></span>
+                                                                
+                                                                <!-- Minimalist checkmark for selected item -->
+                                                                <template x-if="String(it.id) === String(row.item_id)">
+                                                                    <span style="font-size:11px;font-weight:800;color:var(--color-primary);line-height:1;" title="Bahan Terpilih">&#x2713;</span>
+                                                                </template>
+                                                            </div>
                                                         </div>
                                                     </template>
+
                                                     <template x-if="getFilteredItems(row).length === 0">
-                                                        <div style="padding:16px 12px;text-align:center;font-size:11.5px;color:var(--color-ink-mute);">
-                                                            <div>Tidak ada bahan terdaftar untuk vendor ini.</div>
-                                                            <div style="font-size:10.5px;margin-top:3px;color:#3b82f6;">Centang "Semua Bahan" di atas jika pengadaan dari vendor cadangan.</div>
+                                                        <div style="padding:20px 12px;text-align:center;font-size:11.5px;color:var(--color-ink-mute);">
+                                                            <div class="font-semibold text-slate-700 dark:text-slate-300">Tidak ada bahan terdaftar untuk vendor ini.</div>
+                                                            <div style="font-size:10.5px;margin-top:4px;color:#3b82f6;">Centang <em>"Semua Bahan"</em> di atas jika pengadaan dari vendor cadangan.</div>
                                                         </div>
                                                     </template>
                                                 </div>
@@ -772,6 +814,8 @@ ob_start();
                                                            @focus="$event.target.select()"
                                                            @click="$event.target.select()"
                                                            @keydown.enter.prevent="onQtyEnter(row, idx)"
+                                                           @keydown.right.prevent="focusRowField(idx, 'price')"
+                                                           @keydown.left.prevent="focusRowField(idx, 'btn')"
                                                            @keydown.down.prevent="moveRowField(idx, 1, 'qty')"
                                                            @keydown.up.prevent="moveRowField(idx, -1, 'qty')"
                                                            @keydown.delete.ctrl.prevent="removeItemRow(idx)"
@@ -793,6 +837,7 @@ ob_start();
                                                        @focus="$event.target.select()"
                                                        @click="$event.target.select()"
                                                        @keydown.enter.prevent="onPriceEnter(row, idx)"
+                                                       @keydown.left.prevent="focusRowField(idx, 'qty')"
                                                        @keydown.down.prevent="moveRowField(idx, 1, 'price')"
                                                        @keydown.up.prevent="moveRowField(idx, -1, 'price')"
                                                        @keydown.delete.ctrl.prevent="removeItemRow(idx)"
@@ -2193,41 +2238,48 @@ ob_start();
                     </div>
 
                     <!-- Upload Foto Nota Fisik -->
-                    <div>
-                        <div class="flex items-center justify-between gap-2 mb-1.5">
-                            <label class="form-label font-bold mb-0">
-                                Foto Bukti Nota Fisik Vendor / Surat Jalan (Maks. 5 Foto)
+                    <div style="padding:12px 14px;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:10px;">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <div class="flex items-center gap-1.5 font-bold text-xs" style="color:var(--color-ink);">
+                                <i data-lucide="receipt" style="width:14px;height:14px;color:var(--color-primary);"></i>
+                                <span>Foto Bukti Nota Fisik Vendor / Surat Jalan (Maks. 5 Foto)</span>
                                 <template x-if="receiveForm.driver_nota_photo">
-                                    <span style="font-weight:normal;color:#059669;font-size:11px;">(Foto dari driver sudah tersimpan)</span>
+                                    <span class="badge badge-success text-[10px] font-bold" style="padding:1px 5px;">(Foto driver tersimpan)</span>
                                 </template>
-                            </label>
-                            <span class="text-xs text-ink-mute font-mono" x-text="photosReceive.length + '/5 Foto'"></span>
+                            </div>
+                            <span class="badge badge-mono text-[10.5px] font-bold" :class="photosReceive.length >= 5 ? 'badge-warning' : 'badge-secondary'" x-text="photosReceive.length + ' / 5 Foto'"></span>
                         </div>
                         
-                        <div class="multi-photo-dual-picker">
+                        <div class="photo-uploader-actions">
                             <input type="file" x-ref="cameraInputReceive" @change="handleMultiPhoto($event, 'receive')" accept="image/*" capture="environment" style="display:none;">
                             <input type="file" x-ref="galleryInputReceive" @change="handleMultiPhoto($event, 'receive')" accept="image/*" multiple style="display:none;">
                             
-                            <button type="button" @click="$refs.cameraInputReceive.click()" class="btn-picker-action is-camera" :disabled="photosReceive.length >= 5">
-                                <i data-lucide="camera" style="width:16px;height:16px;"></i>
-                                <span>Ambil Foto (Kamera)</span>
+                            <button type="button" @click="$refs.cameraInputReceive.click()" class="photo-uploader-btn photo-uploader-btn-camera" :disabled="photosReceive.length >= 5">
+                                <i data-lucide="camera" style="width:14px;height:14px;"></i>
+                                <span>Ambil Kamera</span>
                             </button>
-                            <button type="button" @click="$refs.galleryInputReceive.click()" class="btn-picker-action is-gallery" :disabled="photosReceive.length >= 5">
-                                <i data-lucide="image-plus" style="width:16px;height:16px;"></i>
+                            <button type="button" @click="$refs.galleryInputReceive.click()" class="photo-uploader-btn" :disabled="photosReceive.length >= 5">
+                                <i data-lucide="image-plus" style="width:14px;height:14px;"></i>
                                 <span>Pilih dari Galeri</span>
                             </button>
+                            <template x-if="photosReceive.length > 0">
+                                <button type="button" @click="photosReceive = []" class="btn btn-ghost btn-sm" style="color:var(--color-danger);font-size:11px;padding:4px 8px;" title="Hapus Semua Foto">
+                                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                    <span>Hapus Semua</span>
+                                </button>
+                            </template>
                         </div>
 
                         <!-- Grid Preview Antrean Foto -->
                         <template x-if="photosReceive.length > 0">
-                            <div class="photo-queue-grid">
+                            <div class="photo-uploader-queue" style="margin-top:10px;">
                                 <template x-for="(p, idx) in photosReceive" :key="idx">
-                                    <div class="photo-queue-item">
-                                        <img :src="p.preview" alt="Preview Foto">
-                                        <button type="button" @click="removePhoto('receive', idx)" class="photo-queue-remove" title="Hapus Foto">
-                                            <i data-lucide="x" style="width:12px;height:12px;"></i>
+                                    <div class="photo-uploader-card">
+                                        <img :src="p.preview" @click="openReceiptPreview(p.preview, 'Preview Foto Nota Realisasi #' + (idx + 1))" class="photo-uploader-thumb" alt="Preview Foto">
+                                        <button type="button" @click.stop="removePhoto('receive', idx)" class="photo-uploader-remove-btn" title="Hapus Foto">
+                                            <i data-lucide="x" style="width:11px;height:11px;"></i>
                                         </button>
-                                        <div class="photo-queue-badge" x-text="'#' + (idx + 1)"></div>
+                                        <span class="photo-uploader-badge" x-text="'#' + (idx + 1)"></span>
                                     </div>
                                 </template>
                             </div>
@@ -2708,6 +2760,47 @@ ob_start();
         outline: 2px solid var(--color-primary, #3b82f6) !important;
         outline-offset: 2px;
     }
+    .purchase-item-opt {
+        padding: 7px 10px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        border-left: 3px solid transparent;
+        transition: background 0.12s ease, border-color 0.12s ease;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        user-select: none;
+        background: transparent;
+    }
+    .purchase-item-opt:hover {
+        background: rgba(136, 19, 55, 0.05);
+        border-left-color: rgba(136, 19, 55, 0.4);
+    }
+    .purchase-item-opt.is-active {
+        background: rgba(136, 19, 55, 0.08) !important;
+        border-left-color: var(--color-primary, #881337) !important;
+        border-top-color: transparent !important;
+        border-right-color: transparent !important;
+        border-bottom-color: transparent !important;
+    }
+    .purchase-item-opt.is-selected {
+        background: rgba(136, 19, 55, 0.06);
+        border-left-color: var(--color-primary, #881337);
+        font-weight: 600;
+    }
+    .dark .purchase-item-opt:hover {
+        background: rgba(251, 113, 133, 0.08);
+        border-left-color: rgba(251, 113, 133, 0.5);
+    }
+    .dark .purchase-item-opt.is-active {
+        background: rgba(251, 113, 133, 0.14) !important;
+        border-left-color: #fb7185 !important;
+    }
+    .dark .purchase-item-opt.is-selected {
+        background: rgba(251, 113, 133, 0.1);
+        border-left-color: #fb7185;
+    }
     .searchable-option {
         transition: background 0.12s ease;
     }
@@ -2958,6 +3051,7 @@ function purchaseApp() {
         purchases: <?= json_encode($purchases) ?>,
         suppliers: <?= json_encode($suppliers) ?>,
         availableItems: <?= json_encode($items) ?>,
+        pemasokCatalog: <?= json_encode($pemasokCatalog ?? []) ?>,
         cashAccounts: <?= json_encode($cashAccounts) ?>,
         drivers: <?= json_encode($drivers ?? []) ?>,
         suggestedPbSuffix: '<?= $suggestedPbSuffix ?>',
@@ -3063,6 +3157,18 @@ function purchaseApp() {
         },
 
         init() {
+            this.$watch('form.pemasok_id', () => {
+                this.$nextTick(() => {
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            });
+            this.$watch('showModal', (val) => {
+                if (val) {
+                    this.$nextTick(() => {
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    });
+                }
+            });
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             });
@@ -3098,9 +3204,21 @@ function purchaseApp() {
             return this.suppliers.find(s => String(s.id) === String(this.editPoForm.pemasok_id)) || null;
         },
 
+        isItemInVendorCatalog(itemId, supplierId) {
+            if (!supplierId || !itemId) return false;
+            return this.pemasokCatalog.some(c => String(c.pemasok_id) === String(supplierId) && String(c.item_id) === String(itemId));
+        },
+
+        getItemCatalogPrice(itemId, supplierId) {
+            if (!supplierId || !itemId) return null;
+            const cat = this.pemasokCatalog.find(c => String(c.pemasok_id) === String(supplierId) && String(c.item_id) === String(itemId));
+            return cat ? parseFloat(cat.harga_beli) : null;
+        },
+
         get supplierItems() {
             if (!this.form.pemasok_id) return [];
-            return this.availableItems.filter(it => String(it.pemasok_utama_id) === String(this.form.pemasok_id));
+            const catItemIds = this.pemasokCatalog.filter(c => String(c.pemasok_id) === String(this.form.pemasok_id)).map(c => String(c.item_id));
+            return this.availableItems.filter(it => catItemIds.includes(String(it.id)));
         },
 
         get filteredPurchases() {
@@ -3151,9 +3269,10 @@ function purchaseApp() {
             const q = (row.search || '').toLowerCase().trim();
             let list = this.availableItems;
 
-            // Filter by supplier unless toggle "showAllMaterials" is active
+            // Filter by supplier catalog unless toggle "showAllMaterials" is active
             if (!this.showAllMaterials && this.form.pemasok_id) {
-                list = list.filter(it => String(it.pemasok_utama_id) === String(this.form.pemasok_id));
+                const catItemIds = this.pemasokCatalog.filter(c => String(c.pemasok_id) === String(this.form.pemasok_id)).map(c => String(c.item_id));
+                list = list.filter(it => catItemIds.includes(String(it.id)));
             }
 
             if (!q) return list;
@@ -3283,8 +3402,26 @@ function purchaseApp() {
             }
         },
 
+        focusRowField(idx, field) {
+            let targetId = '';
+            if (field === 'btn') targetId = 'item-btn-' + idx;
+            else if (field === 'qty') targetId = 'item-qty-' + idx;
+            else if (field === 'price') targetId = 'item-price-' + idx;
+
+            if (targetId) {
+                this.$nextTick(() => {
+                    const el = document.getElementById(targetId);
+                    if (el) {
+                        el.focus();
+                        if (typeof el.select === 'function') el.select();
+                    }
+                });
+            }
+        },
+
         addItemRow() {
             this.form.items.push({ 
+                uid: 'pi_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
                 item_id: '', 
                 qty: 1, 
                 harga_satuan: '0', 
@@ -3301,15 +3438,20 @@ function purchaseApp() {
         addItemRowAndFocus() {
             this.addItemRow();
             this.$nextTick(() => {
-                const newIdx = this.form.items.length - 1;
-                const newRow = this.form.items[newIdx];
-                this.openItemDropdown(newRow, newIdx);
+                setTimeout(() => {
+                    const newIdx = this.form.items.length - 1;
+                    const newRow = this.form.items[newIdx];
+                    if (newRow) {
+                        this.openItemDropdown(newRow, newIdx);
+                    }
+                }, 40);
             });
         },
 
         removeItemRow(idx) {
             if (this.form.items.length <= 1) {
                 this.form.items = [{
+                    uid: 'pi_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7),
                     item_id: '',
                     qty: 1,
                     harga_satuan: '0',
@@ -3319,16 +3461,20 @@ function purchaseApp() {
                     activeIndex: 0
                 }];
                 this.$nextTick(() => {
-                    const btn = document.getElementById('item-btn-0');
-                    if (btn) btn.focus();
+                    setTimeout(() => {
+                        const btn = document.getElementById('item-btn-0');
+                        if (btn) btn.focus();
+                    }, 40);
                 });
                 return;
             }
             this.form.items.splice(idx, 1);
             this.$nextTick(() => {
-                const targetIdx = Math.max(0, idx - 1);
-                const btn = document.getElementById('item-btn-' + targetIdx);
-                if (btn) btn.focus();
+                setTimeout(() => {
+                    const targetIdx = Math.max(0, idx - 1);
+                    const btn = document.getElementById('item-btn-' + targetIdx);
+                    if (btn) btn.focus();
+                }, 40);
             });
         },
 
@@ -3343,12 +3489,14 @@ function purchaseApp() {
             row.activeIndex = currIdx >= 0 ? currIdx : 0;
             this.$nextTick(() => {
                 if (typeof lucide !== 'undefined') lucide.createIcons();
-                const searchInp = document.getElementById('item-search-' + idx);
-                if (searchInp) {
-                    searchInp.focus();
-                    searchInp.select();
-                }
-                this.scrollItemIntoView(idx, row.activeIndex);
+                setTimeout(() => {
+                    const searchInp = document.getElementById('item-search-' + idx);
+                    if (searchInp) {
+                        searchInp.focus();
+                        searchInp.select();
+                    }
+                    this.scrollItemIntoView(idx, row.activeIndex);
+                }, 40);
             });
         },
 
@@ -3363,8 +3511,10 @@ function purchaseApp() {
         closeItemDropdown(row, idx) {
             row.dropdownOpen = false;
             this.$nextTick(() => {
-                const btn = document.getElementById('item-btn-' + idx);
-                if (btn) btn.focus();
+                setTimeout(() => {
+                    const btn = document.getElementById('item-btn-' + idx);
+                    if (btn) btn.focus();
+                }, 30);
             });
         },
 
@@ -3372,8 +3522,8 @@ function purchaseApp() {
             const items = this.getFilteredItems(row);
             if (!items || items.length === 0) return;
             let next = (row.activeIndex || 0) + dir;
-            if (next < 0) next = 0;
-            if (next >= items.length) next = items.length - 1;
+            if (next < 0) next = 0; // Clamped at top (mentok atas)
+            if (next >= items.length) next = items.length - 1; // Clamped at bottom (mentok bawah)
             row.activeIndex = next;
             this.scrollItemIntoView(idx, next);
         },
@@ -3404,6 +3554,7 @@ function purchaseApp() {
         },
 
         selectItemRow(row, idx, item) {
+            if (!item) return;
             const alreadyExists = this.form.items.some((r, i) => i !== idx && String(r.item_id) === String(item.id));
             if (alreadyExists) {
                 toast.warning(`Bahan "${item.nama_item}" sudah ada di daftar. Silakan sesuaikan jumlah kuantitas pada baris tersebut.`);
@@ -3416,21 +3567,25 @@ function purchaseApp() {
             row.activeIndex = 0;
             this.onItemChange(idx);
             this.$nextTick(() => {
-                const qtyEl = document.getElementById('item-qty-' + idx);
-                if (qtyEl) {
-                    qtyEl.focus();
-                    qtyEl.select();
-                }
+                setTimeout(() => {
+                    const qtyEl = document.getElementById('item-qty-' + idx);
+                    if (qtyEl) {
+                        qtyEl.focus();
+                        qtyEl.select();
+                    }
+                }, 40);
             });
         },
 
         onQtyEnter(row, idx) {
             this.$nextTick(() => {
-                const priceInp = document.getElementById('item-price-' + idx);
-                if (priceInp) {
-                    priceInp.focus();
-                    priceInp.select();
-                }
+                setTimeout(() => {
+                    const priceInp = document.getElementById('item-price-' + idx);
+                    if (priceInp) {
+                        priceInp.focus();
+                        priceInp.select();
+                    }
+                }, 30);
             });
         },
 
@@ -3438,28 +3593,55 @@ function purchaseApp() {
             if (idx === this.form.items.length - 1) {
                 this.addItemRow();
                 this.$nextTick(() => {
-                    const newIdx = this.form.items.length - 1;
-                    const newRow = this.form.items[newIdx];
-                    this.openItemDropdown(newRow, newIdx);
+                    setTimeout(() => {
+                        const newIdx = this.form.items.length - 1;
+                        const newRow = this.form.items[newIdx];
+                        if (newRow) {
+                            this.openItemDropdown(newRow, newIdx);
+                        }
+                    }, 50);
                 });
             } else {
                 this.$nextTick(() => {
-                    const nextBtn = document.getElementById('item-btn-' + (idx + 1));
-                    if (nextBtn) {
-                        nextBtn.focus();
-                    }
+                    setTimeout(() => {
+                        const nextBtn = document.getElementById('item-btn-' + (idx + 1));
+                        if (nextBtn) {
+                            nextBtn.focus();
+                        }
+                    }, 30);
                 });
             }
         },
 
         moveRowField(idx, dir, field) {
             const targetIdx = idx + dir;
-            if (targetIdx >= 0 && targetIdx < this.form.items.length) {
-                const targetInp = document.getElementById('item-' + field + '-' + targetIdx);
-                if (targetInp) {
-                    targetInp.focus();
-                    if (typeof targetInp.select === 'function') targetInp.select();
+            if (targetIdx < 0) {
+                if (field === 'btn' || field === 'qty') {
+                    const vendorSel = document.getElementById('purchase-vendor-select');
+                    if (vendorSel) vendorSel.focus();
                 }
+                return;
+            }
+            if (targetIdx >= this.form.items.length) {
+                if (dir > 0 && field === 'price') {
+                    this.onPriceEnter(this.form.items[idx], idx);
+                }
+                return;
+            }
+
+            let targetId = '';
+            if (field === 'btn') targetId = 'item-btn-' + targetIdx;
+            else if (field === 'qty') targetId = 'item-qty-' + targetIdx;
+            else if (field === 'price') targetId = 'item-price-' + targetIdx;
+
+            if (targetId) {
+                this.$nextTick(() => {
+                    const targetInp = document.getElementById(targetId);
+                    if (targetInp) {
+                        targetInp.focus();
+                        if (typeof targetInp.select === 'function') targetInp.select();
+                    }
+                });
             }
         },
 
@@ -3467,7 +3649,9 @@ function purchaseApp() {
             const row = this.form.items[idx];
             const found = this.availableItems.find(i => String(i.id) === String(row.item_id));
             if (found) {
-                row.harga_satuan = window.formatRupiahNumber ? window.formatRupiahNumber(found.harga_pokok_pembelian || 0) : String(found.harga_pokok_pembelian || 0);
+                const catalogPrice = this.getItemCatalogPrice(row.item_id, this.form.pemasok_id);
+                const hargaToUse = (catalogPrice !== null && catalogPrice !== undefined) ? catalogPrice : (found.harga_pokok_pembelian || 0);
+                row.harga_satuan = window.formatRupiahNumber ? window.formatRupiahNumber(hargaToUse) : String(hargaToUse);
                 this.recalcRow(idx);
             }
         },
@@ -3475,7 +3659,7 @@ function purchaseApp() {
         recalcRow(idx) {
             const row = this.form.items[idx];
             const rawHarga = typeof row.harga_satuan === 'string' ? (window.unformatRupiah ? window.unformatRupiah(row.harga_satuan) : Number(row.harga_satuan.replace(/\./g, ''))) : Number(row.harga_satuan || 0);
-            row.subtotal = Number(row.qty || 0) * rawHarga;
+            row.subtotal = Number(row.qty || 0) * (isNaN(rawHarga) ? 0 : rawHarga);
         },
 
         resolvePhotoUrl(url) {

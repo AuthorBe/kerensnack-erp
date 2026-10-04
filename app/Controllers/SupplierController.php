@@ -319,16 +319,23 @@ class SupplierController extends Controller
                 ['id' => $id]
             )['total'] ?? 0);
 
-            // 2. Cek relasi sebagai pemasok utama item bahan
+            // 2. Cek relasi katalog item bahan (pemasok_item dan item.pemasok_utama_id)
+            $usedInCatalog = (int)(Database::fetchOne(
+                "SELECT count(*) as total FROM public.pemasok_item WHERE pemasok_id = :id",
+                ['id' => $id]
+            )['total'] ?? 0);
+
             $usedInItems = (int)(Database::fetchOne(
                 "SELECT count(*) as total FROM public.item WHERE pemasok_utama_id = :id",
                 ['id' => $id]
             )['total'] ?? 0);
 
-            if ($usedInPurchases > 0 || $usedInItems > 0) {
+            $totalCatalog = $usedInCatalog + $usedInItems;
+
+            if ($usedInPurchases > 0 || $totalCatalog > 0) {
                 $reasons = [];
                 if ($usedInPurchases > 0) $reasons[] = "{$usedInPurchases} transaksi faktur pembelian";
-                if ($usedInItems > 0) $reasons[] = "{$usedInItems} katalog bahan baku / kemasan";
+                if ($totalCatalog > 0) $reasons[] = "{$totalCatalog} katalog bahan baku / kemasan";
                 $detail = implode(' dan ', $reasons);
                 $this->flashError("Pemasok '{$nama}' tidak dapat dihapus karena terhubung dengan {$detail}. Untuk menghentikan kerja sama, silakan ubah status menjadi nonaktif.");
                 $this->redirect('/suppliers');
@@ -351,6 +358,208 @@ class SupplierController extends Controller
         } catch (Throwable $e) {
             $this->flashError('Gagal menghapus pemasok: ' . $e->getMessage());
             $this->redirect('/suppliers');
+        }
+    }
+
+    /**
+     * AJAX Get Katalog Bahan Baku & Kemasan per Vendor
+     */
+    public function getCatalog(): void
+    {
+        try {
+            $pemasokId = (string)$this->input('pemasok_id', '');
+            if (empty($pemasokId)) {
+                $this->json(['status' => 'error', 'message' => 'ID Pemasok wajib disertakan.'], 400);
+                return;
+            }
+
+            $pemasok = Database::fetchOne("
+                SELECT id, kode_pemasok, nama_pemasok, termin_bayar, status_aktif
+                FROM public.pemasok 
+                WHERE id = :id
+            ", ['id' => $pemasokId]);
+
+            if (!$pemasok) {
+                $this->json(['status' => 'error', 'message' => 'Pemasok tidak ditemukan.'], 404);
+                return;
+            }
+
+            // Daftar item yang sudah terhubung di katalog vendor
+            $catalogItems = Database::fetchAll("
+                SELECT 
+                    pi.id as catalog_id,
+                    pi.pemasok_id,
+                    pi.item_id,
+                    pi.harga_beli,
+                    pi.kode_sku_vendor,
+                    pi.catatan,
+                    pi.status_aktif,
+                    pi.diubah_pada,
+                    i.nama_item,
+                    i.kode_sku,
+                    i.tipe_item,
+                    i.satuan_dasar,
+                    i.stok_fisik_saat_ini,
+                    i.harga_pokok_pembelian as hpp_master
+                FROM public.pemasok_item pi
+                JOIN public.item i ON i.id = pi.item_id
+                WHERE pi.pemasok_id = :pid
+                ORDER BY i.tipe_item ASC, i.nama_item ASC
+            ", ['pid' => $pemasokId]);
+
+            // Seluruh master item bahan mentah, kemasan & maklon aktif
+            $availableItems = Database::fetchAll("
+                SELECT id, kode_sku, nama_item, tipe_item, satuan_dasar, harga_pokok_pembelian, stok_fisik_saat_ini
+                FROM public.item
+                WHERE status_aktif = TRUE
+                ORDER BY 
+                    CASE 
+                        WHEN tipe_item = 'bahan_mentah' THEN 1 
+                        WHEN tipe_item = 'bahan_kemas' THEN 2 
+                        ELSE 3 
+                    END, 
+                    nama_item ASC
+            ");
+
+            $this->json([
+                'status' => 'success',
+                'pemasok' => $pemasok,
+                'catalog' => $catalogItems,
+                'available_items' => $availableItems
+            ]);
+        } catch (Throwable $e) {
+            $this->json(['status' => 'error', 'message' => 'Gagal memuat katalog vendor: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * AJAX / Form Simpan / Update Item Katalog Vendor
+     */
+    public function saveCatalogItem(): void
+    {
+        Auth::requirePermission('master.suppliers_manage');
+
+        try {
+            $pemasokId = trim((string)$this->input('pemasok_id'));
+            $itemId = trim((string)$this->input('item_id'));
+            $hargaBeli = max(0, (float)$this->input('harga_beli', 0));
+            $kodeSkuVendor = trim((string)$this->input('kode_sku_vendor')) ?: null;
+            $catatan = trim((string)$this->input('catatan')) ?: null;
+            $statusAktif = (bool)$this->input('status_aktif', true);
+
+            if (empty($pemasokId) || empty($itemId)) {
+                $this->json(['status' => 'error', 'message' => 'Pemasok dan Bahan Baku/Kemasan wajib dipilih.'], 400);
+                return;
+            }
+
+            // Verifikasi pemasok & item ada
+            $pemasok = Database::fetchOne("SELECT nama_pemasok FROM public.pemasok WHERE id = :id", ['id' => $pemasokId]);
+            $item = Database::fetchOne("SELECT nama_item FROM public.item WHERE id = :id", ['id' => $itemId]);
+
+            if (!$pemasok || !$item) {
+                $this->json(['status' => 'error', 'message' => 'Data Pemasok atau Item tidak valid.'], 404);
+                return;
+            }
+
+            Database::execute("
+                INSERT INTO public.pemasok_item (
+                    pemasok_id, item_id, harga_beli, kode_sku_vendor, catatan, status_aktif, dibuat_pada, diubah_pada
+                ) VALUES (
+                    :pemasok_id, :item_id, :harga_beli, :kode_sku, :catatan, :status_aktif, NOW(), NOW()
+                )
+                ON CONFLICT (pemasok_id, item_id) DO UPDATE SET
+                    harga_beli = EXCLUDED.harga_beli,
+                    kode_sku_vendor = EXCLUDED.kode_sku_vendor,
+                    catatan = EXCLUDED.catatan,
+                    status_aktif = EXCLUDED.status_aktif,
+                    diubah_pada = NOW()
+            ", [
+                'pemasok_id' => $pemasokId,
+                'item_id' => $itemId,
+                'harga_beli' => $hargaBeli,
+                'kode_sku' => $kodeSkuVendor,
+                'catatan' => $catatan,
+                'status_aktif' => $statusAktif ? 'true' : 'false'
+            ]);
+
+            \App\Helpers\ActivityLog::log(
+                'master_data',
+                'KATALOG_PEMASOK_SIMPAN',
+                "Menetapkan katalog bahan {$item['nama_item']} pada vendor {$pemasok['nama_pemasok']} dengan harga Rp " . number_format($hargaBeli, 0, ',', '.'),
+                'pemasok_item',
+                $pemasokId
+            );
+
+            $this->json([
+                'status' => 'success',
+                'message' => "Bahan '{$item['nama_item']}' berhasil disimpan di katalog {$pemasok['nama_pemasok']}!"
+            ]);
+        } catch (Throwable $e) {
+            $this->json(['status' => 'error', 'message' => 'Gagal menyimpan katalog: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * AJAX Hapus Item dari Katalog Vendor
+     */
+    public function deleteCatalogItem(): void
+    {
+        Auth::requirePermission('master.suppliers_manage');
+
+        try {
+            $catalogId = trim((string)$this->input('id'));
+            $pemasokId = trim((string)$this->input('pemasok_id'));
+            $itemId = trim((string)$this->input('item_id'));
+
+            if (!empty($catalogId)) {
+                $row = Database::fetchOne("
+                    SELECT pi.id, p.nama_pemasok, i.nama_item
+                    FROM public.pemasok_item pi
+                    JOIN public.pemasok p ON p.id = pi.pemasok_id
+                    JOIN public.item i ON i.id = pi.item_id
+                    WHERE pi.id = :id
+                ", ['id' => $catalogId]);
+
+                if (!$row) {
+                    $this->json(['status' => 'error', 'message' => 'Data katalog tidak ditemukan.'], 404);
+                    return;
+                }
+
+                Database::execute("DELETE FROM public.pemasok_item WHERE id = :id", ['id' => $catalogId]);
+            } elseif (!empty($pemasokId) && !empty($itemId)) {
+                $row = Database::fetchOne("
+                    SELECT pi.id, p.nama_pemasok, i.nama_item
+                    FROM public.pemasok_item pi
+                    JOIN public.pemasok p ON p.id = pi.pemasok_id
+                    JOIN public.item i ON i.id = pi.item_id
+                    WHERE pi.pemasok_id = :pid AND pi.item_id = :iid
+                ", ['pid' => $pemasokId, 'iid' => $itemId]);
+
+                if (!$row) {
+                    $this->json(['status' => 'error', 'message' => 'Data katalog tidak ditemukan.'], 404);
+                    return;
+                }
+
+                Database::execute("DELETE FROM public.pemasok_item WHERE pemasok_id = :pid AND item_id = :iid", ['pid' => $pemasokId, 'iid' => $itemId]);
+            } else {
+                $this->json(['status' => 'error', 'message' => 'Parameter ID katalog tidak valid.'], 400);
+                return;
+            }
+
+            \App\Helpers\ActivityLog::log(
+                'master_data',
+                'KATALOG_PEMASOK_HAPUS',
+                "Menghapus bahan {$row['nama_item']} dari katalog {$row['nama_pemasok']}",
+                'pemasok_item',
+                $catalogId ?: null
+            );
+
+            $this->json([
+                'status' => 'success',
+                'message' => "Bahan '{$row['nama_item']}' berhasil dihapus dari katalog."
+            ]);
+        } catch (Throwable $e) {
+            $this->json(['status' => 'error', 'message' => 'Gagal menghapus item katalog: ' . $e->getMessage()], 500);
         }
     }
 }

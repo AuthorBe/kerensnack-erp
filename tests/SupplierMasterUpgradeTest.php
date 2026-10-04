@@ -48,6 +48,7 @@ runTest("1. Kolom baru ada di tabel public.pemasok", function() use ($pdo) {
 runTest("2. Insert Pemasok baru dengan data lokasi maps & kontak PIC lengkap", function() use ($pdo) {
     $kode = 'TEST-SUP-' . time();
     $id = null;
+    $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare("
             INSERT INTO public.pemasok (
@@ -80,6 +81,9 @@ runTest("2. Insert Pemasok baru dengan data lokasi maps & kontak PIC lengkap", f
             $row['catatan'] === 'Pengiriman sebelum jam 16:00'
         );
     } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         if ($id) {
             $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $id]);
         }
