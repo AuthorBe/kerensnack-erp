@@ -75,11 +75,33 @@ class Format
     }
 
     /**
-     * Alias method untuk tanggal() agar kompatibel dengan pemanggilan Format::date()
+     * Alias method untuk tanggal() agar kompatibel dengan pemanggilan Format::date() dan Format::tanggalIndo()
      */
     public static function date(string|null $datetime, bool $withTime = false, bool $shortMonth = true): string
     {
         return self::tanggal($datetime, $withTime, $shortMonth);
+    }
+
+    public static function tanggalIndo(string|null $datetime, bool $withTime = false, bool $shortMonth = false): string
+    {
+        return self::tanggal($datetime, $withTime, $shortMonth);
+    }
+
+    public static function bulanIndo(int|string|null $bulan, bool $shortMonth = false): string
+    {
+        $bulanFull = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ];
+        $bulanShort = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr',
+            5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu',
+            9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'
+        ];
+        $m = (int)($bulan ?? 1);
+        if ($m < 1 || $m > 12) return '-';
+        return $shortMonth ? ($bulanShort[$m] ?? '') : ($bulanFull[$m] ?? '');
     }
 
     /**

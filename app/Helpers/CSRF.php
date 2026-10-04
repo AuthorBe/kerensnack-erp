@@ -76,6 +76,14 @@ class CSRF
     {
         return self::validate($token);
     }
+
+    /**
+     * Alias verify untuk validasi token CSRF
+     */
+    public static function verify(?string $token = null): bool
+    {
+        return self::validate($token);
+    }
 }
 
 if (!class_exists('App\Helpers\Csrf', false)) {

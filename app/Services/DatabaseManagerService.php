@@ -17,17 +17,56 @@ use InvalidArgumentException;
 class DatabaseManagerService
 {
     /**
+     * Daftar tabel Master Data yang WAJIB selalu direplikasi 100% (All-Time)
+     * demi menjamin integritas Foreign Key dan validitas pengujian lokal.
+     */
+    public const MASTER_TABLES = [
+        'peran',
+        'izin',
+        'izin_peran',
+        'pengguna',
+        'izin_pengguna',
+        'wilayah',
+        'karyawan',
+        'skema_komisi_sales',
+        'pemasok',
+        'master_level_harga',
+        'grup_pelanggan',
+        'merek',
+        'grup_pelanggan_level_merek',
+        'pelanggan',
+        'grup_produk',
+        'grup_produk_barcode',
+        'grup_produk_harga_level',
+        'kelompok_upah_borongan',
+        'item',
+        'pelanggan_item',
+        'pelanggan_grup_barcode',
+        'komposisi_item',
+        'pemasok_item',
+        'akun_kas',
+        'kategori_biaya',
+        'pengaturan_sistem',
+        'tabungan',
+        'stok_konsinyasi_toko'
+    ];
+
+    /**
      * Memeriksa apakah aplikasi sedang diakses dari lingkungan lokal developer (localhost, 127.0.0.1, .test, .local, CLI).
      */
     public static function isLocalEnvironment(): bool
     {
-        $host = strtolower(trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '')));
+        $host = strtolower(trim((string)($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '')));
+        if (str_contains($host, ',')) {
+            $host = trim(explode(',', $host)[0]);
+        }
         if (str_contains($host, ':')) {
             $host = explode(':', $host)[0];
         }
 
         if (!empty($host)) {
-            $localHosts = ['127.0.0.1', 'localhost', '::1'];
+            // Host developer tepercaya: lokal + domain preview Cloudflare (exact match, bukan wildcard).
+            $localHosts = ['127.0.0.1', 'localhost', '::1', 'preview.ajisakha.my.id'];
             if (in_array($host, $localHosts, true)) {
                 return true;
             }
@@ -36,7 +75,7 @@ class DatabaseManagerService
                 return true;
             }
 
-            // Memiliki host publik/aktif (misal: preview.ajisakha.my.id, aplikasi.kerensnack.id)
+            // Host publik produksi (misal: aplikasi.kerensnack.id)
             return false;
         }
 
@@ -268,14 +307,16 @@ class DatabaseManagerService
     }
 
     /**
-     * Menjalankan engine replikasi basis data penuh dari Supabase Live ke Database Lokal Laragon.
-     * Dilengkapi proteksi anti-tabrakan (Mutex File Lock), verifikasi target aman,
-     * read-only live session guard, dan penyelarasan sequence menyeluruh.
+     * Menjalankan engine replikasi basis data dari Supabase Live ke Database Lokal Laragon.
+     * Mode:
+     * - '14d' (Default): Hybrid Smart Sync -> 100% Master Data + 14 Hari Transaksi & Log Terakhir.
+     * - 'full': Full All-Time Replication -> 100% Seluruh Baris Data Sepanjang Waktu.
      *
+     * @param string $mode '14d' | 'full'
      * @param callable|null $logger Callback fungsi penerima log string
      * @return array Hasil replikasi lengkap
      */
-    public static function replicateLiveToLocal(?callable $logger = null): array
+    public static function replicateLiveToLocal(string $mode = '14d', ?callable $logger = null): array
     {
         if (!self::isLocalEnvironment()) {
             throw new RuntimeException("Aksi ditolak: Replikasi database dikunci permanen pada domain aktif. Aksi ini hanya dapat dilakukan di lingkungan lokal developer.");
@@ -286,6 +327,13 @@ class DatabaseManagerService
         if (($hasHost || $hasSessionUser || PHP_SAPI !== 'cli') && class_exists('\App\Core\Auth') && !\App\Core\Auth::isDeveloper()) {
             throw new RuntimeException("Aksi ditolak: Hanya peran developer yang berwenang menjalankan replikasi database.");
         }
+
+        $mode = strtolower(trim($mode));
+        if (!in_array($mode, ['14d', 'full', 'smart_14d', 'smart'], true)) {
+            $mode = '14d';
+        }
+        $isSmartSync = ($mode !== 'full');
+        $daysWindow = 14;
 
         // 1. MUTEX LOCK: Cegah eksekusi replikasi bersamaan (anti-crash / race-condition)
         $lockFile = sys_get_temp_dir() . '/keren_erp_replication_mutex.lock';
@@ -316,8 +364,10 @@ class DatabaseManagerService
         $rootPath = dirname(__DIR__, 2);
 
         try {
+            $modeTitle = $isSmartSync ? 'HYBRID SMART SYNC (100% MASTER + 14 HARI TERAKHIR)' : 'FULL ALL-TIME REPLICATION';
             $log("====================================================================");
             $log(" 🔄 KEREN ONE - DATABASE REPLICATION ENGINE (SUPABASE -> LOCAL)");
+            $log(" ⚙️  MODE: {$modeTitle}");
             $log("====================================================================");
 
             // 2. Baca Kredensial Live dari .env.live atau .env
@@ -413,17 +463,28 @@ class DatabaseManagerService
             // 6. Terapkan DDL, RPC, Views, dan Triggers
             $log("\n🏗️  [3/5] Membangun skema, fungsi RPC, views, dan trigger di database lokal...");
             try {
+                // Reset skema public lokal agar struktur 100% bersih, identik, dan bebas duplikasi objek/policy
+                $log("   -> Menyiapkan skema public bersih di database lokal...");
+                $localPdo->exec("DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres; GRANT ALL ON SCHEMA public TO public;");
+
+                // Helper pembersih parameter modern (mis. security_invoker PG 15+) untuk kompatibilitas PostgreSQL 14 lokal
+                $sanitizeSqlForLocal = function(string $sql): string {
+                    $sql = preg_replace('/\bWITH\s*\(\s*security_invoker\s*=\s*(true|false|on|off)\s*\)/i', '', $sql);
+                    $sql = preg_replace('/ALTER\s+VIEW\s+[^;]+SET\s*\(\s*security_invoker\s*=\s*[^)]+\)\s*;/i', '', $sql);
+                    return $sql;
+                };
+
                 $schemaSql = file_get_contents($rootPath . '/database/01_schema.sql') ?: '';
                 $rpcSql    = file_get_contents($rootPath . '/database/02_triggers_and_rpc.sql') ?: '';
 
                 if (!empty($schemaSql)) {
                     $log("   -> Menerapkan database/01_schema.sql...");
-                    $localPdo->exec($schemaSql);
+                    $localPdo->exec($sanitizeSqlForLocal($schemaSql));
                 }
 
                 if (!empty($rpcSql)) {
                     $log("   -> Menerapkan database/02_triggers_and_rpc.sql...");
-                    $localPdo->exec($rpcSql);
+                    $localPdo->exec($sanitizeSqlForLocal($rpcSql));
                 }
 
                 // Replikasi RPC langsung dari pg_proc Live
@@ -440,7 +501,7 @@ class DatabaseManagerService
 
                 foreach ($liveFunctions as $fn) {
                     try {
-                        $cleanDef = preg_replace('/\bWITH\s*\(\s*security_invoker\s*=\s*(true|false)\s*\)/i', '', $fn['def']);
+                        $cleanDef = $sanitizeSqlForLocal($fn['def']);
                         $localPdo->exec($cleanDef);
                     } catch (Throwable $e) {}
                 }
@@ -456,7 +517,7 @@ class DatabaseManagerService
 
                 foreach ($liveViews as $v) {
                     try {
-                        $cleanDef = preg_replace('/\bWITH\s*\(\s*security_invoker\s*=\s*(true|false)\s*\)/i', '', $v['def']);
+                        $cleanDef = $sanitizeSqlForLocal($v['def']);
                         $localPdo->exec("CREATE OR REPLACE VIEW public.\"{$v['relname']}\" AS " . $cleanDef);
                     } catch (Throwable $e) {}
                 }
@@ -568,8 +629,79 @@ class DatabaseManagerService
                     }
                 }
 
+                // Tentukan filter windowing: Master Table -> 100% Seluruh Riwayat, Transaksi -> 14 Hari Terakhir + Transaksi Aktif / Relasi Utuh
+                $isMaster = in_array($table, self::MASTER_TABLES, true);
+                $whereClause = "";
+
+                if ($isSmartSync && !$isMaster) {
+                    if ($table === 'kasbon') {
+                        // Pertahankan kasbon 14 hari terakhir ATAU kasbon yang masih aktif / memiliki sisa pinjaman
+                        $whereClause = "WHERE \"tanggal_pengajuan\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"sisa_pinjaman\" > 0 OR \"status_kasbon\" = 'aktif'";
+                    } elseif ($table === 'potongan_kasbon') {
+                        // Seluruh riwayat cicilan untuk kasbon yang direplikasi atau 14 hari terakhir
+                        $whereClause = "WHERE \"kasbon_id\" IN (SELECT id FROM public.\"kasbon\" WHERE \"tanggal_pengajuan\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"sisa_pinjaman\" > 0 OR \"status_kasbon\" = 'aktif') OR \"dibuat_pada\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days')";
+                    } elseif ($table === 'pesanan') {
+                        // Pertahankan pesanan 14 hari terakhir ATAU pesanan belum lunas/tempo/sedang diproses
+                        $whereClause = "WHERE \"tanggal_pesanan\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"status_pembayaran\" IN ('belum_lunas', 'sebagian', 'tempo') OR \"status_pemrosesan\" NOT IN ('selesai', 'dibatalkan')";
+                    } elseif ($table === 'item_pesanan') {
+                        // Seluruh item produk dari pesanan yang direplikasi
+                        $whereClause = "WHERE \"pesanan_id\" IN (SELECT id FROM public.\"pesanan\" WHERE \"tanggal_pesanan\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"status_pembayaran\" IN ('belum_lunas', 'sebagian', 'tempo') OR \"status_pemrosesan\" NOT IN ('selesai', 'dibatalkan'))";
+                    } elseif ($table === 'surat_jalan') {
+                        // Surat jalan dari pesanan yang direplikasi atau 14 hari terakhir
+                        $whereClause = "WHERE \"pesanan_id\" IN (SELECT id FROM public.\"pesanan\" WHERE \"tanggal_pesanan\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"status_pembayaran\" IN ('belum_lunas', 'sebagian', 'tempo') OR \"status_pemrosesan\" NOT IN ('selesai', 'dibatalkan')) OR \"dibuat_pada\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days')";
+                    } elseif ($table === 'pembelian') {
+                        // Pertahankan belanja bahan baku 14 hari terakhir ATAU yang belum lunas/selesai
+                        $whereClause = "WHERE \"tanggal_pembelian\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"status_pembayaran\" != 'lunas' OR \"status_penerimaan\" NOT IN ('diterima', 'kendala_batal')";
+                    } elseif ($table === 'rincian_pembelian') {
+                        // Seluruh rincian item bahan dari pembelian yang direplikasi
+                        $whereClause = "WHERE \"pembelian_id\" IN (SELECT id FROM public.\"pembelian\" WHERE \"tanggal_pembelian\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"status_pembayaran\" != 'lunas' OR \"status_penerimaan\" NOT IN ('diterima', 'kendala_batal'))";
+                    } elseif ($table === 'penggajian') {
+                        // Pertahankan invoice payroll 14 hari terakhir ATAU yang masih draf / proses bayar
+                        $whereClause = "WHERE \"periode_akhir\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"status\" != 'dibayarkan' OR \"dibuat_pada\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days')";
+                    } elseif ($table === 'rincian_penggajian') {
+                        // Seluruh rincian slip karyawan dari payroll yang direplikasi
+                        $whereClause = "WHERE \"penggajian_id\" IN (SELECT id FROM public.\"penggajian\" WHERE \"periode_akhir\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"status\" != 'dibayarkan' OR \"dibuat_pada\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days'))";
+                    } elseif ($table === 'penarikan_gaji') {
+                        // Ambil uang harian 14 hari terakhir ATAU yang belum ditutup ke payroll
+                        $whereClause = "WHERE \"tanggal\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"penggajian_id\" IS NULL OR \"penggajian_id\" IN (SELECT id FROM public.\"penggajian\" WHERE \"periode_akhir\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"status\" != 'dibayarkan')";
+                    } elseif ($table === 'rincian_kunjungan_konsinyasi') {
+                        $whereClause = "WHERE \"kunjungan_id\" IN (SELECT id FROM public.\"kunjungan_konsinyasi\" WHERE \"tanggal_kunjungan\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days'))";
+                    } elseif ($table === 'tagihan_kunjungan') {
+                        $whereClause = "WHERE \"kunjungan_id\" IN (SELECT id FROM public.\"kunjungan_konsinyasi\" WHERE \"tanggal_kunjungan\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days'))";
+                    } elseif ($table === 'opname_gudang_item') {
+                        $whereClause = "WHERE \"opname_gudang_id\" IN (SELECT id FROM public.\"opname_gudang\" WHERE \"tanggal\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"dibuat_pada\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days'))";
+                    } else {
+                        $dateCandidates = [
+                            'tanggal_pesanan',
+                            'tanggal_transaksi',
+                            'tanggal_kunjungan',
+                            'tanggal_produksi',
+                            'tanggal_pembelian',
+                            'tanggal_pengajuan',
+                            'tanggal_penarikan',
+                            'tanggal_kirim',
+                            'tanggal_bayar',
+                            'tanggal',
+                            'dibuat_pada',
+                            'created_at'
+                        ];
+
+                        $chosenDateCol = null;
+                        foreach ($dateCandidates as $cand) {
+                            if (isset($liveColMap[$cand])) {
+                                $chosenDateCol = $cand;
+                                break;
+                            }
+                        }
+
+                        if ($chosenDateCol !== null) {
+                            $whereClause = "WHERE \"{$chosenDateCol}\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days')";
+                        }
+                    }
+                }
+
                 // Streaming transfer data (ramah memori dengan batch insert)
-                $countStmt = $livePdo->query("SELECT count(*) FROM public.\"{$table}\"");
+                $countStmt = $livePdo->query("SELECT count(*) FROM public.\"{$table}\" {$whereClause}");
                 $rowCount  = (int)($countStmt->fetchColumn() ?: 0);
                 $totalRowsReplicated += $rowCount;
                 $tableStats[$table] = $rowCount;
@@ -579,7 +711,7 @@ class DatabaseManagerService
                 }
 
                 // Ambil sample row untuk menentukan kolom insert
-                $sampleRow = $livePdo->query("SELECT * FROM public.\"{$table}\" LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+                $sampleRow = $livePdo->query("SELECT * FROM public.\"{$table}\" {$whereClause} LIMIT 1")->fetch(PDO::FETCH_ASSOC);
                 if (!$sampleRow) {
                     continue;
                 }
@@ -599,7 +731,7 @@ class DatabaseManagerService
                 $insertStmt = $localPdo->prepare($sqlInsert);
 
                 // Fetch stream data dari live
-                $dataQuery = $livePdo->query("SELECT * FROM public.\"{$table}\"");
+                $dataQuery = $livePdo->query("SELECT * FROM public.\"{$table}\" {$whereClause}");
                 $batchCount = 0;
                 $localPdo->beginTransaction();
 
@@ -694,12 +826,14 @@ class DatabaseManagerService
             } catch (Throwable $e) {}
 
             $duration = round(microtime(true) - $startTime, 2);
+            $modeLabel = $isSmartSync ? 'Hybrid Smart Sync (Master 100% + Transaksi 14 Hari)' : 'Full All-Time Replication (100% Seluruh Data)';
 
             $log("\n====================================================================");
-            $log(" 📊 REKAPITULASI REPLIKASI DATABASE LOKAL (100% IDENTIK)");
+            $log(" 📊 REKAPITULASI REPLIKASI DATABASE LOKAL");
             $log("====================================================================");
             $log(" Database Target         : {$localDb}");
             $log(" Host Database           : {$localHost}:{$localPort}");
+            $log(" Mode Replikasi          : {$modeLabel}");
             $log(" Total Tabel Direplikasi : " . count($tableStats) . " tabel");
             $log(" Total Baris Data        : {$totalRowsReplicated} baris data");
             $log(" Waktu Eksekusi          : {$duration} detik");
@@ -708,6 +842,9 @@ class DatabaseManagerService
 
             return [
                 'success'     => true,
+                'mode'        => $mode,
+                'mode_label'  => $modeLabel,
+                'is_smart'    => $isSmartSync,
                 'duration'    => $duration,
                 'total_tables'=> count($tableStats),
                 'total_rows'  => $totalRowsReplicated,
