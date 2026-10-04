@@ -368,9 +368,12 @@ $endPrevMo    = date('Y-m-t', strtotime('last month'));
     <!-- PAGE HEADER -->
     <div class="page-header">
         <div class="page-header-body">
-            <a href="<?= Router::url('/consignment') ?>" class="btn btn-secondary btn-sm p-2.5 rounded-xl" title="Kembali ke Portal Konsinyasi">
-                <i data-lucide="arrow-left" class="w-5 h-5"></i>
-            </a>
+            <button type="button" 
+                    onclick="try{window.close();}catch(e){} if(window.history.length > 1 && document.referrer.includes(window.location.host)) { window.history.back(); } else { window.location.href = '<?= Router::url('/consignment') ?>'; }" 
+                    class="btn btn-secondary btn-sm p-2 rounded-xl" 
+                    title="Kembali ke Portal Konsinyasi">
+                <i data-lucide="arrow-left" class="w-5 h-5" style="pointer-events:none;"></i>
+            </button>
             <div class="page-header-text">
                 <div class="page-header-tag">
                     <span class="tag-dot" style="background-color:#ef4444;"></span>

@@ -720,9 +720,9 @@ document.addEventListener('alpine:init', () => {
             </div>
 
             <!-- Cart List -->
-            <div class="flex-1 overflow-y-auto custom-scrollbar" style="display:flex;flex-direction:column;gap:8px;padding-right:2px;">
+            <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar" style="display:flex;flex-direction:column;gap:8px;padding-right:2px;">
                 <template x-if="cart.length === 0">
-                    <div style="height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px dashed var(--color-hairline-strong);border-radius:var(--rounded-lg);color:var(--color-ink-mute);gap:8px;padding:16px;">
+                    <div style="flex:1;min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;border:1px dashed var(--color-hairline-strong);border-radius:var(--rounded-lg);color:var(--color-ink-mute);gap:8px;padding:16px;">
                         <i data-lucide="shopping-cart" style="width:32px;height:32px;opacity:0.5;"></i>
                         <div style="font-size:12.5px;font-weight:500;line-height:1.4;">Keranjang belanja masih kosong.<br>Pilih produk di sebelah kiri.</div>
                     </div>

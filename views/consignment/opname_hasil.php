@@ -943,7 +943,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
                title="Kembali ke <?= htmlspecialchars($backTitle) ?>"
                aria-label="Kembali ke <?= htmlspecialchars($backTitle) ?>"
                onclick="handleOpnameBackNavigation(event, '<?= htmlspecialchars($backUrl, ENT_QUOTES) ?>')">
-                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                <i data-lucide="arrow-left" class="w-5 h-5" style="pointer-events:none;"></i>
             </a>
             <div class="page-header-text">
                 <div class="page-header-tag">
