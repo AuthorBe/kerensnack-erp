@@ -125,6 +125,25 @@ class Database
     }
 
     /**
+     * Helper untuk eksekusi query SELECT dan ambil 1 nilai scalar (kolom pertama)
+     */
+    public static function fetchValue(string $sql, array $params = []): mixed
+    {
+        $stmt = self::getConnection()->prepare($sql);
+        self::bindAndExecute($stmt, $params);
+        $result = $stmt->fetchColumn();
+        return $result !== false ? $result : null;
+    }
+
+    /**
+     * Alias singkat untuk fetchValue()
+     */
+    public static function fetchColumn(string $sql, array $params = []): mixed
+    {
+        return self::fetchValue($sql, $params);
+    }
+
+    /**
      * Helper untuk eksekusi INSERT / UPDATE / DELETE
      */
     public static function execute(string $sql, array $params = []): bool

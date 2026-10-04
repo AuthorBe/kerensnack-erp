@@ -69,7 +69,8 @@ jobs:
               -not -path "./vendor/*" \
               -delete
 
-            # 5. Hapus file contoh environment
+            # 5. Hapus utilitas developer & environment lokal (bin, .env.example)
+            rm -rf bin/
             rm -f .env.example
 
             # 6. Pastikan direktori runtime dan cache tetap ada dengan hak akses aman

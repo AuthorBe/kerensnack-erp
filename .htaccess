@@ -25,7 +25,7 @@
     RewriteEngine On
 
     # Blokir akses ke direktori internal sensitif
-    RewriteRule ^(\.env|\.git|app|config|database|docs|tests|views|vendor|storage|cache|scratch)(/.*)?$ - [F,L,NC]
+    RewriteRule ^(\.env|\.git|app|bin|config|database|docs|tests|views|vendor|storage|cache|scratch)(/.*)?$ - [F,L,NC]
 
     # Blokir berkas sensitif spesifik (README.md, AGENTS.md, *.sql, *.dump, *.tar.gz, composer.*, dll)
     RewriteRule ^(README\.md|AGENTS\.md|composer\.(json|lock)|.*\.sql|.*\.md|.*\.dump|.*\.backup|.*\.i5bu|.*\.tar\.gz|.*\.env.*)$ - [F,L,NC]
