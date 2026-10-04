@@ -15,8 +15,9 @@ $totalRevenue = (float)($totalRevenue ?? $pnl['total_omzet'] ?? ($posRevenue + $
 
 $posHpp = (float)($posHpp ?? $pnl['hpp_pos'] ?? 0);
 $b2bHpp = (float)($b2bHpp ?? $pnl['hpp_b2b'] ?? 0);
+$consHpp = (float)($consHpp ?? $pnl['hpp_konsinyasi'] ?? 0);
 $consLoss = (float)($consLoss ?? $pnl['rugi_konsinyasi'] ?? 0);
-$totalCogs = (float)($totalCogs ?? $pnl['total_beban_pokok'] ?? ($posHpp + $b2bHpp + $consLoss));
+$totalCogs = (float)($totalCogs ?? $pnl['total_beban_pokok'] ?? ($posHpp + $b2bHpp + $consHpp));
 $grossProfit = (float)($grossProfit ?? $pnl['laba_kotor'] ?? ($totalRevenue - $totalCogs));
 
 $expenseRows = $expenseRows ?? $pnl['beban_operasional_list'] ?? [];
@@ -217,7 +218,7 @@ $netProfit = (float)($netProfit ?? $pnl['laba_bersih_final'] ?? ($grossProfit - 
 
             <!-- 2. HPP & BEBAN POKOK -->
             <tr class="section-header">
-                <td colspan="3">2. BEBAN POKOK PRODUK &amp; KERUGIAN (HPP / COGS)</td>
+                <td colspan="3">2. BEBAN POKOK PRODUK TERJUAL (HPP / COGS)</td>
             </tr>
             <tr>
                 <td>&bull; HPP Penjualan Kasir POS</td>
@@ -230,15 +231,22 @@ $netProfit = (float)($netProfit ?? $pnl['laba_bersih_final'] ?? ($grossProfit - 
                 <td class="text-right">-</td>
             </tr>
             <tr>
-                <td>&bull; Estimasi Kerugian Produk Rusak/Basi Konsinyasi</td>
-                <td class="text-right" style="color:#dc2626;"><?= Format::rupiah($consLoss) ?></td>
-                <td class="text-right" style="color:#dc2626;"><?= $totalRevenue > 0 ? number_format(($consLoss / $totalRevenue) * 100, 2) : '0' ?>%</td>
+                <td>&bull; HPP Penjualan Titip Jual Konsinyasi</td>
+                <td class="text-right"><?= Format::rupiah($consHpp) ?></td>
+                <td class="text-right">-</td>
             </tr>
             <tr class="subtotal-row">
-                <td>TOTAL BEBAN POKOK (HPP &amp; KERUGIAN)</td>
+                <td>TOTAL BEBAN POKOK (HPP)</td>
                 <td class="text-right"><?= Format::rupiah($totalCogs) ?></td>
                 <td class="text-right"><?= $totalRevenue > 0 ? number_format(($totalCogs / $totalRevenue) * 100, 1) : '0' ?>%</td>
             </tr>
+            <?php if ($consLoss > 0): ?>
+            <tr>
+                <td style="color:#64748b; font-style:italic;">&bull; Catatan Analitik: Kerugian Retur Rusak/Basi Konsinyasi</td>
+                <td class="text-right" style="color:#dc2626; font-style:italic;"><?= Format::rupiah($consLoss) ?></td>
+                <td class="text-right" style="color:#dc2626; font-style:italic;"><?= $totalRevenue > 0 ? number_format(($consLoss / $totalRevenue) * 100, 2) : '0' ?>%</td>
+            </tr>
+            <?php endif; ?>
 
             <!-- MARGIN LABA KOTOR -->
             <tr style="background:#f8fafc; font-weight:bold;">

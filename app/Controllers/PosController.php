@@ -99,7 +99,7 @@ class PosController extends Controller
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, saldo_saat_ini, is_default_pos 
                 FROM public.akun_kas 
-                WHERE status_aktif = TRUE
+                WHERE status_aktif = TRUE AND is_escrow = FALSE
                 ORDER BY is_default_pos DESC, (LOWER(nama_akun) LIKE '%kasir%' OR LOWER(nama_akun) LIKE '%tunai%') DESC, dibuat_pada ASC
             ");
 
@@ -245,20 +245,29 @@ class PosController extends Controller
             $akunKas = null;
 
             if (!empty($requestedKasId)) {
-                $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE", ['id' => $requestedKasId]);
+                $checkAcc = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos, is_escrow FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE", ['id' => $requestedKasId]);
+                if ($checkAcc && !empty($checkAcc['is_escrow'])) {
+                    $pdo->rollBack();
+                    $this->json([
+                        'success' => false,
+                        'message' => 'Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk penerimaan kasir POS.'
+                    ], 422);
+                    return;
+                }
+                $akunKas = $checkAcc;
             }
 
             if (!$akunKas) {
                 if ($paymentType === 'qris') {
                     // Masuk ke Kantong Kas QRIS
-                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND LOWER(nama_akun) LIKE '%qris%' ORDER BY dibuat_pada ASC LIMIT 1 FOR UPDATE");
+                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND is_escrow = FALSE AND LOWER(nama_akun) LIKE '%qris%' ORDER BY dibuat_pada ASC LIMIT 1 FOR UPDATE");
                 } else {
                     // Masuk ke Kasir Utama Toko (Tunai)
-                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND (is_default_pos = TRUE OR LOWER(nama_akun) LIKE '%kasir%' OR LOWER(nama_akun) LIKE '%tunai%') ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1 FOR UPDATE");
+                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND is_escrow = FALSE AND (is_default_pos = TRUE OR LOWER(nama_akun) LIKE '%kasir%' OR LOWER(nama_akun) LIKE '%tunai%') ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1 FOR UPDATE");
                 }
 
                 if (!$akunKas) {
-                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1 FOR UPDATE");
+                    $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND is_escrow = FALSE ORDER BY is_default_pos DESC, dibuat_pada ASC LIMIT 1 FOR UPDATE");
                 }
             }
 

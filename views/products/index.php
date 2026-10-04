@@ -628,8 +628,8 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                         <th style="min-width:180px;">Nama Bahan / Kemasan</th>
                         <th style="min-width:120px;">Kategori</th>
                         <th style="min-width:90px;">Satuan</th>
-                        <th style="min-width:160px;">Vendor Pemasok Utama</th>
-                        <th class="cell-right cell-nowrap" style="width:130px; min-width:120px;">HPP Beli Vendor</th>
+                        <th style="min-width:180px;">Pemasok Vendor Terhubung</th>
+                        <th class="cell-right cell-nowrap" style="width:130px; min-width:120px;">HPP Standar Master</th>
                         <th class="cell-center cell-nowrap" style="width:110px; min-width:100px;">Stok Fisik</th>
                         <?php if (\App\Core\Auth::can(['master.materials_manage', 'master.products_manage'])): ?>
                         <th class="cell-center cell-nowrap" style="width:100px; min-width:90px;">Aksi</th>
@@ -655,8 +655,18 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                 <span style="font-weight:600;font-family:var(--font-mono);" x-text="mat.satuan_dasar"></span>
                             </td>
                             <td>
-                                <div style="font-weight:600;" x-text="mat.nama_pemasok || '-'"></div>
-                                <div style="font-size:10.5px;color:var(--color-ink-mute);" x-text="mat.kode_pemasok || ''"></div>
+                                <template x-if="mat.total_vendor_katalog > 0">
+                                    <div>
+                                        <div style="font-weight:700;font-size:12px;color:var(--color-primary);" x-text="mat.vendor_names"></div>
+                                        <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;" x-text="mat.total_vendor_katalog + ' Vendor terdaftar' + (mat.nama_pemasok ? ' • Utama: ' + mat.nama_pemasok : '')"></div>
+                                    </div>
+                                </template>
+                                <template x-if="!mat.total_vendor_katalog || mat.total_vendor_katalog == 0">
+                                    <div>
+                                        <div style="font-weight:600;color:var(--color-ink-mute);" x-text="mat.nama_pemasok || '-'"></div>
+                                        <div style="font-size:10px;color:var(--color-ink-mute-2);">Belum ada di katalog vendor</div>
+                                    </div>
+                                </template>
                             </td>
                             <td class="cell-currency cell-right cell-nowrap" x-text="formatRupiah(mat.harga_pokok_pembelian)"></td>
                             <td class="cell-center cell-nowrap">

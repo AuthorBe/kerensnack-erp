@@ -25,9 +25,12 @@ foreach ($stores as $st) {
     <!-- PAGE HEADER -->
     <div class="page-header">
         <div class="page-header-body">
-            <a href="<?= Router::url('/consignment') ?>" class="btn btn-secondary btn-sm p-2 rounded-xl" title="Kembali ke Portal">
-                <i data-lucide="arrow-left" class="w-5 h-5"></i>
-            </a>
+            <button type="button" 
+                    onclick="try{window.close();}catch(e){} if(window.history.length > 1 && document.referrer.includes(window.location.host)) { window.history.back(); } else { window.location.href = '<?= Router::url('/consignment') ?>'; }" 
+                    class="btn btn-secondary btn-sm p-2 rounded-xl" 
+                    title="Kembali ke Portal">
+                <i data-lucide="arrow-left" class="w-5 h-5" style="pointer-events:none;"></i>
+            </button>
             <div class="page-header-text">
                 <div class="page-header-tag">
                     <span class="tag-dot" style="background-color:#0284c7;"></span>
@@ -73,19 +76,25 @@ foreach ($stores as $st) {
     <!-- SEARCH & FILTER BAR -->
     <div class="card p-3 rounded-2xl flex items-center gap-3" style="border:1px solid var(--color-hairline);">
         <div class="relative flex-1 w-full">
-            <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style="color:var(--color-ink-mute);"></i>
+            <i data-lucide="search" class="absolute pointer-events-none" style="left:14px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--color-ink-mute);"></i>
             <input type="text" 
-                   x-model="searchQuery" 
+                   x-model.debounce.300ms="searchQuery" 
                    placeholder="Cari nama toko, kode pelanggan, atau nama sales..." 
                    class="form-input w-full text-xs sm:text-sm"
-                   style="height:40px;padding-left:38px;padding-right:38px;border-radius:12px;background:var(--color-canvas);border:1px solid var(--color-hairline);color:var(--color-ink);">
+                   style="height:44px;padding-left:42px;padding-right:42px;border-radius:12px;background:var(--color-canvas);border:1px solid var(--color-hairline);color:var(--color-ink);outline:none;box-shadow:none;">
             <button type="button" 
-                    x-show="searchQuery" 
+                    x-show="searchQuery.length > 0" 
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 scale-90"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100 scale-100"
+                    x-transition:leave-end="opacity-0 scale-90"
                     @click="searchQuery = ''" 
-                    class="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:text-slate-600 dark:hover:text-slate-200 transition-colors" 
-                    style="color:var(--color-ink-mute);"
+                    class="absolute p-2 rounded-lg hover:bg-slate-500/10 transition-colors" 
+                    style="right:8px; top:50%; transform:translateY(-50%); color:var(--color-ink-mute); display:flex; align-items:center; justify-content:center; background:transparent; border:none; outline:none; box-shadow:none; cursor:pointer;"
                     title="Reset Pencarian">
-                <i data-lucide="x" class="w-4 h-4"></i>
+                <i data-lucide="x" style="width:16px;height:16px;stroke-width:2.5;"></i>
             </button>
         </div>
     </div>
@@ -123,31 +132,55 @@ foreach ($stores as $st) {
                 $unbilledCount = count($storeUnbilled);
                 $storeSearchKey = addslashes(strtolower($store['nama_toko'] . ' ' . ($store['nama_sales'] ?? '') . ' ' . $store['kode_pelanggan']));
             ?>
-            <div class="card p-4 rounded-2xl space-y-3 transition-all"
-                 style="border:1px solid var(--color-hairline);"
-                 x-show="matchStore('<?= $storeSearchKey ?>')">
-                
-                <!-- STORE HEADER (CLEAN & MINIMALIST) -->
-                <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h3 class="text-sm font-bold truncate" style="color:var(--color-ink);">
+            <template x-if="isStoreVisible('<?= $storeId ?>')">
+                <div class="card p-4 rounded-2xl space-y-3 transition-all"
+                     style="border:1px solid var(--color-hairline);">
+                    
+                    <!-- STORE HEADER (NEAT & COMPACT) -->
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center flex-shrink-0" style="width:22px;height:22px;border-radius:6px;border:1px solid var(--color-hairline);background:var(--color-canvas-soft);color:var(--color-ink-secondary);font-size:10.5px;font-weight:800;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,0.02);" x-text="visibleIndexMap['<?= $storeId ?>']"></span>
+                            <h3 class="text-sm font-bold m-0 p-0" style="color:var(--color-ink); line-height:1.4;">
                                 <?= htmlspecialchars($store['nama_toko']) ?>
                             </h3>
-                            <span class="text-[10px] font-mono text-slate-400 flex-shrink-0" style="color:var(--color-ink-mute);">
-                                <?= htmlspecialchars($store['kode_pelanggan'] ?? '') ?>
+                        </div>
+                        
+                        <?php 
+                        $alamat = trim($store['alamat_lengkap'] ?? ''); 
+                        if ($alamat !== '' && $alamat !== '-'): 
+                        ?>
+                        <p class="text-[11px] mt-1 line-clamp-1" style="color:var(--color-ink-mute);">
+                            <?= htmlspecialchars($alamat) ?>
+                        </p>
+                        <?php endif; ?>
+
+                        <!-- TAGS & BADGES -->
+                        <div class="flex flex-wrap items-center gap-1.5 mt-2">
+                            <?php if (!empty($store['kode_pelanggan'])): ?>
+                            <span class="font-mono" style="background:var(--color-canvas-soft);color:var(--color-ink-mute);padding:1.5px 6px;border-radius:6px;font-weight:700;font-size:9.5px;border:1px solid var(--color-hairline);">
+                                <?= htmlspecialchars($store['kode_pelanggan']) ?>
                             </span>
+                            <?php endif; ?>
+
                             <?php if ($tipeKonsinyasi === 'kolektif_toko' || $tipeKonsinyasi === 'kolektif_tagihan'): ?>
-                                <span style="background:rgba(2,132,199,0.1);color:#0284c7;border:1px solid rgba(2,132,199,0.25);padding:1.5px 6px;border-radius:6px;font-weight:800;font-size:9px;">Kolektif Toko</span>
+                                <span style="background:rgba(2,132,199,0.1);color:#0284c7;border:1px solid rgba(2,132,199,0.25);padding:1.5px 6px;border-radius:6px;font-weight:700;font-size:9.5px;">Kolektif</span>
                             <?php else: ?>
-                                <span style="background:rgba(124,58,237,0.1);color:#7c3aed;border:1px solid rgba(124,58,237,0.25);padding:1.5px 6px;border-radius:6px;font-weight:800;font-size:9px;">Rolling Nota</span>
+                                <span style="background:rgba(124,58,237,0.1);color:#7c3aed;border:1px solid rgba(124,58,237,0.25);padding:1.5px 6px;border-radius:6px;font-weight:700;font-size:9.5px;">Rolling</span>
+                            <?php endif; ?>
+
+                            <?php if ($daysSince === 999): ?>
+                                <span style="background:rgba(244,63,94,0.1);color:#f43f5e;padding:1.5px 6px;border-radius:6px;font-weight:700;font-size:9.5px;">Belum Opname</span>
+                            <?php elseif ($daysSince > 14): ?>
+                                <span style="background:rgba(244,63,94,0.1);color:#f43f5e;padding:1.5px 6px;border-radius:6px;font-weight:700;font-size:9.5px;">Opname <?= $daysSince ?>hr lalu</span>
+                            <?php elseif ($daysSince > 7): ?>
+                                <span style="background:rgba(245,158,11,0.1);color:#f59e0b;padding:1.5px 6px;border-radius:6px;font-weight:700;font-size:9.5px;">Opname <?= $daysSince ?>hr lalu</span>
+                            <?php else: ?>
+                                <span style="background:rgba(16,185,129,0.1);color:#10b981;padding:1.5px 6px;border-radius:6px;font-weight:700;font-size:9.5px;">Opname <?= $daysSince ?>hr lalu</span>
                             <?php endif; ?>
                         </div>
-                        <p class="text-[11px] mt-0.5 truncate" style="color:var(--color-ink-mute);">
-                            <?= htmlspecialchars($store['alamat_lengkap'] ?? 'Alamat belum diatur') ?>
-                        </p>
+
                         <?php if ($unbilledCount > 0): ?>
-                        <div class="mt-1.5">
+                        <div class="mt-2.5">
                             <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.35);padding:2px 8px;border-radius:9999px;font-weight:700;font-size:10px;line-height:1.2;">
                                 <i data-lucide="clock" style="width:11px;height:11px;stroke:#b45309;stroke-width:2.5;flex-shrink:0;"></i>
                                 <span><?= $unbilledCount ?> PO Belum Ditagih</span>
@@ -156,181 +189,198 @@ foreach ($stores as $st) {
                         <?php endif; ?>
                     </div>
 
-                    <!-- STATUS BADGE -->
-                    <div class="flex-shrink-0">
-                        <?php if ($daysSince === 999): ?>
-                            <span style="background:rgba(244,63,94,0.1);color:#f43f5e;padding:2px 7px;border-radius:6px;font-weight:700;font-size:9.5px;">Belum Opname</span>
-                        <?php elseif ($daysSince > 14): ?>
-                            <span style="background:rgba(244,63,94,0.1);color:#f43f5e;padding:2px 7px;border-radius:6px;font-weight:700;font-size:9.5px;"><?= $daysSince ?> hr lalu</span>
-                        <?php elseif ($daysSince > 7): ?>
-                            <span style="background:rgba(245,158,11,0.1);color:#f59e0b;padding:2px 7px;border-radius:6px;font-weight:700;font-size:9.5px;"><?= $daysSince ?> hr lalu</span>
-                        <?php else: ?>
-                            <span style="background:rgba(16,185,129,0.1);color:#10b981;padding:2px 7px;border-radius:6px;font-weight:700;font-size:9.5px;"><?= $daysSince ?> hr lalu</span>
-                        <?php endif; ?>
+                    <!-- KEY METRICS STRIP -->
+                    <div class="grid grid-cols-3 gap-2 p-2.5 rounded-xl text-center" style="background:var(--color-canvas);border:1px solid var(--color-hairline);">
+                        <div>
+                            <span class="text-[10px] block" style="color:var(--color-ink-mute);">Saldo Rak:</span>
+                            <strong class="text-[11.5px] font-black text-sky-600 dark:text-sky-400"><?= number_format((float)$store['total_pcs_titip']) ?> pcs</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] block" style="color:var(--color-ink-mute);">Varian:</span>
+                            <strong class="text-[11.5px] font-bold" style="color:var(--color-ink);"><?= $store['total_sku_titip'] ?> SKU</strong>
+                        </div>
+                        <div>
+                            <span class="text-[10px] block" style="color:var(--color-ink-mute);">Sales:</span>
+                            <strong class="text-[11.5px] truncate block" style="color:var(--color-ink-secondary);"><?= htmlspecialchars($store['nama_sales'] ?? '-') ?></strong>
+                        </div>
                     </div>
-                </div>
 
-                <!-- KEY METRICS STRIP -->
-                <div class="grid grid-cols-3 gap-2 p-2.5 rounded-xl text-center" style="background:var(--color-canvas);border:1px solid var(--color-hairline);">
-                    <div>
-                        <span class="text-[10px] block" style="color:var(--color-ink-mute);">Saldo Rak:</span>
-                        <strong class="text-xs font-black text-sky-600 dark:text-sky-400"><?= number_format((float)$store['total_pcs_titip']) ?> pcs</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] block" style="color:var(--color-ink-mute);">Varian:</span>
-                        <strong class="text-xs font-bold" style="color:var(--color-ink);"><?= $store['total_sku_titip'] ?> SKU</strong>
-                    </div>
-                    <div>
-                        <span class="text-[10px] block" style="color:var(--color-ink-mute);">Sales:</span>
-                        <strong class="text-xs truncate block" style="color:var(--color-ink-secondary);"><?= htmlspecialchars($store['nama_sales'] ?? '-') ?></strong>
-                    </div>
-                </div>
-
-                <!-- ACTION BUTTONS (MOBILE) -->
-                <div class="space-y-2 pt-0.5">
-                    <?php if ($tipeKonsinyasi === 'kolektif_toko' || $tipeKonsinyasi === 'kolektif_tagihan'): ?>
-                    <a href="<?= Router::url('/consignment/opname?pelanggan_id=' . urlencode((string)$store['id'])) ?>" 
-                       class="btn btn-primary btn-sm w-full flex items-center justify-center gap-1.5 text-xs py-2 px-3 rounded-xl font-bold shadow-sm"
-                       style="background:#0284c7;border-color:#0284c7;color:#fff !important;"
-                       title="Lakukan Opname Toko Langsung">
-                        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
-                        <span>Lakukan Opname Toko</span>
-                    </a>
-                    <?php endif; ?>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" 
-                                @click="toggleStore('<?= $storeId ?>')"
-                                class="btn btn-secondary btn-sm flex items-center justify-center gap-1.5 text-xs py-2 px-2 rounded-xl font-semibold min-w-0"
-                                style="border:1px solid var(--color-hairline);"
-                                :style="expandedStoreId === '<?= $storeId ?>' ? 'background:var(--color-canvas-soft);' : ''">
-                            <span class="truncate" x-text="expandedStoreId === '<?= $storeId ?>' ? 'Tutup Rincian' : 'Rincian &amp; PO (<?= count($storeItems) ?>)'"></span>
-                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200" :class="expandedStoreId === '<?= $storeId ?>' ? 'rotate-180' : ''"></i>
-                        </button>
-                        <a href="<?= Router::url('/customer-orders?pelanggan_id=' . urlencode((string)$store['id'])) ?>" 
-                           class="btn btn-secondary btn-sm flex items-center justify-center gap-1.5 text-xs py-2 px-2 rounded-xl font-semibold min-w-0"
-                           style="border:1px solid var(--color-hairline);color:var(--color-ink);"
-                           title="Lihat Semua PO/Nota Toko Ini">
-                            <i data-lucide="receipt" class="w-3.5 h-3.5 text-sky-600 flex-shrink-0"></i>
-                            <span class="truncate">Semua PO/Nota</span>
+                    <!-- ACTION BUTTONS (MOBILE) -->
+                    <div class="space-y-2 pt-0.5">
+                        <?php if ($tipeKonsinyasi === 'kolektif_toko' || $tipeKonsinyasi === 'kolektif_tagihan'): ?>
+                        <a href="<?= Router::url('/consignment/opname?pelanggan_id=' . urlencode((string)$store['id'])) ?>" 
+                           class="btn btn-primary btn-sm w-full flex items-center justify-center gap-1.5 text-xs py-2 px-3 rounded-xl font-bold shadow-sm"
+                           style="background:#0284c7;border-color:#0284c7;color:#fff !important;"
+                           title="Lakukan Opname Toko Langsung">
+                            <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                            <span>Lakukan Opname Toko</span>
                         </a>
+                        <?php endif; ?>
+                        
+                        <div class="flex items-center gap-2">
+                            <button type="button" 
+                                    @click="toggleStore('<?= $storeId ?>')"
+                                    class="btn btn-secondary flex-1 flex items-center justify-center gap-1.5 text-[11px] py-2 px-2 rounded-xl font-bold transition-all"
+                                    style="border:1px solid var(--color-hairline);"
+                                    :style="expandedStoreId === '<?= $storeId ?>' ? 'background:var(--color-canvas-soft);' : ''">
+                                <span class="truncate" x-text="expandedStoreId === '<?= $storeId ?>' ? 'Tutup Rincian' : 'Rincian (<?= count($storeItems) ?>)'"></span>
+                                <i data-lucide="chevron-down" class="w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200" :class="expandedStoreId === '<?= $storeId ?>' ? 'rotate-180' : ''"></i>
+                            </button>
+                            <a href="<?= Router::url('/customer-orders?pelanggan_id=' . urlencode((string)$store['id'])) ?>" 
+                               class="btn btn-secondary flex-1 flex items-center justify-center gap-1.5 text-[11px] py-2 px-2 rounded-xl font-bold"
+                               style="border:1px solid var(--color-hairline);color:var(--color-ink);"
+                               title="Lihat Semua PO/Nota Toko Ini">
+                                <i data-lucide="receipt" class="w-3 h-3 text-sky-600 flex-shrink-0"></i>
+                                <span class="truncate">Daftar PO/Nota</span>
+                            </a>
+                        </div>
                     </div>
-                </div>
 
-                <!-- MOBILE DRILLDOWN (SMOOTH & LIGHTWEIGHT TRANSITION) -->
-                <div x-show="expandedStoreId === '<?= $storeId ?>'" 
-                     x-transition:enter="transition ease-out duration-200"
-                     x-transition:enter-start="opacity-0 -translate-y-1"
-                     x-transition:enter-end="opacity-100 translate-y-0"
-                     x-transition:leave="transition ease-in duration-150"
-                     x-transition:leave-start="opacity-100 translate-y-0"
-                     x-transition:leave-end="opacity-0 -translate-y-1"
-                     x-cloak 
-                     class="pt-3 border-t space-y-3" 
-                     style="border-color:var(--color-hairline);">
+                    <!-- MOBILE DRILLDOWN (SMOOTH & LIGHTWEIGHT TRANSITION) -->
+                    <div x-show="expandedStoreId === '<?= $storeId ?>'" 
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 -translate-y-1"
+                         x-transition:enter-end="opacity-100 translate-y-0"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 translate-y-0"
+                         x-transition:leave-end="opacity-0 -translate-y-1"
+                         x-cloak 
+                         class="pt-3 border-t space-y-3" 
+                         style="border-color:var(--color-hairline);">
 
-                    <!-- DAFTAR PO/NOTA BELUM ADA NILAI TAGIHAN -->
-                    <div class="p-3.5 rounded-2xl space-y-3" style="background:var(--color-surface);border:1px solid var(--color-hairline);">
-                        <div class="flex items-center justify-between" style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--color-hairline);">
-                            <div class="flex items-center gap-2.5">
-                                <div style="width:30px;height:30px;border-radius:8px;background:rgba(2,132,199,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                    <i data-lucide="receipt" style="width:16px;height:16px;stroke:#0284c7;stroke-width:2.2;"></i>
+                        <!-- DAFTAR PO/NOTA BELUM ADA NILAI TAGIHAN -->
+                        <div class="p-3.5 rounded-2xl space-y-3" style="background:var(--color-surface);border:1px solid var(--color-hairline);">
+                            <div class="flex items-center justify-between" style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--color-hairline);">
+                                <div class="flex items-center gap-2.5">
+                                    <div style="width:30px;height:30px;border-radius:8px;background:rgba(2,132,199,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="receipt" style="width:16px;height:16px;stroke:#0284c7;stroke-width:2.2;"></i>
+                                    </div>
+                                    <span class="text-xs font-bold" style="color:var(--color-ink);">
+                                        PO Belum Ada Tagihan
+                                    </span>
                                 </div>
-                                <span class="text-xs font-bold" style="color:var(--color-ink);">
-                                    PO Belum Ada Tagihan
+                                <span style="display:inline-flex;align-items:center;background:rgba(245,158,11,0.15);color:#b45309;border:1px solid rgba(245,158,11,0.35);padding:2px 8px;border-radius:9999px;font-weight:700;font-size:10px;line-height:1;">
+                                    <?= $unbilledCount ?> PO
                                 </span>
                             </div>
-                            <span style="display:inline-flex;align-items:center;background:rgba(245,158,11,0.15);color:#b45309;border:1px solid rgba(245,158,11,0.35);padding:2px 8px;border-radius:9999px;font-weight:700;font-size:10px;line-height:1;">
-                                <?= $unbilledCount ?> PO
-                            </span>
+
+                            <?php if (empty($storeUnbilled)): ?>
+                                <p class="text-[11px] italic py-2 text-center" style="color:var(--color-ink-mute);">Tidak ada PO kiriman yang menunggu tagihan.</p>
+                            <?php else: ?>
+                                <div class="space-y-2">
+                                    <?php foreach ($storeUnbilled as $upo): ?>
+                                    <div class="p-2.5 rounded-xl space-y-2" style="background:var(--color-canvas);border:1px solid var(--color-hairline);">
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-mono font-bold text-xs text-sky-600 dark:text-sky-400"><?= htmlspecialchars($upo['nomor_nota']) ?></span>
+                                            <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.3);padding:2px 7px;border-radius:9999px;font-weight:700;font-size:9.5px;line-height:1.2;">
+                                                <i data-lucide="clock" style="width:10px;height:10px;stroke:#b45309;stroke-width:2.5;"></i>
+                                                <span>Belum Ditagih</span>
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center justify-between text-xs" style="color:var(--color-ink-mute);">
+                                            <span>Tgl Kirim: <?= date('d/m/Y', strtotime($upo['tanggal_pesanan'])) ?></span>
+                                            <strong class="font-bold" style="color:var(--color-ink);"><?= number_format((float)$upo['total_qty_kirim']) ?> pcs</strong>
+                                        </div>
+                                        <?php if (!empty($upo['rincian_barang'])): ?>
+                                        <div class="text-[10.5px] text-slate-500 truncate">
+                                            <?= htmlspecialchars($upo['rincian_barang']) ?>
+                                        </div>
+                                        <?php endif; ?>
+                                        <div class="pt-1.5 border-t" style="border-color:var(--color-hairline);">
+                                            <a href="<?= Router::url('/consignment/opname?pelanggan_id=' . urlencode((string)$storeId) . '&pesanan_id=' . urlencode((string)$upo['pesanan_id'])) ?>"
+                                               class="btn btn-primary btn-sm w-full py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                                               style="background:#0284c7;border-color:#0284c7;color:#fff !important;">
+                                                <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
+                                                <span>Opname Nota Ini</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
 
-                        <?php if (empty($storeUnbilled)): ?>
-                            <p class="text-[11px] italic py-2 text-center" style="color:var(--color-ink-mute);">Tidak ada PO kiriman yang menunggu tagihan.</p>
-                        <?php else: ?>
-                            <div class="space-y-2">
-                                <?php foreach ($storeUnbilled as $upo): ?>
-                                <div class="p-2.5 rounded-xl space-y-2" style="background:var(--color-canvas);border:1px solid var(--color-hairline);">
-                                    <div class="flex items-center justify-between">
-                                        <span class="font-mono font-bold text-xs text-sky-600 dark:text-sky-400"><?= htmlspecialchars($upo['nomor_nota']) ?></span>
-                                        <span style="display:inline-flex;align-items:center;gap:3px;background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.3);padding:2px 7px;border-radius:9999px;font-weight:700;font-size:9.5px;line-height:1.2;">
-                                            <i data-lucide="clock" style="width:10px;height:10px;stroke:#b45309;stroke-width:2.5;"></i>
-                                            <span>Belum Ditagih</span>
-                                        </span>
+                        <!-- RINCIAN PRODUK DI RAK -->
+                        <div class="p-3.5 rounded-2xl space-y-3" style="background:var(--color-surface);border:1px solid var(--color-hairline);">
+                            <div class="flex items-center justify-between" style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--color-hairline);">
+                                <div class="flex items-center gap-2.5">
+                                    <div style="width:30px;height:30px;border-radius:8px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                        <i data-lucide="layers" style="width:16px;height:16px;stroke:#10b981;stroke-width:2.2;"></i>
                                     </div>
-                                    <div class="flex items-center justify-between text-xs" style="color:var(--color-ink-mute);">
-                                        <span>Tgl Kirim: <?= date('d/m/Y', strtotime($upo['tanggal_pesanan'])) ?></span>
-                                        <strong class="font-bold" style="color:var(--color-ink);"><?= number_format((float)$upo['total_qty_kirim']) ?> pcs</strong>
-                                    </div>
-                                    <?php if (!empty($upo['rincian_barang'])): ?>
-                                    <div class="text-[10.5px] text-slate-500 truncate">
-                                        <?= htmlspecialchars($upo['rincian_barang']) ?>
-                                    </div>
-                                    <?php endif; ?>
-                                    <div class="pt-1.5 border-t" style="border-color:var(--color-hairline);">
-                                        <a href="<?= Router::url('/consignment/opname?pelanggan_id=' . urlencode((string)$storeId) . '&pesanan_id=' . urlencode((string)$upo['pesanan_id'])) ?>"
-                                           class="btn btn-primary btn-sm w-full py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
-                                           style="background:#0284c7;border-color:#0284c7;color:#fff !important;">
-                                            <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
-                                            <span>Opname Nota Ini</span>
-                                        </a>
-                                    </div>
+                                    <span class="text-xs font-bold" style="color:var(--color-ink);">
+                                        Produk di Rak Toko
+                                    </span>
                                 </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-
-                    <!-- RINCIAN PRODUK DI RAK -->
-                    <div class="p-3.5 rounded-2xl space-y-3" style="background:var(--color-surface);border:1px solid var(--color-hairline);">
-                        <div class="flex items-center justify-between" style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--color-hairline);">
-                            <div class="flex items-center gap-2.5">
-                                <div style="width:30px;height:30px;border-radius:8px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                    <i data-lucide="layers" style="width:16px;height:16px;stroke:#10b981;stroke-width:2.2;"></i>
-                                </div>
-                                <span class="text-xs font-bold" style="color:var(--color-ink);">
-                                    Produk di Rak Toko
+                                <span style="display:inline-flex;align-items:center;background:rgba(16,185,129,0.12);color:#047857;border:1px solid rgba(16,185,129,0.25);padding:2px 8px;border-radius:9999px;font-weight:700;font-size:10px;line-height:1;">
+                                    <?= count($storeItems) ?> SKU
                                 </span>
                             </div>
-                            <span style="display:inline-flex;align-items:center;background:rgba(16,185,129,0.12);color:#047857;border:1px solid rgba(16,185,129,0.25);padding:2px 8px;border-radius:9999px;font-weight:700;font-size:10px;line-height:1;">
-                                <?= count($storeItems) ?> SKU
-                            </span>
-                        </div>
 
-                        <?php if (empty($storeItems)): ?>
-                            <p class="text-xs italic py-2 text-center" style="color:var(--color-ink-mute);">Belum ada barang di rak toko ini.</p>
-                        <?php else: ?>
-                            <div class="space-y-1">
-                                <?php foreach ($storeItems as $sItem): 
-                                    $stok = (int)$sItem['stok_titip_saat_ini'];
-                                    $hpp = (float)($sItem['hpp'] ?? 0);
-                                ?>
-                                <div class="p-2 rounded-lg flex items-center justify-between text-xs" style="background:var(--color-canvas);">
-                                    <div class="min-w-0 flex-1 pr-2">
-                                        <div class="font-medium truncate" style="color:var(--color-ink);"><?= htmlspecialchars($sItem['nama_item']) ?></div>
-                                        <div class="text-[10px] font-mono text-slate-400" style="color:var(--color-ink-mute);"><?= htmlspecialchars($sItem['kode_sku'] ?? '-') ?></div>
+                            <?php if (empty($storeItems)): ?>
+                                <p class="text-xs italic py-2 text-center" style="color:var(--color-ink-mute);">Belum ada barang di rak toko ini.</p>
+                            <?php else: ?>
+                                <div class="space-y-1">
+                                    <?php foreach ($storeItems as $sItem): 
+                                        $stok = (int)$sItem['stok_titip_saat_ini'];
+                                        $hpp = (float)($sItem['hpp'] ?? 0);
+                                    ?>
+                                    <div class="p-2 rounded-lg flex items-center justify-between text-xs" style="background:var(--color-canvas);">
+                                        <div class="min-w-0 flex-1 pr-2">
+                                            <div class="font-medium truncate" style="color:var(--color-ink);"><?= htmlspecialchars($sItem['nama_item']) ?></div>
+                                            <div class="text-[10px] font-mono text-slate-400" style="color:var(--color-ink-mute);"><?= htmlspecialchars($sItem['kode_sku'] ?? '-') ?></div>
+                                        </div>
+                                        <div class="text-right flex-shrink-0 font-bold" style="color:var(--color-ink);">
+                                            <?= $stok ?> <?= $sItem['satuan_dasar'] ?>
+                                        </div>
                                     </div>
-                                    <div class="text-right flex-shrink-0 font-bold" style="color:var(--color-ink);">
-                                        <?= $stok ?> <?= $sItem['satuan_dasar'] ?>
-                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
-                </div>
 
-            </div>
+                </div>
+            </template>
             <?php endforeach; ?>
+
+            <!-- Skeleton loader mobile -->
+            <div class="space-y-3 mt-3" x-show="isLoadingMore" x-cloak>
+                <div class="card p-4 rounded-2xl animate-pulse" style="border:1px solid var(--color-hairline);">
+                    <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2 mb-2"></div>
+                    <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/3 mb-4"></div>
+                    <div class="grid grid-cols-3 gap-2 mb-3">
+                        <div class="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl"></div>
+                        <div class="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl"></div>
+                        <div class="h-10 bg-slate-100 dark:bg-slate-800 rounded-xl"></div>
+                    </div>
+                    <div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-xl w-full"></div>
+                </div>
+            </div>
+
+            <!-- Next button mobile -->
+            <div x-show="hasMore" class="pt-2 pb-4" x-cloak>
+                <button type="button" @click="loadMore()" :disabled="isLoadingMore" :class="isLoadingMore ? 'opacity-75 cursor-wait' : ''" class="btn btn-secondary w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all" style="border:1px solid var(--color-hairline);">
+                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-sky-600" x-show="isLoadingMore"></i>
+                    <i data-lucide="chevron-down" class="w-4 h-4" x-show="!isLoadingMore"></i>
+                    <span x-text="isLoadingMore ? 'Sedang Memuat...' : 'Tampilkan Lebih Banyak'"></span>
+                </button>
+            </div>
         </div>
 
         <!-- ===================================================================== -->
         <!-- DESKTOP VIEW (>= 768px): CLEAN & MODERN DATA TABLE                    -->
         <!-- ===================================================================== -->
         <div class="hidden md:block card rounded-3xl overflow-hidden shadow-sm" style="border:1px solid var(--color-hairline);padding:0;">
-            <div class="overflow-x-auto custom-scrollbar">
+            <div class="overflow-x-auto custom-scrollbar cursor-grab"
+                 x-data="{ isDown: false, startX: 0, scrollLeft: 0 }"
+                 @mousedown="isDown = true; $el.classList.add('cursor-grabbing'); $el.classList.remove('cursor-grab'); startX = $event.pageX - $el.offsetLeft; scrollLeft = $el.scrollLeft;"
+                 @mouseleave="isDown = false; $el.classList.remove('cursor-grabbing'); $el.classList.add('cursor-grab');"
+                 @mouseup="isDown = false; $el.classList.remove('cursor-grabbing'); $el.classList.add('cursor-grab');"
+                 @mousemove="if(!isDown) return; $event.preventDefault(); const x = $event.pageX - $el.offsetLeft; const walk = (x - startX) * 1.5; $el.scrollLeft = scrollLeft - walk;">
                 <table class="data-table" style="min-width: 960px;">
                     <thead>
                         <tr>
+                            <th style="width: 50px; min-width: 50px;" class="cell-center">No.</th>
                             <th style="min-width: 280px;">Toko Mitra</th>
                             <th style="min-width: 140px;" class="cell-nowrap">Sales Pemegang</th>
                             <th style="width: 100px; min-width: 95px;" class="cell-center cell-nowrap">Total SKU</th>
@@ -355,10 +405,15 @@ foreach ($stores as $st) {
                             $storeSearchKey = addslashes(strtolower($store['nama_toko'] . ' ' . ($store['nama_sales'] ?? '') . ' ' . $store['kode_pelanggan']));
                         ?>
                         <!-- MAIN STORE ROW (CLEAN & MODERN) -->
-                        <tr class="cursor-pointer"
-                            x-show="matchStore('<?= $storeSearchKey ?>')"
-                            @click="toggleStore('<?= $storeId ?>')">
+                        <template x-if="isStoreVisible('<?= $storeId ?>')">
+                            <tr class="cursor-pointer"
+                                @click="toggleStore('<?= $storeId ?>')">
                             
+                            <!-- NOMOR CELL -->
+                            <td class="cell-center">
+                                <span class="inline-flex items-center justify-center" style="width:24px;height:24px;border-radius:6px;border:1px solid var(--color-hairline);background:var(--color-canvas-soft);color:var(--color-ink-secondary);font-size:11px;font-weight:800;line-height:1;box-shadow:0 1px 2px rgba(0,0,0,0.02);" x-text="visibleIndexMap['<?= $storeId ?>']"></span>
+                            </td>
+
                             <!-- TOKO MITRA CELL -->
                             <td>
                                 <div class="flex items-center gap-2 flex-wrap">
@@ -456,8 +511,10 @@ foreach ($stores as $st) {
                                 </div>
                             </td>
                         </tr>
+                        </template>
 
                         <!-- DESKTOP DRILLDOWN ITEMS (HARMONIZED & MINIMALIST) -->
+                        <template x-if="isStoreVisible('<?= $storeId ?>')">
                         <tr x-show="expandedStoreId === '<?= $storeId ?>'" 
                             x-transition:enter="transition ease-out duration-200"
                             x-transition:enter-start="opacity-0 -translate-y-1"
@@ -467,7 +524,7 @@ foreach ($stores as $st) {
                             x-transition:leave-end="opacity-0 -translate-y-1"
                             x-cloak 
                             style="background:var(--color-canvas);">
-                            <td colspan="6" class="p-4 sm:p-5">
+                            <td colspan="7" class="p-4 sm:p-5">
                                 <div class="space-y-4">
 
                                     <!-- SEKSI 1: DAFTAR PO/NOTA KIRIMAN BELUM ADA NILAI TAGIHAN -->
@@ -609,9 +666,40 @@ foreach ($stores as $st) {
                                 </div>
                             </td>
                         </tr>
+                        </template>
                         <?php endforeach; ?>
+
+                        <!-- Skeleton Loader Desktop -->
+                        <tr x-show="isLoadingMore" class="animate-pulse" style="background:var(--color-canvas-soft);" x-cloak>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-6 mx-auto"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div></td>
+                            <td class="py-4 px-4"><div class="h-6 bg-slate-200 dark:bg-slate-700 rounded-full w-16 mx-auto"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20 mx-auto"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-24 mx-auto"></div></td>
+                            <td class="py-4 px-4"><div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-xl w-24 ml-auto"></div></td>
+                        </tr>
+                        <!-- Second Skeleton Row to make it more visible -->
+                        <tr x-show="isLoadingMore" class="animate-pulse" style="background:var(--color-canvas-soft);" x-cloak>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-6 mx-auto"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-2/3"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div></td>
+                            <td class="py-4 px-4"><div class="h-6 bg-slate-200 dark:bg-slate-700 rounded-full w-16 mx-auto"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16 mx-auto"></div></td>
+                            <td class="py-4 px-4"><div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20 mx-auto"></div></td>
+                            <td class="py-4 px-4"><div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-xl w-24 ml-auto"></div></td>
+                        </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Next Button Desktop -->
+            <div x-show="hasMore" class="p-4 border-t flex justify-center" style="border-color:var(--color-hairline); background:var(--color-canvas-soft);" x-cloak>
+                <button type="button" @click="loadMore()" :disabled="isLoadingMore" :class="isLoadingMore ? 'opacity-75 cursor-wait' : ''" class="btn btn-secondary py-2.5 px-6 rounded-xl font-bold flex items-center gap-2 transition-all" style="border:1px solid var(--color-hairline);">
+                    <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-sky-600" x-show="isLoadingMore"></i>
+                    <i data-lucide="chevron-down" class="w-4 h-4" x-show="!isLoadingMore"></i>
+                    <span x-text="isLoadingMore ? 'Sedang Memuat...' : 'Tampilkan Lebih Banyak'"></span>
+                </button>
             </div>
         </div>
     <?php endif; ?>
@@ -623,10 +711,51 @@ function stokRakApp() {
     return {
         expandedStoreId: null,
         searchQuery: '',
-
-        matchStore(storeSearchKey) {
-            if (!this.searchQuery) return true;
-            return storeSearchKey.includes(this.searchQuery.toLowerCase().trim());
+        limit: 25,
+        isLoadingMore: false,
+        
+        allStoreIds: <?= json_encode(array_column($stores, 'id')) ?>,
+        
+        storeKeys: {
+            <?php foreach($stores as $s): ?>
+            '<?= $s['id'] ?>': <?= json_encode(strtolower($s['nama_toko'] . ' ' . ($s['nama_sales'] ?? '') . ' ' . $s['kode_pelanggan'])) ?>,
+            <?php endforeach; ?>
+        },
+        
+        visibleMap: {},
+        visibleIndexMap: {},
+        hasMore: false,
+        
+        updateVisibleMap() {
+            const map = {};
+            const indexMap = {};
+            const q = this.searchQuery.toLowerCase().trim();
+            const filtered = q ? this.allStoreIds.filter(id => this.storeKeys[id].includes(q)) : this.allStoreIds;
+            const arr = filtered.slice(0, this.limit);
+            for (let i = 0; i < arr.length; i++) {
+                map[arr[i]] = true;
+                indexMap[arr[i]] = i + 1;
+            }
+            this.visibleMap = map;
+            this.visibleIndexMap = indexMap;
+            this.hasMore = this.limit < filtered.length;
+        },
+        
+        isStoreVisible(storeId) {
+            return !!this.visibleMap[storeId];
+        },
+        
+        loadMore() {
+            if (this.isLoadingMore || !this.hasMore) return;
+            this.isLoadingMore = true;
+            setTimeout(() => {
+                this.limit += 25;
+                this.updateVisibleMap();
+                this.isLoadingMore = false;
+                this.$nextTick(() => {
+                    if (window.lucide) window.lucide.createIcons();
+                });
+            }, 600);
         },
 
         toggleStore(storeId) {
@@ -635,6 +764,15 @@ function stokRakApp() {
                 if (window.lucide) {
                     window.lucide.createIcons();
                 }
+            });
+        },
+
+        init() {
+            this.updateVisibleMap();
+            this.$watch('searchQuery', () => {
+                this.limit = 50;
+                this.expandedStoreId = null;
+                this.updateVisibleMap();
             });
         }
     };

@@ -1383,11 +1383,12 @@ $totalStokTitipAwal = array_sum(array_column($items, 'stok_titip_saat_ini'));
             
             <!-- Store Identity -->
             <div class="opname-store-info">
-                <a href="<?= Router::url('/consignment/stok-rak') ?>" 
+                <button type="button" 
+                   onclick="try{window.close();}catch(e){} if(window.history.length > 1 && document.referrer.includes(window.location.host)) { window.history.back(); } else { window.location.href = '<?= Router::url('/consignment/stok-rak') ?>'; }"
                    class="opname-back-btn" 
                    title="Kembali ke Monitoring Stok Rak">
-                    <i data-lucide="arrow-left" style="width:18px;height:18px;"></i>
-                </a>
+                    <i data-lucide="arrow-left" style="width:18px;height:18px;pointer-events:none;"></i>
+                </button>
 
                 <div class="opname-store-details">
                     <div class="opname-store-meta">

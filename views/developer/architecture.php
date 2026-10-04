@@ -39,9 +39,9 @@ ob_start();
                         <span class="badge badge-mono" style="font-size:10px;">PHP <?= htmlspecialchars($systemInfo['php_version'] ?? PHP_VERSION) ?></span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_tables'] ?? count($tables) ?> Tables (PostgreSQL 17)</span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_procedures'] ?? count($procedures) ?> Procedures &amp; RPC</span>
-                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_controllers'] ?? 24 ?> Controllers</span>
+                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_controllers'] ?? 32 ?> Controllers</span>
                         <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_helpers'] ?? 13 ?> Helpers</span>
-                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_suites'] ?? 35 ?> Test Suites</span>
+                        <span class="badge badge-mono" style="font-size:10px;"><?= $systemInfo['total_suites'] ?? 43 ?> Test Suites</span>
                         <span class="badge badge-mono" style="font-size:10px;">Cloudflare R2 Storage</span>
                     </div>
                     <h1 style="font-size:18px;font-weight:900;color:var(--color-ink);line-height:1.3;">
@@ -182,13 +182,16 @@ ob_start();
                         <option value="customer_orders_b2b">📦 Pesanan Pelanggan &amp; Grosir B2B</option>
                         <option value="finance_cash">💰 Keuangan, Mutasi Kas &amp; Valuasi</option>
                         <option value="inventory_bom">🏭 Gudang, Opname Stok &amp; Komposisi BOM</option>
+                        <option value="production_spk">🏭 Produksi Snack &amp; Upah Borongan BOM</option>
                         <option value="pricing_engine">🏷️ Matriks 30 Level Harga &amp; Tier Toko</option>
-                        <option value="master_employees">👥 Karyawan (Sales vs Driver) &amp; Penggajian</option>
+                        <option value="master_employees">👥 Master Karyawan (Sales vs Driver)</option>
+                        <option value="hr_payroll">💼 HR, Absensi, Kasbon &amp; Payroll Engine</option>
                         <option value="rbac_permissions">🔐 Pengguna, Peran &amp; 5-Tab RBAC</option>
                         <option value="import_data_engine">📥 Master Data Impor &amp; Diffing Reconciliation</option>
                         <option value="media_cloud_storage">☁️ Cloudflare R2 Media Proxy &amp; Local Disk Cache</option>
                         <option value="settings_audit">⚙️ Pengaturan Toko &amp; Audit Log Forensik</option>
-                        <option value="developer_test_runner">🧪 Developer Portal &amp; Test Runner (27 Suites)</option>
+                        <option value="database_manager">🗄️ Database Manager, Switcher &amp; Sandbox Sync</option>
+                        <option value="developer_test_runner">🧪 Developer Portal &amp; Test Runner (43 Suites)</option>
                     </select>
                 </div>
 
@@ -464,6 +467,22 @@ ob_start();
                         <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">PO grosir, batch picking list PDF gudang, faktur tagihan &amp; piutang.</div>
                     </div>
 
+                    <div @click="selectAndCopyModule('hr_payroll')" class="p-3 rounded-xl cursor-pointer hover:border-primary transition-all" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
+                        <div class="flex justify-between items-center">
+                            <div style="font-size:12px;font-weight:700;color:var(--color-ink);">💼 HR &amp; Payroll (`/penggajian`, `/absensi`, `/kasbon`)</div>
+                            <span class="badge badge-mono text-[9.5px]">Pilih</span>
+                        </div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Absensi kehadiran, lembur, uang makan, kasbon, tabungan sukarela, dan slip PDF.</div>
+                    </div>
+
+                    <div @click="selectAndCopyModule('production_spk')" class="p-3 rounded-xl cursor-pointer hover:border-primary transition-all" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
+                        <div class="flex justify-between items-center">
+                            <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🏭 Produksi Snack SPK (`/produksi`)</div>
+                            <span class="badge badge-mono text-[9.5px]">Pilih</span>
+                        </div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">SPK produksi harian, alokasi resep BOM, output riil, dan upah borongan per batch.</div>
+                    </div>
+
                     <div @click="selectAndCopyModule('owner_dashboard')" class="p-3 rounded-xl cursor-pointer hover:border-primary transition-all" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
                         <div class="flex justify-between items-center">
                             <div style="font-size:12px;font-weight:700;color:var(--color-ink);">👑 Owner Command Center (`/owner`)</div>
@@ -477,7 +496,7 @@ ob_start();
                             <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🧪 Developer Hub (`/developer`)</div>
                             <span class="badge badge-mono text-[9.5px]">Pilih</span>
                         </div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Portal arsitektur, diagnostik DB Supabase, dan <?= $systemInfo['total_suites'] ?? 35 ?> test suites runner.</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Portal arsitektur, Database Manager (live/lokal), dan <?= $systemInfo['total_suites'] ?? 43 ?> test suites runner.</div>
                     </div>
                 </div>
             </div>
@@ -509,18 +528,18 @@ ob_start();
                     </div>
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🕹️ 24 Business Controllers (`app/Controllers/*`)</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Consignment, Delivery, POS, Order, Owner, Cash, Inventory, ImportData, Media, Developer, dll.</div>
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🕹️ <?= $systemInfo['total_controllers'] ?? 32 ?> Business Controllers (`app/Controllers/*`)</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">Consignment, Delivery, POS, Order, Owner, Cash, Inventory, Produksi, Penggajian, Absensi, Kasbon, Tabungan, ImportData, Media, Developer, dll.</div>
                     </div>
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🛠️ 13 Enterprise Helpers (`app/Helpers/*`)</div>
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">🛠️ <?= $systemInfo['total_helpers'] ?? 13 ?> Enterprise Helpers (`app/Helpers/*`)</div>
                         <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">PrintDocument, ExcelExport, PdfExport, ActivityLog, CSRF, Format, StockHelper, Upload, dll.</div>
                     </div>
 
                     <div class="p-3 rounded-xl" style="background:var(--color-canvas-soft);border:1px solid var(--color-hairline);">
-                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚡ 4 Enterprise Services (`app/Services/*`)</div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">TestRunnerService (35 Suites), R2StorageService, MediaCacheService, dan ImportProcessor Engine.</div>
+                        <div style="font-size:12px;font-weight:700;color:var(--color-ink);">⚡ 5 Enterprise Services (`app/Services/*`)</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:2px;">DatabaseManagerService (Live/Local Switch &amp; Sync), TestRunnerService (<?= $systemInfo['total_suites'] ?? 43 ?> Suites), R2StorageService, MediaCacheService, dan ImportProcessor Engine.</div>
                     </div>
                 </div>
             </div>
@@ -540,7 +559,7 @@ ob_start();
                             <span class="badge badge-success font-mono" style="font-size:9.5px;padding:1px 6px;">LAYER 03</span>
                             <h3 style="font-size:13px;font-weight:800;color:var(--color-ink);">PostgreSQL 17 &amp; Cloudflare R2</h3>
                         </div>
-                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:1px;">45 Tabel Relasional, 18 Stored Procedures &amp; R2 Storage</div>
+                        <div style="font-size:11px;color:var(--color-ink-mute);margin-top:1px;"><?= count($tables) ?> Tabel Relasional, <?= count($procedures) ?> Stored Procedures &amp; R2 Storage</div>
                     </div>
                 </div>
 
@@ -577,7 +596,7 @@ ob_start();
         <div class="p-3.5 sm:p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2.5" style="border-color:var(--color-hairline);">
             <div>
                 <h3 style="font-size:13px;font-weight:800;color:var(--color-ink);">Katalog Lengkap URL Endpoints, Controllers &amp; Views</h3>
-                <p style="font-size:11px;color:var(--color-ink-mute);">Peta seluruh 65+ rute aktif terdaftar di public/index.php.</p>
+                <p style="font-size:11px;color:var(--color-ink-mute);">Peta seluruh 85+ rute aktif terdaftar di public/index.php.</p>
             </div>
             <input type="text" x-model="searchRoute" placeholder="Cari endpoint / controller..." class="form-input" style="height:34px;font-size:12px;max-width:260px;">
         </div>
@@ -628,7 +647,7 @@ ob_start();
                         ⚡ Stored Procedures &amp; RPC (<?= count($procedures) ?>)
                     </button>
                 </div>
-                <p style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;" x-text="dbViewMode === 'tables' ? '45 Tabel aktif skema public PostgreSQL Supabase lengkap dengan jumlah baris riil.' : '18 Stored Procedures & fungsi triggers aktif di PostgreSQL Supabase.'"></p>
+                <p style="font-size:11px;color:var(--color-ink-mute);margin-top:4px;" x-text="dbViewMode === 'tables' ? '<?= count($tables) ?> Tabel aktif skema public PostgreSQL Supabase lengkap dengan jumlah baris riil.' : '<?= count($procedures) ?> Stored Procedures &amp; fungsi triggers aktif di PostgreSQL Supabase.'"></p>
             </div>
             <input type="text" x-model="searchTable" :placeholder="dbViewMode === 'tables' ? 'Cari nama tabel...' : 'Cari nama procedure...'" class="form-input" style="height:34px;font-size:12px;max-width:240px;">
         </div>
@@ -726,10 +745,11 @@ function devArchitectureApp() {
             {
                 id: 'app_controllers',
                 name: 'app/Controllers/',
-                badge: '25 Controllers',
+                badge: '32 Controllers',
                 icon: '🕹️',
                 desc: 'Otak pengendali alur request HTTP, validasi bisnis, otorisasi RBAC, dan routing seluruh modul sistem.',
                 files: [
+                    { name: 'AbsensiController.php', desc: 'Pencatatan absensi harian karyawan (Hadir, Sakit, Izin, Alpha, Setengah Hari), kalkulasi uang makan, lembur & potongan absensi.' },
                     { name: 'ActivityLogController.php', desc: 'Audit jejak aktivitas sistem forensik, tracking IP address, user agent, filter modul & ekspor Excel.' },
                     { name: 'AuthController.php', desc: 'Manajemen login multi-role, verifikasi kredensial bcrypt, heartbeat sesi, proteksi brute force, dan logout.' },
                     { name: 'CashController.php', desc: 'Buku kas multi-akun, mutasi masuk/keluar, transfer kas/bank, rekonsiliasi kas, dan laporan cash flow.' },
@@ -738,23 +758,28 @@ function devArchitectureApp() {
                     { name: 'CustomerOrderController.php', desc: 'Pesanan grosir/B2B (PO Pelanggan), invoice penjualan tempo/tunai, alokasi stok, dan status kirim.' },
                     { name: 'DashboardController.php', desc: 'Pusat kerja harian dan ringkasan operasional bisnis realtime untuk semua level hak akses.' },
                     { name: 'DeliveryController.php', desc: 'Manajemen surat jalan ekspedisi dan Driver Mobile (tugas antar tanpa bocor harga, update status, upload POD).' },
-                    { name: 'DeveloperController.php', desc: 'Portal developer: visual blueprint arsitektur, diagnostik koneksi database Supabase, dan test runner.' },
+                    { name: 'DeveloperController.php', desc: 'Portal developer: visual blueprint arsitektur, Database Manager (live vs local switch & sandbox sync), dan 43 test suites runner.' },
                     { name: 'EmployeeController.php', desc: 'Master karyawan dengan pemisahan peran Sales (komisi %) vs Driver (nopol armada), kasbon, dan payroll.' },
                     { name: 'GuideController.php', desc: 'Portal mandiri dokumentasi SOP, kamus istilah bisnis, dan petunjuk operasional lengkap sistem.' },
                     { name: 'ImportDataController.php', desc: 'Master Data Impor & Diffing Engine: upload file Excel 10 entitas, deteksi diff, dan verifikasi full-sync.' },
                     { name: 'InventoryController.php', desc: 'Inventaris fisik gudang, kartu stok, penyesuaian stok, pencatatan waste, dan bulk stock opname.' },
+                    { name: 'KasbonController.php', desc: 'Manajemen pinjaman karyawan/kasbon, persetujuan, riwayat pencairan, cicilan potong gaji, dan buku kas keluar.' },
                     { name: 'MediaController.php', desc: 'Media proxy Cloudflare R2: streaming file privat/publik, presigned upload URLs, dan local disk cache management.' },
                     { name: 'OrderDocumentController.php', desc: 'Unified Printing Engine: cetak PDF & Excel untuk Surat Jalan, Faktur, Batch Picking List, dan Struk POS.' },
                     { name: 'OwnerController.php', desc: 'Owner Executive Command Center: profitabilitas (omzet, HPP, laba), net working capital, dan performa sales.' },
+                    { name: 'PenarikanGajiController.php', desc: 'Penarikan gaji mandiri / slip gaji, otorisasi pembayaran upah, dan status transfer kas/bank.' },
+                    { name: 'PenggajianController.php', desc: 'Engine payroll terpadu: kalkulasi gaji pokok harian/bulanan, upah borongan packing BOM, komisi sales, lembur, kasbon, tabungan & slip PDF.' },
                     { name: 'PermissionController.php', desc: '5-Tab Master RBAC: peran, permission matrix, user-level overrides, dan update hak akses massal.' },
                     { name: 'PosController.php', desc: 'Kasir ritel cepat: scan barcode universal, kalkulasi diskon otomatis, potong stok, dan mutasi kas.' },
                     { name: 'PricingController.php', desc: 'Matriks 30 level harga dinamis, grup produk, dan penentuan katalog harga khusus toko mitra.' },
                     { name: 'ProductController.php', desc: 'Master produk jadi, brand/merek, bahan baku, kemasan, resep komposisi BOM (komposisi_item), dan upah borongan.' },
+                    { name: 'ProduksiController.php', desc: 'Surat Perintah Kerja (SPK) produksi snack, alokasi bahan baku/kemasan BOM, pelaporan output riil, dan perhitungan upah borongan per batch.' },
                     { name: 'ProfileController.php', desc: 'Manajemen akun pengguna login, pembaruan data profil, dan ubah kata sandi.' },
                     { name: 'PurchaseController.php', desc: 'Pengadaan bahan baku ke vendor (PO Vendor), penerimaan fisik gudang, dan pembayaran hutang.' },
                     { name: 'ReportHubController.php', desc: 'Pusat unduh laporan eksekutif terpadu: 7 kategori laporan terpusat (P&L, Cash Flow, Penjualan, Konsinyasi, HR, Stok, Logistik).' },
                     { name: 'SettingsController.php', desc: 'Pengaturan umum toko, identitas perusahaan, logo, rekening bank, dan konfigurasi master sistem.' },
                     { name: 'SupplierController.php', desc: 'Master vendor pemasok bahan baku mentah, bumbu racik, dan plastik kemasan snack.' },
+                    { name: 'TabunganController.php', desc: 'Tabungan sukarela karyawan, pencatatan setoran auto-debet payroll, penarikan saldo tabungan, dan mutasi saldo buku tabungan.' },
                     { name: 'UserController.php', desc: 'Manajemen pengguna sistem: buat akun, ganti role (owner, admin, sales, driver, mandor, developer), aktivasi status.' }
                 ]
             },
@@ -795,32 +820,34 @@ function devArchitectureApp() {
             {
                 id: 'app_services',
                 name: 'app/Services/',
-                badge: '4 Enterprise Services',
+                badge: '5 Enterprise Services',
                 icon: '⚡',
-                desc: 'Layanan terpusat anti-duplikasi logika bisnis pengujian, media Cloudflare R2, dan engine impor data.',
+                desc: 'Layanan terpusat anti-duplikasi logika bisnis pengujian, media Cloudflare R2, database manager, dan engine impor data.',
                 files: [
-                    { name: 'TestRunnerService.php', desc: 'Master registry 39 test suites, execution timer, global concurrency lock, dan unified runner CLI/Web.' },
+                    { name: 'DatabaseManagerService.php', desc: 'Layanan manajemen multi-database (Live Supabase vs Local PostgreSQL), switching status atomik, migrasi lokal otomatis, hybrid replication (master 100% + transaksi 14 hari), dan global mutex lock.' },
+                    { name: 'TestRunnerService.php', desc: 'Master registry 43 test suites, execution timer, global concurrency lock, dan unified runner CLI/Web.' },
                     { name: 'R2StorageService.php', desc: 'Layanan Cloudflare R2 Object Storage berbasis S3-compatible API untuk upload dan presigned URL media.' },
                     { name: 'MediaCacheService.php', desc: 'Layanan smart caching lokal media R2 di server untuk performa loading secepat kilat.' },
                     { name: 'Import/ImportProcessor.php', desc: 'Engine pemroses impor file Excel dengan validasi schema, smart reader, dan deteksi perbedaan (diffing).' },
                     { name: 'Import/SmartReader.php', desc: 'Reader cerdas parsing baris Excel dengan sanitasi nilai sel dan normalisasi tipe data.' },
                     { name: 'Import/TemplateGenerator.php', desc: 'Generator berkas spreadsheet template impor resmi untuk 10 modul master data.' },
-                    { name: 'Import/Handlers/', desc: 'Kumpulan 10 handler entitas master: Brand, Category, Customer, Employee, Item, Material, Pricing, Supplier, Territory, User.' }
+                    { name: 'Import/Handlers/', desc: 'Kumpulan 12 handler entitas master: Brand, Category, Customer, CustomerGroup, Employee, Item, Material, PieceRate, Pricing, ProductGroup, Supplier, Territory.' }
                 ]
             },
             {
                 id: 'tests',
                 name: 'tests/',
-                badge: '39 Test Suites',
+                badge: '43 Test Suites',
                 icon: '🧪',
                 desc: 'Rangkaian pengujian integrasi otomatis menyeluruh yang memverifikasi 100% kesehatan kode ERP.',
                 files: [
-                    { name: 'run_all.php', desc: 'CLI runner wrapper tipis yang mengeksekusi seluruh 39 test suites terpadu.' },
+                    { name: 'run_all.php', desc: 'CLI runner wrapper tipis yang mengeksekusi seluruh 43 test suites terpadu.' },
                     { name: 'SalesDriverIntegrityTest.php', desc: 'Integritas pemisahan tugas ketat Sales (punya komisi) vs Driver (punya armada nopol).' },
                     { name: 'CustomerIntegrityTest.php', desc: 'Integritas master pelanggan, validasi NIK/WA, grup tier harga, dan assignment sales.' },
                     { name: 'MasterDataCoreTest.php', desc: 'Integritas master data inti (produk, pelanggan, supplier, kas, karyawan).' },
                     { name: 'MasterRelationIntegrityTest.php', desc: 'Integritas relasi foreign keys dan constraint integritas database public.' },
                     { name: 'SupplierMasterUpgradeTest.php', desc: 'Verifikasi master vendor supplier bahan baku dan syarat pembayaran tempo.' },
+                    { name: 'VendorCatalogAndMaterialConsolidationTest.php', desc: 'Validasi integritas relasi multi-vendor M:N (pemasok_item), konsolidasi bahan mentah & kemas tanpa duplikasi, dan sinkronisasi harga katalog.' },
                     { name: 'ProductMasterModuleTest.php', desc: 'Integritas produk jadi, bahan baku, resep komposisi BOM, dan tarif upah borongan.' },
                     { name: 'PricingAndStockIntegrationTest.php', desc: 'Integrasi matriks 30 level harga terhadap kalkulasi mutasi stok POS dan B2B.' },
                     { name: 'PricingSystemReconciliationTest.php', desc: 'Rekonsiliasi akurasi harga level pelanggan versus level default produk.' },
@@ -854,7 +881,23 @@ function devArchitectureApp() {
                     { name: 'GuidePortalTest.php', desc: 'Verifikasi portal buku panduan mandiri (/guide), Table of Contents, dan pencarian teks.' },
                     { name: 'DeveloperDashboardActiveUsersTest.php', desc: 'Verifikasi monitoring pengguna aktif realtime, status online, dan timer logout.' },
                     { name: 'MultiBarcodeIntegrityTest.php', desc: 'Verifikasi multi-barcode grup produk, mapping per toko mitra, dan snapshot faktur.' },
-                    { name: 'ReportHubTest.php', desc: 'Verifikasi Pusat Unduh Laporan (/reports), izin RBAC, dan sentralisasi berkas ekspor.' }
+                    { name: 'ReportHubTest.php', desc: 'Verifikasi Pusat Unduh Laporan (/reports), izin RBAC, dan sentralisasi berkas ekspor.' },
+                    { name: 'PayrollEngineTest.php', desc: 'Validasi komprehensif Payroll Engine: kalkulasi borongan & bulanan, anti-double pay, overlap detection, kasbon auto-deduct, mutasi tabungan, advance withdrawal, lock/unlock transaksi, approval arus kas, 24h rollback, dan render slip PDF.' },
+                    { name: 'DatabaseManagerServiceTest.php', desc: 'Validasi telemetri koneksi database aktif, peralihan koneksi lokal/live atomik, penguncian RBAC khusus developer, dan ketersediaan RPC skema replikasi.' }
+                ]
+            },
+            {
+                id: 'bin',
+                name: 'bin/',
+                badge: '5 CLI & Automation Tools',
+                icon: '⚡',
+                desc: 'Utilitas baris perintah (CLI) untuk switching database instan, replikasi data live ke lokal, proteksi CLI SAPI only, dan shortcut batch Windows.',
+                files: [
+                    { name: 'switch_db.php', desc: 'CLI script pengubah target database di .env (live vs local), proteksi CLI SAPI only, update live status, dan auto-rollback jika invalid.' },
+                    { name: 'switch-db.bat', desc: '1-Click Windows shortcut untuk beralih koneksi database aktif secara instan tanpa edit file manual.' },
+                    { name: 'sync_db.php', desc: 'Script replikasi hybrid CLI: clone master data 100% + transaksi 14 hari sliding window (--mode=14d|full), auto-migration, sequence resetting, zero persistent mock data, dan mutex lock.' },
+                    { name: 'sync-db-from-live.bat', desc: '1-Click Windows batch runner untuk menduplikasi database Supabase live ke PostgreSQL lokal.' },
+                    { name: '.htaccess', desc: 'Proteksi web server (Require all denied) mencegah eksekusi atau inspeksi file bin/ via HTTP browser.' }
                 ]
             },
             {
@@ -865,48 +908,56 @@ function devArchitectureApp() {
                 desc: 'Alat bantu diagnostik database PostgreSQL Supabase dan runner pengujian cepat.',
                 files: [
                     { name: 'test_db.php', desc: 'Skrip diagnostik kesehatan database Supabase, SSL pooler latency, integrity schema, dan RPC test.' },
-                    { name: 'run_all.php', desc: 'Shortcut CLI runner pengujian 35 test suites di lingkungan developer.' }
+                    { name: 'run_all.php', desc: 'Shortcut CLI runner pengujian 43 test suites di lingkungan developer.' }
                 ]
             },
             {
                 id: 'views',
                 name: 'views/',
-                badge: '20 Modul Views',
+                badge: '28 Modul Views',
                 icon: '🎨',
                 desc: 'Antarmuka visual pengguna berbasis Server-Side Rendered PHP dengan Alpine.js reactivity.',
                 files: [
-                    { name: 'guide/index.php', desc: 'Portal Dokumentasi & Buku Panduan Operasional Mandiri (11 Bab SOP Terpadu).' },
-                    { name: 'consignment/', desc: 'Portal konsinyasi: index.php, stok_rak.php, opname.php, opname_hasil.php, tagihan.php, laporan_penjualan.php, dll.' },
-                    { name: 'deliveries/index.php', desc: 'Layar Driver Mobile & ekspedisi: manifest pengiriman surat jalan tanpa bocor harga.' },
-                    { name: 'pos/index.php', desc: 'Layar Kasir POS Retail: keranjang transaksi, scan barcode, diskon, dan cetak struk thermal.' },
-                    { name: 'customer_orders/index.php', desc: 'Layar Pesanan B2B / Grosir: manajemen faktur order grosir, PO list, dan pelunasan.' },
-                    { name: 'owner/index.php', desc: 'Layar Owner Command Center: profitabilitas, net working capital, beban kas operasional, dan sales.' },
-                    { name: 'developer/', desc: 'Layar Developer Hub: index.php (portal utama), architecture.php (blueprint), dan tests.php (runner console).' },
+                    { name: 'absensi/', desc: 'Layar absensi harian karyawan: index.php (pencatatan massal), rekap.php (rekap bulanan), dan ekspor rekap PDF.' },
+                    { name: 'auth/login.php', desc: 'Layar Autentikasi: form login multi-role dengan styling minimalis modern.' },
                     { name: 'cash/', desc: 'Layar Buku Kas: index.php (daftar akun kas), transactions.php (mutasi), dan reports.php (cash flow).' },
+                    { name: 'consignment/', desc: 'Portal konsinyasi: index.php, stok_rak.php, opname.php, opname_hasil.php, tagihan.php, laporan_penjualan.php, dll.' },
+                    { name: 'customers/index.php', desc: 'Layar Master Pelanggan: toko mitra, rute wilayah, grup tier toko, dan katalog khusus.' },
+                    { name: 'customer_orders/index.php', desc: 'Layar Pesanan B2B / Grosir: manajemen faktur order grosir, PO list, dan pelunasan.' },
+                    { name: 'dashboard/index.php', desc: 'Layar ringkasan operasional harian terpadu pengguna sistem.' },
+                    { name: 'deliveries/index.php', desc: 'Layar Driver Mobile & ekspedisi: manifest pengiriman surat jalan tanpa bocor harga.' },
+                    { name: 'developer/', desc: 'Layar Developer Hub: index.php (portal utama), architecture.php (blueprint), database.php (database manager), dan tests.php (runner console).' },
+                    { name: 'employees/index.php', desc: 'Layar Master Karyawan: data pegawai, input komisi sales vs nopol driver, absensi, kasbon.' },
+                    { name: 'errors/403.php', desc: 'Layar Error 403: halaman proteksi akses ditolak interaktif.' },
+                    { name: 'guide/index.php', desc: 'Portal Dokumentasi & Buku Panduan Operasional Mandiri (11 Bab SOP Terpadu).' },
                     { name: 'inventory/', desc: 'Layar Stok Gudang: index.php (katalog stok), bulk_opname.php, dan opname_detail.php.' },
+                    { name: 'kasbon/', desc: 'Layar Kasbon: index.php (pengajuan pinjaman), detail.php, dan pencatatan pembayaran cicilan.' },
+                    { name: 'layouts/', desc: 'Template induk: master.php (kerangka umum), sidebar.php (navigasi), header.php (topbar).' },
+                    { name: 'owner/index.php', desc: 'Layar Owner Command Center: profitabilitas, net working capital, beban kas operasional, dan sales.' },
+                    { name: 'penarikan_gaji/index.php', desc: 'Layar penarikan upah mandiri, otorisasi pembayaran tunai / transfer bank, dan status approval.' },
+                    { name: 'penggajian/', desc: 'Layar Penggajian & Payroll Engine: index.php, create.php, preview.php, rekap gaji, dan slip PDF thermal/A4.' },
+                    { name: 'pos/index.php', desc: 'Layar Kasir POS Retail: keranjang transaksi, scan barcode, diskon, dan cetak struk thermal.' },
                     { name: 'pricing/index.php', desc: 'Layar Matriks Harga: konfigurasi 30 level harga dinamis dan grup produk.' },
                     { name: 'products/index.php', desc: 'Layar Master Produk: katalog snack, bahan baku, kemasan, resep BOM, dan upah borongan.' },
-                    { name: 'customers/index.php', desc: 'Layar Master Pelanggan: toko mitra, rute wilayah, grup tier toko, dan katalog khusus.' },
-                    { name: 'employees/index.php', desc: 'Layar Master Karyawan: data pegawai, input komisi sales vs nopol driver, absensi, kasbon.' },
-                    { name: 'purchases/index.php', desc: 'Layar Pengadaan: PO pembelian bahan baku ke supplier dan penerimaan gudang.' },
-                    { name: 'suppliers/index.php', desc: 'Layar Master Supplier: vendor bahan mentah, bumbu, dan kemasan.' },
-                    { name: 'settings/', desc: 'Layar Pengaturan: index.php (portal pengaturan), company.php (identitas toko), logs.php (audit log), impor_data.php.' },
-                    { name: 'auth/login.php', desc: 'Layar Autentikasi: form login multi-role dengan styling minimalis modern.' },
+                    { name: 'produksi/', desc: 'Layar SPK Produksi Snack: index.php (input SPK & output riil), dan history.php (riwayat produksi).' },
                     { name: 'profile/index.php', desc: 'Layar Profil: pembaruan data pengguna dan pergantian kata sandi.' },
-                    { name: 'errors/403.php', desc: 'Layar Error 403: halaman proteksi akses ditolak interaktif.' },
-                    { name: 'layouts/', desc: 'Template induk: master.php (kerangka umum), sidebar.php (navigasi), header.php (topbar).' }
+                    { name: 'purchases/index.php', desc: 'Layar Pengadaan: PO pembelian bahan baku ke supplier dan penerimaan gudang.' },
+                    { name: 'reports/index.php', desc: 'Layar Pusat Unduh Laporan Eksekutif: 7 kategori laporan terpusat (P&L, Cash Flow, Penjualan Konsolidasi, Konsinyasi, HR, Stok, Logistik).' },
+                    { name: 'settings/', desc: 'Layar Pengaturan: index.php (portal pengaturan), company.php (identitas toko), logs.php (audit log), impor_data.php.' },
+                    { name: 'suppliers/index.php', desc: 'Layar Master Supplier: vendor bahan mentah, bumbu, dan kemasan.' },
+                    { name: 'tabungan/', desc: 'Layar Tabungan Sukarela Karyawan: index.php (daftar penabung) dan detail.php (buku tabungan & mutasi setoran/tarik).' }
                 ]
             },
             {
                 id: 'database',
                 name: 'database/',
-                badge: '45 Tables & 18 RPC',
+                badge: '<?= count($tables) ?> Tables & 92 Migrations',
                 icon: '🗄️',
                 desc: 'Definisi skema basis data PostgreSQL Supabase, triggers, dan stored procedures atomik.',
                 files: [
-                    { name: '01_schema.sql', desc: 'Single Source of Truth: Definisi lengkap 45 tabel master, relasi FK, indeks performa, dan constraint.' },
-                    { name: '02_triggers_and_rpc.sql', desc: '18 Stored procedures & triggers: fn_proses_kunjungan_konsinyasi, fn_hitung_harga_jual_item, dll.' },
-                    { name: 'migrations 03 - 61.sql', desc: '60+ Berkas migrasi database terstruktur berurutan yang mencatat seluruh evolusi skema sistem.' }
+                    { name: '01_schema.sql', desc: 'Single Source of Truth: Definisi lengkap <?= count($tables) ?> tabel master, relasi FK, indeks performa, dan constraint.' },
+                    { name: '02_triggers_and_rpc.sql', desc: '<?= count($procedures) ?> Stored procedures & triggers: fn_proses_kunjungan_konsinyasi, fn_hitung_harga_jual_item, dll.' },
+                    { name: 'migrations 03 - 85+.sql', desc: '92 Berkas migrasi database terstruktur berurutan (03 s/d 85+) yang mencatat seluruh evolusi skema sistem.' }
                 ]
             },
             {
@@ -1009,6 +1060,29 @@ function devArchitectureApp() {
             { url: '/products', method: 'GET / POST', action: 'ProductController::index()', view: 'views/products/index.php', role: 'Owner, Admin' },
             { url: '/customers', method: 'GET / POST', action: 'CustomerController::index()', view: 'views/customers/index.php', role: 'Owner, Admin' },
             { url: '/employees', method: 'GET / POST', action: 'EmployeeController::index()', view: 'views/employees/index.php', role: 'Owner, Admin' },
+            { url: '/absensi', method: 'GET', action: 'AbsensiController::index()', view: 'views/absensi/index.php', role: 'Owner, Admin' },
+            { url: '/absensi/bulk-store', method: 'POST', action: 'AbsensiController::bulkStore()', view: 'Redirect', role: 'Owner, Admin' },
+            { url: '/absensi/rekap', method: 'GET', action: 'AbsensiController::rekap()', view: 'views/absensi/rekap.php', role: 'Owner, Admin' },
+            { url: '/absensi/rekap/pdf', method: 'GET', action: 'AbsensiController::rekapPdf()', view: 'PDF Stream Response', role: 'Owner, Admin' },
+            { url: '/produksi', method: 'GET', action: 'ProduksiController::index()', view: 'views/produksi/index.php', role: 'Owner, Admin, Mandor' },
+            { url: '/produksi/store', method: 'POST', action: 'ProduksiController::store()', view: 'Redirect', role: 'Owner, Admin, Mandor' },
+            { url: '/produksi/history', method: 'GET', action: 'ProduksiController::history()', view: 'views/produksi/history.php', role: 'Owner, Admin' },
+            { url: '/penarikan-gaji', method: 'GET', action: 'PenarikanGajiController::index()', view: 'views/penarikan_gaji/index.php', role: 'Owner, Admin' },
+            { url: '/penarikan-gaji/store', method: 'POST', action: 'PenarikanGajiController::store()', view: 'Redirect', role: 'Owner, Admin' },
+            { url: '/kasbon', method: 'GET', action: 'KasbonController::index()', view: 'views/kasbon/index.php', role: 'Owner, Admin' },
+            { url: '/kasbon/store', method: 'POST', action: 'KasbonController::store()', view: 'Redirect', role: 'Owner, Admin' },
+            { url: '/kasbon/bayar', method: 'POST', action: 'KasbonController::bayar()', view: 'JSON / Redirect', role: 'Owner, Admin' },
+            { url: '/tabungan', method: 'GET', action: 'TabunganController::index()', view: 'views/tabungan/index.php', role: 'Owner, Admin' },
+            { url: '/tabungan/setor', method: 'POST', action: 'TabunganController::setor()', view: 'JSON / Redirect', role: 'Owner, Admin' },
+            { url: '/tabungan/tarik', method: 'POST', action: 'TabunganController::tarik()', view: 'JSON / Redirect', role: 'Owner, Admin' },
+            { url: '/penggajian', method: 'GET', action: 'PenggajianController::index()', view: 'views/penggajian/index.php', role: 'Owner, Admin' },
+            { url: '/penggajian/create', method: 'GET', action: 'PenggajianController::create()', view: 'views/penggajian/create.php', role: 'Owner, Admin' },
+            { url: '/penggajian/generate', method: 'POST', action: 'PenggajianController::generate()', view: 'Redirect ke preview', role: 'Owner, Admin' },
+            { url: '/penggajian/preview', method: 'GET', action: 'PenggajianController::preview()', view: 'views/penggajian/preview.php', role: 'Owner, Admin' },
+            { url: '/penggajian/approve', method: 'POST', action: 'PenggajianController::approve()', view: 'JSON / Redirect', role: 'Owner, Admin' },
+            { url: '/penggajian/slip', method: 'GET', action: 'PenggajianController::slip()', view: 'HTML / PDF Stream', role: 'Owner, Admin' },
+            { url: '/penggajian/slip-batch', method: 'GET', action: 'PenggajianController::slipBatch()', view: 'PDF Stream Response', role: 'Owner, Admin' },
+            { url: '/penggajian/rekap-pdf', method: 'GET', action: 'PenggajianController::rekapPdf()', view: 'PDF Stream Response', role: 'Owner, Admin' },
             { url: '/purchases', method: 'GET / POST', action: 'PurchaseController::index()', view: 'views/purchases/index.php', role: 'Owner, Admin' },
             { url: '/suppliers', method: 'GET / POST', action: 'SupplierController::index()', view: 'views/suppliers/index.php', role: 'Owner, Admin' },
             { url: '/users', method: 'GET / POST', action: 'UserController::index()', view: 'views/users/index.php', role: 'Owner, Admin' },
@@ -1022,6 +1096,10 @@ function devArchitectureApp() {
             { url: '/profile', method: 'GET / POST', action: 'ProfileController::index()', view: 'views/profile/index.php', role: 'Semua Pengguna' },
             { url: '/developer', method: 'GET', action: 'DeveloperController::index()', view: 'views/developer/index.php', role: 'Khusus Developer' },
             { url: '/developer/architecture', method: 'GET', action: 'DeveloperController::architecture()', view: 'views/developer/architecture.php', role: 'Khusus Developer' },
+            { url: '/developer/database', method: 'GET', action: 'DeveloperController::database()', view: 'views/developer/database.php', role: 'Khusus Developer' },
+            { url: '/developer/database/switch', method: 'POST', action: 'DeveloperController::switchDb()', view: 'JSON AJAX Response', role: 'Khusus Developer' },
+            { url: '/developer/database/sync', method: 'POST', action: 'DeveloperController::syncDb()', view: 'JSON AJAX Response', role: 'Khusus Developer' },
+            { url: '/developer/database/status', method: 'GET', action: 'DeveloperController::dbStatus()', view: 'JSON AJAX Response', role: 'Khusus Developer' },
             { url: '/developer/test-db', method: 'GET', action: 'DeveloperController::testDb()', view: 'developer/test_db.php', role: 'Khusus Developer' },
             { url: '/developer/tests', method: 'GET', action: 'DeveloperController::tests()', view: 'views/developer/tests.php', role: 'Khusus Developer' },
             { url: '/developer/tests/run-single', method: 'POST', action: 'DeveloperController::runSingleTest()', view: 'JSON AJAX Response', role: 'Khusus Developer' }
@@ -1189,6 +1267,19 @@ function devArchitectureApp() {
                         'Kartu stok fisik multi-satuan (pcs, bal, pack, kg, gram, lembar).'
                     ]
                 },
+                production_spk: {
+                    title: '🏭 Modul Produksi Snack, SPK & Upah Borongan BOM',
+                    controller: 'app/Controllers/ProduksiController.php, app/Controllers/ProductController.php',
+                    views: 'views/produksi/index.php, views/produksi/history.php, views/products/index.php',
+                    tables: 'produksi_harian, item, komposisi_item, riwayat_stok, kelompok_upah_borongan, karyawan',
+                    rpc: 'fn_trg_produksi_harian_after_insert, fn_trg_produksi_harian_after_update, fn_trg_produksi_harian_after_delete',
+                    rules: [
+                        'SPK produksi harian mengikat resep komposisi BOM (bahan baku + bumbu + kemasan plastik).',
+                        'Pencatatan produksi harian otomatis memotong stok bahan baku dan menambah stok barang jadi secara atomik.',
+                        'Tarif upah borongan per pack/bal otomatis masuk ke kalkulasi hak upah pekerja borongan pada modul payroll.',
+                        'Pencatatan waste/afkir bahan baku terintegrasi dengan penyesuaian kartu stok gudang.'
+                    ]
+                },
                 pricing_engine: {
                     title: '🏷️ Matriks 30 Level Harga & Tier Toko Mitra',
                     controller: 'app/Controllers/PricingController.php (index, updateLevelPrice, deleteLevelPrice)',
@@ -1202,15 +1293,29 @@ function devArchitectureApp() {
                     ]
                 },
                 master_employees: {
-                    title: '👥 Master Karyawan (Pemisahan Sales vs Driver) & Penggajian',
+                    title: '👥 Master Karyawan (Pemisahan Sales vs Driver)',
                     controller: 'app/Controllers/EmployeeController.php (index, store, update, delete, saveCommissionTiersBatch)',
                     views: 'views/employees/index.php',
-                    tables: 'karyawan, skema_komisi_sales, penggajian, rincian_penggajian, tabungan, transaksi_tabungan, kasbon, potongan_kasbon, absensi',
-                    rpc: 'fn_hitung_tier_komisi_sales, fn_guard_pelanggan_sales_driver, fn_trg_potongan_kasbon_update_saldo, fn_trg_transaksi_tabungan_update_saldo',
+                    tables: 'karyawan, skema_komisi_sales, wilayah',
+                    rpc: 'fn_guard_pelanggan_sales_driver, fn_hitung_tier_komisi_sales',
                     rules: [
                         'Sales: Memiliki input persentase komisi berjenjang (%) dan assignment toko binaan.',
                         'Driver: Memiliki input plat nopol armada kendaraan dan TIDAK memiliki kolom komisi.',
                         'Borongan: Pekerja borongan kemasan dengan skema upah kelompok_upah_borongan.'
+                    ]
+                },
+                hr_payroll: {
+                    title: '💼 Modul HR, Absensi, Kasbon, Tabungan & Payroll Engine',
+                    controller: 'app/Controllers/PenggajianController.php, app/Controllers/AbsensiController.php, app/Controllers/KasbonController.php, app/Controllers/TabunganController.php, app/Controllers/PenarikanGajiController.php',
+                    views: 'views/penggajian/index.php, views/penggajian/create.php, views/penggajian/preview.php, views/absensi/index.php, views/kasbon/index.php, views/tabungan/index.php',
+                    tables: 'penggajian, rincian_penggajian, absensi, kasbon, potongan_kasbon, tabungan, transaksi_tabungan, penarikan_gaji, karyawan, akun_kas, arus_kas',
+                    rpc: 'fn_trg_potongan_kasbon_update_saldo, fn_trg_transaksi_tabungan_update_saldo, fn_guard_pelanggan_sales_driver',
+                    rules: [
+                        'Mencegah double-pay untuk karyawan pada periode tanggal yang sama (overlap detection).',
+                        'Kalkulasi otomatis gaji pokok (harian/bulanan), uang makan sesuai kehadiran absensi, lembur, dan komisi sales.',
+                        'Auto-deduct cicilan kasbon aktif dan auto-debet setoran tabungan karyawan.',
+                        'Perubahan status draft -> approved mengunci data dan menerbitkan mutasi pengeluaran kas di arus_kas.',
+                        'Mendukung slip gaji individual, cetak batch PDF, serta rollback dalam window 24 jam dengan audit log.'
                     ]
                 },
                 rbac_permissions: {
@@ -1261,16 +1366,30 @@ function devArchitectureApp() {
                         'Dukungan ekspor spreadsheet log aktivitas dan pembersihan (prune) log lama.'
                     ]
                 },
+                database_manager: {
+                    title: '🗄️ Modul Database Manager, Switcher & Sandbox Replication',
+                    controller: 'app/Controllers/DeveloperController.php, app/Services/DatabaseManagerService.php, bin/switch_db.php, bin/sync_db.php',
+                    views: 'views/developer/database.php, views/developer/index.php',
+                    tables: 'Master Tables (100% complete) + Transactional Tables (14-day sliding window)',
+                    rpc: 'PostgreSQL information_schema & pg_stat_user_tables',
+                    rules: [
+                        'Peralihan instan antara koneksi Live Supabase dan Local PostgreSQL (Laragon) dengan verifikasi koneksi atomik.',
+                        'Replikasi hybrid: master data disalin 100%, transaksi menggunakan sliding window 14 hari untuk kecepatan dan presisi.',
+                        'Deteksi otomatis environment lokal dan domain preview Cloudflare Tunnel (preview.ajisakha.my.id).',
+                        'Proteksi ganda: Auth::requireDeveloper() di web dan PHP_SAPI === cli guard di script bin/.',
+                        'Zero persistent mock data: pengujian dan replikasi tidak boleh meninggalkan data kotor atau merusak sequence database.'
+                    ]
+                },
                 developer_test_runner: {
-                    title: '🧪 Developer Command Center & Automated Test Runner',
+                    title: '🧪 Developer Command Center & Automated Test Runner (43 Suites)',
                     controller: 'app/Controllers/DeveloperController.php, app/Services/TestRunnerService.php',
                     views: 'views/developer/index.php, views/developer/architecture.php, views/developer/tests.php, developer/test_db.php',
-                    tables: 'Seluruh 45 tabel skema public PostgreSQL Supabase',
-                    rpc: 'Seluruh 18 Stored Procedures & Functions',
+                    tables: 'Seluruh skema public PostgreSQL Supabase',
+                    rpc: 'Seluruh Stored Procedures & Functions',
                     rules: [
                         'Akses eksklusif khusus user role developer (Auth::requireDeveloper()).',
-                        'Dukungan eksekusi ganda: Web Browser interaktif & Terminal CLI tanpa duplikasi kode (27 Suites).',
-                        'Seluruh pengujian berjalan dalam transaksi rollback sehingga database 100% steril.'
+                        'Dukungan eksekusi ganda: Web Browser interaktif & Terminal CLI tanpa duplikasi kode (43 Suites terdaftar).',
+                        'Seluruh pengujian berjalan dalam transaksi rollback sehingga database produksi 100% steril.'
                     ]
                 }
             };
@@ -1315,7 +1434,7 @@ INSTRUKSI PENGERJAAN:
 
 ## 1. 📌 GAMBARAN UMUM & PROFIL PROYEK
 - **Nama Proyek**: KEREN ONE (Enterprise Resource Planning & POS System)
-- **Domain Bisnis**: Manufaktur Snack/Makanan Ringan, Distribusi Multi-Channel, Konsinyasi Rak Toko Mitra, Driver Logistik, Kasir POS Ritel, Pesanan Grosir B2B, Manajemen Gudang & Resep BOM, Keuangan & Buku Kas, HR & Komisi Sales Berjenjang.
+- **Domain Bisnis**: Manufaktur Snack/Makanan Ringan, Distribusi Multi-Channel, Konsinyasi Rak Toko Mitra, Driver Logistik, Kasir POS Ritel, Pesanan Grosir B2B, Manajemen Gudang & Resep BOM, Produksi SPK Snack, Keuangan & Buku Kas, HR, Absensi & Payroll Engine.
 - **Tipe Aplikasi**: Web Application Server-Side Rendered (SSR) dengan Interaktivitas Reaktif Mobile-First (Alpine.js).
 
 ---
@@ -1323,18 +1442,19 @@ INSTRUKSI PENGERJAAN:
 ## 2. ⚡ TECH STACK & BAHASA PEMROGRAMAN
 - **Backend Language**: PHP 8.1+ Native (Strict Types \`declare(strict_types=1)\`, PSR-4 Standard Autoloading, Zero Framework Overhead).
 - **Architecture Pattern**: Modular MVC (Model-View-Controller) dengan Pemisahan Tanggung Jawab (Separation of Concerns).
-- **Database Engine**: PostgreSQL 17 (Supabase Cloud Managed SSL Connection Pooler, 45+ Tabel Relasional, 18+ Stored Procedures & Triggers Atomik).
+- **Database Engine**: PostgreSQL 17 (Supabase Cloud Managed SSL Connection Pooler & Local PostgreSQL Laragon, <?= count($tables) ?> Tabel Relasional, <?= count($procedures) ?> Stored Procedures & Triggers Atomik).
+- **Database Tools & Replication**: DatabaseManagerService & \`bin/\` CLI (1-Click Switcher Live/Local, Replikasi Hybrid: Master 100% + Transaksi 14 Hari Sliding Window).
 - **Cloud Object Storage**: Cloudflare R2 Object Storage (S3-Compatible API) + Local Disk Media Cache Layer.
 - **Frontend Layer**: Native Server-Side Rendered PHP Views + Alpine.js (Reaktivitas Lapangan Ringan) + Native CSS Design System Tokens (Dark & Light Mode Adaptive) + Lucide Icons.
 - **Third-Party Libraries**: Composer (\`phpoffice/phpspreadsheet\` untuk Impor/Ekspor Excel, \`dompdf/dompdf\` untuk Cetak Dokumen PDF, \`aws/aws-sdk-php\` untuk Cloudflare R2).
-- **Testing & Verification Engine**: 27 Automated Test Suites Mandiri (Single Source of Truth CLI \`tests/run_all.php\` & Web Interactive \`/developer/tests\`).
+- **Testing & Verification Engine**: 43 Automated Test Suites Mandiri (Single Source of Truth CLI \`tests/run_all.php\` & Web Interactive \`/developer/tests\`).
 
 ---
 
 ## 3. 🛡️ PRINSIP REKAYASA & PROTOKOL KEAMANAN (ENGINEERING PROTOCOLS)
 1. **Zero Persistent Mock Data**: Dilarang menyisipkan data tiruan/dummy permanen di database produksi. Seluruh pengujian wajib diisolasi menggunakan blok transaksi otomatis (\`BEGIN ... ROLLBACK\`).
 2. **Single Source of Truth**:
-   - Skema Database: \`database/01_schema.sql\`
+   - Skema Database: \`database/01_schema.sql\` & \`database/02_triggers_and_rpc.sql\`
    - Test Suites Registry: \`app/Services/TestRunnerService.php\`
    - Rute & Dispatcher: \`public/index.php\` & \`app/Core/Router.php\`
 3. **Security Defense-in-Depth**:
@@ -1350,7 +1470,8 @@ INSTRUKSI PENGERJAAN:
 \`\`\`text
 kerensnack-erp/
 ├── app/                                 # 🧠 Logika Aplikasi & Backend Core
-│   ├── Controllers/                     # 🕹️ 25 Application Controllers
+│   ├── Controllers/                     # 🕹️ 32 Application Controllers
+│   │   ├── AbsensiController.php        # Pencatatan absensi harian karyawan, uang makan, lembur & potongan absensi
 │   │   ├── ActivityLogController.php    # Audit jejak forensik, tracking IP, filter modul & ekspor Excel
 │   │   ├── AuthController.php           # Autentikasi multi-peran, verifikasi bcrypt, session heartbeat & logout
 │   │   ├── CashController.php           # Buku kas multi-akun, mutasi, transfer bank, dan laporan cash flow
@@ -1359,23 +1480,28 @@ kerensnack-erp/
 │   │   ├── CustomerOrderController.php  # Pesanan grosir B2B, invoice penjualan, alokasi stok & piutang tempo
 │   │   ├── DashboardController.php      # Ringkasan operasional dan pusat kerja harian pengguna sistem
 │   │   ├── DeliveryController.php       # Surat jalan ekspedisi, Driver Mobile tanpa bocor harga & upload bukti terima
-│   │   ├── DeveloperController.php      # Command center developer, blueprint visual, diagnostik DB & test runner
-│   │   ├── EmployeeController.php       # Master karyawan (Sales komisi vs Driver armada nopol), kasbon & payroll
+│   │   ├── DeveloperController.php      # Command center developer, blueprint visual, database manager & 43 test suites
+│   │   ├── EmployeeController.php       # Master karyawan (Sales komisi vs Driver armada nopol)
 │   │   ├── GuideController.php          # Portal buku panduan operasional mandiri & dokumentasi SOP bisnis
 │   │   ├── ImportDataController.php     # Master Data Impor & Diffing Engine Excel 10 entitas & rekonsiliasi sync
 │   │   ├── InventoryController.php      # Stok fisik gudang, kartu stok, penyesuaian susut/waste & bulk opname
+│   │   ├── KasbonController.php         # Manajemen pinjaman kasbon karyawan, cicilan potong gaji & buku kas keluar
 │   │   ├── MediaController.php          # Media proxy Cloudflare R2, streaming file & manajemen cache lokal
 │   │   ├── OrderDocumentController.php  # Unified Printing Engine: cetak PDF/Excel Surat Jalan, Faktur, Picking List
 │   │   ├── OwnerController.php          # Owner Command Center: omzet, HPP, net working capital & analisis laba
+│   │   ├── PenarikanGajiController.php  # Penarikan upah mandiri / slip gaji, otorisasi pembayaran tunai/bank
+│   │   ├── PenggajianController.php     # Engine payroll: gaji pokok, borongan kemasan BOM, komisi sales, lembur & slip PDF
 │   │   ├── PermissionController.php     # 5-Tab Master RBAC: permission matrix dinamis & user overrides
 │   │   ├── PosController.php            # Kasir POS retail, scan barcode universal, diskon & cetak struk thermal
 │   │   ├── PricingController.php        # Matriks 30 level harga dinamis & penetapan harga tier pelanggan
 │   │   ├── ProductController.php        # Master produk, brand/merek, bahan baku, kemasan, resep BOM & upah borongan
+│   │   ├── ProduksiController.php       # SPK produksi harian snack, alokasi bahan BOM, output riil & upah borongan
 │   │   ├── ProfileController.php        # Manajemen profil akun pengguna login & ubah kata sandi
 │   │   ├── PurchaseController.php       # Pengadaan vendor (PO), penerimaan fisik gudang & hutang dagang
 │   │   ├── ReportHubController.php      # Pusat unduh laporan eksekutif terpadu (7 kategori berkas ekspor)
 │   │   ├── SettingsController.php       # Konfigurasi identitas toko, nama perusahaan, rekening bank & logo
 │   │   ├── SupplierController.php       # Master vendor pemasok bahan mentah, bumbu racik & plastik kemasan
+│   │   ├── TabunganController.php       # Tabungan sukarela karyawan, setoran auto-debet payroll & riwayat penarikan
 │   │   └── UserController.php           # Manajemen akun pengguna sistem: buat user, aktivasi status & ubah role
 │   │
 │   ├── Core/                            # ⚙️ Komponen Fondasi MVC Native
@@ -1398,70 +1524,89 @@ kerensnack-erp/
 │   │   ├── StockHelper.php              # Kalkulasi mutasi stok multi-satuan (pcs, pack, bal) & cek ketersediaan
 │   │   └── Upload.php                   # Secure upload handler gambar produk & bukti bayar dengan validasi MIME
 │   │
-│   └── Services/                        # ⚡ 4 Layanan Terpusat & Business Engine
-│       ├── TestRunnerService.php        # Master registry 27 test suites, execution timer & global lock engine
+│   └── Services/                        # ⚡ 5 Layanan Terpusat & Business Engine
+│       ├── DatabaseManagerService.php   # Manajemen multi-database (live vs local), switching status, migrasi & hybrid sync
+│       ├── TestRunnerService.php        # Master registry 43 test suites, execution timer & global lock engine
 │       ├── R2StorageService.php         # Cloudflare R2 Object Storage S3-compatible SDK integration
 │       ├── MediaCacheService.php        # Local disk caching layer untuk media gambar R2
 │       └── Import/                      # Engine Impor Data Master Excel
 │           ├── ImportProcessor.php      # Orchestrator pemrosesan impor, validasi schema & diffing
 │           ├── SmartReader.php          # Parser pintar berkas Excel & normalisasi tipe data sel
 │           ├── TemplateGenerator.php    # Generator template Excel resmi untuk 10 modul master data
-│           └── Handlers/                # 10 Entitas handler: Brand, Category, Customer, Employee, Item, Material, Pricing, Supplier, Territory, User
+│           └── Handlers/                # 12 Entitas handler: Brand, Category, Customer, CustomerGroup, Employee, Item, Material, PieceRate, Pricing, ProductGroup, Supplier, Territory
+│
+├── bin/                                 # ⚡ Utilitas Baris Perintah (CLI) & Otomasi Database
+│   ├── switch_db.php                    # CLI switcher koneksi database (.env live vs local)
+│   ├── switch-db.bat                    # 1-Click Windows batch runner untuk switcher database
+│   ├── sync_db.php                      # CLI hybrid data replicator (master 100% + transaksi 14 hari)
+│   ├── sync-db-from-live.bat            # 1-Click Windows batch runner untuk replikasi data live ke lokal
+│   └── .htaccess                        # Proteksi web server (Require all denied)
 │
 ├── config/                              # 🔌 Konfigurasi Sistem & Basis Data
-│   ├── database.php                     # Singleton PDO Database::getInstance() ke Supabase PostgreSQL 17
+│   ├── database.php                     # Singleton PDO Database::getInstance() ke PostgreSQL 17
 │   └── env.php                          # Parser mandiri berkas .env ke environment variables
 │
 ├── database/                            # 🗄️ Skema SQL, RPC & Migrasi
-│   ├── 01_schema.sql                    # Definisi 45 tabel relasional, foreign keys, indexes & enum
-│   ├── 02_triggers_and_rpc.sql          # 18 Stored procedures & triggers (fn_proses_kunjungan_konsinyasi, dll)
-│   ├── migrations 03 - 61.sql           # 60+ Berkas migrasi database berurutan resmi
+│   ├── 01_schema.sql                    # Definisi <?= count($tables) ?> tabel relasional, foreign keys, indexes & enum
+│   ├── 02_triggers_and_rpc.sql          # <?= count($procedures) ?> Stored procedures & triggers (fn_proses_kunjungan_konsinyasi, dll)
+│   ├── migrations 03 - 85+.sql          # 92 Berkas migrasi database berurutan resmi
 │   └── seeds/                           # Seeder terisolasi untuk local sandbox testing
 │
 ├── developer/                           # 💻 Alat Diagnostik Developer Lingkungan Lokal
 │   ├── test_db.php                      # Diagnostik koneksi database Supabase, SSL latency & integritas schema
-│   └── run_all.php                      # CLI shortcut runner pengujian 27 test suites
+│   └── run_all.php                      # CLI shortcut runner pengujian 43 test suites
 │
 ├── docs/                                # 📚 Dokumentasi Arsitektur & PRD
 │   ├── ARCHITECTURE.md                  # Manual spesifikasi arsitektur sistem
 │   └── PRD_MASTER_KEREN_SNACK.md        # Dokumen PRD master kebutuhan sistem
 │
 ├── public/                              # 🌐 Web Server Entry Point (Public Web Root)
-│   ├── index.php                        # Front Controller utama (Composer Autoload, Routing & Dispatch)
+│   ├── index.php                        # Front Controller utama (Composer Autoload, 85+ Rute & Dispatch)
 │   ├── .htaccess                        # Apache URL rewrite rules & trailing slash handling
 │   └── assets/                          # Aset statis: css/app.css, js/app.js, alpine.min.js, lucide.min.js
 │
 ├── storage/                             # 💾 Penyimpanan Berkas Lokal & Uploads
 ├── cache/                               # ⚡ Cache Lokal Media & File Sementara
-├── tests/                               # 🧪 35 Test Suites Otomatis & Integration Tests
+├── tests/                               # 🧪 43 Test Suites Otomatis & Integration Tests
 │   ├── run_all.php                      # CLI test runner terpadu
-│   └── GuidePortalTest.php              # Verifikasi portal buku panduan mandiri
+│   ├── GuidePortalTest.php              # Verifikasi portal buku panduan mandiri
+│   ├── PayrollEngineTest.php            # Verifikasi Payroll Engine, absensi & slip PDF
+│   └── DatabaseManagerServiceTest.php   # Verifikasi live/local isolation & switcher service
 │
-└── views/                               # 🎨 19 Direktori Modul Antarmuka Tampilan (Views)
+└── views/                               # 🎨 28 Direktori Modul Antarmuka Tampilan (Views)
+    ├── absensi/                         # Layar absensi harian karyawan & rekap PDF
     ├── auth/                            # Layar login & sesi pengguna
     ├── cash/                            # Layar buku kas, transaksi & laporan arus kas
     ├── consignment/                     # Layar portal konsinyasi, stok rak, opname, tagihan & komisi
-    ├── customer_orders/                 # Layar pesanan B2B / grosir, invoice & picking list
     ├── customers/                       # Layar master toko mitra pelanggan & rute wilayah
+    ├── customer_orders/                 # Layar pesanan B2B / grosir, invoice & picking list
+    ├── dashboard/                       # Layar dashboard operasional harian pengguna
     ├── deliveries/                      # Layar manifest ekspedisi logistik & portal Driver Mobile
-    ├── developer/                       # Layar developer command center, blueprint arsitektur & test runner
-    ├── employees/                       # Layar master karyawan (Sales vs Driver), kasbon & penggajian
+    ├── developer/                       # Layar developer command center, blueprint, database manager & test runner
+    ├── employees/                       # Layar master karyawan (Sales vs Driver)
     ├── errors/                          # Layar error interaktif (403.php)
+    ├── guide/                           # Portal Dokumentasi & Buku Panduan Operasional Mandiri
     ├── inventory/                       # Layar stok gudang, kartu stok & bulk opname
+    ├── kasbon/                          # Layar manajemen pinjaman kasbon & pembayaran cicilan
     ├── layouts/                         # Master template: master.php, sidebar.php, header.php
     ├── owner/                           # Layar Owner Executive Command Center & Business Analytics
+    ├── penarikan_gaji/                  # Layar penarikan upah mandiri & otorisasi transfer
+    ├── penggajian/                      # Layar penggajian payroll engine, approval & slip PDF
     ├── pos/                             # Layar kasir POS retail, keranjang & scan barcode
     ├── pricing/                         # Layar matriks 30 level harga dinamis
     ├── products/                        # Layar master produk snack, bahan baku, kemasan & resep BOM
+    ├── produksi/                        # Layar SPK produksi harian & riwayat produksi
     ├── profile/                         # Layar profil akun pengguna & ubah kata sandi
     ├── purchases/                       # Layar pengadaan PO supplier & penerimaan fisik gudang
+    ├── reports/                         # Layar Pusat Unduh Laporan Eksekutif (7 Kategori Terpusat)
     ├── settings/                        # Layar pengaturan identitas perusahaan, log audit & impor data
-    └── suppliers/                       # Layar master vendor pemasok bahan baku
+    ├── suppliers/                       # Layar master vendor pemasok bahan baku
+    └── tabungan/                        # Layar tabungan sukarela karyawan & mutasi buku tabungan
 \`\`\`
 
 ---
 
-## 5. 🗺️ KATALOG 12 MODUL BISNIS UTAMA & ALUR KERJA
+## 5. 🗺️ KATALOG 15 MODUL BISNIS UTAMA & ALUR KERJA
 1. **Konsinyasi Terpadu & Sales Mobile (\`/consignment\`)**: Titip barang di etalase toko mitra, opname fisik rutin, formula laku instan (\`Titip Awal - (Sisa + Retur)\`), penerbitan faktur tagihan, dan komisi sales berjenjang.
 2. **Driver Logistik & Surat Jalan (\`/deliveries\`, \`/driver-deliveries\`)**: Manifest pengiriman barang ke toko tanpa membocorkan harga HPP ke driver, update status antar real-time, dan trigger otomatis tambah saldo rak saat selesai diterima.
 3. **Kasir POS Ritel Universal (\`/pos\`)**: Penjualan cepat ritel dengan scanner barcode universal kemasan snack, potong stok otomatis, dan mutasi kas masuk ke buku kas aktif.
@@ -1469,23 +1614,29 @@ kerensnack-erp/
 5. **Owner Executive Command Center (\`/owner\`)**: Analitik profitabilitas (omzet bersih, HPP terjual, laba bersih), Net Working Capital (kas + piutang + valuasi stok gudang/rak - hutang vendor), dan leaderboard sales.
 6. **Keuangan & Buku Kas (\`/cash\`)**: Mutasi kas masuk/keluar multi-akun bank, transfer berpasangan, rekonsiliasi kas terpadu (POS, Grosir, Konsinyasi), dan ekspor laporan arus kas.
 7. **Gudang, Resep BOM & Opname (\`/inventory\`, \`/products\`)**: Bill of Materials (komposisi_item) dari bahan baku mentah + kemasan menjadi snack jadi, pencatatan produksi harian otomatis, dan kartu stok multi-satuan.
-8. **Matriks 30 Level Harga (\`/pricing\`)**: Penentuan harga jual bertingkat hingga 30 level per grup produk yang terhubung dengan kategori tier toko pelanggan.
-9. **Master Karyawan & Payroll (\`/employees\`)**: Pemisahan tegas posisi Sales (memiliki % komisi & toko binaan) vs Driver (memiliki nopol armada kendaraan tanpa komisi), kasbon, dan penggajian.
-10. **Pengguna & 5-Tab RBAC (\`/users\`, \`/permissions\`)**: Matriks izin dinamis per fitur dengan user-level override dan proteksi akun developer di level database.
-11. **Impor Data & Full-Sync Reconciliation (\`/settings/impor-data\`)**: Upload spreadsheet Excel untuk 10 modul master, smart reader, dan deteksi diff otomatis sebelum commit data.
-12. **Developer Portal & Test Runner (\`/developer\`, \`/developer/tests\`)**: Visual blueprint arsitektur 100% Single Source of Truth, diagnostik database Supabase, dan eksekusi 27 test suites terisolasi dengan auto-rollback.
+8. **Produksi Snack & SPK Harian (\`/produksi\`)**: Surat Perintah Kerja (SPK) produksi harian snack, alokasi bahan baku/kemasan BOM, pelaporan output riil, dan perhitungan upah borongan per batch.
+9. **Matriks 30 Level Harga (\`/pricing\`)**: Penentuan harga jual bertingkat hingga 30 level per grup produk yang terhubung dengan kategori tier toko pelanggan.
+10. **Master Karyawan (\`/employees\`)**: Pemisahan tegas posisi Sales (memiliki % komisi & toko binaan) vs Driver (memiliki nopol armada kendaraan tanpa komisi).
+11. **HR, Absensi & Payroll Engine (\`/penggajian\`, \`/absensi\`, \`/kasbon\`, \`/tabungan\`, \`/penarikan-gaji\`)**: Presensi harian, kalkulasi uang makan, lembur, borongan packing BOM, auto-deduct cicilan kasbon, tabungan sukarela, approval arus kas, 24h rollback, dan render slip PDF.
+12. **Pengguna & 5-Tab RBAC (\`/users\`, \`/permissions\`)**: Matriks izin dinamis per fitur dengan user-level override dan proteksi akun developer di level database.
+13. **Impor Data & Full-Sync Reconciliation (\`/settings/impor-data\`)**: Upload spreadsheet Excel untuk 10 modul master, smart reader, dan deteksi diff otomatis sebelum commit data.
+14. **Database Manager, Switcher & Sandbox Replication (\`/developer/database\`, \`bin/\`)**: Peralihan instan antara koneksi Live Supabase dan Local PostgreSQL (Laragon), replikasi data hybrid (master 100% + transaksi 14 hari), auto-switching .env, multi-domain Cloudflare Tunnel detection, dan mutex concurrency lock.
+15. **Developer Portal & Test Runner (\`/developer\`, \`/developer/tests\`)**: Visual blueprint arsitektur 100% Single Source of Truth, diagnostik database Supabase, dan eksekusi 43 test suites terisolasi dengan auto-rollback.
 
 ---
 
 ## 6. 🗄️ DATABASE SCHEMA & STORED PROCEDURES (RPC)
-- **Tabel Relasional Utama**: \`pelanggan\`, \`stok_konsinyasi_toko\`, \`kunjungan_konsinyasi\`, \`rincian_kunjungan_konsinyasi\`, \`tagihan_kunjungan\`, \`pesanan\`, \`item_pesanan\`, \`surat_jalan\`, \`item\`, \`komposisi_item\`, \`pembelian\`, \`pemasok\`, \`karyawan\`, \`skema_komisi_sales\`, \`akun_kas\`, \`arus_kas\`, \`pengguna\`, \`peran\`, \`izin\`, \`pengaturan_sistem\`, \`log_aktivitas\`.
+- **Tabel Relasional Utama**: \`pelanggan\`, \`stok_konsinyasi_toko\`, \`kunjungan_konsinyasi\`, \`rincian_kunjungan_konsinyasi\`, \`tagihan_kunjungan\`, \`pesanan\`, \`item_pesanan\`, \`surat_jalan\`, \`item\`, \`komposisi_item\`, \`produksi_harian\`, \`kelompok_upah_borongan\`, \`pembelian\`, \`pemasok\`, \`pemasok_item\`, \`karyawan\`, \`skema_komisi_sales\`, \`absensi\`, \`penggajian\`, \`rincian_penggajian\`, \`kasbon\`, \`potongan_kasbon\`, \`tabungan\`, \`transaksi_tabungan\`, \`penarikan_gaji\`, \`akun_kas\`, \`arus_kas\`, \`pengguna\`, \`peran\`, \`izin\`, \`pengaturan_sistem\`, \`log_aktivitas\`.
 - **Fungsi Stored Procedure & Trigger Utama**:
   - \`fn_proses_kunjungan_konsinyasi\`: Kalkulasi barang laku, kerugian retur rusak, update rak toko, dan penerbitan faktur tagihan.
   - \`fn_catat_pembayaran_konsinyasi\`: Pelunasan tagihan bertahap/lunas dan pencatatan jurnal arus kas.
   - \`fn_trg_proses_pengiriman_konsinyasi\`: Trigger potong stok gudang dan tambah saldo rak toko saat surat jalan selesai diterima.
   - \`fn_hitung_harga_jual_item\`: Matriks penentuan harga jual 30 level dinamis.
   - \`fn_cari_item_by_barcode\`: Resolusi pencarian produk via barcode universal snack.
-  - \`fn_guard_pelanggan_sales_driver\`: Guard integritas bahwa hanya karyawan posisi Sales yang bisa menjadi penanggung jawab toko konsinyasi.`;
+  - \`fn_guard_pelanggan_sales_driver\`: Guard integritas bahwa hanya karyawan posisi Sales yang bisa menjadi penanggung jawab toko konsinyasi.
+  - \`fn_trg_produksi_harian_after_insert\`: Trigger potong stok bahan baku & kemas BOM serta tambah stok jadi.
+  - \`fn_trg_potongan_kasbon_update_saldo\`: Trigger update sisa saldo kasbon karyawan saat payroll di-approve.
+  - \`fn_trg_transaksi_tabungan_update_saldo\`: Trigger mutasi saldo buku tabungan sukarela karyawan.`;
 
             this.safeCopy(fullMap, () => {
                 this.copiedFull = true;

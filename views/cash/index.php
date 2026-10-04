@@ -39,12 +39,12 @@ ob_start();
     </div>
 
     <!-- ========================================================================= -->
-    <!-- TOP STATS: 4 KARTU LIKUIDITAS UANG KAS RIIL                               -->
+    <!-- TOP STATS: 5 KARTU LIKUIDITAS UANG KAS RIIL & ESCROW                      -->
     <!-- ========================================================================= -->
-    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 sm:gap-3">
         
         <!-- 1. TOTAL KAS CAIR -->
-        <div class="card p-3 sm:p-4" style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--rounded-lg);box-shadow:var(--shadow-1);">
+        <div class="card p-3 sm:p-4 col-span-2 sm:col-span-1 lg:col-span-1" style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--rounded-lg);box-shadow:var(--shadow-1);">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
                 <span style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink-mute);">Total Kas Cair</span>
                 <div style="width:28px;height:28px;border-radius:6px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -54,7 +54,7 @@ ob_start();
             <div style="font-size:16px;font-weight:900;font-family:var(--font-mono);color:#10b981;white-space:nowrap;line-height:1.2;">
                 <?= Format::rupiah($liquidCashTotal) ?>
             </div>
-            <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">Seluruh Saldo Kas Aktif</div>
+            <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">Kas Operasional Aktif</div>
         </div>
 
         <!-- 2. KAS TUNAI LACI TOKO -->
@@ -82,7 +82,7 @@ ob_start();
             <div style="font-size:16px;font-weight:900;font-family:var(--font-mono);color:#8b5cf6;white-space:nowrap;line-height:1.2;">
                 <?= Format::rupiah($bankTotal) ?>
             </div>
-            <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">Saldo di BCA, BSI, dll</div>
+            <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">Saldo di Bank</div>
         </div>
 
         <!-- 4. QRIS & DIGITAL / OPERASIONAL -->
@@ -96,7 +96,21 @@ ob_start();
             <div style="font-size:16px;font-weight:900;font-family:var(--font-mono);color:#e11d48;white-space:nowrap;line-height:1.2;">
                 <?= Format::rupiah($qrisDigitalTotal) ?>
             </div>
-            <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">E-Wallet &amp; Kas Kecil</div>
+            <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">E-Wallet &amp; Digital</div>
+        </div>
+
+        <!-- 5. TITIPAN TABUNGAN KARYAWAN (ESCROW TERKUNCI) -->
+        <div class="card p-3 sm:p-4" style="background:var(--color-canvas);border:1px solid rgba(147,51,234,0.3);border-radius:var(--rounded-lg);box-shadow:var(--shadow-1);">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                <span style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:#7e22ce;">Titipan Tabungan</span>
+                <div style="width:28px;height:28px;border-radius:6px;background:rgba(147,51,234,0.12);color:#7e22ce;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="lock" style="width:14px;height:14px;"></i>
+                </div>
+            </div>
+            <div style="font-size:16px;font-weight:900;font-family:var(--font-mono);color:#7e22ce;white-space:nowrap;line-height:1.2;">
+                <?= Format::rupiah($escrowSavingsTotal) ?>
+            </div>
+            <div style="font-size:10px;color:var(--color-ink-mute);margin-top:2px;">Simpanan Karyawan (Terkunci)</div>
         </div>
 
     </div>
@@ -134,19 +148,22 @@ ob_start();
             <span class="badge badge-secondary"><?= count($accounts) ?> Akun Terdaftar</span>
         </div>
 
-        <!-- Filter Tab Kategori Akun -->
-        <div style="display:flex; gap:4px; background:var(--color-canvas-soft); padding:3px; border-radius:8px; border:1px solid var(--color-hairline);">
-            <button type="button" @click="tabFilter = 'all'" :class="tabFilter === 'all' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:3px 10px; font-size:11.5px;">
+        <!-- Filter Tab Kategori Akun (Single line horizontally scrollable track on mobile) -->
+        <div class="flex items-center gap-1.5 p-1 rounded-lg border border-hairline overflow-x-auto no-scrollbar max-w-full" style="background:var(--color-canvas-soft); flex-wrap:nowrap; -webkit-overflow-scrolling:touch;">
+            <button type="button" @click="tabFilter = 'all'" :class="tabFilter === 'all' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:4px 10px; font-size:11.5px; white-space:nowrap; flex-shrink:0;">
                 Semua
             </button>
-            <button type="button" @click="tabFilter = 'kas_tunai'" :class="tabFilter === 'kas_tunai' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:3px 10px; font-size:11.5px;">
+            <button type="button" @click="tabFilter = 'kas_tunai'" :class="tabFilter === 'kas_tunai' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:4px 10px; font-size:11.5px; white-space:nowrap; flex-shrink:0;">
                 Kas Tunai
             </button>
-            <button type="button" @click="tabFilter = 'bank'" :class="tabFilter === 'bank' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:3px 10px; font-size:11.5px;">
+            <button type="button" @click="tabFilter = 'bank'" :class="tabFilter === 'bank' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:4px 10px; font-size:11.5px; white-space:nowrap; flex-shrink:0;">
                 Bank
             </button>
-            <button type="button" @click="tabFilter = 'digital'" :class="tabFilter === 'digital' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:3px 10px; font-size:11.5px;">
+            <button type="button" @click="tabFilter = 'digital'" :class="tabFilter === 'digital' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:4px 10px; font-size:11.5px; white-space:nowrap; flex-shrink:0;">
                 QRIS / Digital
+            </button>
+            <button type="button" @click="tabFilter = 'escrow'" :class="tabFilter === 'escrow' ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'" style="padding:4px 10px; font-size:11.5px; white-space:nowrap; flex-shrink:0; color:#7e22ce;">
+                🔒 Tabungan (Escrow)
             </button>
         </div>
     </div>
@@ -156,24 +173,26 @@ ob_start();
     <!-- ========================================================================= -->
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
         <?php foreach ($accounts as $acc): 
+            $isEscrow = !empty($acc['is_escrow']);
             $isBank = $acc['tipe_akun'] === 'bank';
             $isQris = $acc['tipe_akun'] === 'qris';
             $isOp = in_array($acc['tipe_akun'], ['kas_operasional', 'kas_kecil']);
             $isTunai = $acc['tipe_akun'] === 'kas_tunai';
 
-            $badgeBg = $isBank ? 'rgba(59,130,246,0.12)' : ($isQris ? 'rgba(225,29,72,0.12)' : ($isOp ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)'));
-            $badgeColor = $isBank ? '#3b82f6' : ($isQris ? '#e11d48' : ($isOp ? '#f59e0b' : '#10b981'));
-            $iconName = $isBank ? 'building-2' : ($isQris ? 'qr-code' : ($isOp ? 'briefcase' : 'banknote'));
+            $badgeBg = $isEscrow ? 'rgba(147,51,234,0.12)' : ($isBank ? 'rgba(59,130,246,0.12)' : ($isQris ? 'rgba(225,29,72,0.12)' : ($isOp ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)')));
+            $badgeColor = $isEscrow ? '#7e22ce' : ($isBank ? '#3b82f6' : ($isQris ? '#e11d48' : ($isOp ? '#f59e0b' : '#10b981')));
+            $iconName = $isEscrow ? 'lock' : ($isBank ? 'building-2' : ($isQris ? 'qr-code' : ($isOp ? 'briefcase' : 'banknote')));
 
             $tipeLabel = match($acc['tipe_akun']) {
                 'kas_tunai' => 'Kas Tunai (Laci / Toko)',
                 'qris' => 'QRIS / E-Wallet (Digital)',
                 'bank' => 'Rekening Bank (Transfer)',
+                'kas_tabungan' => 'Kas Tabungan Karyawan (Dana Terkunci Escrow)',
                 'kas_operasional', 'kas_kecil' => 'Kas Operasional (Petty Cash)',
                 default => ucfirst(str_replace('_', ' ', $acc['tipe_akun']))
             };
 
-            $tabCategory = $isTunai ? 'kas_tunai' : ($isBank ? 'bank' : 'digital');
+            $tabCategory = $isEscrow ? 'escrow' : ($isTunai ? 'kas_tunai' : ($isBank ? 'bank' : 'digital'));
         ?>
         <div x-show="tabFilter === 'all' || tabFilter === '<?= $tabCategory ?>'" 
              class="card p-5 sm:p-6" 
@@ -204,9 +223,14 @@ ob_start();
                     </div>
                 </div>
 
-                <!-- Default POS Status / Action -->
+                <!-- Default POS Status / Escrow Status / Action -->
                 <div style="flex-shrink:0;">
-                    <?php if ($acc['is_default_pos']): ?>
+                    <?php if ($acc['is_escrow']): ?>
+                        <span class="badge" style="font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;background:rgba(147,51,234,0.12);color:#7e22ce;border:1px solid rgba(147,51,234,0.25);">
+                            <i data-lucide="lock" style="width:13px;height:13px;"></i>
+                            <span>Terkunci Escrow</span>
+                        </span>
+                    <?php elseif ($acc['is_default_pos']): ?>
                         <span class="badge badge-success" style="font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;">
                             <i data-lucide="check-circle-2" style="width:13px;height:13px;"></i>
                             <span>Default POS</span>
@@ -261,8 +285,8 @@ ob_start();
                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                     </button>
 
-                    <!-- Delete Button (Hanya jika belum ada transaksi dan bukan default POS) -->
-                    <?php if ((int)$acc['total_transaksi'] === 0 && !$acc['is_default_pos']): ?>
+                    <!-- Delete Button (Hanya jika belum ada transaksi dan bukan default POS dan bukan escrow) -->
+                    <?php if ((int)$acc['total_transaksi'] === 0 && !$acc['is_default_pos'] && !$acc['is_escrow']): ?>
                         <button type="button" @click="openDeleteAccountModal(<?= htmlspecialchars(json_encode($acc)) ?>)" class="btn btn-ghost btn-sm text-danger" style="padding:6px 8px;border-radius:8px;color:#ef4444;" title="Hapus Akun Kosong">
                             <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                         </button>
@@ -307,11 +331,15 @@ ob_start();
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
                             <label class="form-label">Tipe Akun Kas *</label>
-                            <select name="tipe_akun" x-model="accountForm.tipe_akun" required class="form-input font-semibold">
+                            <template x-if="accountForm.is_escrow">
+                                <input type="hidden" name="tipe_akun" value="kas_tabungan">
+                            </template>
+                            <select name="tipe_akun" x-model="accountForm.tipe_akun" :disabled="accountForm.is_escrow" required class="form-input font-semibold" :style="accountForm.is_escrow ? 'background:var(--color-canvas-soft);opacity:0.85;cursor:not-allowed;' : ''">
                                 <option value="kas_tunai">💵 Kas Tunai (Laci / Toko)</option>
                                 <option value="qris">📱 QRIS / E-Wallet (Digital)</option>
                                 <option value="bank">🏦 Rekening Bank (Transfer)</option>
                                 <option value="kas_operasional">💼 Kas Operasional (Petty Cash)</option>
+                                <option value="kas_tabungan" x-show="accountForm.is_escrow">🔒 Kas Tabungan Karyawan (Terkunci / Escrow)</option>
                             </select>
                         </div>
 
@@ -335,16 +363,35 @@ ob_start();
                     </template>
 
                     <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px;">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
-                            <input type="checkbox" name="is_default_pos" x-model="accountForm.is_default_pos" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                            <span>Gunakan sebagai Default Kasir POS (Penerimaan Penjualan)</span>
-                        </label>
+                        <template x-if="!accountForm.is_escrow">
+                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
+                                <input type="checkbox" name="is_default_pos" x-model="accountForm.is_default_pos" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                                <span>Gunakan sebagai Default Kasir POS (Penerimaan Penjualan)</span>
+                            </label>
+                        </template>
+
+                        <template x-if="accountForm.is_escrow">
+                            <div style="padding:10px 12px;background:rgba(147,51,234,0.06);border:1px solid rgba(147,51,234,0.3);border-radius:var(--rounded-md);display:flex;align-items:flex-start;gap:8px;">
+                                <i data-lucide="shield-alert" style="width:16px;height:16px;color:#7e22ce;margin-top:2px;flex-shrink:0;"></i>
+                                <div style="font-size:11.5px;color:#6b21a8;line-height:1.4;">
+                                    <strong>Akun Tabungan Terkunci (Escrow Aman):</strong> Akun ini dilindungi oleh database trigger. Tidak dapat disetel sebagai kasir POS atau dipakai untuk transaksi komersial (penjualan ritel, pesanan, dan pembelian bahan).
+                                </div>
+                            </div>
+                        </template>
 
                         <template x-if="isEditAccount">
-                            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;">
-                                <input type="checkbox" name="status_aktif" x-model="accountForm.status_aktif" style="width:16px;height:16px;accent-color:var(--color-primary);">
-                                <span>Status Akun Aktif</span>
-                            </label>
+                            <div>
+                                <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;" :style="accountForm.is_escrow && accountForm.saldo_current > 0 ? 'opacity:0.6;cursor:not-allowed;' : 'cursor:pointer;'">
+                                    <input type="checkbox" name="status_aktif" x-model="accountForm.status_aktif" :disabled="accountForm.is_escrow && accountForm.saldo_current > 0" style="width:16px;height:16px;accent-color:var(--color-primary);">
+                                    <span>Status Akun Aktif</span>
+                                </label>
+                                <template x-if="accountForm.is_escrow && accountForm.saldo_current > 0">
+                                    <div style="font-size:11px;color:#7e22ce;margin-top:4px;display:flex;align-items:center;gap:4px;">
+                                        <i data-lucide="lock" style="width:12px;height:12px;flex-shrink:0;"></i>
+                                        <span>Akun tabungan tidak dapat dinonaktifkan selagi masih memiliki saldo simpanan berjalan.</span>
+                                    </div>
+                                </template>
+                            </div>
                         </template>
                     </div>
                 </div>
@@ -428,7 +475,9 @@ function cashAccountsApp() {
             nomor_rekening: '',
             atas_nama: '',
             saldo_awal: '0',
+            saldo_current: 0,
             is_default_pos: false,
+            is_escrow: false,
             status_aktif: true
         },
 
@@ -450,7 +499,9 @@ function cashAccountsApp() {
                 nomor_rekening: '',
                 atas_nama: '',
                 saldo_awal: '0',
+                saldo_current: 0,
                 is_default_pos: false,
+                is_escrow: false,
                 status_aktif: true
             };
             this.showAccountModal = true;
@@ -462,11 +513,13 @@ function cashAccountsApp() {
             this.accountForm = {
                 id: acc.id,
                 nama_akun: acc.nama_akun,
-                tipe_akun: acc.tipe_akun || 'kas_tunai',
+                tipe_akun: acc.tipe_akun || (acc.is_escrow ? 'kas_tabungan' : 'kas_tunai'),
                 nomor_rekening: acc.nomor_rekening === '-' ? '' : acc.nomor_rekening,
                 atas_nama: acc.atas_nama === '-' ? '' : acc.atas_nama,
                 saldo_awal: '0',
+                saldo_current: parseFloat(acc.saldo_saat_ini || 0),
                 is_default_pos: Boolean(acc.is_default_pos),
+                is_escrow: Boolean(acc.is_escrow),
                 status_aktif: Boolean(acc.status_aktif)
             };
             this.showAccountModal = true;

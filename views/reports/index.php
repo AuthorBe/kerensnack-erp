@@ -189,10 +189,18 @@ ob_start();
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-semibold text-ink-mute flex-shrink-0">Akun:</span>
                             <select class="form-input text-xs py-1 px-2 h-7 flex-1 min-w-0" x-model="cashFlowAccount" style="border-radius:6px;">
-                                <option value="all">Semua Rekening &amp; Kas Tunai</option>
-                                <?php foreach ($accounts as $acc): ?>
-                                    <option value="<?= htmlspecialchars((string)$acc['id']) ?>"><?= htmlspecialchars((string)$acc['nama_akun']) ?></option>
-                                <?php endforeach; ?>
+                                <option value="operational">Semua Kas Operasional (Bebas Escrow)</option>
+                                <option value="all">Konsolidasi Seluruh Akun (Termasuk Escrow)</option>
+                                <optgroup label="Akun Operasional Usaha">
+                                    <?php foreach ($accounts as $acc): if (empty($acc['is_escrow'])): ?>
+                                        <option value="<?= htmlspecialchars((string)$acc['id']) ?>"><?= htmlspecialchars((string)$acc['nama_akun']) ?></option>
+                                    <?php endif; endforeach; ?>
+                                </optgroup>
+                                <optgroup label="Akun Titipan / Escrow Terkunci">
+                                    <?php foreach ($accounts as $acc): if (!empty($acc['is_escrow'])): ?>
+                                        <option value="<?= htmlspecialchars((string)$acc['id']) ?>"><?= htmlspecialchars((string)$acc['nama_akun']) ?> [Tabungan Escrow]</option>
+                                    <?php endif; endforeach; ?>
+                                </optgroup>
                             </select>
                         </div>
                     </div>
@@ -222,10 +230,18 @@ ob_start();
                     <div class="report-box-meta">
                         <div class="grid grid-cols-2 gap-2">
                             <select class="form-input text-xs py-1 px-2 h-7 w-full min-w-0" x-model="cashTxAccount" style="border-radius:6px;">
-                                <option value="all">Semua Akun</option>
-                                <?php foreach ($accounts as $acc): ?>
-                                    <option value="<?= htmlspecialchars((string)$acc['id']) ?>"><?= htmlspecialchars((string)$acc['nama_akun']) ?></option>
-                                <?php endforeach; ?>
+                                <option value="operational">Kas Operasional Saja</option>
+                                <option value="all">Semua Akun (Termasuk Escrow)</option>
+                                <optgroup label="Akun Operasional Usaha">
+                                    <?php foreach ($accounts as $acc): if (empty($acc['is_escrow'])): ?>
+                                        <option value="<?= htmlspecialchars((string)$acc['id']) ?>"><?= htmlspecialchars((string)$acc['nama_akun']) ?></option>
+                                    <?php endif; endforeach; ?>
+                                </optgroup>
+                                <optgroup label="Akun Titipan / Escrow Terkunci">
+                                    <?php foreach ($accounts as $acc): if (!empty($acc['is_escrow'])): ?>
+                                        <option value="<?= htmlspecialchars((string)$acc['id']) ?>"><?= htmlspecialchars((string)$acc['nama_akun']) ?> [Tabungan Escrow]</option>
+                                    <?php endif; endforeach; ?>
+                                </optgroup>
                             </select>
                             <select class="form-input text-xs py-1 px-2 h-7 w-full min-w-0" x-model="cashTxType" style="border-radius:6px;">
                                 <option value="all">Semua Jenis</option>
@@ -613,6 +629,91 @@ ob_start();
             </div>
         </section>
 
+        <!-- KATEGORI 8: HR & PENGGAJIAN -->
+        <section class="space-y-3">
+            <div class="flex items-center gap-2.5">
+                <div class="section-icon-badge is-maroon">
+                    <i data-lucide="wallet"></i>
+                </div>
+                <h2 class="text-sm sm:text-base font-bold text-ink uppercase tracking-wider">8. HR &amp; Penggajian</h2>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
+                <!-- Card 1: Rekapitulasi Presensi Karyawan (PDF) -->
+                <div class="report-box">
+                    <div class="report-box-top">
+                        <div class="report-box-icon" style="background:rgba(136,19,55,0.08); color:var(--primary, #881337); border:1px solid rgba(136,19,55,0.18);">
+                            <i data-lucide="calendar-check-2"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="report-box-title">Rekapitulasi Kehadiran / Presensi</h3>
+                            <p class="report-box-desc">Akumulasi presensi seluruh karyawan (hadir, izin, sakit, libur, alpa, telat, nominal lembur) dalam rentang periode tanggal aktif.</p>
+                        </div>
+                    </div>
+                    <div class="report-box-meta space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-ink-mute flex-shrink-0">Tipe:</span>
+                            <select class="form-input text-xs py-1 px-2 h-7 flex-1 min-w-0" x-model="hrAttendanceType" style="border-radius:6px;">
+                                <option value="semua">Semua Tipe Karyawan</option>
+                                <option value="borongan">Khusus Borongan</option>
+                                <option value="bulanan">Khusus Bulanan</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-ink-mute flex-shrink-0">Karyawan:</span>
+                            <select class="form-input text-xs py-1 px-2 h-7 flex-1 min-w-0" x-model="hrAttendanceEmployee" style="border-radius:6px;">
+                                <option value="">Semua Karyawan Aktif</option>
+                                <?php foreach (($employees ?? []) as $emp): ?>
+                                    <option value="<?= htmlspecialchars((string)$emp['id']) ?>"><?= htmlspecialchars((string)$emp['nama_karyawan']) ?> (<?= ucfirst($emp['tipe_penggajian']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="report-box-actions">
+                        <button type="button" @click="downloadReport('/absensi/rekap/pdf', { tanggal_awal: startDate, tanggal_akhir: endDate, tipe_gaji: hrAttendanceType, karyawan_id: hrAttendanceEmployee }, 'Rekapitulasi Kehadiran')" class="btn btn-secondary btn-sm w-full" style="height:34px; background:#e11d48; color:#fff; border-color:#be123c; font-weight:700;">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>Download PDF (.pdf)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 2: Rekapitulasi Penggajian & Payroll Run (PDF) -->
+                <div class="report-box">
+                    <div class="report-box-top">
+                        <div class="report-box-icon" style="background:rgba(16,185,129,0.08); color:#059669; border:1px solid rgba(16,185,129,0.18);">
+                            <i data-lucide="badge-dollar-sign"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h3 class="report-box-title">Rekapitulasi Penggajian (Payroll)</h3>
+                            <p class="report-box-desc">Rekapitulasi lengkap run penggajian disetujui (upah borongan, gaji pokok, uang hadir, lembur, komisi, potongan kasbon, &amp; gaji bersih).</p>
+                        </div>
+                    </div>
+                    <div class="report-box-meta">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-ink-mute flex-shrink-0">Payroll:</span>
+                            <select class="form-input text-xs py-1 px-2 h-7 flex-1 min-w-0" x-model="hrPayrollRunId" style="border-radius:6px;">
+                                <?php if (empty($payrollRuns)): ?>
+                                    <option value="">Belum ada payroll yang disetujui</option>
+                                <?php else: ?>
+                                    <?php foreach ($payrollRuns as $pr): ?>
+                                        <option value="<?= htmlspecialchars((string)$pr['id']) ?>">
+                                            <?= htmlspecialchars($pr['nomor_referensi']) ?> - <?= htmlspecialchars($pr['nama_payroll'] ?: Format::tanggalIndo($pr['periode_akhir'])) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="report-box-actions">
+                        <button type="button" :disabled="!hrPayrollRunId" @click="if (hrPayrollRunId) downloadReport('/penggajian/rekap-pdf', { run_id: hrPayrollRunId }, 'Rekapitulasi Penggajian')" class="btn btn-secondary btn-sm w-full" style="height:34px; background:#e11d48; color:#fff; border-color:#be123c; font-weight:700;">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            <span>Download PDF (.pdf)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </div>
 
 </div>
@@ -931,8 +1032,8 @@ function reportHubApp() {
         endDate: '<?= $today ?>',
 
         // Specific Card Filters
-        cashFlowAccount: 'all',
-        cashTxAccount: 'all',
+        cashFlowAccount: 'operational',
+        cashTxAccount: 'operational',
         cashTxType: 'all',
         orderStatusBayar: 'all',
         orderStatusKirim: 'all',
@@ -942,6 +1043,9 @@ function reportHubApp() {
         stockCategory: 'all',
         purchaseSupplier: 'all',
         deliveryDriver: 'all',
+        hrAttendanceType: 'semua',
+        hrAttendanceEmployee: '',
+        hrPayrollRunId: '<?= !empty($payrollRuns) ? (string)$payrollRuns[0]['id'] : '' ?>',
 
         init() {
             this.setupPresetDragScroll();

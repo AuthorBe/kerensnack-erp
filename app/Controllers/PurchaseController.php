@@ -84,7 +84,7 @@ class PurchaseController extends Controller
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, saldo_saat_ini 
                 FROM public.akun_kas 
-                WHERE status_aktif = TRUE 
+                WHERE status_aktif = TRUE AND is_escrow = FALSE
                 ORDER BY nama_akun ASC
             ");
 
@@ -93,6 +93,15 @@ class PurchaseController extends Controller
                 FROM public.v_karyawan_info 
                 WHERE posisi IN ('driver', 'sales') AND status_aktif = TRUE
                 ORDER BY (posisi = 'driver') DESC, nama_karyawan ASC
+            ");
+
+            $pemasokCatalog = Database::fetchAll("
+                SELECT pi.pemasok_id, pi.item_id, pi.harga_beli, pi.kode_sku_vendor, pi.catatan, 
+                       i.nama_item, i.satuan_dasar, i.tipe_item, i.kode_sku
+                FROM public.pemasok_item pi
+                JOIN public.item i ON i.id = pi.item_id
+                WHERE pi.status_aktif = TRUE AND i.status_aktif = TRUE
+                ORDER BY i.nama_item ASC
             ");
 
             // Generate Next Suggested PB Number (PB-YYYYMMDD-XXX) based on current records today
@@ -105,6 +114,7 @@ class PurchaseController extends Controller
                 'purchases' => $purchases,
                 'suppliers' => $suppliers,
                 'items' => $items,
+                'pemasokCatalog' => $pemasokCatalog,
                 'cashAccounts' => $cashAccounts,
                 'drivers' => $drivers,
                 'suggestedPbSuffix' => $suggestedPbSuffix
@@ -312,9 +322,13 @@ class PurchaseController extends Controller
                 $this->json(['success' => false, 'message' => 'Akun kas sumber dana wajib dipilih untuk pembayaran lunas.'], 400);
                 return;
             }
-            $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE", ['id' => $akunKasId]);
+            $akunKas = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_escrow FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE", ['id' => $akunKasId]);
             if (!$akunKas) {
                 $this->json(['success' => false, 'message' => 'Akun kas sumber dana yang dipilih tidak valid.'], 400);
+                return;
+            }
+            if (!empty($akunKas['is_escrow'])) {
+                $this->json(['success' => false, 'message' => 'Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk pembayaran pembelian.'], 400);
                 return;
             }
             $saldoKas = (float)$akunKas['saldo_saat_ini'];
@@ -420,6 +434,18 @@ class PurchaseController extends Controller
                 FOR UPDATE
             ");
 
+            $stmtCatalogSync = $pdo->prepare("
+                INSERT INTO public.pemasok_item (
+                    pemasok_id, item_id, harga_beli, status_aktif, dibuat_pada, diubah_pada
+                ) VALUES (
+                    :pemasok_id, :item_id, :harga, TRUE, NOW(), NOW()
+                )
+                ON CONFLICT (pemasok_id, item_id) DO UPDATE SET
+                    harga_beli = EXCLUDED.harga_beli,
+                    status_aktif = TRUE,
+                    diubah_pada = NOW()
+            ");
+
             foreach ($validItems as $it) {
                 $itemId = $it['item_id'];
                 $qtyItem = (float)$it['qty'];
@@ -438,6 +464,15 @@ class PurchaseController extends Controller
                     'harga' => $harga,
                     'subtotal' => $subtotal
                 ]);
+
+                // Sinkronisasi Harga Beli ke Katalog Vendor (pemasok_item)
+                if ($harga > 0) {
+                    $stmtCatalogSync->execute([
+                        'pemasok_id' => $pemasokId,
+                        'item_id' => $itemId,
+                        'harga' => $harga
+                    ]);
+                }
 
                 // Khusus Faktur Langsung: Langsung update stok fisik & hitung HPP
                 if ($jenisDokumen === 'faktur') {
@@ -871,9 +906,14 @@ class PurchaseController extends Controller
                         $this->json(['success' => false, 'message' => 'Pilih akun kas sumber dana untuk pembayaran tunai/lunas.'], 400);
                         return;
                     }
-                    $stmtKasLockCheck = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
+                    $stmtKasLockCheck = $pdo->prepare("SELECT saldo_saat_ini, nama_akun, is_escrow FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
                     $stmtKasLockCheck->execute(['id' => $targetKasId]);
                     $akunKas = $stmtKasLockCheck->fetch(\PDO::FETCH_ASSOC);
+                    if ($akunKas && !empty($akunKas['is_escrow'])) {
+                        $pdo->rollBack();
+                        $this->json(['success' => false, 'message' => 'Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk pembayaran pembelian.'], 400);
+                        return;
+                    }
                     if (!$akunKas || (float)$akunKas['saldo_saat_ini'] < $kasYangPerluDipotong) {
                         $pdo->rollBack();
                         $saldoFmt = number_format((float)($akunKas['saldo_saat_ini'] ?? 0), 0, ',', '.');
@@ -1286,10 +1326,15 @@ class PurchaseController extends Controller
             $namaSupplier = $purchase['nama_pemasok'] ?? 'Supplier';
             $userId = Auth::id() ?: null;
 
-            $akunKas = Database::fetchOne("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE", ['id' => $akunKasId]);
+            $akunKas = Database::fetchOne("SELECT saldo_saat_ini, nama_akun, is_escrow FROM public.akun_kas WHERE id = :id FOR UPDATE", ['id' => $akunKasId]);
             if (!$akunKas) {
                 $pdo->rollBack();
                 $this->json(['success' => false, 'message' => 'Akun kas tidak valid.'], 400);
+                return;
+            }
+            if (!empty($akunKas['is_escrow'])) {
+                $pdo->rollBack();
+                $this->json(['success' => false, 'message' => 'Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk pelunasan hutang pembelian.'], 400);
                 return;
             }
 

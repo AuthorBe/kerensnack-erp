@@ -166,83 +166,90 @@ echo "\n--- 4. DATABASE INTEGRATION & POSTGRESQL CONSTRAINTS ---\n";
 
 try {
     $db = Database::getConnection();
+    $db->beginTransaction();
 
-    // Test 4.1: Penanganan String Non-UUID ('perusahaan') yang sebelumnya menyebabkan SQLSTATE[22P02]
-    $testDesc = "Test audit non-uuid safety " . uniqid();
-    $logged = ActivityLog::log(
-        'master_data',
-        'UPDATE',
-        $testDesc,
-        'pengaturan_sistem',
-        'perusahaan' // String non-UUID
-    );
+    try {
+        // Test 4.1: Penanganan String Non-UUID ('perusahaan') yang sebelumnya menyebabkan SQLSTATE[22P02]
+        $testDesc = "Test audit non-uuid safety " . uniqid();
+        $logged = ActivityLog::log(
+            'master_data',
+            'UPDATE',
+            $testDesc,
+            'pengaturan_sistem',
+            'perusahaan' // String non-UUID
+        );
 
-    assertTest("ActivityLog::log: Tidak melempar SQLSTATE[22P02] pada id_referensi non-UUID", $logged === true);
+        assertTest("ActivityLog::log: Tidak melempar SQLSTATE[22P02] pada id_referensi non-UUID", $logged === true);
 
-    // Verifikasi di DB bahwa id_referensi bernilai NULL dan deskripsi mencatat reference string
-    $stmt = $db->prepare("SELECT id_referensi, deskripsi_aktivitas, kategori_aktivitas FROM public.log_aktivitas WHERE deskripsi_aktivitas LIKE :desc LIMIT 1");
-    $stmt->execute(['desc' => "%{$testDesc}%"]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Verifikasi di DB bahwa id_referensi bernilai NULL dan deskripsi mencatat reference string
+        $stmt = $db->prepare("SELECT id_referensi, deskripsi_aktivitas, kategori_aktivitas FROM public.log_aktivitas WHERE deskripsi_aktivitas LIKE :desc LIMIT 1");
+        $stmt->execute(['desc' => "%{$testDesc}%"]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    assertTest("ActivityLog::log: PostgreSQL menyimpan id_referensi sebagai NULL", $row !== false && $row['id_referensi'] === null);
-    assertTest("ActivityLog::log: Reference string diamankan ke dalam deskripsi", str_contains($row['deskripsi_aktivitas'] ?? '', '[Ref: perusahaan]'));
+        assertTest("ActivityLog::log: PostgreSQL menyimpan id_referensi sebagai NULL", $row !== false && $row['id_referensi'] === null);
+        assertTest("ActivityLog::log: Reference string diamankan ke dalam deskripsi", str_contains($row['deskripsi_aktivitas'] ?? '', '[Ref: perusahaan]'));
 
-    // Test 4.2: Pemetaan Kategori 'keamanan' -> 'keamanan_auth'
-    $testSecDesc = "Test security auth category mapping " . uniqid();
-    $loggedSec = ActivityLog::log(
-        'keamanan', // Shorthand yang sebelumnya melanggar constraint chk_log_kategori
-        'LOGIN',
-        $testSecDesc,
-        'pengguna',
-        null
-    );
-    assertTest("ActivityLog::log: Kategori 'keamanan' berhasil dipetakan tanpa constraint violation", $loggedSec === true);
+        // Test 4.2: Pemetaan Kategori 'keamanan' -> 'keamanan_auth'
+        $testSecDesc = "Test security auth category mapping " . uniqid();
+        $loggedSec = ActivityLog::log(
+            'keamanan', // Shorthand yang sebelumnya melanggar constraint chk_log_kategori
+            'LOGIN',
+            $testSecDesc,
+            'pengguna',
+            null
+        );
+        assertTest("ActivityLog::log: Kategori 'keamanan' berhasil dipetakan tanpa constraint violation", $loggedSec === true);
 
-    $stmtSec = $db->prepare("SELECT kategori_aktivitas FROM public.log_aktivitas WHERE deskripsi_aktivitas = :desc LIMIT 1");
-    $stmtSec->execute(['desc' => $testSecDesc]);
-    $secRow = $stmtSec->fetch(PDO::FETCH_ASSOC);
-    assertTest("ActivityLog::log: Tersimpan di DB sebagai 'keamanan_auth'", ($secRow['kategori_aktivitas'] ?? '') === 'keamanan_auth');
+        $stmtSec = $db->prepare("SELECT kategori_aktivitas FROM public.log_aktivitas WHERE deskripsi_aktivitas = :desc LIMIT 1");
+        $stmtSec->execute(['desc' => $testSecDesc]);
+        $secRow = $stmtSec->fetch(PDO::FETCH_ASSOC);
+        assertTest("ActivityLog::log: Tersimpan di DB sebagai 'keamanan_auth'", ($secRow['kategori_aktivitas'] ?? '') === 'keamanan_auth');
 
-    // Test 4.3: Pemetaan Kategori Tak Dikenal -> Fallback 'master_data'
-    $testFallbackDesc = "Test invalid category fallback " . uniqid();
-    $loggedFallback = ActivityLog::log(
-        'kategori_sembarangan_123',
-        'CUSTOM',
-        $testFallbackDesc,
-        'unknown',
-        null
-    );
-    assertTest("ActivityLog::log: Kategori invalid tidak merusak query", $loggedFallback === true);
+        // Test 4.3: Pemetaan Kategori Tak Dikenal -> Fallback 'master_data'
+        $testFallbackDesc = "Test invalid category fallback " . uniqid();
+        $loggedFallback = ActivityLog::log(
+            'kategori_sembarangan_123',
+            'CUSTOM',
+            $testFallbackDesc,
+            'unknown',
+            null
+        );
+        assertTest("ActivityLog::log: Kategori invalid tidak merusak query", $loggedFallback === true);
 
-    $stmtFallback = $db->prepare("SELECT kategori_aktivitas FROM public.log_aktivitas WHERE deskripsi_aktivitas = :desc LIMIT 1");
-    $stmtFallback->execute(['desc' => $testFallbackDesc]);
-    $fallbackRow = $stmtFallback->fetch(PDO::FETCH_ASSOC);
-    assertTest("ActivityLog::log: Kategori invalid otomatis fallback ke 'master_data'", ($fallbackRow['kategori_aktivitas'] ?? '') === 'master_data');
+        $stmtFallback = $db->prepare("SELECT kategori_aktivitas FROM public.log_aktivitas WHERE deskripsi_aktivitas = :desc LIMIT 1");
+        $stmtFallback->execute(['desc' => $testFallbackDesc]);
+        $fallbackRow = $stmtFallback->fetch(PDO::FETCH_ASSOC);
+        assertTest("ActivityLog::log: Kategori invalid otomatis fallback ke 'master_data'", ($fallbackRow['kategori_aktivitas'] ?? '') === 'master_data');
 
-    // Test 4.4: log dengan dataSebelum & dataSesudah terintegrasi dengan delta diffing & sanitasi data
-    $testDeltaDesc = "Test log with delta & sanitization " . uniqid();
-    $deltaLogged = ActivityLog::log(
-        'keamanan_auth',
-        'UPDATE',
-        $testDeltaDesc,
-        'pengguna',
-        null,
-        ['username' => 'testuser', 'password' => 'secret123', 'status' => 'aktif'],
-        ['username' => 'testuser', 'password' => 'newsecret456', 'status' => 'nonaktif']
-    );
-    assertTest("ActivityLog::log: Berhasil menyimpan log dengan delta diff", $deltaLogged === true);
+        // Test 4.4: log dengan dataSebelum & dataSesudah terintegrasi dengan delta diffing & sanitasi data
+        $testDeltaDesc = "Test log with delta & sanitization " . uniqid();
+        $deltaLogged = ActivityLog::log(
+            'keamanan_auth',
+            'UPDATE',
+            $testDeltaDesc,
+            'pengguna',
+            null,
+            ['username' => 'testuser', 'password' => 'secret123', 'status' => 'aktif'],
+            ['username' => 'testuser', 'password' => 'newsecret456', 'status' => 'nonaktif']
+        );
+        assertTest("ActivityLog::log: Berhasil menyimpan log dengan delta diff", $deltaLogged === true);
 
-    $stmtDelta = $db->prepare("SELECT data_sebelum, data_sesudah FROM public.log_aktivitas WHERE deskripsi_aktivitas = :desc LIMIT 1");
-    $stmtDelta->execute(['desc' => $testDeltaDesc]);
-    $deltaRow = $stmtDelta->fetch(PDO::FETCH_ASSOC);
+        $stmtDelta = $db->prepare("SELECT data_sebelum, data_sesudah FROM public.log_aktivitas WHERE deskripsi_aktivitas = :desc LIMIT 1");
+        $stmtDelta->execute(['desc' => $testDeltaDesc]);
+        $deltaRow = $stmtDelta->fetch(PDO::FETCH_ASSOC);
 
-    $dataSebelum = json_decode($deltaRow['data_sebelum'] ?? '{}', true);
-    $dataSesudah = json_decode($deltaRow['data_sesudah'] ?? '{}', true);
+        $dataSebelum = json_decode($deltaRow['data_sebelum'] ?? '{}', true);
+        $dataSesudah = json_decode($deltaRow['data_sesudah'] ?? '{}', true);
 
-    assertTest("log di DB: Field yang tidak berubah ('username') diabaikan", !isset($dataSebelum['username']) && !isset($dataSesudah['username']));
-    assertTest("log di DB: Password lama tersensor [TERPROTEKSI]", ($dataSebelum['password'] ?? '') === '[TERPROTEKSI]');
-    assertTest("log di DB: Password baru tersensor [TERPROTEKSI]", ($dataSesudah['password'] ?? '') === '[TERPROTEKSI]');
-    assertTest("log di DB: Perubahan status tercatat akurat", ($dataSebelum['status'] ?? '') === 'aktif' && ($dataSesudah['status'] ?? '') === 'nonaktif');
+        assertTest("log di DB: Field yang tidak berubah ('username') diabaikan", !isset($dataSebelum['username']) && !isset($dataSesudah['username']));
+        assertTest("log di DB: Password lama tersensor [TERPROTEKSI]", ($dataSebelum['password'] ?? '') === '[TERPROTEKSI]');
+        assertTest("log di DB: Password baru tersensor [TERPROTEKSI]", ($dataSesudah['password'] ?? '') === '[TERPROTEKSI]');
+        assertTest("log di DB: Perubahan status tercatat akurat", ($dataSebelum['status'] ?? '') === 'aktif' && ($dataSesudah['status'] ?? '') === 'nonaktif');
+    } finally {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+    }
 
 } catch (\Throwable $e) {
     assertTest("Database integration tests", false, $e->getMessage());

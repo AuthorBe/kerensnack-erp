@@ -103,7 +103,7 @@ let globalTargetForm = null;
     };
 
     // Maju ke elemen berikutnya
-    const moveNextNavElement = (fromEl) => {
+    const moveNextNavElement = (fromEl, allowAddRow = true) => {
         if (!fromEl) return;
         const form = fromEl.closest('form') || globalTargetForm || document.querySelector('form[data-add-row-btn]') || document.querySelector('form');
         if (!form) return;
@@ -114,10 +114,11 @@ let globalTargetForm = null;
         if (currentIndex > -1) {
             if (currentIndex < navElements.length - 1) {
                 focusElement(navElements[currentIndex + 1]);
-            } else {
-                // Di elemen terakhir: Cek apakah form memiliki tombol Tambah Baris
+            } else if (allowAddRow) {
+                // Di elemen terakhir: HANYA picu Tambah Baris jika ditekan Enter (allowAddRow) dan kursor berada di dalam baris transaksi/tabel
+                const isInsideRow = fromEl.closest('tr, .row, .item-row, .prod-item-row-box');
                 const addRowBtnSelector = form.getAttribute('data-add-row-btn');
-                if (addRowBtnSelector) {
+                if (isInsideRow && addRowBtnSelector) {
                     const addRowBtn = form.querySelector(addRowBtnSelector) || document.querySelector(addRowBtnSelector);
                     if (addRowBtn) {
                         addRowBtn.click();
@@ -162,23 +163,45 @@ let globalTargetForm = null;
 
     // Navigasi Vertikal dalam Tabel (Excel Style ArrowUp / ArrowDown)
     const moveVerticalGrid = (currentEl, direction) => {
-        const row = currentEl.closest('tr, .item-row');
+        const row = currentEl.closest('tr, .row, .item-row, .prod-item-row-box');
         if (!row) return false;
 
-        const targetRow = direction > 0 ? row.nextElementSibling : row.previousElementSibling;
+        const form = row.closest('form') || globalTargetForm || document.querySelector('form[data-add-row-btn]') || document.querySelector('form');
+        if (!form) return false;
+
+        // Cari semua baris sejenis di dalam form
+        const allRows = Array.from(form.querySelectorAll('tr, .row, .item-row, .prod-item-row-box')).filter(r => r.offsetWidth > 0 && r.offsetHeight > 0);
+        const currentRowIndex = allRows.indexOf(row);
+        if (currentRowIndex === -1) return false;
+
+        const targetIndex = currentRowIndex + direction;
+        if (targetIndex < 0 || targetIndex >= allRows.length) return false;
+
+        const targetRow = allRows[targetIndex];
         if (!targetRow) return false;
 
-        // Cari inputs di baris sekarang dan baris target
-        const currentInputs = Array.from(row.querySelectorAll('.enter-nav')).filter(el => el.offsetWidth > 0);
-        const targetInputs  = Array.from(targetRow.querySelectorAll('.enter-nav')).filter(el => el.offsetWidth > 0);
+        const targetInputs = Array.from(targetRow.querySelectorAll('.enter-nav')).filter(el => el.offsetWidth > 0 && el.offsetHeight > 0);
+        if (!targetInputs.length) return false;
 
-        if (!currentInputs.length || !targetInputs.length) return false;
+        // TRUE SPATIAL 2D NAVIGATION: Cari elemen terdekat secara kordinat X
+        const currentRect = currentEl.getBoundingClientRect();
+        const currentCenterX = currentRect.left + (currentRect.width / 2);
 
-        const colIndex = currentInputs.indexOf(currentEl);
-        const targetEl = (colIndex !== -1 && targetInputs[colIndex]) ? targetInputs[colIndex] : targetInputs[0];
+        let closestEl = null;
+        let minDistance = Infinity;
 
-        if (targetEl) {
-            focusElement(targetEl);
+        targetInputs.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            const centerX = rect.left + (rect.width / 2);
+            const distance = Math.abs(centerX - currentCenterX);
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestEl = el;
+            }
+        });
+
+        if (closestEl) {
+            focusElement(closestEl);
             return true;
         }
         return false;
@@ -266,6 +289,12 @@ let globalTargetForm = null;
             if (!form && activeElement && activeElement.classList.contains('sd-search')) {
                 form = globalTargetForm || document.querySelector('form');
             }
+            
+            // Jika activeElement berada di dalam modal/popup tanpa form, jangan hijack fallback ke form latar belakang
+            if (!form && activeElement && activeElement.closest('.modal-box, .modal-backdrop, .purchase-modal-box, [data-modal], .confirm-modal, .session-warning-box, .confirm-overlay')) {
+                return;
+            }
+            
             if (!form) form = globalTargetForm || document.querySelector('form');
 
             if (form) {
@@ -291,12 +320,12 @@ let globalTargetForm = null;
             if (activeElement) {
                 const navElement = getCurrentNavElement(activeElement);
                 if (navElement) {
-                    const row = navElement.closest('tr, .row, .item-row');
+                    const row = navElement.closest('tr, .row, .item-row, .prod-item-row-box');
                     if (row) {
-                        const removeBtn = row.querySelector('.btn-remove-row, .remove-row-btn, button[title*="Hapus"], button[aria-label*="Hapus"]');
+                        const removeBtn = row.querySelector('.btn-remove-row, .btn-delete-row, .remove-row-btn, button[title*="Hapus"], button[aria-label*="Hapus"]');
                         if (removeBtn) {
                             e.preventDefault();
-                            const form = row.closest('form') || globalTargetForm;
+                            const form = row.closest('form') || globalTargetForm || document.querySelector('form');
                             if (form) {
                                 const navElements = getVisibleNavElements(form);
                                 const currentIndex = navElements.indexOf(navElement);
@@ -305,6 +334,21 @@ let globalTargetForm = null;
                                 }
                             }
                             removeBtn.click();
+                            
+                            // Toast info
+                            let toast = document.getElementById('kbd-delete-toast');
+                            if (!toast) {
+                                toast = document.createElement('div');
+                                toast.id = 'kbd-delete-toast';
+                                toast.style.cssText = 'position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1e293b; color:white; padding:8px 18px; border-radius:8px; font-weight:600; font-size:12px; z-index:9999; box-shadow:0 10px 25px rgba(0,0,0,0.25); opacity:0; transition:opacity 0.2s; pointer-events:none;';
+                                document.body.appendChild(toast);
+                            }
+                            toast.innerHTML = '🗑️ 1 Baris telah dihapus';
+                            toast.style.opacity = '1';
+                            if (window._kbdToastTimeout) clearTimeout(window._kbdToastTimeout);
+                            window._kbdToastTimeout = setTimeout(() => {
+                                if (toast) toast.style.opacity = '0';
+                            }, 1500);
                             return;
                         }
                     }
@@ -315,12 +359,29 @@ let globalTargetForm = null;
         // 4. Spasi untuk Buka Custom Dropdown
         if (e.key === ' ' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
             const activeElement = document.activeElement;
-            if (activeElement && activeElement.tagName.toLowerCase() !== 'input' && activeElement.tagName.toLowerCase() !== 'textarea') {
-                if (activeElement.classList.contains('sd-trigger') || activeElement.classList.contains('enter-nav')) {
+            const isInput = activeElement && (activeElement.tagName.toLowerCase() === 'input' || activeElement.tagName.toLowerCase() === 'textarea');
+            
+            if (!isInput) {
+                if (activeElement && (activeElement.classList.contains('sd-trigger') || activeElement.classList.contains('enter-nav'))) {
                     e.preventDefault();
                     e.stopPropagation();
                     activeElement.click();
                     return;
+                }
+                
+                // Jika user sedang di body / container tanpa fokus spesifik, cegah scroll ke bawah dan buka field pertama
+                const form = globalTargetForm || document.querySelector('form[data-add-row-btn]') || document.querySelector('form');
+                if (form) {
+                    const navElements = getVisibleNavElements(form);
+                    if (navElements.length > 0) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        focusElement(navElements[0]);
+                        if (navElements[0].tagName.toLowerCase() === 'button') {
+                            navElements[0].click();
+                        }
+                        return;
+                    }
                 }
             }
         }
@@ -355,13 +416,13 @@ let globalTargetForm = null;
 
             const navElement = getCurrentNavElement(activeElement);
             if (navElement) {
-                if (navElement.tagName.toLowerCase() === 'button' && (navElement.getAttribute('data-nav') === 'customer' || navElement.getAttribute('data-nav') === 'product')) {
+                if (navElement.id === 'btnKaryawan' || (navElement.tagName.toLowerCase() === 'button' && (navElement.getAttribute('data-nav') === 'customer' || navElement.getAttribute('data-nav') === 'product' || navElement.getAttribute('data-nav') === 'karyawan'))) {
                     e.preventDefault();
                     navElement.click();
                     return;
                 }
                 e.preventDefault();
-                moveNextNavElement(navElement);
+                moveNextNavElement(navElement, true);
             }
         }
 
@@ -370,26 +431,42 @@ let globalTargetForm = null;
             const activeElement = document.activeElement;
             if (!activeElement) return;
 
+            // Jika sedang di input pencarian dropdown, biarkan kursor bergerak normal
+            if (activeElement.classList.contains('sd-search') || activeElement.closest('.dropdown-menu-searchable')) {
+                return;
+            }
+
+            const isButton      = activeElement.tagName.toLowerCase() === 'button';
             const isSdTrigger   = activeElement.classList.contains('sd-trigger');
-            const isSdSearch    = activeElement.classList.contains('sd-search');
-            const isInput       = activeElement.tagName.toLowerCase() === 'input' && !isSdSearch;
+            const isInput       = activeElement.tagName.toLowerCase() === 'input';
             const isSelect      = activeElement.tagName.toLowerCase() === 'select';
+            const isEnterNav    = activeElement.classList.contains('enter-nav');
 
             let shouldIntercept = false;
 
-            if (isSdTrigger || isSelect) {
+            if (isButton || isSdTrigger || isSelect) {
                 shouldIntercept = true;
-            } else if (isSdSearch) {
-                shouldIntercept = (activeElement.value === '');
             } else if (isInput) {
-                const len      = activeElement.value ? activeElement.value.length : 0;
-                const selStart = activeElement.selectionStart;
-                const selEnd   = activeElement.selectionEnd;
-                if (e.key === 'ArrowRight' && selStart === len && selEnd === len) {
+                if (activeElement.type === 'number') {
+                    // HTML5 number input tidak mendukung selectionStart/End
+                    // Selalu intercept untuk pindah kolom excel style
                     shouldIntercept = true;
-                } else if (e.key === 'ArrowLeft' && selStart === 0 && selEnd === 0) {
-                    shouldIntercept = true;
+                } else {
+                    try {
+                        const len      = activeElement.value ? activeElement.value.length : 0;
+                        const selStart = activeElement.selectionStart;
+                        const selEnd   = activeElement.selectionEnd;
+                        if (e.key === 'ArrowRight' && selStart === len && selEnd === len) {
+                            shouldIntercept = true;
+                        } else if (e.key === 'ArrowLeft' && selStart === 0 && selEnd === 0) {
+                            shouldIntercept = true;
+                        }
+                    } catch (err) {
+                        shouldIntercept = true;
+                    }
                 }
+            } else if (isEnterNav) {
+                shouldIntercept = true;
             }
 
             if (!shouldIntercept) return;
@@ -399,7 +476,7 @@ let globalTargetForm = null;
 
             if (e.key === 'ArrowRight') {
                 e.preventDefault();
-                moveNextNavElement(navElement);
+                moveNextNavElement(navElement, false);
             } else {
                 e.preventDefault();
                 movePrevNavElement(navElement);
@@ -411,17 +488,18 @@ let globalTargetForm = null;
             const activeElement = document.activeElement;
             if (!activeElement) return;
 
-            // Jika dropdown sedang terbuka, biarkan event ditangani oleh searchable-select
-            if (activeElement.classList.contains('sd-search') || document.querySelector('.sd-dropdown.open')) {
+            // Jika dropdown sedang terbuka, biarkan event ditangani oleh searchable-select / Alpine
+            if (activeElement.classList.contains('sd-search') || 
+                activeElement.closest('.dropdown-menu-searchable') || 
+                document.querySelector('.sd-dropdown.open')) {
                 return;
             }
 
             const navElement = getCurrentNavElement(activeElement);
             if (navElement) {
-                const handled = moveVerticalGrid(navElement, e.key === 'ArrowDown' ? 1 : -1);
-                if (handled) {
-                    e.preventDefault();
-                }
+                // Di dalam form .enter-nav, selalu cegah scroll halaman bawaan browser dan spinner
+                e.preventDefault();
+                moveVerticalGrid(navElement, e.key === 'ArrowDown' ? 1 : -1);
             }
         }
     });

@@ -214,6 +214,7 @@ runTest("1. DB Trigger trg_guard_pelanggan_sales_driver: Menolak Driver sebagai 
 
     $dummyCode = 'TEST-DRV-' . bin2hex(random_bytes(3)) . '-' . time();
     $caught = false;
+    $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare("
             INSERT INTO public.pelanggan (
@@ -234,6 +235,9 @@ runTest("1. DB Trigger trg_guard_pelanggan_sales_driver: Menolak Driver sebagai 
             return "Trigger melempar error tidak terduga: " . $e->getMessage();
         }
     } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $pdo->prepare("DELETE FROM public.pelanggan WHERE kode_pelanggan = :kode")->execute(['kode' => $dummyCode]);
     }
 
@@ -251,6 +255,7 @@ runTest("2. DB Trigger trg_guard_pelanggan_sales_driver: Mengizinkan Sales sebag
 
     $dummyCode = 'TEST-SLS-' . bin2hex(random_bytes(3)) . '-' . time();
     $insertedId = null;
+    $pdo->beginTransaction();
     try {
         $stmt = $pdo->prepare("
             INSERT INTO public.pelanggan (
@@ -266,6 +271,9 @@ runTest("2. DB Trigger trg_guard_pelanggan_sales_driver: Mengizinkan Sales sebag
         ]);
         $insertedId = $stmt->fetchColumn();
     } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         if ($insertedId) {
             $pdo->prepare("DELETE FROM public.pelanggan WHERE id = :id")->execute(['id' => $insertedId]);
         }

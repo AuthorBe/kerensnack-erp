@@ -98,6 +98,7 @@ runTest("3.1 - views/products/index.php contains Merek sub-tab button, table, an
 
 // 4. End-to-End Functional CRUD & Integrity Checks
 runTest("4.1 - CRUD: Create, Read, Update Brand Lifecycle", function() use ($pdo) {
+    $pdo->beginTransaction();
     $testCode = 'MRK-AUTOTEST-' . uniqid();
     try {
         Database::execute("
@@ -115,11 +116,14 @@ runTest("4.1 - CRUD: Create, Read, Update Brand Lifecycle", function() use ($pdo
         $updated = Database::fetchOne("SELECT * FROM public.merek WHERE id = :id", ['id' => $inserted['id']]);
         return ($updated && $updated['nama_merek'] === 'Brand Uji Otomatis Updated');
     } finally {
-        Database::execute("DELETE FROM public.merek WHERE kode_merek = :k", ['k' => $testCode]);
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
     }
 });
 
 runTest("4.2 - Relationship Integrity: Grup Produk stores and resolves merek_id", function() use ($pdo) {
+    $pdo->beginTransaction();
     $defaultBrand = Database::fetchOne("SELECT id FROM public.merek WHERE kode_merek = 'KRN'");
     if (!$defaultBrand) return false;
 
@@ -139,11 +143,14 @@ runTest("4.2 - Relationship Integrity: Grup Produk stores and resolves merek_id"
 
         return ($g && $g['merek_id'] === $defaultBrand['id'] && $g['nama_merek'] === 'KEREN SNACK');
     } finally {
-        Database::execute("DELETE FROM public.grup_produk WHERE kode_grup = :k", ['k' => $testGroupCode]);
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
     }
 });
 
 runTest("4.3 - Delete Prevention: Brand with linked group cannot be deleted (FK RESTRICT)", function() use ($pdo) {
+    $pdo->beginTransaction();
     $brandCode = 'MRK-TEST-DEL-' . uniqid();
     $groupCode = 'GRP-TEST-DEL-' . uniqid();
 
@@ -173,8 +180,9 @@ runTest("4.3 - Delete Prevention: Brand with linked group cannot be deleted (FK 
 
         return $caughtException;
     } finally {
-        Database::execute("DELETE FROM public.grup_produk WHERE kode_grup = :k", ['k' => $groupCode]);
-        Database::execute("DELETE FROM public.merek WHERE kode_merek = :k", ['k' => $brandCode]);
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
     }
 });
 

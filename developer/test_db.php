@@ -213,18 +213,24 @@ $error = null;
 $pgVersion = 'PostgreSQL';
 $serverTime = null;
 
-// Telemetry Data
+// Telemetry Data dinamis dari Database::getConnectionInfo()
+$dbInfo = Database::getConnectionInfo();
+$isLocal = (bool)($dbInfo['is_local'] ?? false);
+$dbTargetLabel = $isLocal ? 'LOCAL SANDBOX' : 'LIVE SUPABASE';
+
 $telemetry = [
-    'php_version'   => PHP_VERSION,
-    'pdo_driver'    => 'pdo_pgsql',
-    'memory_usage'  => round(memory_get_usage(true) / 1024 / 1024, 2) . ' MB',
-    'memory_peak'   => round(memory_get_peak_usage(true) / 1024 / 1024, 2) . ' MB',
-    'db_host'       => (string)(getenv('DB_HOST') ?: 'supabase.pooler'),
-    'db_port'       => (string)(getenv('DB_PORT') ?: '5432'),
-    'db_name'       => (string)(getenv('DB_NAME') ?: 'postgres'),
-    'db_sslmode'    => (string)(getenv('DB_SSLMODE') ?: 'require'),
-    'app_env'       => (string)(getenv('APP_ENV') ?: 'local'),
-    'client_ip'     => $isCli ? '127.0.0.1 (CLI)' : ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'),
+    'php_version'       => PHP_VERSION,
+    'pdo_driver'        => 'pdo_pgsql',
+    'memory_usage'      => round(memory_get_usage(true) / 1024 / 1024, 2) . ' MB',
+    'memory_peak'       => round(memory_get_peak_usage(true) / 1024 / 1024, 2) . ' MB',
+    'db_host'           => (string)($dbInfo['host'] ?? '127.0.0.1'),
+    'db_port'           => (string)($dbInfo['port'] ?? '5432'),
+    'db_name'           => (string)($dbInfo['database'] ?? 'postgres'),
+    'db_sslmode'        => (string)($dbInfo['sslmode'] ?? 'prefer'),
+    'is_local'          => $isLocal,
+    'db_target_label'   => $dbTargetLabel,
+    'app_env'           => (string)(getenv('APP_ENV') ?: ($isLocal ? 'local_sandbox' : 'production_live')),
+    'client_ip'         => $isCli ? '127.0.0.1 (CLI)' : ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'),
 ];
 
 try {
@@ -237,15 +243,15 @@ try {
     if (preg_match('/PostgreSQL\s+([\d\.]+)/i', $rawVer, $m)) {
         $pgVersion = 'PostgreSQL ' . $m[1];
     } else {
-        $pgVersion = 'PostgreSQL (Supabase)';
+        $pgVersion = $isLocal ? 'PostgreSQL (Local Sandbox)' : 'PostgreSQL (Supabase Live)';
     }
 
     $serverTime = (string)$pdo->query("SELECT to_char(NOW() AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD HH24:MI:SS') || ' WIB'")->fetchColumn();
 
     $checks['connection'] = [
-        'name'   => 'Database Handshake & SSL Pooler',
+        'name'   => 'Database Handshake & ' . ($isLocal ? 'Local Socket' : 'SSL Pooler'),
         'status' => 'PASS',
-        'detail' => "Connected to {$telemetry['db_host']}:{$telemetry['db_port']} (SSL: {$telemetry['db_sslmode']}) in {$connTime} ms"
+        'detail' => "Connected to {$dbTargetLabel} ({$telemetry['db_host']}:{$telemetry['db_port']}, DB: {$telemetry['db_name']}, SSL: {$telemetry['db_sslmode']}) in {$connTime} ms"
     ];
 
     // 2. Public Schema Table & View Count
@@ -394,7 +400,8 @@ if ($isCli) {
     echo "  {$cBold}{$cCyan}KEREN SNACK ERP // DEV SYSTEM HEALTHCHECK{$cReset}\n";
     echo str_repeat('=', 68) . "\n";
 
-    echo "  • {$cBold}Database{$cReset}  : {$pgVersion} (Supabase Cloud Pooler)\n";
+    $dbModeText = $isLocal ? 'Local Laragon Sandbox' : 'Supabase Cloud Pooler';
+    echo "  • {$cBold}Database{$cReset}  : {$pgVersion} ({$dbModeText} - {$telemetry['db_name']})\n";
     echo "  • {$cBold}Latency{$cReset}   : {$executionTime} ms (Roundtrip) | SSL: {$telemetry['db_sslmode']}\n";
     echo "  • {$cBold}Runtime{$cReset}   : PHP " . PHP_VERSION . " ({$telemetry['pdo_driver']}) | Peak Mem: {$telemetry['memory_peak']}\n";
     if ($serverTime) {
@@ -914,6 +921,12 @@ if ($isCli) {
                     <span id="btn-rerun-text">Re-run</span>
                 </a>
                 <a href="<?= class_exists(\App\Core\Router::class) ? \App\Core\Router::url('/developer/test-db?format=json') : 'test-db?format=json' ?>" class="btn" target="_blank">{ } JSON</a>
+                <a href="<?= class_exists(\App\Core\Router::class) ? \App\Core\Router::url('/developer/database') : '/developer/database' ?>" class="btn">
+                    <span style="color:<?= $isLocal ? 'var(--accent-green)' : 'var(--accent-red)' ?>;">&#x25cf;</span> Switcher &amp; Sync
+                </a>
+                <a href="<?= class_exists(\App\Core\Router::class) ? \App\Core\Router::url('/developer/tests') : '/developer/tests' ?>" class="btn">
+                    <span style="color:var(--accent-purple);">&#x25cf;</span> Test Suites
+                </a>
                 <a href="<?= class_exists(\App\Core\Router::class) ? \App\Core\Router::url('/developer') : '/developer' ?>" class="btn">&rarr; Portal Developer</a>
             </div>
         </div>
@@ -929,11 +942,14 @@ if ($isCli) {
                             <?= $isAllPass ? 'SYSTEM OPERATIONAL // 200 OK' : 'SYSTEM DEGRADED // EXCEPTION' ?>
                         </div>
                         <div id="status-sub" class="status-sub">
-                            Engine: <?= htmlspecialchars($pgVersion) ?> &bull; SSL Pooler Handshake &bull; Latency: <?= $executionTime ?> ms
+                            Engine: <?= htmlspecialchars($pgVersion) ?> &bull; Target: <strong style="color:<?= $isLocal ? 'var(--accent-green)' : 'var(--accent-red)' ?>;"><?= $isLocal ? 'LOCAL SANDBOX' : 'LIVE SUPABASE' ?></strong> (<code><?= htmlspecialchars($telemetry['db_name']) ?></code> @ <?= htmlspecialchars($telemetry['db_host']) ?>) &bull; Latency: <?= $executionTime ?> ms
                         </div>
                     </div>
                 </div>
-                <div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="status-tag" style="background:<?= $isLocal ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' ?>;color:<?= $isLocal ? 'var(--accent-green)' : 'var(--accent-red)' ?>;border-color:<?= $isLocal ? 'var(--accent-green)' : 'var(--accent-red)' ?>;">
+                        <?= $isLocal ? '🟢 LOCAL DB' : '🔴 LIVE SUPABASE' ?>
+                    </span>
                     <span id="status-tag" class="status-tag">
                         <?= $isAllPass ? 'HEALTHY' : 'FAILED' ?>
                     </span>
@@ -948,7 +964,7 @@ if ($isCli) {
                         <span style="color:var(--accent-green);">&#x25cf;</span>
                     </div>
                     <div class="metric-value"><?= $executionTime ?><span style="font-size:11px;font-weight:400;color:var(--text-muted);margin-left:4px;">ms</span></div>
-                    <div class="metric-meta">SSL Pooler Gateway</div>
+                    <div class="metric-meta"><?= $isLocal ? 'Local Sandbox Socket' : 'SSL Pooler Gateway' ?></div>
                 </div>
 
                 <div class="metric-card">
@@ -1008,6 +1024,10 @@ if ($isCli) {
                 </div>
                 <table class="env-table">
                     <tbody>
+                        <tr>
+                            <td class="env-key">Active Target Mode</td>
+                            <td class="env-val"><strong style="color:<?= $isLocal ? 'var(--accent-green)' : 'var(--accent-red)' ?>;"><?= $isLocal ? 'LOCAL SANDBOX (Sandbox Aman Laragon)' : 'LIVE SUPABASE (Cloud Production)' ?></strong></td>
+                        </tr>
                         <tr>
                             <td class="env-key">PostgreSQL Engine</td>
                             <td class="env-val"><code><?= htmlspecialchars($pgVersion) ?></code></td>

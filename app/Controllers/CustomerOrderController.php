@@ -222,7 +222,7 @@ class CustomerOrderController extends Controller
             // Master Filter
             $customers = Database::fetchAll("SELECT id, kode_pelanggan, nama_toko FROM public.pelanggan WHERE status_aktif = TRUE ORDER BY nama_toko ASC");
             $drivers = Database::fetchAll("SELECT id, nama_karyawan, nomor_polisi_kendaraan FROM public.v_karyawan_info WHERE posisi IN ('sales', 'driver') AND status_aktif = TRUE ORDER BY nama_karyawan ASC");
-            $cashAccounts = Database::fetchAll("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY is_default_pos DESC, nama_akun ASC");
+            $cashAccounts = Database::fetchAll("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND is_escrow = FALSE ORDER BY is_default_pos DESC, nama_akun ASC");
 
             $this->view('customer_orders.index', [
                 'pageTitle' => 'Pesanan Pelanggan',
@@ -369,7 +369,7 @@ class CustomerOrderController extends Controller
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, saldo_saat_ini, is_default_pos 
                 FROM public.akun_kas 
-                WHERE status_aktif = TRUE 
+                WHERE status_aktif = TRUE AND is_escrow = FALSE
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
@@ -495,7 +495,7 @@ class CustomerOrderController extends Controller
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, saldo_saat_ini, is_default_pos
                 FROM public.akun_kas
-                WHERE status_aktif = TRUE
+                WHERE status_aktif = TRUE AND is_escrow = FALSE
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
@@ -900,9 +900,13 @@ class CustomerOrderController extends Controller
 
             // 5. Catat Penerimaan Kas Masuk (Uang Muka / Pelunasan Langsung) ke Buku Kas Arus Kas
             if ($totalDibayar > 0 && !empty($akunKasId)) {
-                $stmtKas = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtKas = $pdo->prepare("SELECT saldo_saat_ini, nama_akun, is_escrow FROM public.akun_kas WHERE id = :id FOR UPDATE");
                 $stmtKas->execute(['id' => $akunKasId]);
                 $akunKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
+
+                if ($akunKas && !empty($akunKas['is_escrow'])) {
+                    throw new \Exception("Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk pembayaran pesanan.");
+                }
 
                 if ($akunKas) {
                     $saldoLama = (float)($akunKas['saldo_saat_ini'] ?? 0);
@@ -1050,7 +1054,7 @@ class CustomerOrderController extends Controller
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, saldo_saat_ini, is_default_pos
                 FROM public.akun_kas
-                WHERE status_aktif = TRUE
+                WHERE status_aktif = TRUE AND is_escrow = FALSE
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
@@ -1322,10 +1326,16 @@ class CustomerOrderController extends Controller
                 if ($totalNetto < $totalDibayarLama) {
                     $selisihRefund = $totalDibayarLama - $totalNetto;
                     if (!empty($refundAkunKasId)) {
-                        $akunKasRefund = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE", ['id' => $refundAkunKasId]);
+                        $akunKasRefund = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini, is_escrow FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE", ['id' => $refundAkunKasId]);
                         if (!$akunKasRefund) {
                             $pdo->rollBack();
                             $this->flashError("Akun kas pengembalian dana (refund) tidak valid atau nonaktif.");
+                            $this->redirect('/customer-orders/edit?id=' . urlencode($id));
+                            return;
+                        }
+                        if (!empty($akunKasRefund['is_escrow'])) {
+                            $pdo->rollBack();
+                            $this->flashError("Akun kas pengembalian dana tidak boleh menggunakan akun tabungan escrow.");
                             $this->redirect('/customer-orders/edit?id=' . urlencode($id));
                             return;
                         }
@@ -1709,7 +1719,7 @@ class CustomerOrderController extends Controller
 
             // 3. Validasi & Lock Akun Kas Tujuan (Pencegahan Race Condition & Akun Nonaktif)
             $akunKas = Database::fetchOne("
-                SELECT id, nama_akun, saldo_saat_ini 
+                SELECT id, nama_akun, saldo_saat_ini, is_escrow 
                 FROM public.akun_kas 
                 WHERE id = :id AND status_aktif = TRUE 
                 FOR UPDATE
@@ -1717,6 +1727,9 @@ class CustomerOrderController extends Controller
 
             if (!$akunKas) {
                 throw new \Exception("Akun kas / bank penerima tidak ditemukan atau dalam status nonaktif.");
+            }
+            if (!empty($akunKas['is_escrow'])) {
+                throw new \Exception("Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk pelunasan pesanan.");
             }
 
             $saldoKasAwal = (float)$akunKas['saldo_saat_ini'];

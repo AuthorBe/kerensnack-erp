@@ -451,7 +451,7 @@ class ConsignmentController extends Controller
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, tipe_akun 
                 FROM public.akun_kas 
-                WHERE status_aktif = TRUE 
+                WHERE status_aktif = TRUE AND is_escrow = FALSE
                 ORDER BY (tipe_akun = 'kas') DESC, nama_akun ASC
             ");
 
@@ -1176,6 +1176,7 @@ class ConsignmentController extends Controller
                 SELECT nama_akun, nomor_rekening, atas_nama
                 FROM public.akun_kas
                 WHERE status_aktif = TRUE 
+                  AND is_escrow = FALSE
                   AND tipe_akun = 'bank'
                   AND nomor_rekening IS NOT NULL 
                   AND nomor_rekening != '' 
@@ -1376,6 +1377,7 @@ class ConsignmentController extends Controller
                 SELECT nama_akun, nomor_rekening, atas_nama
                 FROM public.akun_kas
                 WHERE status_aktif = TRUE 
+                  AND is_escrow = FALSE
                   AND tipe_akun = 'bank'
                   AND nomor_rekening IS NOT NULL 
                   AND nomor_rekening != '' 
@@ -1916,7 +1918,7 @@ class ConsignmentController extends Controller
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_default_pos 
                 FROM public.akun_kas 
-                WHERE status_aktif = TRUE 
+                WHERE status_aktif = TRUE AND is_escrow = FALSE
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
@@ -2069,15 +2071,29 @@ class ConsignmentController extends Controller
             return;
         }
 
-        if ($nominal > 0 && empty($accountId)) {
-            $msg = 'Rekening kas penerima pembayaran wajib dipilih untuk pembayaran tunai/transfer.';
-            if ($this->isAjax()) {
-                $this->json(['success' => false, 'message' => $msg], 400);
+        if ($nominal > 0) {
+            if (empty($accountId)) {
+                $msg = 'Rekening kas penerima pembayaran wajib dipilih untuk pembayaran tunai/transfer.';
+                if ($this->isAjax()) {
+                    $this->json(['success' => false, 'message' => $msg], 400);
+                    return;
+                }
+                $this->flashError($msg);
+                $this->redirect($redirectUrl);
                 return;
             }
-            $this->flashError($msg);
-            $this->redirect($redirectUrl);
-            return;
+
+            $chk = Database::fetchOne("SELECT is_escrow FROM public.akun_kas WHERE id = :id", ['id' => $accountId]);
+            if (!empty($chk['is_escrow'])) {
+                $msg = 'Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk pembayaran tagihan konsinyasi.';
+                if ($this->isAjax()) {
+                    $this->json(['success' => false, 'message' => $msg], 400);
+                    return;
+                }
+                $this->flashError($msg);
+                $this->redirect($redirectUrl);
+                return;
+            }
         }
 
         try {
@@ -2186,6 +2202,18 @@ class ConsignmentController extends Controller
 
         if (empty($orderIds) || empty($accountId) || $totalBayar <= 0) {
             $msg = 'Pilih minimal 1 faktur tagihan, rekening kas penerima, dan masukkan total nominal pembayaran transfer lebih dari Rp 0.';
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => $msg], 400);
+                return;
+            }
+            $this->flashError($msg);
+            $this->redirect($redirectUrl);
+            return;
+        }
+
+        $chk = Database::fetchOne("SELECT is_escrow FROM public.akun_kas WHERE id = :id", ['id' => $accountId]);
+        if (!empty($chk['is_escrow'])) {
+            $msg = 'Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk pembayaran tagihan konsinyasi.';
             if ($this->isAjax()) {
                 $this->json(['success' => false, 'message' => $msg], 400);
                 return;

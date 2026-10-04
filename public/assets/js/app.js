@@ -78,12 +78,28 @@
       const isBelow = activeRect.bottom > navRect.bottom;
 
       if (isAbove || isBelow) {
-        activeEl.scrollIntoView({ block: 'nearest', behavior: 'instant' });
+        // Scroll HANYA container nav (scrollIntoView bisa ikut menggeser ancestor overflow:hidden)
+        const pad = 8;
+        if (isAbove) {
+          this.navEl.scrollTop += (activeRect.top - navRect.top) - pad;
+        } else {
+          this.navEl.scrollTop += (activeRect.bottom - navRect.bottom) + pad;
+        }
         this.saveScroll();
       }
     },
 
     init() {
+      // Perangkat lawas / hemat daya: matikan transisi sidebar agar buka-tutup instan & tidak patah-patah
+      try {
+        const lowCpu = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2;
+        const lowMem = navigator.deviceMemory && navigator.deviceMemory <= 2;
+        const saveData = navigator.connection && navigator.connection.saveData;
+        if (lowCpu || lowMem || saveData) {
+          document.documentElement.classList.add('low-end-device');
+        }
+      } catch (e) {}
+
       this.sidebar = document.getElementById('app-sidebar');
       this.overlay = document.getElementById('sidebar-overlay');
       this.navEl = this.sidebar?.querySelector('.sidebar-nav');
@@ -112,19 +128,69 @@
         }
       }, { passive: true });
 
-      // 4. Save scroll and auto-collapse sidebar whenever a menu link is clicked
+      // 4. Save scroll and auto-collapse sidebar smoothly whenever a menu link is clicked
       if (this.sidebar) {
         this.sidebar.addEventListener('click', (e) => {
           const link = e.target.closest('a');
-          if (link && !link.classList.contains('pwa-install-trigger') && link.getAttribute('target') !== '_blank') {
-            this.saveScroll();
-            // Setiap selesai pilih menu di sidebar, sidebar otomatis diperkecil (collapsed)
-            try {
-              localStorage.setItem('ksnack_sidebar_collapsed', '1');
-              document.cookie = 'ksnack_sidebar_collapsed=1; path=/; max-age=31536000';
-              document.documentElement.classList.add('sidebar-is-collapsed');
-            } catch (err) {}
-            this.close();
+          if (!link) return;
+
+          // Abaikan link khusus (PWA install, target blank, download, atau anchor JS)
+          if (link.classList.contains('pwa-install-trigger') ||
+              link.getAttribute('target') === '_blank' ||
+              link.hasAttribute('download') ||
+              !link.href ||
+              link.getAttribute('href') === '#' ||
+              link.href.startsWith('javascript:')) {
+            return;
+          }
+
+          this.saveScroll();
+
+          // Jika klik dengan tombol modifikasi (Ctrl/Cmd/Shift/Alt) atau klik tengah: buka tab baru normal
+          const isModified = e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || (e.button && e.button !== 0);
+          if (isModified) {
+            return;
+          }
+
+          const targetUrl = link.href;
+          const isSamePage = targetUrl === window.location.href || link.classList.contains('is-active');
+
+          if (this.isDesktop()) {
+            if (!this.isCollapsed()) {
+              // Sidebar sedang melebar di Desktop:
+              // Mulai animasi penutupan mulus SEKARANG (saat menu dipilih).
+              e.preventDefault();
+              this.setCollapsed(true);
+
+              if (isSamePage) {
+                return; // Jika menu halaman yang sama, cukup ciutkan tanpa reload
+              }
+
+              // Arahkan ke URL tujuan setelah animasi meluncur selesai (~120ms)
+              setTimeout(() => {
+                window.location.href = targetUrl;
+              }, 120);
+            } else {
+              // Sidebar sudah dalam keadaan mengecil: navigasi instan tanpa delay
+              try {
+                localStorage.setItem('ksnack_sidebar_collapsed', '1');
+                document.cookie = 'ksnack_sidebar_collapsed=1; path=/; max-age=31536000; SameSite=Lax';
+              } catch (err) {}
+            }
+          } else {
+            // Mode Mobile (<1024px):
+            if (document.body.classList.contains('sidebar-open')) {
+              e.preventDefault();
+              this.close();
+
+              if (isSamePage) {
+                return;
+              }
+
+              setTimeout(() => {
+                window.location.href = targetUrl;
+              }, 140);
+            }
           }
         });
       }
@@ -178,6 +244,90 @@
       document.documentElement.classList.remove('sidebar-open');
     }
   };
+
+  /* ---- Desktop collapse/expand (sinkron, tanpa Alpine) ----
+     Single source of truth = class `sidebar-is-collapsed` di <html>.
+     Dipanggil langsung oleh klik tombol & shortcut Ctrl/Cmd+B → respons instan,
+     aman di-spam (tidak ada state async yang tertinggal). */
+  SidebarCtrl.isDesktop = function () {
+    return window.innerWidth >= 1024;
+  };
+
+  SidebarCtrl.isCollapsed = function () {
+    return document.documentElement.classList.contains('sidebar-is-collapsed');
+  };
+
+  SidebarCtrl.setCollapsed = function (collapsed) {
+    const root = document.documentElement;
+    root.classList.toggle('sidebar-is-collapsed', collapsed);
+
+    const sb = this.sidebar || document.getElementById('app-sidebar');
+    if (sb) {
+      sb.classList.toggle('sidebar-collapsed', collapsed);
+      const btn = sb.querySelector('.sidebar-toggle-btn');
+      if (btn) {
+        const label = collapsed ? 'Perlebar Sidebar (Ctrl+B)' : 'Perkecil Sidebar (Ctrl+B)';
+        btn.setAttribute('data-tooltip', label);
+        btn.setAttribute('aria-label', label);
+        btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      }
+    }
+
+    // Sembunyikan floating tooltip agar tidak "nyangkut" saat lebar berubah
+    const tip = document.getElementById('sidebar-floating-tooltip');
+    if (tip) { tip.classList.remove('is-visible'); tip.textContent = ''; }
+
+    // Simpan preferensi (ditulis sinkron; murah)
+    const val = collapsed ? '1' : '0';
+    try { localStorage.setItem('ksnack_sidebar_collapsed', val); } catch (e) {}
+    try { document.cookie = 'ksnack_sidebar_collapsed=' + val + '; path=/; max-age=31536000; SameSite=Lax'; } catch (e) {}
+
+    // Sinkronkan state Alpine (jika sudah siap) tanpa menjadi sumber kebenaran
+    try {
+      const data = window.Alpine && document.body ? window.Alpine.$data(document.body) : null;
+      if (data) data.sidebarCollapsed = collapsed;
+    } catch (e) {}
+  };
+
+
+  SidebarCtrl.toggleCollapse = function () {
+    this.setCollapsed(!this.isCollapsed());
+  };
+
+  // Mobile (<1024px): shortcut membuka/menutup drawer
+  SidebarCtrl.toggleDrawer = function () {
+    let data = null;
+    try { data = window.Alpine ? window.Alpine.$data(document.body) : null; } catch (e) {}
+    const isOpen = document.body.classList.contains('sidebar-open');
+    if (data && typeof data.openNav === 'function') {
+      isOpen ? data.closeNav() : data.openNav();
+    } else {
+      isOpen ? this.close() : this.open();
+    }
+  };
+
+  SidebarCtrl.toggle = function () {
+    this.isDesktop() ? this.toggleCollapse() : this.toggleDrawer();
+  };
+
+  // Delegasi klik di level document: aktif segera saat script dimuat (tidak menunggu Alpine)
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('.sidebar-toggle-btn');
+    if (!btn) return;
+    e.preventDefault();
+    SidebarCtrl.toggleCollapse();
+  });
+
+  // Shortcut Ctrl+B (Cmd+B di macOS)
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+    if ((e.key || '').toLowerCase() !== 'b' && e.code !== 'KeyB') return;
+    if (e.repeat) { e.preventDefault(); return; } // tahan tombol ≠ spam toggle
+    const t = e.target;
+    if (t && t.isContentEditable) return; // jangan bentrok dengan Bold di editor teks
+    e.preventDefault();
+    SidebarCtrl.toggle();
+  });
 
   window.SidebarCtrl = SidebarCtrl;
   window.openSidebar = () => SidebarCtrl.open();
@@ -456,10 +606,11 @@
         title = 'Informasi Sistem',
         message = '',
         submessage = '',
-        buttonText = 'Mengerti',
+        buttonText = 'Tutup',
         type = 'info',
         icon = null,
-        buttonIcon = null
+        buttonIcon = null,
+        showCloseBtn = false
       } = opts;
 
       const existing = document.getElementById('app-confirm-overlay');
@@ -486,9 +637,10 @@
               <div class="confirm-icon-box confirm-icon-${type}">
                 <i data-lucide="${iconName}"></i>
               </div>
+              ${showCloseBtn ? `
               <button type="button" id="alert-btn-close" class="confirm-close-btn" aria-label="Tutup dialog" title="Tutup">
                 <i data-lucide="x"></i>
-              </button>
+              </button>` : ''}
             </div>
 
             <h3 id="alert-dialog-title" class="confirm-title">${title}</h3>
@@ -502,7 +654,7 @@
           </div>
 
           <div class="confirm-modal-footer">
-            <button type="button" id="alert-btn-ok" class="confirm-btn-action btn-action-${type === 'danger' ? 'danger' : 'primary'}">
+            <button type="button" id="alert-btn-ok" class="confirm-btn-action btn-action-${type === 'danger' ? 'danger' : (type === 'warning' ? 'warning' : (type === 'success' ? 'success' : 'primary'))}">
               ${buttonIcon ? `<i data-lucide="${buttonIcon}"></i>` : ''}
               <span>${buttonText}</span>
             </button>
@@ -2084,9 +2236,6 @@
       // Pasang event listener aktivitas pengguna (Throttled & Passive)
       this._attachActivityListeners();
 
-      // Bangun modal peringatan di DOM
-      this._createWarningModal();
-
       // Evaluasi timer berkala tiap detik
       this._intervalId = setInterval(() => this._tick(), 1000);
 
@@ -2137,32 +2286,24 @@
       const logoutUrl = window.KSNACK_SESSION?.logoutUrl || ((window.APP_BASE_PATH || '') + '/logout?reason=timeout');
 
       const modalHtml = `
-        <div id="ksnack-session-warning-modal" class="session-warning-backdrop modal-backdrop confirm-overlay" data-popup-backdrop="true" role="dialog" aria-modal="true" style="position:fixed;inset:0;background:rgba(9,13,22,0.85);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:999999;display:none;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity 0.25s ease-out;">
-          <style>
-            .session-warning-box { background: #ffffff; color: #0f172a; border: 1px solid rgba(226,232,240,0.8); }
-            .dark .session-warning-box { background: #0f172a !important; color: #f8fafc !important; border: 1px solid rgba(255,255,255,0.12) !important; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7) !important; }
-            .dark .session-warning-box h3 { color: #f8fafc !important; }
-            .dark .session-warning-box p { color: #94a3b8 !important; }
-            .dark .session-warning-box #ksnack-session-logout-btn { color: #94a3b8 !important; }
-            .dark .session-warning-box #ksnack-session-logout-btn:hover { color: #f8fafc !important; }
-          </style>
-          <div class="session-warning-box modal-box confirm-modal" style="border-radius:24px;max-width:420px;width:100%;padding:32px 28px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);text-align:center;transform:scale(0.95);transition:transform 0.25s ease-out;position:relative;">
-            <div style="width:60px;height:60px;margin:0 auto 16px;border-radius:50%;background:#fee2e2;color:#e11d48;display:flex;align-items:center;justify-content:center;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div id="ksnack-session-warning-modal" class="session-warning-backdrop confirm-overlay" data-popup-backdrop="true" role="dialog" aria-modal="true" aria-labelledby="ksnack-session-warning-title" style="display:none;">
+          <div class="session-warning-box" role="document">
+            <div class="session-warning-icon-wrap">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
-            <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;">Sesi Tidak Aktif</h3>
-            <p style="font-size:13.5px;color:#64748b;line-height:1.5;margin-bottom:20px;">
+            <h3 id="ksnack-session-warning-title" class="session-warning-title">Sesi Tidak Aktif</h3>
+            <p class="session-warning-desc">
               Tidak ada aktivitas selama beberapa waktu. Demi keamanan, sesi login Anda akan otomatis berakhir dalam:
             </p>
-            <div style="font-family:inherit;font-variant-numeric:tabular-nums;font-size:36px;font-weight:800;color:#e11d48;margin-bottom:24px;letter-spacing:1px;" id="ksnack-session-countdown">
+            <div class="session-warning-timer-pill" id="ksnack-session-countdown">
               05:00
             </div>
-            <div style="display:flex;flex-direction:column;gap:10px;">
-              <button id="ksnack-session-extend-btn" type="button" style="width:100%;padding:12px 20px;border-radius:12px;background:#e11d48;color:#ffffff;font-weight:700;font-size:14px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(225,29,72,0.35);transition:all 0.2s;">
+            <div class="session-warning-actions">
+              <button id="ksnack-session-extend-btn" class="session-warning-btn-extend" type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-                Lanjutkan Sesi
+                <span>Lanjutkan Sesi</span>
               </button>
-              <button id="ksnack-session-logout-btn" type="button" data-instant-logout="true" style="width:100%;padding:10px 20px;border-radius:12px;background:transparent;color:#64748b;font-weight:600;font-size:13px;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all 0.15s;">
+              <button id="ksnack-session-logout-btn" class="session-warning-btn-logout" type="button" data-instant-logout="true">
                 Keluar Sekarang
               </button>
             </div>
@@ -2231,7 +2372,8 @@
         this._countdownEl.textContent = formattedTime;
       }
 
-      this._modalEl.style.display = 'flex';
+      this._modalEl.classList.add('is-active');
+      this._modalEl.style.setProperty('display', 'flex', 'important');
       if (window.PopupManager) window.PopupManager.freeze(this._modalEl);
       document.body.classList.add('modal-open');
 
@@ -2239,6 +2381,8 @@
         this._modalEl.style.opacity = '1';
         const box = this._modalEl.querySelector('.session-warning-box');
         if (box) box.style.transform = 'scale(1)';
+        const extendBtn = this._modalEl.querySelector('#ksnack-session-extend-btn');
+        if (extendBtn) extendBtn.focus();
       });
     },
 
@@ -2254,7 +2398,8 @@
       if (box) box.style.transform = 'scale(0.95)';
       setTimeout(() => {
         if (!this._warningShown && this._modalEl) {
-          this._modalEl.style.display = 'none';
+          this._modalEl.classList.remove('is-active');
+          this._modalEl.style.setProperty('display', 'none', 'important');
         }
       }, 250);
     },
@@ -2375,15 +2520,20 @@
       if (el.hasAttribute('x-cloak') || el.hidden) return false;
 
       // Check inline style display: none
-      if (el.style.display === 'none') return false;
+      if (el.style.display === 'none' || el.style.getPropertyValue('display') === 'none') return false;
 
       // Check computed style
       try {
         const cs = window.getComputedStyle(el);
-        if (cs.display === 'none' || cs.visibility === 'hidden') {
+        if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0' || cs.pointerEvents === 'none') {
           return false;
         }
       } catch (e) {
+        return false;
+      }
+
+      // Explicit guard for session warning modal: only visible when active and triggered
+      if (el.id === 'ksnack-session-warning-modal' && (!el.classList.contains('is-active') || !window.SessionTimeoutEngine?._warningShown)) {
         return false;
       }
 
@@ -2466,7 +2616,7 @@
 
       candidates.forEach(el => {
         // Skip child dialog elements (e.g. .m3-dialog inside .modal-backdrop)
-        if (el.matches('[role="dialog"]') && el.closest('.modal-backdrop, .confirm-overlay, .tagihan-modal-backdrop, .receipt-backdrop, .m3-payment-backdrop')) {
+        if (el.matches('[role="dialog"]') && el.closest('.modal-backdrop, .confirm-overlay, .tagihan-modal-backdrop, .receipt-backdrop, .m3-payment-backdrop, .session-warning-backdrop')) {
           return;
         }
 
@@ -2512,12 +2662,12 @@
         if (!target) return;
 
         const backdrop = target.closest(
-          '.modal-backdrop, .tagihan-modal-backdrop, .tagihan-modal-overlay, .confirm-overlay, .receipt-backdrop, .m3-payment-backdrop, .popup-blur-backdrop, [data-popup-backdrop]'
+          '.modal-backdrop, .tagihan-modal-backdrop, .tagihan-modal-overlay, .confirm-overlay, .session-warning-backdrop, .receipt-backdrop, .m3-payment-backdrop, .popup-blur-backdrop, [data-popup-backdrop]'
         );
         if (!backdrop) return;
 
         const dialog = backdrop.querySelector(
-          '.modal-box, .detail-modal-shell, .tagihan-modal-shell, .tagihan-modal-guide-shell, .skema-modal-box, .receipt-container, .m3-dialog, .confirm-modal, .action-loader-card, [role="dialog"], [aria-modal="true"], [data-modal-container], .card, form'
+          '.modal-box, .detail-modal-shell, .tagihan-modal-shell, .tagihan-modal-guide-shell, .skema-modal-box, .receipt-container, .m3-dialog, .confirm-modal, .session-warning-box, .action-loader-card, [role="dialog"], [aria-modal="true"], [data-modal-container], .card, form'
         ) || Array.from(backdrop.children).find(el => !['STYLE', 'SCRIPT', 'TEMPLATE'].includes(el.tagName));
 
         // If target is inside the modal dialog, allow normal scroll
@@ -2540,13 +2690,13 @@
       // Seluruh pop up hanya dapat ditutup menggunakan tombol Batal atau Tutup eksplisit
       window.addEventListener('click', (e) => {
         const backdrop = e.target.closest(
-          '.modal-backdrop, .tagihan-modal-backdrop, .tagihan-modal-overlay, .confirm-overlay, .receipt-backdrop, .m3-payment-backdrop, .popup-blur-backdrop, [data-popup-backdrop]'
+          '.modal-backdrop, .tagihan-modal-backdrop, .tagihan-modal-overlay, .confirm-overlay, .session-warning-backdrop, .receipt-backdrop, .m3-payment-backdrop, .popup-blur-backdrop, [data-popup-backdrop]'
         );
         if (!backdrop) return;
 
         // Cari elemen kotak dialog utama di dalam backdrop
         const dialog = backdrop.querySelector(
-          '.modal-box, .detail-modal-shell, .tagihan-modal-shell, .tagihan-modal-guide-shell, .skema-modal-box, .receipt-container, .m3-dialog, .confirm-modal, .action-loader-card, [role="dialog"], [aria-modal="true"], [data-modal-container], .card, form'
+          '.modal-box, .detail-modal-shell, .tagihan-modal-shell, .tagihan-modal-guide-shell, .skema-modal-box, .receipt-container, .m3-dialog, .confirm-modal, .session-warning-box, .action-loader-card, [role="dialog"], [aria-modal="true"], [data-modal-container], .card, form'
         ) || Array.from(backdrop.children).find(el => !['STYLE', 'SCRIPT', 'TEMPLATE'].includes(el.tagName));
 
         // Jika klik berada di dalam kotak dialog (tombol Tutup/Batal, input, link, tab), IZINKAN NORMAL

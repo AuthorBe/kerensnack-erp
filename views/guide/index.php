@@ -285,7 +285,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         @media (max-width: 639px) {
             .guide-search-input {
                 height: 32px;
-                padding: 0 46px 0 24px;
+                padding: 0 54px 0 26px;
                 font-size: 16px; /* Mencegah auto-zoom default iOS Safari saat focus input */
                 border-radius: 8px;
             }
@@ -306,7 +306,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         }
         @media (max-width: 639px) {
             .guide-search-icon {
-                left: 6px;
+                left: 8px;
                 width: 12px;
                 height: 12px;
             }
@@ -970,6 +970,184 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             padding-left: 44px;
         }
 
+        /* 5.1 CODE BLOCKS & TYPOGRAPHY */
+        code {
+            font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.88em;
+            background: var(--guide-accent-soft);
+            color: var(--guide-accent);
+            padding: 2px 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(136, 19, 55, 0.15);
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        html.dark code {
+            border-color: rgba(251, 113, 133, 0.25);
+            background: rgba(251, 113, 133, 0.12);
+        }
+
+        /* 5.2 CUSTOM SCROLLBAR */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--guide-border);
+            border-radius: 999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: var(--guide-text-muted);
+        }
+        .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: var(--guide-border) transparent;
+        }
+
+        /* 5.3 OFF-CANVAS DRAWER ANIMATIONS */
+        .transition-opacity { transition: opacity 0.2s ease; }
+        .transition { transition: all 0.2s ease; }
+        .ease-out { transition-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+        .ease-in { transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+        .duration-200 { transition-duration: 200ms; }
+        .opacity-0 { opacity: 0; }
+        .opacity-100 { opacity: 1; }
+        .transform { transform: translateZ(0); }
+        .-translate-x-full { transform: translateX(-100%); }
+        .translate-x-0 { transform: translateX(0); }
+        .translate-y-4 { transform: translateY(16px); }
+        .translate-y-0 { transform: translateY(0); }
+
+        /* 5.4 SUB-CHAPTER HEADINGS */
+        .sub-chapter-block {
+            margin-bottom: 20px;
+        }
+        .sub-chapter-title {
+            font-size: 14.5px;
+            font-weight: 800;
+            color: var(--guide-text-primary);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 8px;
+            line-height: 1.35;
+        }
+        .sub-chapter-title svg {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+            margin-top: 2px;
+            color: var(--guide-accent);
+        }
+
+        /* 5.5 FEATURE CARDS GRID (Universal Search & High-Density Cards) */
+        .feature-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+            margin: 16px 0;
+        }
+        @media (max-width: 639px) {
+            .feature-cards-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+        .feature-card {
+            background: var(--guide-card-bg);
+            border: 1px solid var(--guide-border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+        }
+        .feature-card:hover {
+            border-color: var(--guide-accent);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+            transform: translateY(-1px);
+        }
+        html.dark .feature-card:hover {
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+        }
+        .feature-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 13px;
+            color: var(--guide-text-primary);
+        }
+        .feature-card-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .feature-card-icon svg {
+            width: 16px;
+            height: 16px;
+        }
+        .feature-card-body {
+            font-size: 12px;
+            color: var(--guide-text-secondary);
+            line-height: 1.55;
+        }
+
+        /* 5.6 FLOATING BACK TO TOP BUTTON */
+        .guide-btn-back-to-top {
+            position: fixed;
+            right: max(16px, env(safe-area-inset-right, 0px));
+            bottom: max(20px, env(safe-area-inset-bottom, 0px));
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            background: var(--guide-card-bg);
+            border: 1px solid var(--guide-border);
+            color: var(--guide-accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            z-index: 90;
+            transition: all 0.2s ease;
+        }
+        .guide-btn-back-to-top:hover {
+            background: var(--guide-accent);
+            color: #ffffff;
+            border-color: var(--guide-accent);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(136, 19, 55, 0.25);
+        }
+        html.dark .guide-btn-back-to-top {
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+        }
+        @media (max-width: 639px) {
+            .guide-btn-back-to-top {
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                right: max(12px, env(safe-area-inset-right, 0px));
+                bottom: max(16px, env(safe-area-inset-bottom, 0px));
+            }
+            .guide-btn-back-to-top svg {
+                width: 16px;
+                height: 16px;
+            }
+            .sub-chapter-title {
+                font-size: 13.5px;
+            }
+        }
+
         /* 6. MOBILE RESPONSIVENESS OVERRIDES */
         @media (max-width: 639px) {
             .guide-content-wrapper {
@@ -1139,7 +1317,14 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         return false;
                     }
                 })(),
+                showBackToTop: false,
+                scrollToTop() {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
                 init() {
+                    window.addEventListener('scroll', () => {
+                        this.showBackToTop = (window.pageYOffset || document.documentElement.scrollTop || 0) > 400;
+                    }, { passive: true });
                     this.$watch('searchQuery', (val) => {
                         if (window.guideSearchEngine) {
                             const res = window.guideSearchEngine.highlight(val);
@@ -1254,7 +1439,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             <button type="button" 
                     class="guide-btn-icon" 
                     @click="sidebarOpen = !sidebarOpen" 
-                    title="Daftar Isi Panduan (11 Bab)">
+                    title="Daftar Isi Panduan (13 Bab)">
                 <i data-lucide="menu"></i>
             </button>
 
@@ -1374,7 +1559,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </button>
             </div>
             <nav class="guide-drawer-nav">
-                <div class="toc-header">11 Bab Standar Operasional</div>
+                <div class="toc-header">13 Bab Standar Operasional</div>
                 <ul class="toc-nav-list">
                     <li><a href="#bab-1-peran" class="toc-link" @click="sidebarOpen = false"><i data-lucide="shield"></i> <span>1. Peran &amp; Hak Akses</span></a></li>
                     <li><a href="#bab-2-master-harga" class="toc-link" @click="sidebarOpen = false"><i data-lucide="tag"></i> <span>2. Master Produk &amp; Harga</span></a></li>
@@ -1382,11 +1567,13 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                     <li><a href="#bab-4-b2b-hybrid" class="toc-link" @click="sidebarOpen = false"><i data-lucide="file-text"></i> <span>4. B2B &amp; Dokumen Hybrid</span></a></li>
                     <li><a href="#bab-5-konsinyasi-rolling" class="toc-link" @click="sidebarOpen = false"><i data-lucide="refresh-cw"></i> <span>5. Konsinyasi: Rolling Nota</span></a></li>
                     <li><a href="#bab-6-konsinyasi-tagihan" class="toc-link" @click="sidebarOpen = false"><i data-lucide="receipt"></i> <span>6. Konsinyasi: Kolektif Tagihan</span></a></li>
-                    <li><a href="#bab-7-pembelian-vendor" class="toc-link" @click="sidebarOpen = false"><i data-lucide="shopping-bag"></i> <span>7. Pembelian &amp; Vendor</span></a></li>
+                    <li><a href="#bab-7-pembelian-vendor" class="toc-link" @click="sidebarOpen = false"><i data-lucide="shopping-bag"></i> <span>7. Pengadaan &amp; Multi-Vendor</span></a></li>
                     <li><a href="#bab-8-logistik-pengiriman" class="toc-link" @click="sidebarOpen = false"><i data-lucide="truck"></i> <span>8. Logistik &amp; Pengiriman</span></a></li>
-                    <li><a href="#bab-9-keuangan-kas" class="toc-link" @click="sidebarOpen = false"><i data-lucide="wallet"></i> <span>9. Buku Kas &amp; Setoran Sore</span></a></li>
-                    <li><a href="#bab-10-faq-masalah" class="toc-link" @click="sidebarOpen = false"><i data-lucide="help-circle"></i> <span>10. Solusi Masalah Lapangan</span></a></li>
-                    <li><a href="#bab-11-impor-master" class="toc-link" @click="sidebarOpen = false"><i data-lucide="database"></i> <span>11. Setup &amp; Sinkronisasi Master</span></a></li>
+                    <li><a href="#bab-9-keuangan-kas" class="toc-link" @click="sidebarOpen = false"><i data-lucide="wallet"></i> <span>9. Kas Tertutup &amp; Rekening Escrow</span></a></li>
+                    <li><a href="#bab-10-hr-penggajian" class="toc-link" @click="sidebarOpen = false"><i data-lucide="users"></i> <span>10. SDM, Kasbon &amp; Penggajian</span></a></li>
+                    <li><a href="#bab-11-faq-masalah" class="toc-link" @click="sidebarOpen = false"><i data-lucide="help-circle"></i> <span>11. Solusi Masalah Lapangan</span></a></li>
+                    <li><a href="#bab-12-setup-perusahaan" class="toc-link" @click="sidebarOpen = false"><i data-lucide="building"></i> <span>12. Profil Usaha &amp; Impor Excel</span></a></li>
+                    <li><a href="#bab-13-tips-navigasi" class="toc-link" @click="sidebarOpen = false"><i data-lucide="sparkles"></i> <span>13. Tips Navigasi &amp; PWA HP</span></a></li>
                 </ul>
             </nav>
         </aside>
@@ -1427,51 +1614,85 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="chapter-icon-badge"><i data-lucide="shield"></i></div>
                         <div class="chapter-title-wrap">
                             <span class="chapter-number">Bab 1</span>
-                            <h3 class="chapter-title">Matriks Peran Pengguna &amp; Keamanan Sistem</h3>
+                            <h3 class="chapter-title">Struktur Peran, Wewenang &amp; Hak Akses Karyawan</h3>
                             <div class="chapter-roles">
-                                <span class="role-pill">Semua Pengguna</span>
-                                <span class="role-pill">Super Admin</span>
+                                <span class="role-pill">Semua Staf</span>
+                                <span class="role-pill">Kepala Divisi</span>
+                                <span class="role-pill">Owner</span>
                             </div>
                         </div>
                     </div>
                     <p class="step-desc">
-                        Sistem ERP mengadopsi kontrol akses berbasis peran (<em>Role-Based Access Control / RBAC</em>). Setiap pengguna memiliki batasan menu yang tegas demi menjamin keamanan data finansial dan integritas transaksi:
+                        Aplikasi ERP ini dirancang dengan pembagian wewenang yang tegas untuk setiap bagian kerja. Tujuannya adalah agar data keuangan terlindungi, operasional berjalan tertib, dan setiap staf dapat fokus pada tugas pekerjaannya masing-masing tanpa kebingungan:
                     </p>
                     <div class="step-timeline">
                         <div class="step-item">
                             <div class="step-circle">1</div>
                             <div class="step-content">
-                                <h4 class="step-title">Owner &amp; Eksekutif</h4>
-                                <p class="step-desc">Akses penuh ke menu <strong>Executive Dashboard</strong> (Sidebar: <em>Manajemen &rarr; Executive Dashboard</em>), valuasi aset stok, margin laba kotor, performa sales, dan persetujuan kebijakan strategis.</p>
+                                <h4 class="step-title">Owner &amp; Manajemen Eksekutif</h4>
+                                <p class="step-desc">Memegang wewenang pengawasan tertinggi. Mengakses <strong>Executive Dashboard</strong> untuk memantau grafik omzet penjualan riil, laba kotor harian, perputaran aset inventori gudang, persetujuan batas piutang besar, serta persetujuan akhir pembayaran gaji karyawan (Payroll Approval).</p>
                             </div>
                         </div>
                         <div class="step-item">
                             <div class="step-circle">2</div>
                             <div class="step-content">
-                                <h4 class="step-title">Admin Operasional</h4>
-                                <p class="step-desc">Mengelola master data produk, level harga, pesanan B2B, penjadwalan pengiriman, penagihan konsinyasi, dan mutasi kas bank.</p>
+                                <h4 class="step-title">Kepala Kantor / Admin Operasional</h4>
+                                <p class="step-desc">Mengatur jalannya operasional kantor: master data produk, level harga jual, pesanan grosir B2B, penjadwalan rute pengiriman armada, penagihan tempo konsinyasi, dan koordinasi kelancaran antar bagian.</p>
                             </div>
                         </div>
                         <div class="step-item">
                             <div class="step-circle">3</div>
                             <div class="step-content">
-                                <h4 class="step-title">Sales Lapangan &amp; Driver</h4>
-                                <p class="step-desc">Mengakses form opname rak toko mitra, pencatatan titipan baru, rute pengiriman harian, penerimaan setoran tunai, dan pelaporan kunjungan.</p>
+                                <h4 class="step-title">Admin Keuangan &amp; Kasir Kantor (Finance)</h4>
+                                <p class="step-desc">Bertanggung jawab atas arus kas perusahaan: mencatat biaya pengeluaran operasional (listrik, bensin, konsumsi), transfer saldo bank, menerima uang setoran fisik dari driver di sore hari, memverifikasi permohonan kasbon, serta menyiapkan rekapitulasi penggajian.</p>
                             </div>
                         </div>
                         <div class="step-item">
                             <div class="step-circle">4</div>
                             <div class="step-content">
-                                <h4 class="step-title">Petugas Gudang</h4>
-                                <p class="step-desc">Memproses persiapan packing pesanan (<em>PO Preparation</em>), penerimaan bahan baku vendor, dan pencatatan retur rusak.</p>
+                                <h4 class="step-title">Kasir POS Outlet (Penjualan Ritel Langsung)</h4>
+                                <p class="step-desc">Melayani pembeli langsung di toko/outlet dengan menu Kasir POS. Bertugas melakukan scan barcode produk, menerima pembayaran (Tunai, QRIS, atau Transfer Bank), mencetak struk belanja, dan menghitung uang fisik kasir saat pergantian jam kerja (tutup shift).</p>
                             </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">5</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Sales Lapangan &amp; Pemasaran</h4>
+                                <p class="step-desc">Ujung tombak relasi dengan toko mitra: membuka pesanan baru, melakukan kunjungan berkala, mengecek sisa stok di rak konsinyasi (opname fisik), serta membina kemitraan toko di wilayah tugasnya.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">6</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Driver &amp; Tim Logistik Pengiriman</h4>
+                                <p class="step-desc">Mengantar pesanan barang ke toko pelanggan sesuai Surat Jalan, menjalankan tugas belanja bahan baku ke supplier (dengan memfoto nota/bon struk belanja), menagih pembayaran tunai di toko mitra rolling nota, dan menyetorkan seluruh uang tagihan ke kasir kantor di sore hari.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">7</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Petugas Gudang &amp; Pengadaan</h4>
+                                <p class="step-desc">Menjaga keamanan fisik persediaan: memeriksa dan menimbang bahan baku yang baru tiba dari supplier, menyiapkan dan membungkus barang sesuai lembar <em>Picking List</em> pesanan, serta melakukan opname stok berkala untuk memastikan jumlah di gudang cocok dengan data di sistem.</p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">8</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Mandor Produksi &amp; Bagian HR</h4>
+                                <p class="step-desc">Mencatat kehadiran harian staf (absensi), mencatat hasil kerja harian karyawan borongan per jenis kemasan, menginput pengambilan uang harian tenaga borongan, dan memastikan data kerja harian siap diproses saat jadwal gajian.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-box box-info">
+                        <i data-lucide="shield-check"></i>
+                        <div>
+                            <strong>Prinsip Keamanan Akun Pengguna:</strong><br>
+                            Setiap karyawan memiliki akun login unik sendiri. Dilarang saling meminjamkan akun atau kata sandi (*password*) karena setiap aktivitas input transaksi, perubahan data, dan penghapusan otomatis terekam jejak auditnya (*Audit Trail*) secara permanen di sistem.
                         </div>
                     </div>
                 </section>
 
-                <!-- ========================================================= -->
-                <!-- BAB 2: MASTER PRODUK & MATRIKS HARGA                      -->
-                <!-- ========================================================= -->
                 <!-- ========================================================= -->
                 <!-- BAB 2: MASTER DATA & FITUR PENCARIAN PINTAR                -->
                 <!-- ========================================================= -->
@@ -1491,48 +1712,48 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                     </div>
 
                     <!-- SUB-BAB 2.1: UNIVERSAL SEARCH EXPLANATION -->
-                    <div class="sub-chapter-block" style="margin-bottom:20px;">
-                        <h4 style="font-size:15px;font-weight:800;color:var(--guide-text-primary);display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                            <i data-lucide="search" style="width:16px;height:16px;color:var(--guide-accent);"></i>
+                    <div class="sub-chapter-block">
+                        <h4 class="sub-chapter-title">
+                            <i data-lucide="search"></i>
                             <span>2.1 Fitur Kolom Pencarian Pintar (Live Debounce &amp; Universal Multi-Field Search)</span>
                         </h4>
                         <p class="step-desc">
                             Seluruh halaman pada menu <strong>Master Data</strong> (<em>Toko Pelanggan, Produk &amp; Bahan, Matriks Level Harga, Pemasok Vendor, dan Data Karyawan</em>) telah dilengkapi dengan teknologi <strong>Live Debounce &amp; Universal Global Search</strong>:
                         </p>
 
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3" style="margin:12px 0;">
-                            <div class="card p-3.5" style="background:var(--guide-card-bg);border:1px solid var(--guide-border);border-radius:12px;">
-                                <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--guide-text-primary);margin-bottom:4px;">
-                                    <div style="width:26px;height:26px;border-radius:6px;background:rgba(16,185,129,0.12);color:#10b981;display:flex;align-items:center;justify-content:center;">
-                                        <i data-lucide="zap" style="width:14px;height:14px;"></i>
+                        <div class="feature-cards-grid">
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(16,185,129,0.12);color:#10b981;">
+                                        <i data-lucide="zap"></i>
                                     </div>
                                     <span>Pencarian Otomatis (Live Debounce)</span>
                                 </div>
-                                <div style="font-size:11.5px;color:var(--guide-text-secondary);line-height:1.5;">
+                                <div class="feature-card-body">
                                     Cukup ketik kata kunci, sistem secara otomatis mengeksekusi pencarian setelah jeda mengetik 0,3 detik (350 ms) <strong>tanpa perlu menekan tombol Cari atau Enter</strong>.
                                 </div>
                             </div>
 
-                            <div class="card p-3.5" style="background:var(--guide-card-bg);border:1px solid var(--guide-border);border-radius:12px;">
-                                <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--guide-text-primary);margin-bottom:4px;">
-                                    <div style="width:26px;height:26px;border-radius:6px;background:rgba(14,165,233,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;">
-                                        <i data-lucide="loader-2" style="width:14px;height:14px;"></i>
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(14,165,233,0.12);color:#0284c7;">
+                                        <i data-lucide="loader-2"></i>
                                     </div>
                                     <span>Loading Cepat Hanya di Tabel</span>
                                 </div>
-                                <div style="font-size:11.5px;color:var(--guide-text-secondary);line-height:1.5;">
-                                    Tidak ada kedip layar (*zero full-page reload*). Hanya area tabel data yang memuat animasi *shimmer bar* halus saat mengambil data, kursor tetap fokus di kolom input.
+                                <div class="feature-card-body">
+                                    Tidak ada kedip layar (<em>zero full-page reload</em>). Hanya area tabel data yang memuat animasi <em>shimmer bar</em> halus saat mengambil data, kursor tetap fokus di kolom input.
                                 </div>
                             </div>
 
-                            <div class="card p-3.5" style="background:var(--guide-card-bg);border:1px solid var(--guide-border);border-radius:12px;">
-                                <div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px;color:var(--guide-text-primary);margin-bottom:4px;">
-                                    <div style="width:26px;height:26px;border-radius:6px;background:rgba(99,102,241,0.12);color:#6366f1;display:flex;align-items:center;justify-content:center;">
-                                        <i data-lucide="globe" style="width:14px;height:14px;"></i>
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(99,102,241,0.12);color:#6366f1;">
+                                        <i data-lucide="globe"></i>
                                     </div>
                                     <span>Pencarian Database Menyeluruh</span>
                                 </div>
-                                <div style="font-size:11.5px;color:var(--guide-text-secondary);line-height:1.5;">
+                                <div class="feature-card-body">
                                     Mencakup 100% basis data dari 1 kolom pencarian tunggal: nama, kode unik, nomor WA/telepon, PIC, alamat, sales pembina, rute, rekening bank, hingga tipe pembayaran.
                                 </div>
                             </div>
@@ -1563,8 +1784,8 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
 
                     <!-- SUB-BAB 2.2: MASTER PRODUK & MATRIKS HARGA -->
                     <div class="sub-chapter-block">
-                        <h4 style="font-size:15px;font-weight:800;color:var(--guide-text-primary);display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-                            <i data-lucide="tag" style="width:16px;height:16px;color:var(--guide-accent);"></i>
+                        <h4 class="sub-chapter-title">
+                            <i data-lucide="tag"></i>
                             <span>2.2 Matriks 30 Tingkat Level Harga &amp; Resep BOM</span>
                         </h4>
                         <p class="step-desc">
@@ -1812,51 +2033,71 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 7: PEMBELIAN & VENDOR                                 -->
+                <!-- BAB 7: PENGADAAN & MULTI-VENDOR                           -->
                 <!-- ========================================================= -->
                 <section id="bab-7-pembelian-vendor" class="guide-chapter theme-teal">
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="shopping-bag"></i></div>
                         <div class="chapter-title-wrap">
                             <span class="chapter-number">Bab 7</span>
-                            <h3 class="chapter-title">Pengadaan Bahan &amp; Pembelian Vendor (PO &amp; Penerimaan)</h3>
+                            <h3 class="chapter-title">Pengadaan Bahan Baku &amp; Katalog Multi-Vendor</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Admin Gudang</span>
-                                <span class="role-pill">Driver</span>
+                                <span class="role-pill">Driver Pengadaan</span>
                                 <span class="role-pill">Finance</span>
                             </div>
                         </div>
                     </div>
                     <p class="step-desc">
-                        Pengelolaan pengadaan bahan baku, bumbu, dan kemasan di menu <strong>Pembelian Vendor</strong> (Sidebar: <em>Gudang &amp; Pembelian &rarr; Pembelian Vendor</em>):
+                        Pengelolaan pembelian bahan baku mentah, bumbu racik, dan bahan kemasan plastik di menu <strong>Pembelian Vendor</strong> (Sidebar: <em>Gudang &amp; Pembelian &rarr; Pembelian Vendor</em>):
                     </p>
 
                     <div class="step-timeline">
                         <div class="step-item">
                             <div class="step-circle">1</div>
                             <div class="step-content">
-                                <h4 class="step-title">Pilih Mode Input Sesuai Kebutuhan</h4>
-                                <ul style="padding-left:18px; margin:4px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
-                                    <li><strong>+ Catat Faktur Langsung:</strong> Digunakan jika barang sudah dibeli dan telah tiba di gudang. Stok gudang langsung bertambah dan kas langsung terpotong.</li>
-                                    <li><strong>+ Buat PO Pembelian:</strong> Digunakan untuk memesan ke supplier atau menugaskan belanja ke driver. Stok dan kas <em>belum berubah</em> sampai fisik barang diverifikasi di gudang.</li>
-                                </ul>
+                                <h4 class="step-title">Katalog Multi-Vendor &amp; Riwayat Pemasok</h4>
+                                <p class="step-desc">
+                                    Sistem ERP mendukung <strong>Katalog Multi-Vendor</strong>, yaitu 1 jenis bahan baku (misal: Singkong Basah, Minyak Goreng, Bumbu Balado, atau Plastik 250g) dapat memiliki beberapa supplier rekanan sekaligus. Setiap supplier tercatat dengan nomor part/SKU vendor, harga beli kesepakatan, dan catatan mutu pasokan. Saat admin membuat pesanan, sistem otomatis menyajikan pilihan vendor rekanan lengkap dengan harga beli terakhir.
+                                </p>
                             </div>
                         </div>
                         <div class="step-item">
                             <div class="step-circle">2</div>
                             <div class="step-content">
-                                <h4 class="step-title">Dua Metode Logistik Pengadaan</h4>
+                                <h4 class="step-title">Dua Pilihan Mode Input Pengadaan</h4>
                                 <ul style="padding-left:18px; margin:4px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
-                                    <li><strong>Diambil Driver Toko:</strong> Tugas belanja otomatis muncul di aplikasi HP Driver. Driver berbelanja di vendor, mengunggah foto bon fisik/struk, dan membawa barang ke toko.</li>
-                                    <li><strong>Diantar oleh Supplier:</strong> Pihak vendor atau ekspedisi mengirimkan barang langsung ke gudang sesuai tanggal perkiraan tiba.</li>
+                                    <li><strong>+ Catat Faktur Langsung:</strong> Digunakan jika barang sudah dibeli secara tunai dan barang fisik telah berada di gudang. Stok gudang langsung bertambah dan kas langsung terpotong saat form disimpan.</li>
+                                    <li><strong>+ Buat PO Pembelian:</strong> Digunakan untuk rencana pemesanan ke supplier atau menugaskan belanja ke driver. Stok gudang dan saldo kas <em>belum berubah</em> sampai fisik barang tiba dan diverifikasi di gudang.</li>
                                 </ul>
                             </div>
                         </div>
                         <div class="step-item">
                             <div class="step-circle">3</div>
                             <div class="step-content">
-                                <h4 class="step-title">Verifikasi Penerimaan Barang (Wajib Terima)</h4>
-                                <p class="step-desc">Setiap barang PO yang tiba wajib diverifikasi oleh admin gudang dengan menekan tombol <strong>[&#x1F4E6; Terima]</strong> pada tabel pembelian &rarr; cek kesesuaian fisik dan foto bon struk &rarr; klik <strong>"Konfirmasi Terima &amp; Tambah Stok"</strong>. Stok resmi masuk gudang dan HPP terhitung otomatis.</p>
+                                <h4 class="step-title">Dua Metode Logistik Pengadaan Barang</h4>
+                                <ul style="padding-left:18px; margin:4px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                    <li><strong>Diambil Driver Toko (Armada Belanja):</strong> Tugas belanja otomatis muncul di aplikasi HP Driver yang ditugaskan. Driver datang ke lokasi vendor, membeli barang, memfoto bon struk belanja melalui HP, dan membawa barang ke gudang pabrik.</li>
+                                    <li><strong>Diantar oleh Pemasok:</strong> Pihak supplier rekanan atau jasa ekspedisi mengantarkan barang langsung ke gudang sesuai tanggal perkiraan tiba.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">4</div>
+                            <div class="step-content">
+                                <h4 class="step-title">SOP Verifikasi Fisik &amp; Penerimaan Barang Gudang</h4>
+                                <p class="step-desc">
+                                    Setiap barang PO yang tiba wajib dicek fisik dan ditimbang oleh Petugas Gudang dengan menekan tombol <strong>[📦 Terima]</strong> pada tabel pembelian &rarr; periksa kesesuaian kuantitas fisik dan foto bon struk belanja &rarr; klik <strong>"Konfirmasi Terima &amp; Tambah Stok"</strong>. Stok resmi bertambah ke kartu stok gudang dan nilai HPP bahan baku diperbarui otomatis.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">5</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Pelunasan Hutang Dagang Supplier</h4>
+                                <p class="step-desc">
+                                    Jika pembelian dilakukan secara tempo, nilai faktur otomatis masuk ke buku hutang dagang supplier. Pembayaran dicatat pada tab <em>Daftar Pembelian</em> &rarr; klik <em>Catat Bayar Hutang</em> &rarr; pilih Akun Kas atau Rekening Bank sumber pembayaran.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1864,7 +2105,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                     <div class="guide-box box-danger">
                         <i data-lucide="alert-triangle"></i>
                         <div>
-                            <strong>Penanganan Kendala Driver:</strong> Jika driver melaporkan toko vendor tutup atau barang habis, status PO otomatis berubah menjadi <code>KENDALA / BATAL</code> dan tombol terima terkunci. Admin dapat membuka Detail PO untuk klik <em>[Jadwalkan Ulang / Ganti Driver]</em> atau <em>[Batalkan PO]</em>.
+                            <strong>Penanganan Kendala Driver Belanja:</strong> Apabila driver di lapangan menemukan supplier tutup atau stok bahan habis, driver memilih opsi <em>"Laporkan Kendala"</em> di HP. Status PO otomatis berubah menjadi <code>KENDALA / BATAL</code> dan tombol terima terkunci demi mencegah salah input stok fiktif. Admin kantor dapat membuka Detail PO untuk menjadwalkan ulang atau membatalkan PO.
                         </div>
                     </div>
                 </section>
@@ -1877,59 +2118,253 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="chapter-icon-badge"><i data-lucide="truck"></i></div>
                         <div class="chapter-title-wrap">
                             <span class="chapter-number">Bab 8</span>
-                            <h3 class="chapter-title">Operasional Logistik &amp; Manifest Pengiriman</h3>
+                            <h3 class="chapter-title">Operasional Logistik, Armada Driver &amp; Surat Jalan</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Driver</span>
                                 <span class="role-pill">Koordinator Logistik</span>
+                                <span class="role-pill">Admin Kantor</span>
                             </div>
                         </div>
                     </div>
                     <p class="step-desc">
-                        Driver membuka menu <strong>Pengiriman</strong> (Sidebar: <em>Delivery &rarr; Pengiriman</em> atau <em>Delivery &rarr; Surat Jalan</em>) untuk melihat rute harian pengantaran, kontak toko, alamat, dan memperbarui status surat jalan (Siap Kirim, Sedang Dikirim, Selesai Terkirim, atau Gagal Kirim / Reschedule).
+                        Pengelolaan rute pengiriman pesanan dan pergerakan armada harian di menu <strong>Pengiriman</strong> (Sidebar: <em>Delivery &rarr; Pengiriman</em>):
                     </p>
+
+                    <div class="step-timeline">
+                        <div class="step-item">
+                            <div class="step-circle">1</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Penerbitan Surat Jalan Resmi</h4>
+                                <p class="step-desc">
+                                    Setelah pesanan pelanggan B2B selesai disiapkan oleh gudang, sistem menerbitkan Surat Jalan resmi berformat <code>SJ-YYYYMMDD-XXXX</code> yang memuat daftar nama toko, alamat tujuan, nomor telepon/WhatsApp, rincian barang muatan, dan nama driver yang bertugas.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">2</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Tampilan Mobile Rute Harian Driver di HP</h4>
+                                <p class="step-desc">
+                                    Driver cukup membuka menu <em>Pengiriman Driver</em> di browser HP. Seluruh toko yang harus dikunjungi hari ini tersusun rapi berdasarkan rute wilayah (<code>RTE-</code>). Terdapat tombol praktis untuk langsung menghubungi WhatsApp pemilik toko atau membuka panduan navigasi peta.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">3</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Pembaruan Status Pengiriman Real-Time</h4>
+                                <ul style="padding-left:18px; margin:4px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                    <li><strong>Siap Kirim:</strong> Barang sudah selesai dimuat ke dalam armada kendaraan.</li>
+                                    <li><strong>Sedang Dikirim:</strong> Driver telah berangkat dan sedang dalam perjalanan rute.</li>
+                                    <li><strong>Selesai Terkirim:</strong> Barang telah diterima oleh pemilik toko dengan bukti tanda tangan fisik pada lembar surat jalan.</li>
+                                    <li><strong>Gagal Kirim / Reschedule:</strong> Digunakan jika toko mitra tutup atau jalan terhalang, disertai keterangan alasan yang jelas agar admin kantor dapat menjadwalkan ulang.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 9: BUKU KAS & SETORAN SORE                            -->
+                <!-- BAB 9: KEUANGAN, KAS & REKENING ESCROW                    -->
                 <!-- ========================================================= -->
                 <section id="bab-9-keuangan-kas" class="guide-chapter theme-green">
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="wallet"></i></div>
                         <div class="chapter-title-wrap">
                             <span class="chapter-number">Bab 9</span>
-                            <h3 class="chapter-title">Buku Kas, Rekening Bank &amp; Rekonsiliasi Sore Hari</h3>
+                            <h3 class="chapter-title">Tata Kelola Kas Tertutup &amp; Rekening Kas Tabungan (Escrow)</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Kasir Kantor</span>
-                                <span class="role-pill">Driver</span>
+                                <span class="role-pill">Admin Keuangan</span>
+                                <span class="role-pill">Owner</span>
                             </div>
                         </div>
                     </div>
                     <p class="step-desc">
-                        <strong>SOP Serah Terima Uang Tunai Driver ke Kantor (Sore Hari):</strong>
+                        Sistem keuangan Keren One menerapkan standar <strong>Arsitektur Kas Tertutup (Closed-Loop Cashflow)</strong>. Setiap aliran dana masuk dan keluar wajib terikat pada akun kas penampung resmi agar pembukuan tidak bocor dan dapat diaudit secara akurat:
                     </p>
-                    <div class="guide-box box-success">
-                        <i data-lucide="check-circle-2"></i>
-                        <div>
-                            Driver menyerahkan fisik uang tunai hasil rolling nota ke Kasir Kantor.<br>
-                            Kasir membuka menu <strong>Kas Masuk &amp; Keluar</strong> (Sidebar: <em>Keuangan &amp; Kas &rarr; Kas Masuk &amp; Keluar &rarr; Tab Transfer Antar Kas</em>):<br>
-                            • <em>Dari Akun:</em> <strong>Kas Driver (Pegawai)</strong><br>
-                            • <em>Ke Akun:</em> <strong>Kasir Utama / Brankas Kantor</strong><br>
-                            Tanggung jawab kas driver otomatis kembali nol dan kas kantor bertambah resmi.
+
+                    <div class="step-timeline">
+                        <div class="step-item">
+                            <div class="step-circle">1</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Struktur Akun Kas Perusahaan</h4>
+                                <p class="step-desc">Dikelola melalui menu <strong>Akun Kas &amp; Bank</strong> (Sidebar: <em>Keuangan &amp; Kas &rarr; Akun Kas</em>):</p>
+                                <ul style="padding-left:18px; margin:4px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                    <li><strong>Kasir Utama / Kas Toko:</strong> Kas operasional cair untuk transaksi penjualan langsung dan kebutuhan harian outlet.</li>
+                                    <li><strong>Brankas Kantor:</strong> Tempat penyimpanan uang tunai cadangan kantor yang disimpan di brankas utama.</li>
+                                    <li><strong>Rekening Bank (BCA, Mandiri, BRI, dll):</strong> Rekening perbankan resmi perusahaan untuk transfer masuk pelanggan dan pembayaran ke supplier.</li>
+                                    <li><strong>Kas Driver (Pegawai):</strong> Akun kas sementara yang dipegang driver saat keliling di jalan untuk menampung uang tunai hasil setoran rolling nota toko.</li>
+                                    <li><strong>Akun Kas Tabungan Karyawan (Rekening Terkunci / Escrow):</strong> Akun kas khusus yang difungsikan semata-mata untuk menyimpan dana tabungan milik seluruh karyawan.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">2</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Proteksi Ketat Akun Kas Tabungan Karyawan (Rekening Terkunci)</h4>
+                                <p class="step-desc">
+                                    Demi menjamin keamanan dana tabungan karyawan agar tidak terpakai atau tercampur dengan likuiditas operasional bisnis, sistem memberikan proteksi otomatis:
+                                </p>
+                                <div class="guide-box box-warning" style="margin:8px 0;">
+                                    <i data-lucide="lock"></i>
+                                    <div>
+                                        <strong>4 Proteksi Mutlak Rekening Kas Tabungan:</strong><br>
+                                        • <strong>Dilarang untuk Belanja Bahan / PO:</strong> Akun kas tabungan diblokir dari pilihan metode bayar pembelian supplier.<br>
+                                        • <strong>Dilarang untuk Biaya Kantor:</strong> Tidak dapat digunakan untuk membayar pengeluaran operasional harian kantor.<br>
+                                        • <strong>Dilarang untuk Transaksi Kasir POS:</strong> Kasir toko tidak dapat memilih kas tabungan saat transaksi penjualan.<br>
+                                        • <strong>Anti-Nonaktif Saldo Positif:</strong> Akun kas tabungan tidak dapat dinonaktifkan atau dihapus jika masih terdapat saldo simpanan karyawan di dalamnya.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">3</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Pencatatan Biaya Operasional &amp; Pemasukan Lain</h4>
+                                <p class="step-desc">
+                                    Pada menu <strong>Kas Masuk &amp; Keluar</strong>, admin dapat mencatat pengeluaran biaya perusahaan (bensin armada, listrik pabrik, makan lembur, perawatan kendaraan) dengan memilih kategori biaya yang tepat dan menentukan akun kas operasional sumber pembayaran.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">4</div>
+                            <div class="step-content">
+                                <h4 class="step-title">SOP Rekonsiliasi &amp; Serah Terima Kas Driver di Sore Hari</h4>
+                                <p class="step-desc">
+                                    Saat armada driver kembali ke kantor di sore hari:
+                                </p>
+                                <div class="guide-box box-success" style="margin:8px 0;">
+                                    <i data-lucide="check-circle-2"></i>
+                                    <div>
+                                        1. Driver menyerahkan fisik uang tunai hasil rolling nota ke Kasir Kantor.<br>
+                                        2. Kasir membuka menu <strong>Transfer Antar Kas</strong> (Sidebar: <em>Keuangan &amp; Kas &rarr; Kas Masuk &amp; Keluar &rarr; Tab Transfer</em>):<br>
+                                        &bull; <em>Dari Akun:</em> <strong>Kas Driver (Pegawai)</strong><br>
+                                        &bull; <em>Ke Akun:</em> <strong>Kasir Utama / Brankas Kantor</strong><br>
+                                        3. Setelah disimpan, tanggung jawab saldo kas driver otomatis kembali Rp 0 dan kas kantor bertambah resmi.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 10: SOLUSI MASALAH LAPANGAN & FAQ                     -->
+                <!-- BAB 10: MANAJEMEN SDM, KASBON & PENGGAJIAN               -->
                 <!-- ========================================================= -->
-                <section id="bab-10-faq-masalah" class="guide-chapter theme-orange">
+                <section id="bab-10-hr-penggajian" class="guide-chapter theme-indigo">
+                    <div class="chapter-header">
+                        <div class="chapter-icon-badge"><i data-lucide="users"></i></div>
+                        <div class="chapter-title-wrap">
+                            <span class="chapter-number">Bab 10</span>
+                            <h3 class="chapter-title">Manajemen SDM, Kasbon &amp; Penggajian Terpadu (HR &amp; Payroll)</h3>
+                            <div class="chapter-roles">
+                                <span class="role-pill">Mandor Produksi</span>
+                                <span class="role-pill">Admin HR / Personalia</span>
+                                <span class="role-pill">Finance</span>
+                                <span class="role-pill">Owner</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        Modul SDM Keren One mengintegrasikan absensi kehadiran, hasil produksi borongan, kasbon, tabungan, hingga penerbitan slip gaji resmi secara otomatis:
+                    </p>
+
+                    <div class="step-timeline">
+                        <div class="step-item">
+                            <div class="step-circle">1</div>
+                            <div class="step-content">
+                                <h4 class="step-title">10.1 Absensi Kehadiran Karyawan</h4>
+                                <p class="step-desc">
+                                    Dikelola di menu <strong>Absensi Karyawan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Absensi</em>). Setiap hari kerja, mandor atau admin mencatat kehadiran staf dengan pilihan status: <code>Hadir</code>, <code>Sakit</code>, <code>Izin</code>, atau <code>Alpa</code>. Rekapitulasi absensi bulanan otomatis menjadi dasar perhitungan tunjangan kehadiran, uang makan harian, atau potongan ketidakhadiran pada slip gaji.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">2</div>
+                            <div class="step-content">
+                                <h4 class="step-title">10.2 Pencatatan Produksi Harian Borongan</h4>
+                                <p class="step-desc">
+                                    Dikelola di menu <strong>Produksi Borongan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Produksi</em>). Mandor mencatat hasil kerja harian tenaga borongan dengan memilih nama karyawan, jenis produk/kemasan, dan jumlah unit yang berhasil diselesaikan hari itu. Sistem otomatis mengalikan unit tersebut dengan tarif upah kemasan (<em>Kelompok Upah Borongan</em>) sehingga total hak upah borongan terkumpul akurat.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">3</div>
+                            <div class="step-content">
+                                <h4 class="step-title">10.3 Kasbon Karyawan &amp; Cicilan Terjadwal</h4>
+                                <p class="step-desc">
+                                    Dikelola di menu <strong>Kasbon Karyawan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Kasbon</em>):
+                                </p>
+                                <ul style="padding-left:18px; margin:4px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                    <li><strong>Pengajuan Kasbon Baru:</strong> Pilih karyawan, nominal pinjaman, jumlah tenor cicilan, dan Akun Kas Sumber Pembayaran (misal Kasir Utama atau Brankas). Saldo kas yang dipilih akan otomatis berkurang sesuai nominal pinjaman.</li>
+                                    <li><strong>Opsi Bypass Kas:</strong> Disediakan khusus jika pencatatan kasbon merupakan pemindahan sisa hutang lama karyawan sebelum sistem dipakai, sehingga tidak mengurangi fisik kas hari ini.</li>
+                                    <li><strong>Pelunasan Cicilan Kasbon:</strong> Sistem otomatis memotong cicilan saat tutup penggajian (Payroll), atau karyawan dapat melunasi secara tunai langsung di menu kasbon yang otomatis menambah saldo akun kas perusahaan.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">4</div>
+                            <div class="step-content">
+                                <h4 class="step-title">10.4 Penarikan Gaji / Kasbon Harian</h4>
+                                <p class="step-desc">
+                                    Dikelola di menu <strong>Penarikan Gaji</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Penarikan Gaji</em>). Fasilitas ini digunakan jika tenaga kerja harian atau borongan mengambil uang saku harian di tengah periode kerja. Pengambilan uang harian memotong kas operasional kantor yang dipilih dan otomatis menjadi komponen potongan pada slip gaji periode tersebut.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">5</div>
+                            <div class="step-content">
+                                <h4 class="step-title">10.5 Tabungan Karyawan</h4>
+                                <p class="step-desc">
+                                    Dikelola di menu <strong>Tabungan Karyawan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Tabungan</em>):
+                                </p>
+                                <ul style="padding-left:18px; margin:4px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                    <li><strong>Setor Tabungan Sukarela:</strong> Karyawan menitipkan tabungan sukarela, uang fisik masuk ke Akun Kas Tabungan Escrow dan buku tabungan karyawan bertambah.</li>
+                                    <li><strong>Penarikan Tabungan:</strong> Saat karyawan membutuhkan dana tabungannya, penarikan hanya dapat dicairkan dari Akun Kas Tabungan Escrow dan sistem menolak penarikan yang melebihi sisa saldo tabungan karyawan tersebut.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">6</div>
+                            <div class="step-content">
+                                <h4 class="step-title">10.6 Penggajian Otomatis (Payroll Engine) &amp; Approval Pembayaran</h4>
+                                <p class="step-desc">
+                                    Dikelola di menu <strong>Penggajian</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Penggajian</em>):
+                                </p>
+                                <div class="formula-card">
+                                    Gaji Bersih = (Gaji Pokok / Total Upah Borongan + Tunjangan/Uang Makan) - Potongan Kasbon - Potongan Ambil Harian - Setoran Tabungan Wajib - Potongan Absen
+                                </div>
+                                <div class="guide-box box-info" style="margin:8px 0;">
+                                    <i data-lucide="calculator"></i>
+                                    <div>
+                                        <strong>SOP Persetujuan Penggajian (Approval Owner &amp; Finance):</strong><br>
+                                        1. Buka menu <em>Penggajian &rarr; Buat Periode Gaji</em> (Pilih tipe Mingguan Borongan atau Bulanan Staff).<br>
+                                        2. Sistem menghitung seluruh rekap absensi, hasil borongan, potongan kasbon, dan uang makan secara otomatis.<br>
+                                        3. Saat Pimpinan/Finance menekan <strong>"Setujui &amp; Bayar Payroll"</strong>:<br>
+                                        &bull; Admin memilih Akun Kas Operasional untuk pembayaran Gaji Bersih.<br>
+                                        &bull; <strong>Otomatisasi Escrow:</strong> Sistem otomatis memotong kas operasional untuk gaji bersih, dan <em>secara otomatis mentransfer</em> dana potongan tabungan wajib karyawan dari Kas Operasional ke Akun Kas Tabungan Escrow!<br>
+                                        4. Klik <strong>"Cetak Slip Gaji (PDF)"</strong> untuk membagikan bukti rincian gaji resmi berlogo perusahaan kepada masing-masing karyawan.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================= -->
+                <!-- BAB 11: SOLUSI MASALAH LAPANGAN & FAQ                     -->
+                <!-- ========================================================= -->
+                <section id="bab-11-faq-masalah" class="guide-chapter theme-orange">
+                    <a id="bab-10-faq-masalah" href="#bab-10-faq-masalah" style="display:none;" aria-hidden="true"></a>
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="help-circle"></i></div>
                         <div class="chapter-title-wrap">
-                            <span class="chapter-number">Bab 10</span>
+                            <span class="chapter-number">Bab 11</span>
                             <h3 class="chapter-title">Penanganan Masalah Lapangan (Troubleshooting &amp; FAQ)</h3>
                             <div class="chapter-roles">
-                                <span class="role-pill">Semua Tim</span>
+                                <span class="role-pill">Semua Staf</span>
+                                <span class="role-pill">Admin</span>
                             </div>
                         </div>
                     </div>
@@ -1938,106 +2373,117 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="faq-card">
                             <div class="faq-header">
                                 <div class="faq-badge-icon"><i data-lucide="store"></i></div>
-                                <h4 class="faq-question">1. Bagaimana jika Toko Tutup saat Driver Datang?</h4>
+                                <h4 class="faq-question">1. Bagaimana jika Toko Tutup saat Driver Datang Mengantar Barang?</h4>
                             </div>
                             <div class="faq-body">
-                                <strong>Jangan submit form opname!</strong> Pada menu <strong>Pengiriman</strong> (Sidebar: <em>Delivery &rarr; Pengiriman</em>), pilih status <em>"Gagal Kirim / Reschedule"</em> dengan catatan <em>"Toko tutup"</em>. Saldo rak toko di database tetap aman pada posisi terakhir.
+                                <strong>Jangan submit form opname atau selesaikan surat jalan!</strong> Pada menu <strong>Pengiriman</strong> (Sidebar: <em>Delivery &rarr; Pengiriman</em>), pilih status <em>"Gagal Kirim / Reschedule"</em> dengan catatan <em>"Toko tutup"</em>. Saldo rak toko dan posisi barang di sistem tetap aman pada data terakhir tanpa ada tagihan palsu.
                             </div>
                         </div>
 
                         <div class="faq-card">
                             <div class="faq-header">
                                 <div class="faq-badge-icon"><i data-lucide="plus-circle"></i></div>
-                                <h4 class="faq-question">2. Toko Minta Tambah Varian Rasa / SKU Baru di Rak?</h4>
+                                <h4 class="faq-question">2. Toko Mitra Ingin Menambah Varian Rasa / Produk Baru di Rak?</h4>
                             </div>
                             <div class="faq-body">
-                                Admin/Sales membuat PO Konsinyasi yang memuat SKU baru melalui menu <strong>Konsinyasi</strong>. Saat form opname dibuka, sistem otomatis menggabungkan SKU baru tersebut dengan <em>Stok Kirim Lalu = 0</em> dan <em>Tambah Baru = Qty PO</em>. Setelah disubmit, SKU baru resmi tercatat permanen di rak toko tersebut.
+                                Admin/Sales membuat pesanan PO Konsinyasi yang memuat produk baru tersebut melalui menu <strong>Konsinyasi</strong>. Saat form opname dibuka oleh driver/sales, sistem otomatis menggabungkan produk baru tersebut dengan <em>Stok Kirim Lalu = 0</em> dan <em>Tambah Baru = Jumlah PO</em>. Setelah disimpan, produk baru resmi tercatat di rak toko tersebut untuk kunjungan selanjutnya.
                             </div>
                         </div>
 
                         <div class="faq-card">
                             <div class="faq-header">
                                 <div class="faq-badge-icon"><i data-lucide="alert-triangle"></i></div>
-                                <h4 class="faq-question">3. Ada Barang Hilang di Rak Toko &amp; Toko Menolak Bayar?</h4>
+                                <h4 class="faq-question">3. Ada Barang Hilang di Rak Toko &amp; Pemilik Toko Menolak Bayar?</h4>
                             </div>
                             <div class="faq-body">
-                                Sales memasukkan selisih di kolom <em>"Selisih Qty / Stok Hilang Pending"</em> (misal: <code>-2</code>). Sistem mencatatnya sebagai audit kehilangan tanpa membebankan tagihan pada nota hari itu demi menjaga hubungan kemitraan.
+                                Sales/Driver memasukkan selisih di kolom <em>"Selisih Qty / Stok Hilang Pending"</em> (misal: <code>-2</code>). Sistem mencatatnya sebagai audit kehilangan barang tanpa membebankan tagihan pada nota hari itu demi menjaga hubungan baik dengan toko mitra.
                             </div>
                         </div>
 
                         <div class="faq-card">
                             <div class="faq-header">
                                 <div class="faq-badge-icon"><i data-lucide="smartphone"></i></div>
-                                <h4 class="faq-question">4. Bagaimana Menginstal Aplikasi Keren One di HP Android/iOS?</h4>
+                                <h4 class="faq-question">4. Bagaimana Cara Menginstal Aplikasi Keren One di Layar HP Android / iPhone?</h4>
                             </div>
                             <div class="faq-body">
-                                Buka browser Chrome/Safari, akses alamat ERP, lalu klik tombol menu browser (titik tiga atau tombol share) dan pilih <strong>"Tambahkan ke Layar Utama / Install App"</strong>. Aplikasi langsung terpasang sebagai Progressive Web App (PWA) tanpa perlu PlayStore.
+                                Buka browser Chrome (Android) atau Safari (iPhone), akses alamat web ERP Keren One, lalu buka menu browser (titik tiga di kanan atas Chrome, atau ikon Bagikan/Share di Safari) dan pilih <strong>"Tambahkan ke Layar Utama / Install App"</strong>. Aplikasi langsung terpasang sebagai ikon mandiri (PWA) di layar utama HP, berjalan cepat tanpa baris URL browser, dan siap digunakan di lapangan.
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <div class="faq-header">
+                                <div class="faq-badge-icon"><i data-lucide="rotate-ccw"></i></div>
+                                <h4 class="faq-question">5. Salah Input Kas atau Kasbon, Bagaimana Prosedur Koreksinya?</h4>
+                            </div>
+                            <div class="faq-body">
+                                Setiap mutasi kas yang salah input dapat dikoreksi melalui pembatalan transaksi berotorisasi oleh Admin Keuangan atau Kepala Kantor. Khusus transaksi kasbon yang salah input, admin dapat menghapus pengajuan kasbon selama belum ada cicilan yang berjalan, dan saldo kas operasional yang sempat berkurang akan otomatis dipulihkan kembali (*refund*).
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <div class="faq-header">
+                                <div class="faq-badge-icon"><i data-lucide="key"></i></div>
+                                <h4 class="faq-question">6. Karyawan Membutuhkan Akses Menu Tambahan, Bagaimana Prosedurnya?</h4>
+                            </div>
+                            <div class="faq-body">
+                                Sampaikan permohonan kepada Kepala Kantor atau Super Admin. Admin dapat membuka menu <strong>Hak Akses &amp; Peran</strong> (Sidebar: <em>Manajemen &rarr; Hak Akses &rarr; Tab Override Pengguna</em>) untuk mengaktifkan izin menu khusus pada akun karyawan yang bersangkutan tanpa harus mengubah peran dasarnya.
                             </div>
                         </div>
                     </div>
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 11: SETUP & SINKRONISASI MASTER DATA                  -->
+                <!-- BAB 12: PROFIL PERUSAHAAN & IMPOR DATA MASTER            -->
                 <!-- ========================================================= -->
-                <section id="bab-11-impor-master" class="guide-chapter theme-violet">
+                <section id="bab-12-setup-perusahaan" class="guide-chapter theme-violet">
+                    <a id="bab-11-impor-master" href="#bab-11-impor-master" style="display:none;" aria-hidden="true"></a>
                     <div class="chapter-header">
-                        <div class="chapter-icon-badge"><i data-lucide="database"></i></div>
+                        <div class="chapter-icon-badge"><i data-lucide="building"></i></div>
                         <div class="chapter-title-wrap">
-                            <span class="chapter-number">Bab 11</span>
-                            <h3 class="chapter-title">Setup &amp; Sinkronisasi Master Data (Roadmap 4 Fase)</h3>
+                            <span class="chapter-number">Bab 12</span>
+                            <h3 class="chapter-title">Profil Perusahaan &amp; Setup Impor Data Master Excel</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Super Admin</span>
-                                <span class="role-pill">Developer</span>
+                                <span class="role-pill">Admin Operasional</span>
                             </div>
                         </div>
                     </div>
                     <p class="step-desc">
-                        Panduan setup awal dan impor massal database di menu <strong>Pengaturan &rarr; Impor Data</strong> (Sidebar: <em>Sistem &rarr; Pengaturan &rarr; Impor Data</em>):
+                        Pengaturan identitas resmi perusahaan dan tata cara impor data massal dari berkas Excel:
                     </p>
 
                     <div class="step-timeline">
                         <div class="step-item">
                             <div class="step-circle">1</div>
                             <div class="step-content">
-                                <h4 class="step-title">Fase 1: Master Pondasi Independen &amp; Kemasan Produk</h4>
-                                <p class="step-desc">Wajib diimpor pertama kali: <strong>1. Merek Produk</strong> (Brand), <strong>2. Wilayah &amp; Rute Distribusi</strong> (kunci utama pemetaan toko), <strong>3. Grup Kemasan Produk</strong> (Gramasi, Bal to Pcs), dan <strong>4. Kelompok Upah Borongan</strong>.</p>
+                                <h4 class="step-title">12.1 Pengaturan Profil Perusahaan &amp; Nota</h4>
+                                <p class="step-desc">
+                                    Dikelola di menu <strong>Profil Perusahaan</strong> (Sidebar: <em>Pengaturan &rarr; Profil Perusahaan</em>). Di halaman ini, admin dapat memperbarui nama resmi perusahaan, alamat kantor/pabrik, nomor WhatsApp resmi layanan pelanggan, mengunggah logo perusahaan (yang otomatis muncul di struk kasir, invoice faktur, surat jalan, dan slip gaji), serta mengatur catatan kaki (*footer*) faktur B2B.
+                                </p>
                             </div>
                         </div>
                         <div class="step-item">
                             <div class="step-circle">2</div>
                             <div class="step-content">
-                                <h4 class="step-title">Fase 2: Sumber Daya, Vendor, Matriks Harga &amp; Grup Pelanggan</h4>
-                                <p class="step-desc">Langkah kedua: <strong>5. Data Karyawan</strong> (khususnya posisi Sales &amp; Driver), <strong>6. Pemasok Vendor</strong>, <strong>7. Matriks Harga Jual 30 Level</strong> (wajib diinput sebelum grup pelanggan agar tier harga tersedia), dan <strong>8. Grup Pelanggan</strong> (mengikat default level harga dan diskon brand dari matriks).</p>
+                                <h4 class="step-title">12.2 Roadmap Impor Data Master (Urutan 4 Fase)</h4>
+                                <p class="step-desc">
+                                    Saat menyiapkan data awal perusahaan di menu <strong>Impor Data</strong> (Sidebar: <em>Pengaturan &rarr; Impor Data</em>), ikuti urutan 4 fase baku agar data saling terhubung tanpa error relasi:
+                                </p>
+                                <ul style="padding-left:18px; margin:6px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                    <li><strong>Fase 1 (Pondasi Utama):</strong> 1. Merek Produk, 2. Wilayah &amp; Rute Distribusi, 3. Grup Kemasan Produk, dan 4. Kelompok Upah Borongan.</li>
+                                    <li><strong>Fase 2 (Sumber Daya &amp; Mitra):</strong> 5. Data Karyawan (Sales &amp; Driver), 6. Pemasok Vendor, 7. Matriks Harga 30 Level, dan 8. Grup Pelanggan.</li>
+                                    <li><strong>Fase 3 (Inventori &amp; Resep):</strong> 9. Bahan Baku &amp; Bahan Kemas, dan 10. Barang Jadi Siap Jual (mengikat kemasan dan resep bahan).</li>
+                                    <li><strong>Fase 4 (Jaringan Toko):</strong> 11. Toko Pelanggan (mengikat wilayah, grup harga, dan sales pembina).</li>
+                                </ul>
                             </div>
                         </div>
                         <div class="step-item">
                             <div class="step-circle">3</div>
                             <div class="step-content">
-                                <h4 class="step-title">Fase 3: Katalog Inventori &amp; Produksi</h4>
-                                <p class="step-desc">Langkah ketiga: <strong>9. Bahan Baku &amp; Kemas</strong> (singkong, bumbu, minyak, plastik dengan satuan standar: <code>kg</code>, <code>pcs</code>, <code>roll</code>, <code>lembar</code>, <code>liter</code>, serta <strong><code>bal</code></strong> untuk karung/kemasan bal mentah), dan <strong>10. Barang Jadi Siap Jual</strong> (SKU produk jadi yang mengikat Merek, Grup Kemasan, dan Upah Borongan).</p>
-                                <ul style="padding-left:18px; margin:6px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
-                                    <li><strong>Relasi Pemasok Utama Aktif (Aturan Integritas):</strong> Nilai kolom <em>Pemasok Utama</em> pada bahan baku, bahan kemas, maupun produk jadi wajib mengacu pada master data Pemasok Vendor yang sudah terdaftar dan berstatus <strong>Aktif</strong> (lihat referensi Sheet 2).</li>
-                                    <li><strong>Penolakan Error Pemasok:</strong> Apabila nama atau kode pemasok tidak ditemukan di sistem atau berstatus nonaktif, baris data akan langsung ditolak dengan status <strong>ERROR</strong> untuk mencegah ketidaksinkronan data pembelian PO.</li>
-                                    <li><strong>Produksi Internal:</strong> Kolom Pemasok Utama pada Barang Jadi dapat dikosongkan apabila produk merupakan hasil produksi atau repacking mandiri.</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div class="step-item">
-                            <div class="step-circle">4</div>
-                            <div class="step-content">
-                                <h4 class="step-title">Fase 4: Jaringan Toko Pelanggan (Puncak Relasi)</h4>
-                                <p class="step-desc">Langkah puncak: <strong>11. Toko Pelanggan</strong> (mengikat Wilayah, Grup Pelanggan, dan Sales Pembina sekaligus). Perhatikan aturan standar pengisian:</p>
-                                <ul style="padding-left:18px; margin:6px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
-                                    <li><strong>Wilayah / Rute (Wajib):</strong> Wajib diisi dan harus terdaftar di master wilayah aktif (lihat Sheet 2).</li>
-                                    <li><strong>Alamat Lengkap (Opsional):</strong> Dapat dikosongkan jika belum lengkap (sistem otomatis mengisi tanda <code>-</code>).</li>
-                                    <li><strong>Model Kerjasama &amp; Tipe Konsinyasi:</strong>
-                                        <br>&bull; Toko <strong>Reguler</strong>: Kolom <em>Tipe Konsinyasi</em> <strong>wajib dikosongkan</strong> (sistem akan menolak bila diisi).
-                                        <br>&bull; Toko <strong>Konsinyasi</strong>: Kolom <em>Tipe Konsinyasi</em> diisi <code>Rolling Nota</code> (opname bergulir per nota) atau <code>Kolektif Tagihan</code> (rekapitulasi faktur periodik/tempo).
-                                    </li>
-                                    <li><strong>Status Toko Baru:</strong> Otomatis berstatus <strong>Aktif</strong> secara default saat diimpor, dan pelanggan default kasir (<code>CUST-001</code>) selalu diproteksi aktif.</li>
-                                    <li><strong>Grup Pelanggan:</strong> Bila dikosongkan di Excel, sistem otomatis menetapkan ke Grup Pelanggan default sistem.</li>
-                                </ul>
+                                <h4 class="step-title">12.3 Panduan Penggunaan Template Excel Resmi</h4>
+                                <p class="step-desc">
+                                    Setiap template Excel yang diunduh dari sistem dilengkapi dengan <strong>Sheet 2 (Kamus &amp; Referensi Data)</strong>. Sheet ini memuat daftar kode wilayah, grup pelanggan, dan nama pemasok yang sah di sistem. Pengguna tinggal menyalin data dari Sheet 2 agar tidak terjadi salah ketik (*typo*) saat pengisian.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -2045,11 +2491,57 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                     <div class="guide-box box-info">
                         <i data-lucide="shield-alert"></i>
                         <div>
-                            <strong>Fitur Unggulan Mesin Sinkronisasi &amp; SmartReader:</strong><br>
-                            • <em>Sheet 2 (Kamus &amp; Referensi Data):</em> Setiap template Excel yang diunduh dilengkapi Sheet 2 berisi referensi kode wilayah, grup, sales, dan opsi termin bayar sah tanpa perlu bolak-balik membuka aplikasi.<br>
-                            • <em>Pratinjau Data &amp; Diffing Engine:</em> Sebelum data dieksekusi ke database, sistem menampilkan tabel perbandingan mutasi (INSERT, UPDATE, DELETE, ERROR, FATAL) serta lencana status tipe konsinyasi untuk menjamin integritas data.<br>
-                            • <em>Mode Aman (Upsert):</em> Menambah data baru &amp; menimpa data yang berubah tanpa mengganggu data lain.<br>
-                            • <em>Sinkronisasi Penuh (Single Truth):</em> Berkas Excel menjadi acuan mutlak; entri lama yang tidak terdaftar akan otomatis dinonaktifkan / disoft-delete bila memiliki riwayat transaksi agar laporan finansial tetap utuh.
+                            <strong>Pemeriksaan Pratinjau (Data Preview) Sebelum Disimpan:</strong><br>
+                            Saat berkas Excel diunggah, sistem tidak langsung memasukkan data ke database, melainkan menampilkan tabel pratinjau perbandingan (*Diffing Table*). Staf dapat memeriksa baris yang akan ditambah (*INSERT*), diubah (*UPDATE*), atau ditolak (*ERROR*) terlebih dahulu untuk memastikan data 100% benar sebelum klik Simpan Permanen.
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================= -->
+                <!-- BAB 13: TIPS NAVIGASI & PWA HP                            -->
+                <!-- ========================================================= -->
+                <section id="bab-13-tips-navigasi" class="guide-chapter theme-rose">
+                    <div class="chapter-header">
+                        <div class="chapter-icon-badge"><i data-lucide="sparkles"></i></div>
+                        <div class="chapter-title-wrap">
+                            <span class="chapter-number">Bab 13</span>
+                            <h3 class="chapter-title">Tips Navigasi Cepat, Kenyamanan &amp; Performa Aplikasi</h3>
+                            <div class="chapter-roles">
+                                <span class="role-pill">Semua Staf</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        Panduan praktis agar penggunaan aplikasi sehari-hari lebih nyaman, cepat, dan lancar di komputer maupun di HP smartphone:
+                    </p>
+
+                    <div class="step-timeline">
+                        <div class="step-item">
+                            <div class="step-circle">1</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Tombol Kembali Pintar (Smart Navigation)</h4>
+                                <p class="step-desc">
+                                    Saat membuka panduan ini atau dokumen cetak, tombol <strong>"Kembali / Tutup Panduan"</strong> di pojok kanan atas telah dilengkapi navigasi pintar: jika dibuka di HP (aplikasi PWA), tombol akan mengembalikan Anda ke halaman kerja transaksi terakhir tanpa menutup aplikasi ke home screen HP.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">2</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Pencarian Cepat di Semua Tabel Data</h4>
+                                <p class="step-desc">
+                                    Gunakan kolom pencarian di bagian atas tabel. Cukup ketik beberapa huruf nama toko, kode barang, nomor WhatsApp, atau nomor rekening bank, sistem otomatis menyaring data dalam hitungan 0,3 detik tanpa perlu menekan tombol Enter. Tekan tombol ✕ di dalam kolom untuk mereset tabel seketika.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-circle">3</div>
+                            <div class="step-content">
+                                <h4 class="step-title">Mode Gelap (Dark Mode) untuk Kerja Malam Hari</h4>
+                                <p class="step-desc">
+                                    Klik ikon bulan/matahari di bagian atas untuk beralih antara Mode Terang dan Mode Gelap. Mode gelap dirancang khusus untuk kenyamanan mata kasir dan driver saat bertugas di malam hari, sekaligus menghemat pemakaian baterai layar HP.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -2057,6 +2549,22 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             </article>
         </main>
     </div>
+
+    <!-- 3. FLOATING BACK TO TOP BUTTON -->
+    <button type="button" 
+            x-show="showBackToTop" 
+            x-cloak 
+            x-transition:enter="transition ease-out duration-200 transform"
+            x-transition:enter-start="opacity-0 translate-y-4"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-200 transform"
+            x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 translate-y-4"
+            @click="scrollToTop()" 
+            class="guide-btn-back-to-top" 
+            title="Kembali ke Bagian Atas">
+        <i data-lucide="arrow-up"></i>
+    </button>
 
     <!-- JavaScript Search Engine & Lucide Initialization -->
     <script>

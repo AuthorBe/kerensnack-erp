@@ -116,22 +116,29 @@ class OwnerController extends Controller
             $labaKotor = $totalOmzet - $totalHpp;
             $marginLabaKotor = ($totalOmzet > 0) ? round(($labaKotor / $totalOmzet) * 100, 1) : 0.0;
 
-            // D. Beban Pengeluaran Operasional (Arus Kas Keluar)
+            // D. Beban Pengeluaran Operasional (Arus Kas Keluar Operasional Usaha)
+            // Mengecualikan transaksi dari akun escrow (tabungan), penarikan tabungan karyawan, mutasi transfer, dan pembelian bahan baku
             $expenseRow = Database::fetchOne("
-                SELECT COALESCE(SUM(nominal), 0) as total_beban
-                FROM public.arus_kas
-                WHERE tanggal_transaksi BETWEEN :start AND :end
-                  AND jenis_kas = 'keluar'
+                SELECT COALESCE(SUM(ark.nominal), 0) as total_beban
+                FROM public.arus_kas ark
+                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+                WHERE ark.tanggal_transaksi BETWEEN :start AND :end
+                  AND ark.jenis_kas = 'keluar'
+                  AND COALESCE(ak.is_escrow, FALSE) = FALSE
+                  AND ark.kategori NOT IN ('penarikan_tabungan', 'transfer_keluar', 'pembelian_bahan')
             ", ['start' => $startDate, 'end' => $endDate]) ?? [];
             $totalBebanOperasional = (float)($expenseRow['total_beban'] ?? 0);
 
-            // Breakdown Top 5 Kategori Beban
+            // Breakdown Top 5 Kategori Beban Operasional
             $expenseBreakdown = Database::fetchAll("
-                SELECT kategori, COALESCE(SUM(nominal), 0) as total_nominal, COUNT(id) as total_tx
-                FROM public.arus_kas
-                WHERE tanggal_transaksi BETWEEN :start AND :end
-                  AND jenis_kas = 'keluar'
-                GROUP BY kategori
+                SELECT ark.kategori, COALESCE(SUM(ark.nominal), 0) as total_nominal, COUNT(ark.id) as total_tx
+                FROM public.arus_kas ark
+                JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+                WHERE ark.tanggal_transaksi BETWEEN :start AND :end
+                  AND ark.jenis_kas = 'keluar'
+                  AND COALESCE(ak.is_escrow, FALSE) = FALSE
+                  AND ark.kategori NOT IN ('penarikan_tabungan', 'transfer_keluar', 'pembelian_bahan')
+                GROUP BY ark.kategori
                 ORDER BY total_nominal DESC
                 LIMIT 5
             ", ['start' => $startDate, 'end' => $endDate]);
@@ -154,18 +161,27 @@ class OwnerController extends Controller
             // 3. NERACA MODAL KERJA & KESEHATAN KEUANGAN (CURRENT LIVE SNAPSHOT)
             // =========================================================================
 
-            // A. Kas Cair & Rekening Bank
-            $totalKasLikuid = (float)(Database::fetchOne("
+            // A. Kas Operasional Likuid Usaha vs Dana Tabungan Karyawan (Escrow Terkunci)
+            $totalKasOperasional = (float)(Database::fetchOne("
                 SELECT COALESCE(SUM(saldo_saat_ini), 0) as total 
                 FROM public.akun_kas 
-                WHERE status_aktif = TRUE
+                WHERE status_aktif = TRUE AND COALESCE(is_escrow, FALSE) = FALSE
             ")['total'] ?? 0);
 
+            $totalKasEscrow = (float)(Database::fetchOne("
+                SELECT COALESCE(SUM(saldo_saat_ini), 0) as total 
+                FROM public.akun_kas 
+                WHERE status_aktif = TRUE AND is_escrow = TRUE
+            ")['total'] ?? 0);
+
+            $totalKasKonsolidasi = $totalKasOperasional + $totalKasEscrow;
+            $totalKasLikuid = $totalKasOperasional; // Backward compatibility alias
+
             $kasDetail = Database::fetchAll("
-                SELECT nama_akun, tipe_akun, saldo_saat_ini
+                SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_escrow
                 FROM public.akun_kas
                 WHERE status_aktif = TRUE
-                ORDER BY saldo_saat_ini DESC
+                ORDER BY COALESCE(is_escrow, FALSE) ASC, saldo_saat_ini DESC
             ");
 
             // B. Total Piutang Usaha & Aging (Berdasarkan Jatuh Tempo Riil)
@@ -478,6 +494,9 @@ class OwnerController extends Controller
                 'marginLabaBersih' => $marginLabaBersih,
                 // Neraca Modal Kerja
                 'totalKasLikuid' => $totalKasLikuid,
+                'totalKasOperasional' => $totalKasOperasional,
+                'totalKasEscrow' => $totalKasEscrow,
+                'totalKasKonsolidasi' => $totalKasKonsolidasi,
                 'kasDetail' => $kasDetail,
                 'totalPiutang' => $totalPiutang,
                 'agingSummary' => $agingSummary,

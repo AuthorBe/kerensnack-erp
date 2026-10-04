@@ -190,15 +190,18 @@ class ProductController extends Controller
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
 
-            // 3. Master Bahan Baku Curah & Bahan Kemasan
+            // 3. Master Bahan Baku Curah & Bahan Kemasan (Konsolidasi & Terhubung Multi-Vendor)
             $materials = Database::fetchAll("
                 SELECT i.id, i.kode_sku, i.nama_item, i.tipe_item, i.satuan_dasar,
                        i.harga_pokok_pembelian, i.stok_fisik_saat_ini, i.stok_minimum_peringatan,
                        i.pemasok_utama_id, i.status_aktif,
-                       sup.nama_pemasok, sup.kode_pemasok,
-                       (SELECT COUNT(*) FROM public.komposisi_item ki WHERE ki.item_bahan_id = i.id) as dipakai_di_resep
+                       (SELECT COUNT(*) FROM public.komposisi_item ki WHERE ki.item_bahan_id = i.id) as dipakai_di_resep,
+                       (SELECT COUNT(*) FROM public.pemasok_item pi WHERE pi.item_id = i.id AND pi.status_aktif = TRUE) as total_vendor_katalog,
+                       (SELECT string_agg(p.nama_pemasok, ', ') 
+                        FROM public.pemasok_item pi 
+                        JOIN public.pemasok p ON p.id = pi.pemasok_id 
+                        WHERE pi.item_id = i.id AND pi.status_aktif = TRUE) as vendor_names
                 FROM public.item i
-                LEFT JOIN public.pemasok sup ON i.pemasok_utama_id = sup.id
                 WHERE i.tipe_item IN ('bahan_mentah', 'bahan_kemas')
                 ORDER BY i.tipe_item ASC, i.nama_item ASC
             ");

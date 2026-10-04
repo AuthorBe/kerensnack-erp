@@ -230,7 +230,7 @@ class CustomerController extends Controller
             $cashAccounts = Database::fetchAll("
                 SELECT id, nama_akun, nomor_rekening, atas_nama, saldo_saat_ini, tipe_akun, is_default_pos
                 FROM public.akun_kas
-                WHERE status_aktif = TRUE
+                WHERE status_aktif = TRUE AND is_escrow = FALSE
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
@@ -563,9 +563,9 @@ class CustomerController extends Controller
             return;
         }
 
-        // Proteksi Pelanggan Default POS (CUST-001): Status wajib aktif
-        if ($currentCust['kode_pelanggan'] === 'CUST-001' && !$statusAktif) {
-            $this->flashError('Status toko default sistem (CUST-001 / Toko Umum / Walk-in Cash) wajib tetap aktif untuk operasional kasir POS.');
+        // Proteksi Pelanggan Default Sistem (CUST-001 & CUST-002): Status wajib aktif
+        if (in_array($currentCust['kode_pelanggan'], ['CUST-001', 'CUST-002'], true) && !$statusAktif) {
+            $this->flashError("Status toko default sistem ({$currentCust['kode_pelanggan']} / {$currentCust['nama_toko']}) wajib tetap aktif untuk operasional sistem.");
             $this->redirect('/customers');
             return;
         }
@@ -676,7 +676,7 @@ class CustomerController extends Controller
                     if ($metodeBeliPutus === 'lunas') {
                         $akunKasId = $this->input('akun_kas_id');
                         if (empty($akunKasId)) {
-                            $defaultKas = Database::fetchOne("SELECT id FROM public.akun_kas WHERE status_aktif = TRUE AND is_default_pos = TRUE LIMIT 1");
+                            $defaultKas = Database::fetchOne("SELECT id FROM public.akun_kas WHERE status_aktif = TRUE AND is_default_pos = TRUE AND is_escrow = FALSE LIMIT 1");
                             if ($defaultKas) {
                                 $akunKasId = $defaultKas['id'];
                             } else {
@@ -684,7 +684,7 @@ class CustomerController extends Controller
                             }
                         }
                         $stmtKas = $pdo->prepare("
-                            SELECT id, nama_akun, saldo_saat_ini 
+                            SELECT id, nama_akun, saldo_saat_ini, is_escrow 
                             FROM public.akun_kas 
                             WHERE id = :id AND status_aktif = TRUE 
                             FOR UPDATE
@@ -693,6 +693,9 @@ class CustomerController extends Controller
                         $akunKas = $stmtKas->fetch(PDO::FETCH_ASSOC);
                         if (!$akunKas) {
                             throw new RuntimeException("Akun kas/bank yang dipilih tidak ditemukan atau nonaktif.");
+                        }
+                        if (!empty($akunKas['is_escrow'])) {
+                            throw new RuntimeException("Akun kas yang dipilih adalah Akun Tabungan (Escrow Terkunci) dan dilarang digunakan untuk pembayaran penjualan.");
                         }
                     }
 
@@ -990,10 +993,14 @@ class CustomerController extends Controller
                 return;
             }
 
-            // Proteksi Pelanggan Default POS (CUST-001 / Toko Umum / Walk-in Cash)
+            // Proteksi Pelanggan Default Sistem (CUST-001 / Walk-in Cash & CUST-002 / Online Customer)
             $namaTokoUpper = strtoupper(trim($custRow['nama_toko']));
-            if ($custRow['kode_pelanggan'] === 'CUST-001' || $namaTokoUpper === 'UMUM/CASH' || str_contains($namaTokoUpper, 'WALK-IN CASH') || str_contains($namaTokoUpper, 'TOKO UMUM')) {
-                $this->flashError('Toko pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak dapat dihapus.');
+            if (in_array($custRow['kode_pelanggan'], ['CUST-001', 'CUST-002'], true) 
+                || $namaTokoUpper === 'UMUM/CASH' 
+                || str_contains($namaTokoUpper, 'WALK-IN CASH') 
+                || str_contains($namaTokoUpper, 'TOKO UMUM')
+                || str_contains($namaTokoUpper, 'ONLINE CUSTOMER')) {
+                $this->flashError("Toko pelanggan default sistem ({$custRow['kode_pelanggan']} / {$custRow['nama_toko']}) terkunci permanen dan tidak dapat dihapus.");
                 $this->redirect('/customers');
                 return;
             }

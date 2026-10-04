@@ -1180,51 +1180,6 @@ AFTER DELETE ON public.produksi_harian
 FOR EACH ROW
 EXECUTE FUNCTION public.fn_trg_produksi_harian_after_delete();
 
--- C. Trigger Persetujuan Biaya Operasional (Draf Pengeluaran -> Catat Arus Kas Keluar)
-CREATE OR REPLACE FUNCTION public.fn_trg_draf_pengeluaran_approval()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path = public, pg_temp
-AS $function$
-DECLARE
-    v_akun_id UUID;
-    v_saldo_lama NUMERIC;
-    v_saldo_baru NUMERIC;
-BEGIN
-    IF (OLD.status_approval IS DISTINCT FROM NEW.status_approval) AND (NEW.status_approval = 'disetujui') THEN
-        v_akun_id := NEW.akun_kas_id;
-        IF v_akun_id IS NULL THEN
-            SELECT id INTO v_akun_id FROM public.akun_kas WHERE status_aktif = TRUE LIMIT 1;
-        END IF;
-
-        SELECT saldo_saat_ini INTO v_saldo_lama FROM public.akun_kas WHERE id = v_akun_id;
-        v_saldo_baru := COALESCE(v_saldo_lama, 0) - NEW.nominal;
-
-        UPDATE public.akun_kas 
-        SET saldo_saat_ini = v_saldo_baru, diubah_pada = NOW()
-        WHERE id = v_akun_id;
-
-        INSERT INTO public.arus_kas (
-            akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal,
-            keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
-        ) VALUES (
-            v_akun_id, CURRENT_DATE, 'keluar', 'beban_operasional', NEW.nominal,
-            'Pengeluaran disetujui: ' || NEW.keterangan_mentah, 'draf_pengeluaran', NEW.id,
-            v_saldo_baru, NEW.diajukan_oleh_pengguna_id, NOW()
-        );
-    END IF;
-
-    RETURN NEW;
-END;
-$function$;
-
-DROP TRIGGER IF EXISTS trg_draf_pengeluaran_approval ON public.draf_pengeluaran;
-CREATE TRIGGER trg_draf_pengeluaran_approval
-AFTER UPDATE ON public.draf_pengeluaran
-FOR EACH ROW
-EXECUTE FUNCTION public.fn_trg_draf_pengeluaran_approval();
-
 -- D. Trigger Potongan Kasbon -> Update Saldo Kasbon
 CREATE OR REPLACE FUNCTION public.fn_trg_potongan_kasbon_update_saldo()
  RETURNS trigger
@@ -1239,9 +1194,12 @@ BEGIN
     FROM public.kasbon 
     WHERE id = NEW.kasbon_id;
 
+    IF v_sisa_baru < 0 THEN
+        RAISE EXCEPTION 'Nominal potongan melebihi sisa pinjaman kasbon. Proses ditolak.';
+    END IF;
     UPDATE public.kasbon 
-    SET sisa_pinjaman = GREATEST(0, v_sisa_baru),
-        status_kasbon = CASE WHEN v_sisa_baru <= 0 THEN 'lunas' ELSE 'aktif' END,
+    SET sisa_pinjaman = v_sisa_baru,
+        status_kasbon = CASE WHEN v_sisa_baru = 0 THEN 'lunas' ELSE 'aktif' END,
         diubah_pada = NOW()
     WHERE id = NEW.kasbon_id;
 
@@ -1262,14 +1220,20 @@ CREATE OR REPLACE FUNCTION public.fn_trg_transaksi_tabungan_update_saldo()
  SECURITY DEFINER
  SET search_path = public, pg_temp
 AS $function$
+DECLARE
+    v_saldo_saat_ini NUMERIC;
 BEGIN
     IF NEW.tipe = 'deposit' THEN
         UPDATE public.tabungan 
         SET saldo = saldo + NEW.jumlah, diubah_pada = NOW()
         WHERE id = NEW.tabungan_id;
     ELSIF NEW.tipe = 'withdrawal' THEN
+        SELECT saldo INTO v_saldo_saat_ini FROM public.tabungan WHERE id = NEW.tabungan_id FOR UPDATE;
+        IF COALESCE(v_saldo_saat_ini, 0) - NEW.jumlah < 0 THEN
+            RAISE EXCEPTION 'Saldo tabungan tidak mencukupi untuk penarikan sebesar Rp %.', NEW.jumlah;
+        END IF;
         UPDATE public.tabungan 
-        SET saldo = GREATEST(0, saldo - NEW.jumlah), diubah_pada = NOW()
+        SET saldo = saldo - NEW.jumlah, diubah_pada = NOW()
         WHERE id = NEW.tabungan_id;
     END IF;
 
@@ -1405,7 +1369,7 @@ BEFORE INSERT OR UPDATE OF sales_driver_id ON public.pelanggan
 FOR EACH ROW
 EXECUTE FUNCTION public.fn_guard_pelanggan_sales_driver();
 
--- Trigger Proteksi Mutlak Pelanggan Default POS (CUST-001 / Toko Umum / Walk-in Cash)
+-- Trigger Proteksi Mutlak Pelanggan Default Sistem (CUST-001 / Walk-in Cash & CUST-002 / Online Customer)
 CREATE OR REPLACE FUNCTION public.fn_guard_protect_default_customer()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -1414,8 +1378,10 @@ SET search_path = public, pg_temp
 AS $$
 BEGIN
     IF TG_OP = 'DELETE' THEN
-        IF OLD.kode_pelanggan = 'CUST-001' OR UPPER(TRIM(OLD.nama_toko)) LIKE '%WALK-IN CASH%' THEN
-            RAISE EXCEPTION 'Pelanggan default sistem (CUST-001 / Toko Umum / Walk-in Cash) terkunci permanen dan tidak dapat dihapus.';
+        IF OLD.kode_pelanggan IN ('CUST-001', 'CUST-002') 
+           OR UPPER(TRIM(OLD.nama_toko)) LIKE '%WALK-IN CASH%' 
+           OR UPPER(TRIM(OLD.nama_toko)) LIKE '%ONLINE CUSTOMER%' THEN
+            RAISE EXCEPTION 'Pelanggan default sistem (CUST-001 / Walk-in Cash dan CUST-002 / Online Customer) terkunci permanen dan tidak dapat dihapus.';
         END IF;
         RETURN OLD;
     END IF;
@@ -1429,6 +1395,16 @@ BEGIN
                 RAISE EXCEPTION 'Pelanggan default sistem (CUST-001) wajib tetap aktif untuk operasional kasir POS.';
             END IF;
         END IF;
+
+        IF OLD.kode_pelanggan = 'CUST-002' THEN
+            IF NEW.kode_pelanggan != 'CUST-002' THEN
+                RAISE EXCEPTION 'Kode pelanggan default sistem (CUST-002) terkunci dan tidak boleh diubah.';
+            END IF;
+            IF NEW.status_aktif = FALSE THEN
+                RAISE EXCEPTION 'Pelanggan default sistem (CUST-002) wajib tetap aktif untuk operasional penjualan online.';
+            END IF;
+        END IF;
+
         RETURN NEW;
     END IF;
 
@@ -1441,6 +1417,9 @@ CREATE TRIGGER trg_guard_protect_default_customer
 BEFORE UPDATE OR DELETE ON public.pelanggan
 FOR EACH ROW
 EXECUTE FUNCTION public.fn_guard_protect_default_customer();
+
+REVOKE EXECUTE ON FUNCTION public.fn_guard_protect_default_customer() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_protect_default_customer() TO postgres, service_role;
 
 -- 2. Fungsi Helper PostgreSQL untuk Perhitungan Tier Komisi Sales Bertingkat
 CREATE OR REPLACE FUNCTION public.fn_hitung_tier_komisi_sales(p_omzet NUMERIC)
@@ -1633,6 +1612,323 @@ AFTER INSERT ON public.merek
 FOR EACH ROW
 EXECUTE FUNCTION public.fn_trg_merek_after_insert();
 
+-- A. fn_buat_tagihan_kunjungan_konsinyasi
+CREATE OR REPLACE FUNCTION public.fn_buat_tagihan_kunjungan_konsinyasi(
+    p_kunjungan_ids uuid[],
+    p_pengguna_id uuid DEFAULT NULL::uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $function$
+DECLARE
+    v_kid UUID;
+    v_pelanggan_id UUID;
+    v_driver_id UUID;
+    v_nomor_nota VARCHAR(50);
+    v_pesanan_id UUID;
+    v_total_netto NUMERIC(15,2) := 0;
+    v_count INT;
+    v_cek_tagihan UUID;
+    v_tgl_terakhir DATE;
+BEGIN
+    IF p_kunjungan_ids IS NULL OR array_length(p_kunjungan_ids, 1) = 0 THEN
+        RAISE EXCEPTION 'Daftar ID kunjungan tidak boleh kosong';
+    END IF;
+
+    -- Validasi 1: Pastikan semua kunjungan berasal dari pelanggan yang sama
+    SELECT COUNT(DISTINCT pelanggan_id), MAX(pelanggan_id), MAX(sales_driver_id)
+    INTO v_count, v_pelanggan_id, v_driver_id
+    FROM public.kunjungan_konsinyasi
+    WHERE id = ANY(p_kunjungan_ids);
+
+    IF v_count > 1 THEN
+        RAISE EXCEPTION 'Semua kunjungan yang ditagihkan harus berasal dari 1 pelanggan / toko yang sama';
+    END IF;
+
+    IF v_pelanggan_id IS NULL THEN
+        RAISE EXCEPTION 'Data kunjungan tidak ditemukan untuk ID yang diberikan';
+    END IF;
+
+    -- Validasi 2: Pastikan tidak ada kunjungan yang sudah ditagihkan sebelumnya
+    SELECT tk.pesanan_id INTO v_cek_tagihan
+    FROM public.tagihan_kunjungan tk
+    WHERE tk.kunjungan_id = ANY(p_kunjungan_ids)
+    LIMIT 1;
+
+    IF v_cek_tagihan IS NOT NULL THEN
+        RAISE EXCEPTION 'Salah satu kunjungan yang dipilih sudah pernah ditagihkan pada pesanan ID %', v_cek_tagihan;
+    END IF;
+
+    -- Hitung total laku dari rincian kunjungan
+    SELECT COALESCE(SUM(rkk.subtotal_laku), 0)
+    INTO v_total_netto
+    FROM public.rincian_kunjungan_konsinyasi rkk
+    WHERE rkk.kunjungan_id = ANY(p_kunjungan_ids);
+
+    IF v_total_netto <= 0 THEN
+        RAISE EXCEPTION 'Total penjualan dari kunjungan yang dipilih adalah Rp 0. Tidak ada tagihan yang dibuat.';
+    END IF;
+
+    -- Generate nomor nota tagihan konsinyasi unik
+    v_nomor_nota := 'INV-KONS-' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || '-' || LPAD(FLOOR(RANDOM() * 9000 + 1000)::TEXT, 4, '0');
+
+    -- Ambil pengguna pencatat jika null
+    IF p_pengguna_id IS NULL THEN
+        SELECT id INTO p_pengguna_id 
+        FROM public.pengguna 
+        WHERE status_aktif = TRUE 
+        ORDER BY dibuat_pada ASC 
+        LIMIT 1;
+    END IF;
+
+    -- Insert pesanan (tagihan konsinyasi baru) dengan is_tagihan = TRUE
+    INSERT INTO public.pesanan (
+        nomor_nota, pelanggan_id, sales_driver_id,
+        tanggal_pesanan, total_bruto, total_diskon, total_netto,
+        tipe_pembayaran, status_pembayaran, status_pemrosesan,
+        total_dibayar, sisa_tagihan, is_tagihan, catatan,
+        dibuat_oleh, dibuat_pada, diubah_pada
+    ) VALUES (
+        v_nomor_nota, v_pelanggan_id, v_driver_id,
+        CURRENT_DATE, v_total_netto, 0.00, v_total_netto,
+        'konsinyasi', 'belum_lunas', 'selesai',
+        0.00, v_total_netto, TRUE,
+        'Tagihan Manual Konsinyasi: ' || array_length(p_kunjungan_ids, 1) || ' kunjungan',
+        p_pengguna_id, NOW(), NOW()
+    ) RETURNING id INTO v_pesanan_id;
+
+    -- Insert item_pesanan
+    INSERT INTO public.item_pesanan (
+        pesanan_id, item_id,
+        kuantitas_satuan_dasar,
+        harga_satuan_deal, diskon_item_persen, diskon_item_nominal,
+        is_bonus, subtotal, dibuat_pada
+    )
+    SELECT 
+        v_pesanan_id,
+        rkk.item_id,
+        SUM(rkk.jumlah_laku_terjual),
+        MAX(rkk.harga_satuan_deal),
+        0.00, 0.00,
+        FALSE,
+        SUM(rkk.subtotal_laku),
+        NOW()
+    FROM public.rincian_kunjungan_konsinyasi rkk
+    WHERE rkk.kunjungan_id = ANY(p_kunjungan_ids)
+      AND rkk.jumlah_laku_terjual > 0
+    GROUP BY rkk.item_id;
+
+    -- Isi junction table tagihan_kunjungan dan update link di kunjungan
+    FOREACH v_kid IN ARRAY p_kunjungan_ids LOOP
+        INSERT INTO public.tagihan_kunjungan (pesanan_id, kunjungan_id)
+        VALUES (v_pesanan_id, v_kid);
+
+        UPDATE public.kunjungan_konsinyasi 
+        SET pesanan_id = v_pesanan_id
+        WHERE id = v_kid;
+    END LOOP;
+
+    -- Update total piutang berjalan di master pelanggan
+    UPDATE public.pelanggan 
+    SET total_piutang_berjalan = COALESCE(total_piutang_berjalan, 0) + v_total_netto,
+        diubah_pada = NOW()
+    WHERE id = v_pelanggan_id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'pesanan_id', v_pesanan_id,
+        'nomor_nota', v_nomor_nota,
+        'total_tagihan', v_total_netto,
+        'jumlah_kunjungan', array_length(p_kunjungan_ids, 1)
+    );
+END;
+$function$;
+
+-- B. fn_catat_pembayaran_konsinyasi
+CREATE OR REPLACE FUNCTION public.fn_catat_pembayaran_konsinyasi(
+    p_pesanan_id uuid,
+    p_akun_kas_id uuid,
+    p_nominal_bayar numeric,
+    p_dicatat_oleh uuid DEFAULT NULL::uuid,
+    p_keterangan text DEFAULT NULL::text,
+    p_tanggal_bayar date DEFAULT CURRENT_DATE
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $function$
+DECLARE
+    v_pesanan RECORD;
+    v_sisa_baru NUMERIC(15,2);
+    v_status_baru VARCHAR(30);
+    v_saldo_lama NUMERIC(15,2);
+    v_saldo_baru NUMERIC(15,2);
+    v_pengguna_id UUID := p_dicatat_oleh;
+    v_tgl_transaksi DATE := COALESCE(p_tanggal_bayar, CURRENT_DATE);
+    v_ket_kas TEXT;
+BEGIN
+    SELECT * INTO v_pesanan FROM public.pesanan WHERE id = p_pesanan_id FOR UPDATE;
+
+    IF v_pesanan IS NULL THEN
+        RAISE EXCEPTION 'Pesanan % tidak ditemukan', p_pesanan_id;
+    END IF;
+
+    IF v_pesanan.is_tagihan = FALSE THEN
+        RAISE EXCEPTION 'Pesanan ini adalah dokumen pengiriman/titip, bukan tagihan. Tidak bisa dicatat pembayarannya.';
+    END IF;
+
+    IF v_pesanan.status_pembayaran = 'dibatalkan' THEN
+        RAISE EXCEPTION 'Tagihan % telah dibatalkan. Pembayaran tidak dapat diproses.', v_pesanan.nomor_nota;
+    END IF;
+
+    IF v_pesanan.status_pembayaran = 'lunas' AND v_pesanan.sisa_tagihan <= 0 THEN
+        RAISE EXCEPTION 'Tagihan % sudah lunas sepenuhnya.', v_pesanan.nomor_nota;
+    END IF;
+
+    IF p_nominal_bayar <= 0 THEN
+        RAISE EXCEPTION 'Nominal pembayaran harus lebih dari 0';
+    END IF;
+
+    IF p_nominal_bayar > v_pesanan.sisa_tagihan THEN
+        RAISE EXCEPTION 'Nominal pembayaran (Rp %) melebihi sisa tagihan (Rp %)',
+            TO_CHAR(p_nominal_bayar, 'FM999,999,999,990D00'),
+            TO_CHAR(v_pesanan.sisa_tagihan, 'FM999,999,999,990D00');
+    END IF;
+
+    IF p_akun_kas_id IS NULL THEN
+        RAISE EXCEPTION 'Akun kas penerima pembayaran wajib dipilih';
+    END IF;
+
+    IF v_pengguna_id IS NULL THEN
+        SELECT id INTO v_pengguna_id FROM public.pengguna WHERE status_aktif = TRUE ORDER BY dibuat_pada ASC LIMIT 1;
+    END IF;
+
+    v_sisa_baru := GREATEST(0.00, v_pesanan.sisa_tagihan - p_nominal_bayar);
+    IF v_sisa_baru <= 0 THEN
+        v_status_baru := 'lunas';
+    ELSE
+        v_status_baru := 'sebagian';
+    END IF;
+
+    UPDATE public.pesanan
+    SET total_dibayar = COALESCE(total_dibayar, 0) + p_nominal_bayar,
+        sisa_tagihan = v_sisa_baru,
+        status_pembayaran = v_status_baru,
+        akun_kas_id = p_akun_kas_id,
+        diubah_pada = NOW()
+    WHERE id = p_pesanan_id;
+
+    UPDATE public.pelanggan
+    SET total_piutang_berjalan = GREATEST(0.00, COALESCE(total_piutang_berjalan, 0) - p_nominal_bayar),
+        diubah_pada = NOW()
+    WHERE id = v_pesanan.pelanggan_id;
+
+    SELECT saldo_saat_ini INTO v_saldo_lama FROM public.akun_kas WHERE id = p_akun_kas_id FOR UPDATE;
+    v_saldo_baru := COALESCE(v_saldo_lama, 0) + p_nominal_bayar;
+
+    UPDATE public.akun_kas
+    SET saldo_saat_ini = v_saldo_baru,
+        diubah_pada = NOW()
+    WHERE id = p_akun_kas_id;
+
+    v_ket_kas := COALESCE(p_keterangan, 'Pelunasan Tagihan Konsinyasi: ' || v_pesanan.nomor_nota);
+
+    INSERT INTO public.transaksi_kas (
+        akun_kas_id, jenis_transaksi, kategori,
+        nominal, saldo_sebelum, saldo_setelah,
+        tanggal_transaksi, referensi_tabel, referensi_id,
+        keterangan, dibuat_oleh, dibuat_pada
+    ) VALUES (
+        p_akun_kas_id, 'masuk', 'pendapatan_operasional',
+        p_nominal_bayar, v_saldo_lama, v_saldo_baru,
+        v_tgl_transaksi, 'pesanan', p_pesanan_id,
+        v_ket_kas, v_pengguna_id, NOW()
+    );
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'nomor_nota', v_pesanan.nomor_nota,
+        'nominal_bayar', p_nominal_bayar,
+        'sisa_tagihan_baru', v_sisa_baru,
+        'status_pembayaran', v_status_baru,
+        'saldo_kas_baru', v_saldo_baru
+    );
+END;
+$function$;
+
+-- C. fn_revisi_dan_rekonsiliasi_piutang_pelanggan
+CREATE OR REPLACE FUNCTION public.fn_revisi_dan_rekonsiliasi_piutang_pelanggan(
+    p_pelanggan_id uuid DEFAULT NULL::uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $function$
+DECLARE
+    v_updated_count INT := 0;
+    v_total_piutang_baru NUMERIC(15, 2) := 0;
+BEGIN
+    IF p_pelanggan_id IS NOT NULL THEN
+        UPDATE public.pelanggan p
+        SET total_piutang_berjalan = COALESCE((
+            SELECT SUM(pes.sisa_tagihan)
+            FROM public.pesanan pes
+            WHERE pes.pelanggan_id = p.id
+              AND pes.is_tagihan = TRUE
+              AND pes.status_pemrosesan IN ('selesai_dikirim', 'selesai', 'selesai_diterima')
+              AND pes.status_pemrosesan != 'dibatalkan'
+              AND pes.status_pembayaran != 'lunas'
+              AND pes.sisa_tagihan > 0
+        ), 0),
+        diubah_pada = NOW()
+        WHERE p.id = p_pelanggan_id;
+
+        GET DIAGNOSTICS v_updated_count = ROW_COUNT;
+
+        SELECT total_piutang_berjalan INTO v_total_piutang_baru
+        FROM public.pelanggan WHERE id = p_pelanggan_id;
+
+        RETURN jsonb_build_object(
+            'success', true,
+            'mode', 'single',
+            'pelanggan_id', p_pelanggan_id,
+            'total_piutang_berjalan', v_total_piutang_baru
+        );
+    ELSE
+        UPDATE public.pelanggan p
+        SET total_piutang_berjalan = COALESCE((
+            SELECT SUM(pes.sisa_tagihan)
+            FROM public.pesanan pes
+            WHERE pes.pelanggan_id = p.id
+              AND pes.is_tagihan = TRUE
+              AND pes.status_pemrosesan IN ('selesai_dikirim', 'selesai', 'selesai_diterima')
+              AND pes.status_pemrosesan != 'dibatalkan'
+              AND pes.status_pembayaran != 'lunas'
+              AND pes.sisa_tagihan > 0
+        ), 0),
+        diubah_pada = NOW();
+
+        GET DIAGNOSTICS v_updated_count = ROW_COUNT;
+
+        SELECT COALESCE(SUM(total_piutang_berjalan), 0) INTO v_total_piutang_baru
+        FROM public.pelanggan;
+
+        RETURN jsonb_build_object(
+            'success', true,
+            'mode', 'all',
+            'pelanggan_terupdate', v_updated_count,
+            'total_piutang_nasional', v_total_piutang_baru
+        );
+    END IF;
+END;
+$function$;
+
+
+
 -- Kunci hak akses eksekusi RPC untuk fungsi trigger
 REVOKE EXECUTE ON FUNCTION public.fn_trg_grup_pelanggan_after_insert() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.fn_trg_merek_after_insert() FROM PUBLIC, anon, authenticated;
@@ -1645,4 +1941,156 @@ GRANT EXECUTE ON FUNCTION public.fn_buat_tagihan_kunjungan_konsinyasi(uuid[], uu
 GRANT EXECUTE ON FUNCTION public.fn_proses_kunjungan_konsinyasi(uuid, uuid, jsonb, text, text, uuid, uuid) TO postgres, service_role;
 GRANT EXECUTE ON FUNCTION public.fn_revisi_dan_rekonsiliasi_piutang_pelanggan(uuid) TO postgres, service_role;
 
+
+
+
+-- ==============================================================================
+-- G. IMMUTABLE GUARD UNTUK DOKUMEN PAYROLL (HR TRANSACTIONS)
+-- ==============================================================================
+
+-- Fungsi Guard untuk tabel dengan penggajian_id (produksi_harian, absensi, penarikan_gaji)
+CREATE OR REPLACE FUNCTION public.fn_guard_locked_hr_transactions()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $function$
+BEGIN
+    IF OLD.penggajian_id IS NOT NULL THEN
+        IF TG_OP = 'UPDATE' THEN
+            IF NEW.penggajian_id IS NULL THEN
+                RETURN NEW;
+            END IF;
+            RAISE EXCEPTION 'Akses Ditolak (UPDATE): Transaksi ini telah terkunci secara permanen oleh Invoice Payroll (ID: %). Batal/drafkan payroll dari aplikasi terlebih dahulu.', OLD.penggajian_id;
+        ELSIF TG_OP = 'DELETE' THEN
+            RAISE EXCEPTION 'Akses Ditolak (DELETE): Transaksi ini telah terkunci secara permanen oleh Invoice Payroll (ID: %). Batal/drafkan payroll dari aplikasi terlebih dahulu.', OLD.penggajian_id;
+        END IF;
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_guard_locked_hr_produksi ON public.produksi_harian;
+CREATE TRIGGER trg_guard_locked_hr_produksi
+BEFORE UPDATE OR DELETE ON public.produksi_harian
+FOR EACH ROW EXECUTE FUNCTION public.fn_guard_locked_hr_transactions();
+
+DROP TRIGGER IF EXISTS trg_guard_locked_hr_absensi ON public.absensi;
+CREATE TRIGGER trg_guard_locked_hr_absensi
+BEFORE UPDATE OR DELETE ON public.absensi
+FOR EACH ROW EXECUTE FUNCTION public.fn_guard_locked_hr_transactions();
+
+DROP TRIGGER IF EXISTS trg_guard_locked_hr_penarikan_gaji ON public.penarikan_gaji;
+CREATE TRIGGER trg_guard_locked_hr_penarikan_gaji
+BEFORE UPDATE OR DELETE ON public.penarikan_gaji
+FOR EACH ROW EXECUTE FUNCTION public.fn_guard_locked_hr_transactions();
+
+-- Fungsi Guard untuk tabel dengan rincian_penggajian_id (potongan_kasbon, transaksi_tabungan)
+CREATE OR REPLACE FUNCTION public.fn_guard_locked_hr_rincian_transactions()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path = public, pg_temp
+AS $function$
+BEGIN
+    IF OLD.rincian_penggajian_id IS NOT NULL THEN
+        IF TG_OP = 'UPDATE' THEN
+            IF NEW.rincian_penggajian_id IS NULL THEN
+                RETURN NEW;
+            END IF;
+            RAISE EXCEPTION 'Akses Ditolak (UPDATE): Transaksi ini telah dikunci oleh Rincian Payroll (ID: %).', OLD.rincian_penggajian_id;
+        ELSIF TG_OP = 'DELETE' THEN
+            RAISE EXCEPTION 'Akses Ditolak (DELETE): Transaksi ini telah dikunci oleh Rincian Payroll (ID: %).', OLD.rincian_penggajian_id;
+        END IF;
+    END IF;
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$function$;
+
+DROP TRIGGER IF EXISTS trg_guard_locked_hr_potongan_kasbon ON public.potongan_kasbon;
+CREATE TRIGGER trg_guard_locked_hr_potongan_kasbon
+BEFORE UPDATE OR DELETE ON public.potongan_kasbon
+FOR EACH ROW EXECUTE FUNCTION public.fn_guard_locked_hr_rincian_transactions();
+
+DROP TRIGGER IF EXISTS trg_guard_locked_hr_transaksi_tabungan ON public.transaksi_tabungan;
+CREATE TRIGGER trg_guard_locked_hr_transaksi_tabungan
+BEFORE UPDATE OR DELETE ON public.transaksi_tabungan
+FOR EACH ROW EXECUTE FUNCTION public.fn_guard_locked_hr_rincian_transactions();
+
+-- -----------------------------------------------------------------------------
+-- PROTEKSI ARUS KAS: REKENING TITIPAN ESCROW TABUNGAN KARYAWAN
+-- Dilarang digunakan untuk transaksi komersial penjualan dan pembelian
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_guard_escrow_cash_account()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_is_escrow BOOLEAN;
+    v_nama_akun TEXT;
+BEGIN
+    SELECT is_escrow, nama_akun INTO v_is_escrow, v_nama_akun
+    FROM public.akun_kas
+    WHERE id = NEW.akun_kas_id;
+
+    IF v_is_escrow IS TRUE THEN
+        IF NEW.kategori IN (
+            'penjualan', 'penjualan_pos', 'penjualan_pesanan', 'pelunasan_piutang', 'pembayaran_konsinyasi',
+            'uang_muka_penjualan', 'retur_penjualan',
+            'pembelian', 'pembelian_bahan', 'pelunasan_hutang_pembelian', 'uang_muka_pembelian', 'pembelian_aset',
+            'biaya_pengadaan', 'kasbon', 'penarikan_gaji', 'beban_operasional', 'biaya_operasional'
+        ) OR NEW.referensi_tabel IN (
+            'pesanan', 'pesanan_penjualan', 'pembayaran_pesanan', 'pembelian', 'rincian_pembelian', 'pembayaran_pembelian',
+            'surat_jalan', 'tagihan_kunjungan', 'kunjungan_konsinyasi'
+        ) THEN
+            RAISE EXCEPTION 'Proteksi Finansial: Akun kas ''%'' adalah rekening titipan tabungan karyawan (escrow) dan dilarang digunakan untuk transaksi penjualan maupun pembelian.', v_nama_akun;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_guard_escrow_cash_account ON public.arus_kas;
+CREATE TRIGGER trg_guard_escrow_cash_account
+    BEFORE INSERT OR UPDATE ON public.arus_kas
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_guard_escrow_cash_account();
+
+-- -----------------------------------------------------------------------------
+-- Trigger Proteksi Mutasi Akun Kas Escrow (Blokir Hapus & Nonaktif saat Bersaldo)
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_guard_escrow_account_mutation()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Blokir penghapusan akun escrow master sistem
+    IF TG_OP = 'DELETE' THEN
+        IF OLD.is_escrow IS TRUE THEN
+            RAISE EXCEPTION 'Proteksi Finansial: Akun ''%'' adalah rekening titipan escrow tabungan karyawan master sistem dan tidak dapat dihapus.', OLD.nama_akun;
+        END IF;
+        RETURN OLD;
+    END IF;
+
+    -- Blokir penonaktifan akun escrow selagi masih ada saldo berjalan
+    IF TG_OP = 'UPDATE' THEN
+        IF NEW.is_escrow IS TRUE AND NEW.status_aktif IS FALSE AND (NEW.saldo_saat_ini > 0 OR OLD.saldo_saat_ini > 0) THEN
+            RAISE EXCEPTION 'Proteksi Finansial: Akun ''%'' adalah rekening titipan tabungan karyawan (escrow) dan tidak dapat dinonaktifkan selagi masih memiliki saldo berjalan (Rp %). Lakukan pencairan seluruh saldo tabungan terlebih dahulu sebelum menonaktifkan akun.', NEW.nama_akun, to_char(COALESCE(NEW.saldo_saat_ini, OLD.saldo_saat_ini), 'FM999,999,999,999');
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_guard_escrow_account_mutation ON public.akun_kas;
+CREATE TRIGGER trg_guard_escrow_account_mutation
+    BEFORE UPDATE OF status_aktif, is_escrow, saldo_saat_ini OR DELETE ON public.akun_kas
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_guard_escrow_account_mutation();
 

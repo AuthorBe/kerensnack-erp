@@ -20,9 +20,13 @@ class Auth
     public static function init(): void
     {
         if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+            $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                        (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+            
             ini_set('session.gc_maxlifetime', '86400');
             session_start([
                 'cookie_httponly' => true,
+                'cookie_secure'   => $isSecure,
                 'cookie_samesite' => 'Lax',
                 'cookie_lifetime' => 0,
                 'gc_maxlifetime'  => 86400

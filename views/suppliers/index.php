@@ -323,6 +323,10 @@ ob_start();
                             <?php if (Auth::can('master.suppliers_manage')): ?>
                             <td class="cell-center cell-nowrap">
                                 <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                                    <button @click="openCatalogModal(s)" class="btn btn-secondary btn-sm" style="padding:4px 8px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;border-color:rgba(136,19,55,0.25);color:var(--color-primary);" title="Kelola Katalog Bahan &amp; Harga Vendor Ini">
+                                        <i data-lucide="package-search" style="width:13px;height:13px;"></i>
+                                        <span>Katalog</span>
+                                    </button>
                                     <button @click="openEditModal(s)" class="btn btn-ghost btn-sm" style="padding:6px;" title="Edit Data Vendor Lengkap">
                                         <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                                     </button>
@@ -559,6 +563,506 @@ ob_start();
     </div>
     </template>
 
+    <!-- ========================================================================= -->
+    <!-- MODAL KATALOG BAHAN & HARGA VENDOR (CANONICAL KEREN ONE ERP DESIGN DNA)  -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+    <div x-show="showCatalogModal" x-cloak class="modal-backdrop" @click="showCatalogModal = false">
+        <div class="modal-box modal-box-lg" style="max-width:920px; width:96vw;" @click.stop>
+            <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+            
+            <!-- Modal Header (Keren One Canonical) -->
+            <div class="modal-header" style="padding:16px 20px; border-bottom:1px solid var(--color-hairline);">
+                <div class="flex items-center gap-3.5 min-w-0 flex-1">
+                    <div style="width:44px;height:44px;border-radius:12px;background:rgba(136,19,55,0.1);color:var(--color-primary);border:1px solid rgba(136,19,55,0.22);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="package-search" style="width:22px;height:22px;"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="modal-title text-base sm:text-lg font-bold" style="color:var(--color-ink);">Katalog Bahan &amp; Harga Vendor</span>
+                            <span class="badge badge-mono text-xs font-bold" style="color:var(--color-primary);background:rgba(136,19,55,0.08);border:1px solid rgba(136,19,55,0.2);" x-text="catalogSupplier?.kode_pemasok"></span>
+                        </div>
+                        <div style="font-size:12px;color:var(--color-ink-mute);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <span class="font-bold" style="color:var(--color-ink);" x-text="catalogSupplier?.nama_pemasok"></span>
+                            <span>&bull;</span>
+                            <span x-text="'Syarat Bayar: ' + formatTermin(catalogSupplier?.termin_bayar)"></span>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" @click="showCatalogModal = false" class="modal-close-x" title="Tutup Modal">
+                    <i data-lucide="x" style="width:18px;height:18px;"></i>
+                </button>
+            </div>
+
+            <div class="modal-body custom-scrollbar space-y-4" style="max-height:calc(85vh - 120px);overflow-y:auto;padding:16px 20px;">
+                
+                <!-- Skeleton Loading State (Keren One High-Fidelity Skeleton) -->
+                <div x-show="loadingCatalog" class="space-y-4">
+                    <!-- 1. Skeleton Stat Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="stat-card" style="padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:12px;">
+                            <div class="skeleton-shimmer skeleton-box" style="width:38px;height:38px;min-width:38px;border-radius:10px;"></div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="skeleton-shimmer skeleton-line" style="width:75px;height:10px;margin-bottom:6px;"></div>
+                                <div class="skeleton-shimmer skeleton-line" style="width:45px;height:16px;"></div>
+                            </div>
+                        </div>
+                        <div class="stat-card" style="padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:12px;">
+                            <div class="skeleton-shimmer skeleton-box" style="width:38px;height:38px;min-width:38px;border-radius:10px;"></div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="skeleton-shimmer skeleton-line" style="width:85px;height:10px;margin-bottom:6px;"></div>
+                                <div class="skeleton-shimmer skeleton-line" style="width:45px;height:16px;"></div>
+                            </div>
+                        </div>
+                        <div class="stat-card" style="padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:12px;">
+                            <div class="skeleton-shimmer skeleton-box" style="width:38px;height:38px;min-width:38px;border-radius:10px;"></div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="skeleton-shimmer skeleton-line" style="width:95px;height:10px;margin-bottom:6px;"></div>
+                                <div class="skeleton-shimmer skeleton-line" style="width:45px;height:16px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Skeleton Form Card -->
+                    <?php if (Auth::can('master.suppliers_manage')): ?>
+                    <div style="padding:14px 16px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
+                        <div class="flex items-center justify-between border-b pb-2" style="border-color:var(--color-hairline);">
+                            <div class="skeleton-shimmer skeleton-line" style="width:160px;height:12px;"></div>
+                            <div class="skeleton-shimmer skeleton-line" style="width:60px;height:10px;"></div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                            <div class="sm:col-span-5">
+                                <div class="skeleton-shimmer skeleton-line" style="width:110px;height:10px;margin-bottom:6px;"></div>
+                                <div class="skeleton-shimmer skeleton-box" style="width:100%;height:38px;border-radius:6px;"></div>
+                            </div>
+                            <div class="sm:col-span-3">
+                                <div class="skeleton-shimmer skeleton-line" style="width:90px;height:10px;margin-bottom:6px;"></div>
+                                <div class="skeleton-shimmer skeleton-box" style="width:100%;height:38px;border-radius:6px;"></div>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <div class="skeleton-shimmer skeleton-line" style="width:80px;height:10px;margin-bottom:6px;"></div>
+                                <div class="skeleton-shimmer skeleton-box" style="width:100%;height:38px;border-radius:6px;"></div>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <div class="skeleton-shimmer skeleton-box" style="width:100%;height:38px;border-radius:6px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- 3. Skeleton Table Card -->
+                    <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);overflow:hidden;">
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 border-b" style="border-color:var(--color-hairline);background:var(--color-canvas-soft);">
+                            <div class="skeleton-shimmer skeleton-line" style="width:170px;height:12px;"></div>
+                            <div class="skeleton-shimmer skeleton-box" style="width:180px;height:32px;border-radius:8px;"></div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="data-table" style="width:100%;margin:0;">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:180px;">Item / Bahan</th>
+                                        <th style="width:120px;">Kategori</th>
+                                        <th style="width:80px;" class="cell-center">Satuan</th>
+                                        <th style="width:140px;text-align:right;">Harga Beli Vendor</th>
+                                        <th style="min-width:140px;">Catatan</th>
+                                        <?php if (Auth::can('master.suppliers_manage')): ?>
+                                        <th class="cell-center" style="width:80px;">Aksi</th>
+                                        <?php endif; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php for ($skm = 0; $skm < 3; $skm++): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="skeleton-shimmer skeleton-line" style="width:65%;height:13px;margin-bottom:5px;"></div>
+                                            <div class="skeleton-shimmer skeleton-line" style="width:35%;height:10px;"></div>
+                                        </td>
+                                        <td>
+                                            <div class="skeleton-shimmer skeleton-pill" style="width:80px;height:18px;"></div>
+                                        </td>
+                                        <td class="cell-center">
+                                            <div class="skeleton-shimmer skeleton-pill" style="width:40px;height:18px;margin:0 auto;"></div>
+                                        </td>
+                                        <td style="text-align:right;">
+                                            <div class="skeleton-shimmer skeleton-line" style="width:75px;height:13px;margin-left:auto;"></div>
+                                        </td>
+                                        <td>
+                                            <div class="skeleton-shimmer skeleton-line" style="width:60%;height:12px;"></div>
+                                        </td>
+                                        <?php if (Auth::can('master.suppliers_manage')): ?>
+                                        <td class="cell-center">
+                                            <div class="skeleton-shimmer skeleton-box" style="width:50px;height:24px;border-radius:6px;margin:0 auto;"></div>
+                                        </td>
+                                        <?php endif; ?>
+                                    </tr>
+                                    <?php endfor; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Catalog Main Content -->
+                <div x-show="!loadingCatalog" class="space-y-4">
+                    
+                    <!-- 1. Executive Stat Cards (Keren One Metric DNA) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="stat-card" style="padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:12px;">
+                            <div class="stat-card-icon" style="width:38px;height:38px;min-width:38px;border-radius:10px;background:rgba(136,19,55,0.1);color:var(--color-primary);display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="boxes" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div style="min-width:0;">
+                                <div class="stat-card-label" style="font-size:11px;">Total Bahan Dipasok</div>
+                                <div class="stat-card-value font-mono" style="font-size:16px;color:var(--color-ink);" x-text="catalogItems.length + ' Item'"></div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:12px;">
+                            <div class="stat-card-icon" style="width:38px;height:38px;min-width:38px;border-radius:10px;background:rgba(59,130,246,0.1);color:#3b82f6;display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="archive" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div style="min-width:0;">
+                                <div class="stat-card-label" style="font-size:11px;">Bahan Mentah Curah</div>
+                                <div class="stat-card-value font-mono" style="font-size:16px;color:#3b82f6;" x-text="catalogItems.filter(i => i.tipe_item === 'bahan_mentah').length + ' Item'"></div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card" style="padding:12px 14px;display:flex;align-items:center;gap:12px;border-radius:12px;">
+                            <div class="stat-card-icon" style="width:38px;height:38px;min-width:38px;border-radius:10px;background:rgba(16,185,129,0.1);color:#10b981;display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="package" style="width:18px;height:18px;"></i>
+                            </div>
+                            <div style="min-width:0;">
+                                <div class="stat-card-label" style="font-size:11px;">Bahan Kemasan &amp; Maklon</div>
+                                <div class="stat-card-value font-mono" style="font-size:16px;color:#10b981;" x-text="catalogItems.filter(i => i.tipe_item !== 'bahan_mentah').length + ' Item'"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Form Entri / Edit Cepat (Keren One Section Card) -->
+                    <?php if (Auth::can('master.suppliers_manage')): ?>
+                    <div style="padding:14px 16px;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);display:flex;flex-direction:column;gap:12px;">
+                        <div class="flex items-center justify-between gap-2 border-b pb-2" style="border-color:var(--color-hairline);">
+                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
+                                <i data-lucide="plus-circle" style="width:14px;height:14px;"></i>
+                                <span x-text="catalogForm.item_id && catalogItems.find(x => x.item_id === catalogForm.item_id) ? 'Perbarui Harga / Ketentuan Bahan di Vendor' : '1. Daftarkan Bahan Baru ke Vendor Ini'"></span>
+                            </div>
+                            <template x-if="catalogForm.item_id">
+                                <button type="button" @click="resetCatalogForm()" class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 8px;color:var(--color-ink-mute);">
+                                    <i data-lucide="rotate-ccw" style="width:12px;height:12px;"></i>
+                                    <span>Reset Form</span>
+                                </button>
+                            </template>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                            <!-- Dropdown Bahan (Searchable Combobox) (5 cols) -->
+                            <div class="sm:col-span-5 relative" x-data="{
+                                openDropdown: false,
+                                itemSearchQuery: '',
+                                get selectedItemObj() {
+                                    return availableItems.find(x => x.id === catalogForm.item_id) || null;
+                                }
+                            }" @click.away="openDropdown = false">
+                                <label class="form-label" style="font-size:11.5px;margin-bottom:4px;">
+                                    Pilih Bahan Mentah / Kemasan / Maklon <span style="color:var(--color-danger);">*</span>
+                                </label>
+                                
+                                <!-- Combobox Trigger Button -->
+                                <div @click="if (!catalogFormSaving) { openDropdown = !openDropdown; if (openDropdown) { $nextTick(() => { $refs.itemSearchInput?.focus(); if (window.lucide) lucide.createIcons(); }); } }"
+                                     class="form-input flex items-center justify-between cursor-pointer transition-all"
+                                     :style="catalogFormSaving ? 'opacity:0.6;pointer-events:none;' : (openDropdown ? 'border-color:var(--color-primary);box-shadow:0 0 0 3px rgba(136,19,55,0.12);' : '')"
+                                     style="height:38px;padding:6px 12px;font-size:12px;user-select:none;background:var(--color-canvas);border-radius:8px;">
+                                    
+                                    <div class="truncate flex items-center gap-2 flex-1 min-w-0 pr-1">
+                                        <template x-if="selectedItemObj">
+                                            <div class="flex items-center gap-1.5 truncate">
+                                                <span class="badge badge-mono text-[10px]" style="padding:1px 6px;font-weight:700;" x-text="selectedItemObj.kode_sku"></span>
+                                                <span class="font-bold truncate text-[12.5px]" style="color:var(--color-ink);" x-text="selectedItemObj.nama_item"></span>
+                                                <span class="badge badge-secondary text-[10px]" style="padding:1px 5px;" x-text="selectedItemObj.satuan_dasar"></span>
+                                            </div>
+                                        </template>
+                                        <template x-if="!selectedItemObj">
+                                            <span style="color:var(--color-ink-mute);font-size:12px;font-weight:500;">-- Cari &amp; Pilih Item Bahan --</span>
+                                        </template>
+                                    </div>
+
+                                    <div class="flex items-center gap-1.5 text-slate-400 flex-shrink-0">
+                                        <template x-if="catalogForm.item_id">
+                                            <button type="button" @click.stop="resetCatalogForm(); itemSearchQuery = '';" class="btn-ghost p-1 rounded hover:text-rose-600 dark:hover:text-rose-400 transition-colors" title="Hapus Pilihan">
+                                                <i data-lucide="x" style="width:13px;height:13px;"></i>
+                                            </button>
+                                        </template>
+                                        <i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--color-ink-mute);" :style="openDropdown ? 'transform:rotate(180deg);transition:transform 0.2s;' : 'transition:transform 0.2s;'"></i>
+                                    </div>
+                                </div>
+
+                                <!-- Combobox Popover (Executive UI) -->
+                                <div x-show="openDropdown" x-cloak
+                                     style="position:absolute;top:calc(100% + 6px);left:0;right:0;min-width:320px;z-index:90;background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:12px;box-shadow:0 12px 30px -6px rgba(0,0,0,0.22), 0 8px 12px -6px rgba(0,0,0,0.12);max-height:300px;display:flex;flex-direction:column;overflow:hidden;">
+                                    
+                                    <!-- Search Input Header -->
+                                    <div style="padding:10px 12px;border-bottom:1px solid var(--color-hairline);background:var(--color-canvas-soft);display:flex;align-items:center;gap:8px;">
+                                        <div class="relative flex-1">
+                                            <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--color-ink-mute);pointer-events:none;"></i>
+                                            <input type="text" x-ref="itemSearchInput" x-model="itemSearchQuery"
+                                                   placeholder="Ketik nama bahan atau kode SKU..."
+                                                   @keydown.escape="openDropdown = false"
+                                                   class="form-input text-xs"
+                                                   style="height:32px;padding-left:30px;padding-right:26px;border-radius:8px;width:100%;font-size:12px;">
+                                            <button type="button" x-show="itemSearchQuery" @click="itemSearchQuery = ''" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--color-ink-mute);padding:2px;cursor:pointer;">
+                                                <i data-lucide="x" style="width:12px;height:12px;"></i>
+                                            </button>
+                                        </div>
+                                        <div class="text-[10.5px] font-mono font-bold text-slate-400 whitespace-nowrap" x-text="getAllSelectableItems(itemSearchQuery).length + ' opsi'"></div>
+                                    </div>
+
+                                    <!-- Options Scroll Area -->
+                                    <div class="overflow-y-auto custom-scrollbar flex-1" style="max-height:240px;padding:8px;">
+                                        
+                                        <!-- Group 1: Bahan Mentah Curah -->
+                                        <template x-if="getSelectableItems('bahan_mentah', itemSearchQuery).length > 0">
+                                            <div style="margin-bottom:8px;">
+                                                <div style="padding:6px 8px 6px 8px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;justify-content:space-between;">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <i data-lucide="boxes" style="width:13px;height:13px;"></i>
+                                                        <span>Bahan Mentah Curah</span>
+                                                    </div>
+                                                    <span class="badge badge-mono" style="font-size:9.5px;padding:1px 6px;background:rgba(136,19,55,0.08);color:var(--color-primary);" x-text="getSelectableItems('bahan_mentah', itemSearchQuery).length + ' bahan'"></span>
+                                                </div>
+                                                <div class="space-y-1">
+                                                    <template x-for="it in getSelectableItems('bahan_mentah', itemSearchQuery)" :key="it.id">
+                                                        <div @click="selectCatalogItem(it); openDropdown = false; itemSearchQuery = '';"
+                                                             class="cursor-pointer flex items-center justify-between text-xs transition-all group"
+                                                             style="padding:8px 12px;border-radius:8px;border:1px solid transparent;"
+                                                             :style="catalogForm.item_id === it.id ? 'background:rgba(136,19,55,0.08);border-color:var(--color-primary);font-weight:700;' : 'background:transparent;'"
+                                                             :class="catalogForm.item_id === it.id ? '' : 'hover:bg-rose-50/80 dark:hover:bg-slate-800/80 hover:border-rose-200 dark:hover:border-slate-700'">
+                                                            <div class="truncate flex items-center gap-2.5 flex-1 min-w-0 pr-2">
+                                                                <span class="badge badge-mono text-[10px] font-bold flex-shrink-0" style="padding:2px 6px;" x-text="it.kode_sku"></span>
+                                                                <span class="font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-rose-700 dark:group-hover:text-rose-400 text-[12.5px]" x-text="it.nama_item"></span>
+                                                            </div>
+                                                            <span class="badge badge-secondary text-[10px] flex-shrink-0 font-mono font-bold" style="padding:2px 7px;text-transform:uppercase;" x-text="it.satuan_dasar"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- Group 2: Bahan Kemas & Perlengkapan -->
+                                        <template x-if="getSelectableItems('bahan_kemas', itemSearchQuery).length > 0">
+                                            <div style="margin-bottom:8px;">
+                                                <div style="padding:6px 8px 6px 8px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:#0284c7;display:flex;align-items:center;justify-content:space-between;">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <i data-lucide="package" style="width:13px;height:13px;"></i>
+                                                        <span>Bahan Kemasan &amp; Perlengkapan</span>
+                                                    </div>
+                                                    <span class="badge badge-mono" style="font-size:9.5px;padding:1px 6px;background:rgba(2,132,199,0.08);color:#0284c7;" x-text="getSelectableItems('bahan_kemas', itemSearchQuery).length + ' bahan'"></span>
+                                                </div>
+                                                <div class="space-y-1">
+                                                    <template x-for="it in getSelectableItems('bahan_kemas', itemSearchQuery)" :key="it.id">
+                                                        <div @click="selectCatalogItem(it); openDropdown = false; itemSearchQuery = '';"
+                                                             class="cursor-pointer flex items-center justify-between text-xs transition-all group"
+                                                             style="padding:8px 12px;border-radius:8px;border:1px solid transparent;"
+                                                             :style="catalogForm.item_id === it.id ? 'background:rgba(136,19,55,0.08);border-color:var(--color-primary);font-weight:700;' : 'background:transparent;'"
+                                                             :class="catalogForm.item_id === it.id ? '' : 'hover:bg-rose-50/80 dark:hover:bg-slate-800/80 hover:border-rose-200 dark:hover:border-slate-700'">
+                                                            <div class="truncate flex items-center gap-2.5 flex-1 min-w-0 pr-2">
+                                                                <span class="badge badge-mono text-[10px] font-bold flex-shrink-0" style="padding:2px 6px;" x-text="it.kode_sku"></span>
+                                                                <span class="font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-rose-700 dark:group-hover:text-rose-400 text-[12.5px]" x-text="it.nama_item"></span>
+                                                            </div>
+                                                            <span class="badge badge-secondary text-[10px] flex-shrink-0 font-mono font-bold" style="padding:2px 7px;text-transform:uppercase;" x-text="it.satuan_dasar"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- Group 3: Barang Jadi / Maklon -->
+                                        <template x-if="getSelectableItems('barang_jadi', itemSearchQuery).length > 0">
+                                            <div style="margin-bottom:8px;">
+                                                <div style="padding:6px 8px 6px 8px;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:#059669;display:flex;align-items:center;justify-content:space-between;">
+                                                    <div class="flex items-center gap-1.5">
+                                                        <i data-lucide="tag" style="width:13px;height:13px;"></i>
+                                                        <span>Barang Jadi / Maklon Vendor</span>
+                                                    </div>
+                                                    <span class="badge badge-mono" style="font-size:9.5px;padding:1px 6px;background:rgba(5,150,105,0.08);color:#059669;" x-text="getSelectableItems('barang_jadi', itemSearchQuery).length + ' produk'"></span>
+                                                </div>
+                                                <div class="space-y-1">
+                                                    <template x-for="it in getSelectableItems('barang_jadi', itemSearchQuery)" :key="it.id">
+                                                        <div @click="selectCatalogItem(it); openDropdown = false; itemSearchQuery = '';"
+                                                             class="cursor-pointer flex items-center justify-between text-xs transition-all group"
+                                                             style="padding:8px 12px;border-radius:8px;border:1px solid transparent;"
+                                                             :style="catalogForm.item_id === it.id ? 'background:rgba(136,19,55,0.08);border-color:var(--color-primary);font-weight:700;' : 'background:transparent;'"
+                                                             :class="catalogForm.item_id === it.id ? '' : 'hover:bg-rose-50/80 dark:hover:bg-slate-800/80 hover:border-rose-200 dark:hover:border-slate-700'">
+                                                            <div class="truncate flex items-center gap-2.5 flex-1 min-w-0 pr-2">
+                                                                <span class="badge badge-mono text-[10px] font-bold flex-shrink-0" style="padding:2px 6px;" x-text="it.kode_sku"></span>
+                                                                <span class="font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-rose-700 dark:group-hover:text-rose-400 text-[12.5px]" x-text="it.nama_item"></span>
+                                                            </div>
+                                                            <span class="badge badge-secondary text-[10px] flex-shrink-0 font-mono font-bold" style="padding:2px 7px;text-transform:uppercase;" x-text="it.satuan_dasar"></span>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- Empty / No matches state -->
+                                        <template x-if="getAllSelectableItems(itemSearchQuery).length === 0">
+                                            <div style="padding:28px 16px;text-align:center;color:var(--color-ink-mute);font-size:12px;">
+                                                <div style="width:36px;height:36px;border-radius:10px;background:var(--color-canvas-soft);color:var(--color-ink-mute);display:inline-flex;align-items:center;justify-content:center;margin-bottom:6px;">
+                                                    <i data-lucide="inbox" style="width:18px;height:18px;"></i>
+                                                </div>
+                                                <template x-if="itemSearchQuery">
+                                                    <div class="font-semibold text-slate-700 dark:text-slate-300">Tidak ada item yang cocok dengan "<b><span x-text="itemSearchQuery"></span></b>"</div>
+                                                </template>
+                                                <template x-if="!itemSearchQuery">
+                                                    <div class="font-semibold text-slate-700 dark:text-slate-300">Semua item bahan &amp; produk sudah dikaitkan ke vendor ini.</div>
+                                                </template>
+                                                <div class="text-[11px] text-slate-400 mt-1">Gunakan tabel di bawah untuk mengubah harga atau menghapus bahan.</div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Input Harga Beli (3 cols) -->
+                            <div class="sm:col-span-3">
+                                <label class="form-label" style="font-size:11.5px;margin-bottom:4px;">
+                                    Harga Beli Satuan (Rp) <span style="color:var(--color-danger);">*</span>
+                                </label>
+                                <div class="relative flex items-center">
+                                    <span style="position:absolute;left:10px;font-size:11.5px;font-weight:700;color:var(--color-ink-mute);pointer-events:none;">Rp</span>
+                                    <input type="number" step="any" min="0" x-model.number="catalogForm.harga_beli" class="form-input font-mono font-bold" style="height:38px;font-size:12.5px;padding-left:32px;text-align:right;" placeholder="0" :disabled="catalogFormSaving">
+                                </div>
+                            </div>
+
+                            <!-- Input Catatan / Min Order (2 cols) -->
+                            <div class="sm:col-span-2">
+                                <label class="form-label" style="font-size:11.5px;margin-bottom:4px;">
+                                    Catatan / Min Order
+                                </label>
+                                <input type="text" x-model="catalogForm.catatan" class="form-input" style="height:38px;font-size:12px;" placeholder="Misal: Min 5 bal" :disabled="catalogFormSaving">
+                            </div>
+
+                            <!-- Tombol Aksi Simpan (2 cols) -->
+                            <div class="sm:col-span-2">
+                                <button type="button" @click="saveCatalog()" class="btn btn-primary w-full flex items-center justify-center gap-1.5" style="height:38px;font-size:12px;font-weight:700;" :disabled="catalogFormSaving || !catalogForm.item_id" title="Simpan ke Katalog">
+                                    <template x-if="!catalogFormSaving">
+                                        <div class="flex items-center gap-1.5">
+                                            <i data-lucide="check" style="width:15px;height:15px;"></i>
+                                            <span x-text="catalogForm.item_id && catalogItems.find(x => x.item_id === catalogForm.item_id) ? 'Update' : 'Daftarkan'"></span>
+                                        </div>
+                                    </template>
+                                    <template x-if="catalogFormSaving">
+                                        <div class="flex items-center gap-1.5">
+                                            <i data-lucide="loader-2" class="animate-spin" style="width:15px;height:15px;"></i>
+                                            <span>Menyimpan...</span>
+                                        </div>
+                                    </template>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- 3. Tabel Daftar Bahan Vendor (Keren One Data Table) -->
+                    <div style="background:var(--color-canvas);border:1px solid var(--color-hairline);border-radius:var(--rounded-md);overflow:hidden;">
+                        
+                        <!-- Table Top Controls -->
+                        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 border-b" style="border-color:var(--color-hairline);background:var(--color-canvas-soft);">
+                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);display:flex;align-items:center;gap:6px;">
+                                <i data-lucide="list" style="width:14px;height:14px;"></i>
+                                <span>2. Rincian Bahan yang Dipasok Vendor</span>
+                            </div>
+                            
+                            <div class="relative flex-1 sm:max-w-xs">
+                                <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:var(--color-ink-mute);pointer-events:none;"></i>
+                                <input type="text" x-model="catalogSearch" placeholder="Cari bahan di vendor ini..." class="form-input text-xs" style="height:32px;padding-left:30px;width:100%;border-radius:8px;">
+                            </div>
+                        </div>
+
+                        <!-- Data Table -->
+                        <div class="overflow-x-auto">
+                            <table class="data-table" style="min-width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:200px;">Nama Bahan Baku / Kemasan</th>
+                                        <th style="width:105px;" class="cell-nowrap">Kategori</th>
+                                        <th style="width:80px;" class="cell-nowrap cell-center">Satuan</th>
+                                        <th style="width:140px;text-align:right;" class="cell-nowrap">Harga Beli Vendor</th>
+                                        <th style="min-width:140px;">Catatan / Ketentuan</th>
+                                        <?php if (Auth::can('master.suppliers_manage')): ?>
+                                        <th class="cell-center cell-nowrap" style="width:80px;">Aksi</th>
+                                        <?php endif; ?>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="item in filteredCatalogItems" :key="item.catalog_id">
+                                        <tr>
+                                            <td>
+                                                <div class="font-bold text-xs" style="color:var(--color-ink);" x-text="item.nama_item"></div>
+                                                <div class="text-[10.5px] font-mono text-slate-400" x-text="item.kode_sku"></div>
+                                            </td>
+                                            <td class="cell-nowrap">
+                                                <span :class="{
+                                                    'badge badge-warning': item.tipe_item === 'bahan_mentah',
+                                                    'badge badge-secondary': item.tipe_item === 'bahan_kemas',
+                                                    'badge badge-success': item.tipe_item === 'barang_jadi'
+                                                }" style="font-size:10px;padding:1px 6px;font-weight:700;" x-text="item.tipe_item === 'bahan_mentah' ? 'Curah Mentah' : (item.tipe_item === 'bahan_kemas' ? 'Bahan Kemas' : 'Maklon / Jadi')"></span>
+                                            </td>
+                                            <td class="cell-nowrap cell-center">
+                                                <span class="badge badge-mono text-[10px]" style="text-transform:uppercase;" x-text="item.satuan_dasar"></span>
+                                            </td>
+                                            <td style="text-align:right;" class="cell-nowrap">
+                                                <span class="font-bold text-xs font-mono" style="color:var(--color-success);" x-text="'Rp ' + Number(item.harga_beli).toLocaleString('id-ID')"></span>
+                                            </td>
+                                            <td>
+                                                <span class="text-xs" style="color:var(--color-ink-mute);" x-text="item.catatan || '-'"></span>
+                                            </td>
+                                            <?php if (Auth::can('master.suppliers_manage')): ?>
+                                            <td class="cell-center cell-nowrap">
+                                                <div class="flex items-center justify-center gap-1">
+                                                    <button type="button" @click="editCatalogItem(item)" class="btn btn-ghost btn-sm" style="padding:5px;" title="Edit Harga / Catatan">
+                                                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
+                                                    </button>
+                                                    <button type="button" @click="deleteCatalog(item)" class="btn btn-ghost btn-sm" style="padding:5px;color:#ef4444;" title="Hapus dari Katalog">
+                                                        <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                            <?php endif; ?>
+                                        </tr>
+                                    </template>
+
+                                    <template x-if="filteredCatalogItems.length === 0">
+                                        <tr>
+                                            <td colspan="<?= Auth::can('master.suppliers_manage') ? 6 : 5 ?>" style="text-align:center;padding:36px 16px;color:var(--color-ink-mute);">
+                                                <div style="width:44px;height:44px;border-radius:12px;background:var(--color-canvas-soft);color:var(--color-ink-mute);display:inline-flex;align-items:center;justify-content:center;margin-bottom:8px;">
+                                                    <i data-lucide="inbox" style="width:22px;height:22px;"></i>
+                                                </div>
+                                                <div style="font-weight:700;font-size:13px;color:var(--color-ink);">Belum ada bahan di katalog vendor ini</div>
+                                                <div style="font-size:11.5px;margin-top:2px;color:var(--color-ink-mute);">Gunakan formulir di atas untuk menghubungkan bahan baku atau kemasan yang dipasok oleh vendor.</div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Modal Footer (Keren One Canonical) -->
+            <div class="modal-footer flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5" style="padding:14px 20px; border-top:1px solid var(--color-hairline); background:var(--color-canvas-soft);">
+                <div class="flex items-center gap-2 text-[11.5px]" style="color:var(--color-ink-mute);">
+                    <i data-lucide="info" style="width:14px;height:14px;color:var(--color-primary);flex-shrink:0;"></i>
+                    <span>Harga beli di katalog ini akan otomatis muncul saat membuat PO Pembelian untuk vendor ini.</span>
+                </div>
+                <button type="button" @click="showCatalogModal = false" class="btn btn-secondary w-full sm:w-auto" style="font-weight:700;min-width:90px;">Tutup</button>
+            </div>
+        </div>
+    </div>
+    </template>
+
     <!-- FORM DELETE HIDDEN -->
     <form id="delete-supplier-form" action="<?= Router::url('/suppliers/delete') ?>" method="POST" style="display:none;">
         <?= \App\Helpers\CSRF::field() ?>
@@ -591,6 +1095,22 @@ function supplierApp() {
             bank_nama: '',
             bank_rekening: '',
             bank_atas_nama: '',
+            status_aktif: true
+        },
+
+        // Vendor Catalog State
+        showCatalogModal: false,
+        loadingCatalog: false,
+        catalogSupplier: null,
+        catalogItems: [],
+        availableItems: [],
+        catalogSearch: '',
+        catalogFormSaving: false,
+        catalogForm: {
+            item_id: '',
+            harga_beli: 0,
+            kode_sku_vendor: '',
+            catatan: '',
             status_aktif: true
         },
 
@@ -729,6 +1249,212 @@ function supplierApp() {
             if (confirmed) {
                 document.getElementById('delete-supplier-id').value = id;
                 document.getElementById('delete-supplier-form').submit();
+            }
+        },
+
+        // ==========================================
+        // VENDOR CATALOG METHODS
+        // ==========================================
+        async openCatalogModal(supplier) {
+            this.catalogSupplier = supplier;
+            this.showCatalogModal = true;
+            this.loadingCatalog = true;
+            this.resetCatalogForm();
+            this.$nextTick(() => lucide.createIcons());
+
+            try {
+                const res = await fetch('<?= Router::url("/suppliers/catalog") ?>?pemasok_id=' + encodeURIComponent(supplier.id), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        this.catalogItems = data.catalog || [];
+                        this.availableItems = data.available_items || [];
+                    }
+                }
+            } catch (err) {
+                console.error('Gagal memuat katalog:', err);
+                if (window.Toast) window.Toast.error('Gagal memuat katalog vendor');
+            } finally {
+                this.loadingCatalog = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        resetCatalogForm() {
+            this.catalogForm = {
+                item_id: '',
+                harga_beli: 0,
+                kode_sku_vendor: '',
+                catatan: '',
+                status_aktif: true
+            };
+        },
+
+        getSelectableItems(type, search) {
+            const linkedItemIds = this.catalogItems.map(c => c.item_id);
+            const q = (search || '').toLowerCase().trim();
+            
+            return this.availableItems.filter(it => {
+                if (it.tipe_item !== type) return false;
+                
+                // Item must NOT already be linked to this vendor (unless currently editing this item)
+                const isCurrentlySelected = this.catalogForm.item_id === it.id;
+                const isAlreadyLinked = linkedItemIds.includes(it.id);
+                if (isAlreadyLinked && !isCurrentlySelected) return false;
+                
+                if (!q) return true;
+                return (it.nama_item && it.nama_item.toLowerCase().includes(q)) ||
+                       (it.kode_sku && it.kode_sku.toLowerCase().includes(q));
+            });
+        },
+
+        getAllSelectableItems(search) {
+            const linkedItemIds = this.catalogItems.map(c => c.item_id);
+            const q = (search || '').toLowerCase().trim();
+            
+            return this.availableItems.filter(it => {
+                const isCurrentlySelected = this.catalogForm.item_id === it.id;
+                const isAlreadyLinked = linkedItemIds.includes(it.id);
+                if (isAlreadyLinked && !isCurrentlySelected) return false;
+                
+                if (!q) return true;
+                return (it.nama_item && it.nama_item.toLowerCase().includes(q)) ||
+                       (it.kode_sku && it.kode_sku.toLowerCase().includes(q));
+            });
+        },
+
+        selectCatalogItem(it) {
+            this.catalogForm.item_id = it.id;
+            this.onCatalogItemSelected();
+        },
+
+        onCatalogItemSelected() {
+            const itemId = this.catalogForm.item_id;
+            if (!itemId) return;
+
+            // Jika item sudah ada di katalog vendor, load harga & catatannya
+            const existingInCatalog = this.catalogItems.find(x => x.item_id === itemId);
+            if (existingInCatalog) {
+                this.catalogForm.harga_beli = parseFloat(existingInCatalog.harga_beli) || 0;
+                this.catalogForm.kode_sku_vendor = existingInCatalog.kode_sku_vendor || '';
+                this.catalogForm.catatan = existingInCatalog.catatan || '';
+                return;
+            }
+
+            // Jika belum ada, gunakan HPP standar master item sebagai nilai default
+            const masterItem = this.availableItems.find(x => x.id === itemId);
+            if (masterItem) {
+                this.catalogForm.harga_beli = parseFloat(masterItem.harga_pokok_pembelian) || 0;
+            }
+        },
+
+        editCatalogItem(item) {
+            this.catalogForm = {
+                item_id: item.item_id,
+                harga_beli: parseFloat(item.harga_beli) || 0,
+                kode_sku_vendor: item.kode_sku_vendor || '',
+                catatan: item.catatan || '',
+                status_aktif: Boolean(item.status_aktif)
+            };
+        },
+
+        get filteredCatalogItems() {
+            const q = (this.catalogSearch || '').toLowerCase().trim();
+            if (!q) return this.catalogItems;
+            return this.catalogItems.filter(i => {
+                return (i.nama_item && i.nama_item.toLowerCase().includes(q)) ||
+                       (i.kode_sku && i.kode_sku.toLowerCase().includes(q)) ||
+                       (i.catatan && i.catatan.toLowerCase().includes(q)) ||
+                       (i.satuan_dasar && i.satuan_dasar.toLowerCase().includes(q));
+            });
+        },
+
+        async saveCatalog() {
+            if (!this.catalogSupplier || !this.catalogForm.item_id) return;
+
+            this.catalogFormSaving = true;
+            try {
+                const formData = new FormData();
+                formData.append('csrf_token', '<?= \App\Helpers\CSRF::token() ?>');
+                formData.append('pemasok_id', this.catalogSupplier.id);
+                formData.append('item_id', this.catalogForm.item_id);
+                formData.append('harga_beli', this.catalogForm.harga_beli);
+                formData.append('kode_sku_vendor', this.catalogForm.kode_sku_vendor || '');
+                formData.append('catatan', this.catalogForm.catatan || '');
+                formData.append('status_aktif', this.catalogForm.status_aktif ? '1' : '0');
+
+                const res = await fetch('<?= Router::url("/suppliers/catalog/save") ?>', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (window.Toast) window.Toast.success(data.message || 'Katalog berhasil disimpan');
+                    // Reload data katalog
+                    await this.reloadCatalogItems();
+                    this.resetCatalogForm();
+                } else {
+                    if (window.Toast) window.Toast.error(data.message || 'Gagal menyimpan katalog');
+                }
+            } catch (err) {
+                console.error('Gagal simpan katalog:', err);
+                if (window.Toast) window.Toast.error('Terjadi kesalahan saat menyimpan katalog');
+            } finally {
+                this.catalogFormSaving = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        async deleteCatalog(item) {
+            const confirmed = window.AppConfirm ? await window.AppConfirm({
+                title: 'Hapus dari Katalog',
+                message: `Hapus bahan "${item.nama_item}" dari katalog ${this.catalogSupplier.nama_pemasok}?`,
+                type: 'warning',
+                confirmText: 'Ya, Hapus'
+            }) : confirm(`Hapus "${item.nama_item}" dari katalog?`);
+
+            if (!confirmed) return;
+
+            try {
+                const formData = new FormData();
+                formData.append('csrf_token', '<?= \App\Helpers\CSRF::token() ?>');
+                formData.append('id', item.catalog_id);
+
+                const res = await fetch('<?= Router::url("/suppliers/catalog/delete") ?>', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                const data = await res.json();
+                if (data.status === 'success') {
+                    if (window.Toast) window.Toast.success(data.message || 'Item dihapus dari katalog');
+                    await this.reloadCatalogItems();
+                } else {
+                    if (window.Toast) window.Toast.error(data.message || 'Gagal menghapus item');
+                }
+            } catch (err) {
+                console.error('Gagal hapus item katalog:', err);
+                if (window.Toast) window.Toast.error('Gagal menghapus item katalog');
+            } finally {
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        async reloadCatalogItems() {
+            if (!this.catalogSupplier) return;
+            const res = await fetch('<?= Router::url("/suppliers/catalog") ?>?pemasok_id=' + encodeURIComponent(this.catalogSupplier.id), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'success') {
+                    this.catalogItems = data.catalog || [];
+                }
             }
         }
     }

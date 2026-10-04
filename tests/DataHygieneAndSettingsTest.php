@@ -158,6 +158,14 @@ runTest("4.1.5 SettingsController: updateCompany() Menghapus Berkas Logo Fisik d
     if (!is_dir($logoDir)) {
         @mkdir($logoDir, 0755, true);
     }
+
+    // Bersihkan residu berkas logo uji coba dari proses sebelumnya jika ada
+    foreach (glob($logoDir . '/logo_test_*') ?: [] as $orphan) {
+        if (is_file($orphan)) {
+            @unlink($orphan);
+        }
+    }
+
     $testFileName = 'logo_test_' . time() . '_' . bin2hex(random_bytes(4)) . '.png';
     $testFilePath = $logoDir . '/' . $testFileName;
     file_put_contents($testFilePath, 'mock_logo_image_bytes');
@@ -199,9 +207,11 @@ runTest("4.1.5 SettingsController: updateCompany() Menghapus Berkas Logo Fisik d
             return "Database logo_url belum dikosongkan setelah hapus_logo='1': '{$currentSettings['logo_url']}'";
         }
     } finally {
-        // Safe guaranteed teardown
-        if (file_exists($testFilePath)) {
-            @unlink($testFilePath);
+        // Safe guaranteed teardown: sapu bersih seluruh berkas logo_test_*
+        foreach (glob($logoDir . '/logo_test_*') ?: [] as $orphan) {
+            if (is_file($orphan)) {
+                @unlink($orphan);
+            }
         }
         CompanySetting::save($oldSettings);
         $_POST = [];
@@ -215,98 +225,101 @@ runTest("4.1.5 SettingsController: updateCompany() Menghapus Berkas Logo Fisik d
 // -------------------------------------------------------------
 runTest("4.2.1 SupplierController: store() & update() Menyimpan Kolom Relasional Bank & Menjaga Sinkronisasi JSONB", function() use ($pdo) {
     $dummyName = 'Pemasok Vendor Bank Test ' . time();
-    $ctrl = new class extends SupplierController {
-        public ?string $capturedSuccess = null;
-        public ?string $capturedError = null;
-        public array $mockInput = [];
-        protected function input(string $key, mixed $default = null): mixed {
-            return $this->mockInput[$key] ?? $default;
+    $saved = null;
+    $pdo->beginTransaction();
+    try {
+        $ctrl = new class extends SupplierController {
+            public ?string $capturedSuccess = null;
+            public ?string $capturedError = null;
+            public array $mockInput = [];
+            protected function input(string $key, mixed $default = null): mixed {
+                return $this->mockInput[$key] ?? $default;
+            }
+            protected function flashSuccess(string $message, ?string $title = null): void {
+                $this->capturedSuccess = $message;
+            }
+            protected function flashError(string $message, ?string $title = null): void {
+                $this->capturedError = $message;
+            }
+            protected function redirect(string $url): void {}
+        };
+
+        // 1. Uji store
+        $ctrl->mockInput = [
+            'nama_pemasok' => $dummyName,
+            'nomor_whatsapp' => '081299887766',
+            'alamat_lengkap' => 'Kawasan Industri Cikupa No. 12',
+            'bank_nama' => 'Bank Mandiri',
+            'bank_rekening' => '1370-001-992288',
+            'bank_atas_nama' => 'PT PLASTIK MANDIRI MAKMUR'
+        ];
+        $ctrl->store();
+
+        if (!empty($ctrl->capturedError)) {
+            return "SupplierController store() error: " . $ctrl->capturedError;
         }
-        protected function flashSuccess(string $message, ?string $title = null): void {
-            $this->capturedSuccess = $message;
+
+        $saved = Database::fetchOne("
+            SELECT id, nama_pemasok, nama_bank, nomor_rekening, atas_nama_rekening
+            FROM public.pemasok WHERE nama_pemasok = :nama
+        ", ['nama' => $dummyName]);
+
+        if (!$saved) {
+            return "Data pemasok baru gagal disimpan ke database.";
         }
-        protected function flashError(string $message, ?string $title = null): void {
-            $this->capturedError = $message;
+        if ($saved['nama_bank'] !== 'Bank Mandiri') {
+            return "Kolom relasional nama_bank tidak tersimpan (got: {$saved['nama_bank']})";
         }
-        protected function redirect(string $url): void {}
-    };
+        if ($saved['nomor_rekening'] !== '1370-001-992288') {
+            return "Kolom relasional nomor_rekening tidak tersimpan (got: {$saved['nomor_rekening']})";
+        }
+        if ($saved['atas_nama_rekening'] !== 'PT PLASTIK MANDIRI MAKMUR') {
+            return "Kolom relasional atas_nama_rekening tidak tersimpan (got: {$saved['atas_nama_rekening']})";
+        }
 
-    // 1. Uji store
-    $ctrl->mockInput = [
-        'nama_pemasok' => $dummyName,
-        'nomor_whatsapp' => '081299887766',
-        'alamat_lengkap' => 'Kawasan Industri Cikupa No. 12',
-        'bank_nama' => 'Bank Mandiri',
-        'bank_rekening' => '1370-001-992288',
-        'bank_atas_nama' => 'PT PLASTIK MANDIRI MAKMUR'
-    ];
-    $ctrl->store();
+        // Pastikan kolom dead detail_bank sudah terhapus tuntas dari database
+        $hasDetailBankCol = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'pemasok' AND column_name = 'detail_bank'")->fetchColumn();
+        if ($hasDetailBankCol > 0) {
+            return "Kolom redundan detail_bank masih ada di tabel pemasok!";
+        }
 
-    if (!empty($ctrl->capturedError)) {
-        return "SupplierController store() error: " . $ctrl->capturedError;
+        // 2. Uji update
+        $ctrl->capturedError = null;
+        $ctrl->capturedSuccess = null;
+        $ctrl->mockInput = [
+            'id' => $saved['id'],
+            'nama_pemasok' => $dummyName . ' Updated',
+            'nomor_whatsapp' => '081299887766',
+            'alamat_lengkap' => 'Kawasan Industri Cikupa No. 12 Blok B',
+            'bank_nama' => 'Bank BCA',
+            'bank_rekening' => '8820-9988-77',
+            'bank_atas_nama' => 'PT PLASTIK MANDIRI MAKMUR TBK',
+            'status_aktif' => true
+        ];
+        $ctrl->update();
+
+        if (!empty($ctrl->capturedError)) {
+            return "SupplierController update() error: " . $ctrl->capturedError;
+        }
+
+        $updated = Database::fetchOne("
+            SELECT nama_bank, nomor_rekening, atas_nama_rekening
+            FROM public.pemasok WHERE id = :id
+        ", ['id' => $saved['id']]);
+
+        if ($updated['nama_bank'] !== 'Bank BCA' || $updated['nomor_rekening'] !== '8820-9988-77') {
+            return "Update kolom relasional bank gagal!";
+        }
+
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if ($saved && !empty($saved['id'])) {
+            $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $saved['id']]);
+        }
     }
-
-    $saved = Database::fetchOne("
-        SELECT id, nama_pemasok, nama_bank, nomor_rekening, atas_nama_rekening
-        FROM public.pemasok WHERE nama_pemasok = :nama
-    ", ['nama' => $dummyName]);
-
-    if (!$saved) {
-        return "Data pemasok baru gagal disimpan ke database.";
-    }
-    if ($saved['nama_bank'] !== 'Bank Mandiri') {
-        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $saved['id']]);
-        return "Kolom relasional nama_bank tidak tersimpan (got: {$saved['nama_bank']})";
-    }
-    if ($saved['nomor_rekening'] !== '1370-001-992288') {
-        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $saved['id']]);
-        return "Kolom relasional nomor_rekening tidak tersimpan (got: {$saved['nomor_rekening']})";
-    }
-    if ($saved['atas_nama_rekening'] !== 'PT PLASTIK MANDIRI MAKMUR') {
-        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $saved['id']]);
-        return "Kolom relasional atas_nama_rekening tidak tersimpan (got: {$saved['atas_nama_rekening']})";
-    }
-
-    // Pastikan kolom dead detail_bank sudah terhapus tuntas dari database
-    $hasDetailBankCol = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'pemasok' AND column_name = 'detail_bank'")->fetchColumn();
-    if ($hasDetailBankCol > 0) {
-        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $saved['id']]);
-        return "Kolom redundan detail_bank masih ada di tabel pemasok!";
-    }
-
-    // 2. Uji update
-    $ctrl->capturedError = null;
-    $ctrl->capturedSuccess = null;
-    $ctrl->mockInput = [
-        'id' => $saved['id'],
-        'nama_pemasok' => $dummyName . ' Updated',
-        'nomor_whatsapp' => '081299887766',
-        'alamat_lengkap' => 'Kawasan Industri Cikupa No. 12 Blok B',
-        'bank_nama' => 'Bank BCA',
-        'bank_rekening' => '8820-9988-77',
-        'bank_atas_nama' => 'PT PLASTIK MANDIRI MAKMUR TBK',
-        'status_aktif' => true
-    ];
-    $ctrl->update();
-
-    if (!empty($ctrl->capturedError)) {
-        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $saved['id']]);
-        return "SupplierController update() error: " . $ctrl->capturedError;
-    }
-
-    $updated = Database::fetchOne("
-        SELECT nama_bank, nomor_rekening, atas_nama_rekening
-        FROM public.pemasok WHERE id = :id
-    ", ['id' => $saved['id']]);
-
-    // Cleanup
-    $pdo->prepare("DELETE FROM public.pemasok WHERE id = :id")->execute(['id' => $saved['id']]);
-
-    if ($updated['nama_bank'] !== 'Bank BCA' || $updated['nomor_rekening'] !== '8820-9988-77') {
-        return "Update kolom relasional bank gagal!";
-    }
-
-    return true;
 });
 
 // -------------------------------------------------------------
@@ -316,148 +329,165 @@ runTest("4.3.1 SupplierController: delete() Memblokir Hapus Vendor yang Memiliki
     $supDummyId = 'ffffffff-aaaa-4444-9999-000000000001';
     $poDummyId = 'ffffffff-bbbb-4444-9999-000000000001';
 
-    $pdo->prepare("DELETE FROM public.rincian_pembelian WHERE pembelian_id = :poid")->execute(['poid' => $poDummyId]);
-    $pdo->prepare("DELETE FROM public.pembelian WHERE id = :poid")->execute(['poid' => $poDummyId]);
-    $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare("DELETE FROM public.rincian_pembelian WHERE pembelian_id = :poid")->execute(['poid' => $poDummyId]);
+        $pdo->prepare("DELETE FROM public.pembelian WHERE id = :poid")->execute(['poid' => $poDummyId]);
+        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
 
-    // Insert dummy pemasok
-    $pdo->prepare("
-        INSERT INTO public.pemasok (id, kode_pemasok, nama_pemasok, alamat_lengkap, status_aktif)
-        VALUES (:id, 'SUP-TEST-DEL-PO', 'Vendor PO Terkait', 'Jl. Supplier No. 1', TRUE)
-    ")->execute(['id' => $supDummyId]);
+        // Insert dummy pemasok
+        $pdo->prepare("
+            INSERT INTO public.pemasok (id, kode_pemasok, nama_pemasok, alamat_lengkap, status_aktif)
+            VALUES (:id, 'SUP-TEST-DEL-PO', 'Vendor PO Terkait', 'Jl. Supplier No. 1', TRUE)
+        ")->execute(['id' => $supDummyId]);
 
-    // Insert dummy pembelian
-    $pdo->prepare("
-        INSERT INTO public.pembelian (id, nomor_faktur_pembelian, pemasok_id, total_biaya, status_pembayaran, status_penerimaan)
-        VALUES (:poid, 'PO-TEST-DEL-01', :sid, 500000.00, 'belum_lunas', 'diterima')
-    ")->execute(['poid' => $poDummyId, 'sid' => $supDummyId]);
+        // Insert dummy pembelian
+        $pdo->prepare("
+            INSERT INTO public.pembelian (id, nomor_faktur_pembelian, pemasok_id, total_biaya, status_pembayaran, status_penerimaan)
+            VALUES (:poid, 'PO-TEST-DEL-01', :sid, 500000.00, 'belum_lunas', 'diterima')
+        ")->execute(['poid' => $poDummyId, 'sid' => $supDummyId]);
 
-    $ctrl = new class extends SupplierController {
-        public ?string $capturedError = null;
-        public array $mockInput = [];
-        protected function input(string $key, mixed $default = null): mixed {
-            return $this->mockInput[$key] ?? $default;
+        $ctrl = new class extends SupplierController {
+            public ?string $capturedError = null;
+            public array $mockInput = [];
+            protected function input(string $key, mixed $default = null): mixed {
+                return $this->mockInput[$key] ?? $default;
+            }
+            protected function flashError(string $message, ?string $title = null): void {
+                $this->capturedError = $message;
+            }
+            protected function redirect(string $url): void {}
+        };
+
+        $ctrl->mockInput = ['id' => $supDummyId];
+        $ctrl->delete();
+
+        $stillExists = Database::fetchOne("SELECT id FROM public.pemasok WHERE id = :id", ['id' => $supDummyId]);
+
+        if (!$stillExists) {
+            return "Pemasok terhapus padahal terhubung ke faktur pembelian!";
         }
-        protected function flashError(string $message, ?string $title = null): void {
-            $this->capturedError = $message;
+        if (empty($ctrl->capturedError) || !str_contains(strtolower($ctrl->capturedError), 'pembelian')) {
+            return "Pesan error tidak menyebutkan faktur pembelian: " . ($ctrl->capturedError ?? 'None');
         }
-        protected function redirect(string $url): void {}
-    };
-
-    $ctrl->mockInput = ['id' => $supDummyId];
-    $ctrl->delete();
-
-    $stillExists = Database::fetchOne("SELECT id FROM public.pemasok WHERE id = :id", ['id' => $supDummyId]);
-
-    // Cleanup
-    $pdo->prepare("DELETE FROM public.pembelian WHERE id = :poid")->execute(['poid' => $poDummyId]);
-    $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
-
-    if (!$stillExists) {
-        return "Pemasok terhapus padahal terhubung ke faktur pembelian!";
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $pdo->prepare("DELETE FROM public.pembelian WHERE id = :poid")->execute(['poid' => $poDummyId]);
+        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
     }
-    if (empty($ctrl->capturedError) || !str_contains(strtolower($ctrl->capturedError), 'pembelian')) {
-        return "Pesan error tidak menyebutkan faktur pembelian: " . ($ctrl->capturedError ?? 'None');
-    }
-    return true;
 });
 
 runTest("4.3.2 SupplierController: delete() Memblokir Hapus Vendor yang Menjadi Pemasok Utama Item", function() use ($pdo) {
     $supDummyId = 'ffffffff-aaaa-4444-9999-000000000002';
     $itemDummyId = 'ffffffff-cccc-4444-9999-000000000002';
 
-    $pdo->prepare("DELETE FROM public.riwayat_stok WHERE item_id = :iid")->execute(['iid' => $itemDummyId]);
-    $pdo->prepare("DELETE FROM public.item WHERE id = :iid")->execute(['iid' => $itemDummyId]);
-    $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
+    $pdo->beginTransaction();
+    try {
+        $pdo->prepare("DELETE FROM public.riwayat_stok WHERE item_id = :iid")->execute(['iid' => $itemDummyId]);
+        $pdo->prepare("DELETE FROM public.item WHERE id = :iid")->execute(['iid' => $itemDummyId]);
+        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
 
-    // Insert dummy pemasok
-    $pdo->prepare("
-        INSERT INTO public.pemasok (id, kode_pemasok, nama_pemasok, alamat_lengkap, status_aktif)
-        VALUES (:id, 'SUP-TEST-DEL-ITEM', 'Vendor Item Terkait', 'Jl. Supplier No. 2', TRUE)
-    ")->execute(['id' => $supDummyId]);
+        // Insert dummy pemasok
+        $pdo->prepare("
+            INSERT INTO public.pemasok (id, kode_pemasok, nama_pemasok, alamat_lengkap, status_aktif)
+            VALUES (:id, 'SUP-TEST-DEL-ITEM', 'Vendor Item Terkait', 'Jl. Supplier No. 2', TRUE)
+        ")->execute(['id' => $supDummyId]);
 
-    // Insert dummy item bahan dengan pemasok_utama_id
-    $pdo->prepare("
-        INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, satuan_dasar, pemasok_utama_id, harga_pokok_pembelian, status_aktif)
-        VALUES (:iid, 'BAHAN-TEST-DEL', 'Plastik HD Test', 'bahan_kemas', 'lembar', :sid, 150.00, TRUE)
-    ")->execute(['iid' => $itemDummyId, 'sid' => $supDummyId]);
+        // Insert dummy item bahan dengan pemasok_utama_id
+        $pdo->prepare("
+            INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, satuan_dasar, pemasok_utama_id, harga_pokok_pembelian, status_aktif)
+            VALUES (:iid, 'BAHAN-TEST-DEL', 'Plastik HD Test', 'bahan_kemas', 'lembar', :sid, 150.00, TRUE)
+        ")->execute(['iid' => $itemDummyId, 'sid' => $supDummyId]);
 
-    $ctrl = new class extends SupplierController {
-        public ?string $capturedError = null;
-        public array $mockInput = [];
-        protected function input(string $key, mixed $default = null): mixed {
-            return $this->mockInput[$key] ?? $default;
+        $ctrl = new class extends SupplierController {
+            public ?string $capturedError = null;
+            public array $mockInput = [];
+            protected function input(string $key, mixed $default = null): mixed {
+                return $this->mockInput[$key] ?? $default;
+            }
+            protected function flashError(string $message, ?string $title = null): void {
+                $this->capturedError = $message;
+            }
+            protected function redirect(string $url): void {}
+        };
+
+        $ctrl->mockInput = ['id' => $supDummyId];
+        $ctrl->delete();
+
+        $stillExists = Database::fetchOne("SELECT id FROM public.pemasok WHERE id = :id", ['id' => $supDummyId]);
+
+        if (!$stillExists) {
+            return "Pemasok terhapus padahal terhubung ke katalog item bahan!";
         }
-        protected function flashError(string $message, ?string $title = null): void {
-            $this->capturedError = $message;
+        if (empty($ctrl->capturedError) || !str_contains(strtolower($ctrl->capturedError), 'bahan')) {
+            return "Pesan error tidak menyebutkan katalog bahan/produk: " . ($ctrl->capturedError ?? 'None');
         }
-        protected function redirect(string $url): void {}
-    };
-
-    $ctrl->mockInput = ['id' => $supDummyId];
-    $ctrl->delete();
-
-    $stillExists = Database::fetchOne("SELECT id FROM public.pemasok WHERE id = :id", ['id' => $supDummyId]);
-
-    // Cleanup
-    $pdo->prepare("DELETE FROM public.item WHERE id = :iid")->execute(['iid' => $itemDummyId]);
-    $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
-
-    if (!$stillExists) {
-        return "Pemasok terhapus padahal terhubung ke katalog item bahan!";
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $pdo->prepare("DELETE FROM public.item WHERE id = :iid")->execute(['iid' => $itemDummyId]);
+        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
     }
-    if (empty($ctrl->capturedError) || !str_contains(strtolower($ctrl->capturedError), 'bahan')) {
-        return "Pesan error tidak menyebutkan katalog bahan/produk: " . ($ctrl->capturedError ?? 'None');
-    }
-    return true;
 });
 
 runTest("4.3.3 SupplierController: delete() Menghapus Vendor Bersih & Mencatat ActivityLog", function() use ($pdo) {
     $supDummyId = 'ffffffff-aaaa-4444-9999-000000000003';
-    $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
-
-    // Insert dummy pemasok bersih
-    $pdo->prepare("
-        INSERT INTO public.pemasok (id, kode_pemasok, nama_pemasok, alamat_lengkap, status_aktif)
-        VALUES (:id, 'SUP-CLEAN-DEL', 'Vendor Bersih Siap Hapus', 'Jl. Bersih No. 3', TRUE)
-    ")->execute(['id' => $supDummyId]);
-
-    $ctrl = new class extends SupplierController {
-        public ?string $capturedSuccess = null;
-        public array $mockInput = [];
-        protected function input(string $key, mixed $default = null): mixed {
-            return $this->mockInput[$key] ?? $default;
-        }
-        protected function flashSuccess(string $message, ?string $title = null): void {
-            $this->capturedSuccess = $message;
-        }
-        protected function redirect(string $url): void {}
-    };
-
-    $ctrl->mockInput = ['id' => $supDummyId];
-    $ctrl->delete();
-
-    $exists = Database::fetchOne("SELECT id FROM public.pemasok WHERE id = :id", ['id' => $supDummyId]);
-    if ($exists) {
+    $pdo->beginTransaction();
+    try {
         $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
-        return "Vendor bersih gagal dihapus dari database!";
-    }
-    if (empty($ctrl->capturedSuccess) || !str_contains(strtolower($ctrl->capturedSuccess), 'berhasil dihapus')) {
-        return "Pesan sukses delete pemasok tidak sesuai: " . ($ctrl->capturedSuccess ?? 'None');
-    }
 
-    // Verifikasi ActivityLog
-    $log = Database::fetchOne("
-        SELECT id, deskripsi_aktivitas 
-        FROM public.log_aktivitas 
-        WHERE jenis_aksi = 'HAPUS_PEMASOK' AND id_referensi = :id
-        ORDER BY waktu_kejadian DESC LIMIT 1
-    ", ['id' => $supDummyId]);
+        // Insert dummy pemasok bersih
+        $pdo->prepare("
+            INSERT INTO public.pemasok (id, kode_pemasok, nama_pemasok, alamat_lengkap, status_aktif)
+            VALUES (:id, 'SUP-CLEAN-DEL', 'Vendor Bersih Siap Hapus', 'Jl. Bersih No. 3', TRUE)
+        ")->execute(['id' => $supDummyId]);
 
-    if (!$log) {
-        return "Aktivitas HAPUS_PEMASOK tidak tercatat di public.log_aktivitas!";
+        $ctrl = new class extends SupplierController {
+            public ?string $capturedSuccess = null;
+            public array $mockInput = [];
+            protected function input(string $key, mixed $default = null): mixed {
+                return $this->mockInput[$key] ?? $default;
+            }
+            protected function flashSuccess(string $message, ?string $title = null): void {
+                $this->capturedSuccess = $message;
+            }
+            protected function redirect(string $url): void {}
+        };
+
+        $ctrl->mockInput = ['id' => $supDummyId];
+        $ctrl->delete();
+
+        $exists = Database::fetchOne("SELECT id FROM public.pemasok WHERE id = :id", ['id' => $supDummyId]);
+        if ($exists) {
+            return "Vendor bersih gagal dihapus dari database!";
+        }
+        if (empty($ctrl->capturedSuccess) || !str_contains(strtolower($ctrl->capturedSuccess), 'berhasil dihapus')) {
+            return "Pesan sukses delete pemasok tidak sesuai: " . ($ctrl->capturedSuccess ?? 'None');
+        }
+
+        // Verifikasi ActivityLog
+        $log = Database::fetchOne("
+            SELECT id, deskripsi_aktivitas 
+            FROM public.log_aktivitas 
+            WHERE jenis_aksi = 'HAPUS_PEMASOK' AND id_referensi = :id
+            ORDER BY waktu_kejadian DESC LIMIT 1
+        ", ['id' => $supDummyId]);
+
+        if (!$log) {
+            return "Aktivitas HAPUS_PEMASOK tidak tercatat di public.log_aktivitas!";
+        }
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        $pdo->prepare("DELETE FROM public.pemasok WHERE id = :sid")->execute(['sid' => $supDummyId]);
     }
-    return true;
 });
 
 // -------------------------------------------------------------
@@ -469,21 +499,21 @@ runTest("4.4.1 CustomerController: saveCustomerItems() Mengelola Whitelist Produ
     $items = Database::fetchAll("SELECT id FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 2");
     $createdItemIds = [];
 
-    if (count($items) < 2) {
-        $grupProdId = Database::fetchOne("SELECT id FROM public.grup_produk LIMIT 1")['id'] ?? null;
-        for ($i = count($items) + 1; $i <= 2; $i++) {
-            $tmpId = "ffffffff-cccc-4444-9999-00000000000{$i}";
-            $pdo->exec("
-                INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, grup_id, satuan_dasar, status_aktif)
-                VALUES ('{$tmpId}', 'SKU-TMP-WHT-{$i}', 'Item Whitelist Transien {$i}', 'barang_jadi', '{$grupProdId}', 'pcs', TRUE)
-                ON CONFLICT (id) DO NOTHING
-            ");
-            $createdItemIds[] = $tmpId;
-            $items[] = ['id' => $tmpId];
-        }
-    }
-
     try {
+        if (count($items) < 2) {
+            $grupProdId = Database::fetchOne("SELECT id FROM public.grup_produk LIMIT 1")['id'] ?? null;
+            for ($i = count($items) + 1; $i <= 2; $i++) {
+                $tmpId = "ffffffff-cccc-4444-9999-00000000000{$i}";
+                $pdo->exec("
+                    INSERT INTO public.item (id, kode_sku, nama_item, tipe_item, grup_id, satuan_dasar, status_aktif)
+                    VALUES ('{$tmpId}', 'SKU-TMP-WHT-{$i}', 'Item Whitelist Transien {$i}', 'barang_jadi', '{$grupProdId}', 'pcs', TRUE)
+                    ON CONFLICT (id) DO NOTHING
+                ");
+                $createdItemIds[] = $tmpId;
+                $items[] = ['id' => $tmpId];
+            }
+        }
+
         $pdo->prepare("DELETE FROM public.pelanggan_item WHERE pelanggan_id = :cid")->execute(['cid' => $custDummyId]);
         $pdo->prepare("DELETE FROM public.pelanggan WHERE id = :cid")->execute(['cid' => $custDummyId]);
 
@@ -536,6 +566,9 @@ runTest("4.4.1 CustomerController: saveCustomerItems() Mengelola Whitelist Produ
 
         return true;
     } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $pdo->prepare("DELETE FROM public.pelanggan_item WHERE pelanggan_id = :cid")->execute(['cid' => $custDummyId]);
         $pdo->prepare("DELETE FROM public.pelanggan WHERE id = :cid")->execute(['cid' => $custDummyId]);
         foreach ($createdItemIds as $tmpItemId) {
@@ -547,50 +580,58 @@ runTest("4.4.1 CustomerController: saveCustomerItems() Mengelola Whitelist Produ
 // -------------------------------------------------------------
 // ITEM 4.5: FRONTEND TEMPLATE & ROUTE SANITIZATION
 // -------------------------------------------------------------
-runTest("4.5.1 CustomerController: storeGroup, updateGroup, deleteGroup Menerapkan Sanitasi redirect_to", function() {
-    $ctrl = new class extends CustomerController {
-        public ?string $capturedRedirect = null;
-        public array $mockInput = [];
-        protected function input(string $key, mixed $default = null): mixed {
-            return $this->mockInput[$key] ?? $default;
+runTest("4.5.1 CustomerController: storeGroup, updateGroup, deleteGroup Menerapkan Sanitasi redirect_to", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        $ctrl = new class extends CustomerController {
+            public ?string $capturedRedirect = null;
+            public array $mockInput = [];
+            protected function input(string $key, mixed $default = null): mixed {
+                return $this->mockInput[$key] ?? $default;
+            }
+            protected function flashSuccess(string $message, ?string $title = null): void {}
+            protected function flashError(string $message, ?string $title = null): void {}
+            protected function redirect(string $url): void {
+                $this->capturedRedirect = $url;
+            }
+        };
+
+        // Uji redirect_to open redirect attempt: 'https://evil.com'
+        $ctrl->mockInput = [
+            'nama_grup' => 'Grup Test OpenRedirect',
+            'default_level_harga' => 1,
+            'redirect_to' => 'https://evil.com/phishing'
+        ];
+        $ctrl->storeGroup();
+
+        if ($ctrl->capturedRedirect !== '/customers?tab=customer_groups') {
+            return "Sanitasi redirect_to gagal memblokir URL eksternal: {$ctrl->capturedRedirect}";
         }
-        protected function flashSuccess(string $message, ?string $title = null): void {}
-        protected function flashError(string $message, ?string $title = null): void {}
-        protected function redirect(string $url): void {
-            $this->capturedRedirect = $url;
+
+        // Cleanup record dummy jika ter-insert
+        Database::execute("DELETE FROM public.grup_pelanggan WHERE nama_grup = 'Grup Test OpenRedirect'");
+
+        // Uji redirect internal sah: '/pricing'
+        $ctrl->mockInput = [
+            'nama_grup' => 'Grup Test InternalRedirect',
+            'default_level_harga' => 1,
+            'redirect_to' => '/pricing'
+        ];
+        $ctrl->storeGroup();
+
+        $validRedirect = ($ctrl->capturedRedirect === '/pricing');
+        Database::execute("DELETE FROM public.grup_pelanggan WHERE nama_grup = 'Grup Test InternalRedirect'");
+
+        if (!$validRedirect) {
+            return "Sanitasi redirect_to memblokir path internal yang sah: {$ctrl->capturedRedirect}";
         }
-    };
-
-    // Uji redirect_to open redirect attempt: 'https://evil.com'
-    $ctrl->mockInput = [
-        'nama_grup' => 'Grup Test OpenRedirect',
-        'default_level_harga' => 1,
-        'redirect_to' => 'https://evil.com/phishing'
-    ];
-    $ctrl->storeGroup();
-
-    if ($ctrl->capturedRedirect !== '/customers?tab=customer_groups') {
-        return "Sanitasi redirect_to gagal memblokir URL eksternal: {$ctrl->capturedRedirect}";
+        return true;
+    } finally {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        Database::execute("DELETE FROM public.grup_pelanggan WHERE nama_grup IN ('Grup Test OpenRedirect', 'Grup Test InternalRedirect')");
     }
-
-    // Cleanup record dummy jika ter-insert
-    Database::execute("DELETE FROM public.grup_pelanggan WHERE nama_grup = 'Grup Test OpenRedirect'");
-
-    // Uji redirect internal sah: '/pricing'
-    $ctrl->mockInput = [
-        'nama_grup' => 'Grup Test InternalRedirect',
-        'default_level_harga' => 1,
-        'redirect_to' => '/pricing'
-    ];
-    $ctrl->storeGroup();
-
-    $validRedirect = ($ctrl->capturedRedirect === '/pricing');
-    Database::execute("DELETE FROM public.grup_pelanggan WHERE nama_grup = 'Grup Test InternalRedirect'");
-
-    if (!$validRedirect) {
-        return "Sanitasi redirect_to menolak path internal yang sah: {$ctrl->capturedRedirect}";
-    }
-    return true;
 });
 
 runTest("4.5.2 Frontend UI: views/suppliers/index.php Memiliki Form Delete dan Tombol Aksi Hapus", function() {

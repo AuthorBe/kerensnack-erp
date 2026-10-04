@@ -880,7 +880,7 @@ class DeliveryController extends Controller
             ");
 
             // Master akun kas untuk setor tunai
-            $cashAccounts = Database::fetchAll("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE ORDER BY is_default_pos DESC, nama_akun ASC");
+            $cashAccounts = Database::fetchAll("SELECT id, nama_akun, saldo_saat_ini, is_default_pos FROM public.akun_kas WHERE status_aktif = TRUE AND is_escrow = FALSE ORDER BY is_default_pos DESC, nama_akun ASC");
 
             // Driver name for restricted user
             $myDriverName = null;
@@ -1238,8 +1238,16 @@ class DeliveryController extends Controller
 
                 // Catat transaksi kas jika akun kas dipilih atau default kasir
                 $kasId = $akunKasId;
-                if (empty($kasId)) {
-                    $defaultKas = Database::fetchOne("SELECT id FROM public.akun_kas WHERE is_default_pos = TRUE AND status_aktif = TRUE LIMIT 1");
+                if (!empty($kasId)) {
+                    $chk = Database::fetchOne("SELECT is_escrow FROM public.akun_kas WHERE id = :id", ['id' => $kasId]);
+                    if (!empty($chk['is_escrow'])) {
+                        $pdo->rollBack();
+                        $this->flashError("Penerimaan COD driver tidak boleh menggunakan akun kas tabungan (escrow).");
+                        $this->redirect('/delivery');
+                        return;
+                    }
+                } else {
+                    $defaultKas = Database::fetchOne("SELECT id FROM public.akun_kas WHERE is_default_pos = TRUE AND status_aktif = TRUE AND is_escrow = FALSE LIMIT 1");
                     $kasId = $defaultKas['id'] ?? null;
                 }
 

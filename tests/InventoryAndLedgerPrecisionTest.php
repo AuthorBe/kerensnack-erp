@@ -95,7 +95,7 @@ runTest("5. InventoryController adjustStock maps 'retur_masuk_manual' accurately
 
 runTest("6. CashController storeOutflow employs row lock FOR UPDATE and overdraft check", function() {
     $content = file_get_contents(ROOT_PATH . '/app/Controllers/CashController.php');
-    if (!str_contains($content, "SELECT id, nama_akun, saldo_saat_ini, tipe_akun FROM public.akun_kas WHERE id = :id FOR UPDATE")) {
+    if (!preg_match('/SELECT\s+id,\s*nama_akun,\s*saldo_saat_ini,\s*tipe_akun(?:,\s*is_escrow)?\s+FROM\s+public\.akun_kas\s+WHERE\s+id\s*=\s*:id\s+FOR\s+UPDATE/i', $content)) {
         throw new Exception("storeOutflow missing FOR UPDATE row lock");
     }
     if (!str_contains($content, '$currentBal < $nominal')) {
@@ -106,7 +106,7 @@ runTest("6. CashController storeOutflow employs row lock FOR UPDATE and overdraf
 
 runTest("7. CashController storeTransfer employs deterministic FOR UPDATE lock and overdraft check", function() {
     $content = file_get_contents(ROOT_PATH . '/app/Controllers/CashController.php');
-    if (!str_contains($content, "sort(\$ids);") || !str_contains($content, "SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE")) {
+    if (!str_contains($content, "sort(\$ids);") || !preg_match('/SELECT\s+id,\s*nama_akun,\s*saldo_saat_ini(?:,\s*is_escrow)?\s+FROM\s+public\.akun_kas\s+WHERE\s+id\s*=\s*:id\s+FOR\s+UPDATE/i', $content)) {
         throw new Exception("storeTransfer missing deterministic deadlock-free FOR UPDATE locking");
     }
     if (!str_contains($content, '$sourceBal < $nominal')) {

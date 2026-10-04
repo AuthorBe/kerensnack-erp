@@ -164,224 +164,234 @@ if (!$akunKas) {
 // TEST 1
 runTest('Block conversion if active consignment stock exists and no resolution option selected', function() use ($db, $grupId, $wilId, $item) {
     $custId = 'c0000000-0000-0000-0000-000000000010';
-    $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
-    $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
+    try {
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
+        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
 
-    $db->exec("
-        INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, tipe_pembayaran_default, status_aktif, alamat_lengkap)
-        VALUES ('{$custId}', 'CUST-TEST-10', 'Toko Titip Test Guard', '{$grupId}', '{$wilId}', TRUE, 'konsinyasi', TRUE, 'Jl. Test No. 10')
-    ");
+        $db->exec("
+            INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, tipe_pembayaran_default, status_aktif, alamat_lengkap)
+            VALUES ('{$custId}', 'CUST-TEST-10', 'Toko Titip Test Guard', '{$grupId}', '{$wilId}', TRUE, 'konsinyasi', TRUE, 'Jl. Test No. 10')
+        ");
 
-    $db->exec("
-        INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
-        VALUES (gen_random_uuid(), '{$custId}', '{$item['id']}', 20)
-    ");
+        $db->exec("
+            INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
+            VALUES (gen_random_uuid(), '{$custId}', '{$item['id']}', 20)
+        ");
 
-    $ctrl = createMockCustomerController([
-        'id' => $custId,
-        'nama_toko' => 'Toko Titip Test Guard',
-        'grup_pelanggan_id' => $grupId,
-        'wilayah_id' => $wilId,
-        'tipe_pembayaran_default' => 'cash',
-        'is_konsinyasi' => false,
-        'konversi_konsinyasi_opsi' => ''
-    ]);
-    $ctrl->update();
+        $ctrl = createMockCustomerController([
+            'id' => $custId,
+            'nama_toko' => 'Toko Titip Test Guard',
+            'grup_pelanggan_id' => $grupId,
+            'wilayah_id' => $wilId,
+            'tipe_pembayaran_default' => 'cash',
+            'is_konsinyasi' => false,
+            'konversi_konsinyasi_opsi' => ''
+        ]);
+        $ctrl->update();
 
-    $checkCust = $db->query("SELECT is_konsinyasi FROM public.pelanggan WHERE id = '{$custId}'")->fetch(PDO::FETCH_ASSOC);
-    
-    $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
-    $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
+        $checkCust = $db->query("SELECT is_konsinyasi FROM public.pelanggan WHERE id = '{$custId}'")->fetch(PDO::FETCH_ASSOC);
 
-    if (!$checkCust['is_konsinyasi']) {
-        return "Toko berhasil diubah ke non-konsinyasi tanpa memilih opsi penyelesaian!";
+        if (!$checkCust['is_konsinyasi']) {
+            return "Toko berhasil diubah ke non-konsinyasi tanpa memilih opsi penyelesaian!";
+        }
+        if (empty($ctrl->capturedError) || !str_contains($ctrl->capturedError, 'stok konsinyasi')) {
+            return "Pesan error tidak sesuai: " . var_export($ctrl->capturedError, true);
+        }
+        return true;
+    } finally {
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
+        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
     }
-    if (empty($ctrl->capturedError) || !str_contains($ctrl->capturedError, 'stok konsinyasi')) {
-        return "Pesan error tidak sesuai: " . var_export($ctrl->capturedError, true);
-    }
-    return true;
 });
 
 // TEST 2
 runTest('Opsi 1 (Retur Fisik): Returns stock to warehouse, zeroes shelf stock, and writes riwayat_stok', function() use ($db, $grupId, $wilId, $item) {
     $custId = 'c0000000-0000-0000-0000-000000000020';
-    $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
-    $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
-
     $stokGudangAwal = (float)$db->query("SELECT stok_fisik_saat_ini FROM public.item WHERE id = '{$item['id']}'")->fetchColumn();
     $qtyRetur = 25;
 
-    $db->exec("
-        INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, tipe_pembayaran_default, status_aktif, alamat_lengkap)
-        VALUES ('{$custId}', 'CUST-TEST-20', 'Toko Retur Test', '{$grupId}', '{$wilId}', TRUE, 'konsinyasi', TRUE, 'Jl. Test No. 20')
-    ");
+    try {
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
+        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
 
-    $db->exec("
-        INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
-        VALUES (gen_random_uuid(), '{$custId}', '{$item['id']}', {$qtyRetur})
-    ");
+        $db->exec("
+            INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, tipe_pembayaran_default, status_aktif, alamat_lengkap)
+            VALUES ('{$custId}', 'CUST-TEST-20', 'Toko Retur Test', '{$grupId}', '{$wilId}', TRUE, 'konsinyasi', TRUE, 'Jl. Test No. 20')
+        ");
 
-    $ctrl = createMockCustomerController([
-        'id' => $custId,
-        'nama_toko' => 'Toko Retur Test',
-        'grup_pelanggan_id' => $grupId,
-        'wilayah_id' => $wilId,
-        'tipe_pembayaran_default' => 'cash',
-        'is_konsinyasi' => false,
-        'konversi_konsinyasi_opsi' => 'retur',
-        'catatan_konversi' => 'BAST-TEST-001'
-    ]);
-    $ctrl->update();
+        $db->exec("
+            INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
+            VALUES (gen_random_uuid(), '{$custId}', '{$item['id']}', {$qtyRetur})
+        ");
 
-    $checkCust = $db->query("SELECT is_konsinyasi, tipe_pembayaran_default FROM public.pelanggan WHERE id = '{$custId}'")->fetch(PDO::FETCH_ASSOC);
-    $checkRak = (int)$db->query("SELECT stok_titip_saat_ini FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}' AND item_id = '{$item['id']}'")->fetchColumn();
-    $stokGudangAkhir = (float)$db->query("SELECT stok_fisik_saat_ini FROM public.item WHERE id = '{$item['id']}'")->fetchColumn();
-    $checkMutasi = $db->query("SELECT * FROM public.riwayat_stok WHERE referensi_tabel = 'pelanggan' AND referensi_id = '{$custId}' ORDER BY dibuat_pada DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        $ctrl = createMockCustomerController([
+            'id' => $custId,
+            'nama_toko' => 'Toko Retur Test',
+            'grup_pelanggan_id' => $grupId,
+            'wilayah_id' => $wilId,
+            'tipe_pembayaran_default' => 'cash',
+            'is_konsinyasi' => false,
+            'konversi_konsinyasi_opsi' => 'retur',
+            'catatan_konversi' => 'BAST-TEST-001'
+        ]);
+        $ctrl->update();
 
-    $db->exec("UPDATE public.item SET stok_fisik_saat_ini = {$stokGudangAwal} WHERE id = '{$item['id']}'");
-    $db->exec("DELETE FROM public.riwayat_stok WHERE referensi_tabel = 'pelanggan' AND referensi_id = '{$custId}'");
-    $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
-    $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
+        $checkCust = $db->query("SELECT is_konsinyasi, tipe_pembayaran_default FROM public.pelanggan WHERE id = '{$custId}'")->fetch(PDO::FETCH_ASSOC);
+        $checkRak = (int)$db->query("SELECT stok_titip_saat_ini FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}' AND item_id = '{$item['id']}'")->fetchColumn();
+        $stokGudangAkhir = (float)$db->query("SELECT stok_fisik_saat_ini FROM public.item WHERE id = '{$item['id']}'")->fetchColumn();
+        $checkMutasi = $db->query("SELECT * FROM public.riwayat_stok WHERE referensi_tabel = 'pelanggan' AND referensi_id = '{$custId}' ORDER BY dibuat_pada DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 
-    if ($checkCust['is_konsinyasi'] === true) return "is_konsinyasi masih true setelah retur!";
-    if ($checkRak !== 0) return "Stok rak tidak nol, masih: {$checkRak}";
-    if ($stokGudangAkhir != ($stokGudangAwal + $qtyRetur)) return "Stok gudang tidak bertambah!";
-    if (!$checkMutasi || $checkMutasi['tipe_mutasi'] !== 'konsinyasi_retur_masuk' || (int)$checkMutasi['jumlah_perubahan'] !== $qtyRetur) {
-        return "Riwayat stok konsinyasi_retur_masuk tidak valid!";
+        if ($checkCust['is_konsinyasi'] === true) return "is_konsinyasi masih true setelah retur!";
+        if ($checkRak !== 0) return "Stok rak tidak nol, masih: {$checkRak}";
+        if ($stokGudangAkhir != ($stokGudangAwal + $qtyRetur)) return "Stok gudang tidak bertambah!";
+        if (!$checkMutasi || $checkMutasi['tipe_mutasi'] !== 'konsinyasi_retur_masuk' || (int)$checkMutasi['jumlah_perubahan'] !== $qtyRetur) {
+            return "Riwayat stok konsinyasi_retur_masuk tidak valid!";
+        }
+
+        return true;
+    } finally {
+        $db->exec("UPDATE public.item SET stok_fisik_saat_ini = {$stokGudangAwal} WHERE id = '{$item['id']}'");
+        $db->exec("DELETE FROM public.riwayat_stok WHERE referensi_tabel = 'pelanggan' AND referensi_id = '{$custId}'");
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
+        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
     }
-
-    return true;
 });
 
 // TEST 3
 runTest('Opsi 2A (Beli Putus Lunas): Zeroes shelf stock, creates paid pesanan, increases cash balance, records arus_kas', function() use ($db, $grupId, $wilId, $item, $akunKas) {
     $custId = 'c0000000-0000-0000-0000-000000000030';
-    $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
-    $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
-
     $qtyBeli = 10;
     $saldoKasAwal = (float)$db->query("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = '{$akunKas['id']}'")->fetchColumn();
 
-    $db->exec("
-        INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, tipe_pembayaran_default, status_aktif, alamat_lengkap)
-        VALUES ('{$custId}', 'CUST-TEST-30', 'Toko Beli Lunas Test', '{$grupId}', '{$wilId}', TRUE, 'konsinyasi', TRUE, 'Jl. Test No. 30')
-    ");
+    try {
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
+        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
 
-    $db->exec("
-        INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
-        VALUES (gen_random_uuid(), '{$custId}', '{$item['id']}', {$qtyBeli})
-    ");
+        $db->exec("
+            INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, tipe_pembayaran_default, status_aktif, alamat_lengkap)
+            VALUES ('{$custId}', 'CUST-TEST-30', 'Toko Beli Lunas Test', '{$grupId}', '{$wilId}', TRUE, 'konsinyasi', TRUE, 'Jl. Test No. 30')
+        ");
 
-    $hargaInfoRaw = $db->query("SELECT public.fn_hitung_harga_jual_item('{$item['id']}', '{$custId}') as info")->fetchColumn();
-    $hargaData = json_decode((string)$hargaInfoRaw, true) ?: [];
-    $hargaPcsNetto = (float)($hargaData['harga_pcs_netto'] ?? 0);
-    $totalExpected = $hargaPcsNetto * $qtyBeli;
+        $db->exec("
+            INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
+            VALUES (gen_random_uuid(), '{$custId}', '{$item['id']}', {$qtyBeli})
+        ");
 
-    $ctrl = createMockCustomerController([
-        'id' => $custId,
-        'nama_toko' => 'Toko Beli Lunas Test',
-        'grup_pelanggan_id' => $grupId,
-        'wilayah_id' => $wilId,
-        'tipe_pembayaran_default' => 'cash',
-        'is_konsinyasi' => false,
-        'konversi_konsinyasi_opsi' => 'beli_putus',
-        'metode_beli_putus' => 'lunas',
-        'akun_kas_id' => $akunKas['id'],
-        'catatan_konversi' => 'Test Beli Putus Lunas'
-    ]);
-    $ctrl->update();
+        $hargaInfoRaw = $db->query("SELECT public.fn_hitung_harga_jual_item('{$item['id']}', '{$custId}') as info")->fetchColumn();
+        $hargaData = json_decode((string)$hargaInfoRaw, true) ?: [];
+        $hargaPcsNetto = (float)($hargaData['harga_pcs_netto'] ?? 0);
+        $totalExpected = $hargaPcsNetto * $qtyBeli;
 
-    $checkCust = $db->query("SELECT is_konsinyasi, tipe_pembayaran_default FROM public.pelanggan WHERE id = '{$custId}'")->fetch(PDO::FETCH_ASSOC);
-    $checkRak = (int)$db->query("SELECT stok_titip_saat_ini FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}' AND item_id = '{$item['id']}'")->fetchColumn();
-    $saldoKasAkhir = (float)$db->query("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = '{$akunKas['id']}'")->fetchColumn();
-    
-    $pesanan = $db->query("SELECT * FROM public.pesanan WHERE pelanggan_id = '{$custId}' ORDER BY dibuat_pada DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-    $itemPesanan = $pesanan ? $db->query("SELECT * FROM public.item_pesanan WHERE pesanan_id = '{$pesanan['id']}'")->fetch(PDO::FETCH_ASSOC) : null;
-    $arusKas = $pesanan ? $db->query("SELECT * FROM public.arus_kas WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pesanan['id']}'")->fetch(PDO::FETCH_ASSOC) : null;
+        $ctrl = createMockCustomerController([
+            'id' => $custId,
+            'nama_toko' => 'Toko Beli Lunas Test',
+            'grup_pelanggan_id' => $grupId,
+            'wilayah_id' => $wilId,
+            'tipe_pembayaran_default' => 'cash',
+            'is_konsinyasi' => false,
+            'konversi_konsinyasi_opsi' => 'beli_putus',
+            'metode_beli_putus' => 'lunas',
+            'akun_kas_id' => $akunKas['id'],
+            'catatan_konversi' => 'Test Beli Putus Lunas'
+        ]);
+        $ctrl->update();
 
-    if ($pesanan) {
-        $db->exec("DELETE FROM public.arus_kas WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pesanan['id']}'");
-        $db->exec("DELETE FROM public.riwayat_stok WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pesanan['id']}'");
-        $db->exec("DELETE FROM public.item_pesanan WHERE pesanan_id = '{$pesanan['id']}'");
-        $db->exec("DELETE FROM public.pesanan WHERE id = '{$pesanan['id']}'");
+        $checkCust = $db->query("SELECT is_konsinyasi, tipe_pembayaran_default FROM public.pelanggan WHERE id = '{$custId}'")->fetch(PDO::FETCH_ASSOC);
+        $checkRak = (int)$db->query("SELECT stok_titip_saat_ini FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}' AND item_id = '{$item['id']}'")->fetchColumn();
+        $saldoKasAkhir = (float)$db->query("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = '{$akunKas['id']}'")->fetchColumn();
+        
+        $pesanan = $db->query("SELECT * FROM public.pesanan WHERE pelanggan_id = '{$custId}' ORDER BY dibuat_pada DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        $itemPesanan = $pesanan ? $db->query("SELECT * FROM public.item_pesanan WHERE pesanan_id = '{$pesanan['id']}'")->fetch(PDO::FETCH_ASSOC) : null;
+        $arusKas = $pesanan ? $db->query("SELECT * FROM public.arus_kas WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pesanan['id']}'")->fetch(PDO::FETCH_ASSOC) : null;
+
+        if ($checkCust['is_konsinyasi'] === true) return "is_konsinyasi masih true!";
+        if ($checkRak !== 0) return "Stok rak tidak nol!";
+        if (!$pesanan) return "Faktur pesanan tidak terbentuk!";
+        if ($pesanan['status_pembayaran'] !== 'lunas') return "Status pesanan bukan lunas!";
+        if ((float)$pesanan['total_netto'] != $totalExpected) return "Total netto pesanan tidak sesuai: {$pesanan['total_netto']} vs {$totalExpected}";
+        if (!$itemPesanan || (int)$itemPesanan['kuantitas_satuan_dasar'] !== $qtyBeli) return "Item pesanan tidak sesuai!";
+        if ($saldoKasAkhir != ($saldoKasAwal + $totalExpected)) return "Saldo kas tidak bertambah dengan benar!";
+        if (!$arusKas || (float)$arusKas['nominal'] != $totalExpected) return "Arus kas masuk tidak valid!";
+
+        return true;
+    } finally {
+        $pesananIds = $db->query("SELECT id FROM public.pesanan WHERE pelanggan_id = '{$custId}'")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($pesananIds as $pid) {
+            $db->exec("DELETE FROM public.arus_kas WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pid}'");
+            $db->exec("DELETE FROM public.riwayat_stok WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pid}'");
+            $db->exec("DELETE FROM public.item_pesanan WHERE pesanan_id = '{$pid}'");
+            $db->exec("DELETE FROM public.pesanan WHERE id = '{$pid}'");
+        }
+        $db->exec("UPDATE public.akun_kas SET saldo_saat_ini = {$saldoKasAwal} WHERE id = '{$akunKas['id']}'");
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
+        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
     }
-    $db->exec("UPDATE public.akun_kas SET saldo_saat_ini = {$saldoKasAwal} WHERE id = '{$akunKas['id']}'");
-    $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
-    $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
-
-    if ($checkCust['is_konsinyasi'] === true) return "is_konsinyasi masih true!";
-    if ($checkRak !== 0) return "Stok rak tidak nol!";
-    if (!$pesanan) return "Faktur pesanan tidak terbentuk!";
-    if ($pesanan['status_pembayaran'] !== 'lunas') return "Status pesanan bukan lunas!";
-    if ((float)$pesanan['total_netto'] != $totalExpected) return "Total netto pesanan tidak sesuai: {$pesanan['total_netto']} vs {$totalExpected}";
-    if (!$itemPesanan || (int)$itemPesanan['kuantitas_satuan_dasar'] !== $qtyBeli) return "Item pesanan tidak sesuai!";
-    if ($saldoKasAkhir != ($saldoKasAwal + $totalExpected)) return "Saldo kas tidak bertambah dengan benar!";
-    if (!$arusKas || (float)$arusKas['nominal'] != $totalExpected) return "Arus kas masuk tidak valid!";
-
-    return true;
 });
 
 // TEST 4
 runTest('Opsi 2B (Beli Putus Tempo): Zeroes shelf stock, creates pending pesanan, increases total_piutang_berjalan', function() use ($db, $grupId, $wilId, $item) {
     $custId = 'c0000000-0000-0000-0000-000000000040';
-    $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
-    $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
-
     $qtyBeli = 12;
 
-    $db->exec("
-        INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, tipe_pembayaran_default, total_piutang_berjalan, plafon_piutang, status_aktif, alamat_lengkap)
-        VALUES ('{$custId}', 'CUST-TEST-40', 'Toko Beli Tempo Test', '{$grupId}', '{$wilId}', TRUE, 'konsinyasi', 100000, 5000000, TRUE, 'Jl. Test No. 40')
-    ");
+    try {
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
+        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
 
-    $db->exec("
-        INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
-        VALUES (gen_random_uuid(), '{$custId}', '{$item['id']}', {$qtyBeli})
-    ");
+        $db->exec("
+            INSERT INTO public.pelanggan (id, kode_pelanggan, nama_toko, grup_pelanggan_id, wilayah_id, is_konsinyasi, tipe_pembayaran_default, total_piutang_berjalan, plafon_piutang, status_aktif, alamat_lengkap)
+            VALUES ('{$custId}', 'CUST-TEST-40', 'Toko Beli Tempo Test', '{$grupId}', '{$wilId}', TRUE, 'konsinyasi', 100000, 5000000, TRUE, 'Jl. Test No. 40')
+        ");
 
-    $hargaInfoRaw = $db->query("SELECT public.fn_hitung_harga_jual_item('{$item['id']}', '{$custId}') as info")->fetchColumn();
-    $hargaData = json_decode((string)$hargaInfoRaw, true) ?: [];
-    $hargaPcsNetto = (float)($hargaData['harga_pcs_netto'] ?? 0);
-    $totalExpected = $hargaPcsNetto * $qtyBeli;
+        $db->exec("
+            INSERT INTO public.stok_konsinyasi_toko (id, pelanggan_id, item_id, stok_titip_saat_ini)
+            VALUES (gen_random_uuid(), '{$custId}', '{$item['id']}', {$qtyBeli})
+        ");
 
-    $ctrl = createMockCustomerController([
-        'id' => $custId,
-        'nama_toko' => 'Toko Beli Tempo Test',
-        'grup_pelanggan_id' => $grupId,
-        'wilayah_id' => $wilId,
-        'tipe_pembayaran_default' => 'tempo_tanggal',
-        'is_konsinyasi' => false,
-        'konversi_konsinyasi_opsi' => 'beli_putus',
-        'metode_beli_putus' => 'tempo',
-        'catatan_konversi' => 'Test Beli Putus Tempo'
-    ]);
-    $ctrl->update();
+        $hargaInfoRaw = $db->query("SELECT public.fn_hitung_harga_jual_item('{$item['id']}', '{$custId}') as info")->fetchColumn();
+        $hargaData = json_decode((string)$hargaInfoRaw, true) ?: [];
+        $hargaPcsNetto = (float)($hargaData['harga_pcs_netto'] ?? 0);
+        $totalExpected = $hargaPcsNetto * $qtyBeli;
 
-    $checkCust = $db->query("SELECT is_konsinyasi, tipe_pembayaran_default, total_piutang_berjalan FROM public.pelanggan WHERE id = '{$custId}'")->fetch(PDO::FETCH_ASSOC);
-    $checkRak = (int)$db->query("SELECT stok_titip_saat_ini FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}' AND item_id = '{$item['id']}'")->fetchColumn();
-    
-    $pesanan = $db->query("SELECT * FROM public.pesanan WHERE pelanggan_id = '{$custId}' ORDER BY dibuat_pada DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        $ctrl = createMockCustomerController([
+            'id' => $custId,
+            'nama_toko' => 'Toko Beli Tempo Test',
+            'grup_pelanggan_id' => $grupId,
+            'wilayah_id' => $wilId,
+            'tipe_pembayaran_default' => 'tempo_tanggal',
+            'is_konsinyasi' => false,
+            'konversi_konsinyasi_opsi' => 'beli_putus',
+            'metode_beli_putus' => 'tempo',
+            'catatan_konversi' => 'Test Beli Putus Tempo'
+        ]);
+        $ctrl->update();
 
-    if ($pesanan) {
-        $db->exec("DELETE FROM public.riwayat_stok WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pesanan['id']}'");
-        $db->exec("DELETE FROM public.item_pesanan WHERE pesanan_id = '{$pesanan['id']}'");
-        $db->exec("DELETE FROM public.pesanan WHERE id = '{$pesanan['id']}'");
+        $checkCust = $db->query("SELECT is_konsinyasi, tipe_pembayaran_default, total_piutang_berjalan FROM public.pelanggan WHERE id = '{$custId}'")->fetch(PDO::FETCH_ASSOC);
+        $checkRak = (int)$db->query("SELECT stok_titip_saat_ini FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}' AND item_id = '{$item['id']}'")->fetchColumn();
+        
+        $pesanan = $db->query("SELECT * FROM public.pesanan WHERE pelanggan_id = '{$custId}' ORDER BY dibuat_pada DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+
+        if ($checkCust['is_konsinyasi'] === true) return "is_konsinyasi masih true!";
+        if ($checkRak !== 0) return "Stok rak tidak nol!";
+        if (!$pesanan) return "Faktur pesanan tidak terbentuk!";
+        if ($pesanan['status_pembayaran'] !== 'belum_lunas') return "Status pesanan tempo seharusnya belum_lunas!";
+        if (empty($pesanan['tanggal_jatuh_tempo'])) return "Tanggal jatuh tempo tidak diisi!";
+        
+        $expectedPiutang = 100000 + $totalExpected;
+        if ((float)$checkCust['total_piutang_berjalan'] != $expectedPiutang) {
+            return "Piutang berjalan tidak bertambah sesuai tagihan: {$checkCust['total_piutang_berjalan']} vs {$expectedPiutang}";
+        }
+
+        return true;
+    } finally {
+        $pesananIds = $db->query("SELECT id FROM public.pesanan WHERE pelanggan_id = '{$custId}'")->fetchAll(PDO::FETCH_COLUMN);
+        foreach ($pesananIds as $pid) {
+            $db->exec("DELETE FROM public.riwayat_stok WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pid}'");
+            $db->exec("DELETE FROM public.item_pesanan WHERE pesanan_id = '{$pid}'");
+            $db->exec("DELETE FROM public.pesanan WHERE id = '{$pid}'");
+        }
+        $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
+        $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
     }
-    $db->exec("DELETE FROM public.stok_konsinyasi_toko WHERE pelanggan_id = '{$custId}'");
-    $db->exec("DELETE FROM public.pelanggan WHERE id = '{$custId}'");
-
-    if ($checkCust['is_konsinyasi'] === true) return "is_konsinyasi masih true!";
-    if ($checkRak !== 0) return "Stok rak tidak nol!";
-    if (!$pesanan) return "Faktur pesanan tidak terbentuk!";
-    if ($pesanan['status_pembayaran'] !== 'belum_lunas') return "Status pesanan tempo seharusnya belum_lunas!";
-    if (empty($pesanan['tanggal_jatuh_tempo'])) return "Tanggal jatuh tempo tidak diisi!";
-    
-    $expectedPiutang = 100000 + $totalExpected;
-    if ((float)$checkCust['total_piutang_berjalan'] != $expectedPiutang) {
-        return "Piutang berjalan tidak bertambah sesuai tagihan: {$checkCust['total_piutang_berjalan']} vs {$expectedPiutang}";
-    }
-
-    return true;
 });
 
 echo "\n============================================================\n";

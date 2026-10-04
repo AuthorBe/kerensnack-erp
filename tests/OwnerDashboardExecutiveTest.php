@@ -259,6 +259,95 @@ runTest("6. View views/owner/index.php evaluates without warnings or undefined v
     }
 });
 
+runTest("7. 100% Mathematical Parity & Cash Segregation Reconciliation between Owner Dashboard & Report Hub", function() {
+    $startDate = date('Y-m-01');
+    $endDate = date('Y-m-t');
+
+    // 1. Matriks dari Owner Dashboard Logic
+    $salesSummary = Database::fetchOne("
+        SELECT COALESCE(SUM(total_netto), 0) as total_omzet
+        FROM public.pesanan
+        WHERE tanggal_pesanan BETWEEN :start AND :end
+          AND status_pemrosesan != 'dibatalkan'
+          AND status_pembayaran != 'dibatalkan'
+          AND is_tagihan = TRUE
+    ", ['start' => $startDate, 'end' => $endDate]) ?? [];
+    $ownerOmzet = (float)($salesSummary['total_omzet'] ?? 0);
+
+    $cogsRow = Database::fetchOne("
+        SELECT COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as total_hpp
+        FROM public.item_pesanan ip
+        JOIN public.pesanan p ON ip.pesanan_id = p.id
+        LEFT JOIN public.item i ON ip.item_id = i.id
+        WHERE p.tanggal_pesanan BETWEEN :start AND :end
+          AND p.status_pemrosesan != 'dibatalkan'
+          AND p.status_pembayaran != 'dibatalkan'
+          AND p.is_tagihan = TRUE
+    ", ['start' => $startDate, 'end' => $endDate]) ?? [];
+    $ownerHpp = (float)($cogsRow['total_hpp'] ?? 0);
+    $ownerGross = $ownerOmzet - $ownerHpp;
+
+    $expenseRow = Database::fetchOne("
+        SELECT COALESCE(SUM(ark.nominal), 0) as total_beban
+        FROM public.arus_kas ark
+        JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+        WHERE ark.tanggal_transaksi BETWEEN :start AND :end
+          AND ark.jenis_kas = 'keluar'
+          AND COALESCE(ak.is_escrow, FALSE) = FALSE
+          AND ark.kategori NOT IN ('penarikan_tabungan', 'transfer_keluar', 'pembelian_bahan')
+    ", ['start' => $startDate, 'end' => $endDate]) ?? [];
+    $ownerOpex = (float)($expenseRow['total_beban'] ?? 0);
+    $ownerNetProfit = $ownerGross - $ownerOpex;
+
+    // 2. Matriks dari Report Hub Logic
+    $reportHubController = new \App\Controllers\ReportHubController();
+    $refClass = new ReflectionClass($reportHubController);
+    $fetchPnlMethod = $refClass->getMethod('fetchPnlData');
+    $fetchPnlMethod->setAccessible(true);
+    $hubPnl = $fetchPnlMethod->invoke($reportHubController, $startDate, $endDate);
+
+    $fetchConsMethod = $refClass->getMethod('fetchConsolidatedMetrics');
+    $fetchConsMethod->setAccessible(true);
+    $hubCons = $fetchConsMethod->invoke($reportHubController, $startDate, $endDate);
+
+    // 3. Rekonsiliasi Paritas Finansial
+    if (abs($ownerOmzet - (float)$hubPnl['totalRevenue']) > 0.01) {
+        throw new Exception("Revenue mismatch: Owner ({$ownerOmzet}) vs Report Hub ({$hubPnl['totalRevenue']})");
+    }
+    if (abs($ownerHpp - (float)$hubPnl['totalCogs']) > 0.01) {
+        throw new Exception("HPP / COGS mismatch: Owner ({$ownerHpp}) vs Report Hub ({$hubPnl['totalCogs']})");
+    }
+    if (abs($ownerGross - (float)$hubPnl['grossProfit']) > 0.01) {
+        throw new Exception("Gross Profit mismatch: Owner ({$ownerGross}) vs Report Hub ({$hubPnl['grossProfit']})");
+    }
+    if (abs($ownerOpex - (float)$hubPnl['totalOperationalExpense']) > 0.01) {
+        throw new Exception("OPEX mismatch: Owner ({$ownerOpex}) vs Report Hub ({$hubPnl['totalOperationalExpense']})");
+    }
+    if (abs($ownerNetProfit - (float)$hubPnl['netProfit']) > 0.01) {
+        throw new Exception("Net Profit mismatch: Owner ({$ownerNetProfit}) vs Report Hub ({$hubPnl['netProfit']})");
+    }
+    if (abs($ownerOmzet - (float)$hubCons['total_omzet']) > 0.01) {
+        throw new Exception("Consolidated Sales Omzet mismatch: Owner ({$ownerOmzet}) vs Report Hub ({$hubCons['total_omzet']})");
+    }
+    if (abs($ownerHpp - (float)$hubCons['total_hpp']) > 0.01) {
+        throw new Exception("Consolidated Sales HPP mismatch: Owner ({$ownerHpp}) vs Report Hub ({$hubCons['total_hpp']})");
+    }
+
+    // 4. Verifikasi Isolasi Kas Escrow (Tabungan Karyawan)
+    $escrowCheck = Database::fetchOne("
+        SELECT COUNT(*) as count_transaksi
+        FROM public.arus_kas ark
+        JOIN public.akun_kas ak ON ark.akun_kas_id = ak.id
+        WHERE ak.is_escrow = TRUE
+          AND ark.jenis_kas = 'keluar'
+          AND ark.kategori NOT IN ('penarikan_tabungan', 'transfer_keluar')
+    ");
+    $invalidEscrowTx = (int)($escrowCheck['count_transaksi'] ?? 0);
+    if ($invalidEscrowTx > 0) {
+        throw new Exception("Found {$invalidEscrowTx} non-escrow expense transactions inside escrow account");
+    }
+});
+
 echo "====================================================================\n";
-echo "ALL 6 OWNER EXECUTIVE TESTS PASSED SUCCESSFULLY!\n";
+echo "ALL 7 OWNER EXECUTIVE TESTS PASSED SUCCESSFULLY!\n";
 echo "====================================================================\n";

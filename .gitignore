@@ -42,6 +42,7 @@ test_*.php
 check_*.php
 clean_*.php
 scratch_*.php
+public/assets/img/logo/logo_test_*
 *.tmp
 *.bak
 *.swp

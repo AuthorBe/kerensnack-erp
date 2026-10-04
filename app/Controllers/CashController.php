@@ -48,7 +48,7 @@ class CashController extends Controller
                            WHERE ark.akun_kas_id = ak.id
                        ), 0) as kalkulasi_saldo_buku_besar
                 FROM public.akun_kas ak
-                ORDER BY ak.status_aktif DESC, ak.is_default_pos DESC, ak.nama_akun ASC
+                ORDER BY COALESCE(ak.is_escrow, FALSE) ASC, ak.status_aktif DESC, ak.is_default_pos DESC, ak.nama_akun ASC
             ");
 
             // 2. Evaluasi status rekonsiliasi per akun kas
@@ -57,6 +57,7 @@ class CashController extends Controller
             $cashTunaiTotal = 0;
             $bankTotal = 0;
             $qrisDigitalTotal = 0;
+            $escrowSavingsTotal = 0;
 
             foreach ($accounts as &$acc) {
                 $actualBal = (float)$acc['saldo_saat_ini'];
@@ -71,13 +72,19 @@ class CashController extends Controller
 
                 // Hitung total saldo jika akun aktif
                 if ($acc['status_aktif']) {
-                    $liquidCashTotal += $actualBal;
-                    if ($acc['tipe_akun'] === 'kas_tunai') {
-                        $cashTunaiTotal += $actualBal;
-                    } elseif ($acc['tipe_akun'] === 'bank') {
-                        $bankTotal += $actualBal;
-                    } elseif (in_array($acc['tipe_akun'], ['qris', 'kas_operasional', 'kas_kecil'])) {
-                        $qrisDigitalTotal += $actualBal;
+                    if (!empty($acc['is_escrow'])) {
+                        // Titipan Tabungan Karyawan (Terkunci) — Terpisah dari Kas Operasional
+                        $escrowSavingsTotal += $actualBal;
+                    } else {
+                        // Kas Likuid Operasional Perusahaan
+                        $liquidCashTotal += $actualBal;
+                        if ($acc['tipe_akun'] === 'kas_tunai') {
+                            $cashTunaiTotal += $actualBal;
+                        } elseif ($acc['tipe_akun'] === 'bank') {
+                            $bankTotal += $actualBal;
+                        } elseif (in_array($acc['tipe_akun'], ['qris', 'kas_operasional', 'kas_kecil'])) {
+                            $qrisDigitalTotal += $actualBal;
+                        }
                     }
                 }
             }
@@ -91,6 +98,7 @@ class CashController extends Controller
                 'cashTunaiTotal' => $cashTunaiTotal,
                 'bankTotal' => $bankTotal,
                 'qrisDigitalTotal' => $qrisDigitalTotal,
+                'escrowSavingsTotal' => $escrowSavingsTotal,
                 'allReconciled' => $allReconciled
             ]);
 
@@ -450,6 +458,13 @@ class CashController extends Controller
         $id = $this->input('id');
         if (!empty($id)) {
             try {
+                $checkEscrow = Database::fetchOne("SELECT is_escrow, nama_akun FROM public.akun_kas WHERE id = :id", ['id' => $id]);
+                if (!empty($checkEscrow['is_escrow'])) {
+                    $this->flashError("Akun '{$checkEscrow['nama_akun']}' adalah akun tabungan (escrow terkunci) dan dilarang dijadikan Default Kasir POS.");
+                    $this->redirect('/cash');
+                    return;
+                }
+
                 $pdo = Database::getConnection();
                 $pdo->beginTransaction();
                 $pdo->exec("UPDATE public.akun_kas SET is_default_pos = FALSE");
@@ -476,6 +491,11 @@ class CashController extends Controller
         $atasNama = trim((string)$this->input('atas_nama', '-'));
         $saldoAwal = (float)preg_replace('/[^0-9]/', '', (string)$this->input('saldo_awal', '0'));
         $isDefaultPos = (bool)$this->input('is_default_pos', false);
+        $isEscrow = ($tipeAkun === 'kas_tabungan');
+
+        if ($isEscrow) {
+            $isDefaultPos = false;
+        }
 
         if (empty($namaAkun)) {
             $this->flashError('Nama akun kas / bank wajib diisi.');
@@ -489,7 +509,7 @@ class CashController extends Controller
 
             if ($isDefaultPos) {
                 $pdo->exec("UPDATE public.akun_kas SET is_default_pos = FALSE");
-            } else {
+            } else if (!$isEscrow) {
                 $existingCount = (int)($pdo->query("SELECT count(*) FROM public.akun_kas WHERE is_default_pos = TRUE")->fetchColumn() ?? 0);
                 if ($existingCount === 0) {
                     $isDefaultPos = true;
@@ -498,9 +518,9 @@ class CashController extends Controller
 
             $stmt = $pdo->prepare("
                 INSERT INTO public.akun_kas (
-                    nama_akun, tipe_akun, nomor_rekening, atas_nama, saldo_saat_ini, is_default_pos, status_aktif, dibuat_pada, diubah_pada
+                    nama_akun, tipe_akun, nomor_rekening, atas_nama, saldo_saat_ini, is_default_pos, is_escrow, status_aktif, dibuat_pada, diubah_pada
                 ) VALUES (
-                    :nama, :tipe, :rek, :an, :saldo, :def_pos, TRUE, NOW(), NOW()
+                    :nama, :tipe, :rek, :an, :saldo, :def_pos, :escrow, TRUE, NOW(), NOW()
                 ) RETURNING id
             ");
             $stmt->execute([
@@ -509,7 +529,8 @@ class CashController extends Controller
                 'rek' => $nomorRekening ?: '-',
                 'an' => $atasNama ?: '-',
                 'saldo' => $saldoAwal,
-                'def_pos' => $isDefaultPos ? 'true' : 'false'
+                'def_pos' => $isDefaultPos ? 'true' : 'false',
+                'escrow' => $isEscrow ? 'true' : 'false'
             ]);
             $newAccountId = $stmt->fetchColumn();
 
@@ -565,6 +586,23 @@ class CashController extends Controller
         try {
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
+
+            $existing = Database::fetchOne("SELECT is_escrow, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $id]);
+            $isEscrow = !empty($existing['is_escrow']);
+            $saldoSaatIni = (float)($existing['saldo_saat_ini'] ?? 0);
+
+            if ($isEscrow) {
+                // Escrow akun terkunci: tidak boleh dijadikan default POS & tipe_akun tetap kas_tabungan
+                $isDefaultPos = false;
+                $tipeAkun = 'kas_tabungan';
+
+                if (!$statusAktif && $saldoSaatIni > 0) {
+                    $saldoFmt = Format::rupiah($saldoSaatIni);
+                    $this->flashError("Akun kas '{$existing['nama_akun']}' tidak dapat dinonaktifkan selagi masih memiliki saldo simpanan karyawan sebesar {$saldoFmt}. Harap cairkan atau tarik seluruh saldo tabungan terlebih dahulu sebelum menonaktifkan akun.");
+                    $this->redirect('/cash');
+                    return;
+                }
+            }
 
             if ($isDefaultPos) {
                 $pdo->prepare("UPDATE public.akun_kas SET is_default_pos = FALSE WHERE id != :id")
@@ -627,13 +665,19 @@ class CashController extends Controller
                 return;
             }
 
-            // Cek apakah akun merupakan default POS
-            $stmtPos = $pdo->prepare("SELECT is_default_pos, nama_akun FROM public.akun_kas WHERE id = :id");
+            // Cek apakah akun merupakan default POS atau akun escrow
+            $stmtPos = $pdo->prepare("SELECT is_default_pos, is_escrow, nama_akun FROM public.akun_kas WHERE id = :id");
             $stmtPos->execute(['id' => $id]);
             $accRow = $stmtPos->fetch();
 
             if (!$accRow) {
                 $this->flashError('Akun kas tidak ditemukan.');
+                $this->redirect('/cash');
+                return;
+            }
+
+            if (!empty($accRow['is_escrow'])) {
+                $this->flashError("Akun '{$accRow['nama_akun']}' adalah akun kas tabungan karyawan (escrow) master sistem dan terkunci permanen sehingga tidak dapat dihapus.");
                 $this->redirect('/cash');
                 return;
             }
@@ -753,12 +797,16 @@ class CashController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            $stmtBal = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini, tipe_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
+            $stmtBal = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini, tipe_akun, is_escrow FROM public.akun_kas WHERE id = :id FOR UPDATE");
             $stmtBal->execute(['id' => $accountId]);
             $acc = $stmtBal->fetch();
 
             if (!$acc) {
                 throw new \Exception("Akun kas tidak ditemukan.");
+            }
+
+            if (!empty($acc['is_escrow'])) {
+                throw new \Exception("Akun '{$acc['nama_akun']}' adalah akun kas tabungan karyawan (terkunci/escrow). Pengeluaran kas operasional manual tidak diizinkan dari akun ini.");
             }
 
             $currentBal = (float)($acc['saldo_saat_ini'] ?? 0);
@@ -849,7 +897,7 @@ class CashController extends Controller
             // Kunci akun sumber dan tujuan secara deterministik
             $ids = [$sourceId, $destId];
             sort($ids);
-            $stmtLock = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+            $stmtLock = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini, is_escrow FROM public.akun_kas WHERE id = :id FOR UPDATE");
             $lockedAccounts = [];
             foreach ($ids as $lockId) {
                 $stmtLock->execute(['id' => $lockId]);
@@ -864,6 +912,10 @@ class CashController extends Controller
 
             if (!$sourceAcc || !$destAcc) {
                 throw new \Exception("Akun sumber atau tujuan tidak ditemukan.");
+            }
+
+            if (!empty($sourceAcc['is_escrow']) || !empty($destAcc['is_escrow'])) {
+                throw new \Exception("Mutasi dana dari/ke akun Kas Tabungan Karyawan (Escrow) hanya diperbolehkan melalui modul Penggajian dan Tabungan Karyawan demi integritas saldo simpanan karyawan.");
             }
 
             $sourceBal = (float)$sourceAcc['saldo_saat_ini'];

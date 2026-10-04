@@ -316,23 +316,34 @@ runTest("4.1 - TerritoryImportHandler: Wilayah yang tercatat di rute Surat Jalan
     }
 });
 
-// TEST 7: Proteksi Default Customer GRP-001 dan CUST-001
-runTest("5.1 - Proteksi Default Master: CUST-001 dan GRP-001 kebal dari penghapusan Full-Sync", function () use ($pdo) {
+// TEST 7: Proteksi Default Customer GRP-001, CUST-001, dan CUST-002
+runTest("5.1 - Proteksi Default Master: CUST-001, CUST-002, dan GRP-001 kebal dari penghapusan Full-Sync", function () use ($pdo) {
     $pdo->beginTransaction();
     try {
         $custHandler = new CustomerImportHandler();
         $groupHandler = new CustomerGroupImportHandler();
 
         $cust001 = $pdo->query("SELECT id, kode_pelanggan, nama_toko FROM public.pelanggan WHERE kode_pelanggan = 'CUST-001'")->fetch(PDO::FETCH_ASSOC);
+        $cust002 = $pdo->query("SELECT id, kode_pelanggan, nama_toko FROM public.pelanggan WHERE kode_pelanggan = 'CUST-002'")->fetch(PDO::FETCH_ASSOC);
         $grp001 = $pdo->query("SELECT id, kode_grup, nama_grup FROM public.grup_pelanggan WHERE kode_grup = 'GRP-001'")->fetch(PDO::FETCH_ASSOC);
 
         if ($cust001) {
-            $resC = $custHandler->applySync([
+            $resC1 = $custHandler->applySync([
                 ['action' => 'DELETE', 'data' => $cust001]
             ], $pdo);
 
-            if ($resC['delete'] !== 0 || $resC['deactivate'] !== 0) {
-                return "CUST-001 should be protected and skipped completely, got " . json_encode($resC);
+            if ($resC1['delete'] !== 0 || $resC1['deactivate'] !== 0) {
+                return "CUST-001 should be protected and skipped completely, got " . json_encode($resC1);
+            }
+        }
+
+        if ($cust002) {
+            $resC2 = $custHandler->applySync([
+                ['action' => 'DELETE', 'data' => $cust002]
+            ], $pdo);
+
+            if ($resC2['delete'] !== 0 || $resC2['deactivate'] !== 0) {
+                return "CUST-002 should be protected and skipped completely, got " . json_encode($resC2);
             }
         }
 

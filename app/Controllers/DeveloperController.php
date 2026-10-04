@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Auth;
 use App\Services\TestRunnerService;
+use App\Services\DatabaseManagerService;
 use App\Helpers\CSRF;
 use App\Helpers\ActivityLog;
 use Database;
@@ -43,9 +44,11 @@ class DeveloperController extends Controller
                 WHERE routine_schema = 'public'
             ")['total'] ?? 0);
 
+            $dbStatus = DatabaseManagerService::getStatus();
+
             $telemetry = [
                 'php_version'      => PHP_VERSION,
-                'db_driver'        => 'PostgreSQL 17 (Supabase SSL Pooler)',
+                'db_driver'        => $dbStatus['is_local'] ? 'PostgreSQL 14 (Local Laragon Sandbox)' : 'PostgreSQL 17 (Supabase SSL Pooler)',
                 'total_tables'     => $tablesCount,
                 'total_procedures' => $proceduresCount,
                 'total_suites'     => count(TestRunnerService::SUITES),
@@ -53,13 +56,15 @@ class DeveloperController extends Controller
                 'active_role'      => Auth::role(),
                 'server_time'      => date('d M Y H:i:s') . ' WIB',
                 'session_timeout'  => \App\Core\Auth::INACTIVITY_TIMEOUT . ' detik (1 Jam)',
-                'last_activity'    => date('d M Y H:i:s', (int)($_SESSION['last_activity'] ?? time())) . ' WIB'
+                'last_activity'    => date('d M Y H:i:s', (int)($_SESSION['last_activity'] ?? time())) . ' WIB',
+                'db_info'          => $dbStatus
             ];
 
             $this->view('developer.index', [
                 'pageTitle'    => 'Developer Command Center',
                 'pageSubtitle' => 'Portal Terpadu Arsitektur, Diagnostik Database, dan Verifikasi Otomatis',
                 'telemetry'    => $telemetry,
+                'dbStatus'     => $dbStatus,
                 'csrfToken'    => CSRF::token()
             ]);
         } catch (Throwable $e) {
@@ -97,7 +102,7 @@ class DeveloperController extends Controller
                 'db_driver'         => 'PostgreSQL 17 (Supabase SSL Pooler)',
                 'total_tables'      => count($tables),
                 'total_procedures'  => count($procedures),
-                'total_controllers' => $controllersCount ?: 24,
+                'total_controllers' => $controllersCount ?: 32,
                 'total_helpers'     => $helpersCount ?: 13,
                 'total_suites'      => count(TestRunnerService::SUITES),
                 'active_user'       => Auth::name() ?? 'Developer',
@@ -149,11 +154,14 @@ class DeveloperController extends Controller
         $lockState     = TestRunnerService::isLocked();       // false atau array info lock
         $cooldownState = TestRunnerService::getCooldownState(); // false atau array {remaining_seconds, cooldown_until, ...}
 
+        $dbStatus = DatabaseManagerService::getStatus();
+
         $telemetry = [
             'php_version'  => PHP_VERSION,
             'total_suites' => count($suites),
             'active_user'  => Auth::name(),
-            'server_time'  => date('d M Y H:i:s') . ' WIB'
+            'server_time'  => date('d M Y H:i:s') . ' WIB',
+            'db_info'      => $dbStatus,
         ];
 
         $this->view('developer.tests', [
@@ -161,6 +169,7 @@ class DeveloperController extends Controller
             'pageSubtitle'  => 'Eksekusi Real-time ' . count($suites) . ' Test Suites ERP (Anti-Timeout, Rollback Aman)',
             'suites'        => $suites,
             'telemetry'     => $telemetry,
+            'dbStatus'      => $dbStatus,
             'csrfToken'     => CSRF::token(),
             'lockState'     => $lockState,
             'cooldownState' => $cooldownState,
@@ -335,17 +344,155 @@ class DeveloperController extends Controller
     /**
      * Preview Halaman Akses Dibatasi (.htaccess & Restricted Route) Khusus Developer
      */
-    public function previewRestricted(): void
+     public function previewRestricted(): void
+     {
+         $viewFile = ROOT_PATH . '/views/errors/restricted.php';
+         if (file_exists($viewFile)) {
+             $title = 'Preview: Akses Dibatasi (Restricted Guard)';
+             require $viewFile;
+             exit;
+         }
+         $this->denyAccess('preview_not_found');
+     }
+
+    /**
+     * Menu Khusus: Database Sandbox & Cloud Sync Manager (/developer/database)
+     */
+    public function database(): void
     {
-        $viewFile = ROOT_PATH . '/views/errors/restricted.php';
-        if (file_exists($viewFile)) {
-            $title = 'Preview: Akses Dibatasi (Restricted Guard)';
-            require $viewFile;
-            exit;
+        $dbStatus = DatabaseManagerService::getStatus();
+
+        $isProductionDomain = DatabaseManagerService::isProductionDomain();
+
+        $this->view('developer.database', [
+            'pageTitle'          => 'Database Engine & Cloud Sync Manager',
+            'pageSubtitle'       => 'Pusat Replikasi 100% Identik Supabase ke Lokal & 1-Click Connection Switcher',
+            'dbStatus'           => $dbStatus,
+            'csrfToken'          => CSRF::token(),
+            'isProductionDomain' => $isProductionDomain
+        ]);
+    }
+
+    /**
+     * AJAX Endpoint: Beralih Koneksi Database ('local' atau 'live')
+     */
+    public function switchDb(): void
+    {
+        if (!DatabaseManagerService::isActionAllowed()) {
+            $this->json([
+                'success' => false,
+                'error'   => 'Aksi ditolak: Saklar database dikunci permanen pada domain aktif. Aksi ini hanya dapat dilakukan di lingkungan lokal developer (localhost / 127.0.0.1).'
+            ], 403);
+            return;
         }
-        $this->denyAccess('preview_not_found');
+
+        if (!CSRF::validate()) {
+            $this->json(['success' => false, 'error' => 'Token CSRF tidak valid. Muat ulang halaman dan coba lagi.'], 403);
+            return;
+        }
+
+        $target = strtolower(trim((string)($_POST['target'] ?? '')));
+        if (!in_array($target, ['local', 'live'], true)) {
+            $this->json(['success' => false, 'error' => 'Target database tidak valid. Pilih "local" atau "live".'], 400);
+            return;
+        }
+
+        try {
+            $result = DatabaseManagerService::switchConnection($target);
+
+            // Audit Log
+            $userName = Auth::name() . ' (' . Auth::role() . ')';
+            ActivityLog::log(
+                'keamanan_auth',
+                'PENGATURAN',
+                "Developer {$userName} beralih target database ke " . strtoupper($target),
+                'pengaturan_sistem',
+                null,
+                null,
+                ['target' => $target, 'result' => $result],
+                'web_app',
+                Auth::id(),
+                Auth::name(),
+                Auth::role()
+            );
+
+            $this->json($result);
+        } catch (Throwable $e) {
+            $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * AJAX Endpoint: Replikasi Data Penuh dari Live Supabase ke Database Lokal
+     */
+    public function syncDb(): void
+    {
+        if (!DatabaseManagerService::isActionAllowed()) {
+            $this->json([
+                'success' => false,
+                'error'   => 'Aksi ditolak: Replikasi database dikunci permanen pada domain aktif. Aksi ini hanya dapat dilakukan di lingkungan lokal developer (localhost / 127.0.0.1).'
+            ], 403);
+            return;
+        }
+
+        if (!CSRF::validate()) {
+            $this->json(['success' => false, 'error' => 'Token CSRF tidak valid. Muat ulang halaman dan coba lagi.'], 403);
+            return;
+        }
+
+        $mode = strtolower(trim((string)($_POST['mode'] ?? '14d')));
+        if (!in_array($mode, ['14d', 'full', 'smart_14d', 'smart'], true)) {
+            $mode = '14d';
+        }
+
+        // Pastikan eksekusi tidak terputus timeout web server
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
+
+        try {
+            $result = DatabaseManagerService::replicateLiveToLocal($mode);
+
+            // Audit Log
+            $userName = Auth::name() . ' (' . Auth::role() . ')';
+            $modeLabel = ($mode === 'full') ? 'Full All-Time' : 'Smart 14-Day';
+            ActivityLog::log(
+                'keamanan_auth',
+                'PENGATURAN',
+                "Developer {$userName} mengeksekusi replikasi database ({$modeLabel}) Live -> Local ({$result['total_tables']} tabel, {$result['total_rows']} baris)",
+                'pengaturan_sistem',
+                null,
+                null,
+                [
+                    'mode'     => $mode,
+                    'duration' => $result['duration'],
+                    'tables'   => $result['total_tables'],
+                    'rows'     => $result['total_rows']
+                ],
+                'web_app',
+                Auth::id(),
+                Auth::name(),
+                Auth::role()
+            );
+
+            $this->json($result);
+        } catch (Throwable $e) {
+            $this->json([
+                'success' => false,
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * AJAX Endpoint: Ambil status koneksi database realtime
+     */
+    public function dbStatus(): void
+    {
+        $status = DatabaseManagerService::getStatus();
+        $this->json($status);
     }
 }
+
 
 
 
