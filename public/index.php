@@ -46,8 +46,12 @@ header("Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()
 // 1. Session Initialization (Sliding Inactivity Timeout 1 Jam / 3.600 detik)
 ini_set('session.gc_maxlifetime', '86400');
 if (session_status() === PHP_SESSION_NONE) {
+    $isSecure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ||
+                (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+
     session_start([
         'cookie_httponly' => true,
+        'cookie_secure'   => $isSecure,
         'cookie_samesite' => 'Lax',
         'cookie_lifetime' => 0,
         'gc_maxlifetime'  => 86400
@@ -130,6 +134,12 @@ use App\Controllers\ActivityLogController;
 use App\Controllers\ImportDataController;
 use App\Controllers\MediaController;
 use App\Controllers\ReportHubController;
+use App\Controllers\AbsensiController;
+use App\Controllers\ProduksiController;
+use App\Controllers\PenarikanGajiController;
+use App\Controllers\KasbonController;
+use App\Controllers\TabunganController;
+use App\Controllers\PenggajianController;
 
 // =========================================================================
 // ROUTE REGISTRATION (Enterprise Router)
@@ -322,6 +332,9 @@ Router::get('/suppliers', [SupplierController::class, 'index']);
 Router::post('/suppliers/store', [SupplierController::class, 'store']);
 Router::post('/suppliers/update', [SupplierController::class, 'update']);
 Router::post('/suppliers/delete', [SupplierController::class, 'delete']);
+Router::get('/suppliers/catalog', [SupplierController::class, 'getCatalog']);
+Router::post('/suppliers/catalog/save', [SupplierController::class, 'saveCatalogItem']);
+Router::post('/suppliers/catalog/delete', [SupplierController::class, 'deleteCatalogItem']);
 
 // --- MASTER DATA 3: MASTER DATA KARYAWAN ---
 Router::get('/employees', [EmployeeController::class, 'index']);
@@ -329,6 +342,59 @@ Router::post('/employees/store', [EmployeeController::class, 'store']);
 Router::post('/employees/update', [EmployeeController::class, 'update']);
 Router::post('/employees/delete', [EmployeeController::class, 'delete']);
 Router::post('/employees/commission-tiers/batch-save', [EmployeeController::class, 'saveCommissionTiersBatch']);
+
+// ============================================================
+// MODUL HR: ABSENSI, PRODUKSI, PENARIKAN GAJI, KASBON, TABUNGAN, PENGGAJIAN
+// ============================================================
+// --- HR 1: ABSENSI KEHADIRAN HARIAN ---
+Router::get('/absensi', [AbsensiController::class, 'index']);
+Router::post('/absensi/bulk-store', [AbsensiController::class, 'bulkStore']);
+Router::get('/absensi/rekap', [AbsensiController::class, 'rekap']);
+Router::get('/absensi/rekap/pdf', [AbsensiController::class, 'rekapPdf']);
+
+// --- HR 2: PRODUKSI HARIAN BORONGAN ---
+Router::get('/produksi', [ProduksiController::class, 'index']);
+Router::post('/produksi/store', [ProduksiController::class, 'store']);
+Router::post('/produksi/update', [ProduksiController::class, 'update']);
+Router::post('/produksi/delete', [ProduksiController::class, 'delete']);
+Router::get('/produksi/history', [ProduksiController::class, 'history']);
+
+// --- HR 3: PENARIKAN GAJI HARIAN BULANAN ---
+Router::get('/penarikan-gaji', [PenarikanGajiController::class, 'index']);
+Router::post('/penarikan-gaji/store', [PenarikanGajiController::class, 'store']);
+Router::post('/penarikan-gaji/update', [PenarikanGajiController::class, 'update']);
+Router::post('/penarikan-gaji/delete', [PenarikanGajiController::class, 'delete']);
+
+// --- HR 4: KASBON KARYAWAN ---
+Router::get('/kasbon', [KasbonController::class, 'index']);
+Router::post('/kasbon/store', [KasbonController::class, 'store']);
+Router::get('/kasbon/detail', [KasbonController::class, 'detail']);
+Router::post('/kasbon/bayar', [KasbonController::class, 'bayar']);
+Router::post('/kasbon/delete', [KasbonController::class, 'delete']);
+Router::post('/kasbon/cancel', [KasbonController::class, 'cancel']);
+
+// --- HR 5: TABUNGAN KARYAWAN ---
+Router::get('/tabungan', [TabunganController::class, 'index']);
+Router::get('/tabungan/detail', [TabunganController::class, 'detail']);
+Router::post('/tabungan/setor', [TabunganController::class, 'setor']);
+Router::post('/tabungan/tarik', [TabunganController::class, 'tarik']);
+
+// --- HR 6: PENGGAJIAN & PAYROLL ENGINE ---
+Router::get('/penggajian', [PenggajianController::class, 'index']);
+Router::get('/penggajian/create', [PenggajianController::class, 'create']);
+Router::post('/penggajian/generate', [PenggajianController::class, 'generate']);
+Router::get('/penggajian/preview', [PenggajianController::class, 'preview']);
+Router::post('/penggajian/update-item', [PenggajianController::class, 'updateItem']);
+Router::post('/penggajian/approve', [PenggajianController::class, 'approve']);
+Router::post('/penggajian/cancel-approve', [PenggajianController::class, 'cancelApprove']);
+Router::post('/penggajian/delete', [PenggajianController::class, 'deleteDraft']);
+Router::post('/penggajian/regenerate', [PenggajianController::class, 'regenerate']);
+Router::post('/penggajian/toggle-exclude', [PenggajianController::class, 'toggleExclude']);
+Router::get('/penggajian/slip', [PenggajianController::class, 'slip']);
+Router::get('/penggajian/slip-batch', [PenggajianController::class, 'slipBatch']);
+Router::get('/penggajian/rekap-pdf', [PenggajianController::class, 'rekapPdf']);
+Router::get('/penggajian/rekap/karyawan', [PenggajianController::class, 'rekapKaryawan']);
+Router::get('/penggajian/rekap/karyawan/pdf', [PenggajianController::class, 'rekapKaryawanPdf']);
 
 // --- MASTER DATA 4: PRODUK, BAHAN BAKU, RESEP BOM & UPAH BORONGAN ---
 Router::get('/products', [ProductController::class, 'index']);
@@ -424,10 +490,14 @@ Router::post('/settings/impor-data/confirm', [ImportDataController::class, 'conf
 Router::post('/settings/impor-data/cancel', [ImportDataController::class, 'cancel']);
 Router::get('/settings/impor-data/cancel', [ImportDataController::class, 'cancel']);
 
-// --- DEVELOPER EXCLUSIVE: PORTAL HUB, ARCHITECTURE, TEST DB & TEST SOURCE ---
+// --- DEVELOPER EXCLUSIVE: PORTAL HUB, ARCHITECTURE, DATABASE MANAGER, TEST DB & TEST SOURCE ---
 Router::get('/developer', [DeveloperController::class, 'index']);
 Router::get('/developer/index', [DeveloperController::class, 'index']);
 Router::get('/developer/portal', [DeveloperController::class, 'index']);
+Router::get('/developer/database', [DeveloperController::class, 'database']);
+Router::post('/developer/database/switch', [DeveloperController::class, 'switchDb']);
+Router::post('/developer/database/sync', [DeveloperController::class, 'syncDb']);
+Router::get('/developer/database/status', [DeveloperController::class, 'dbStatus']);
 Router::get('/developer/architecture', [DeveloperController::class, 'architecture']);
 Router::get('/developer/test-db', [DeveloperController::class, 'testDb']);
 Router::get('/developer/test_db.php', [DeveloperController::class, 'testDb']);

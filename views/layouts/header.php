@@ -79,115 +79,130 @@ $headerSub = $pageSubtitle ?? match(true) {
     </div>
 
     <div class="header-right">
-        <?php if (\App\Core\Auth::isDeveloper()): 
+        <?php 
+        $isDeveloper = \App\Core\Auth::isDeveloper();
+        $isLocalEnv = \App\Services\DatabaseManagerService::isLocalEnvironment();
+        
+        // Tampilkan indikator DB:
+        // 1. Role Developer: Tampil di semua domain (dengan popover interaktif & akses ke DB Manager)
+        // 2. Non-Developer: Tampil HANYA jika diakses lewat lingkungan lokal / preview (localhost, preview.ajisakha.my.id) MURNI SEBAGAI BADGE INFORMASI STATIC (tanpa popover/tanpa bocor detail koneksi)
+        if ($isDeveloper || $isLocalEnv):
             $dbInfo = \Database::getConnectionInfo();
             $isLocal = $dbInfo['is_local'];
         ?>
-        <!-- Developer Database Status Pill & Popover (Khusus Role Developer) -->
-        <div class="relative" x-data="{ openDbModal: false }" @click.outside="openDbModal = false" style="position:relative;">
-            <button type="button" 
-                    @click="openDbModal = !openDbModal"
-                    class="header-db-badge <?= $isLocal ? 'db-badge-local' : 'db-badge-live' ?>"
-                    title="Klik untuk melihat detail koneksi database (Khusus Developer)">
-                <span class="db-badge-dot <?= $isLocal ? 'dot-local' : 'dot-live' ?>"></span>
-                <span class="db-badge-text font-medium text-xs">
-                    <?= $isLocal ? 'LOCAL DB' : 'LIVE SUPABASE' ?>
-                </span>
-                <span class="db-badge-ping text-[10px] opacity-75 hide-mobile">
-                    (<?= $dbInfo['ping_ms'] >= 0 ? $dbInfo['ping_ms'] . 'ms' : 'ERR' ?>)
-                </span>
-            </button>
-
-            <!-- Popover Details (Modern, Spacious & Responsive DNA Keren One) -->
-            <div x-show="openDbModal" 
-                 x-cloak 
-                 x-transition:enter="transition ease-out duration-150"
-                 x-transition:enter-start="opacity-0 translate-y-1 scale-95"
-                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                 x-transition:leave="transition ease-in duration-100"
-                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
-                 x-transition:leave-end="opacity-0 translate-y-1 scale-95"
-                 class="header-db-popover">
-                
-                <!-- Popover Header Bar -->
-                <div style="padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; <?= $isLocal ? 'background:rgba(16,185,129,0.08); border-bottom:1px solid rgba(16,185,129,0.22);' : 'background:rgba(225,29,72,0.08); border-bottom:1px solid rgba(225,29,72,0.22);' ?>">
-                    <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                        <span class="db-badge-dot <?= $isLocal ? 'dot-local' : 'dot-live' ?>" style="flex-shrink:0;"></span>
-                        <strong style="font-size:12px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; <?= $isLocal ? 'color:#065f46;' : 'color:#9f1239;' ?>">
-                            <?= $isLocal ? 'PostgreSQL Local Sandbox' : 'Supabase Production Live' ?>
-                        </strong>
-                    </div>
-                    <span style="font-size:9.5px; font-weight:800; font-family:var(--font-mono, monospace); padding:2px 8px; border-radius:6px; flex-shrink:0; <?= $isLocal ? 'background:rgba(16,185,129,0.15); color:#065f46; border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(225,29,72,0.15); color:#9f1239; border:1px solid rgba(225,29,72,0.3);' ?>">
-                        <?= $dbInfo['is_healthy'] ? 'CONNECTED' : 'FAILED' ?>
-                    </span>
-                </div>
-
-                <!-- Popover Info Body -->
-                <div style="padding:14px 16px; display:flex; flex-direction:column; gap:9px;">
-                    <!-- Host Row -->
-                    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; font-size:12px;">
-                        <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">Host:</span>
-                        <span style="font-family:var(--font-mono, monospace); font-weight:700; color:var(--color-ink, #0f172a); font-size:11.5px; text-align:right; word-break:break-all;" title="<?= htmlspecialchars($dbInfo['host']) ?>">
-                            <?= htmlspecialchars($dbInfo['host']) ?>
+            <?php if ($isDeveloper): ?>
+                <!-- Developer Database Status Pill & Popover (Khusus Role Developer) -->
+                <div class="relative" x-data="{ openDbModal: false }" @click.outside="openDbModal = false" style="position:relative;">
+                    <button type="button" 
+                            @click="openDbModal = !openDbModal"
+                            class="header-db-badge <?= $isLocal ? 'db-badge-local' : 'db-badge-live' ?>"
+                            title="Klik untuk melihat detail koneksi database (Khusus Developer)">
+                        <span class="db-badge-dot <?= $isLocal ? 'dot-local' : 'dot-live' ?>"></span>
+                        <span class="db-badge-text font-medium text-xs">
+                            <?= $isLocal ? 'LOCAL DB' : 'LIVE SUPABASE' ?>
                         </span>
-                    </div>
+                    </button>
 
-                    <!-- Database Row -->
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px;">
-                        <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">Database:</span>
-                        <span style="font-family:var(--font-mono, monospace); font-weight:800; color:var(--color-primary, #2563eb); font-size:12px; text-align:right; word-break:break-all;">
-                            <?= htmlspecialchars($dbInfo['database']) ?>
-                        </span>
-                    </div>
+                    <!-- Popover Details (Modern, Spacious & Responsive DNA Keren One) -->
+                    <div x-show="openDbModal" 
+                         x-cloak 
+                         x-transition:enter="transition ease-out duration-150"
+                         x-transition:enter-start="opacity-0 translate-y-1 scale-95"
+                         x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                         x-transition:leave="transition ease-in duration-100"
+                         x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                         x-transition:leave-end="opacity-0 translate-y-1 scale-95"
+                         class="header-db-popover">
+                        
+                        <!-- Popover Header Bar -->
+                        <div style="padding:12px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; <?= $isLocal ? 'background:rgba(16,185,129,0.08); border-bottom:1px solid rgba(16,185,129,0.22);' : 'background:rgba(225,29,72,0.08); border-bottom:1px solid rgba(225,29,72,0.22);' ?>">
+                            <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+                                <span class="db-badge-dot <?= $isLocal ? 'dot-local' : 'dot-live' ?>" style="flex-shrink:0;"></span>
+                                <strong style="font-size:12px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; <?= $isLocal ? 'color:#065f46;' : 'color:#9f1239;' ?>">
+                                    <?= $isLocal ? 'PostgreSQL Local Sandbox' : 'Supabase Production Live' ?>
+                                </strong>
+                            </div>
+                            <span style="font-size:9.5px; font-weight:800; font-family:var(--font-mono, monospace); padding:2px 8px; border-radius:6px; flex-shrink:0; <?= $isLocal ? 'background:rgba(16,185,129,0.15); color:#065f46; border:1px solid rgba(16,185,129,0.3);' : 'background:rgba(225,29,72,0.15); color:#9f1239; border:1px solid rgba(225,29,72,0.3);' ?>">
+                                <?= $dbInfo['is_healthy'] ? 'CONNECTED' : 'FAILED' ?>
+                            </span>
+                        </div>
 
-                    <!-- Port Row -->
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px;">
-                        <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">Port:</span>
-                        <span style="font-family:var(--font-mono, monospace); font-weight:700; color:var(--color-ink, #0f172a); font-size:12px;">
-                            <?= htmlspecialchars($dbInfo['port']) ?>
-                        </span>
-                    </div>
+                        <!-- Popover Info Body -->
+                        <div style="padding:14px 16px; display:flex; flex-direction:column; gap:9px;">
+                            <!-- Host Row -->
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; font-size:12px;">
+                                <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">Host:</span>
+                                <span style="font-family:var(--font-mono, monospace); font-weight:700; color:var(--color-ink, #0f172a); font-size:11.5px; text-align:right; word-break:break-all;" title="<?= htmlspecialchars($dbInfo['host']) ?>">
+                                    <?= htmlspecialchars($dbInfo['host']) ?>
+                                </span>
+                            </div>
 
-                    <!-- User Row -->
-                    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; font-size:12px;">
-                        <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">User:</span>
-                        <span style="font-family:var(--font-mono, monospace); font-weight:600; color:var(--color-ink, #0f172a); font-size:11px; text-align:right; word-break:break-all;">
-                            <?= htmlspecialchars($dbInfo['user']) ?>
-                        </span>
-                    </div>
+                            <!-- Database Row -->
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px;">
+                                <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">Database:</span>
+                                <span style="font-family:var(--font-mono, monospace); font-weight:800; color:var(--color-primary, #2563eb); font-size:12px; text-align:right; word-break:break-all;">
+                                    <?= htmlspecialchars($dbInfo['database']) ?>
+                                </span>
+                            </div>
 
-                    <!-- Latency Row -->
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px; padding-top:4px; border-top:1px solid var(--color-hairline, #e2e8f0);">
-                        <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">Latency / Ping:</span>
-                        <span style="font-family:var(--font-mono, monospace); font-weight:700; font-size:11px; padding:2px 8px; border-radius:6px; background:var(--color-canvas-soft, #f1f5f9); color:var(--color-ink, #0f172a); border:1px solid var(--color-hairline, #e2e8f0);">
-                            <?= $dbInfo['ping_ms'] >= 0 ? $dbInfo['ping_ms'] . ' ms' : 'Error' ?>
-                        </span>
-                    </div>
+                            <!-- Port Row -->
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px;">
+                                <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">Port:</span>
+                                <span style="font-family:var(--font-mono, monospace); font-weight:700; color:var(--color-ink, #0f172a); font-size:12px;">
+                                    <?= htmlspecialchars($dbInfo['port']) ?>
+                                </span>
+                            </div>
 
-                    <!-- Status Warning Notice Box -->
-                    <div style="margin-top:4px; padding:10px 12px; border-radius:10px; font-size:11.5px; line-height:1.5; display:flex; align-items:flex-start; gap:8px; <?= $isLocal ? 'background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); color:#065f46;' : 'background:rgba(225,29,72,0.06); border:1px solid rgba(225,29,72,0.25); color:#9f1239;' ?>">
-                        <i data-lucide="<?= $isLocal ? 'shield-check' : 'alert-triangle' ?>" style="width:16px; height:16px; flex-shrink:0; margin-top:1px; <?= $isLocal ? 'color:#10b981;' : 'color:#e11d48;' ?>"></i>
-                        <div>
-                            <?php if ($isLocal): ?>
-                                <strong>SANDBOX MODE AMAN</strong>: Seluruh transaksi tersimpan di PostgreSQL lokal (0% menyentuh cloud).
-                            <?php else: ?>
-                                <strong>PERINGATAN LIVE</strong>: Terhubung ke Cloud Supabase. Segala transaksi adalah data riil operasional!
-                            <?php endif; ?>
+                            <!-- User Row -->
+                            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; font-size:12px;">
+                                <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">User:</span>
+                                <span style="font-family:var(--font-mono, monospace); font-weight:600; color:var(--color-ink, #0f172a); font-size:11px; text-align:right; word-break:break-all;">
+                                    <?= htmlspecialchars($dbInfo['user']) ?>
+                                </span>
+                            </div>
+
+                            <!-- Latency Row -->
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:12px; padding-top:4px; border-top:1px solid var(--color-hairline, #e2e8f0);">
+                                <span style="color:var(--color-ink-mute, #64748b); font-weight:600; flex-shrink:0;">Latency / Ping:</span>
+                                <span style="font-family:var(--font-mono, monospace); font-weight:700; font-size:11px; padding:2px 8px; border-radius:6px; background:var(--color-canvas-soft, #f1f5f9); color:var(--color-ink, #0f172a); border:1px solid var(--color-hairline, #e2e8f0);">
+                                    <?= $dbInfo['ping_ms'] >= 0 ? $dbInfo['ping_ms'] . ' ms' : 'Error' ?>
+                                </span>
+                            </div>
+
+                            <!-- Status Warning Notice Box -->
+                            <div style="margin-top:4px; padding:10px 12px; border-radius:10px; font-size:11.5px; line-height:1.5; display:flex; align-items:flex-start; gap:8px; <?= $isLocal ? 'background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.25); color:#065f46;' : 'background:rgba(225,29,72,0.06); border:1px solid rgba(225,29,72,0.25); color:#9f1239;' ?>">
+                                <i data-lucide="<?= $isLocal ? 'shield-check' : 'alert-triangle' ?>" style="width:16px; height:16px; flex-shrink:0; margin-top:1px; <?= $isLocal ? 'color:#10b981;' : 'color:#e11d48;' ?>"></i>
+                                <div>
+                                    <?php if ($isLocal): ?>
+                                        <strong>SANDBOX MODE AMAN</strong>: Seluruh transaksi tersimpan di PostgreSQL lokal (0% menyentuh cloud).
+                                    <?php else: ?>
+                                        <strong>PERINGATAN LIVE</strong>: Terhubung ke Cloud Supabase. Segala transaksi adalah data riil operasional!
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Popover Footer Action Button -->
+                        <div style="padding:12px 16px; border-top:1px solid var(--color-hairline, #e2e8f0); background:var(--color-canvas-soft, #f8fafc);">
+                            <a href="<?= \App\Core\Router::url('/developer/database') ?>" 
+                               class="btn btn-primary" 
+                               style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; font-weight:700; padding:9px 14px; border-radius:8px; text-decoration:none;">
+                                <i data-lucide="settings" style="width:14px; height:14px;"></i>
+                                <span>Buka Database Manager</span>
+                            </a>
                         </div>
                     </div>
                 </div>
-
-                <!-- Popover Footer Action Button -->
-                <div style="padding:12px 16px; border-top:1px solid var(--color-hairline, #e2e8f0); background:var(--color-canvas-soft, #f8fafc);">
-                    <a href="<?= \App\Core\Router::url('/developer/database') ?>" 
-                       class="btn btn-primary" 
-                       style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; font-size:12px; font-weight:700; padding:9px 14px; border-radius:8px; text-decoration:none;">
-                        <i data-lucide="settings" style="width:14px; height:14px;"></i>
-                        <span>Buka Database Manager</span>
-                    </a>
+            <?php else: ?>
+                <!-- Static Non-Developer DB Indicator (Read-Only Pill, Tanpa Popover & Tanpa Data Leak) -->
+                <div class="header-db-badge header-db-badge-static <?= $isLocal ? 'db-badge-local' : 'db-badge-live' ?>"
+                     title="Target Database: <?= $isLocal ? 'Database Lokal (Mode Percobaan/Presentasi)' : 'Cloud Supabase' ?>">
+                    <span class="db-badge-dot <?= $isLocal ? 'dot-local' : 'dot-live' ?>"></span>
+                    <span class="db-badge-text font-medium text-xs">
+                        <?= $isLocal ? 'LOCAL DB' : 'LIVE SUPABASE' ?>
+                    </span>
                 </div>
-            </div>
-        </div>
+            <?php endif; ?>
         <?php endif; ?>
 
         <!-- Panduan SOP & Alur Kerja Lapangan (Buka di Tab Baru) -->
@@ -249,6 +264,14 @@ $headerSub = $pageSubtitle ?? match(true) {
 .header-db-badge:hover {
     transform: translateY(-1px);
     box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+.header-db-badge-static {
+    cursor: default !important;
+    user-select: none;
+}
+.header-db-badge-static:hover {
+    transform: none !important;
+    box-shadow: none !important;
 }
 .db-badge-local {
     background-color: #ecfdf5;

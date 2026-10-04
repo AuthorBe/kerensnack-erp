@@ -154,17 +154,7 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
             }
         },
         toggleSidebarCollapsed() {
-            this.sidebarCollapsed = !this.sidebarCollapsed;
-            const val = this.sidebarCollapsed ? '1' : '0';
-            try {
-                localStorage.setItem('ksnack_sidebar_collapsed', val);
-                document.cookie = 'ksnack_sidebar_collapsed=' + val + '; path=/; max-age=31536000';
-            } catch (e) {}
-            if (this.sidebarCollapsed) {
-                document.documentElement.classList.add('sidebar-is-collapsed');
-            } else {
-                document.documentElement.classList.remove('sidebar-is-collapsed');
-            }
+            if (window.SidebarCtrl) SidebarCtrl.toggleCollapse();
         },
         openNav() {
             this.sidebarOpen = true;
@@ -326,6 +316,7 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
     </div>
 
     <!-- Global App JS -->
+    <script src="<?= Router::asset('/js/erp-helpers.js') ?>?v=<?= $helpersV ?>"></script>
     <script src="<?= Router::asset('/js/app.js') ?>?v=<?= $jsV ?>"></script>
     <script src="<?= Router::asset('/js/searchable-select.js') ?>?v=<?= $jsV ?>"></script>
     <script src="<?= Router::asset('/js/keyboard-nav.js') ?>?v=<?= $jsV ?>"></script>

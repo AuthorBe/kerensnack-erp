@@ -41,6 +41,11 @@ function runTest(string $title, callable $fn) {
         echo " [ERROR] {$title}: " . $e->getMessage() . "\n";
         echo " Trace: " . $e->getFile() . ":" . $e->getLine() . "\n";
         $failed++;
+    } finally {
+        $db = Database::getConnection();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
     }
 }
 

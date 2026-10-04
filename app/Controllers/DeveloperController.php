@@ -102,7 +102,7 @@ class DeveloperController extends Controller
                 'db_driver'         => 'PostgreSQL 17 (Supabase SSL Pooler)',
                 'total_tables'      => count($tables),
                 'total_procedures'  => count($procedures),
-                'total_controllers' => $controllersCount ?: 24,
+                'total_controllers' => $controllersCount ?: 32,
                 'total_helpers'     => $helpersCount ?: 13,
                 'total_suites'      => count(TestRunnerService::SUITES),
                 'active_user'       => Auth::name() ?? 'Developer',
@@ -154,11 +154,14 @@ class DeveloperController extends Controller
         $lockState     = TestRunnerService::isLocked();       // false atau array info lock
         $cooldownState = TestRunnerService::getCooldownState(); // false atau array {remaining_seconds, cooldown_until, ...}
 
+        $dbStatus = DatabaseManagerService::getStatus();
+
         $telemetry = [
             'php_version'  => PHP_VERSION,
             'total_suites' => count($suites),
             'active_user'  => Auth::name(),
-            'server_time'  => date('d M Y H:i:s') . ' WIB'
+            'server_time'  => date('d M Y H:i:s') . ' WIB',
+            'db_info'      => $dbStatus,
         ];
 
         $this->view('developer.tests', [
@@ -166,6 +169,7 @@ class DeveloperController extends Controller
             'pageSubtitle'  => 'Eksekusi Real-time ' . count($suites) . ' Test Suites ERP (Anti-Timeout, Rollback Aman)',
             'suites'        => $suites,
             'telemetry'     => $telemetry,
+            'dbStatus'      => $dbStatus,
             'csrfToken'     => CSRF::token(),
             'lockState'     => $lockState,
             'cooldownState' => $cooldownState,
@@ -436,23 +440,30 @@ class DeveloperController extends Controller
             return;
         }
 
+        $mode = strtolower(trim((string)($_POST['mode'] ?? '14d')));
+        if (!in_array($mode, ['14d', 'full', 'smart_14d', 'smart'], true)) {
+            $mode = '14d';
+        }
+
         // Pastikan eksekusi tidak terputus timeout web server
         set_time_limit(300);
         ini_set('memory_limit', '512M');
 
         try {
-            $result = DatabaseManagerService::replicateLiveToLocal();
+            $result = DatabaseManagerService::replicateLiveToLocal($mode);
 
             // Audit Log
             $userName = Auth::name() . ' (' . Auth::role() . ')';
+            $modeLabel = ($mode === 'full') ? 'Full All-Time' : 'Smart 14-Day';
             ActivityLog::log(
                 'keamanan_auth',
                 'PENGATURAN',
-                "Developer {$userName} mengeksekusi replikasi database penuh Live -> Local ({$result['total_tables']} tabel, {$result['total_rows']} baris)",
+                "Developer {$userName} mengeksekusi replikasi database ({$modeLabel}) Live -> Local ({$result['total_tables']} tabel, {$result['total_rows']} baris)",
                 'pengaturan_sistem',
                 null,
                 null,
                 [
+                    'mode'     => $mode,
                     'duration' => $result['duration'],
                     'tables'   => $result['total_tables'],
                     'rows'     => $result['total_rows']

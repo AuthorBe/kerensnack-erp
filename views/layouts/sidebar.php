@@ -25,7 +25,7 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
 ?>
 <aside id="app-sidebar"
        class="sidebar <?= $isSidebarCollapsed ? 'sidebar-collapsed' : '' ?>"
-       :class="{ 'is-open': sidebarOpen, 'sidebar-collapsed': sidebarCollapsed }">
+       :class="{ 'is-open': sidebarOpen }">
 
     <!-- Brand Header -->
     <div class="sidebar-brand">
@@ -40,9 +40,10 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
         <!-- Toggle button: desktop only (hidden on mobile via CSS) -->
         <button type="button"
                 class="sidebar-toggle-btn"
-                @click="toggleSidebarCollapsed()"
-                :data-tooltip="sidebarCollapsed ? 'Perlebar Sidebar' : 'Perkecil Sidebar'"
-                :aria-label="sidebarCollapsed ? 'Perlebar Sidebar' : 'Perkecil Sidebar'">
+                data-tooltip="<?= $isSidebarCollapsed ? 'Perlebar Sidebar (Ctrl+B)' : 'Perkecil Sidebar (Ctrl+B)' ?>"
+                aria-label="<?= $isSidebarCollapsed ? 'Perlebar Sidebar (Ctrl+B)' : 'Perkecil Sidebar (Ctrl+B)' ?>"
+                aria-expanded="<?= $isSidebarCollapsed ? 'false' : 'true' ?>"
+                aria-keyshortcuts="Control+B">
             <i data-lucide="panel-left-close" class="sidebar-icon-close"></i>
             <i data-lucide="panel-left-open" class="sidebar-icon-open"></i>
         </button>
@@ -228,6 +229,67 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
         <?php endif; ?>
         <?php endif; ?>
 
+        <!-- HR & PENGGAJIAN -->
+        <?php if (Auth::can(['hr.absensi_view', 'hr.absensi_manage', 'hr.produksi_view', 'hr.produksi_manage',
+                             'hr.penarikan_view', 'hr.penarikan_manage', 'hr.kasbon_view', 'hr.kasbon_manage',
+                             'hr.tabungan_view', 'hr.tabungan_manage', 'hr.payroll_view', 'hr.payroll_manage', 'hr.payroll_approve'])): ?>
+        <div class="sidebar-section-label">HR &amp; Penggajian</div>
+
+        <?php if (Auth::can(['hr.absensi_view', 'hr.absensi_manage'])): ?>
+        <a href="<?= Router::url('/absensi') ?>"
+           class="sidebar-link <?= isActiveSection('/absensi', $currentPath, $base) ? 'is-active' : '' ?>"
+           data-tooltip="Kehadiran Karyawan">
+            <i data-lucide="calendar-check-2"></i>
+            <span>Kehadiran</span>
+        </a>
+        <?php endif; ?>
+
+        <?php if (Auth::can(['hr.produksi_view', 'hr.produksi_manage'])): ?>
+        <a href="<?= Router::url('/produksi') ?>"
+           class="sidebar-link <?= isActiveSection('/produksi', $currentPath, $base) ? 'is-active' : '' ?>"
+           data-tooltip="Produksi Borongan">
+            <i data-lucide="boxes"></i>
+            <span>Produksi</span>
+        </a>
+        <?php endif; ?>
+
+        <?php if (Auth::can(['hr.penarikan_view', 'hr.penarikan_manage'])): ?>
+        <a href="<?= Router::url('/penarikan-gaji') ?>"
+           class="sidebar-link <?= isActiveSection('/penarikan-gaji', $currentPath, $base) ? 'is-active' : '' ?>"
+           data-tooltip="Penarikan Gaji">
+            <i data-lucide="badge-dollar-sign"></i>
+            <span>Penarikan Gaji</span>
+        </a>
+        <?php endif; ?>
+
+        <?php if (Auth::can(['hr.kasbon_view', 'hr.kasbon_manage'])): ?>
+        <a href="<?= Router::url('/kasbon') ?>"
+           class="sidebar-link <?= isActiveSection('/kasbon', $currentPath, $base) ? 'is-active' : '' ?>"
+           data-tooltip="Kasbon Karyawan">
+            <i data-lucide="hand-coins"></i>
+            <span>Kasbon</span>
+        </a>
+        <?php endif; ?>
+
+        <?php if (Auth::can(['hr.tabungan_view', 'hr.tabungan_manage'])): ?>
+        <a href="<?= Router::url('/tabungan') ?>"
+           class="sidebar-link <?= isActiveSection('/tabungan', $currentPath, $base) ? 'is-active' : '' ?>"
+           data-tooltip="Tabungan Karyawan">
+            <i data-lucide="piggy-bank"></i>
+            <span>Tabungan</span>
+        </a>
+        <?php endif; ?>
+
+        <?php if (Auth::can(['hr.payroll_view', 'hr.payroll_manage', 'hr.payroll_approve'])): ?>
+        <a href="<?= Router::url('/penggajian') ?>"
+           class="sidebar-link <?= isActiveSection('/penggajian', $currentPath, $base) ? 'is-active' : '' ?>"
+           data-tooltip="Penggajian">
+            <i data-lucide="wallet"></i>
+            <span>Penggajian</span>
+        </a>
+        <?php endif; ?>
+        <?php endif; ?>
+
         <!-- EXECUTIVE MENU -->
         <?php if (Auth::can(['owner.dashboard', 'reports.download_hub'])): ?>
         <div class="sidebar-section-label">Executive Menu</div>
@@ -275,20 +337,36 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
 
     </nav>
 
-    <!-- Instant Zero-Flicker Pre-Paint Scroll Restoration -->
+    <!-- Instant Zero-Flicker Pre-Paint: ikon + state collapsed + scroll restoration -->
     <script>
         (function() {
             try {
                 var sidebar = document.getElementById('app-sidebar');
-                var nav = sidebar ? sidebar.querySelector('.sidebar-nav') : null;
-                if (!nav) return;
-                var saved = sessionStorage.getItem('sidebar_scroll');
-                if (saved !== null) {
-                    nav.scrollTop = parseInt(saved, 10) || 0;
-                } else {
-                    var active = nav.querySelector('.sidebar-link.is-active');
-                    if (active) {
-                        active.scrollIntoView({ block: 'center' });
+                if (!sidebar) return;
+
+                // 1. State collapsed aside = class html (sumber tunggal, dihitung di <head>)
+                sidebar.classList.toggle('sidebar-collapsed',
+                    document.documentElement.classList.contains('sidebar-is-collapsed'));
+
+                // 2. Render ikon Lucide sekarang juga (lucide dimuat sinkron di <head>)
+                if (window.lucide && typeof window.lucide.createIcons === 'function') {
+                    window.lucide.createIcons({ root: sidebar });
+                }
+
+                // 3. Restore scroll sebelum paint
+                var nav = sidebar.querySelector('.sidebar-nav');
+                if (nav) {
+                    var saved = sessionStorage.getItem('sidebar_scroll');
+                    if (saved !== null) {
+                        nav.scrollTop = parseInt(saved, 10) || 0;
+                    } else {
+                        var active = nav.querySelector('.sidebar-link.is-active');
+                        if (active) {
+                            // Manual (bukan scrollIntoView) agar ancestor overflow:hidden tidak ikut bergeser
+                            var nr = nav.getBoundingClientRect();
+                            var ar = active.getBoundingClientRect();
+                            nav.scrollTop += (ar.top + ar.height / 2) - (nr.top + nr.height / 2);
+                        }
                     }
                 }
             } catch (e) {}
@@ -391,6 +469,18 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
 
 <!-- Instant Fast Floating Tooltip (Outside sidebar DOM, desktop collapsed only) -->
 <div id="sidebar-floating-tooltip" class="sidebar-floating-tooltip" aria-hidden="true"></div>
+
+<script>
+    // Ikon footer/popup sidebar (muncul setelah script pre-paint di atas) → render sebelum first paint
+    (function() {
+        try {
+            var sb = document.getElementById('app-sidebar');
+            if (sb && window.lucide && typeof window.lucide.createIcons === 'function') {
+                window.lucide.createIcons({ root: sb });
+            }
+        } catch (e) {}
+    })();
+</script>
 
 <script>
     (function() {

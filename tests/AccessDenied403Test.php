@@ -34,6 +34,17 @@ require_once APP_ROOT . '/app/Core/Controller.php';
 require_once APP_ROOT . '/app/Helpers/CSRF.php';
 require_once APP_ROOT . '/app/Helpers/ActivityLog.php';
 require_once APP_ROOT . '/app/Services/TestRunnerService.php';
+require_once APP_ROOT . '/app/Services/DatabaseManagerService.php';
+
+spl_autoload_register(function (string $class) {
+    $prefix = 'App\\';
+    $baseDir = APP_ROOT . '/app/';
+    $len = strlen($prefix);
+    if (strncmp($prefix, $class, $len) !== 0) return;
+    $relativeClass = substr($class, $len);
+    $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+    if (file_exists($file)) require_once $file;
+});
 
 use App\Core\Auth;
 use App\Core\Router;
@@ -330,6 +341,7 @@ runTest("7. views/settings/index.php tidak memuat kartu Portal Developer untuk k
         require_once ROOT_PATH . "/app/Helpers/CSRF.php";
         require_once ROOT_PATH . "/app/Helpers/Flash.php";
         require_once ROOT_PATH . "/app/Helpers/Format.php";
+        require_once ROOT_PATH . "/app/Services/DatabaseManagerService.php";
 
         session_start();
         $_SESSION["user"] = ["id" => "1", "nama_lengkap" => "Kasir Uji", "peran" => "kasir"];
@@ -374,6 +386,7 @@ runTest("8. views/settings/index.php menampilkan kartu Portal Developer di palin
         require_once ROOT_PATH . "/app/Helpers/CSRF.php";
         require_once ROOT_PATH . "/app/Helpers/Flash.php";
         require_once ROOT_PATH . "/app/Helpers/Format.php";
+        require_once ROOT_PATH . "/app/Services/DatabaseManagerService.php";
 
         session_start();
         $_SESSION["user"] = ["id" => "1", "nama_lengkap" => "Developer Master", "peran" => "developer"];

@@ -186,6 +186,53 @@ ob_start();
     cursor: not-allowed;
 }
 
+/* --- Modern Segmented Radio Controls --- */
+.dev-segmented-track {
+    background: var(--color-canvas-soft, #f1f5f9);
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    border-radius: 10px;
+    padding: 3px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+}
+.dev-segmented-item {
+    border: 1px solid transparent !important;
+    outline: none !important;
+    border-radius: 7px;
+    padding: 7px 10px !important;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: transparent;
+    color: var(--color-ink-mute, #64748b);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-shadow: none;
+}
+.dev-segmented-item:hover:not(.active-smart):not(.active-full) {
+    color: var(--color-ink, #0f172a);
+    background: rgba(0, 0, 0, 0.03);
+}
+.dev-segmented-item.active-smart {
+    background: #ffffff !important;
+    color: #065f46 !important;
+    font-weight: 800 !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+.dev-segmented-item.active-full {
+    background: #ffffff !important;
+    color: #92400e !important;
+    font-weight: 800 !important;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
 /* --- Terminal Console Styles --- */
 .dev-terminal-wrapper {
     border-radius: 14px;
@@ -519,23 +566,26 @@ ob_start();
             <div style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #10b981, #34d399);"></div>
             
             <div>
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:8px; flex-wrap:wrap;">
-                    <div class="dev-card-icon" :class="isLocal ? 'dev-card-icon-local' : 'dev-card-icon-live'">
+                <div style="display:flex; align-items:flex-start; gap:14px; margin-bottom:16px;">
+                    <div class="dev-card-icon" :class="isLocal ? 'dev-card-icon-local' : 'dev-card-icon-live'" style="margin-top:2px;">
                         <i data-lucide="git-branch" style="width:20px; height:20px;"></i>
                     </div>
-                    <span class="badge font-bold"
-                          :class="isLocal ? 'badge-success' : 'badge-error'"
-                          style="font-size:9.5px; font-weight:800; padding:4px 8px;">
-                        KONEKSI: <span x-text="isLocal ? 'LOCAL (127.0.0.1)' : 'LIVE SUPABASE'"></span>
-                    </span>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <h3 style="font-size:15px; font-weight:800; color:var(--color-ink, #0f172a); margin:0;">
+                                Saklar Koneksi Database (1-Click Switcher)
+                            </h3>
+                            <span class="badge font-bold"
+                                  :class="isLocal ? 'badge-success' : 'badge-error'"
+                                  style="font-size:9.5px; font-weight:800; padding:3px 8px;">
+                                KONEKSI: <span x-text="isLocal ? 'LOCAL (127.0.0.1)' : 'LIVE SUPABASE'"></span>
+                            </span>
+                        </div>
+                        <p style="font-size:12px; color:var(--color-ink-mute, #64748b); line-height:1.5; margin:4px 0 0 0;">
+                            Beralih seketika antara Database Sandbox Lokal (<strong style="color:#059669; font-weight:700;">Aman untuk Uji Coba</strong>) dan Database Cloud Supabase (<strong style="color:#e11d48; font-weight:700;">Produksi Aktif</strong>).
+                        </p>
+                    </div>
                 </div>
-
-                <h3 style="font-size:15px; font-weight:800; color:var(--color-ink, #0f172a); margin:0 0 6px 0;">
-                    1. Saklar Koneksi Database (1-Click Switcher)
-                </h3>
-                <p style="font-size:12px; color:var(--color-ink-mute, #64748b); line-height:1.5; margin:0 0 16px 0;">
-                    Beralih seketika antara Database Sandbox Lokal (<strong style="color:#059669; font-weight:700;">Aman untuk Uji Coba</strong>) dan Database Cloud Supabase (<strong style="color:#e11d48; font-weight:700;">Produksi Aktif</strong>).
-                </p>
 
                 <!-- Status Sub-Cards (Local vs Live) with Smooth 14px Curves -->
                 <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:16px;">
@@ -625,19 +675,22 @@ ob_start();
             <div style="position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg, #3b82f6, #60a5fa);"></div>
 
             <div>
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:8px; flex-wrap:wrap;">
-                    <div class="dev-card-icon dev-card-icon-blue">
+                <div style="display:flex; align-items:flex-start; gap:14px; margin-bottom:16px;">
+                    <div class="dev-card-icon dev-card-icon-blue" style="margin-top:2px;">
                         <i data-lucide="refresh-cw" style="width:20px; height:20px;" :class="isSyncing ? 'animate-spin' : ''"></i>
                     </div>
-                    <span class="badge badge-primary" style="font-size:9.5px; font-weight:800; padding:4px 8px;">REPLIKASI 100% IDENTIK</span>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <h3 style="font-size:15px; font-weight:800; color:var(--color-ink, #0f172a); margin:0;">
+                                Replikasi Database (Live Cloud &rarr; Lokal)
+                            </h3>
+                            <span class="badge badge-primary" style="font-size:9.5px; font-weight:800; padding:3px 8px;">REPLIKASI 100% IDENTIK</span>
+                        </div>
+                        <p style="font-size:12px; color:var(--color-ink-mute, #64748b); line-height:1.5; margin:4px 0 0 0;">
+                            Kloning seluruh skema DDL, fungsi Stored Procedures, Triggers, Views, Sequences, dan 50 tabel data aktif Supabase ke database lokal secara atomik.
+                        </p>
+                    </div>
                 </div>
-
-                <h3 style="font-size:15px; font-weight:800; color:var(--color-ink, #0f172a); margin:0 0 6px 0;">
-                    2. Replikasi Database (Live Cloud &rarr; Lokal)
-                </h3>
-                <p style="font-size:12px; color:var(--color-ink-mute, #64748b); line-height:1.5; margin:0 0 16px 0;">
-                    Kloning seluruh skema DDL, fungsi Stored Procedures, Triggers, Views, Sequences, dan 50 tabel data aktif Supabase ke database lokal secara atomik.
-                </p>
 
                 <!-- Spec Table Box with 14px Curves -->
                 <div style="padding:14px 16px; border-radius:14px; border:1px solid var(--color-hairline, #e2e8f0); background:var(--color-canvas-soft, #f1f5f9); margin-bottom:16px; font-size:11.5px; display:flex; flex-direction:column; gap:9px;">
@@ -653,9 +706,38 @@ ob_start();
                         <span style="color:var(--color-ink-mute, #64748b);">Penyelarasan Sequences &amp; FK:</span>
                         <span style="color:var(--color-ink, #0f172a); font-weight:700; font-family:var(--font-mono);">Auto-Sync Otomatis</span>
                     </div>
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding-top:8px; border-top:1px solid var(--color-hairline, #e2e8f0);">
-                        <span style="color:var(--color-ink-mute, #64748b);">Tabel Terisi Saat Ini:</span>
-                        <span class="badge badge-mono" style="font-size:9.5px; padding:2px 7px;" x-text="tableCount + ' Tabel (' + FormatNumber(totalRows) + ' Rows)'"></span>
+                </div>
+
+                <!-- Mode Selection Selector (Smart 14-Day vs Full All-Time) -->
+                <div style="padding:12px 14px; border-radius:12px; border:1px solid var(--color-hairline, #e2e8f0); background:var(--color-canvas, #ffffff); margin-bottom:14px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="font-size:11px; font-weight:700; color:var(--color-ink, #0f172a); display:flex; align-items:center; justify-content:space-between;">
+                        <span>Cakupan Replikasi Data:</span>
+                        <span class="badge badge-success font-mono" style="font-size:8.5px; padding:2px 6px;" x-show="syncMode === '14d'">SUPER CEPAT (3-5s)</span>
+                        <span class="badge badge-warning font-mono" style="font-size:8.5px; padding:2px 6px;" x-show="syncMode === 'full'">FULL ALL-TIME</span>
+                    </div>
+
+                    <!-- Sleek Modern Segmented Track & Pill Controls -->
+                    <div class="dev-segmented-track">
+                        <button type="button" 
+                                @click="syncMode = '14d'"
+                                class="dev-segmented-item"
+                                :class="syncMode === '14d' ? 'active-smart' : ''">
+                            <i data-lucide="zap" style="width:13.5px; height:13.5px; flex-shrink:0;" :style="syncMode === '14d' ? 'color:#10b981;' : 'color:#94a3b8;'"></i>
+                            <span>Smart (2 Pekan)</span>
+                        </button>
+
+                        <button type="button" 
+                                @click="syncMode = 'full'"
+                                class="dev-segmented-item"
+                                :class="syncMode === 'full' ? 'active-full' : ''">
+                            <i data-lucide="database" style="width:13.5px; height:13.5px; flex-shrink:0;" :style="syncMode === 'full' ? 'color:#f59e0b;' : 'color:#94a3b8;'"></i>
+                            <span>Full (Semua Data)</span>
+                        </button>
+                    </div>
+
+                    <div style="font-size:10.5px; color:var(--color-ink-mute, #64748b); line-height:1.4;">
+                        <span x-show="syncMode === '14d'">✨ <strong>100% Master Data</strong> + Transaksi 14 hari terakhir. Ringan &amp; bebas timeout.</span>
+                        <span x-show="syncMode === 'full'">📦 Kloning 100% seluruh riwayat transaksi tanpa batas waktu.</span>
                     </div>
                 </div>
             </div>
@@ -678,7 +760,7 @@ ob_start();
                         style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; padding:11px 16px; font-size:12.5px; font-weight:800; border-radius:12px; transition:all 0.2s ease;">
                     <i data-lucide="play" style="width:15px; height:15px; fill:currentColor;" x-show="!isSyncing"></i>
                     <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" x-show="isSyncing"></span>
-                    <span x-text="isSyncing ? 'Sedang Mereplikasi Database Live ke Lokal...' : 'Mulai Replikasi Live ke Lokal'"></span>
+                    <span x-text="isSyncing ? 'Sedang Mereplikasi Database Live ke Lokal...' : (syncMode === '14d' ? 'Mulai Smart Sync (2 Pekan)' : 'Mulai Full Replication')"></span>
                 </button>
                 <?php endif; ?>
             </div>
@@ -775,7 +857,7 @@ ob_start();
                         <!-- Top Command -->
                         <div class="dev-terminal-cmd-line">
                             <span style="color:#10b981; font-weight:700; font-size:12.5px;">developer@keren-one:~$</span>
-                            <span style="color:#f1f5f9; font-weight:600; font-size:12.5px;">php bin/sync_db.php --status</span>
+                            <span style="color:#f1f5f9; font-weight:600; font-size:12.5px;">php bin/switch_db.php status</span>
                         </div>
                         
                         <!-- Structured Info Box -->
@@ -817,6 +899,172 @@ ob_start();
 
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- 4. CLI TERMINAL COMMANDS QUICK REFERENCE (COLLAPSIBLE DROPDOWN / HIDE)    -->
+    <!-- ========================================================================= -->
+    <div class="dev-db-card" style="transition:all 0.2s ease;">
+        <div class="dev-db-card-header" 
+             @click="showCliGuide = !showCliGuide"
+             style="cursor:pointer; user-select:none; margin-bottom:0; padding-bottom:0; border-bottom:none;">
+            <div style="display:flex; align-items:center; gap:14px;">
+                <div style="width:40px; height:40px; border-radius:10px; background:rgba(16,185,129,0.08); color:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid rgba(16,185,129,0.25);">
+                    <i data-lucide="terminal" style="width:20px; height:20px;"></i>
+                </div>
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <h3 style="font-size:15px; font-weight:800; color:var(--color-ink, #0f172a); margin:0;">
+                            Perintah Terminal / CLI Database Engine
+                        </h3>
+                        <span class="badge badge-success" style="font-size:9.5px; font-weight:800; padding:2px 7px;">CLI REFERENCE</span>
+                    </div>
+                    <p style="font-size:12px; color:var(--color-ink-mute, #64748b); margin:3px 0 0 0;">
+                        Variasi perintah CLI untuk sinkronisasi, migrasi, dan peralihan database via Terminal/PowerShell tanpa limit timeout HTTP.
+                    </p>
+                </div>
+            </div>
+            
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span class="badge badge-mono font-mono hide-mobile" style="font-size:10px; padding:3px 8px; background:var(--color-canvas-soft); color:var(--color-ink-mute); border:1px solid var(--color-hairline);" x-text="showCliGuide ? 'Klik untuk Tutup' : 'Klik untuk Buka'"></span>
+                <div style="width:32px; height:32px; border-radius:8px; background:var(--color-canvas-soft, #f1f5f9); border:1px solid var(--color-hairline, #e2e8f0); display:flex; align-items:center; justify-content:center; color:var(--color-ink-mute);">
+                    <i data-lucide="chevron-down" 
+                       style="width:16px; height:16px; transition:transform 0.25s ease;" 
+                       :style="showCliGuide ? 'transform:rotate(180deg); color:#10b981;' : ''"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collapsible Content Body -->
+        <div x-show="showCliGuide" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 transform -translate-y-2"
+             x-transition:enter-end="opacity-100 transform translate-y-0"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 transform translate-y-0"
+             x-transition:leave-end="opacity-0 transform -translate-y-2"
+             style="margin-top:16px; padding-top:16px; border-top:1px solid var(--color-hairline, #e2e8f0);">
+            
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap:14px;">
+                
+                <!-- Command 1: Hybrid Smart Sync (Recommended) -->
+                <div style="background:var(--color-canvas-soft, #f8fafc); border:1px solid var(--color-hairline, #e2e8f0); border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px;">
+                    <div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                            <span style="font-size:12px; font-weight:800; color:var(--color-ink, #0f172a); display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="zap" style="width:14px; height:14px; color:#10b981;"></i>
+                                Hybrid Smart Sync (2 Pekan)
+                            </span>
+                            <span class="badge badge-success" style="font-size:8.5px; padding:2px 6px;">DEFAULT (3-5s)</span>
+                        </div>
+                        <p style="font-size:11px; color:var(--color-ink-mute, #64748b); line-height:1.5; margin:0 0 10px 0;">
+                            Kloning <strong>100% Master Data</strong> (produk, pelanggan, karyawan, dll.) + transaksi <strong>14 hari terakhir</strong>. Ringan, cepat, dan bebas timeout.
+                        </p>
+                    </div>
+                    
+                    <div style="background:#0b0f19; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-family:var(--font-mono);">
+                        <code style="color:#38bdf8; font-size:11.5px; word-break:break-all; font-weight:600;">php bin/sync_db.php --mode=14d</code>
+                        <button type="button" 
+                                @click="copyCommand('php bin/sync_db.php --mode=14d')" 
+                                class="btn btn-secondary" 
+                                style="padding:4px 8px; font-size:10.5px; font-weight:700; border-radius:6px; flex-shrink:0; height:28px;"
+                                :style="copiedCmd === 'php bin/sync_db.php --mode=14d' ? 'background:#10b981; color:#fff; border-color:#10b981;' : ''">
+                            <i data-lucide="check" style="width:12px; height:12px;" x-show="copiedCmd === 'php bin/sync_db.php --mode=14d'"></i>
+                            <i data-lucide="copy" style="width:12px; height:12px;" x-show="copiedCmd !== 'php bin/sync_db.php --mode=14d'"></i>
+                            <span x-text="copiedCmd === 'php bin/sync_db.php --mode=14d' ? 'Tersalin' : 'Salin'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Command 2: Full All-Time Replication -->
+                <div style="background:var(--color-canvas-soft, #f8fafc); border:1px solid var(--color-hairline, #e2e8f0); border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px;">
+                    <div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                            <span style="font-size:12px; font-weight:800; color:var(--color-ink, #0f172a); display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="database" style="width:14px; height:14px; color:#f59e0b;"></i>
+                                Full Sync (Seluruh Riwayat Transaksi)
+                            </span>
+                            <span class="badge badge-warning" style="font-size:8.5px; padding:2px 6px;">ALL-TIME</span>
+                        </div>
+                        <p style="font-size:11px; color:var(--color-ink-mute, #64748b); line-height:1.5; margin:0 0 10px 0;">
+                            Replikasi 100% seluruh riwayat transaksi tanpa batasan waktu (cocok untuk audit rekonsiliasi total tahunan).
+                        </p>
+                    </div>
+                    
+                    <div style="background:#0b0f19; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-family:var(--font-mono);">
+                        <code style="color:#f59e0b; font-size:11.5px; word-break:break-all; font-weight:600;">php bin/sync_db.php --mode=full</code>
+                        <button type="button" 
+                                @click="copyCommand('php bin/sync_db.php --mode=full')" 
+                                class="btn btn-secondary" 
+                                style="padding:4px 8px; font-size:10.5px; font-weight:700; border-radius:6px; flex-shrink:0; height:28px;"
+                                :style="copiedCmd === 'php bin/sync_db.php --mode=full' ? 'background:#10b981; color:#fff; border-color:#10b981;' : ''">
+                            <i data-lucide="check" style="width:12px; height:12px;" x-show="copiedCmd === 'php bin/sync_db.php --mode=full'"></i>
+                            <i data-lucide="copy" style="width:12px; height:12px;" x-show="copiedCmd !== 'php bin/sync_db.php --mode=full'"></i>
+                            <span x-text="copiedCmd === 'php bin/sync_db.php --mode=full' ? 'Tersalin' : 'Salin'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Command 3: 1-Click Windows Batch Runner -->
+                <div style="background:var(--color-canvas-soft, #f8fafc); border:1px solid var(--color-hairline, #e2e8f0); border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px;">
+                    <div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                            <span style="font-size:12px; font-weight:800; color:var(--color-ink, #0f172a); display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="play-circle" style="width:14px; height:14px; color:#3b82f6;"></i>
+                                Windows 1-Click Batch Runner
+                            </span>
+                            <span class="badge badge-primary" style="font-size:8.5px; padding:2px 6px;">1-CLICK WINDOWS</span>
+                        </div>
+                        <p style="font-size:11px; color:var(--color-ink-mute, #64748b); line-height:1.5; margin:0 0 10px 0;">
+                            Eksekusi instan lewat file Batch (.bat). Bisa dijalankan via CMD atau langsung klik ganda (double-click) di File Explorer tanpa perlu path PHP manual.
+                        </p>
+                    </div>
+                    
+                    <div style="background:#0b0f19; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-family:var(--font-mono);">
+                        <code style="color:#a855f7; font-size:11.5px; word-break:break-all; font-weight:600;">.\bin\sync-db-from-live.bat</code>
+                        <button type="button" 
+                                @click="copyCommand('.\\bin\\sync-db-from-live.bat')" 
+                                class="btn btn-secondary" 
+                                style="padding:4px 8px; font-size:10.5px; font-weight:700; border-radius:6px; flex-shrink:0; height:28px;"
+                                :style="copiedCmd === '.\\bin\\sync-db-from-live.bat' ? 'background:#10b981; color:#fff; border-color:#10b981;' : ''">
+                            <i data-lucide="check" style="width:12px; height:12px;" x-show="copiedCmd === '.\\bin\\sync-db-from-live.bat'"></i>
+                            <i data-lucide="copy" style="width:12px; height:12px;" x-show="copiedCmd !== '.\\bin\\sync-db-from-live.bat'"></i>
+                            <span x-text="copiedCmd === '.\\bin\\sync-db-from-live.bat' ? 'Tersalin' : 'Salin'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Command 4: 1-Click Connection Switcher CLI -->
+                <div style="background:var(--color-canvas-soft, #f8fafc); border:1px solid var(--color-hairline, #e2e8f0); border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between; gap:12px;">
+                    <div>
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                            <span style="font-size:12px; font-weight:800; color:var(--color-ink, #0f172a); display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="repeat" style="width:14px; height:14px; color:#06b6d4;"></i>
+                                Peralihan Target Database via CLI
+                            </span>
+                            <span class="badge badge-info" style="font-size:8.5px; padding:2px 6px;">SWITCHER CLI</span>
+                        </div>
+                        <p style="font-size:11px; color:var(--color-ink-mute, #64748b); line-height:1.5; margin:0 0 10px 0;">
+                            Ganti koneksi aktif .env antara database Sandbox Lokal (<code style="font-size:10px;">local</code>) dan Cloud Supabase (<code style="font-size:10px;">live</code>). Tersedia juga 1-klik <code style="font-size:10px;">bin\switch-db.bat</code>.
+                        </p>
+                    </div>
+                    
+                    <div style="background:#0b0f19; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-family:var(--font-mono);">
+                        <code style="color:#34d399; font-size:11.5px; word-break:break-all; font-weight:600;">php bin/switch_db.php local</code>
+                        <button type="button" 
+                                @click="copyCommand('php bin/switch_db.php local')" 
+                                class="btn btn-secondary" 
+                                style="padding:4px 8px; font-size:10.5px; font-weight:700; border-radius:6px; flex-shrink:0; height:28px;"
+                                :style="copiedCmd === 'php bin/switch_db.php local' ? 'background:#10b981; color:#fff; border-color:#10b981;' : ''">
+                            <i data-lucide="check" style="width:12px; height:12px;" x-show="copiedCmd === 'php bin/switch_db.php local'"></i>
+                            <i data-lucide="copy" style="width:12px; height:12px;" x-show="copiedCmd !== 'php bin/switch_db.php local'"></i>
+                            <span x-text="copiedCmd === 'php bin/switch_db.php local' ? 'Tersalin' : 'Salin'"></span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
@@ -834,8 +1082,11 @@ function databaseManager() {
         isSwitching: false,
         targetSwitch: '',
         isSyncing: false,
+        syncMode: '14d',
         syncDuration: null,
         logs: [],
+        showCliGuide: false,
+        copiedCmd: '',
 
         init() {
             if (window.lucide) {
@@ -847,12 +1098,43 @@ function databaseManager() {
             return new Intl.NumberFormat('id-ID').format(num || 0);
         },
 
+        copyCommand(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    this.copiedCmd = text;
+                    setTimeout(() => {
+                        if (this.copiedCmd === text) {
+                            this.copiedCmd = '';
+                        }
+                    }, 2000);
+                });
+            } else {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    this.copiedCmd = text;
+                    setTimeout(() => {
+                        if (this.copiedCmd === text) {
+                            this.copiedCmd = '';
+                        }
+                    }, 2000);
+                } catch (e) {}
+                document.body.removeChild(textarea);
+            }
+        },
+
         async switchDatabase(target) {
             if (this.isProductionDomain) {
                 if (window.AppAlert) {
                     await window.AppAlert({
                         title: 'Aksi Dikunci',
-                        message: 'Aksi perpindahan database tidak diizinkan pada domain produksi aplikasi.kerensnack.id.',
+                        message: 'Aksi perpindahan database tidak diizinkan pada domain produksi aktif.',
                         type: 'danger',
                         buttonText: 'Tutup'
                     });
@@ -938,7 +1220,7 @@ function databaseManager() {
                 if (window.AppAlert) {
                     await window.AppAlert({
                         title: 'Aksi Dikunci',
-                        message: 'Replikasi database tidak diizinkan pada domain produksi aplikasi.kerensnack.id.',
+                        message: 'Replikasi database tidak diizinkan pada domain produksi aktif.',
                         type: 'danger',
                         buttonText: 'Tutup'
                     });
@@ -948,19 +1230,23 @@ function databaseManager() {
 
             if (this.isSyncing) return;
 
+            const modeDesc = this.syncMode === '14d'
+                ? 'Mode Smart Sync: 100% Master Data + Riwayat Transaksi 14 Hari Terakhir (Sangat Cepat & Ringan).'
+                : 'Mode Full Sync: 100% Seluruh Master Data dan Seluruh Riwayat Transaksi Sepanjang Waktu.';
+
             let proceed = false;
             if (window.AppConfirm) {
                 proceed = await window.AppConfirm({
                     title: 'Mulai Replikasi Database?',
-                    message: 'Seluruh skema DDL, 30 Stored Procedures, Triggers, Views, Sequences, dan 50 tabel data Supabase akan dikloning 100% ke database lokal.',
-                    submessage: 'Data lokal (kerensnack_erp_local) akan disinkronkan identik dengan kondisi produksi saat ini.',
+                    message: 'Seluruh skema DDL, Stored Procedures, Triggers, Views, Sequences, dan data Supabase akan dikloning ke database lokal.',
+                    submessage: modeDesc,
                     type: 'primary',
                     confirmText: 'Mulai Kloning Data',
                     cancelText: 'Batal',
                     icon: 'refresh-cw'
                 });
             } else {
-                proceed = confirm('Mulai replikasi data penuh dari Supabase ke lokal?');
+                proceed = confirm('Mulai replikasi database dari Supabase ke lokal?\n' + modeDesc);
             }
 
             if (!proceed) return;
@@ -968,12 +1254,14 @@ function databaseManager() {
             this.isSyncing = true;
             this.logs = [
                 '🔄 Memulai engine replikasi database (Live Cloud -> Local)...',
-                '⏳ Menghubungkan ke Supabase & mempersiapkan DDL...'
+                '⚙️  Mode: ' + (this.syncMode === '14d' ? 'Hybrid Smart Sync (14 Hari)' : 'Full All-Time Sync'),
+                '⏳ Menghubungkan ke Supabase & mempersiapkan skema DDL...'
             ];
 
             try {
                 const formData = new FormData();
                 formData.append('csrf_token', this.csrfToken);
+                formData.append('mode', this.syncMode);
 
                 const res = await fetch('<?= Router::url('/developer/database/sync') ?>', {
                     method: 'POST',

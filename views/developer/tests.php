@@ -808,11 +808,14 @@ use App\Core\Auth;
                 <div>
                     <div class="status-headline" x-text="headlineText"></div>
                     <div class="status-sub">
-                        PostgreSQL SSL Gateway &bull; Zero-Pollution Transaction Rollbacks &bull; Real-time Async AJAX
+                        Target DB: <span style="font-weight:600;color:<?= ($dbStatus['is_local'] ?? false) ? 'var(--accent-green)' : 'var(--accent-cyan)' ?>;"><?= htmlspecialchars($dbStatus['status_label'] ?? 'PostgreSQL') ?> (<?= htmlspecialchars($dbStatus['database'] ?? 'postgres') ?> @ <?= htmlspecialchars($dbStatus['host'] ?? '127.0.0.1') ?>)</span> &bull; Rollback Atomik &bull; Real-time Async AJAX
                     </div>
                 </div>
             </div>
-            <div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <span class="status-tag" style="background:<?= ($dbStatus['is_local'] ?? false) ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' ?>;border:1px solid <?= ($dbStatus['is_local'] ?? false) ? 'var(--accent-green)' : 'var(--accent-red)' ?>;color:<?= ($dbStatus['is_local'] ?? false) ? 'var(--accent-green)' : 'var(--accent-red)' ?>;font-weight:700;">
+                    <?= ($dbStatus['is_local'] ?? false) ? '🟢 LOCAL SANDBOX' : '🔴 LIVE SUPABASE' ?>
+                </span>
                 <span class="status-tag" :class="tagClass" x-text="tagText"></span>
             </div>
         </div>

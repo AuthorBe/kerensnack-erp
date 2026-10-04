@@ -154,7 +154,7 @@
             var type = opts.type || 'danger';
             var iconName = opts.icon || null;
             var showCancelBtn = opts.showCancelBtn !== false;
-            var showCloseBtn = opts.showCloseBtn !== undefined ? Boolean(opts.showCloseBtn) : !showCancelBtn;
+            var showCloseBtn = Boolean(opts.showCloseBtn);
             var defaultFocus = opts.defaultFocus || 'confirm';
 
             var existing = document.getElementById('app-confirm-overlay');
@@ -165,7 +165,7 @@
             overlay.className = 'confirm-overlay';
 
             overlay.innerHTML =
-                '<div class="confirm-modal" style="max-height: 90vh; overflow-y: auto;" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">' +
+                '<div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">' +
                     '<div class="confirm-modal-body">' +
                         '<div class="confirm-header-row">' +
                             '<div class="confirm-icon-box confirm-icon-' + type + '">' +
@@ -264,10 +264,10 @@
             var title = escapeHtml(opts.title || 'Informasi Sistem');
             var message = escapeHtml(opts.message || '');
             var submessage = escapeHtml(opts.submessage || '');
-            var buttonText = escapeHtml(opts.buttonText || 'Mengerti');
+            var buttonText = escapeHtml(opts.buttonText || 'Lanjutkan');
             var type = opts.type || 'info';
             var iconName = opts.icon || null;
-            var showCloseBtn = opts.showCloseBtn !== false;
+            var showCloseBtn = Boolean(opts.showCloseBtn);
 
             var existing = document.getElementById('app-confirm-overlay');
             if (existing) existing.remove();
@@ -277,7 +277,7 @@
             overlay.className = 'confirm-overlay';
 
             overlay.innerHTML =
-                '<div class="confirm-modal" style="max-height: 90vh; overflow-y: auto;" role="dialog" aria-modal="true" aria-labelledby="alert-dialog-title">' +
+                '<div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="alert-dialog-title">' +
                     '<div class="confirm-modal-body">' +
                         '<div class="confirm-header-row">' +
                             '<div class="confirm-icon-box confirm-icon-' + type + '">' +

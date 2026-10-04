@@ -30,6 +30,11 @@ function runTest(string $title, callable $fn): void {
     } catch (Throwable $e) {
         echo "\033[31m[ERROR]\033[0m: " . $e->getMessage() . "\n";
         $failed++;
+    } finally {
+        $db = Database::getConnection();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
     }
 }
 

@@ -84,6 +84,12 @@ class TestRunnerService
             'category'    => 'Pengadaan',
             'description' => 'Pengujian master supplier, kelengkapan data rekening bank, dan buku besar vendor.'
         ],
+        'vendor_catalog' => [
+            'file'        => 'VendorCatalogAndMaterialConsolidationTest.php',
+            'title'       => 'Vendor Catalog & Raw Material Consolidation',
+            'category'    => 'Pengadaan & Bahan',
+            'description' => 'Pengujian relasi multi-vendor M:N (pemasok_item), konsolidasi bahan mentah unik, dan integritas BOM.'
+        ],
         'product_master' => [
             'file'        => 'ProductMasterModuleTest.php',
             'title'       => 'Product Master, BOM & Single Level 1 Default',
@@ -288,6 +294,24 @@ class TestRunnerService
             'category'    => 'Management & Reports',
             'description' => 'Validasi izin RBAC reports.download_hub, perutean ReportHubController, penempatan menu Manajemen sidebar, tampilan 7 kategori laporan, dan pembersihan tombol ekspor operasional.'
         ],
+        'payroll_engine' => [
+            'file'        => 'PayrollEngineTest.php',
+            'title'       => 'HR & Payroll Engine, Ledger & PDF Slips Lifecycle',
+            'category'    => 'HR & Penggajian',
+            'description' => 'Validasi komprehensif Payroll Engine: kalkulasi borongan & bulanan, anti-double pay, overlap detection, kasbon auto-deduct, mutasi tabungan, advance withdrawal, lock/unlock transaksi, otorisasi approval arus kas, 24h rollback, dan render slip PDF.'
+        ],
+        'database_manager_service' => [
+            'file'        => 'DatabaseManagerServiceTest.php',
+            'title'       => 'Database Engine, 1-Click Switcher & Cloud Sync Service',
+            'category'    => 'Database & Sandbox',
+            'description' => 'Validasi telemetri koneksi database aktif, peralihan koneksi lokal/live atomik, penguncian RBAC khusus developer, dan ketersediaan RPC skema replikasi.'
+        ],
+        'closed_loop_cashflow' => [
+            'file'        => 'ClosedLoopCashflowIntegrationTest.php',
+            'title'       => 'Closed-Loop Cashflow & Escrow Savings Architecture',
+            'category'    => 'Keuangan & HR',
+            'description' => 'Validasi komprehensif sistem kas tertutup & rekening escrow: pemisahan dana tabungan karyawan dari likuiditas operasional, proteksi overdraft tabungan, alokasi akun kas pada kasbon, penarikan gaji harian, absensi hadir, otomatisasi transfer escrow saat approval payroll, dan 100% rollback mutasi multi-rekening.'
+        ],
     ];
 
     // -------------------------------------------------------------------------
@@ -328,6 +352,15 @@ class TestRunnerService
         foreach ($linuxCandidates as $cand) {
             if (file_exists($cand)) {
                 return $cand;
+            }
+        }
+
+        // Deteksi dinamis via CLI which/where (Linux VPS, Docker, Alpine, custom path)
+        if (function_exists('exec')) {
+            $locatorCmd = (DIRECTORY_SEPARATOR === '\\') ? 'where php 2>nul' : 'which php 2>/dev/null';
+            $detected = @exec($locatorCmd);
+            if (!empty($detected) && file_exists(trim($detected))) {
+                return trim($detected);
             }
         }
 
@@ -661,50 +694,11 @@ class TestRunnerService
             if (is_resource($process)) {
                 fclose($pipes[0]);
 
-                $stdout   = '';
-                $stderr   = '';
-                $deadline = microtime(true) + self::SUBPROCESS_TIMEOUT;
-
-                // Baca output secara non-blocking dengan deadline enforcement
-                while (microtime(true) < $deadline) {
-                    $readStreams = [$pipes[1], $pipes[2]];
-                    $write       = null;
-                    $except      = null;
-                    $changed     = @stream_select($readStreams, $write, $except, 1, 0);
-
-                    if ($changed === false) break;
-
-                    foreach ($readStreams as $stream) {
-                        if ($stream === $pipes[1]) {
-                            $chunk = fread($pipes[1], 8192);
-                            if ($chunk !== false) $stdout .= $chunk;
-                        } elseif ($stream === $pipes[2]) {
-                            $chunk = fread($pipes[2], 8192);
-                            if ($chunk !== false) $stderr .= $chunk;
-                        }
-                    }
-
-                    $procStatus = proc_get_status($process);
-                    if (!$procStatus['running']) {
-                        // Baca sisa buffer setelah process selesai
-                        $stdout .= @stream_get_contents($pipes[1]);
-                        $stderr .= @stream_get_contents($pipes[2]);
-                        $exitCode = $procStatus['exitcode'];
-                        break;
-                    }
-                }
-
-                // Jika masih berjalan setelah deadline, terminate paksa
-                $procStatus = proc_get_status($process);
-                if ($procStatus['running']) {
-                    proc_terminate($process, 9);
-                    $stdout  .= "\n[TIMEOUT] Subprocess dihentikan paksa setelah " . self::SUBPROCESS_TIMEOUT . " detik.";
-                    $exitCode = 124;
-                }
-
+                $stdout   = (string)stream_get_contents($pipes[1]);
+                $stderr   = (string)stream_get_contents($pipes[2]);
                 fclose($pipes[1]);
                 fclose($pipes[2]);
-                proc_close($process);
+                $exitCode = proc_close($process);
 
                 $output = trim($stdout . ($stderr ? "\nSTDERR:\n" . $stderr : ''));
             } else {

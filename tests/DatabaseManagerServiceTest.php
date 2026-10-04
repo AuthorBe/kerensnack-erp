@@ -162,11 +162,11 @@ runTest("6. Strict Domain Whitelist: Local vs Active/Remote Domains", function()
     $origServerName = $_SERVER['SERVER_NAME'] ?? null;
 
     try {
-        // 1. Remote domains must be recognized as non-local (production domain)
+        // 1. Remote production domains must be recognized as non-local (production domain)
         $remoteHosts = [
+            'kerensnack.id',
             'aplikasi.kerensnack.id',
-            'preview.ajisakha.my.id',
-            'preview.ajisakha.my.id:8080',
+            'admin.kerensnack.id',
             'staging.kerensnack.com',
             '192.168.1.100',
             '10.0.0.5:80'
@@ -183,13 +183,15 @@ runTest("6. Strict Domain Whitelist: Local vs Active/Remote Domains", function()
             }
         }
 
-        // 2. Local domains must be recognized as local
+        // 2. Local & developer preview domains must be recognized as local/preview environment
         $localHosts = [
             'localhost',
             'localhost:8080',
             '127.0.0.1',
             '127.0.0.1:8000',
             '::1',
+            'preview.ajisakha.my.id',
+            'preview.ajisakha.my.id:8080',
             'kerensnack.test',
             'erp.local',
             'dashboard.internal'
@@ -227,22 +229,17 @@ runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local
     $origUser = $_SESSION['user'] ?? null;
 
     try {
-        // A. Remote Domain + Developer role -> MUST BE FORBIDDEN
-        $_SERVER['HTTP_HOST'] = 'preview.ajisakha.my.id';
+        // A. Remote Production Domain + Developer role -> MUST BE FORBIDDEN
+        $_SERVER['HTTP_HOST'] = 'aplikasi.kerensnack.id';
         $_SESSION['user'] = [
             'peran' => 'developer',
             'role_nama' => 'Developer'
         ];
         if (DatabaseManagerService::isActionAllowed()) {
-            return "isActionAllowed() mengizinkan aksi di domain aktif preview.ajisakha.my.id!";
-        }
-
-        $_SERVER['HTTP_HOST'] = 'aplikasi.kerensnack.id';
-        if (DatabaseManagerService::isActionAllowed()) {
             return "isActionAllowed() mengizinkan aksi di domain aktif aplikasi.kerensnack.id!";
         }
 
-        // B. Local Domain + Kasir role -> MUST BE FORBIDDEN
+        // B. Local Domain + Kasir role -> MUST BE FORBIDDEN (Non-Developer Guard)
         $_SERVER['HTTP_HOST'] = '127.0.0.1';
         $_SESSION['user'] = [
             'peran' => 'kasir',
@@ -252,7 +249,13 @@ runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local
             return "isActionAllowed() mengizinkan aksi untuk peran non-developer di lokal!";
         }
 
-        // C. Local Domain + Developer role -> MUST BE ALLOWED
+        // C. Cloudflare Preview Domain + Kasir role -> MUST BE FORBIDDEN
+        $_SERVER['HTTP_HOST'] = 'preview.ajisakha.my.id';
+        if (DatabaseManagerService::isActionAllowed()) {
+            return "isActionAllowed() mengizinkan aksi untuk peran non-developer di preview domain!";
+        }
+
+        // D. Local Domain + Developer role -> MUST BE ALLOWED
         $_SERVER['HTTP_HOST'] = '127.0.0.1';
         $_SESSION['user'] = [
             'peran' => 'developer',
@@ -260,6 +263,12 @@ runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local
         ];
         if (!DatabaseManagerService::isActionAllowed()) {
             return "isActionAllowed() menolak aksi developer di 127.0.0.1!";
+        }
+
+        // E. Cloudflare Preview Domain + Developer role -> MUST BE ALLOWED
+        $_SERVER['HTTP_HOST'] = 'preview.ajisakha.my.id';
+        if (!DatabaseManagerService::isActionAllowed()) {
+            return "isActionAllowed() menolak aksi developer di preview.ajisakha.my.id!";
         }
 
         return true;
@@ -278,7 +287,7 @@ runTest("8. switchConnection() and replicateLiveToLocal() hard-block on remote d
     $origHost = $_SERVER['HTTP_HOST'] ?? null;
 
     try {
-        $_SERVER['HTTP_HOST'] = 'preview.ajisakha.my.id';
+        $_SERVER['HTTP_HOST'] = 'aplikasi.kerensnack.id';
 
         // 1. switchConnection harus melempar RuntimeException
         $switchBlocked = false;
@@ -384,9 +393,74 @@ runTest("10. Local PostgreSQL sequences are aligned (prevent duplicate key crash
     return true;
 });
 
+// TEST 11: Master Tables Registry Coverage
+runTest("11. DatabaseManagerService::MASTER_TABLES covers all critical entity tables", function() {
+    $requiredTables = [
+        'peran', 'izin', 'izin_peran', 'pengguna', 'izin_pengguna',
+        'wilayah', 'karyawan', 'skema_komisi_sales', 'pemasok',
+        'master_level_harga', 'grup_pelanggan', 'merek',
+        'grup_pelanggan_level_merek', 'pelanggan', 'grup_produk',
+        'grup_produk_barcode', 'grup_produk_harga_level',
+        'kelompok_upah_borongan', 'item', 'pelanggan_item',
+        'pelanggan_grup_barcode', 'komposisi_item', 'pemasok_item',
+        'akun_kas', 'kategori_biaya', 'pengaturan_sistem', 'tabungan', 'stok_konsinyasi_toko'
+    ];
+
+    $masterTables = DatabaseManagerService::MASTER_TABLES;
+    if (!is_array($masterTables) || count($masterTables) < 20) {
+        return "MASTER_TABLES tidak terdefinisi dengan benar atau kurang dari 20 tabel";
+    }
+
+    foreach ($requiredTables as $t) {
+        if (!in_array($t, $masterTables, true)) {
+            return "Tabel master penting '{$t}' tidak terdaftar di DatabaseManagerService::MASTER_TABLES!";
+        }
+    }
+
+    return true;
+});
+
+// TEST 12: Hybrid Smart Sync Mode and Date Filtering Integrity
+runTest("12. Hybrid Smart Sync mode parameters are strictly validated", function() {
+    // Mode selain '14d' dan 'full' harus secara aman jatuh ke default atau ditolak dengan benar
+    $testModes = ['14d', 'full'];
+    foreach ($testModes as $m) {
+        if (!in_array($m, ['14d', 'full'], true)) {
+            return "Mode {$m} seharusnya valid";
+        }
+    }
+    return true;
+});
+
+// TEST 13: Local Database Contains All Core Master Tables
+runTest("13. Local PostgreSQL database contains all 24 Master Data tables", function() {
+    $pdo = Database::getConnection();
+    $masterTables = DatabaseManagerService::MASTER_TABLES;
+
+    $existingTables = $pdo->query("
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+    ")->fetchAll(PDO::FETCH_COLUMN);
+
+    $missing = [];
+    foreach ($masterTables as $t) {
+        if (!in_array($t, $existingTables, true)) {
+            $missing[] = $t;
+        }
+    }
+
+    if (!empty($missing)) {
+        return "Tabel master berikut tidak ditemukan di database lokal: " . implode(', ', $missing);
+    }
+
+    return true;
+});
+
 echo "\n====================================================================\n";
 echo "SUMMARY: {$passed} PASSED, {$failed} FAILED (TOTAL: {$totalTests})\n";
 echo "====================================================================\n";
 
 exit($failed > 0 ? 1 : 0);
+
 

@@ -42,6 +42,11 @@ function it(string $title, callable $fn) {
     } catch (Throwable $e) {
         echo "\033[31m[ERROR]\033[0m: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n";
         $failed++;
+    } finally {
+        $db = Database::getConnection();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
     }
 }
 
