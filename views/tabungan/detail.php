@@ -1,0 +1,1283 @@
+<?php
+/**
+ * views/tabungan/detail.php
+ * Buku Tabungan & Buku Besar Mutasi Simpanan Karyawan Keren One ERP
+ * 100% Selaras dengan DNA Desain, Responsive Desktop & Mobile, & Sistem Modal KEREN ONE
+ */
+
+use App\Core\Router;
+use App\Helpers\Format;
+use App\Helpers\CSRF;
+
+ob_start();
+
+if (!function_exists('getTabunganAvatarColor')) {
+    function getTabunganAvatarColor(string $name): array {
+        $colors = [
+            ['bg' => 'rgba(16, 185, 129, 0.12)', 'text' => '#047857', 'border' => 'rgba(16, 185, 129, 0.28)'], // Emerald
+            ['bg' => 'rgba(79, 70, 229, 0.1)',   'text' => '#4338ca', 'border' => 'rgba(79, 70, 229, 0.25)'],  // Indigo
+            ['bg' => 'rgba(2, 132, 199, 0.1)',   'text' => '#0284c7', 'border' => 'rgba(2, 132, 199, 0.25)'],  // Sky Blue
+            ['bg' => 'rgba(217, 119, 6, 0.12)',  'text' => '#b45309', 'border' => 'rgba(217, 119, 6, 0.28)'],  // Warm Amber
+            ['bg' => 'rgba(147, 51, 234, 0.1)',  'text' => '#7e22ce', 'border' => 'rgba(147, 51, 234, 0.25)'], // Violet
+            ['bg' => 'rgba(13, 148, 136, 0.12)', 'text' => '#0f766e', 'border' => 'rgba(13, 148, 136, 0.28)'], // Teal
+            ['bg' => 'rgba(225, 29, 72, 0.1)',   'text' => '#be123c', 'border' => 'rgba(225, 29, 72, 0.25)'],  // Rose
+        ];
+        $idx = abs(crc32($name)) % count($colors);
+        return $colors[$idx];
+    }
+}
+
+$currentSaldo = (float)($karyawan['saldo'] ?? 0);
+$initials = '';
+$words = preg_split('/\s+/', trim($karyawan['nama_karyawan'] ?? ''));
+foreach ($words as $w) {
+    if (!empty($w)) {
+        $initials .= mb_strtoupper(mb_substr($w, 0, 1));
+    }
+    if (mb_strlen($initials) >= 2) break;
+}
+$initials = $initials ?: 'KR';
+$avatarTheme = getTabunganAvatarColor($karyawan['nama_karyawan'] ?? '');
+?>
+
+<style>
+/* ==========================================================================
+   Tabungan Detail DNA Styling & Responsive Utilities (Forest & Harmonies)
+   ========================================================================== */
+
+/* 0. KPI Stat Cards & Themes */
+.tabungan-stat-card {
+    background: #ffffff;
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    border-radius: 16px;
+    padding: 15px 17px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+    transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, border-color 0.18s ease;
+    position: relative;
+    overflow: hidden;
+}
+.tabungan-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
+}
+.dark .tabungan-stat-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.dark .tabungan-stat-card:hover {
+    border-color: #475569;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+}
+
+/* Stat Icon Box */
+.tabungan-stat-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    transition: transform 0.18s ease;
+}
+.tabungan-stat-card:hover .tabungan-stat-icon {
+    transform: scale(1.06);
+}
+.tabungan-stat-icon svg {
+    width: 21px;
+    height: 21px;
+    stroke-width: 2.2px;
+    display: block;
+}
+
+.tabungan-stat-icon.is-emerald {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+    border: 1.5px solid rgba(16, 185, 129, 0.28);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
+}
+.dark .tabungan-stat-icon.is-emerald {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.tabungan-stat-icon.is-sky {
+    background: rgba(2, 132, 199, 0.12);
+    color: #0284c7;
+    border: 1.5px solid rgba(2, 132, 199, 0.28);
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12);
+}
+.dark .tabungan-stat-icon.is-sky {
+    background: rgba(2, 132, 199, 0.2);
+    color: #38bdf8;
+    border-color: rgba(2, 132, 199, 0.4);
+}
+
+.tabungan-stat-icon.is-amber {
+    background: rgba(217, 119, 6, 0.12);
+    color: #d97706;
+    border: 1.5px solid rgba(217, 119, 6, 0.28);
+    box-shadow: 0 2px 6px rgba(217, 119, 6, 0.12);
+}
+.dark .tabungan-stat-icon.is-amber {
+    background: rgba(217, 119, 6, 0.2);
+    color: #fbbf24;
+    border-color: rgba(217, 119, 6, 0.4);
+}
+
+/* Avatar Large for Profile Banner */
+.tabungan-avatar-lg {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+/* 1. Filter Dock Container */
+.tabungan-filter-dock {
+    background: var(--color-canvas, #ffffff);
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    border-radius: var(--rounded-lg, 12px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    margin-bottom: 16px;
+    padding: 12px 14px;
+}
+.dark .tabungan-filter-dock {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.tab-pill-group {
+    display: inline-flex;
+    align-items: center;
+    background: var(--color-canvas-soft, #f8fafc);
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    border-radius: 9px;
+    padding: 3px;
+    gap: 2px;
+    overflow-x: auto;
+    max-width: 100%;
+}
+.dark .tab-pill-group {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+.tab-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border-radius: 7px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-ink-secondary, #64748b);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    user-select: none;
+}
+.tab-pill-btn:hover {
+    color: var(--color-ink, #0f172a);
+    background: rgba(0, 0, 0, 0.04);
+}
+.dark .tab-pill-btn:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.06);
+}
+.tab-pill-btn.is-active {
+    background: #047857 !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(4, 120, 87, 0.3);
+}
+.dark .tab-pill-btn.is-active {
+    background: #059669 !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(5, 150, 105, 0.35);
+}
+
+.tab-pill-counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4.5px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    background: rgba(0, 0, 0, 0.08);
+}
+.dark .tab-pill-counter {
+    background: rgba(255, 255, 255, 0.14);
+}
+.tab-pill-btn.is-active .tab-pill-counter {
+    background: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+}
+
+/* 2. Currency Group & Quick Chips */
+.pg-currency-group {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--color-hairline-strong, #cbd5e1);
+    border-radius: var(--rounded-md, 8px);
+    background: var(--color-canvas, #ffffff);
+    overflow: hidden;
+    height: 38px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.dark .pg-currency-group {
+    background: #1e293b;
+    border-color: #475569;
+}
+.pg-currency-group:focus-within {
+    border-color: #047857 !important;
+    box-shadow: 0 0 0 1px #047857 !important;
+}
+.dark .pg-currency-group:focus-within {
+    border-color: #34d399 !important;
+    box-shadow: 0 0 0 1px #34d399 !important;
+}
+.pg-currency-group.is-amber:focus-within {
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 1px #d97706 !important;
+}
+.dark .pg-currency-group.is-amber:focus-within {
+    border-color: #fbbf24 !important;
+    box-shadow: 0 0 0 1px #fbbf24 !important;
+}
+.pg-currency-addon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    background: var(--color-canvas-soft, #f8fafc);
+    border-right: 1px solid var(--color-hairline, #e2e8f0);
+    color: var(--color-ink-mute, #64748b);
+    font-size: 11.5px;
+    font-weight: 800;
+    font-family: var(--font-mono, monospace);
+    user-select: none;
+}
+.dark .pg-currency-addon {
+    background: #334155;
+    border-color: #475569;
+    color: #94a3b8;
+}
+.pg-currency-input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font-mono, monospace);
+    color: var(--color-ink, #0f172a);
+    background: transparent;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    text-align: right;
+}
+.dark .pg-currency-input {
+    color: #f8fafc;
+}
+
+.quick-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    background: var(--color-canvas-soft, #f8fafc);
+    color: var(--color-ink-secondary, #475569);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+}
+.quick-chip-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+.dark .quick-chip-btn {
+    background: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+.dark .quick-chip-btn:hover {
+    background: #475569;
+    color: #ffffff;
+}
+
+/* 3. Table Card Container */
+.tabungan-table-card {
+    background: var(--color-canvas, #ffffff);
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.dark .tabungan-table-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+.tabungan-table-card .table-wrapper {
+    overflow-x: auto;
+    border-radius: 16px;
+}
+.tabungan-table-card table thead tr th {
+    background: #f8fafc;
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+}
+.dark .tabungan-table-card table thead tr th {
+    background: #0f172a;
+    color: #94a3b8;
+    border-bottom-color: #334155;
+}
+.tabungan-table-card table thead tr th:first-child {
+    border-top-left-radius: 15px;
+}
+.tabungan-table-card table thead tr th:last-child {
+    border-top-right-radius: 15px;
+}
+
+/* Badges for Mutasi */
+.badge-mutasi-setor {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3.5px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    white-space: nowrap;
+}
+.dark .badge-mutasi-setor {
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.badge-mutasi-tarik {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3.5px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    white-space: nowrap;
+}
+.dark .badge-mutasi-tarik {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
+.badge-ref-payroll {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2.5px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #4338ca;
+    background: rgba(79, 70, 229, 0.08);
+    border: 1px solid rgba(79, 70, 229, 0.22);
+    white-space: nowrap;
+}
+.dark .badge-ref-payroll {
+    color: #a5b4fc;
+    background: rgba(79, 70, 229, 0.18);
+    border-color: rgba(79, 70, 229, 0.35);
+}
+
+.badge-tipe-bulanan {
+    display: inline-flex;
+    align-items: center;
+    padding: 2.5px 8px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #0284c7;
+    background: rgba(2, 132, 199, 0.1);
+    border: 1px solid rgba(2, 132, 199, 0.25);
+    white-space: nowrap;
+}
+.dark .badge-tipe-bulanan {
+    color: #38bdf8;
+    background: rgba(2, 132, 199, 0.18);
+    border-color: rgba(2, 132, 199, 0.35);
+}
+
+.badge-tipe-borongan {
+    display: inline-flex;
+    align-items: center;
+    padding: 2.5px 8px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #7e22ce;
+    background: rgba(147, 51, 234, 0.1);
+    border: 1px solid rgba(147, 51, 234, 0.25);
+    white-space: nowrap;
+}
+.dark .badge-tipe-borongan {
+    color: #c084fc;
+    background: rgba(147, 51, 234, 0.18);
+    border-color: rgba(147, 51, 234, 0.35);
+}
+
+.tabungan-nominal-setor {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #047857;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.22);
+    white-space: nowrap;
+}
+.dark .tabungan-nominal-setor {
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.tabungan-nominal-tarik {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.22);
+    white-space: nowrap;
+}
+.dark .tabungan-nominal-tarik {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+/* Canonical Page Header Icon Emerald */
+.page-header-icon.is-emerald {
+    background: rgba(16, 185, 129, 0.12) !important;
+    color: #047857 !important;
+    border: 1px solid rgba(16, 185, 129, 0.28) !important;
+}
+.dark .page-header-icon.is-emerald {
+    background: rgba(16, 185, 129, 0.18) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+/* Primary Button in Mature Calm Forest Emerald */
+.btn-primary-forest {
+    background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+    color: #ffffff !important;
+    border: 1px solid #065f46 !important;
+    box-shadow: 0 1px 3px rgba(4, 120, 87, 0.25);
+    transition: all 0.15s ease;
+}
+.btn-primary-forest:hover {
+    background: linear-gradient(135deg, #065f46 0%, #064e3b 100%) !important;
+    color: #ffffff !important;
+}
+
+/* Secondary Button in Warm Amber */
+.btn-secondary-amber {
+    background: rgba(245, 158, 11, 0.08) !important;
+    color: #b45309 !important;
+    border: 1px solid rgba(245, 158, 11, 0.28) !important;
+    transition: all 0.15s ease;
+}
+.btn-secondary-amber:hover {
+    background: #d97706 !important;
+    color: #ffffff !important;
+    border-color: #b45309 !important;
+}
+.dark .btn-secondary-amber {
+    background: rgba(245, 158, 11, 0.16) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(245, 158, 11, 0.38) !important;
+}
+.dark .btn-secondary-amber:hover {
+    background: #d97706 !important;
+    color: #ffffff !important;
+}
+
+/* Desktop Rules (>= 768px) */
+@media (min-width: 768px) {
+    .tabungan-m-only,
+    .tabungan-m-flex {
+        display: none !important;
+    }
+    .tabungan-d-only {
+        display: block;
+    }
+    .tabungan-d-flex {
+        display: flex;
+    }
+}
+
+/* Responsive Table in Detail (< 768px) */
+@media (max-width: 767px) {
+    .responsive-tabungan-detail-table,
+    .responsive-tabungan-detail-table tbody {
+        display: block !important;
+        width: 100% !important;
+    }
+    .responsive-tabungan-detail-table thead {
+        display: none !important;
+    }
+    .responsive-tabungan-detail-table tbody tr.tabungan-mutasi-row {
+        display: block !important;
+        background: var(--color-canvas, #ffffff) !important;
+        border: 1px solid var(--color-hairline, #e2e8f0) !important;
+        border-radius: 16px !important;
+        padding: 14px !important;
+        margin-bottom: 12px !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
+    }
+    .dark .responsive-tabungan-detail-table tbody tr.tabungan-mutasi-row {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+    }
+    /* Hide desktop table cells on mobile */
+    .responsive-tabungan-detail-table td.col-no,
+    .responsive-tabungan-detail-table td.col-tipe,
+    .responsive-tabungan-detail-table td.col-sumber,
+    .responsive-tabungan-detail-table td.col-keterangan,
+    .responsive-tabungan-detail-table td.col-ref,
+    .responsive-tabungan-detail-table td.col-jumlah,
+    .responsive-tabungan-detail-table td.col-waktu {
+        display: none !important;
+    }
+    .responsive-tabungan-detail-table td.col-tanggal {
+        display: block !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+    .tabungan-d-only,
+    .tabungan-d-flex {
+        display: none !important;
+    }
+    .tabungan-m-only {
+        display: block !important;
+    }
+    .tabungan-m-flex {
+        display: flex !important;
+    }
+    .tabungan-m-num-pill {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        font-family: var(--font-mono, ui-monospace, monospace) !important;
+        color: #64748b !important;
+        background: rgba(0, 0, 0, 0.04) !important;
+        border: 1px solid rgba(0, 0, 0, 0.07) !important;
+        padding: 3px 7px !important;
+        border-radius: 7px !important;
+        line-height: 1.2 !important;
+    }
+    .dark .tabungan-m-num-pill {
+        color: #94a3b8 !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+}
+</style>
+
+<div x-data="bukuTabunganApp()" class="space-y-4">
+
+    <!-- 1. PAGE HEADER (Pola Kanonikal KEREN ONE ERP) -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="tabungan-avatar-lg" style="background: <?= $avatarTheme['bg'] ?>; color: <?= $avatarTheme['text'] ?>; border: 1.5px solid <?= $avatarTheme['border'] ?>;">
+                <?= htmlspecialchars($initials) ?>
+            </div>
+            <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <h1 class="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 truncate">
+                        <?= htmlspecialchars($karyawan['nama_karyawan']) ?>
+                    </h1>
+                    <span class="<?= ($karyawan['tipe_penggajian'] ?? '') === 'borongan' ? 'badge-tipe-borongan' : 'badge-tipe-bulanan' ?>">
+                        <?= ucfirst($karyawan['tipe_penggajian'] ?? 'Bulanan') ?>
+                    </span>
+                </div>
+                <div class="text-xs text-slate-400 capitalize mt-0.5 truncate">
+                    <?= htmlspecialchars($karyawan['posisi'] ?? '-') ?> &bull; Rekening Simpanan Pegawai
+                </div>
+            </div>
+        </div>
+
+        <div class="grid <?= $currentSaldo > 0 ? 'grid-cols-3' : 'grid-cols-2' ?> sm:flex items-center gap-2 w-full sm:w-auto justify-end">
+            <a href="<?= Router::url('/tabungan') ?>" class="btn btn-secondary text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 w-full sm:w-auto" style="height:38px; border-radius:10px;">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                <span>Kembali</span>
+            </a>
+            <button type="button" @click="openModalSetor()" class="btn btn-primary-forest text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 w-full sm:w-auto" style="height:38px; border-radius:10px;">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Setor</span>
+            </button>
+            <?php if ($currentSaldo > 0): ?>
+            <button type="button" @click="openModalTarik()" class="btn btn-secondary-amber text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 w-full sm:w-auto" style="height:38px; border-radius:10px;">
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                <span>Tarik</span>
+            </button>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- 2. INFORMASI SALDO & METRIK TABUNGAN -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <!-- Card 1: Saldo Simpanan -->
+        <div class="tabungan-stat-card">
+            <div class="tabungan-stat-icon is-emerald">
+                <i data-lucide="piggy-bank"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Saldo Simpanan Saat Ini</div>
+                <div class="text-lg sm:text-xl font-bold font-mono text-emerald-700 dark:text-emerald-300 mt-0.5"><?= Format::rupiah($currentSaldo) ?></div>
+            </div>
+        </div>
+
+        <!-- Card 2: Akumulasi Setoran Masuk -->
+        <div class="tabungan-stat-card">
+            <div class="tabungan-stat-icon is-sky">
+                <i data-lucide="arrow-down-left"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Akumulasi Setoran Masuk</div>
+                <div class="text-lg sm:text-xl font-bold font-mono text-sky-600 dark:text-sky-400 mt-0.5"><?= Format::rupiah($totalDeposit) ?></div>
+            </div>
+        </div>
+
+        <!-- Card 3: Akumulasi Penarikan Keluar -->
+        <div class="tabungan-stat-card">
+            <div class="tabungan-stat-icon is-amber">
+                <i data-lucide="arrow-up-right"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Akumulasi Penarikan Keluar</div>
+                <div class="text-lg sm:text-xl font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5"><?= Format::rupiah($totalWithdrawal) ?></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. FILTER DOCK FOR MUTASI -->
+    <div class="tabungan-filter-dock">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="tab-pill-group">
+                <button type="button" 
+                        @click="tipeFilter = 'all'" 
+                        class="tab-pill-btn" 
+                        :class="tipeFilter === 'all' ? 'is-active' : ''">
+                    <span>Semua Mutasi</span>
+                    <span class="tab-pill-counter"><?= count($transaksiList) ?></span>
+                </button>
+                <button type="button" 
+                        @click="tipeFilter = 'deposit'" 
+                        class="tab-pill-btn" 
+                        :class="tipeFilter === 'deposit' ? 'is-active' : ''">
+                    <span>Setoran</span>
+                </button>
+                <button type="button" 
+                        @click="tipeFilter = 'withdrawal'" 
+                        class="tab-pill-btn" 
+                        :class="tipeFilter === 'withdrawal' ? 'is-active' : ''">
+                    <span>Penarikan</span>
+                </button>
+            </div>
+
+            <!-- Instant Search Box -->
+            <div style="position:relative; display:flex; align-items:center; min-width:220px; max-width:320px; flex:1;">
+                <svg style="position:absolute; left:11px; width:14px; height:14px; color:#94a3b8; pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" 
+                       x-model="searchMutasi" 
+                       placeholder="Cari keterangan / no payroll..." 
+                       class="form-input"
+                       style="height:36px; padding-left:34px; padding-right:28px; font-size:12px; border-radius:8px; width:100%; border:1px solid var(--color-hairline-strong, #cbd5e1); background:var(--color-canvas, #ffffff); color:var(--color-ink, #0f172a);">
+                <button type="button" 
+                        x-show="searchMutasi.length > 0" 
+                        @click="searchMutasi = ''" 
+                        style="position:absolute; right:8px; color:#94a3b8; padding:2px;" 
+                        title="Hapus pencarian">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. TABEL BUKU BESAR MUTASI TABUNGAN -->
+    <div class="tabungan-table-card">
+        <div class="table-wrapper">
+            <table class="responsive-tabungan-detail-table data-table w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        <th class="py-3 px-4 w-12 text-center">No</th>
+                        <th class="py-3 px-4 w-32">Tanggal</th>
+                        <th class="py-3 px-4 w-28 text-center">Tipe</th>
+                        <th class="py-3 px-4 w-28">Sumber</th>
+                        <th class="py-3 px-4 min-w-[200px]">Keterangan</th>
+                        <th class="py-3 px-4 min-w-[150px]">Referensi Payroll</th>
+                        <th class="py-3 px-4 text-right min-w-[140px]">Jumlah Mutasi</th>
+                        <th class="py-3 px-4 w-36">Waktu Catat</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                    <?php if (empty($transaksiList)): ?>
+                        <tr class="border-0">
+                            <td colspan="8" class="py-12 px-4 text-center border-0">
+                                <div style="width:48px;height:48px;border-radius:14px;background:rgba(16,185,129,0.08);color:#059669;display:flex;align-items:center;justify-content:center;margin:0 auto 12px auto;border:1px solid rgba(16,185,129,0.2);">
+                                    <i data-lucide="book-open" style="width:24px;height:24px;"></i>
+                                </div>
+                                <div class="text-sm font-bold text-slate-800 dark:text-slate-200">Buku Tabungan Masih Kosong</div>
+                                <div class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Belum ada riwayat mutasi setoran atau penarikan simpanan untuk karyawan ini.</div>
+                                <button type="button" @click="openModalSetor()" class="btn btn-primary-forest btn-sm text-xs font-bold mt-4 inline-flex items-center gap-1.5" style="border-radius:8px;">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                    <span>Catat Setoran Pertama</span>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($transaksiList as $idx => $t): 
+                            $isDeposit = ($t['tipe'] === 'deposit');
+                            $searchKeywords = strtolower($t['keterangan'] . ' ' . ($t['nomor_payroll'] ?? '') . ' ' . $t['sumber'] . ' ' . $t['tanggal']);
+                        ?>
+                        <tr class="tabungan-mutasi-row hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                            x-show="isMutasiVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', '<?= $t['tipe'] ?>')">
+                            
+                            <!-- Col: No (Desktop Only) -->
+                            <td class="col-no py-3 px-4 text-center font-mono text-slate-400"><?= $idx + 1 ?></td>
+
+                            <!-- Col: Tanggal (Desktop & Mobile Adaptive) -->
+                            <td class="col-tanggal py-3 px-4">
+                                <!-- DESKTOP VIEW -->
+                                <div class="tabungan-d-flex items-center gap-2 font-mono font-semibold text-slate-800 dark:text-slate-200">
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                    <span><?= Format::tanggalIndo($t['tanggal']) ?></span>
+                                </div>
+
+                                <!-- MOBILE VIEW (Full Mutation Card) -->
+                                <div class="tabungan-m-only">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="tabungan-m-num-pill">#<?= $idx + 1 ?></span>
+                                            <span class="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
+                                                <?= Format::tanggalIndo($t['tanggal']) ?>
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <?php if ($isDeposit): ?>
+                                                <span class="badge-mutasi-setor text-[10.5px]">
+                                                    <i data-lucide="arrow-down-left" class="w-3 h-3"></i> Setor
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge-mutasi-tarik text-[10.5px]">
+                                                    <i data-lucide="arrow-up-right" class="w-3 h-3"></i> Tarik
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+
+                                    <!-- Keterangan & Badges -->
+                                    <div class="mt-2 text-xs text-slate-700 dark:text-slate-200 font-medium">
+                                        <?= htmlspecialchars($t['keterangan'] ?: '-') ?>
+                                    </div>
+
+                                    <div class="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                        <span class="badge badge-neutral text-[10px] py-0.5 px-2 font-mono capitalize">
+                                            <?= htmlspecialchars($t['sumber'] ?? '-') ?>
+                                        </span>
+                                        <?php if (!empty($t['nomor_payroll'])): ?>
+                                            <span class="badge-ref-payroll">
+                                                <i data-lucide="file-text" class="w-3 h-3 text-slate-400"></i>
+                                                <span><?= htmlspecialchars($t['nomor_payroll']) ?></span>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <!-- Amount & Time Footer -->
+                                    <div class="flex items-center justify-between gap-2 mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800">
+                                        <div class="text-[11px] text-slate-400 font-mono">
+                                            <?= date('d/m/Y H:i', strtotime($t['dibuat_pada'])) ?>
+                                        </div>
+                                        <div>
+                                            <?php if ($isDeposit): ?>
+                                                <span class="tabungan-nominal-setor">
+                                                    + <?= Format::rupiah((float)$t['jumlah']) ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="tabungan-nominal-tarik">
+                                                    - <?= Format::rupiah((float)$t['jumlah']) ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Col: Tipe (Desktop Only) -->
+                            <td class="col-tipe py-3 px-4 text-center">
+                                <?php if ($isDeposit): ?>
+                                    <span class="badge-mutasi-setor">
+                                        <i data-lucide="arrow-down-left" class="w-3 h-3"></i> Setor
+                                    </span>
+                                <?php else: ?>
+                                    <span class="badge-mutasi-tarik">
+                                        <i data-lucide="arrow-up-right" class="w-3 h-3"></i> Tarik
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- Col: Sumber (Desktop Only) -->
+                            <td class="col-sumber py-3 px-4 text-slate-600 dark:text-slate-300 capitalize text-xs">
+                                <span class="badge badge-neutral text-[10px] py-0.5 px-2 font-mono">
+                                    <?= htmlspecialchars($t['sumber'] ?? '-') ?>
+                                </span>
+                            </td>
+
+                            <!-- Col: Keterangan (Desktop Only) -->
+                            <td class="col-keterangan py-3 px-4 text-slate-700 dark:text-slate-200">
+                                <div class="leading-relaxed font-medium">
+                                    <?= htmlspecialchars($t['keterangan'] ?: '-') ?>
+                                </div>
+                            </td>
+
+                            <!-- Col: Referensi Payroll (Desktop Only) -->
+                            <td class="col-ref py-3 px-4 font-mono text-slate-500">
+                                <?php if (!empty($t['nomor_payroll'])): ?>
+                                    <span class="badge-ref-payroll">
+                                        <i data-lucide="file-text" class="w-3 h-3 text-slate-400"></i>
+                                        <span><?= htmlspecialchars($t['nomor_payroll']) ?></span>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="text-slate-400">-</span>
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- Col: Jumlah Mutasi (Desktop Only) -->
+                            <td class="col-jumlah py-3 px-4 text-right">
+                                <?php if ($isDeposit): ?>
+                                    <span class="tabungan-nominal-setor">
+                                        + <?= Format::rupiah((float)$t['jumlah']) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="tabungan-nominal-tarik">
+                                        - <?= Format::rupiah((float)$t['jumlah']) ?>
+                                    </span>
+                                <?php endif; ?>
+                            </td>
+
+                            <!-- Col: Waktu Catat (Desktop Only) -->
+                            <td class="col-waktu py-3 px-4 text-slate-400 font-mono text-xs">
+                                <?= date('d/m/Y H:i', strtotime($t['dibuat_pada'])) ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- 5. MODAL SETOR (Teleported to Body)                                       -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+        <div x-show="modalSetorOpen" 
+             x-cloak 
+             class="modal-backdrop" 
+             @click="modalSetorOpen = false" 
+             @keydown.escape.window="modalSetorOpen = false">
+            
+            <div class="modal-box modal-box-md" style="max-width:480px;" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+
+                <div class="modal-header">
+                    <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                        <div style="width:38px;height:38px;border-radius:10px;background:rgba(16,185,129,0.12);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(16,185,129,0.25);">
+                            <i data-lucide="plus-circle" style="width:18px;height:18px;"></i>
+                        </div>
+                        <div style="min-width:0;flex:1;">
+                            <div class="modal-title">Setor Simpanan</div>
+                            <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;">Karyawan: <?= htmlspecialchars($karyawan['nama_karyawan']) ?></div>
+                        </div>
+                    </div>
+                    <button type="button" @click="modalSetorOpen = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
+                </div>
+
+                <form method="POST" action="<?= Router::url('/tabungan/setor') ?>" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+                    <?= CSRF::field() ?>
+                    <input type="hidden" name="karyawan_id" value="<?= htmlspecialchars($karyawan['id']) ?>">
+
+                    <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
+                        
+                        <div class="p-2.5 rounded-lg flex items-center justify-between gap-2"
+                             style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);">
+                            <div class="flex items-center gap-1.5 text-xs text-emerald-800 dark:text-emerald-300">
+                                <i data-lucide="wallet" class="w-4 h-4 shrink-0 text-emerald-600"></i>
+                                <span>Saldo Simpanan Saat Ini: <strong class="font-mono font-bold"><?= Format::rupiah($currentSaldo) ?></strong></span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;">
+                                    Tanggal Setoran <span style="color:#e11d48;">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="tanggal" 
+                                       value="<?= date('Y-m-d') ?>" 
+                                       required 
+                                       class="form-input text-xs font-medium w-full"
+                                       style="height:38px; border-radius:var(--rounded-md, 8px);">
+                            </div>
+
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;">
+                                    Nominal Setor (Rp) <span style="color:#e11d48;">*</span>
+                                </label>
+                                <div class="pg-currency-group">
+                                    <span class="pg-currency-addon">Rp</span>
+                                    <input type="text" 
+                                           inputmode="numeric"
+                                           x-model="setorNominalDisplay" 
+                                           @input="onSetorInput($event)"
+                                           required 
+                                           placeholder="0" 
+                                           class="pg-currency-input">
+                                    <input type="hidden" name="jumlah" :value="setorNominal">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Preset Nominal Cepat:</div>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <button type="button" @click="addSetorNominal(20000)" class="quick-chip-btn">+20.000</button>
+                                <button type="button" @click="addSetorNominal(50000)" class="quick-chip-btn">+50.000</button>
+                                <button type="button" @click="addSetorNominal(100000)" class="quick-chip-btn">+100.000</button>
+                                <button type="button" @click="addSetorNominal(200000)" class="quick-chip-btn">+200.000</button>
+                                <button type="button" @click="resetSetorNominal()" class="quick-chip-btn text-rose-600 dark:text-rose-400">Reset</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label" style="display:block;margin-bottom:6px;">
+                                Keterangan Setoran
+                            </label>
+                            <input type="text" 
+                                   name="keterangan" 
+                                   x-model="setorKeterangan"
+                                   placeholder="Contoh: Setoran sukarela..." 
+                                   class="form-input text-xs w-full"
+                                   style="height:38px; border-radius:var(--rounded-md, 8px);">
+
+                            <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+                                <span class="text-[10.5px] font-semibold text-slate-400">Pilihan Cepat:</span>
+                                <button type="button" @click="setorKeterangan = 'Setoran Rutin'" class="quick-chip-btn text-[10.5px]">Setoran Rutin</button>
+                                <button type="button" @click="setorKeterangan = 'Tabungan Hari Raya'" class="quick-chip-btn text-[10.5px]">Tabungan Hari Raya</button>
+                                <button type="button" @click="setorKeterangan = 'Bonus / THR'" class="quick-chip-btn text-[10.5px]">Bonus / THR</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" @click="modalSetorOpen = false" class="btn btn-secondary modal-btn-cancel-desktop">
+                            Batal
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="background:#059669; border-color:#047857;">
+                            <i data-lucide="check-circle-2"></i>
+                            <span>Simpan Setoran</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <!-- ========================================================================= -->
+    <!-- 6. MODAL TARIK (Teleported to Body)                                       -->
+    <!-- ========================================================================= -->
+    <template x-teleport="body">
+        <div x-show="modalTarikOpen" 
+             x-cloak 
+             class="modal-backdrop" 
+             @click="modalTarikOpen = false" 
+             @keydown.escape.window="modalTarikOpen = false">
+            
+            <div class="modal-box modal-box-md" style="max-width:480px;" @click.stop>
+                <div class="modal-handle"><div class="modal-handle-bar"></div></div>
+
+                <div class="modal-header">
+                    <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                        <div style="width:38px;height:38px;border-radius:10px;background:rgba(245,158,11,0.12);color:#d97706;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(245,158,11,0.25);">
+                            <i data-lucide="arrow-up-right" style="width:18px;height:18px;"></i>
+                        </div>
+                        <div style="min-width:0;flex:1;">
+                            <div class="modal-title">Penarikan Simpanan</div>
+                            <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;">Karyawan: <?= htmlspecialchars($karyawan['nama_karyawan']) ?></div>
+                        </div>
+                    </div>
+                    <button type="button" @click="modalTarikOpen = false" class="modal-close-x" title="Tutup Modal">
+                        <i data-lucide="x" style="width:18px;height:18px;"></i>
+                    </button>
+                </div>
+
+                <form method="POST" action="<?= Router::url('/tabungan/tarik') ?>" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+                    <?= CSRF::field() ?>
+                    <input type="hidden" name="karyawan_id" value="<?= htmlspecialchars($karyawan['id']) ?>">
+
+                    <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
+                        
+                        <div class="p-2.5 rounded-lg flex items-center justify-between gap-2"
+                             style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);">
+                            <div class="flex items-center gap-1.5 text-xs text-amber-900 dark:text-amber-300">
+                                <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-amber-600"></i>
+                                <span>Maksimal Penarikan: <strong class="font-mono font-bold"><?= Format::rupiah($currentSaldo) ?></strong></span>
+                            </div>
+                            <button type="button" 
+                                    @click="setAllTarikSaldo()" 
+                                    class="btn btn-ghost btn-xs text-[10.5px] font-bold py-1 px-2.5 rounded-md border"
+                                    style="background:var(--color-canvas, #ffffff);color:#d97706;border-color:rgba(245,158,11,0.3);">
+                                Tarik Semua
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;">
+                                    Tanggal Penarikan <span style="color:#e11d48;">*</span>
+                                </label>
+                                <input type="date" 
+                                       name="tanggal" 
+                                       value="<?= date('Y-m-d') ?>" 
+                                       required 
+                                       class="form-input text-xs font-medium w-full"
+                                       style="height:38px; border-radius:var(--rounded-md, 8px);">
+                            </div>
+
+                            <div>
+                                <label class="form-label" style="display:block;margin-bottom:6px;">
+                                    Nominal Tarik (Rp) <span style="color:#e11d48;">*</span>
+                                </label>
+                                <div class="pg-currency-group is-amber">
+                                    <span class="pg-currency-addon">Rp</span>
+                                    <input type="text" 
+                                           inputmode="numeric"
+                                           x-model="tarikNominalDisplay" 
+                                           @input="onTarikInput($event)"
+                                           required 
+                                           placeholder="0" 
+                                           class="pg-currency-input">
+                                    <input type="hidden" name="jumlah" :value="tarikNominal">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Preset Cepat:</div>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <button type="button" @click="addTarikNominal(50000)" class="quick-chip-btn">+50.000</button>
+                                <button type="button" @click="addTarikNominal(100000)" class="quick-chip-btn">+100.000</button>
+                                <button type="button" @click="addTarikNominal(200000)" class="quick-chip-btn">+200.000</button>
+                                <button type="button" @click="setAllTarikSaldo()" class="quick-chip-btn text-amber-700 dark:text-amber-400">Semua Saldo</button>
+                                <button type="button" @click="resetTarikNominal()" class="quick-chip-btn text-rose-600 dark:text-rose-400">Reset</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="form-label" style="display:block;margin-bottom:6px;">
+                                Alasan / Keterangan Penarikan
+                            </label>
+                            <input type="text" 
+                                   name="keterangan" 
+                                   x-model="tarikKeterangan"
+                                   placeholder="Contoh: Kebutuhan keluarga mendesak..." 
+                                   class="form-input text-xs w-full"
+                                   style="height:38px; border-radius:var(--rounded-md, 8px);">
+
+                            <div class="flex items-center gap-1.5 mt-2 flex-wrap">
+                                <span class="text-[10.5px] font-semibold text-slate-400">Pilihan Cepat:</span>
+                                <button type="button" @click="tarikKeterangan = 'Kebutuhan Keluarga'" class="quick-chip-btn text-[10.5px]">Kebutuhan Keluarga</button>
+                                <button type="button" @click="tarikKeterangan = 'Keperluan Mendesak'" class="quick-chip-btn text-[10.5px]">Keperluan Mendesak</button>
+                                <button type="button" @click="tarikKeterangan = 'Hari Raya / Lebaran'" class="quick-chip-btn text-[10.5px]">Hari Raya</button>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" @click="modalTarikOpen = false" class="btn btn-secondary modal-btn-cancel-desktop">
+                            Batal
+                        </button>
+                        <button type="submit" class="btn btn-primary" style="background:#d97706; border-color:#b45309;">
+                            <i data-lucide="arrow-up-right"></i>
+                            <span>Proses Penarikan</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </template>
+
+</div>
+
+<script>
+function bukuTabunganApp() {
+    return {
+        tipeFilter: 'all', // 'all', 'deposit', 'withdrawal'
+        searchMutasi: '',
+        modalSetorOpen: false,
+        modalTarikOpen: false,
+        setorNominal: '',
+        setorNominalDisplay: '',
+        setorKeterangan: 'Setoran Rutin',
+        tarikNominal: '',
+        tarikNominalDisplay: '',
+        tarikKeterangan: 'Kebutuhan Keluarga',
+        maxSaldo: <?= $currentSaldo ?>,
+
+        openModalSetor() {
+            this.setorNominal = '';
+            this.setorNominalDisplay = '';
+            this.setorKeterangan = 'Setoran Rutin';
+            this.modalSetorOpen = true;
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        onSetorInput(event) {
+            const raw = event.target.value.replace(/\D/g, '');
+            if (!raw) {
+                this.setorNominal = '';
+                this.setorNominalDisplay = '';
+                return;
+            }
+            const num = parseInt(raw, 10);
+            this.setorNominal = num;
+            this.setorNominalDisplay = num.toLocaleString('id-ID');
+        },
+
+        addSetorNominal(amount) {
+            let current = parseInt(this.setorNominal, 10) || 0;
+            this.setorNominal = current + amount;
+            this.setorNominalDisplay = this.setorNominal.toLocaleString('id-ID');
+        },
+
+        resetSetorNominal() {
+            this.setorNominal = '';
+            this.setorNominalDisplay = '';
+        },
+
+        openModalTarik() {
+            this.tarikNominal = '';
+            this.tarikNominalDisplay = '';
+            this.tarikKeterangan = 'Kebutuhan Keluarga';
+            this.modalTarikOpen = true;
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        onTarikInput(event) {
+            const raw = event.target.value.replace(/\D/g, '');
+            if (!raw) {
+                this.tarikNominal = '';
+                this.tarikNominalDisplay = '';
+                return;
+            }
+            let num = parseInt(raw, 10);
+            if (this.maxSaldo > 0 && num > this.maxSaldo) {
+                num = this.maxSaldo;
+            }
+            this.tarikNominal = num;
+            this.tarikNominalDisplay = num.toLocaleString('id-ID');
+        },
+
+        addTarikNominal(amount) {
+            let current = parseInt(this.tarikNominal, 10) || 0;
+            let target = current + amount;
+            if (this.maxSaldo > 0 && target > this.maxSaldo) {
+                target = this.maxSaldo;
+            }
+            this.tarikNominal = target;
+            this.tarikNominalDisplay = target.toLocaleString('id-ID');
+        },
+
+        setAllTarikSaldo() {
+            this.tarikNominal = this.maxSaldo;
+            this.tarikNominalDisplay = this.maxSaldo > 0 ? this.maxSaldo.toLocaleString('id-ID') : '';
+        },
+
+        resetTarikNominal() {
+            this.tarikNominal = '';
+            this.tarikNominalDisplay = '';
+        },
+
+        isMutasiVisible(keywords, tipe) {
+            if (this.tipeFilter !== 'all' && this.tipeFilter !== tipe) return false;
+            if (!this.searchMutasi.trim()) return true;
+            const q = this.searchMutasi.toLowerCase().trim();
+            return keywords.includes(q);
+        }
+    };
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+});
+</script>
+
+<?php
+$content = ob_get_clean();
+require ROOT_PATH . '/views/layouts/master.php';
+?>

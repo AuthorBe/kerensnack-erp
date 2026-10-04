@@ -399,7 +399,7 @@ class EmployeeImportHandler implements EntityImportHandlerInterface
             COALESCE((SELECT COUNT(*) FROM public.pembelian WHERE sales_driver_id = k.id OR dibuat_oleh = u.id), 0) +
             COALESCE((SELECT COUNT(*) FROM public.kunjungan_konsinyasi WHERE sales_driver_id = k.id OR dibuat_oleh = u.id), 0) +
             COALESCE((SELECT COUNT(*) FROM public.absensi WHERE karyawan_id = k.id), 0) +
-            COALESCE((SELECT COUNT(*) FROM public.kasbon WHERE karyawan_id = k.id OR disetujui_oleh = u.id), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.kasbon WHERE karyawan_id = k.id), 0) +
             COALESCE((SELECT COUNT(*) FROM public.penarikan_gaji WHERE karyawan_id = k.id), 0) +
             COALESCE((SELECT COUNT(*) FROM public.rincian_penggajian WHERE karyawan_id = k.id), 0) +
             COALESCE((SELECT COUNT(*) FROM public.transaksi_tabungan WHERE karyawan_id = k.id), 0) +
