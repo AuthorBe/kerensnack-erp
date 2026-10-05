@@ -473,7 +473,10 @@ if ($isCli) {
             --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
 
         body {
             font-family: var(--font-mono);
@@ -482,6 +485,8 @@ if ($isCli) {
             min-height: 100vh;
             padding: 30px 20px;
             line-height: 1.5;
+            max-width: 100%;
+            overflow-x: hidden;
             background-image: 
                 radial-gradient(ellipse at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 65%),
                 linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
@@ -517,6 +522,7 @@ if ($isCli) {
         .container {
             max-width: 960px;
             margin: 0 auto;
+            width: 100%;
         }
 
         /* Top Command Bar */
@@ -537,12 +543,14 @@ if ($isCli) {
             display: flex;
             align-items: center;
             gap: 12px;
+            min-width: 0;
         }
 
         .window-dots {
             display: flex;
             align-items: center;
             gap: 6px;
+            flex-shrink: 0;
         }
 
         .dot {
@@ -557,6 +565,8 @@ if ($isCli) {
         .cmd-prompt {
             font-size: 12px;
             color: var(--text-dim);
+            min-width: 0;
+            word-break: break-all;
         }
         .cmd-prompt .path { color: var(--accent-cyan); font-weight: 600; }
         .cmd-prompt .branch { color: var(--accent-purple); }
@@ -565,6 +575,7 @@ if ($isCli) {
         .btn-group {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 8px;
         }
 
@@ -584,6 +595,7 @@ if ($isCli) {
             color: var(--text);
             transition: all 0.15s ease;
             user-select: none;
+            white-space: nowrap;
         }
         .btn:hover {
             background: var(--surface-hover);
@@ -652,6 +664,8 @@ if ($isCli) {
             display: flex;
             align-items: center;
             gap: 14px;
+            min-width: 0;
+            flex: 1 1 280px;
         }
 
         .status-indicator {
@@ -661,6 +675,7 @@ if ($isCli) {
             background: <?= $isAllPass ? 'var(--accent-green)' : 'var(--accent-red)' ?>;
             box-shadow: 0 0 12px <?= $isAllPass ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)' ?>;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
 
         @keyframes pulseGlow {
@@ -687,6 +702,10 @@ if ($isCli) {
             font-size: 11px;
             color: var(--text-muted);
             margin-top: 3px;
+            word-break: break-word;
+        }
+        .status-sub code {
+            word-break: break-all;
         }
 
         .status-tag {
@@ -700,6 +719,7 @@ if ($isCli) {
             color: <?= $isAllPass ? 'var(--accent-green)' : 'var(--accent-red)' ?>;
             border: 1px solid <?= $isAllPass ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)' ?>;
             transition: all 0.2s ease;
+            white-space: nowrap;
         }
 
         .status-tag.is-running {
@@ -716,23 +736,14 @@ if ($isCli) {
             margin-bottom: 18px;
         }
 
-        @media (max-width: 820px) {
-            .metrics-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        @media (max-width: 480px) {
-            .metrics-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
         .metric-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 14px;
             transition: border-color 0.15s ease;
+            min-width: 0;
+            overflow: hidden;
         }
         .metric-card:hover {
             border-color: var(--border-highlight);
@@ -747,6 +758,7 @@ if ($isCli) {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 4px;
         }
 
         .metric-value {
@@ -784,6 +796,8 @@ if ($isCli) {
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            flex-wrap: wrap;
+            gap: 6px;
         }
 
         .checklist {
@@ -834,6 +848,8 @@ if ($isCli) {
 
         .check-content {
             flex: 1;
+            min-width: 0;
+            word-break: break-word;
         }
         .check-title {
             font-size: 12px;
@@ -844,6 +860,7 @@ if ($isCli) {
             font-size: 11px;
             color: var(--text-dim);
             margin-top: 2px;
+            word-break: break-word;
         }
 
         /* Key-Value Telemetry Table */
@@ -867,6 +884,7 @@ if ($isCli) {
         .env-val {
             color: #e2e8f0;
             font-family: inherit;
+            word-break: break-all;
         }
         .env-val code {
             color: var(--accent-cyan);
@@ -895,6 +913,115 @@ if ($isCli) {
             padding: 1px 4px;
             border-radius: 3px;
             color: #94a3b8;
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 820px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 14px 10px;
+            }
+            .cmd-bar {
+                padding: 10px 12px;
+                gap: 10px;
+            }
+            .cmd-left {
+                width: 100%;
+            }
+            .cmd-prompt {
+                font-size: 11px;
+            }
+            .btn-group {
+                width: 100%;
+                gap: 6px;
+            }
+            .btn {
+                flex: 1 1 calc(50% - 6px);
+                justify-content: center;
+                padding: 7px 8px;
+                font-size: 10px;
+                text-align: center;
+            }
+            .btn:last-child {
+                flex: 1 1 100%;
+            }
+            .status-hero {
+                padding: 14px;
+                gap: 12px;
+            }
+            .status-info {
+                gap: 10px;
+            }
+            .status-headline {
+                font-size: 12px;
+            }
+            .status-sub {
+                font-size: 10px;
+                line-height: 1.4;
+            }
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            .metric-card {
+                padding: 10px 12px;
+            }
+            .metric-label {
+                font-size: 9px;
+            }
+            .metric-value {
+                font-size: 15px;
+                margin-top: 4px;
+            }
+            .metric-meta {
+                font-size: 9px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .panel-header {
+                padding: 9px 12px;
+                font-size: 10px;
+            }
+            .check-item {
+                padding: 10px 12px;
+                gap: 10px;
+            }
+            .check-title {
+                font-size: 11px;
+            }
+            .check-detail {
+                font-size: 10px;
+            }
+            .env-table td {
+                padding: 8px 10px;
+                font-size: 10px;
+            }
+            .env-key {
+                width: 110px;
+                font-size: 9.5px;
+            }
+            .footer {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                gap: 6px;
+                font-size: 9px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            .btn {
+                flex: 1 1 100%;
+            }
         }
     </style>
 </head>
@@ -946,7 +1073,7 @@ if ($isCli) {
                         </div>
                     </div>
                 </div>
-                <div style="display:flex;align-items:center;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     <span class="status-tag" style="background:<?= $isLocal ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' ?>;color:<?= $isLocal ? 'var(--accent-green)' : 'var(--accent-red)' ?>;border-color:<?= $isLocal ? 'var(--accent-green)' : 'var(--accent-red)' ?>;">
                         <?= $isLocal ? '🟢 LOCAL DB' : '🔴 LIVE SUPABASE' ?>
                     </span>
