@@ -556,9 +556,9 @@ use App\Core\Auth;
             margin-top: 10px;
             background: #06080e;
             border: 1px solid #1e293b;
-            border-radius: 6px;
+            border-radius: 8px;
             padding: 10px 12px;
-            font-size: 10.5px;
+            font-size: 11px;
             line-height: 1.5;
             color: #cbd5e1;
             position: relative;
@@ -567,19 +567,181 @@ use App\Core\Auth;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding-bottom: 6px;
-            margin-bottom: 6px;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
             border-bottom: 1px solid #1e293b;
-            font-size: 10px;
+            font-size: 10.5px;
             color: var(--text-muted);
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .log-header-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .log-pre {
             white-space: pre-wrap;
             word-break: break-word;
-            max-height: 240px;
+            max-height: 320px;
             overflow-y: auto;
+            overflow-x: auto;
             color: #e2e8f0;
             font-family: inherit;
+            font-size: 11px;
+            line-height: 1.5;
+            padding: 2px 0;
+        }
+
+        /* Copy Button State */
+        .btn-copy-log {
+            background: #1e293b;
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        .btn-copy-log:hover {
+            background: #334155;
+            color: #fff;
+        }
+        .btn-copy-log.btn-copy-success {
+            background: rgba(16, 185, 129, 0.15) !important;
+            color: #34d399 !important;
+            border-color: rgba(16, 185, 129, 0.4) !important;
+        }
+
+        /* Small Screen & Mobile Optimization (< 680px) */
+        @media (max-width: 680px) {
+            .check-item {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                grid-template-areas: 
+                    "badge actions"
+                    "content content";
+                gap: 8px 10px;
+                padding: 12px 14px;
+            }
+            .check-badge-col {
+                grid-area: badge;
+                align-self: center;
+            }
+            .check-actions {
+                grid-area: actions;
+                justify-self: end;
+                align-self: center;
+            }
+            .check-content {
+                grid-area: content;
+                width: 100%;
+                min-width: 0;
+            }
+            .check-header {
+                gap: 6px;
+            }
+            .log-box {
+                margin-top: 10px;
+                padding: 10px 12px;
+                background: #04060b;
+                border: 1px solid #1e293b;
+                border-radius: 8px;
+            }
+            .log-header {
+                font-size: 10px;
+            }
+            .log-pre {
+                max-height: 380px;
+                font-size: 11px;
+                line-height: 1.5;
+                white-space: pre-wrap;
+                word-break: break-word;
+                overflow-x: auto;
+            }
+        }
+
+        /* Toast Notifications (Antigravity Clean Dark UI) */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 999999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 400px;
+            width: calc(100% - 40px);
+            pointer-events: none;
+        }
+        @media (max-width: 640px) {
+            .toast-container {
+                top: 14px;
+                right: 14px;
+                left: 14px;
+                width: auto;
+                max-width: none;
+            }
+        }
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 14px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+            font-size: 11.5px;
+            color: #f1f5f9;
+            pointer-events: auto;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            animation: toastSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .toast-success {
+            border-color: rgba(16, 185, 129, 0.45);
+            background: #062b1e;
+            color: #6ee7b7;
+        }
+        .toast-error {
+            border-color: rgba(239, 68, 68, 0.45);
+            background: #360c0c;
+            color: #fca5a5;
+        }
+        .toast-info {
+            border-color: rgba(56, 189, 248, 0.45);
+            background: #08283b;
+            color: #7dd3fc;
+        }
+        .toast-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+        .toast-msg {
+            flex: 1;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+        .toast-close {
+            background: none;
+            border: none;
+            color: inherit;
+            opacity: 0.6;
+            cursor: pointer;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.15s ease;
+        }
+        .toast-close:hover { opacity: 1; }
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         /* Footer */
@@ -905,7 +1067,7 @@ use App\Core\Auth;
                 <template x-for="suite in filteredSuites" :key="suite.key">
                     <li class="check-item">
                         <!-- Status Badge -->
-                        <div>
+                        <div class="check-badge-col">
                             <template x-if="suite.status === 'READY'">
                                 <span class="badge-status badge-ready">WAIT</span>
                             </template>
@@ -939,9 +1101,22 @@ use App\Core\Auth;
                             <template x-if="isLogExpanded(suite.key) && suite.output">
                                 <div class="log-box">
                                     <div class="log-header">
-                                        <span>TERMINAL LOG OUTPUT &bull; <span x-text="suite.file"></span></span>
-                                        <button type="button" @click="copyLog(suite.output)" class="btn btn-sm" style="background:#1e293b;color:#cbd5e1;border:none;">
-                                            Copy Log
+                                        <div class="log-header-title">
+                                            <span>TERMINAL LOG OUTPUT &bull; <span x-text="suite.file"></span></span>
+                                        </div>
+                                        <button type="button" @click="copyLog(suite.output, suite.key)" class="btn btn-sm btn-copy-log" :class="copiedKey === suite.key ? 'btn-copy-success' : ''" :title="'Salin log ' + suite.file">
+                                            <template x-if="copiedKey === suite.key">
+                                                <span style="display:inline-flex;align-items:center;gap:4px;">
+                                                    <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    <span>Tersalin!</span>
+                                                </span>
+                                            </template>
+                                            <template x-if="copiedKey !== suite.key">
+                                                <span style="display:inline-flex;align-items:center;gap:4px;">
+                                                    <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+                                                    <span>Copy Log</span>
+                                                </span>
+                                            </template>
                                         </button>
                                     </div>
                                     <pre class="log-pre" x-text="suite.output"></pre>
@@ -1003,6 +1178,7 @@ use App\Core\Auth;
             activeCategory: 'all',
             searchQuery: '',
             expandedLogs: [],
+            copiedKey: null,
             totalDuration: 0,
 
             // ── Cooldown state (diinisiasi dari PHP saat halaman dimuat) ──
@@ -1258,11 +1434,48 @@ use App\Core\Auth;
             isLogExpanded(key) {
                 return this.expandedLogs.includes(key);
             },
-            copyLog(text) {
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(text).then(() => {
-                        alert('Terminal log copied to clipboard!');
-                    });
+            copyLog(text, suiteKey) {
+                if (!text) return;
+                const onSuccess = () => {
+                    if (suiteKey) {
+                        this.copiedKey = suiteKey;
+                        setTimeout(() => {
+                            if (this.copiedKey === suiteKey) this.copiedKey = null;
+                        }, 2000);
+                    }
+                    if (window.toast && typeof window.toast.success === 'function') {
+                        window.toast.success('Terminal log copied to clipboard!');
+                    } else if (typeof window.showToast === 'function') {
+                        window.showToast('Terminal log copied to clipboard!', 'success');
+                    }
+                };
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text)
+                        .then(onSuccess)
+                        .catch(() => this.fallbackCopyText(text, onSuccess));
+                } else {
+                    this.fallbackCopyText(text, onSuccess);
+                }
+            },
+            fallbackCopyText(text, cb) {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    const successful = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    if (successful && cb) {
+                        cb();
+                    } else if (!successful && window.toast) {
+                        window.toast.error('Gagal menyalin log ke clipboard');
+                    }
+                } catch (e) {
+                    if (window.toast) window.toast.error('Gagal menyalin log');
                 }
             },
 
@@ -1389,6 +1602,65 @@ use App\Core\Auth;
             }
         };
     }
+    </script>
+
+    <!-- Global Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+    /**
+     * Toast Notification Engine for Developer Console
+     */
+    window.showToast = function(message, type = 'info', duration = 3500) {
+        var container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'toast-container';
+            document.body.appendChild(container);
+        }
+
+        var normalizedType = (type === 'danger' || type === 'error') ? 'error' : type;
+        var svgs = {
+            success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>',
+            error:   '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path></svg>',
+            warning: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>',
+            info:    '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>'
+        };
+
+        var toastEl = document.createElement('div');
+        toastEl.className = 'toast toast-' + normalizedType;
+        toastEl.innerHTML = (svgs[normalizedType] || svgs.info) + 
+            '<span class="toast-msg">' + message + '</span>' +
+            '<button type="button" class="toast-close" onclick="this.closest(\'.toast\').remove()" aria-label="Tutup">' +
+                '<svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                    '<line x1="18" y1="6" x2="6" y2="18"></line>' +
+                    '<line x1="6" y1="6" x2="18" y2="18"></line>' +
+                '</svg>' +
+            '</button>';
+
+        container.appendChild(toastEl);
+
+        if (duration > 0) {
+            setTimeout(function() {
+                if (toastEl.parentNode) {
+                    toastEl.style.opacity = '0';
+                    toastEl.style.transform = 'translateY(-8px) scale(0.96)';
+                    toastEl.style.transition = 'all 0.18s ease';
+                    setTimeout(function() {
+                        if (toastEl.parentNode) toastEl.remove();
+                    }, 180);
+                }
+            }, duration);
+        }
+    };
+
+    window.toast = {
+        success: function(msg, dur) { window.showToast(msg, 'success', dur || 3500); },
+        error:   function(msg, dur) { window.showToast(msg, 'error', dur || 4500); },
+        warning: function(msg, dur) { window.showToast(msg, 'warning', dur || 4000); },
+        info:    function(msg, dur) { window.showToast(msg, 'info', dur || 3500); }
+    };
     </script>
 </body>
 </html>
