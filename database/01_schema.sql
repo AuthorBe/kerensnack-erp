@@ -938,6 +938,17 @@ CREATE INDEX IF NOT EXISTS idx_produksi_harian_penggajian_id ON public.produksi_
 CREATE INDEX IF NOT EXISTS idx_penarikan_gaji_penggajian_id ON public.penarikan_gaji(penggajian_id) WHERE penggajian_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_penarikan_gaji_karyawan_tanggal ON public.penarikan_gaji(karyawan_id, tanggal);
 
+-- ------------------------------------------------------------------------------
+-- 35. TABEL PELACAK RIWAYAT MIGRASI SISTEM (SCHEMA MIGRATIONS)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.schema_migrations (
+    version VARCHAR(255) PRIMARY KEY,
+    migrated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    batch INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS idx_schema_migrations_version ON public.schema_migrations(version);
+CREATE INDEX IF NOT EXISTS idx_schema_migrations_batch ON public.schema_migrations(batch);
+
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) & SERVICE ROLE POLICIES
 -- ==============================================================================
@@ -1007,3 +1018,8 @@ CREATE POLICY service_role_all_opname_gudang ON public.opname_gudang FOR ALL TO 
 CREATE POLICY service_role_all_opname_gudang_item ON public.opname_gudang_item FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_gplm ON public.grup_pelanggan_level_merek FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_pemasok_item ON public.pemasok_item FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Keamanan & Hak Akses schema_migrations
+REVOKE ALL ON public.schema_migrations FROM PUBLIC, anon;
+GRANT SELECT ON public.schema_migrations TO authenticated;
+GRANT ALL ON public.schema_migrations TO postgres, service_role;

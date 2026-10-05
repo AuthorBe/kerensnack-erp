@@ -48,7 +48,8 @@ class DatabaseManagerService
         'kategori_biaya',
         'pengaturan_sistem',
         'tabungan',
-        'stok_konsinyasi_toko'
+        'stok_konsinyasi_toko',
+        'schema_migrations'
     ];
 
     /**
