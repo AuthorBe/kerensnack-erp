@@ -8,9 +8,14 @@ description: >-
 
 # Database Schema, Supabase Permissions & Replication
 
-## 1. Official Migrations
-- Every change to tables, indexes, views, RPC functions, or constraints **must** have a sequentially numbered migration file in `database/migrations/`, formatted as `XX_migration_description.sql` (always verify the highest current migration number first).
+## 1. Official Migrations & Dual-Database Execution Protocol
+- Every change to tables, indexes, views, RPC functions, constraints, or official system master entities **must** have a sequentially numbered migration file in `database/migrations/`, formatted as `XX_migration_description.sql` (always verify the highest current migration number first).
 - Every migration **must be atomic**: wrapped within `BEGIN; ... COMMIT;`.
+- **MANDATORY DUAL-DATABASE APPLICATION**:
+  Because Live-to-Local sync (`Supabase -> Local`) is authoritative and wipes local public data, **NEVER apply migrations/fixes to only one database**:
+  1. Any migration or system master fix must be executed on **BOTH** databases: Live Cloud Supabase (`.env.live`) AND Local PostgreSQL (`.env` / `kerensnack_erp_local`).
+  2. If a migration is only run on Local DB, the very next sync from Supabase will wipe the changes and revert the database.
+  3. Never assume updating `.env` alone is sufficient; always execute the migration on Supabase Live as well (or apply to Supabase Live and then run sync).
 
 ## 2. Canonical Schema Synchronization (Single Source of Truth)
 - `database/01_schema.sql` and `database/02_triggers_and_rpc.sql` **must** be synchronized with the latest schema state whenever creating or modifying migrations.

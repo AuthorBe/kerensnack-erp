@@ -28,6 +28,13 @@ Skills hold the complete rules (testing, schema/permissions/replication, UI/UX) 
 
 ## 4. Core Database Rules
 - Every structural change (table, index, view, RPC, constraint) requires a numbered migration file `database/migrations/XX_description.sql` wrapped in `BEGIN; ... COMMIT;`.
+- **Mandatory Dual-Database Execution (Supabase Live & Local)**:
+  Any official migration, schema fix, RPC update, or permanent system master entity (e.g. system customers, routes, settings) **MUST NEVER be applied to only one database**.
+  Because Live-to-Local sync (`Supabase -> Local`) is authoritative and overwrites local data, any fix applied only locally will be **wiped out** on the next sync.
+  Whenever executing database migrations/fixes:
+  1. The migration/fix **MUST be executed on BOTH databases**: Cloud Supabase (Live) AND Local PostgreSQL (`kerensnack_erp_local`).
+  2. Always verify that both `.env` (Local) and `.env.live` (Supabase) reflect the migration/fix, or run the migration on Supabase and sync down to Local.
+  3. Never leave either database behind in an out-of-sync or half-migrated state.
 - Always keep `database/01_schema.sql` & `database/02_triggers_and_rpc.sql` in sync (Single Source of Truth); avoid PostgreSQL 15+ features (e.g. `security_invoker`) in canonical DDL.
 - `SECURITY DEFINER` functions must `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` and `GRANT EXECUTE ... TO postgres, service_role`.
 - Replication: master data 100% complete; transactions/logs use a 14-day sliding window. New master tables must be registered in `App\Services\DatabaseManagerService::MASTER_TABLES`; new transaction tables must provide standard timestamp columns (`created_at`, `dibuat_pada`, `tanggal_*`). Large datasets or batch runs via CLI: `php bin/sync_db.php --mode=14d|full` or 1-click `bin\sync-db-from-live.bat`.
