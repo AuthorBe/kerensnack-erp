@@ -1,8 +1,10 @@
 <?php
 use App\Core\Router;
 use App\Helpers\CompanySetting;
+use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -29,7 +31,7 @@ $comp = CompanySetting::getAll();
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Helvetica', 'Arial', sans-serif;
         }
         body {
             background: #f8fafc;
@@ -57,7 +59,8 @@ $comp = CompanySetting::getAll();
             font-size: 20px;
             font-weight: 900;
             color: #0f172a;
-            letter-spacing: -0.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .doc-title {
             font-size: 13px;
@@ -94,7 +97,7 @@ $comp = CompanySetting::getAll();
             line-height: 1.4;
         }
         .po-number {
-            font-family: monospace;
+            font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;
             font-size: 15px;
             font-weight: 800;
             color: #2563eb;
@@ -129,7 +132,7 @@ $comp = CompanySetting::getAll();
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .font-mono { font-family: monospace; }
+        .font-mono { font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums; }
         .font-bold { font-weight: 700; }
 
         .note-box {
@@ -174,11 +177,22 @@ $comp = CompanySetting::getAll();
     <!-- HEADER -->
     <table class="header-table">
         <tr>
-            <td style="border: none; padding: 0; vertical-align: top;">
-                <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
-                <div class="doc-title">DAFTAR ITEM PESANAN (PO)</div>
+            <td style="border: none; padding: 0; vertical-align: middle;">
+                <table style="border-collapse: collapse; border: none; margin: 0; padding: 0;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 55px; vertical-align: middle; padding-right: 12px; border: none;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 46px; max-width: 55px; object-fit: contain; display: block;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="border: none; padding: 0; vertical-align: middle;">
+                            <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
+                            <div class="doc-title">DAFTAR ITEM PESANAN (PO)</div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="border: none; padding: 0; vertical-align: top; text-align: right;">
+            <td style="border: none; padding: 0; vertical-align: middle; text-align: right;">
                 <div class="po-number"><?= htmlspecialchars($order['nomor_nota']) ?></div>
                 <div class="po-date">Tgl Pesanan: <?= date('d/m/Y', strtotime($order['tanggal_pesanan'] ?? $order['dibuat_pada'])) ?></div>
             </td>
@@ -236,7 +250,7 @@ $comp = CompanySetting::getAll();
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($it['barcode'])): ?>
-                    <div style="font-size: 10.5px; color: #64748b; font-family: monospace; margin-top: 1px;">Barcode: <?= htmlspecialchars($it['barcode']) ?></div>
+                    <div style="font-size: 10.5px; color: #64748b; font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums; margin-top: 1px;">Barcode: <?= htmlspecialchars($it['barcode']) ?></div>
                     <?php endif; ?>
                 </td>
                 <td class="text-center font-bold" style="font-size: 13.5px; color: #1e3a8a;">

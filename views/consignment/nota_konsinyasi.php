@@ -5,6 +5,7 @@ use App\Helpers\CompanySetting;
 use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 
 $totalLakuRp = (float)($visit['total_laku_nominal'] ?? 0);
 $totalQtyKirimLalu = (int)array_sum(array_column($details, 'stok_titip_awal'));
@@ -61,12 +62,12 @@ ob_start();
 /* ========================================================================= */
 
 /* Styling Standar A4 / Laser / PDF */
-.nusantara-header-table { width: 100%; border-bottom: 2px solid #000000; padding-bottom: 8px; margin-bottom: 10px; }
-.nusantara-brand-name { font-size: 16pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000000; }
-.nusantara-brand-sub { font-size: 8.5pt; font-weight: bold; color: #333333; }
+.nusantara-header-table { width: 100%; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 10px; }
+.nusantara-brand-name { font-size: 16pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #0f172a; }
+.nusantara-brand-sub { font-size: 8.5pt; font-weight: bold; color: #475569; }
 .nusantara-title-box { text-align: right; }
 .nusantara-title-text { font-size: 11pt; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: #000000; }
-.nusantara-no-box { font-size: 10.5pt; font-weight: 800; font-family: var(--font-mono, monospace); margin-top: 3px; }
+.nusantara-no-box { font-size: 10.5pt; font-weight: 800; font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums; margin-top: 3px; }
 
 .nusantara-meta-table { width: 100%; margin-bottom: 10px; font-size: 8.5pt; }
 .nusantara-meta-table td { padding: 2px 0; vertical-align: top; }
@@ -88,7 +89,7 @@ ob_start();
 
 /* Styling Khusus Printer Dot Matrix (Continuous 9.5"x11" Full / 9.5"x5.5" Half) */
 .dm-nusantara-wrapper {
-    font-family: var(--font-mono, 'Courier New', Courier, monospace);
+    font-family: 'Courier New', Courier, monospace;
     font-size: 8pt;
     line-height: 1.25;
     color: #000000;
@@ -97,7 +98,7 @@ ob_start();
     width: 100%;
     border-collapse: collapse;
     font-size: 7.5pt;
-    font-family: var(--font-mono, 'Courier New', Courier, monospace);
+    font-family: 'Courier New', Courier, monospace;
 }
 .dm-nusantara-table th, .dm-nusantara-table td {
     padding: 3px 4px;
@@ -113,14 +114,25 @@ ob_start();
     <!-- HEADER RESMI SESUAI NOTA NUSANTARA -->
     <table class="nusantara-header-table">
         <tr>
-            <td style="width: 55%; vertical-align: top;">
-                <div class="nusantara-brand-name"><?= htmlspecialchars($visit['nama_toko']) ?></div>
-                <div class="nusantara-brand-sub">SNACK &amp; KUE BASAH TRADISIONAL</div>
-                <div style="font-size: 7.5pt; color: #475569; margin-top: 2px;">
-                    <?= htmlspecialchars($visit['alamat_lengkap'] ?? '-') ?> &bull; Telp/WA: <?= htmlspecialchars($visit['nomor_whatsapp'] ?: ($visit['nomor_telepon'] ?: '-')) ?>
-                </div>
+            <td style="width: 58%; vertical-align: middle;">
+                <table style="width: 100%; border-collapse: collapse; border: none;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 56px; vertical-align: middle; padding-right: 12px; border: none;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 48px; max-width: 56px; object-fit: contain; display: block;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="vertical-align: middle; border: none; padding: 0;">
+                            <div class="nusantara-brand-name"><?= htmlspecialchars($visit['nama_toko']) ?></div>
+                            <div class="nusantara-brand-sub">SNACK &amp; KUE BASAH TRADISIONAL</div>
+                            <div style="font-size: 7.5pt; color: #475569; margin-top: 2px;">
+                                <?= htmlspecialchars($visit['alamat_lengkap'] ?? '-') ?> &bull; Telp/WA: <?= htmlspecialchars($visit['nomor_whatsapp'] ?: ($visit['nomor_telepon'] ?: '-')) ?>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="width: 45%; vertical-align: top;" class="nusantara-title-box">
+            <td style="width: 42%; vertical-align: middle;" class="nusantara-title-box">
                 <div class="nusantara-title-text"><?= $docMainTitle ?></div>
                 <div class="nusantara-no-box">NO. <?= htmlspecialchars($docIdentifier) ?></div>
                 <div style="font-size: 8pt; font-weight: 700; margin-top: 3px;">
@@ -179,7 +191,7 @@ ob_start();
                     <div style="font-weight: 800; font-size: 8.5pt; color: #0f172a;">
                         <?= htmlspecialchars($d['nama_item'] ?? $d['nama_grup']) ?>
                         <?php if (!empty($barcode)): ?>
-                            <span style="font-size: 7pt; color: #475569; font-weight: 600; font-family: var(--font-mono, monospace);">[<?= htmlspecialchars($barcode) ?>]</span>
+                            <span style="font-size: 7pt; color: #475569; font-weight: 600; font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;">[<?= htmlspecialchars($barcode) ?>]</span>
                         <?php endif; ?>
                     </div>
                 </td>
@@ -213,7 +225,7 @@ ob_start();
             <td style="width: 58%; vertical-align: top; padding-right: 15px;">
                 <div class="nusantara-slogan">Meraih Kebarokahan Bersama Snack &amp; Kue Basah Tradisional</div>
                 <div style="margin-top: 6px; font-size: 7.5pt; font-style: italic; color: #334155; border: 1px dashed #cbd5e1; padding: 6px; border-radius: 4px;">
-                    Terbilang: # <?= Format::terbilang($totalLakuRp) ?> #<br>
+                    Terbilang: <?= Format::terbilang($totalLakuRp) ?><br>
                     <?php if (!empty($visit['catatan'])): ?>
                     Catatan Kunjungan: <?= htmlspecialchars($visit['catatan']) ?><br>
                     <?php endif; ?>
@@ -281,12 +293,23 @@ ob_start();
         <!-- HEADER DOT MATRIX -->
         <table style="width: 100%; border-bottom: 1px solid #000000; padding-bottom: 4px; margin-bottom: 6px;">
             <tr>
-                <td style="width: 55%; vertical-align: top;">
-                    <div style="font-size: 11pt; font-weight: bold;"><?= htmlspecialchars($visit['nama_toko']) ?></div>
-                    <div style="font-size: 7pt; font-weight: bold;">SNACK &amp; KUE BASAH TRADISIONAL</div>
-                    <div style="font-size: 6.5pt;"><?= htmlspecialchars($visit['alamat_lengkap'] ?? '-') ?></div>
+                <td style="width: 55%; vertical-align: middle;">
+                    <table style="width: 100%; border-collapse: collapse; border: none;">
+                        <tr>
+                            <?php if (!empty($logoSrc)): ?>
+                            <td style="width: 64px; vertical-align: middle; padding-right: 10px; border: none;">
+                                <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 54px; max-width: 64px; object-fit: contain; filter: grayscale(100%); display: block;">
+                            </td>
+                            <?php endif; ?>
+                            <td style="vertical-align: middle; border: none; padding: 0;">
+                                <div style="font-size: 11pt; font-weight: bold;"><?= htmlspecialchars($visit['nama_toko']) ?></div>
+                                <div style="font-size: 7pt; font-weight: bold;">SNACK &amp; KUE BASAH TRADISIONAL</div>
+                                <div style="font-size: 6.5pt;"><?= htmlspecialchars($visit['alamat_lengkap'] ?? '-') ?></div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td style="width: 45%; vertical-align: top; text-align: right;">
+                <td style="width: 45%; vertical-align: middle; text-align: right;">
                     <div style="font-size: 8.5pt; font-weight: bold; text-transform: uppercase;">NOTA KHUSUS SUPPLIER TOKO</div>
                     <div style="font-size: 8pt; font-weight: bold;">NO. <?= htmlspecialchars($docIdentifier) ?></div>
                     <div style="font-size: 7pt;">Tgl: <?= date('d.m.y', strtotime($visit['tanggal_kunjungan'])) ?></div>

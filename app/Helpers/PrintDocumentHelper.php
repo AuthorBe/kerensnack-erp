@@ -164,4 +164,54 @@ class PrintDocumentHelper
         $filename = trim("{$cleanName}{$suffix}") . '.pdf';
         PdfExport::stream($html, $filename, $config['paper'], $config['orientation']);
     }
+
+    /**
+     * Mengambil URL atau Data URI Base64 logo resmi perusahaan untuk disematkan pada dokumen cetak & PDF.
+     * Menggunakan Base64 Data URI saat berkas lokal ditemukan agar kompatibel 100% dengan Dompdf & cetak browser.
+     *
+     * @param array<string, string>|null $comp Hasil dari CompanySetting::getAll()
+     * @param bool $allowFallback Jika true, gunakan icon brand default saat logo kustom belum diunggah
+     * @return string Data URI base64 atau string URL logo (kosong jika tidak ditemukan)
+     */
+    public static function getLogoSrc(?array $comp = null, bool $allowFallback = true): string
+    {
+        $comp = $comp ?? CompanySetting::getAll();
+        $raw = trim((string)($comp['logo_url'] ?? ''));
+        $appRoot = defined('APP_ROOT') ? APP_ROOT : (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2));
+
+        if ($raw !== '') {
+            if (str_starts_with($raw, 'data:')) {
+                return $raw;
+            }
+            $cleanPath = ltrim(parse_url($raw, PHP_URL_PATH) ?: $raw, '/');
+            $local = $appRoot . '/public/' . $cleanPath;
+            if (is_file($local)) {
+                $ext = strtolower(pathinfo($local, PATHINFO_EXTENSION));
+                $mime = match ($ext) {
+                    'png' => 'image/png',
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'svg' => 'image/svg+xml',
+                    'webp' => 'image/webp',
+                    default => 'image/png',
+                };
+                $content = @file_get_contents($local);
+                if ($content !== false && $content !== '') {
+                    return 'data:' . $mime . ';base64,' . base64_encode($content);
+                }
+            }
+            return $raw;
+        }
+
+        if ($allowFallback) {
+            $fallback = $appRoot . '/public/assets/favicon/apple-touch-icon.png';
+            if (is_file($fallback)) {
+                $content = @file_get_contents($fallback);
+                if ($content !== false && $content !== '') {
+                    return 'data:image/png;base64,' . base64_encode($content);
+                }
+            }
+        }
+
+        return '';
+    }
 }

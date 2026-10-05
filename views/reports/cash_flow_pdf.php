@@ -5,6 +5,7 @@ use App\Helpers\PrintDocumentHelper;
 use App\Core\Auth;
 
 $comp = $company ?? CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 $startDateStr = date('d F Y', strtotime($startDate ?? date('Y-m-01')));
 $endDateStr = date('d F Y', strtotime($endDate ?? date('Y-m-d')));
 
@@ -45,7 +46,7 @@ $outflowBreakdown = $outflowBreakdown ?? $kategoriKeluar ?? [];
         .uppercase { text-transform: uppercase; }
 
         .kop-table { width: 100%; margin-bottom: 4px; }
-        .company-name { font-size: 14pt; font-weight: bold; color: #059669; letter-spacing: 0.3px; margin-bottom: 2px; }
+        .company-name { font-size: 14pt; font-weight: 800; text-transform: uppercase; color: #0f172a; letter-spacing: 0.5px; margin-bottom: 2px; }
         .company-tagline { font-size: 8pt; font-weight: bold; color: #475569; margin-bottom: 2px; }
         .company-contact { font-size: 7pt; color: #64748b; line-height: 1.3; }
 
@@ -140,12 +141,23 @@ $outflowBreakdown = $outflowBreakdown ?? $kategoriKeluar ?? [];
     <table class="kop-table">
         <tr>
             <td style="width: 55%; vertical-align: top;">
-                <div class="company-name"><?= htmlspecialchars($comp['nama'] ?? 'KEREN SNACK INDONESIA') ?></div>
-                <div class="company-tagline"><?= htmlspecialchars($comp['tagline'] ?? 'Produsen & Distributor Aneka Makanan Ringan') ?></div>
-                <div class="company-contact">
-                    <?= htmlspecialchars($comp['alamat'] ?? 'Jl. Industri Snack No. 88, Jawa Barat') ?><br>
-                    <?= PrintDocumentHelper::formatContactLine($comp, ' | ') ?>
-                </div>
+                <table style="width: auto; border-collapse: collapse;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 50px; vertical-align: middle; padding-right: 12px;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 44px; max-width: 50px; object-fit: contain;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="vertical-align: middle;">
+                            <div class="company-name"><?= htmlspecialchars($comp['nama'] ?? 'KEREN SNACK INDONESIA') ?></div>
+                            <div class="company-tagline"><?= htmlspecialchars($comp['tagline'] ?? 'Produsen & Distributor Aneka Makanan Ringan') ?></div>
+                            <div class="company-contact">
+                                <?= htmlspecialchars($comp['alamat'] ?? 'Jl. Industri Snack No. 88, Jawa Barat') ?><br>
+                                <?= PrintDocumentHelper::formatContactLine($comp, ' | ') ?>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </td>
             <td style="width: 45%; vertical-align: top; text-align: right;">
                 <div class="doc-title-main">LAPORAN ARUS KAS (CASH FLOW)</div>

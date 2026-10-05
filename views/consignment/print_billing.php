@@ -5,6 +5,7 @@ use App\Helpers\CompanySetting;
 use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -25,9 +26,6 @@ $comp = CompanySetting::getAll();
     <link rel="icon" type="image/png" sizes="96x96" href="<?= Router::asset('/favicon/favicon-96x96.png') ?>">
     <link rel="apple-touch-icon" sizes="180x180" href="<?= Router::asset('/favicon/apple-touch-icon.png') ?>">
     <link rel="manifest" href="<?= Router::asset('/favicon/site.webmanifest') ?>">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -35,7 +33,7 @@ $comp = CompanySetting::getAll();
             padding: 0;
         }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Helvetica', 'Arial', sans-serif;
             background: #f1f5f9;
             color: #0f172a;
             padding: 24px;
@@ -62,8 +60,8 @@ $comp = CompanySetting::getAll();
         .brand-title {
             font-size: 22px;
             font-weight: 900;
-            color: #e11d48;
-            letter-spacing: -0.02em;
+            color: #0f172a;
+            letter-spacing: 0.02em;
             text-transform: uppercase;
         }
         .brand-subtitle {
@@ -135,7 +133,7 @@ $comp = CompanySetting::getAll();
             background: #f8fafc;
         }
         .font-mono {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;
         }
         .text-right {
             text-align: right;
@@ -281,11 +279,16 @@ $comp = CompanySetting::getAll();
     <div class="invoice-card">
         <!-- HEADER -->
         <div class="invoice-header">
-            <div>
-                <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
-                <div class="brand-subtitle"><?= htmlspecialchars($comp['tagline']) ?></div>
-                <div style="font-size:11px;color:#64748b;margin-top:4px;">
-                    <?= htmlspecialchars($comp['alamat']) ?> • <?= PrintDocumentHelper::formatContactLine($comp, ' • ') ?>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <?php if (!empty($logoSrc)): ?>
+                <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 54px; max-width: 75px; object-fit: contain; display: block; flex-shrink: 0;">
+                <?php endif; ?>
+                <div>
+                    <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
+                    <div class="brand-subtitle"><?= htmlspecialchars($comp['tagline']) ?></div>
+                    <div style="font-size:11px;color:#64748b;margin-top:4px;">
+                        <?= htmlspecialchars($comp['alamat']) ?> • <?= PrintDocumentHelper::formatContactLine($comp, ' • ') ?>
+                    </div>
                 </div>
             </div>
             <div style="text-align:right;">

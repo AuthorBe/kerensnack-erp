@@ -861,9 +861,9 @@ class ReportHubController extends Controller
             $opnames = Database::fetchAll("
                 SELECT og.*, u.nama_lengkap as nama_petugas
                 FROM public.opname_gudang og
-                LEFT JOIN public.pengguna u ON og.petugas_id = u.id
-                WHERE og.tanggal_opname BETWEEN :start AND :end
-                ORDER BY og.tanggal_opname DESC, og.dibuat_pada DESC
+                LEFT JOIN public.pengguna u ON COALESCE(og.dibuat_oleh, og.petugas_id) = u.id
+                WHERE COALESCE(og.tanggal, og.tanggal_opname) BETWEEN :start AND :end
+                ORDER BY COALESCE(og.tanggal, og.tanggal_opname) DESC, og.dibuat_pada DESC
             ", ['start' => $startDate, 'end' => $endDate]);
 
             $headers = ['No', 'Nomor Dokumen Opname', 'Tanggal Audit', 'Petugas Pemeriksa', 'Total SKU Diperiksa', 'SKU Selisih', 'Total Nilai Selisih HPP (Rp)', 'Status', 'Keterangan'];
@@ -871,14 +871,14 @@ class ReportHubController extends Controller
             foreach ($opnames as $idx => $op) {
                 $rows[] = [
                     $idx + 1,
-                    $op['nomor_opname'],
-                    $op['tanggal_opname'],
+                    $op['nomor_dokumen'] ?? $op['nomor_opname'] ?? '-',
+                    $op['tanggal'] ?? $op['tanggal_opname'] ?? '-',
                     $op['nama_petugas'] ?? '-',
-                    (int)($op['total_sku_diperiksa'] ?? 0),
-                    (int)($op['total_sku_selisih'] ?? 0),
+                    (int)($op['total_item_dihitung'] ?? $op['total_sku_diperiksa'] ?? 0),
+                    (int)($op['total_item_selisih'] ?? $op['total_sku_selisih'] ?? 0),
                     (float)($op['total_nilai_selisih_rp'] ?? 0),
                     strtoupper((string)($op['status_opname'] ?? 'selesai')),
-                    $op['keterangan'] ?? '-'
+                    $op['catatan'] ?? $op['keterangan'] ?? '-'
                 ];
             }
 

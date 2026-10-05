@@ -821,9 +821,8 @@ class InventoryController extends Controller
 
             $cleanNomor = preg_replace('/[^A-Za-z0-9]/', ' ', (string)($opname['nomor_dokumen'] ?? ''));
             $cleanNomor = trim(preg_replace('/\s+/', ' ', $cleanNomor));
-            $dateFormatted = !empty($opname['tanggal_opname']) 
-                ? Format::tanggal($opname['tanggal_opname'], false, true) 
-                : Format::tanggal(date('Y-m-d'), false, true);
+            $tglVal = $opname['tanggal'] ?? $opname['tanggal_opname'] ?? date('Y-m-d');
+            $dateFormatted = Format::tanggal($tglVal, false, true);
             $filename = ($cleanNomor !== '' ? "Opname {$cleanNomor} ({$dateFormatted})" : "Opname ({$dateFormatted})") . ".pdf";
             PdfExport::download($html, $filename, 'A4', 'portrait');
         } catch (Throwable $e) {

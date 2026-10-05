@@ -5,6 +5,7 @@ use App\Helpers\CompanySetting;
 use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 $formatMode = $formatMode ?? PrintDocumentHelper::resolveFormat($_GET['format'] ?? 'standard');
 $isKonsinyasi = !empty($order['is_konsinyasi']) 
     || (($order['tipe_pembayaran'] ?? '') === 'konsinyasi') 
@@ -28,11 +29,11 @@ ob_start();
 <style>
 /* STYLING SPESIFIK DOKUMEN HYBRID (FAKTUR & SURAT JALAN GABUNGAN) A4 */
 .header-table { width: 100%; border-bottom: 2px solid #0f172a; padding-bottom: 14px; margin-bottom: 16px; }
-.company-name { font-size: 20px; font-weight: 900; color: #e11d48; letter-spacing: -0.5px; }
+.company-name { font-size: 20px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; }
 .company-sub { font-size: 11px; color: #64748b; line-height: 1.4; margin-top: 3px; }
 .invoice-title { text-align: right; font-size: 17px; font-weight: 900; color: #0f172a; letter-spacing: 0.5px; text-transform: uppercase; }
 .dual-ref-box { text-align: right; margin-top: 6px; font-size: 12px; }
-.dual-ref-line { font-family: monospace; font-weight: 700; color: #0f172a; }
+.dual-ref-line { font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums; font-weight: 700; color: #0f172a; }
 .dual-ref-nota { color: #0284c7; }
 .dual-ref-sj { color: #059669; }
 .meta-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 8px; font-size: 11.5px; }
@@ -41,7 +42,7 @@ ob_start();
 .items-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
 .items-table th { background: #f8fafc; color: #334155; font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 10px; border-bottom: 2px solid #cbd5e1; text-align: left; }
 .items-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 11.5px; }
-.font-mono { font-family: monospace; }
+.font-mono { font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums; }
 .terbilang-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 11.5px; }
 .summary-table { width: 100%; font-size: 11.5px; }
 .summary-table td { padding: 3px 0; }
@@ -55,15 +56,26 @@ ob_start();
     <!-- HEADER -->
     <table class="header-table">
         <tr>
-            <td style="vertical-align:top; width:54%;">
-                <div class="company-name"><?= htmlspecialchars($comp['nama']) ?></div>
-                <div class="company-sub">
-                    <?= htmlspecialchars($comp['tagline']) ?><br>
-                    <?= htmlspecialchars($comp['alamat']) ?><br>
-                    <?= PrintDocumentHelper::formatContactLine($comp, ' • ') ?>
-                </div>
+            <td style="vertical-align:middle; width:58%;">
+                <table style="width: 100%; border-collapse: collapse; border: none;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 70px; vertical-align: middle; padding-right: 14px; border: none;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 54px; max-width: 70px; object-fit: contain; display: block;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="vertical-align: middle; border: none; padding: 0;">
+                            <div class="company-name"><?= htmlspecialchars($comp['nama']) ?></div>
+                            <div class="company-sub">
+                                <?= htmlspecialchars($comp['tagline']) ?><br>
+                                <?= htmlspecialchars($comp['alamat']) ?><br>
+                                <?= PrintDocumentHelper::formatContactLine($comp, ' • ') ?>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="vertical-align:top; width:46%;">
+            <td style="vertical-align:middle; width:42%;">
                 <div class="invoice-title"><?= $docHeaderTitle ?></div>
                 <div class="dual-ref-box">
                     <div class="dual-ref-line">
@@ -216,12 +228,12 @@ ob_start();
                     <?php endif; ?>
                     <?php if (!empty($comp['nomor_rekening'])): ?>
                     <div style="margin-top:6px; font-size:10.5px; color:#334155; background:#f1f5f9; padding:5px 8px; border-radius:4px; border-left:3px solid #3b82f6;">
-                        Pembayaran Transfer: <strong><?= htmlspecialchars($comp['nama_bank']) ?></strong> Rek: <strong style="font-family:monospace;"><?= htmlspecialchars($comp['nomor_rekening']) ?></strong> a.n <strong><?= htmlspecialchars($comp['atas_nama_bank']) ?></strong>
+                        Pembayaran Transfer: <strong><?= htmlspecialchars($comp['nama_bank']) ?></strong> Rek: <strong style="font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;"><?= htmlspecialchars($comp['nomor_rekening']) ?></strong> a.n <strong><?= htmlspecialchars($comp['atas_nama_bank']) ?></strong>
                     </div>
                     <?php endif; ?>
                     <?php if (!empty($comp['catatan_faktur'])): ?>
                     <div style="margin-top:4px; font-size:10px; color:#64748b; font-style:italic;">
-                        * <?= htmlspecialchars($comp['catatan_faktur']) ?>
+                        <?= htmlspecialchars($comp['catatan_faktur']) ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -292,13 +304,24 @@ ob_start();
         <!-- KOP RESMI PERUSAHAAN & HEADER FAKTUR GABUNGAN -->
         <table class="dm-table">
             <tr>
-                <td style="width: 52%; vertical-align: top;">
-                    <div class="dm-brand"><?= htmlspecialchars($comp['nama']) ?></div>
-                    <div class="dm-sub"><?= htmlspecialchars($comp['tagline']) ?></div>
-                    <div class="dm-text-muted"><?= htmlspecialchars($comp['alamat']) ?></div>
-                    <div class="dm-text-muted"><?= PrintDocumentHelper::formatContactLine($comp, ' &bull; ') ?></div>
+                <td style="width: 52%; vertical-align: middle;">
+                    <table style="width: 100%; border-collapse: collapse; border: none;">
+                        <tr>
+                            <?php if (!empty($logoSrc)): ?>
+                            <td style="width: 68px; vertical-align: middle; padding-right: 10px; border: none;">
+                                <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 58px; max-width: 68px; object-fit: contain; filter: grayscale(100%); display: block;">
+                            </td>
+                            <?php endif; ?>
+                            <td style="vertical-align: middle; border: none; padding: 0;">
+                                <div class="dm-brand"><?= htmlspecialchars($comp['nama']) ?></div>
+                                <div class="dm-sub"><?= htmlspecialchars($comp['tagline']) ?></div>
+                                <div class="dm-text-muted"><?= htmlspecialchars($comp['alamat']) ?></div>
+                                <div class="dm-text-muted"><?= PrintDocumentHelper::formatContactLine($comp, ' &bull; ') ?></div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td style="width: 48%; vertical-align: top; text-align: right;">
+                <td style="width: 48%; vertical-align: middle; text-align: right;">
                     <div class="dm-title"><?= $docHeaderTitle ?></div>
                     <table class="dm-meta-table">
                         <tr>
@@ -455,7 +478,7 @@ ob_start();
             <tr>
                 <td style="vertical-align: top; width: 55%; font-size: 8.5pt; padding-right: 14px;">
                     <strong>Terbilang:</strong><br>
-                    <em># <?= Format::terbilang((float)($order['total_netto'] ?? 0), true) ?> #</em><br><br>
+                    <em><?= Format::terbilang((float)($order['total_netto'] ?? 0), true) ?></em><br><br>
                     <?php if (!empty($order['catatan']) || !empty($order['catatan_pesanan'])): ?>
                     <strong>Catatan:</strong> <?= htmlspecialchars($order['catatan'] ?? $order['catatan_pesanan'] ?? '') ?><br>
                     <?php endif; ?>

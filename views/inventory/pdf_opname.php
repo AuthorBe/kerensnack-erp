@@ -4,6 +4,7 @@ use App\Helpers\CompanySetting;
 use App\Helpers\PrintDocumentHelper;
 
 $comp = $company ?? CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 
 $nomorDokumen = $opname['nomor_dokumen'] ?? '-';
 $tanggalStr = date('d F Y', strtotime($opname['tanggal'] ?? date('Y-m-d')));
@@ -80,9 +81,10 @@ $totalNilaiRp = (float)($opname['total_nilai_selisih_rp'] ?? 0);
         }
         .company-name {
             font-size: 13pt;
-            font-weight: bold;
+            font-weight: 800;
+            text-transform: uppercase;
             color: #0f172a;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.5px;
             margin-bottom: 2px;
         }
         .company-tagline {
@@ -286,12 +288,23 @@ $totalNilaiRp = (float)($opname['total_nilai_selisih_rp'] ?? 0);
     <table class="kop-table">
         <tr>
             <td style="width: 58%; vertical-align: top;">
-                <div class="company-name"><?= htmlspecialchars($comp['nama']) ?></div>
-                <div class="company-tagline"><?= htmlspecialchars($comp['tagline']) ?></div>
-                <div class="company-contact">
-                    <?= htmlspecialchars($comp['alamat']) ?><br>
-                    <?= PrintDocumentHelper::formatContactLine($comp, ' | ') ?>
-                </div>
+                <table style="width: auto; border-collapse: collapse;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 55px; vertical-align: middle; padding-right: 12px;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 48px; max-width: 55px; object-fit: contain;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="vertical-align: middle;">
+                            <div class="company-name"><?= htmlspecialchars($comp['nama']) ?></div>
+                            <div class="company-tagline"><?= htmlspecialchars($comp['tagline']) ?></div>
+                            <div class="company-contact">
+                                <?= htmlspecialchars($comp['alamat']) ?><br>
+                                <?= PrintDocumentHelper::formatContactLine($comp, ' | ') ?>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </td>
             <td style="width: 42%; vertical-align: top; text-align: right;">
                 <div class="doc-title-main">BUKTI PENYESUAIAN STOK</div>

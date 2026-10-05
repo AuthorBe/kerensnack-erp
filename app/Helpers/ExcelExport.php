@@ -986,9 +986,8 @@ class ExcelExport
         $rawDoc = (string)($opname['nomor_dokumen'] ?? '');
         $cleanDoc = preg_replace('/[^A-Za-z0-9]/', ' ', $rawDoc);
         $cleanDoc = trim(preg_replace('/\s+/', ' ', $cleanDoc));
-        $dateFormatted = !empty($opname['tanggal_opname'])
-            ? Format::tanggal($opname['tanggal_opname'], false, true)
-            : Format::tanggal(date('Y-m-d'), false, true);
+        $tglVal = $opname['tanggal'] ?? $opname['tanggal_opname'] ?? date('Y-m-d');
+        $dateFormatted = Format::tanggal($tglVal, false, true);
         $filename = ($cleanDoc !== '' ? "Opname {$cleanDoc} ({$dateFormatted})" : "Opname ({$dateFormatted})") . '.xlsx';
 
         while (ob_get_level() > 0) {

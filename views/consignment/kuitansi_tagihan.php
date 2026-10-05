@@ -5,6 +5,7 @@ use App\Helpers\CompanySetting;
 use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 
 $totalNetto   = (float)($order['total_netto'] ?? 0);
 $totalDibayar = (float)($order['total_dibayar'] ?? 0);
@@ -32,9 +33,6 @@ $documentTitle = 'Kuitansi Pembayaran - ' . htmlspecialchars($order['nama_toko']
     <meta name="application-name" content="Keren One">
 
     <link rel="icon" type="image/x-icon" href="<?= Router::asset('/favicon/favicon.ico') ?>">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
@@ -44,7 +42,7 @@ $documentTitle = 'Kuitansi Pembayaran - ' . htmlspecialchars($order['nama_toko']
             padding: 0;
         }
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Helvetica', 'Arial', sans-serif;
             background: #f1f5f9;
             color: #0f172a;
             padding: 24px;
@@ -141,8 +139,8 @@ $documentTitle = 'Kuitansi Pembayaran - ' . htmlspecialchars($order['nama_toko']
         .brand-title {
             font-size: 22px;
             font-weight: 900;
-            color: #881337;
-            letter-spacing: -0.02em;
+            color: #0f172a;
+            letter-spacing: 0.02em;
             text-transform: uppercase;
         }
         .brand-subtitle {
@@ -163,7 +161,7 @@ $documentTitle = 'Kuitansi Pembayaran - ' . htmlspecialchars($order['nama_toko']
             letter-spacing: 0.03em;
         }
         .kuitansi-no {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;
             font-size: 12px;
             font-weight: 800;
             color: #881337;
@@ -244,7 +242,7 @@ $documentTitle = 'Kuitansi Pembayaran - ' . htmlspecialchars($order['nama_toko']
             font-size: 12.5px;
         }
         .font-mono {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;
         }
         .text-right {
             text-align: right;
@@ -407,11 +405,19 @@ $documentTitle = 'Kuitansi Pembayaran - ' . htmlspecialchars($order['nama_toko']
 
         <!-- HEADER -->
         <div class="kuitansi-header">
-            <div>
-                <div class="brand-title"><?= htmlspecialchars($comp['nama_perusahaan'] ?? 'KEREN ONE ERP') ?></div>
-                <div class="brand-subtitle">
-                    <?= htmlspecialchars($comp['alamat'] ?? 'Distribusi & Titip Jual Snack Nusantara') ?><br>
-                    <?= PrintDocumentHelper::formatContactLine($comp) ?>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <?php if (!empty($logoSrc)): ?>
+                <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 54px; max-width: 75px; object-fit: contain; display: block; flex-shrink: 0;">
+                <?php endif; ?>
+                <div>
+                    <div class="brand-title"><?= htmlspecialchars($comp['nama'] ?? $comp['nama_perusahaan'] ?? 'KEREN ONE ERP') ?></div>
+                    <div class="brand-subtitle">
+                        <?php if (!empty($comp['tagline'])): ?>
+                            <?= htmlspecialchars($comp['tagline']) ?><br>
+                        <?php endif; ?>
+                        <?= htmlspecialchars($comp['alamat'] ?? 'Distribusi & Titip Jual Snack Nusantara') ?><br>
+                        <?= PrintDocumentHelper::formatContactLine($comp) ?>
+                    </div>
                 </div>
             </div>
 

@@ -1,8 +1,10 @@
 <?php
 use App\Core\Router;
 use App\Helpers\CompanySetting;
+use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 
 $grandTotalPcs = 0;
 $masterItems = [];
@@ -49,7 +51,7 @@ foreach ($orders as $o) {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Helvetica', 'Arial', sans-serif;
         }
         body {
             background: #f8fafc;
@@ -77,7 +79,8 @@ foreach ($orders as $o) {
             font-size: 17px;
             font-weight: 900;
             color: #0f172a;
-            letter-spacing: -0.3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .doc-title {
             font-size: 11.5px;
@@ -127,7 +130,7 @@ foreach ($orders as $o) {
             color: #64748b;
         }
         .po-badge {
-            font-family: monospace;
+            font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;
             font-weight: 800;
             color: #2563eb;
             font-size: 11.5px;
@@ -157,7 +160,7 @@ foreach ($orders as $o) {
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
-        .font-mono { font-family: monospace; }
+        .font-mono { font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums; }
         .font-bold { font-weight: 700; }
 
         .note-text {
@@ -200,11 +203,22 @@ foreach ($orders as $o) {
     <!-- HEADER UTAMA -->
     <table class="header-table">
         <tr>
-            <td style="border: none; padding: 0; vertical-align: top;">
-                <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
-                <div class="doc-title">DAFTAR REKAPITULASI PO GUDANG</div>
+            <td style="border: none; padding: 0; vertical-align: middle;">
+                <table style="width: auto; border-collapse: collapse;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="border: none; width: 44px; vertical-align: middle; padding-right: 10px;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 38px; max-width: 44px; object-fit: contain;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="border: none; vertical-align: middle;">
+                            <div class="brand-title"><?= htmlspecialchars($comp['nama']) ?></div>
+                            <div class="doc-title">DAFTAR REKAPITULASI PO GUDANG</div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="border: none; padding: 0; vertical-align: top; text-align: right;">
+            <td style="border: none; padding: 0; vertical-align: middle; text-align: right;">
                 <div style="font-size: 11.5px; font-weight: 800; color: #0f172a;">Tgl Cetak: <?= date('d/m/Y H:i') ?></div>
                 <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">
                     Total: <strong><?= count($orders) ?> Nota PO</strong> &bull; <strong><?= number_format($grandTotalPcs, 0, ',', '.') ?> Pcs</strong>

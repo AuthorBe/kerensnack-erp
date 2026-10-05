@@ -5,6 +5,7 @@ use App\Helpers\CompanySetting;
 use App\Helpers\PrintDocumentHelper;
 
 $comp = CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 $isPo = (($purchase['jenis_dokumen'] ?? 'faktur') === 'po');
 $docTitle = $isPo ? 'SURAT PESANAN PEMBELIAN (PO)' : 'FAKTUR PEMBELIAN VENDOR';
 $nomorDokumen = $purchase['nomor_faktur_pembelian'] ?? '-';
@@ -20,11 +21,11 @@ ob_start();
 <style>
 /* STYLING SPESIFIK PO PEMBELIAN STANDAR A4 */
 .kop-table { margin-bottom: 12px; border-bottom: 2px solid #1f2937; padding-bottom: 10px; width: 100%; }
-.company-name { font-size: 16pt; font-weight: 900; color: #111827; letter-spacing: -0.5px; }
+.company-name { font-size: 16pt; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; }
 .company-sub { font-size: 8pt; color: #4b5563; margin-top: 2px; line-height: 1.35; }
 .doc-title-box { text-align: right; }
 .doc-title { font-size: 13pt; font-weight: 900; color: #1e40af; letter-spacing: 0.3px; }
-.doc-number { font-family: 'Courier', monospace; font-size: 11pt; font-weight: bold; color: #111827; margin-top: 2px; }
+.doc-number { font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums; font-size: 11pt; font-weight: bold; color: #111827; margin-top: 2px; }
 .info-table { margin-bottom: 16px; width: 100%; }
 .info-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 12px; vertical-align: top; width: 48%; }
 .info-card-title { font-size: 7.5pt; font-weight: bold; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
@@ -45,15 +46,26 @@ ob_start();
     <!-- KOP RESMI -->
     <table class="kop-table">
         <tr>
-            <td style="vertical-align:top; width:60%;">
-                <div class="company-name"><?= htmlspecialchars($comp['nama']) ?></div>
-                <div class="company-sub">
-                    <?= htmlspecialchars($comp['tagline']) ?><br>
-                    <?= htmlspecialchars($comp['alamat']) ?><br>
-                    <?= PrintDocumentHelper::formatContactLine($comp, ' &bull; ') ?>
-                </div>
+            <td style="vertical-align:middle; width:58%;">
+                <table style="width: 100%; border-collapse: collapse; border: none;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 65px; vertical-align: middle; padding-right: 14px; border: none;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 52px; max-width: 65px; object-fit: contain; display: block;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="vertical-align: middle; border: none; padding: 0;">
+                            <div class="company-name"><?= htmlspecialchars($comp['nama']) ?></div>
+                            <div class="company-sub">
+                                <?= htmlspecialchars($comp['tagline']) ?><br>
+                                <?= htmlspecialchars($comp['alamat']) ?><br>
+                                <?= PrintDocumentHelper::formatContactLine($comp, ' &bull; ') ?>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="vertical-align:top; width:40%;" class="doc-title-box">
+            <td style="vertical-align:middle; width:42%;" class="doc-title-box">
                 <div class="doc-title"><?= $docTitle ?></div>
                 <div class="doc-number"><?= htmlspecialchars($nomorDokumen) ?></div>
                 <div style="font-size:8pt; color:#6b7280; margin-top:2px;">
@@ -132,7 +144,7 @@ ob_start();
             ?>
             <tr>
                 <td class="text-center"><?= $no++ ?></td>
-                <td style="font-family:monospace;"><?= htmlspecialchars($it['kode_sku'] ?? '-') ?></td>
+                <td style="font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;"><?= htmlspecialchars($it['kode_sku'] ?? '-') ?></td>
                 <td><strong><?= htmlspecialchars($it['nama_item'] ?? '-') ?></strong></td>
                 <td class="text-center" style="font-weight:bold;"><?= ((float)$it['kuantitas'] == (int)$it['kuantitas']) ? number_format((float)$it['kuantitas'], 0, ',', '.') : rtrim(rtrim(number_format((float)$it['kuantitas'], 2, ',', '.'), '0'), ',') ?></td>
                 <td class="text-center"><?= htmlspecialchars($it['satuan'] ?? 'pcs') ?></td>
@@ -202,13 +214,24 @@ ob_start();
         <!-- KOP RESMI PERUSAHAAN & HEADER PO -->
         <table class="dm-table">
             <tr>
-                <td style="width: 55%; vertical-align: top;">
-                    <div class="dm-brand"><?= htmlspecialchars($comp['nama']) ?></div>
-                    <div class="dm-sub"><?= htmlspecialchars($comp['tagline']) ?></div>
-                    <div class="dm-text-muted"><?= htmlspecialchars($comp['alamat']) ?></div>
-                    <div class="dm-text-muted"><?= PrintDocumentHelper::formatContactLine($comp, ' &bull; ') ?></div>
+                <td style="width: 55%; vertical-align: middle;">
+                    <table style="width: 100%; border-collapse: collapse; border: none;">
+                        <tr>
+                            <?php if (!empty($logoSrc)): ?>
+                            <td style="width: 66px; vertical-align: middle; padding-right: 10px; border: none;">
+                                <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 56px; max-width: 66px; object-fit: contain; filter: grayscale(100%); display: block;">
+                            </td>
+                            <?php endif; ?>
+                            <td style="vertical-align: middle; border: none; padding: 0;">
+                                <div class="dm-brand"><?= htmlspecialchars($comp['nama']) ?></div>
+                                <div class="dm-sub"><?= htmlspecialchars($comp['tagline']) ?></div>
+                                <div class="dm-text-muted"><?= htmlspecialchars($comp['alamat']) ?></div>
+                                <div class="dm-text-muted"><?= PrintDocumentHelper::formatContactLine($comp, ' &bull; ') ?></div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
-                <td style="width: 45%; vertical-align: top; text-align: right;">
+                <td style="width: 45%; vertical-align: middle; text-align: right;">
                     <div class="dm-title"><?= $docTitle ?></div>
                     <table class="dm-meta-table">
                         <tr>
@@ -343,7 +366,7 @@ ob_start();
         <table class="dm-table" style="margin-bottom: 6px;">
             <tr>
                 <td style="vertical-align: top; width: 60%; font-size: 8.5pt;">
-                    <strong>Terbilang:</strong> <em># <?= Format::terbilang($grandTotal, true) ?> #</em><br>
+                    <strong>Terbilang:</strong> <em><?= Format::terbilang($grandTotal, true) ?></em><br>
                     <strong>Instruksi:</strong> <?= htmlspecialchars(!empty($purchase['instruksi_driver']) ? $purchase['instruksi_driver'] : ($purchase['catatan'] ?: 'Barang wajib dalam kondisi baik & tanggal kadaluarsa aman.')) ?><br>
                     <em>* Harap konfirmasi ketersediaan stok sebelum armada tiba di lokasi.</em>
                 </td>
