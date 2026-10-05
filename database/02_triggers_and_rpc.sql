@@ -952,12 +952,14 @@ DECLARE
     v_stok_lama NUMERIC(15, 2);
     v_stok_baru NUMERIC(15, 2);
     v_total_pcs NUMERIC(15, 2);
+    v_total_bal NUMERIC(15, 2);
     r_bom RECORD;
     v_bahan_stok_lama NUMERIC(15, 2);
     v_bahan_stok_baru NUMERIC(15, 2);
     v_pemakaian_bahan NUMERIC(15, 4);
 BEGIN
     v_total_pcs := (NEW.kuantitas_pcs + NEW.lembur_pcs)::NUMERIC;
+    v_total_bal := (COALESCE(NEW.kuantitas_bal, 0) + COALESCE(NEW.lembur_bal, 0))::NUMERIC;
 
     -- 1. Tambah Stok Fisik Barang Jadi
     SELECT COALESCE(stok_fisik_saat_ini, 0) INTO v_stok_lama 
@@ -978,14 +980,22 @@ BEGIN
         'produksi_harian', NEW.id, 'Hasil produksi borongan karyawan', NEW.dicatat_oleh, NOW()
     );
 
-    -- 2. Kurangi Bahan Baku Curah & Kemasan Sesuai Formula BOM (Presisi Desimal)
+    -- 2. Kurangi Bahan Baku Curah & Kemasan Sesuai Formula BOM (Hybrid Bal / Pcs)
     FOR r_bom IN 
-        SELECT ki.item_bahan_id, ki.jumlah_kebutuhan, ib.nama_item, ib.satuan_dasar
+        SELECT ki.item_bahan_id, ki.jumlah_kebutuhan, COALESCE(ki.potong_sesuai_bal, FALSE) as potong_sesuai_bal, ib.nama_item, ib.satuan_dasar
         FROM public.komposisi_item ki
         JOIN public.item ib ON ki.item_bahan_id = ib.id
         WHERE ki.item_jadi_id = NEW.item_id
     LOOP
-        v_pemakaian_bahan := ROUND((v_total_pcs * r_bom.jumlah_kebutuhan)::NUMERIC, 4);
+        IF r_bom.potong_sesuai_bal IS TRUE THEN
+            v_pemakaian_bahan := ROUND(v_total_bal, 4);
+        ELSE
+            v_pemakaian_bahan := ROUND((v_total_pcs * r_bom.jumlah_kebutuhan)::NUMERIC, 4);
+        END IF;
+
+        IF v_pemakaian_bahan <= 0 THEN
+            CONTINUE;
+        END IF;
 
         SELECT COALESCE(stok_fisik_saat_ini, 0) INTO v_bahan_stok_lama 
         FROM public.item 
@@ -1016,6 +1026,9 @@ BEGIN
 END;
 $function$;
 
+REVOKE EXECUTE ON FUNCTION public.fn_trg_produksi_harian_after_insert() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_trg_produksi_harian_after_insert() TO postgres, service_role;
+
 DROP TRIGGER IF EXISTS trg_produksi_harian_after_insert ON public.produksi_harian;
 CREATE TRIGGER trg_produksi_harian_after_insert
 AFTER INSERT ON public.produksi_harian
@@ -1033,6 +1046,9 @@ DECLARE
     v_total_pcs_lama NUMERIC(15, 2);
     v_total_pcs_baru NUMERIC(15, 2);
     v_delta_pcs NUMERIC(15, 2);
+    v_total_bal_lama NUMERIC(15, 2);
+    v_total_bal_baru NUMERIC(15, 2);
+    v_delta_bal NUMERIC(15, 2);
     v_stok_lama NUMERIC(15, 2);
     v_stok_baru NUMERIC(15, 2);
     r_bom RECORD;
@@ -1044,34 +1060,54 @@ BEGIN
     v_total_pcs_baru := (NEW.kuantitas_pcs + NEW.lembur_pcs)::NUMERIC;
     v_delta_pcs := v_total_pcs_baru - v_total_pcs_lama;
 
-    IF v_delta_pcs = 0 AND OLD.item_id = NEW.item_id THEN
+    v_total_bal_lama := (COALESCE(OLD.kuantitas_bal, 0) + COALESCE(OLD.lembur_bal, 0))::NUMERIC;
+    v_total_bal_baru := (COALESCE(NEW.kuantitas_bal, 0) + COALESCE(NEW.lembur_bal, 0))::NUMERIC;
+    v_delta_bal := v_total_bal_baru - v_total_bal_lama;
+
+    IF v_delta_pcs = 0 AND v_delta_bal = 0 AND OLD.item_id = NEW.item_id THEN
         RETURN NEW;
     END IF;
 
-    -- Sesuaikan Barang Jadi
+    -- 1. Sesuaikan Barang Jadi
     SELECT COALESCE(stok_fisik_saat_ini, 0) INTO v_stok_lama FROM public.item WHERE id = NEW.item_id;
     v_stok_baru := v_stok_lama + v_delta_pcs;
 
-    UPDATE public.item 
-    SET stok_fisik_saat_ini = v_stok_baru, diubah_pada = NOW() 
-    WHERE id = NEW.item_id;
+    -- Proteksi Anti-Stok Minus Barang Jadi
+    IF v_stok_baru < 0 THEN
+        RAISE EXCEPTION 'Koreksi produksi gagal: Stok barang jadi "%" saat ini tersisa % pcs, tidak mencukupi untuk pengurangan koreksi sebesar % pcs karena barang sudah laku terjual.',
+            (SELECT nama_item FROM public.item WHERE id = NEW.item_id), v_stok_lama, ABS(v_delta_pcs);
+    END IF;
 
-    INSERT INTO public.riwayat_stok (
-        item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
-        referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
-    ) VALUES (
-        NEW.item_id, 'penyesuaian_opname_koreksi', v_delta_pcs, v_stok_lama, v_stok_baru,
-        'produksi_harian', NEW.id, 'Koreksi kuantitas hasil produksi harian', NEW.dicatat_oleh, NOW()
-    );
+    IF v_delta_pcs <> 0 THEN
+        UPDATE public.item 
+        SET stok_fisik_saat_ini = v_stok_baru, diubah_pada = NOW() 
+        WHERE id = NEW.item_id;
 
-    -- Sesuaikan Bahan Baku & Kemasan BOM
+        INSERT INTO public.riwayat_stok (
+            item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
+            referensi_tabel, referensi_id, keterangan, dibuat_oleh, dibuat_pada
+        ) VALUES (
+            NEW.item_id, 'penyesuaian_opname_koreksi', v_delta_pcs, v_stok_lama, v_stok_baru,
+            'produksi_harian', NEW.id, 'Koreksi kuantitas hasil produksi harian', NEW.dicatat_oleh, NOW()
+        );
+    END IF;
+
+    -- 2. Sesuaikan Bahan Baku & Kemasan BOM
     FOR r_bom IN 
-        SELECT ki.item_bahan_id, ki.jumlah_kebutuhan, ib.nama_item, ib.satuan_dasar
+        SELECT ki.item_bahan_id, ki.jumlah_kebutuhan, COALESCE(ki.potong_sesuai_bal, FALSE) as potong_sesuai_bal, ib.nama_item, ib.satuan_dasar
         FROM public.komposisi_item ki
         JOIN public.item ib ON ki.item_bahan_id = ib.id
         WHERE ki.item_jadi_id = NEW.item_id
     LOOP
-        v_delta_bahan := ROUND((v_delta_pcs * r_bom.jumlah_kebutuhan)::NUMERIC, 4);
+        IF r_bom.potong_sesuai_bal IS TRUE THEN
+            v_delta_bahan := ROUND(v_delta_bal, 4);
+        ELSE
+            v_delta_bahan := ROUND((v_delta_pcs * r_bom.jumlah_kebutuhan)::NUMERIC, 4);
+        END IF;
+
+        IF v_delta_bahan = 0 THEN
+            CONTINUE;
+        END IF;
 
         SELECT COALESCE(stok_fisik_saat_ini, 0) INTO v_bahan_stok_lama 
         FROM public.item 
@@ -1102,6 +1138,9 @@ BEGIN
 END;
 $function$;
 
+REVOKE EXECUTE ON FUNCTION public.fn_trg_produksi_harian_after_update() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_trg_produksi_harian_after_update() TO postgres, service_role;
+
 DROP TRIGGER IF EXISTS trg_produksi_harian_after_update ON public.produksi_harian;
 CREATE TRIGGER trg_produksi_harian_after_update
 AFTER UPDATE ON public.produksi_harian
@@ -1117,6 +1156,7 @@ SET search_path = public, pg_temp
 AS $function$
 DECLARE
     v_total_pcs NUMERIC(15, 2);
+    v_total_bal NUMERIC(15, 2);
     v_stok_lama NUMERIC(15, 2);
     v_stok_baru NUMERIC(15, 2);
     r_bom RECORD;
@@ -1125,10 +1165,17 @@ DECLARE
     v_pemakaian_bahan NUMERIC(15, 4);
 BEGIN
     v_total_pcs := (OLD.kuantitas_pcs + OLD.lembur_pcs)::NUMERIC;
+    v_total_bal := (COALESCE(OLD.kuantitas_bal, 0) + COALESCE(OLD.lembur_bal, 0))::NUMERIC;
 
-    -- Revert Barang Jadi (Kurangi kembali hasil produksi)
+    -- 1. Revert Barang Jadi (Kurangi kembali hasil produksi)
     SELECT COALESCE(stok_fisik_saat_ini, 0) INTO v_stok_lama FROM public.item WHERE id = OLD.item_id;
     v_stok_baru := v_stok_lama - v_total_pcs;
+
+    -- Proteksi Anti-Stok Minus Barang Jadi
+    IF v_stok_baru < 0 THEN
+        RAISE EXCEPTION 'Pembatalan produksi gagal: Stok barang jadi "%" saat ini tersisa % pcs, tidak mencukupi untuk pembatalan produksi sebesar % pcs karena sebagian barang sudah laku terjual.',
+            (SELECT nama_item FROM public.item WHERE id = OLD.item_id), v_stok_lama, v_total_pcs;
+    END IF;
 
     UPDATE public.item 
     SET stok_fisik_saat_ini = v_stok_baru, diubah_pada = NOW() 
@@ -1142,13 +1189,21 @@ BEGIN
         'produksi_harian', OLD.id, 'Pembatalan / hapus catatan produksi', OLD.dicatat_oleh, NOW()
     );
 
-    -- Revert Bahan Baku & Kemasan (Kembalikan bahan ke stok gudang)
+    -- 2. Revert Bahan Baku & Kemasan (Kembalikan bahan ke stok gudang)
     FOR r_bom IN 
-        SELECT ki.item_bahan_id, ki.jumlah_kebutuhan
+        SELECT ki.item_bahan_id, ki.jumlah_kebutuhan, COALESCE(ki.potong_sesuai_bal, FALSE) as potong_sesuai_bal
         FROM public.komposisi_item ki
         WHERE ki.item_jadi_id = OLD.item_id
     LOOP
-        v_pemakaian_bahan := ROUND((v_total_pcs * r_bom.jumlah_kebutuhan)::NUMERIC, 4);
+        IF r_bom.potong_sesuai_bal IS TRUE THEN
+            v_pemakaian_bahan := ROUND(v_total_bal, 4);
+        ELSE
+            v_pemakaian_bahan := ROUND((v_total_pcs * r_bom.jumlah_kebutuhan)::NUMERIC, 4);
+        END IF;
+
+        IF v_pemakaian_bahan <= 0 THEN
+            CONTINUE;
+        END IF;
 
         SELECT COALESCE(stok_fisik_saat_ini, 0) INTO v_bahan_stok_lama 
         FROM public.item 
@@ -1173,6 +1228,9 @@ BEGIN
     RETURN OLD;
 END;
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_trg_produksi_harian_after_delete() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_trg_produksi_harian_after_delete() TO postgres, service_role;
 
 DROP TRIGGER IF EXISTS trg_produksi_harian_after_delete ON public.produksi_harian;
 CREATE TRIGGER trg_produksi_harian_after_delete

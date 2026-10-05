@@ -404,6 +404,7 @@ CREATE TABLE IF NOT EXISTS public.komposisi_item (
     item_jadi_id UUID NOT NULL REFERENCES public.item(id) ON DELETE CASCADE,
     item_bahan_id UUID NOT NULL REFERENCES public.item(id) ON DELETE RESTRICT,
     jumlah_kebutuhan NUMERIC(15, 4) NOT NULL CHECK (jumlah_kebutuhan > 0), -- Contoh: 0.1350 kg singkong curah + 1 lembar plastik
+    potong_sesuai_bal BOOLEAN NOT NULL DEFAULT FALSE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT uq_komposisi_item UNIQUE (item_jadi_id, item_bahan_id)
 );
