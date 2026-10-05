@@ -42,7 +42,13 @@ Skills hold the complete rules (testing, schema/permissions/replication, UI/UX, 
 
 ## 5. Core UI/UX Rules
 - **Must comply with skill `erp-ui-design`** and mimic the Golden Templates.
-- **Forbidden**: Material Design 3 (FAB, full-pill buttons, thick surface-container, Roboto). Use Modern Enterprise ERP / Supabase Clean UI: `Inter` & `JetBrains Mono`, `Lucide` icons, `rounded-lg`/`rounded-md`, subtle borders.
+- **Visual Harmony & Golden Peer-View Replication**: Every UI modification must prioritize organic visual alignment with active peer views in the repo (`views/products`, `views/customers`, `views/customer_orders`). Never invent arbitrary styles or adhere to external dogmas.
+- **Borders & Rounded Hierarchy**:
+  - Form action buttons, cards, modals, and panels: Use moderate rounded corners `rounded-lg` (8px - 12px) or `rounded-md` with subtle hairline border `var(--color-hairline)`. Avoid giant capsule action buttons or Material Design 3 FABs.
+  - Notification badges, status tags, and tab counter pills: **Must be sleek, smooth pills (`.badge-counter` / `rounded-full`)** with proportional padding; never rigid, square dice.
+  - **Badge Centering DNA (Mandatory Precision Centering)**: All content inside badges (numbers, text, pulse dots, icons) **MUST be perfectly centered both vertically and horizontally**: always use `display: inline-flex; align-items: center; justify-content: center; line-height: 1;`. Never rely on browser default line-height or asymmetrical padding that causes text to sink below the badge boundary.
+- **Button Styling & Segmented Controls**: Never use raw, unclassed `<button>` elements. Because KEREN ONE uses pure CSS without full Tailwind preflight, raw buttons render native browser 3D beveled black borders. Always use `.btn` variants or dedicated components like `.segmented-btn` with explicit `border: none; appearance: none;`.
+- **Typography & Icons**: `Inter` and `JetBrains Mono` fonts; icons are always **Lucide** (`data-lucide="..."`).
 - Modals must use the standard structure (`x-teleport` → `.modal-backdrop` → `.modal-box` → `.modal-handle` → `.modal-header` → `.modal-body.custom-scrollbar` → `.modal-footer`).
 - Dialogs must use `window.AppConfirm()`, `window.AppAlert()`, `window.toast` (`public/assets/js/erp-helpers.js`); native `alert()`/`confirm()` are **forbidden**.
 - Notch color `#881337`; avoid `filter: blur` on `<header>`/`<main>` (use `backdrop-filter: blur(6px)` on overlays); standalone portal close buttons use Smart Navigation (`window.close()` → `history.back()` → `/dashboard`).

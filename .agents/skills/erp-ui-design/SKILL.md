@@ -14,7 +14,8 @@ description: >-
 ---
 
 ## 1. Design Philosophy & Brand DNA
-KEREN ONE adopts the **Modern Enterprise ERP / Supabase Clean UI** design language paired with the **Google Chrome Dark Mode Standard**:
+KEREN ONE adopts the **Modern Enterprise Clean UI** design language guided by **Contextual Harmony & Peer-View Replication** paired with the **Google Chrome Dark Mode Standard**:
+- **Contextual Harmony & Peer-View Replication (First Principle)**: Every UI modification MUST visually align with existing active pages of the same category in the repository (`views/products`, `views/customers`, `views/customer_orders`). Never invent arbitrary styles, force external UI dogmas, or construct components in isolation without referencing active views.
 - **High Information Density**: Layouts are designed to be concise, dense, and space-efficient without wasted whitespace.
 - **Clean & Crisp Typography**: Uses the **Inter** font family for interface copy and **JetBrains Mono** for numbers, transaction codes, currency, and dates.
 - **Brand Identity Colors (Brand DNA)**:
@@ -24,28 +25,55 @@ KEREN ONE adopts the **Modern Enterprise ERP / Supabase Clean UI** design langua
   - Status Success / Paid / Profit: `#10b981` (Emerald)
   - Status Warning / Due / Terms: `#f59e0b` (Amber)
   - Status Danger / Out of Stock / Delete: `#ef4444` (Red)
-- **Sharp-Moderate Borders & Contours**: Uses 1px solid borders (`var(--color-hairline)` / `border-slate-200` / `border-zinc-700`) with moderate `rounded-lg` (8px - 12px) or `rounded-md` corners—never extreme pill-shaped curves.
+- **Borders & Rounded Hierarchy**:
+  - **Cards, Modals, Panels, & Form Action Buttons**: Use 1px solid border (`var(--color-hairline)` / `border-slate-200` / `border-zinc-700`) with moderate rounded corners `rounded-lg` (8px - 12px) or `rounded-md`.
+  - **Badge Counters, Status Tags, & Notification Pills**: **Must be sleek, smooth pills (`.badge-counter` / `rounded-full`)** with proportional padding and min-width so they never render as rigid square dice.
 - **Iconography**: Always use **Lucide** icons (`data-lucide="..."`).
 
 ---
 
-## 2. 🚫 STRICT PROHIBITIONS: Material Design 3 (M3) Anti-Patterns
-Applying Google Material Design 3 patterns to this application is strictly forbidden:
+## 2. 🚫 STRICT PROHIBITIONS: Anti-Patterns
+Applying Google Material Design 3 patterns or rigid artificial styling is strictly forbidden:
 1. ❌ **Forbidden**: Using Floating Action Buttons (large circular FAB in bottom corners).
-2. ❌ **Forbidden**: Using excessively rounded corners such as `rounded-2xl`, `rounded-3xl`, or full-pill buttons for primary form actions.
+2. ❌ **Forbidden**: Using full-pill buttons or excessively rounded corners (`rounded-2xl`, `rounded-3xl`) for **primary form action buttons** (Save, Submit, Modal Actions). *(Exception: Numeric counter badges and status tags MUST be `rounded-full`)*.
 3. ❌ **Forbidden**: Using heavy multi-level elevation shadows (*M3 surface container tonal palettes*).
 4. ❌ **Forbidden**: Using legacy serif or Roboto fonts; `Inter` and `JetBrains Mono` are mandatory.
-5. ❌ **Forbidden**: Building components from scratch without mimicking the structure of existing reference files (*Golden Templates*).
+5. ❌ **Forbidden**: Building components from scratch or inventing isolated styles without inspecting and replicating the structure of existing reference files (*Golden Templates & Peer Views*).
 6. ❌ **Forbidden**: Using native browser dialogs `alert()` or `confirm()`.
+7. ❌ **Forbidden**: Using raw, unclassed `<button>` elements without standard button classes (`.btn`, `.btn-primary`, `.btn-ghost`) or dedicated segmented controls (`.segmented-track` + `.segmented-btn`). Because KEREN ONE uses pure CSS without full Tailwind preflight, raw `<button>` elements render default browser User-Agent styles (`border: 2px outset buttonface`), generating dated 3D beveled black borders.
 
 ---
 
-## 3. Golden Reference Templates (*Golden Templates*)
-Whenever creating or redesigning a page, AI agents must inspect one of the following reference files according to the page category:
+## 3. Mandatory Protocol: Golden Peer-View Replication
+Before creating or modifying any view file, AI agents **MUST** open and inspect at least one reference page corresponding to the module category to mirror class structure, proportions, margins, and color schemes:
 - **Dashboard / Executive Summary Cards**: `views/dashboard/index.php` & `views/owner/index.php`
-- **Master Data / Full Table + CRUD Pop-up Modals**: `views/customers/index.php` & `views/inventory/index.php`
+- **Master Data / Full Table + Filter Tabs + Pop-up Modals**: `views/products/index.php`, `views/customers/index.php` & `views/inventory/index.php`
 - **Transactions / Invoices / Multi-item Builder**: `views/customer_orders/index.php` & `views/pos/index.php`
 - **Form Management & Logistics**: `views/deliveries/index.php` & `views/purchases/index.php`
+
+---
+
+## 3.5. Badge & Numeric Counter Standard DNA
+To prevent numeric counter badges from appearing as rigid, blocky dice, apply these element standards:
+1. **Tab & Notification Counter Pills (`.badge-counter`)**:
+   - Use the official `.badge-counter` class (defined in `public/assets/css/app.css`).
+   - Smooth pill shape (`border-radius: var(--rounded-full)`), `min-width: 20px`, `height: 18px`, `padding: 0 6px`.
+   - Example: `<span class="badge-counter" x-text="items.length"></span>`.
+2. **Status Pills (Available / Low Stock / Out of Stock / Active)**:
+   - Use `.badge.badge-success`, `.badge.badge-warning`, `.badge.badge-danger`.
+   - Automatically `rounded-full` with padding `2.5px var(--space-sm)`.
+3. **SKU & Transaction Code Monospace Box (`.badge-mono`)**:
+   - Reserved strictly for SKU codes or invoice numbers that need monospace text inside a subtle rectangular frame: use `.badge.badge-mono` (`border-radius: var(--rounded-xs)` / 4px). Never use `.badge-mono` for tab counters!
+4. **Precision Centering Invariant (Vertical & Horizontal)**:
+   - Every badge element (`.badge`, `.badge-counter`, status pills, filter indicator chips) **MUST BE PERFECTLY CENTERED** both vertically and horizontally.
+   - Always apply the precision flexbox pattern:
+     ```css
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     line-height: 1;
+     ```
+   - Avoid browser default line-heights (such as 1.4–1.5) which cause text to sag below the badge boundary. When a badge includes a pulse dot or Lucide icon, always apply `flex-shrink: 0;` to ensure symmetrical vertical alignment.
 
 ---
 
@@ -349,8 +377,10 @@ For standalone portal views or independent popups such as `/guide` or printable 
 ---
 
 ## 11. Pre-flight UI Checklist (*UI Pre-flight Checklist*)
-- [ ] Strictly follows the structure of a relevant Golden Template.
-- [ ] Zero M3 Anti-patterns: no FAB, no full-pill buttons, no Roboto font.
+- [ ] Strictly follows peer-view replication: inspected and harmonized with existing active views in `views/**`.
+- [ ] Zero M3 Anti-patterns: no FAB, no full-pill form action buttons, no Roboto font.
+- [ ] Tab counters and notification numbers use `.badge-counter` (`rounded-full`), avoiding rigid square dice.
+- [ ] No raw unclassed `<button>` tags; all buttons use `.btn` variants or `.segmented-btn` with explicit resets.
 - [ ] Modal conforms to standard DNA (`x-teleport`, `.modal-backdrop`, `.modal-box`, `.modal-handle`, 40x40 header icon, responsive footer).
 - [ ] All interactive dialogs use `AppConfirm()`, `AppAlert()`, `window.toast` (zero native `alert()`/`confirm()`).
 - [ ] Monetary inputs and transaction codes use monospace typography (`font-mono`).
