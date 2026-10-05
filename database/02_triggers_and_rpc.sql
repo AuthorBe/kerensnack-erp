@@ -1313,7 +1313,19 @@ FOR EACH ROW
 EXECUTE FUNCTION public.fn_guard_developer_account();
 
 -- G. Stored Procedure Master Audit Log
-CREATE OR REPLACE FUNCTION public.fn_catat_log_aktivitas(p_pengguna_id uuid DEFAULT NULL::uuid, p_nama_aktor character varying DEFAULT 'Sistem Otomasi n8n'::character varying, p_peran_aktor character varying DEFAULT 'ai_n8n'::character varying, p_sumber_aksi character varying DEFAULT 'n8n_automation'::character varying, p_kategori_aktivitas character varying DEFAULT 'ai_interaction'::character varying, p_jenis_aksi character varying DEFAULT 'EXECUTE'::character varying, p_tabel_terdampak character varying DEFAULT NULL::character varying, p_id_referensi uuid DEFAULT NULL::uuid, p_deskripsi_aktivitas text DEFAULT ''::text, p_data_sebelum jsonb DEFAULT NULL::jsonb, p_data_sesudah jsonb DEFAULT NULL::jsonb, p_id_pesan_telegram bigint DEFAULT NULL::bigint)
+CREATE OR REPLACE FUNCTION public.fn_catat_log_aktivitas(
+    p_pengguna_id uuid DEFAULT NULL::uuid,
+    p_nama_aktor character varying DEFAULT 'Sistem Otomasi n8n'::character varying,
+    p_peran_aktor character varying DEFAULT 'ai_n8n'::character varying,
+    p_sumber_aksi character varying DEFAULT 'n8n_automation'::character varying,
+    p_kategori_aktivitas character varying DEFAULT 'ai_interaction'::character varying,
+    p_jenis_aksi character varying DEFAULT 'EXECUTE'::character varying,
+    p_tabel_terdampak character varying DEFAULT NULL::character varying,
+    p_id_referensi uuid DEFAULT NULL::uuid,
+    p_deskripsi_aktivitas text DEFAULT ''::text,
+    p_data_sebelum jsonb DEFAULT NULL::jsonb,
+    p_data_sesudah jsonb DEFAULT NULL::jsonb
+)
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
@@ -1325,11 +1337,11 @@ BEGIN
     INSERT INTO public.log_aktivitas (
         pengguna_id, nama_aktor, peran_aktor, sumber_aksi, kategori_aktivitas,
         jenis_aksi, tabel_terdampak, id_referensi, deskripsi_aktivitas,
-        data_sebelum, data_sesudah, id_pesan_telegram, waktu_kejadian
+        data_sebelum, data_sesudah, waktu_kejadian
     ) VALUES (
         p_pengguna_id, p_nama_aktor, p_peran_aktor, p_sumber_aksi, p_kategori_aktivitas,
         p_jenis_aksi, p_tabel_terdampak, p_id_referensi, p_deskripsi_aktivitas,
-        p_data_sebelum, p_data_sesudah, p_id_pesan_telegram, NOW()
+        p_data_sebelum, p_data_sesudah, NOW()
     ) RETURNING id INTO v_log_id;
 
     RETURN v_log_id;
@@ -1612,221 +1624,13 @@ AFTER INSERT ON public.merek
 FOR EACH ROW
 EXECUTE FUNCTION public.fn_trg_merek_after_insert();
 
--- A. fn_buat_tagihan_kunjungan_konsinyasi
-CREATE OR REPLACE FUNCTION public.fn_buat_tagihan_kunjungan_konsinyasi(
-    p_kunjungan_ids uuid[],
-    p_pengguna_id uuid DEFAULT NULL::uuid
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $function$
-DECLARE
-    v_kid UUID;
-    v_pelanggan_id UUID;
-    v_driver_id UUID;
-    v_nomor_nota VARCHAR(50);
-    v_pesanan_id UUID;
-    v_total_netto NUMERIC(15,2) := 0;
-    v_count INT;
-    v_cek_tagihan UUID;
-    v_tgl_terakhir DATE;
-BEGIN
-    IF p_kunjungan_ids IS NULL OR array_length(p_kunjungan_ids, 1) = 0 THEN
-        RAISE EXCEPTION 'Daftar ID kunjungan tidak boleh kosong';
-    END IF;
-
-    -- Validasi 1: Pastikan semua kunjungan berasal dari pelanggan yang sama
-    SELECT COUNT(DISTINCT pelanggan_id), MAX(pelanggan_id), MAX(sales_driver_id)
-    INTO v_count, v_pelanggan_id, v_driver_id
-    FROM public.kunjungan_konsinyasi
-    WHERE id = ANY(p_kunjungan_ids);
-
-    IF v_count > 1 THEN
-        RAISE EXCEPTION 'Semua kunjungan yang ditagihkan harus berasal dari 1 pelanggan / toko yang sama';
-    END IF;
-
-    IF v_pelanggan_id IS NULL THEN
-        RAISE EXCEPTION 'Data kunjungan tidak ditemukan untuk ID yang diberikan';
-    END IF;
-
-    -- Validasi 2: Pastikan tidak ada kunjungan yang sudah ditagihkan sebelumnya
-    SELECT tk.pesanan_id INTO v_cek_tagihan
-    FROM public.tagihan_kunjungan tk
-    WHERE tk.kunjungan_id = ANY(p_kunjungan_ids)
-    LIMIT 1;
-
-    IF v_cek_tagihan IS NOT NULL THEN
-        RAISE EXCEPTION 'Salah satu kunjungan yang dipilih sudah pernah ditagihkan pada pesanan ID %', v_cek_tagihan;
-    END IF;
-
-    -- Hitung total laku dari rincian kunjungan
-    SELECT COALESCE(SUM(rkk.subtotal_laku), 0)
-    INTO v_total_netto
-    FROM public.rincian_kunjungan_konsinyasi rkk
-    WHERE rkk.kunjungan_id = ANY(p_kunjungan_ids);
-
-    IF v_total_netto <= 0 THEN
-        RAISE EXCEPTION 'Total penjualan dari kunjungan yang dipilih adalah Rp 0. Tidak ada tagihan yang dibuat.';
-    END IF;
-
-    -- Generate nomor nota tagihan konsinyasi unik
-    v_nomor_nota := 'INV-KONS-' || TO_CHAR(CURRENT_DATE, 'YYYYMMDD') || '-' || LPAD(FLOOR(RANDOM() * 9000 + 1000)::TEXT, 4, '0');
-
-    -- Ambil pengguna pencatat jika null
-    IF p_pengguna_id IS NULL THEN
-        SELECT id INTO p_pengguna_id 
-        FROM public.pengguna 
-        WHERE status_aktif = TRUE 
-        ORDER BY dibuat_pada ASC 
-        LIMIT 1;
-    END IF;
-
-    -- Insert pesanan (tagihan konsinyasi baru) dengan is_tagihan = TRUE
-    INSERT INTO public.pesanan (
-        nomor_nota, pelanggan_id, sales_driver_id,
-        tanggal_pesanan, total_bruto, total_diskon, total_netto,
-        tipe_pembayaran, status_pembayaran, status_pemrosesan,
-        total_dibayar, sisa_tagihan, is_tagihan, catatan,
-        dibuat_oleh, dibuat_pada, diubah_pada
-    ) VALUES (
-        v_nomor_nota, v_pelanggan_id, v_driver_id,
-        CURRENT_DATE, v_total_netto, 0.00, v_total_netto,
-        'konsinyasi', 'belum_lunas', 'selesai',
-        0.00, v_total_netto, TRUE,
-        'Tagihan Manual Konsinyasi: ' || array_length(p_kunjungan_ids, 1) || ' kunjungan',
-        p_pengguna_id, NOW(), NOW()
-    ) RETURNING id INTO v_pesanan_id;
-
-    -- Insert item_pesanan
-    INSERT INTO public.item_pesanan (
-        pesanan_id, item_id,
-        kuantitas_satuan_dasar,
-        harga_satuan_deal, diskon_item_persen, diskon_item_nominal,
-        is_bonus, subtotal, dibuat_pada
-    )
-    SELECT 
-        v_pesanan_id,
-        rkk.item_id,
-        SUM(rkk.jumlah_laku_terjual),
-        MAX(rkk.harga_satuan_deal),
-        0.00, 0.00,
-        FALSE,
-        SUM(rkk.subtotal_laku),
-        NOW()
-    FROM public.rincian_kunjungan_konsinyasi rkk
-    WHERE rkk.kunjungan_id = ANY(p_kunjungan_ids)
-      AND rkk.jumlah_laku_terjual > 0
-    GROUP BY rkk.item_id;
-
-    -- Isi junction table tagihan_kunjungan dan update link di kunjungan
-    FOREACH v_kid IN ARRAY p_kunjungan_ids LOOP
-        INSERT INTO public.tagihan_kunjungan (pesanan_id, kunjungan_id)
-        VALUES (v_pesanan_id, v_kid);
-
-        UPDATE public.kunjungan_konsinyasi 
-        SET pesanan_id = v_pesanan_id
-        WHERE id = v_kid;
-    END LOOP;
-
-    -- Update total piutang berjalan di master pelanggan
-    UPDATE public.pelanggan 
-    SET total_piutang_berjalan = COALESCE(total_piutang_berjalan, 0) + v_total_netto,
-        diubah_pada = NOW()
-    WHERE id = v_pelanggan_id;
-
-    RETURN jsonb_build_object(
-        'success', true,
-        'pesanan_id', v_pesanan_id,
-        'nomor_nota', v_nomor_nota,
-        'total_tagihan', v_total_netto,
-        'jumlah_kunjungan', array_length(p_kunjungan_ids, 1)
-    );
-END;
-$function$;
-
--- C. fn_revisi_dan_rekonsiliasi_piutang_pelanggan
-CREATE OR REPLACE FUNCTION public.fn_revisi_dan_rekonsiliasi_piutang_pelanggan(
-    p_pelanggan_id uuid DEFAULT NULL::uuid
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_temp
-AS $function$
-DECLARE
-    v_updated_count INT := 0;
-    v_total_piutang_baru NUMERIC(15, 2) := 0;
-BEGIN
-    IF p_pelanggan_id IS NOT NULL THEN
-        UPDATE public.pelanggan p
-        SET total_piutang_berjalan = COALESCE((
-            SELECT SUM(pes.sisa_tagihan)
-            FROM public.pesanan pes
-            WHERE pes.pelanggan_id = p.id
-              AND pes.is_tagihan = TRUE
-              AND pes.status_pemrosesan IN ('selesai_dikirim', 'selesai', 'selesai_diterima')
-              AND pes.status_pemrosesan != 'dibatalkan'
-              AND pes.status_pembayaran != 'lunas'
-              AND pes.sisa_tagihan > 0
-        ), 0),
-        diubah_pada = NOW()
-        WHERE p.id = p_pelanggan_id;
-
-        GET DIAGNOSTICS v_updated_count = ROW_COUNT;
-
-        SELECT total_piutang_berjalan INTO v_total_piutang_baru
-        FROM public.pelanggan WHERE id = p_pelanggan_id;
-
-        RETURN jsonb_build_object(
-            'success', true,
-            'mode', 'single',
-            'pelanggan_id', p_pelanggan_id,
-            'total_piutang_berjalan', v_total_piutang_baru
-        );
-    ELSE
-        UPDATE public.pelanggan p
-        SET total_piutang_berjalan = COALESCE((
-            SELECT SUM(pes.sisa_tagihan)
-            FROM public.pesanan pes
-            WHERE pes.pelanggan_id = p.id
-              AND pes.is_tagihan = TRUE
-              AND pes.status_pemrosesan IN ('selesai_dikirim', 'selesai', 'selesai_diterima')
-              AND pes.status_pemrosesan != 'dibatalkan'
-              AND pes.status_pembayaran != 'lunas'
-              AND pes.sisa_tagihan > 0
-        ), 0),
-        diubah_pada = NOW();
-
-        GET DIAGNOSTICS v_updated_count = ROW_COUNT;
-
-        SELECT COALESCE(SUM(total_piutang_berjalan), 0) INTO v_total_piutang_baru
-        FROM public.pelanggan;
-
-        RETURN jsonb_build_object(
-            'success', true,
-            'mode', 'all',
-            'pelanggan_terupdate', v_updated_count,
-            'total_piutang_nasional', v_total_piutang_baru
-        );
-    END IF;
-END;
-$function$;
-
-
-
 -- Kunci hak akses eksekusi RPC untuk fungsi trigger
 REVOKE EXECUTE ON FUNCTION public.fn_trg_grup_pelanggan_after_insert() FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.fn_trg_merek_after_insert() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.fn_trg_grup_pelanggan_after_insert() TO postgres, service_role;
 GRANT EXECUTE ON FUNCTION public.fn_trg_merek_after_insert() TO postgres, service_role;
-REVOKE EXECUTE ON FUNCTION public.fn_buat_tagihan_kunjungan_konsinyasi(uuid[], uuid) FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.fn_proses_kunjungan_konsinyasi(uuid, uuid, jsonb, text, text, uuid, uuid) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.fn_revisi_dan_rekonsiliasi_piutang_pelanggan(uuid) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fn_buat_tagihan_kunjungan_konsinyasi(uuid[], uuid) TO postgres, service_role;
 GRANT EXECUTE ON FUNCTION public.fn_proses_kunjungan_konsinyasi(uuid, uuid, jsonb, text, text, uuid, uuid) TO postgres, service_role;
-GRANT EXECUTE ON FUNCTION public.fn_revisi_dan_rekonsiliasi_piutang_pelanggan(uuid) TO postgres, service_role;
 
 
 
@@ -2037,3 +1841,63 @@ CREATE TRIGGER trg_guard_arus_kas_tabungan_escrow
     BEFORE INSERT OR UPDATE ON public.arus_kas
     FOR EACH ROW
     EXECUTE FUNCTION public.fn_guard_arus_kas_tabungan_escrow();
+
+-- ==============================================================================
+-- TRIGGER SINKRONISASI HARGA KATALOG VENDOR UTAMA & MULTI-BARCODE (Migration 91)
+-- ==============================================================================
+
+-- Trigger Sinkronisasi Otomatis Harga Katalog Vendor Utama ke item.harga_pokok_pembelian
+CREATE OR REPLACE FUNCTION public.trg_sync_pemasok_item_to_item_hpp()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    UPDATE public.item
+    SET harga_pokok_pembelian = NEW.harga_beli,
+        diubah_pada = NOW()
+    WHERE id = NEW.item_id 
+      AND pemasok_utama_id = NEW.pemasok_id
+      AND harga_pokok_pembelian != NEW.harga_beli;
+
+    RETURN NEW;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.trg_sync_pemasok_item_to_item_hpp() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.trg_sync_pemasok_item_to_item_hpp() TO postgres, service_role;
+
+DROP TRIGGER IF EXISTS trg_sync_pemasok_item_to_item_hpp ON public.pemasok_item;
+CREATE TRIGGER trg_sync_pemasok_item_to_item_hpp
+AFTER INSERT OR UPDATE OF harga_beli ON public.pemasok_item
+FOR EACH ROW
+EXECUTE FUNCTION public.trg_sync_pemasok_item_to_item_hpp();
+
+-- Trigger Sinkronisasi Otomatis Barcode Default ke grup_produk.barcode_universal
+CREATE OR REPLACE FUNCTION public.trg_sync_grup_barcode_default_to_grup_produk()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+    IF NEW.is_default = TRUE AND NEW.status_aktif = TRUE THEN
+        UPDATE public.grup_produk_barcode
+        SET is_default = FALSE,
+            diubah_pada = NOW()
+        WHERE grup_produk_id = NEW.grup_produk_id 
+          AND id != NEW.id 
+          AND is_default = TRUE;
+
+        UPDATE public.grup_produk
+        SET barcode_universal = NEW.barcode,
+            diubah_pada = NOW()
+        WHERE id = NEW.grup_produk_id 
+          AND (barcode_universal IS NULL OR barcode_universal != NEW.barcode);
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.trg_sync_grup_barcode_default_to_grup_produk() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.trg_sync_grup_barcode_default_to_grup_produk() TO postgres, service_role;
+
+DROP TRIGGER IF EXISTS trg_sync_grup_barcode_default_to_grup_produk ON public.grup_produk_barcode;
+CREATE TRIGGER trg_sync_grup_barcode_default_to_grup_produk
+AFTER INSERT OR UPDATE OF barcode, is_default, status_aktif ON public.grup_produk_barcode
+FOR EACH ROW
+EXECUTE FUNCTION public.trg_sync_grup_barcode_default_to_grup_produk();

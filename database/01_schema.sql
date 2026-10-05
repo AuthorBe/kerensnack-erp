@@ -65,7 +65,6 @@ CREATE TABLE IF NOT EXISTS public.pengguna (
     bank_nama VARCHAR(50),
     bank_nomor_rekening VARCHAR(50),
     bank_atas_nama VARCHAR(100),
-    karyawan_legacy_id INT UNIQUE,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     diubah_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT chk_pengguna_posisi_valid CHECK (posisi IN ('developer', 'owner', 'admin', 'mandor', 'pengemasan', 'sales', 'driver', 'gudang')),
@@ -170,8 +169,7 @@ SELECT
     k.dibuat_pada,
     k.diubah_pada,
     p.nomor_whatsapp,
-    p.peran_id,
-    p.karyawan_legacy_id AS id_legacy
+    p.peran_id
 FROM public.karyawan k
 JOIN public.pengguna p ON p.id = k.pengguna_id;
 
@@ -636,7 +634,6 @@ CREATE TABLE IF NOT EXISTS public.surat_jalan (
     pesanan_id UUID NOT NULL REFERENCES public.pesanan(id),
     sales_driver_id UUID REFERENCES public.karyawan(id), -- Driver / Kurir Logistik Pengantar (Bisa Driver atau Sales)
     rute_wilayah_id UUID REFERENCES public.wilayah(id),
-    url_pdf_dokumen TEXT,
     status_surat_jalan VARCHAR(30) NOT NULL DEFAULT 'siap_kirim' CHECK (status_surat_jalan IN ('siap_kirim', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'gagal_kirim')),
     bukti_terima_foto TEXT, -- Foto bukti terima toko yang diupload Pengemudi/Sales via Telegram
     nama_penerima_toko VARCHAR(100),
@@ -717,7 +714,6 @@ CREATE TABLE IF NOT EXISTS public.tagihan_kunjungan (
 
 CREATE TABLE IF NOT EXISTS public.penggajian (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     nomor_referensi VARCHAR(100) NOT NULL UNIQUE,
     nama_payroll VARCHAR(255) NULL,
     periode_awal DATE NOT NULL,
@@ -734,7 +730,6 @@ CREATE TABLE IF NOT EXISTS public.penggajian (
 
 CREATE TABLE IF NOT EXISTS public.produksi_harian (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     karyawan_id UUID NOT NULL REFERENCES public.karyawan(id),
     tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
     item_id UUID NOT NULL REFERENCES public.item(id),
@@ -753,7 +748,6 @@ CREATE TABLE IF NOT EXISTS public.produksi_harian (
 
 CREATE TABLE IF NOT EXISTS public.absensi (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     karyawan_id UUID NOT NULL REFERENCES public.karyawan(id),
     tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
     status_kehadiran VARCHAR(30) NOT NULL DEFAULT 'hadir' CHECK (status_kehadiran IN ('hadir', 'izin', 'sakit', 'libur', 'alpa')),
@@ -769,7 +763,6 @@ CREATE TABLE IF NOT EXISTS public.absensi (
 
 CREATE TABLE IF NOT EXISTS public.kasbon (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     karyawan_id UUID NOT NULL REFERENCES public.karyawan(id),
     tanggal_pengajuan DATE NOT NULL DEFAULT CURRENT_DATE,
     total_pinjaman NUMERIC(15, 2) NOT NULL CHECK (total_pinjaman > 0),
@@ -787,13 +780,11 @@ CREATE TABLE IF NOT EXISTS public.kasbon (
 
 CREATE TABLE IF NOT EXISTS public.rincian_penggajian (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     penggajian_id UUID NOT NULL REFERENCES public.penggajian(id) ON DELETE CASCADE,
     karyawan_id UUID NOT NULL REFERENCES public.karyawan(id),
     gaji_pokok NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     hari_hadir INT NOT NULL DEFAULT 0,
     total_uang_kehadiran NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
-    total_tunjangan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     tunjangan_bulanan NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     tunjangan_lain NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     catatan_tunjangan_lain VARCHAR(255),
@@ -816,7 +807,6 @@ CREATE TABLE IF NOT EXISTS public.rincian_penggajian (
 
 CREATE TABLE IF NOT EXISTS public.potongan_kasbon (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     kasbon_id UUID NOT NULL REFERENCES public.kasbon(id) ON DELETE CASCADE,
     rincian_penggajian_id UUID REFERENCES public.rincian_penggajian(id) ON DELETE SET NULL,
     tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -829,7 +819,6 @@ CREATE TABLE IF NOT EXISTS public.potongan_kasbon (
 
 CREATE TABLE IF NOT EXISTS public.tabungan (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     karyawan_id UUID NOT NULL UNIQUE REFERENCES public.karyawan(id) ON DELETE RESTRICT,
     saldo NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -839,7 +828,6 @@ CREATE TABLE IF NOT EXISTS public.tabungan (
 
 CREATE TABLE IF NOT EXISTS public.transaksi_tabungan (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     tabungan_id UUID NOT NULL REFERENCES public.tabungan(id) ON DELETE RESTRICT,
     karyawan_id UUID NOT NULL REFERENCES public.karyawan(id),
     rincian_penggajian_id UUID REFERENCES public.rincian_penggajian(id),
@@ -854,7 +842,6 @@ CREATE TABLE IF NOT EXISTS public.transaksi_tabungan (
 
 CREATE TABLE IF NOT EXISTS public.penarikan_gaji (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_legacy INT UNIQUE,
     karyawan_id UUID NOT NULL REFERENCES public.karyawan(id),
     tanggal DATE NOT NULL DEFAULT CURRENT_DATE,
     nominal NUMERIC(15, 2) NOT NULL CHECK (nominal > 0),
@@ -894,7 +881,6 @@ CREATE TABLE IF NOT EXISTS public.log_aktivitas (
     data_sesudah JSONB, -- Snapshot data baru (setelah diubah)
     ip_address VARCHAR(50),
     user_agent TEXT,
-    id_pesan_telegram BIGINT,
     waktu_kejadian TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -1020,3 +1006,4 @@ CREATE POLICY service_role_all_merek ON public.merek FOR ALL TO service_role USI
 CREATE POLICY service_role_all_opname_gudang ON public.opname_gudang FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_opname_gudang_item ON public.opname_gudang_item FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_gplm ON public.grup_pelanggan_level_merek FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_role_all_pemasok_item ON public.pemasok_item FOR ALL TO service_role USING (true) WITH CHECK (true);

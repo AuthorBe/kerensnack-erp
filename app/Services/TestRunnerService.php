@@ -312,6 +312,12 @@ class TestRunnerService
             'category'    => 'Keuangan & HR',
             'description' => 'Validasi komprehensif sistem kas tertutup & rekening escrow: pemisahan dana tabungan karyawan dari likuiditas operasional, proteksi overdraft tabungan, alokasi akun kas pada kasbon, penarikan gaji harian, absensi hadir, otomatisasi transfer escrow saat approval payroll, dan 100% rollback mutasi multi-rekening.'
         ],
+        'database_obsolete_audit' => [
+            'file'        => 'DatabaseObsoleteAssetsAuditTest.php',
+            'title'       => 'Obsolete Database Assets & Schema Hygiene Guard',
+            'category'    => 'Database & Sandbox',
+            'description' => 'Validasi pembersihan permanen 13 kolom usang, fungsi duplikat PL/pgSQL, indeks duplikat lower(nama_pengguna), dan integritas view v_karyawan_info tanpa relasi legacy.'
+        ],
     ];
 
     // -------------------------------------------------------------------------
