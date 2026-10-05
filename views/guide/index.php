@@ -879,6 +879,11 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
         .box-warning { background: rgba(217, 119, 6, 0.08); color: #d97706; border: 1px solid rgba(217, 119, 6, 0.2); }
         .box-danger  { background: rgba(225, 29, 72, 0.08); color: #e11d48; border: 1px solid rgba(225, 29, 72, 0.2); }
 
+        html.dark .box-info    { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border-color: rgba(56, 189, 248, 0.25); }
+        html.dark .box-success { background: rgba(52, 211, 153, 0.12); color: #34d399; border-color: rgba(52, 211, 153, 0.25); }
+        html.dark .box-warning { background: rgba(251, 191, 36, 0.12); color: #fbbf24; border-color: rgba(251, 191, 36, 0.25); }
+        html.dark .box-danger  { background: rgba(251, 113, 133, 0.12); color: #fb7185; border-color: rgba(251, 113, 133, 0.25); }
+
         .formula-card {
             background: var(--guide-bg);
             border: 1px dashed var(--guide-border);
@@ -1043,7 +1048,149 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             color: var(--guide-accent);
         }
 
-        /* 5.5 FEATURE CARDS GRID (Universal Search & High-Density Cards) */
+        /* 5.5 GUIDE TABLES (RESPONSIVE COMPARISON & AUDIT TABLES) */
+        .guide-table-wrapper,
+        .guide-article .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 16px 0;
+            border-radius: 14px;
+            border: 1px solid var(--guide-border);
+            background: var(--guide-card-bg);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+        }
+        .guide-table,
+        .guide-article table.data-table,
+        .guide-article .table-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            text-align: left;
+            min-width: 620px;
+        }
+        .guide-table thead tr,
+        .guide-article .table-wrapper thead tr {
+            background: var(--guide-bg);
+            border-bottom: 1.5px solid var(--guide-border);
+        }
+        .guide-table th,
+        .guide-article .table-wrapper th {
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--guide-text-primary);
+            border-bottom: 1.5px solid var(--guide-border);
+            border-right: 1px solid var(--guide-border);
+            line-height: 1.4;
+            vertical-align: middle;
+        }
+        .guide-table th:last-child,
+        .guide-article .table-wrapper th:last-child {
+            border-right: none;
+        }
+        .guide-table tbody tr,
+        .guide-article .table-wrapper tbody tr {
+            border-bottom: 1px solid var(--guide-border);
+            transition: background 0.15s ease;
+        }
+        .guide-table tbody tr:last-child,
+        .guide-article .table-wrapper tbody tr:last-child {
+            border-bottom: none;
+        }
+        .guide-table tbody tr:hover,
+        .guide-article .table-wrapper tbody tr:hover {
+            background: var(--guide-accent-soft);
+        }
+        .guide-table td,
+        .guide-article .table-wrapper td {
+            padding: 12px 16px;
+            color: var(--guide-text-secondary);
+            border-right: 1px solid var(--guide-border);
+            line-height: 1.55;
+            vertical-align: top;
+        }
+        .guide-table td:last-child,
+        .guide-article .table-wrapper td:last-child {
+            border-right: none;
+        }
+        /* Sticky/Distinct first column for comparison aspects */
+        .guide-table th:first-child,
+        .guide-table td:first-child,
+        .guide-article .table-wrapper th:first-child,
+        .guide-article .table-wrapper td:first-child {
+            width: 170px;
+            min-width: 150px;
+            font-weight: 700;
+            color: var(--guide-text-primary);
+            background: var(--guide-bg);
+            white-space: nowrap;
+        }
+        /* Header badge pills for comparison columns */
+        .guide-th-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 9999px;
+            font-weight: 800;
+            font-size: 11.5px;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        .guide-th-pill svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+        .guide-th-pill.pill-waste {
+            background: rgba(225, 29, 72, 0.12);
+            color: #be123c;
+            border: 1px solid rgba(225, 29, 72, 0.25);
+        }
+        html.dark .guide-th-pill.pill-waste {
+            background: rgba(251, 113, 133, 0.18);
+            color: #fca5a5;
+            border-color: rgba(251, 113, 133, 0.35);
+        }
+        .guide-th-pill.pill-opname {
+            background: rgba(2, 132, 199, 0.12);
+            color: #0369a1;
+            border: 1px solid rgba(2, 132, 199, 0.25);
+        }
+        html.dark .guide-th-pill.pill-opname {
+            background: rgba(56, 189, 248, 0.18);
+            color: #7dd3fc;
+            border-color: rgba(56, 189, 248, 0.35);
+        }
+        @media (max-width: 639px) {
+            .guide-table,
+            .guide-article table.data-table,
+            .guide-article .table-wrapper table {
+                font-size: 11.5px;
+                min-width: 540px;
+            }
+            .guide-table th,
+            .guide-table td,
+            .guide-article .table-wrapper th,
+            .guide-article .table-wrapper td {
+                padding: 10px 12px;
+            }
+            .guide-table th:first-child,
+            .guide-table td:first-child,
+            .guide-article .table-wrapper th:first-child,
+            .guide-article .table-wrapper td:first-child {
+                width: 140px;
+                min-width: 130px;
+            }
+            .guide-th-pill {
+                font-size: 10.5px;
+                padding: 4px 9px;
+            }
+        }
+
+        /* 5.6 FEATURE CARDS GRID (Universal Search & High-Density Cards) */
         .feature-cards-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1559,7 +1706,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </button>
             </div>
             <nav class="guide-drawer-nav">
-                <div class="toc-header">13 Bab Standar Operasional</div>
+                <div class="toc-header">14 Bab Standar Operasional</div>
                 <ul class="toc-nav-list">
                     <li><a href="#bab-1-peran" class="toc-link" @click="sidebarOpen = false"><i data-lucide="shield"></i> <span>1. Peran &amp; Hak Akses</span></a></li>
                     <li><a href="#bab-2-master-harga" class="toc-link" @click="sidebarOpen = false"><i data-lucide="tag"></i> <span>2. Master Produk &amp; Harga</span></a></li>
@@ -1568,12 +1715,13 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                     <li><a href="#bab-5-konsinyasi-rolling" class="toc-link" @click="sidebarOpen = false"><i data-lucide="refresh-cw"></i> <span>5. Konsinyasi: Rolling Nota</span></a></li>
                     <li><a href="#bab-6-konsinyasi-tagihan" class="toc-link" @click="sidebarOpen = false"><i data-lucide="receipt"></i> <span>6. Konsinyasi: Kolektif Tagihan</span></a></li>
                     <li><a href="#bab-7-pembelian-vendor" class="toc-link" @click="sidebarOpen = false"><i data-lucide="shopping-bag"></i> <span>7. Pengadaan &amp; Multi-Vendor</span></a></li>
-                    <li><a href="#bab-8-logistik-pengiriman" class="toc-link" @click="sidebarOpen = false"><i data-lucide="truck"></i> <span>8. Logistik &amp; Pengiriman</span></a></li>
-                    <li><a href="#bab-9-keuangan-kas" class="toc-link" @click="sidebarOpen = false"><i data-lucide="wallet"></i> <span>9. Kas Tertutup &amp; Rekening Escrow</span></a></li>
-                    <li><a href="#bab-10-hr-penggajian" class="toc-link" @click="sidebarOpen = false"><i data-lucide="users"></i> <span>10. SDM, Kasbon &amp; Penggajian</span></a></li>
-                    <li><a href="#bab-11-faq-masalah" class="toc-link" @click="sidebarOpen = false"><i data-lucide="help-circle"></i> <span>11. Solusi Masalah Lapangan</span></a></li>
-                    <li><a href="#bab-12-setup-perusahaan" class="toc-link" @click="sidebarOpen = false"><i data-lucide="building"></i> <span>12. Profil Usaha &amp; Impor Excel</span></a></li>
-                    <li><a href="#bab-13-tips-navigasi" class="toc-link" @click="sidebarOpen = false"><i data-lucide="sparkles"></i> <span>13. Tips Navigasi &amp; PWA HP</span></a></li>
+                    <li><a href="#bab-inventori-opname" class="toc-link" @click="sidebarOpen = false"><i data-lucide="warehouse"></i> <span>8. Inventaris &amp; Bulk Opname</span></a></li>
+                    <li><a href="#bab-8-logistik-pengiriman" class="toc-link" @click="sidebarOpen = false"><i data-lucide="truck"></i> <span>9. Logistik &amp; Pengiriman</span></a></li>
+                    <li><a href="#bab-9-keuangan-kas" class="toc-link" @click="sidebarOpen = false"><i data-lucide="wallet"></i> <span>10. Kas Tertutup &amp; Rekening Escrow</span></a></li>
+                    <li><a href="#bab-10-hr-penggajian" class="toc-link" @click="sidebarOpen = false"><i data-lucide="users"></i> <span>11. SDM, Kasbon &amp; Penggajian</span></a></li>
+                    <li><a href="#bab-11-faq-masalah" class="toc-link" @click="sidebarOpen = false"><i data-lucide="help-circle"></i> <span>12. Solusi Masalah Lapangan</span></a></li>
+                    <li><a href="#bab-12-setup-perusahaan" class="toc-link" @click="sidebarOpen = false"><i data-lucide="building"></i> <span>13. Profil Usaha &amp; Impor Excel</span></a></li>
+                    <li><a href="#bab-13-tips-navigasi" class="toc-link" @click="sidebarOpen = false"><i data-lucide="sparkles"></i> <span>14. Tips Navigasi &amp; PWA HP</span></a></li>
                 </ul>
             </nav>
         </aside>
@@ -1672,7 +1820,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                             <div class="step-circle">7</div>
                             <div class="step-content">
                                 <h4 class="step-title">Petugas Gudang &amp; Pengadaan</h4>
-                                <p class="step-desc">Menjaga keamanan fisik persediaan: memeriksa dan menimbang bahan baku yang baru tiba dari supplier, menyiapkan dan membungkus barang sesuai lembar <em>Picking List</em> pesanan, serta melakukan opname stok berkala untuk memastikan jumlah di gudang cocok dengan data di sistem.</p>
+                                <p class="step-desc">Menjaga keamanan fisik persediaan: memeriksa dan menimbang bahan baku yang baru tiba dari supplier, menyiapkan dan membungkus barang sesuai lembar <em>Picking List</em> pesanan, memantau batas stok minimum di katalog inventori, serta melakukan audit stok massal berkala melalui modul <strong>Bulk Opname Gudang</strong> (dengan tab kategori Bahan Mentah, Bahan Kemas, dan Barang Jadi) untuk memastikan angka buku besar sistem 100% cocok dengan fisik di rak.</p>
                             </div>
                         </div>
                         <div class="step-item">
@@ -2111,13 +2259,447 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 8: LOGISTIK & PENGIRIMAN                              -->
+                <!-- BAB 8: INVENTARIS GUDANG, KARTU STOK & BULK OPNAME FISIK  -->
+                <!-- ========================================================= -->
+                <section id="bab-inventori-opname" class="guide-chapter theme-emerald">
+                    <a id="bab-inventaris-opname" href="#bab-inventaris-opname" style="display:none;" aria-hidden="true"></a>
+                    <a id="bab-bulk-opname" href="#bab-bulk-opname" style="display:none;" aria-hidden="true"></a>
+                    <div class="chapter-header">
+                        <div class="chapter-icon-badge"><i data-lucide="warehouse"></i></div>
+                        <div class="chapter-title-wrap">
+                            <span class="chapter-number">Bab 8</span>
+                            <h3 class="chapter-title">Inventaris Gudang, Kartu Stok &amp; Bulk Opname Fisik</h3>
+                            <div class="chapter-roles">
+                                <span class="role-pill">Petugas Gudang</span>
+                                <span class="role-pill">Admin Operasional</span>
+                                <span class="role-pill">Super Admin</span>
+                                <span class="role-pill">Owner</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="step-desc">
+                        Pengelolaan saldo stok fisik persediaan, audit riwayat mutasi keluar-masuk, penyesuaian cepat, dan tata cara pelaksanaan audit opname massal berkecepatan tinggi di menu <strong>Inventaris</strong> (Sidebar: <em>Gudang &amp; Pembelian &rarr; Inventaris</em> dan tombol <em>Bulk Opname Gudang</em>):
+                    </p>
+
+                    <!-- SUB-BAB 8.1: MONITORING STOK REALTIME & 5 KARTU KPI GUDANG -->
+                    <div class="sub-chapter-block">
+                        <h4 class="sub-chapter-title">
+                            <i data-lucide="layout-grid"></i>
+                            <span>8.1 Monitoring Stok Real-Time &amp; 5 Kartu Indikator KPI Gudang</span>
+                        </h4>
+                        <p class="step-desc">
+                            Halaman utama <strong>Inventaris Stok</strong> menyajikan ringkasan visual metrik persediaan secara komprehensif tanpa perlu kalkulasi manual:
+                        </p>
+
+                        <div class="feature-cards-grid">
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(99,102,241,0.12);color:#6366f1;">
+                                        <i data-lucide="package"></i>
+                                    </div>
+                                    <span>Total Katalog (SKU)</span>
+                                </div>
+                                <div class="feature-card-body">
+                                    Menghitung seluruh varian produk jadi, bahan baku mentah, dan bahan kemas yang aktif terdaftar dalam database sistem.
+                                </div>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(16,185,129,0.12);color:#059669;">
+                                        <i data-lucide="boxes"></i>
+                                    </div>
+                                    <span>Total Fisik Gudang</span>
+                                </div>
+                                <div class="feature-card-body">
+                                    Akumulasi jumlah fisik seluruh persediaan yang berada di dalam gudang dalam satuan dasar (pcs, kg, atau rol).
+                                </div>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(37,99,235,0.12);color:#2563eb;">
+                                        <i data-lucide="coins"></i>
+                                    </div>
+                                    <span>Valuasi Aset Gudang (HPP)</span>
+                                </div>
+                                <div class="feature-card-body">
+                                    Nilai total kapital modal persediaan yang tersimpan di gudang berdasarkan Harga Pokok Pembelian (HPP) riil yang dihitung otomatis.
+                                </div>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(217,119,6,0.12);color:#d97706;">
+                                        <i data-lucide="alert-triangle"></i>
+                                    </div>
+                                    <span>Stok Menipis (Peringatan)</span>
+                                </div>
+                                <div class="feature-card-body">
+                                    Jumlah SKU yang kuantitasnya telah menyentuh atau di bawah batas minimum peringatan (*reorder point*), menjadi sinyal bagi tim belanja/produksi untuk segera restock.
+                                </div>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(220,38,38,0.12);color:#dc2626;">
+                                        <i data-lucide="x-circle"></i>
+                                    </div>
+                                    <span>Stok Habis / Kosong (0)</span>
+                                </div>
+                                <div class="feature-card-body">
+                                    Daftar produk atau bahan yang persediaannya telah habis total (0 pcs), otomatis mengunci transaksi penjualan agar tidak terjadi stok negatif fiktif.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab Filter Kategori Item Explanation -->
+                        <div class="guide-box box-info" style="margin:14px 0;">
+                            <i data-lucide="layers"></i>
+                            <div>
+                                <strong>Tab Filter Kategori Cepat (4 Kategori dengan Counter Live):</strong><br>
+                                Tabel stok dilengkapi tab filter visual untuk menyortir jenis item secara instan:
+                                <ul style="padding-left:18px; margin:6px 0 0 0; font-size:12px; line-height:1.6;">
+                                    <li><strong>Semua Stok (Burgundy):</strong> Menampilkan seluruh SKU tanpa batasan kategori.</li>
+                                    <li><strong>Barang Jadi (Biru):</strong> Hanya menampilkan snack kemasan siap jual (Keripik Singkong, Basreng, Stik Bawang, dll).</li>
+                                    <li><strong>Bahan Mentah (Amber):</strong> Menampilkan komoditas mentah produksi (Singkong mentah, Minyak goreng curah/kemasan, Bumbu balado, Cabai bubuk).</li>
+                                    <li><strong>Bahan Kemas (Teal):</strong> Menampilkan material pengemasan (Plastik standing pouch, Dus karton luar, Lakban segel, Stiker label barcode).</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Live Search & Keyboard Shortcut -->
+                        <div style="background:var(--guide-bg);border:1px solid var(--guide-border);border-radius:12px;padding:12px 14px;margin-top:12px;">
+                            <div style="font-weight:800;font-size:12px;color:var(--guide-text-primary);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                                <i data-lucide="zap" style="width:14px;height:14px;color:#f59e0b;"></i>
+                                <span>Pencarian Cepat &amp; Shortcut Keyboard:</span>
+                            </div>
+                            <ul style="font-size:11.5px;color:var(--guide-text-secondary);line-height:1.6;padding-left:18px;margin:0;">
+                                <li>• <strong>Shortcut Tombol <code>/</code>:</strong> Tekan tombol garis miring <code>/</code> pada keyboard komputer dari posisi mana pun untuk langsung memfokuskan kursor ke kolom pencarian tanpa perlu menyentuh mouse.</li>
+                                <li>• <strong>Filter Status Ketersediaan:</strong> Dropdown filter untuk menyaring item berdasarkan status <em>Stok Aman</em>, <em>Stok Menipis</em>, atau <em>Stok Kosong</em>.</li>
+                                <li>• <strong>Tombol Reset Filter:</strong> Mengembalikan seluruh tab, status ketersediaan, grup kemasan, dan kata kunci pencarian ke tampilan default dalam 1 kali klik.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- SUB-BAB 8.2: KARTU STOK & PENYESUAIAN CEPAT -->
+                    <div class="sub-chapter-block">
+                        <h4 class="sub-chapter-title">
+                            <i data-lucide="activity"></i>
+                            <span>8.2 Audit Kartu Stok &amp; Penyesuaian Cepat (Quick Stock Adjustment)</span>
+                        </h4>
+                        <p class="step-desc">
+                            Untuk menjaga integritas dan ketelusuran pergerakan persediaan, setiap pergeseran stok di sistem KEREN ONE dicatat secara permanen di buku besar mutasi inventori:
+                        </p>
+
+                        <div class="step-timeline">
+                            <div class="step-item">
+                                <div class="step-circle">1</div>
+                                <div class="step-content">
+                                    <h4 class="step-title">Intip Riwayat Kartu Stok Mini (Ikon Activity)</h4>
+                                    <p class="step-desc">
+                                        Klik tombol ikon grafik mutasi pada kolom aksi baris produk untuk membuka modal <strong>Kartu Stok &amp; Riwayat Mutasi Terakhir</strong>. Modal ini merinci kronologi mutasi: waktu kejadian, nomor referensi dokumen, tipe pergerakan (Penerimaan PO Pembelian, Penjualan Kasir POS, Pengiriman Surat Jalan B2B, Penyesuaian Opname, Retur), jumlah penambahan (+) atau pengurangan (-), saldo stok akhir sesudah mutasi, serta nama staf pengguna yang mengeksekusi transaksi.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-circle">2</div>
+                                <div class="step-content">
+                                    <h4 class="step-title">Penyesuaian Cepat &amp; Pencatatan Kerusakan (Quick Adjustment &amp; Waste)</h4>
+                                    <p class="step-desc">
+                                        Untuk pergerakan stok insidental pada baris produk di luar audit massal, sistem menyediakan dua aksi independen:
+                                    </p>
+                                    <ul style="padding-left:18px; margin:6px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                        <li><strong>Tombol [Opname] (Penyesuaian Fisik):</strong> Membuka 3 mode aksi (<em>Opname Fisik</em> untuk memasukkan hasil hitung riil rak, <em>Item Masuk</em> untuk koreksi penambahan, dan <em>Item Keluar</em> untuk koreksi pengurangan administratif).</li>
+                                        <li><strong>Tombol Merah [Waste] (Barang Rusak &amp; Sampel):</strong> Aksi khusus untuk memotong stok barang yang fisik nyatanya rusak, remuk, kemasan bocor, kadaluarsa, atau diambil untuk sampel promosi/uji rasa.</li>
+                                    </ul>
+                                    <p class="step-desc">
+                                        Setiap aksi wajib menyertakan <em>Alasan / Keterangan</em> yang jelas sebagai jejak rekam audit digital bagi manajemen dan tim akuntansi.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-BAB 8.3: PANDUAN KRUSIAL MEMBEDAKAN WASTE VS OPNAME ITEM KELUAR -->
+                    <div class="sub-chapter-block">
+                        <h4 class="sub-chapter-title">
+                            <i data-lucide="scale"></i>
+                            <span>8.3 Panduan Krusial: Membedakan Barang Rusak (Waste) vs Opname Item Keluar (Dampak Akuntansi &amp; Laporan)</span>
+                        </h4>
+                        <p class="step-desc">
+                            Banyak staf operasional sering bertanya: <em>"Sama-sama mengurangi stok fisik di gudang, mengapa ada tombol Waste dan tombol Opname (Item Keluar)?"</em>. Pemilihan fitur yang tepat adalah <strong>kunci utama keakuratan laporan keuangan, perhitungan HPP, dan evaluasi efisiensi operasional pabrik</strong>:
+                        </p>
+
+                        <!-- Tabel Perbandingan Komprehensif -->
+                        <div class="guide-table-wrapper custom-scrollbar">
+                            <table class="guide-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:160px; min-width:140px;">Aspek Pembeda</th>
+                                        <th style="width:50%;">
+                                            <span class="guide-th-pill pill-waste">
+                                                <i data-lucide="trash-2"></i>
+                                                <span>Catat Barang Rusak (Waste)</span>
+                                            </span>
+                                        </th>
+                                        <th style="width:50%;">
+                                            <span class="guide-th-pill pill-opname">
+                                                <i data-lucide="clipboard-list"></i>
+                                                <span>Opname: Item Keluar / Koreksi</span>
+                                            </span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Kondisi Fisik Barang</td>
+                                        <td>
+                                            <div style="font-weight:700; color:#e11d48; margin-bottom:3px;">Wujud fisik barang nyata ada</div>
+                                            <span>Terbukti rusak, bocor, remuk, kadaluarsa, atau dicicipi untuk sampel uji rasa mitra.</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:700; color:#0284c7; margin-bottom:3px;">Fisik barang tidak ada / selisih hitung</div>
+                                            <span>Barang hilang atau kurang di rak audit gudang, tidak ada bangkai atau bukti fisik kerusakan.</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Kapan Digunakan?</td>
+                                        <td>
+                                            <div style="font-weight:700; color:var(--guide-text-primary); margin-bottom:2px;">Insidental harian saat kejadian</div>
+                                            <span>Plastik sobek terkena cutter saat packing, dus jatuh, tanggal kadaluarsa habis, atau sampel buyer.</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:700; color:var(--guide-text-primary); margin-bottom:2px;">Saat Stok Opname Berkala</div>
+                                            <span>Pelaksanaan audit fisik mingguan/bulanan atau koreksi administratif non-waste.</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Input yang Diminta</td>
+                                        <td>
+                                            <div style="font-weight:700; color:var(--guide-text-primary); margin-bottom:2px;">Kategori Kerusakan + Kronologi</div>
+                                            <span>Wajib memilih Kategori Kerusakan (Kemasan Rusak, Remuk, Expired, Sampel) &amp; kronologi kejadian.</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:700; color:var(--guide-text-primary); margin-bottom:2px;">Alasan Audit / Koreksi</div>
+                                            <span>Murni catatan audit fisik (contoh: <em>"Selisih hitung rak tengah"</em> atau <em>"Koreksi salah catat nota"</em>).</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Kartu Stok (Mutasi)</td>
+                                        <td>
+                                            <code style="font-size:11px;">item_keluar_waste</code>
+                                            <div style="font-size:11px; margin-top:3px; opacity:0.85;">Referensi: <code>waste_manual</code></div>
+                                        </td>
+                                        <td>
+                                            <code style="font-size:11px;">penyesuaian_opname_kurang</code>
+                                            <div style="font-size:11px; margin-top:3px; opacity:0.85;">Referensi: <code>penyesuaian_stok</code></div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Pos Akuntansi &amp; Laba Rugi</td>
+                                        <td>
+                                            <div style="font-weight:700; color:var(--guide-text-primary); margin-bottom:2px;">Beban Kerusakan Barang (Spoilage)</div>
+                                            <span>Atau <strong>Beban Promosi</strong> (jika sampel tester). Mengurangi laba operasional sebagai beban terukur pabrik.</span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:700; color:var(--guide-text-primary); margin-bottom:2px;">Selisih Persediaan (Inventory Shrinkage)</div>
+                                            <span>Dibukukan ke akun selisih audit persediaan gudang untuk ditelusuri riwayatnya.</span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Analitik Manajemen</td>
+                                        <td>
+                                            Mengevaluasi kualitas kemasan supplier karton/plastik, kehati-hatian staf packing, dan efektivitas mesin segel.
+                                        </td>
+                                        <td>
+                                            Menelusuri potensi kebocoran stok, kelalaian pencatatan penjualan kasir, atau selisih administrasi gudang.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Contoh Kasus Nyata di Lapangan Kerja -->
+                        <div class="space-y-3" style="margin-top:16px;">
+                            <div class="guide-box box-danger">
+                                <i data-lucide="alert-triangle"></i>
+                                <div style="flex:1; min-width:0;">
+                                    <strong style="color:currentColor; font-size:13px;">Contoh Kasus 1 (Gunakan Tombol Waste):</strong>
+                                    <p style="margin:4px 0 6px 0; font-size:12px; line-height:1.5;">
+                                        Staf gudang sedang merapikan karton <em>Berondong Beras 2 Susun</em>. Ditemukan 2 bungkus plastik robek tersayat cutter dan 1 bungkus remuk terinjak saat pemindahan dus. Selain itu, staf mengambil 2 bungkus untuk sampel uji rasa pembeli supermarket mitra.
+                                    </p>
+                                    <div style="background:var(--guide-card-bg); border-radius:10px; padding:10px 14px; font-size:12px; border:1px solid var(--guide-border); margin-top:8px;">
+                                        👉 <strong>Tindakan:</strong> Klik tombol merah <strong>[Waste]</strong> &rarr; Masukkan kuantitas (misal 3) &rarr; Pilih kategori <em>Kemasan Rusak / Gagal Segel</em> &rarr; Kronologi: <em>"Sobek cutter dan remuk saat unboxing dus"</em>.<br>
+                                        📊 <strong>Hasil Laporan:</strong> Stok berkurang 3 pcs, dan tercatat resmi sebagai <strong>Beban Kerusakan Barang</strong>, sehingga manajemen dapat mengevaluasi SOP kerja atau mengklaim ganti rugi vendor.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="guide-box box-info">
+                                <i data-lucide="clipboard-check"></i>
+                                <div style="flex:1; min-width:0;">
+                                    <strong style="color:currentColor; font-size:13px;">Contoh Kasus 2 (Gunakan Tombol Opname / Bulk Opname):</strong>
+                                    <p style="margin:4px 0 6px 0; font-size:12px; line-height:1.5;">
+                                        Pada jadwal audit opname fisik akhir bulan, sistem mencatat stok <em>Stik Bawang Gurih</em> ada 20 pcs. Setelah seluruh rak gudang dihitung teliti, barang yang ada hanya 18 pcs (kurang 2 pcs). Di area gudang dan tempat sampah <strong>tidak ada bungkus rusak ataupun sisa remukan produk</strong>. Barangnya murni selisih hitung fisik.
+                                    </p>
+                                    <div style="background:var(--guide-card-bg); border-radius:10px; padding:10px 14px; font-size:12px; border:1px solid var(--guide-border); margin-top:8px;">
+                                        👉 <strong>Tindakan:</strong> Klik tombol <strong>[Opname]</strong> (masukkan hasil hitung fisik <code>18</code> atau pilih mode <em>Item Keluar</em> kuantitas <code>2</code>) atau gunakan modul <strong>Bulk Opname</strong> &rarr; Alasan: <em>"Selisih hitung fisik opname rak tengah"</em>.<br>
+                                        📊 <strong>Hasil Laporan:</strong> Stok sistem diselaraskan menjadi 18 pcs agar kasir tidak menjual barang fiktif, dan selisih -2 pcs masuk pos <strong>Selisih Persediaan (Inventory Shrinkage)</strong> untuk ditelusuri riwayat nota penjualannya.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Golden Rule Box -->
+                        <div style="background:var(--guide-accent-soft); border:1px solid var(--guide-accent); border-radius:12px; padding:12px 16px; margin-top:14px;">
+                            <div style="font-weight:800; font-size:12.5px; color:var(--guide-accent); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="check-circle-2" style="width:16px; height:16px;"></i>
+                                <span>Aturan Emas Operasional (Golden Rule):</span>
+                            </div>
+                            <div style="font-size:12px; color:var(--guide-text-primary); line-height:1.5;">
+                                • <strong>Ada wujud fisik bangkai barangnya yang rusak / terbuang / dicicipi sampel?</strong> &rarr; Selalu gunakan <strong>[Waste]</strong>.<br>
+                                • <strong>Barangnya tidak ada di rak / selisih hitung saat audit berkala?</strong> &rarr; Selalu gunakan <strong>[Opname Fisik]</strong> atau <strong>[Bulk Opname]</strong>.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-BAB 8.4: ALUR KERJA BULK OPNAME GUDANG -->
+                    <div class="sub-chapter-block">
+                        <h4 class="sub-chapter-title">
+                            <i data-lucide="clipboard-check"></i>
+                            <span>8.4 Modul Bulk Opname Stok Gudang (Audit Massal Berkecepatan Tinggi)</span>
+                        </h4>
+                        <p class="step-desc">
+                            Untuk audit stok periodik (opname akhir bulan atau audit fisik serentak seluruh gudang), gunakan fitur <strong>Bulk Opname Gudang</strong> (diakses via tombol hijau di pojok kanan atas halaman Inventaris atau URL <code>/inventory/bulk-opname</code>):
+                        </p>
+
+                        <div class="step-timeline">
+                            <div class="step-item">
+                                <div class="step-circle">1</div>
+                                <div class="step-content">
+                                    <h4 class="step-title">Pengisian Metadata Dokumen Sesi Opname</h4>
+                                    <p class="step-desc">
+                                        Tentukan <strong>Tanggal Opname</strong> (tanggal fisik cut-off penghitungan) dan tuliskan <strong>Keterangan / Catatan Sesi Opname</strong> (misal: <em>"Opname Fisik Tutup Buku Akhir Bulan Gudang Pusat"</em>). Metadata ini akan tercatat resmi pada nomor dokumen audit <code>OPN-YYYYMMDD-XXXX</code>.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-circle">2</div>
+                                <div class="step-content">
+                                    <h4 class="step-title">Tab Kategori Fleksibel: Pisahkan Fokus Area Hitung</h4>
+                                    <p class="step-desc">
+                                        Manfaatkan tab kategori di atas tabel (<em>Semua Item</em>, <em>Barang Jadi</em>, <em>Bahan Mentah</em>, dan <em>Bahan Kemas</em>). Petugas dapat menyelesaikan penghitungan bahan mentah terlebih dahulu di area gudang bahan basah, lalu berpindah ke tab barang jadi tanpa khawatir angka yang sudah diinput hilang atau ter-reset.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-circle">3</div>
+                                <div class="step-content">
+                                    <h4 class="step-title">Mesin Input Dua-Arah Cepat (Two-Way Binding @ 60 FPS)</h4>
+                                    <p class="step-desc">
+                                        Sistem menyediakan dua metode fleksibel untuk memasukkan data yang saling terkalkulasi otomatis secara seketika (*zero-lag*):
+                                    </p>
+                                    <ul style="padding-left:18px; margin:6px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                        <li><strong>Metode A (Input Stok Fisik Realita):</strong> Masukkan total angka riil hasil hitung fisik di rak gudang. Sistem secara instan menghitung selisihnya terhadap stok sistem dan mengisi kolom penyesuaian (warna hijau untuk stok masuk, warna merah untuk stok keluar).</li>
+                                        <li><strong>Metode B (Input Penyesuaian Langsung +/-):</strong> Jika petugas sudah mengetahui jumlah selisihnya, cukup ketik di kolom Penyesuaian (misal <code>+10</code> atau <code>-5</code>). Sistem otomatis memperbarui kolom Stok Fisik Realita yang bersesuaian.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-circle">4</div>
+                                <div class="step-content">
+                                    <h4 class="step-title">Aturan Ketat Validasi Anti-Minus (Zero Negative Stock Safety)</h4>
+                                    <p class="step-desc">
+                                        Untuk mencegah data persediaan menjadi tidak masuk akal atau minus di buku besar:
+                                    </p>
+                                    <ul style="padding-left:18px; margin:6px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.6;">
+                                        <li>Kolom <em>Stok Fisik Realita</em> hanya menerima angka positif &ge; 0 (tanda minus <code>-</code> otomatis diblokir keyboard).</li>
+                                        <li>Kolom <em>Penyesuaian (+/-)</em> otomatis membatasi nilai pengurangan maksimal sebesar sisa stok sistem yang ada. Contoh: jika stok sistem tercatat 15 pcs, pengurangan maksimal adalah <code>-15</code>. Pengurangan lebih dari itu otomatis dibatasi dan sistem menampilkan pop-up toast peringatan bahwa stok fisik tidak boleh minus.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-circle">5</div>
+                                <div class="step-content">
+                                    <h4 class="step-title">Review Ringkasan &amp; Simpan Dokumen</h4>
+                                    <p class="step-desc">
+                                        Setelah seluruh fisik terdata, klik tombol <strong>"Review &amp; Simpan"</strong>. Sistem menampilkan modal pop-up konfirmasi yang menyajikan perbandingan detail stok awal, penyesuaian (+/-), dan stok akhir untuk seluruh item yang diubah. Klik <strong>"Simpan Permanen Opname"</strong> untuk membukukan mutasi stok ke sistem secara atomik dan aman.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-BAB 8.5: KEAMANAN DATA & SHORTCUT PRODUKTIVITAS -->
+                    <div class="sub-chapter-block">
+                        <h4 class="sub-chapter-title">
+                            <i data-lucide="shield-check"></i>
+                            <span>8.5 Keamanan Data Input (Anti-Hilang Data) &amp; Shortcut Staf Gudang</span>
+                        </h4>
+
+                        <div class="feature-cards-grid">
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(16,185,129,0.12);color:#10b981;">
+                                        <i data-lucide="save"></i>
+                                    </div>
+                                    <span>Auto-Save Draf ke Perangkat</span>
+                                </div>
+                                <div class="feature-card-body">
+                                    Setiap angka yang Anda ketik otomatis tersimpan di memori browser lokal (*Local Storage*). Jika koneksi internet terputus, laptop kehabisan baterai, atau halaman ter-refresh secara mendadak, draf data Anda 100% aman dan akan langsung dipulihkan secara otomatis saat membuka kembali halaman.
+                                </div>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(37,99,235,0.12);color:#2563eb;">
+                                        <i data-lucide="check-square"></i>
+                                    </div>
+                                    <span>Preservasi Data saat Filter &amp; Paging</span>
+                                </div>
+                                <div class="feature-card-body">
+                                    Berpindah tab kategori, mengetik pencarian nama produk, mengganti filter status periksa, atau berpindah halaman pagination <strong>tidak akan menghapus atau me-reset</strong> angka yang telah Anda ketik sebelumnya.
+                                </div>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="feature-card-header">
+                                    <div class="feature-card-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+                                        <i data-lucide="alert-circle"></i>
+                                    </div>
+                                    <span>Konfirmasi Navigasi Aman (AppConfirm)</span>
+                                </div>
+                                <div class="feature-card-body">
+                                    Jika Anda mengklik menu lain di sidebar atau tombol navigasi keluar saat masih ada perubahan opname yang belum disimpan, sistem memunculkan pop-up dialog peringatan yang elegan untuk mencegah Anda keluar secara tidak sengaja.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Warehouse Staff Productivity Tips -->
+                        <div class="guide-box box-success" style="margin-top:14px;">
+                            <i data-lucide="sparkles"></i>
+                            <div>
+                                <strong>Tips Kerja Cepat dengan Keyboard (10-Key Numpad &amp; Scanner):</strong><br>
+                                Staf gudang yang menggunakan keyboard numerik atau barcode scanner dapat menginput dengan sangat cepat tanpa perlu menyentuh mouse:
+                                <ul style="padding-left:18px; margin:6px 0 0 0; font-size:12px; line-height:1.6;">
+                                    <li>Tekan tombol <code>/</code> untuk langsung mencari produk atau barcode.</li>
+                                    <li>Ketik angka stok fisik pada baris produk yang sesuai.</li>
+                                    <li>Tekan tombol <code>Enter</code> atau <code>Panah Bawah (&darr;)</code> pada keyboard untuk langsung loncat ke kolom input baris berikutnya secara otomatis!</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================= -->
+                <!-- BAB 9: LOGISTIK & PENGIRIMAN                              -->
                 <!-- ========================================================= -->
                 <section id="bab-8-logistik-pengiriman" class="guide-chapter theme-cyan">
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="truck"></i></div>
                         <div class="chapter-title-wrap">
-                            <span class="chapter-number">Bab 8</span>
+                            <span class="chapter-number">Bab 9</span>
                             <h3 class="chapter-title">Operasional Logistik, Armada Driver &amp; Surat Jalan</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Driver</span>
@@ -2165,13 +2747,13 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 9: KEUANGAN, KAS & REKENING ESCROW                    -->
+                <!-- BAB 10: KEUANGAN, KAS & REKENING ESCROW                   -->
                 <!-- ========================================================= -->
                 <section id="bab-9-keuangan-kas" class="guide-chapter theme-green">
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="wallet"></i></div>
                         <div class="chapter-title-wrap">
-                            <span class="chapter-number">Bab 9</span>
+                            <span class="chapter-number">Bab 10</span>
                             <h3 class="chapter-title">Tata Kelola Kas Tertutup &amp; Rekening Kas Tabungan (Escrow)</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Kasir Kantor</span>
@@ -2250,13 +2832,13 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 10: MANAJEMEN SDM, KASBON & PENGGAJIAN               -->
+                <!-- BAB 11: MANAJEMEN SDM, KASBON & PENGGAJIAN               -->
                 <!-- ========================================================= -->
                 <section id="bab-10-hr-penggajian" class="guide-chapter theme-indigo">
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="users"></i></div>
                         <div class="chapter-title-wrap">
-                            <span class="chapter-number">Bab 10</span>
+                            <span class="chapter-number">Bab 11</span>
                             <h3 class="chapter-title">Manajemen SDM, Kasbon &amp; Penggajian Terpadu (HR &amp; Payroll)</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Mandor Produksi</span>
@@ -2274,7 +2856,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item" id="panduan-absensi" style="scroll-margin-top: 85px;">
                             <div class="step-circle">1</div>
                             <div class="step-content">
-                                <h4 class="step-title">10.1 Absensi Kehadiran, Pencairan Kas Harian &amp; Proteksi Saldo</h4>
+                                <h4 class="step-title">11.1 Absensi Kehadiran, Pencairan Kas Harian &amp; Proteksi Saldo</h4>
                                 <p class="step-desc">
                                     Dikelola di menu <strong>Absensi Karyawan</strong> (<span class="guide-nav-step"><i data-lucide="users"></i> HR &amp; Personalia <i data-lucide="chevron-right"></i> Absensi</span>). Modul ini berfungsi mencatat presensi harian seluruh staf, menyinkronkan penarikan uang kehadiran &amp; lembur tunai dari kas fisik kantor, serta mengunci proteksi saldo kas agar tidak terjadi kebocoran atau selisih pembukuan:
                                 </p>
@@ -2370,7 +2952,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item">
                             <div class="step-circle">2</div>
                             <div class="step-content">
-                                <h4 class="step-title">10.2 Pencatatan Produksi Harian Borongan</h4>
+                                <h4 class="step-title">11.2 Pencatatan Produksi Harian Borongan</h4>
                                 <p class="step-desc">
                                     Dikelola di menu <strong>Produksi Borongan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Produksi</em>). Mandor mencatat hasil kerja harian tenaga borongan dengan memilih nama karyawan, jenis produk/kemasan, dan jumlah unit yang berhasil diselesaikan hari itu. Sistem otomatis mengalikan unit tersebut dengan tarif upah kemasan (<em>Kelompok Upah Borongan</em>) sehingga total hak upah borongan terkumpul akurat.
                                 </p>
@@ -2379,7 +2961,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item">
                             <div class="step-circle">3</div>
                             <div class="step-content">
-                                <h4 class="step-title">10.3 Kasbon Karyawan &amp; Cicilan Terjadwal</h4>
+                                <h4 class="step-title">11.3 Kasbon Karyawan &amp; Cicilan Terjadwal</h4>
                                 <p class="step-desc">
                                     Dikelola di menu <strong>Kasbon Karyawan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Kasbon</em>):
                                 </p>
@@ -2393,7 +2975,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item">
                             <div class="step-circle">4</div>
                             <div class="step-content">
-                                <h4 class="step-title">10.4 Penarikan Gaji / Kasbon Harian</h4>
+                                <h4 class="step-title">11.4 Penarikan Gaji / Kasbon Harian</h4>
                                 <p class="step-desc">
                                     Dikelola di menu <strong>Penarikan Gaji</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Penarikan Gaji</em>). Fasilitas ini digunakan jika tenaga kerja harian atau borongan mengambil uang saku harian di tengah periode kerja. Pengambilan uang harian memotong kas operasional kantor yang dipilih dan otomatis menjadi komponen potongan pada slip gaji periode tersebut.
                                 </p>
@@ -2402,7 +2984,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item">
                             <div class="step-circle">5</div>
                             <div class="step-content">
-                                <h4 class="step-title">10.5 Tabungan Karyawan</h4>
+                                <h4 class="step-title">11.5 Tabungan Karyawan</h4>
                                 <p class="step-desc">
                                     Dikelola di menu <strong>Tabungan Karyawan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Tabungan</em>):
                                 </p>
@@ -2415,7 +2997,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item">
                             <div class="step-circle">6</div>
                             <div class="step-content">
-                                <h4 class="step-title">10.6 Penggajian Otomatis (Payroll Engine) &amp; Approval Pembayaran</h4>
+                                <h4 class="step-title">11.6 Penggajian Otomatis (Payroll Engine) &amp; Approval Pembayaran</h4>
                                 <p class="step-desc">
                                     Dikelola di menu <strong>Penggajian</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Penggajian</em>):
                                 </p>
@@ -2440,14 +3022,14 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 11: SOLUSI MASALAH LAPANGAN & FAQ                     -->
+                <!-- BAB 12: SOLUSI MASALAH LAPANGAN & FAQ                     -->
                 <!-- ========================================================= -->
                 <section id="bab-11-faq-masalah" class="guide-chapter theme-orange">
                     <a id="bab-10-faq-masalah" href="#bab-10-faq-masalah" style="display:none;" aria-hidden="true"></a>
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="help-circle"></i></div>
                         <div class="chapter-title-wrap">
-                            <span class="chapter-number">Bab 11</span>
+                            <span class="chapter-number">Bab 12</span>
                             <h3 class="chapter-title">Penanganan Masalah Lapangan (Troubleshooting &amp; FAQ)</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Semua Staf</span>
@@ -2516,18 +3098,63 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                                 Sampaikan permohonan kepada Kepala Kantor atau Super Admin. Admin dapat membuka menu <strong>Hak Akses &amp; Peran</strong> (Sidebar: <em>Manajemen &rarr; Hak Akses &rarr; Tab Override Pengguna</em>) untuk mengaktifkan izin menu khusus pada akun karyawan yang bersangkutan tanpa harus mengubah peran dasarnya.
                             </div>
                         </div>
+
+                        <div class="faq-card">
+                            <div class="faq-header">
+                                <div class="faq-badge-icon"><i data-lucide="save"></i></div>
+                                <h4 class="faq-question">7. Tidak Sengaja Menutup Halaman Opname / Browser Tertutup, Apakah Data Input Hilang?</h4>
+                            </div>
+                            <div class="faq-body">
+                                <strong>Tidak hilang!</strong> Modul <em>Bulk Opname Gudang</em> dilengkapi fitur <strong>Auto-Save Draf Lokal</strong> yang menyimpan setiap angka ketikan Anda ke memori browser secara berkala. Saat Anda kembali membuka halaman opname, sistem secara otomatis memulihkan seluruh draf angka yang pernah Anda sesuaikan disertai notifikasi konfirmasi di bagian atas tabel.
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <div class="faq-header">
+                                <div class="faq-badge-icon"><i data-lucide="shield-alert"></i></div>
+                                <h4 class="faq-question">8. Mengapa Input Penyesuaian (-) Membatasi Angka dan Tidak Bisa Minus dari Stok Sistem?</h4>
+                            </div>
+                            <div class="faq-body">
+                                Sistem ERP menerapkan <strong>Zero Negative Stock Safety</strong>. Dalam operasional fisik riil, sebuah barang di gudang tidak mungkin berjumlah negatif (kurang dari 0). Jika stok sistem saat ini adalah 10 unit, pengurangan maksimal yang diizinkan adalah <code>-10</code> (stok fisik habis). Apabila pengguna mencoba memasukkan angka pengurangan yang lebih besar (misal <code>-15</code>), sistem otomatis membatasi ke <code>-10</code> dan memberikan peringatan agar saldo buku besar mutasi inventaris tetap sah dan tidak cacat.
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <div class="faq-header">
+                                <div class="faq-badge-icon"><i data-lucide="keyboard"></i></div>
+                                <h4 class="faq-question">9. Bagaimana Cara Memasukkan Ratusan Data Opname Cepat Menggunakan Numpad / Scanner?</h4>
+                            </div>
+                            <div class="faq-body">
+                                Cukup gunakan tombol keyboard tanpa perlu menyentuh mouse: tekan tombol <code>/</code> untuk mencari produk/SKU/barcode &rarr; masukkan angka stok fisik pada kolom &rarr; tekan tombol <code>Enter</code> atau <code>Panah Bawah (&darr;)</code> untuk langsung loncat ke kolom input baris berikutnya secara otomatis.
+                            </div>
+                        </div>
+
+                        <div class="faq-card">
+                            <div class="faq-header">
+                                <div class="faq-badge-icon" style="background:rgba(239,68,68,0.12); color:#dc2626;"><i data-lucide="scale"></i></div>
+                                <h4 class="faq-question">10. Kapan Harus Menggunakan Tombol Waste dan Kapan Menggunakan Opname Item Keluar? Mengapa Berpengaruh Besar pada Laporan Keuangan?</h4>
+                            </div>
+                            <div class="faq-body">
+                                <strong>Kunci pembedanya terletak pada wujud fisik dan tujuan audit:</strong>
+                                <ul style="padding-left:18px; margin:6px 0; font-size:12px; line-height:1.6;">
+                                    <li><strong>Gunakan Tombol [Waste]:</strong> Jika wujud fisik barang nyata ada dan diketahui penyebab rusaknya/dibuangnya (plastik bocor/terkena cutter, remuk saat unboxing dus, expired, atau diambil untuk sampel promosi uji rasa buyer). Mutasi ini dibukukan sebagai pos <strong>Beban Kerusakan Barang / Beban Promosi</strong>. Manajemen dapat memantau tingkat spoilage rate dan mengevaluasi kualitas kemasan supplier.</li>
+                                    <li><strong>Gunakan [Opname / Item Keluar]:</strong> Jika fisik barang tidak ada di rak / selisih hitung saat audit berkala tanpa ditemukan bangkai kemasan rusak, atau koreksi administratif. Mutasi ini dibukukan ke pos <strong>Selisih Persediaan (Inventory Variance / Shrinkage)</strong> untuk ditelusuri riwayat nota penjualan sebelumnya.</li>
+                                </ul>
+                                <em>Aturan Emas: Ada bangkai fisik barang yang rusak/dibuang/sampel? &rarr; <strong>WASTE</strong>. Barang tidak ada di tempat / selisih audit rak? &rarr; <strong>OPNAME</strong>.</em>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 12: PROFIL PERUSAHAAN & IMPOR DATA MASTER            -->
+                <!-- BAB 13: PROFIL PERUSAHAAN & IMPOR DATA MASTER            -->
                 <!-- ========================================================= -->
                 <section id="bab-12-setup-perusahaan" class="guide-chapter theme-violet">
                     <a id="bab-11-impor-master" href="#bab-11-impor-master" style="display:none;" aria-hidden="true"></a>
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="building"></i></div>
                         <div class="chapter-title-wrap">
-                            <span class="chapter-number">Bab 12</span>
+                            <span class="chapter-number">Bab 13</span>
                             <h3 class="chapter-title">Profil Perusahaan &amp; Setup Impor Data Master Excel</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Super Admin</span>
@@ -2543,7 +3170,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item">
                             <div class="step-circle">1</div>
                             <div class="step-content">
-                                <h4 class="step-title">12.1 Pengaturan Profil Perusahaan &amp; Nota</h4>
+                                <h4 class="step-title">13.1 Pengaturan Profil Perusahaan &amp; Nota</h4>
                                 <p class="step-desc">
                                     Dikelola di menu <strong>Profil Perusahaan</strong> (Sidebar: <em>Pengaturan &rarr; Profil Perusahaan</em>). Di halaman ini, admin dapat memperbarui nama resmi perusahaan, alamat kantor/pabrik, nomor WhatsApp resmi layanan pelanggan, mengunggah logo perusahaan (yang otomatis muncul di struk kasir, invoice faktur, surat jalan, dan slip gaji), serta mengatur catatan kaki (*footer*) faktur B2B.
                                 </p>
@@ -2552,7 +3179,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item">
                             <div class="step-circle">2</div>
                             <div class="step-content">
-                                <h4 class="step-title">12.2 Roadmap Impor Data Master (Urutan 4 Fase)</h4>
+                                <h4 class="step-title">13.2 Roadmap Impor Data Master (Urutan 4 Fase)</h4>
                                 <p class="step-desc">
                                     Saat menyiapkan data awal perusahaan di menu <strong>Impor Data</strong> (Sidebar: <em>Pengaturan &rarr; Impor Data</em>), ikuti urutan 4 fase baku agar data saling terhubung tanpa error relasi:
                                 </p>
@@ -2567,7 +3194,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                         <div class="step-item">
                             <div class="step-circle">3</div>
                             <div class="step-content">
-                                <h4 class="step-title">12.3 Panduan Penggunaan Template Excel Resmi</h4>
+                                <h4 class="step-title">13.3 Panduan Penggunaan Template Excel Resmi</h4>
                                 <p class="step-desc">
                                     Setiap template Excel yang diunduh dari sistem dilengkapi dengan <strong>Sheet 2 (Kamus &amp; Referensi Data)</strong>. Sheet ini memuat daftar kode wilayah, grup pelanggan, dan nama pemasok yang sah di sistem. Pengguna tinggal menyalin data dari Sheet 2 agar tidak terjadi salah ketik (*typo*) saat pengisian.
                                 </p>
@@ -2585,13 +3212,13 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                 </section>
 
                 <!-- ========================================================= -->
-                <!-- BAB 13: TIPS NAVIGASI & PWA HP                            -->
+                <!-- BAB 14: TIPS NAVIGASI & PWA HP                            -->
                 <!-- ========================================================= -->
                 <section id="bab-13-tips-navigasi" class="guide-chapter theme-rose">
                     <div class="chapter-header">
                         <div class="chapter-icon-badge"><i data-lucide="sparkles"></i></div>
                         <div class="chapter-title-wrap">
-                            <span class="chapter-number">Bab 13</span>
+                            <span class="chapter-number">Bab 14</span>
                             <h3 class="chapter-title">Tips Navigasi Cepat, Kenyamanan &amp; Performa Aplikasi</h3>
                             <div class="chapter-roles">
                                 <span class="role-pill">Semua Staf</span>
