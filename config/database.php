@@ -251,4 +251,20 @@ class Database
             'is_healthy'   => $pingMs >= 0,
         ];
     }
+
+    /**
+     * Memastikan pengujian mutasi (INSERT/UPDATE/DELETE) hanya berjalan di lingkungan Local DB sandbox.
+     * Jika terdeteksi mengarah ke database Live Supabase, proses akan dihentikan secara aman (exit 0)
+     * untuk mencegah polusi data akuntansi dan loncatan sequence faktur.
+     */
+    public static function ensureLocalTestSandbox(string $suiteName = ''): void
+    {
+        $info = self::getConnectionInfo();
+        if (!$info['is_local']) {
+            $nameStr = $suiteName ? "Suite '{$suiteName}'" : "Suite pengujian mutasi ini";
+            echo "\n\033[33m🛡️ [SKIP FOR SAFETY]\033[0m {$nameStr} ditangguhkan karena koneksi aktif mengarah ke Live Supabase ({$info['database']}).\n";
+            echo "Mutasi data dan simulasi hanya diizinkan berjalan di Local DB (kerensnack_erp_local).\n\n";
+            exit(0);
+        }
+    }
 }

@@ -324,6 +324,12 @@ class TestRunnerService
             'category'    => 'Database & Sandbox',
             'description' => 'Validasi sistem pencatatan migrasi otomatis schema_migrations, runner bin/migrate.php, dan keselarasan skema dual-database (Local & Live Supabase).'
         ],
+        'produksi_hybrid_deduction' => [
+            'file'        => 'ProduksiHybridDeductionTest.php',
+            'title'       => 'Hybrid Production Material Deduction & Stock Integrity',
+            'category'    => 'Produksi & Gudang',
+            'description' => 'Validasi pemotongan bahan mentah curah berbasis input bal riil, pemotongan kemasan berbasis pcs bungkus jadi, dan proteksi anti-stok minus.'
+        ],
     ];
 
     /**
@@ -332,20 +338,40 @@ class TestRunnerService
      */
     public const MUTATING_SUITES = [
         'sales_vs_driver',
+        'customer_integrity',
+        'master_core',
+        'master_relation',
+        'supplier_upgrade',
+        'vendor_catalog',
+        'product_master',
+        'pricing_stock',
+        'pricing_reconcile',
         'pos_cashier',
         'customer_orders',
         'procurement',
         'delivery_logistics',
+        'cash_ledger',
         'consignment_full',
         'consignment_conversion',
         'consignment_billing_adjustment',
-        'payroll_engine',
-        'closed_loop_cashflow',
         'tiered_commission',
+        'auth_rbac',
+        'activity_log',
+        'data_hygiene',
         'import_data',
         'employee_type_and_whatsapp',
+        'employee_nik_16_digit',
+        'brand_master',
         'customer_group_brand_pricing',
+        'master_full_sync_safety',
+        'gudang_role_position',
         'driver_assignment_po',
+        'hybrid_document_lifecycle',
+        'developer_dashboard_active_users',
+        'multi_barcode_integrity',
+        'payroll_engine',
+        'closed_loop_cashflow',
+        'produksi_hybrid_deduction',
     ];
 
     // -------------------------------------------------------------------------
@@ -849,11 +875,30 @@ class TestRunnerService
         $totalDuration = 0;
         $allPassed     = true;
 
+        $dbConfigFile = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'database.php';
+        if (file_exists($dbConfigFile)) {
+            require_once $dbConfigFile;
+        }
+
+        $dbInfo  = \Database::getConnectionInfo();
+        $isLocal = $dbInfo['is_local'] ?? false;
+        echo "Active Database: " . ($isLocal ? "\033[32mLOCAL DB ({$dbInfo['database']})\033[0m" : "\033[33mLIVE SUPABASE ({$dbInfo['database']})\033[0m") . "\n\n";
+
         foreach (self::SUITES as $key => $suite) {
             $file  = $suite['file'];
             $title = $suite['title'];
 
             echo "▶️  Running {$file} ({$title})...\n";
+
+            // Safety Guard: Proteksi Lingkungan Produksi (Zero Contamination & Sequence Preservation)
+            if (!$isLocal && in_array($key, self::MUTATING_SUITES, true)) {
+                echo "   \033[33m🛡️  SKIPPED\033[0m (Proteksi Live DB: Suite mutasi dilewati untuk mencegah loncatan sequence)\n\n";
+                $results[$file] = [
+                    'status'   => 'SKIPPED',
+                    'duration' => 0.0,
+                ];
+                continue;
+            }
 
             $testFile = $testsDir . DIRECTORY_SEPARATOR . $file;
             $cmd      = escapeshellarg($phpBin) . ' ' . escapeshellarg($testFile);
@@ -907,18 +952,28 @@ class TestRunnerService
         echo str_repeat("-", 72) . "\n";
 
         foreach ($results as $file => $info) {
-            $badge = ($info['status'] === 'PASS') ? "\033[32m✅ PASS\033[0m" : "\033[31m❌ FAIL\033[0m";
+            $badge = match ($info['status']) {
+                'PASS'    => "\033[32m✅ PASS\033[0m",
+                'SKIPPED' => "\033[33m🛡️ SKIP\033[0m",
+                default   => "\033[31m❌ FAIL\033[0m",
+            };
             printf("%-38s | %s | %6.2fs\n", $file, $badge, $info['duration']);
         }
 
         echo str_repeat("-", 72) . "\n";
         echo "Total Execution Time: " . round($totalDuration, 2) . "s\n";
         $passCount  = count(array_filter($results, fn($r) => $r['status'] === 'PASS'));
+        $skipCount  = count(array_filter($results, fn($r) => $r['status'] === 'SKIPPED'));
+        $failCount  = count(array_filter($results, fn($r) => $r['status'] === 'FAIL'));
         $totalCount = count($results);
-        echo "Summary: {$passCount} / {$totalCount} Suites Passed (" . round(($passCount / $totalCount) * 100) . "%)\n";
+        echo "Summary: {$passCount} Passed, {$skipCount} Skipped (Live Guard), {$failCount} Failed / {$totalCount} Total\n";
 
-        if ($allPassed) {
-            echo "\033[32m🎉 ALL " . count(self::SUITES) . " TEST SUITES PASSED (100%)! Entire ERP Codebase is healthy & hardened.\033[0m\n";
+        if ($allPassed && $failCount === 0) {
+            if ($skipCount > 0) {
+                echo "\033[32m🎉 ALL RUNNING SUITES PASSED! (" . ($totalCount - $skipCount) . " Read-Only Suites Verified on Live DB, {$skipCount} Mutating Suites Safely Isolated)\033[0m\n";
+            } else {
+                echo "\033[32m🎉 ALL " . count(self::SUITES) . " TEST SUITES PASSED (100%)! Entire ERP Codebase is healthy & hardened.\033[0m\n";
+            }
             exit(0);
         } else {
             echo "\033[31m⚠️ WARNING: Some test suites failed! Please inspect logs above.\033[0m\n";
