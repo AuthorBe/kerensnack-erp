@@ -318,6 +318,34 @@ class TestRunnerService
             'category'    => 'Database & Sandbox',
             'description' => 'Validasi pembersihan permanen 13 kolom usang, fungsi duplikat PL/pgSQL, indeks duplikat lower(nama_pengguna), dan integritas view v_karyawan_info tanpa relasi legacy.'
         ],
+        'migration_tracker' => [
+            'file'        => 'MigrationTrackerSystemTest.php',
+            'title'       => 'Automated Migration History & Dual-DB Tracker',
+            'category'    => 'Database & Sandbox',
+            'description' => 'Validasi sistem pencatatan migrasi otomatis schema_migrations, runner bin/migrate.php, dan keselarasan skema dual-database (Local & Live Supabase).'
+        ],
+    ];
+
+    /**
+     * Daftar suite yang melakukan simulasi mutasi data (INSERT/UPDATE/DELETE).
+     * Sesuai Best Practice, suite ini HANYA boleh berjalan saat terhubung ke Local DB (kerensnack_erp_local).
+     */
+    public const MUTATING_SUITES = [
+        'sales_vs_driver',
+        'pos_cashier',
+        'customer_orders',
+        'procurement',
+        'delivery_logistics',
+        'consignment_full',
+        'consignment_conversion',
+        'consignment_billing_adjustment',
+        'payroll_engine',
+        'closed_loop_cashflow',
+        'tiered_commission',
+        'import_data',
+        'employee_type_and_whatsapp',
+        'customer_group_brand_pricing',
+        'driver_assignment_po',
     ];
 
     // -------------------------------------------------------------------------
@@ -677,6 +705,28 @@ class TestRunnerService
                 'output'         => "Error: File pengujian {$suite['file']} tidak ditemukan di server.",
                 'exit_code'      => 1,
                 'cooldown_until' => self::COOLDOWN_SECONDS > 0 ? (time() + self::COOLDOWN_SECONDS) : null,
+            ];
+        }
+
+        // [4.1] Safety Guard: Proteksi Lingkungan Produksi (Zero Contamination & Sequence Preservation)
+        $dbInfo = \Database::getConnectionInfo();
+        $isLocal = $dbInfo['is_local'] ?? false;
+        if (!$isLocal && in_array($suiteKey, self::MUTATING_SUITES, true)) {
+            self::releaseLock();
+            return [
+                'success'        => true,
+                'key'            => $suiteKey,
+                'file'           => $suite['file'],
+                'title'          => $suite['title'],
+                'status'         => 'SKIPPED_FOR_SAFETY',
+                'duration'       => 0.01,
+                'output'         => "🛡️ SAFETY GUARD AKTIF (Best Practice Test Isolation):\n"
+                                  . "Suite '{$suite['title']}' melakukan simulasi mutasi data (INSERT/UPDATE/DELETE).\n"
+                                  . "Untuk menjaga nomor sequence faktur tidak melompat dan mencegah polusi data akuntansi di Live Supabase, "
+                                  . "pengujian mutasi HANYA boleh berjalan saat terhubung ke Local DB (kerensnack_erp_local).\n"
+                                  . "Silakan beralih ke Database Lokal di Developer Command Center sebelum menjalankan suite ini.",
+                'exit_code'      => 0,
+                'cooldown_until' => null,
             ];
         }
 
