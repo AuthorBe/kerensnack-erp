@@ -4,6 +4,11 @@
  * Template Slip Gaji Karyawan (A5 / A4 Batch)
  */
 use App\Helpers\Format;
+use App\Helpers\CompanySetting;
+use App\Helpers\PrintDocumentHelper;
+
+$company = $company ?? CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($company);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -39,8 +44,10 @@ use App\Helpers\Format;
         }
         .company-name {
             font-size: 13pt;
-            font-weight: bold;
-            color: #881337;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .doc-title {
             font-size: 12pt;
@@ -89,7 +96,7 @@ use App\Helpers\Format;
             font-weight: bold;
         }
         .font-mono {
-            font-family: Courier, monospace;
+            font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;
         }
         .total-box {
             background-color: #f5f5f4;
@@ -138,11 +145,22 @@ use App\Helpers\Format;
     <!-- Header -->
     <table class="header-table">
         <tr>
-            <td style="vertical-align: top;">
-                <div class="company-name"><?= htmlspecialchars($company['nama'] ?? 'KEREN SNACK INDONESIA') ?></div>
-                <div style="font-size: 8pt; color: #78716c;"><?= htmlspecialchars($company['alamat'] ?? '') ?></div>
+            <td style="vertical-align: middle;">
+                <table style="width: auto; border-collapse: collapse;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 50px; vertical-align: middle; padding-right: 10px;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 42px; max-width: 50px; object-fit: contain;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="vertical-align: middle;">
+                            <div class="company-name"><?= htmlspecialchars($company['nama'] ?? 'KEREN SNACK INDONESIA') ?></div>
+                            <div style="font-size: 8pt; color: #78716c;"><?= htmlspecialchars($company['alamat'] ?? '') ?></div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="vertical-align: top; text-align: right;">
+            <td style="vertical-align: middle; text-align: right;">
                 <div class="doc-title">SLIP GAJI</div>
                 <div class="doc-sub">No: <?= htmlspecialchars($item['nomor_referensi']) ?></div>
             </td>

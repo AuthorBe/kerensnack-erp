@@ -5,13 +5,7 @@ use App\Helpers\PrintDocumentHelper;
 
 $comp = $comp ?? $company ?? CompanySetting::getAll();
 
-$logoPath = dirname(__DIR__, 2) . '/public/assets/favicon/apple-touch-icon.png';
-$logoBase64 = '';
-if (file_exists($logoPath)) {
-    $type = pathinfo($logoPath, PATHINFO_EXTENSION);
-    $data = file_get_contents($logoPath);
-    $logoBase64 = 'data:image/' . $type . ';base64,' . base64_encode($data);
-}
+$logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -40,7 +34,7 @@ if (file_exists($logoPath)) {
         .uppercase { text-transform: uppercase; }
 
         .kop-table { width: 100%; margin-bottom: 6px; }
-        .company-name { font-size: 13pt; font-weight: bold; color: #881337; letter-spacing: 0.3px; margin-bottom: 2px; }
+        .company-name { font-size: 13pt; font-weight: 800; text-transform: uppercase; color: #0f172a; letter-spacing: 0.5px; margin-bottom: 2px; }
         .company-tagline { font-size: 7.5pt; font-weight: bold; color: #475569; margin-bottom: 2px; }
         .company-address { font-size: 7pt; color: #64748b; line-height: 1.25; margin-bottom: 2px; }
         .company-contact { font-size: 6.8pt; color: #64748b; line-height: 1.25; }
@@ -100,9 +94,9 @@ if (file_exists($logoPath)) {
             <td style="width: 58%; vertical-align: top;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <?php if (!empty($logoBase64)): ?>
-                        <td style="width: 48px; vertical-align: top; padding-right: 8px;">
-                            <img src="<?= $logoBase64 ?>" style="width: 42px; height: 42px; border-radius: 6px; object-fit: contain;">
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 48px; vertical-align: middle; padding-right: 10px;">
+                            <img src="<?= $logoSrc ?>" style="max-height: 44px; max-width: 48px; object-fit: contain;">
                         </td>
                         <?php endif; ?>
                         <td style="vertical-align: top;">

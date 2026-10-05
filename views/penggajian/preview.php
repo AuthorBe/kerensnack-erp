@@ -10,6 +10,11 @@ use App\Core\Auth;
 use App\Core\Router;
 
 ob_start();
+
+$totalPotonganTabunganAll = (float)($totalPotonganTabunganAll ?? $totalPotonganTabunganPayroll ?? 0);
+$totalPenarikanTabunganAll = (float)($totalPenarikanTabunganAll ?? $totalPenarikanTabunganPayroll ?? 0);
+$totalGajiBersih = (float)($totalGajiBersih ?? 0);
+$totalKebutuhanKasOperasional = $totalGajiBersih + $totalPotonganTabunganAll;
 ?>
 
 <style>
@@ -128,6 +133,90 @@ ob_start();
 .dark .tab-pill-counter {
     background: #0f172a;
     border-color: #334155;
+}
+
+/* Warning / Info Banner Kuning Minimalis */
+.payroll-warning-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: var(--rounded-md, 8px);
+    background-color: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    color: #92400e !important;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+.payroll-warning-banner .banner-icon-box {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background-color: #fef3c7 !important;
+    color: #b45309 !important;
+    border: 1px solid #fde68a !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.payroll-warning-banner strong {
+    color: #78350f !important;
+    font-weight: 700;
+}
+.dark .payroll-warning-banner {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    color: #fef3c7 !important;
+}
+.dark .payroll-warning-banner .banner-icon-box {
+    background-color: rgba(245, 158, 11, 0.25) !important;
+    border-color: rgba(245, 158, 11, 0.45) !important;
+    color: #fcd34d !important;
+}
+.dark .payroll-warning-banner strong {
+    color: #fbbf24 !important;
+}
+
+/* Banner Dampak Otorisasi Biru Soft */
+.payroll-info-banner-blue {
+    padding: 10px 14px;
+    border-radius: var(--rounded-md, 8px);
+    background-color: #f0f7ff !important;
+    border: 1px solid #bfdbfe !important;
+    color: #1e40af !important;
+    font-size: 11.5px;
+    line-height: 1.5;
+}
+.payroll-info-banner-blue .info-title {
+    font-weight: 700;
+    color: #1d4ed8 !important;
+    font-size: 11.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+}
+.payroll-info-banner-blue ul {
+    margin: 0;
+    padding-left: 18px;
+    list-style-type: disc;
+    color: #1e3a8a;
+}
+.payroll-info-banner-blue li {
+    margin-bottom: 2px;
+}
+.dark .payroll-info-banner-blue {
+    background-color: rgba(59, 130, 246, 0.12) !important;
+    border-color: rgba(59, 130, 246, 0.35) !important;
+    color: #93c5fd !important;
+}
+.dark .payroll-info-banner-blue .info-title {
+    color: #60a5fa !important;
+}
+.dark .payroll-info-banner-blue ul {
+    color: #bfdbfe;
 }
 </style>
 
@@ -639,22 +728,26 @@ ob_start();
 
                     <div class="modal-body custom-scrollbar space-y-4">
                         <!-- Highlight & Breakdown Card -->
-                        <div class="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2">
+                        <div class="p-3 rounded-lg border border-slate-200/90 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 space-y-2">
                             <div class="flex justify-between items-center text-xs">
-                                <span class="font-semibold text-slate-700 dark:text-slate-300">Total Gaji Bersih (Net Dibayarkan):</span>
-                                <span class="font-mono font-bold text-base text-emerald-700 dark:text-emerald-300"><?= Format::rupiah($totalGajiBersih) ?></span>
+                                <span class="font-medium text-slate-600 dark:text-slate-400">Total Gaji Bersih (Net Dibayarkan):</span>
+                                <span class="font-mono font-bold text-sm text-slate-900 dark:text-slate-100"><?= Format::rupiah($totalGajiBersih) ?></span>
                             </div>
                             <?php if ($totalPotonganTabunganAll > 0): ?>
-                            <div class="flex justify-between items-center text-xs border-t border-dashed border-emerald-200 dark:border-emerald-800/60 pt-1.5">
+                            <div class="flex justify-between items-center text-xs border-t border-slate-200/80 dark:border-slate-800 pt-1.5">
                                 <span class="flex items-center gap-1 text-purple-700 dark:text-purple-300">
                                     <i data-lucide="arrow-right" class="w-3 h-3"></i>
                                     <span>Transfer ke Kas Tabungan (Escrow):</span>
                                 </span>
                                 <span class="font-mono font-bold text-purple-700 dark:text-purple-300">+<?= Format::rupiah($totalPotonganTabunganAll) ?></span>
                             </div>
+                            <div class="flex justify-between items-center text-xs border-t border-slate-200/80 dark:border-slate-800 pt-1.5 font-medium">
+                                <span class="text-slate-700 dark:text-slate-300">Total Kebutuhan Kas Operasional:</span>
+                                <span class="font-mono font-bold text-slate-900 dark:text-slate-100"><?= Format::rupiah($totalKebutuhanKasOperasional) ?></span>
+                            </div>
                             <?php endif; ?>
                             <?php if ($totalPenarikanTabunganAll > 0): ?>
-                            <div class="flex justify-between items-center text-xs border-t border-dashed border-emerald-200 dark:border-emerald-800/60 pt-1.5">
+                            <div class="flex justify-between items-center text-xs border-t border-slate-200/80 dark:border-slate-800 pt-1.5">
                                 <span class="flex items-center gap-1 text-amber-700 dark:text-amber-300">
                                     <i data-lucide="arrow-left" class="w-3 h-3"></i>
                                     <span>Reimbursement dari Kas Tabungan:</span>
@@ -662,9 +755,9 @@ ob_start();
                                 <span class="font-mono font-bold text-amber-700 dark:text-amber-300">+<?= Format::rupiah($totalPenarikanTabunganAll) ?></span>
                             </div>
                             <?php endif; ?>
-                            <div class="flex justify-between items-center text-[11px] text-slate-400 border-t border-slate-200 dark:border-slate-800 pt-1.5">
+                            <div class="flex justify-between items-center text-[11px] text-slate-500 dark:text-slate-400 border-t border-slate-200/80 dark:border-slate-800 pt-1.5">
                                 <span>Karyawan Disertakan:</span>
-                                <span class="font-bold text-slate-700 dark:text-slate-300"><?= $includedCount ?> orang <span class="font-normal">(dari <?= count($items) ?> total)</span></span>
+                                <span class="font-semibold text-slate-700 dark:text-slate-300"><?= $includedCount ?> orang <span class="font-normal text-slate-400">(dari <?= count($items) ?> total)</span></span>
                             </div>
                         </div>
 
@@ -687,7 +780,7 @@ ob_start();
                                          :class="{
                                              'border-emerald-600 dark:border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/20': selectedKasId === acc.id,
                                              'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600': selectedKasId !== acc.id,
-                                             'opacity-60 cursor-not-allowed border-dashed': acc.saldo < (totalPayrollNet + <?= (float)$totalPotonganTabunganAll ?>)
+                                             'opacity-60 cursor-not-allowed border-dashed': acc.saldo < totalKebutuhanKas
                                          }"
                                          class="relative flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer select-none">
                                         <div class="flex items-center gap-2 min-w-0 flex-1">
@@ -706,7 +799,7 @@ ob_start();
                                                     <span x-show="acc.is_default_pos" class="px-1 py-0.2 text-[9px] font-bold rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">POS</span>
                                                 </div>
                                                 <div class="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                                                    Saldo: <span :class="acc.saldo < (totalPayrollNet + <?= (float)$totalPotonganTabunganAll ?>) ? 'text-rose-600 font-bold' : 'text-slate-700 dark:text-slate-200'" x-text="formatRupiah(acc.saldo)"></span>
+                                                    Saldo: <span :class="acc.saldo < totalKebutuhanKas ? 'text-rose-600 font-bold' : 'text-slate-700 dark:text-slate-200'" x-text="formatRupiah(acc.saldo)"></span>
                                                 </div>
                                             </div>
                                         </div>
@@ -720,16 +813,30 @@ ob_start();
                                 </template>
                             </div>
 
-                            <p x-show="selectedKasId && kasBalances[selectedKasId] < (totalPayrollNet + <?= (float)$totalPotonganTabunganAll ?>)" x-cloak class="text-[11.5px] text-rose-600 font-bold flex items-center gap-1 mt-1">
-                                <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
-                                <span>Saldo akun kas tidak mencukupi untuk pembayaran payroll &amp; setoran tabungan.</span>
-                            </p>
+                            <!-- Info Banner Kuning / Minimalis & Clean -->
+                            <div x-show="selectedKasId && kasBalances[selectedKasId] !== undefined && kasBalances[selectedKasId] < totalKebutuhanKas"
+                                 x-cloak
+                                 class="payroll-warning-banner"
+                                 style="background-color:#fffbeb; border:1px solid #fde68a; color:#92400e;">
+                                <div class="banner-icon-box" style="background-color:#fef3c7; color:#b45309; border:1px solid #fde68a;">
+                                    <i data-lucide="alert-triangle" style="width:13px; height:13px;"></i>
+                                </div>
+                                <div style="min-width:0; flex:1;">
+                                    <span style="font-weight:700;">Saldo akun kas belum mencukupi</span> untuk pembayaran payroll &amp; setoran tabungan.
+                                    <div style="margin-top:2px; font-family:var(--font-mono); font-size:11px; color:#b45309;">
+                                        Kebutuhan kas: <strong><span x-text="formatRupiah(totalKebutuhanKas)"></span></strong>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Checkpoint List -->
-                        <div style="padding:10px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-radius:var(--rounded-md); font-size:11.5px; color:var(--color-ink-mute); line-height:1.5;">
-                            <div style="font-weight:700; color:var(--color-ink); margin-bottom:4px;">Dampak Otorisasi:</div>
-                            <ul style="list-style-type:disc; padding-left:16px; margin:0;" class="space-y-1">
+                        <!-- Banner Dampak Otorisasi Biru Soft -->
+                        <div class="payroll-info-banner-blue" style="background-color:#f0f7ff; border:1px solid #bfdbfe; color:#1e40af; padding:10px 14px; border-radius:8px; font-size:11.5px; line-height:1.5;">
+                            <div class="info-title" style="font-weight:700; color:#1d4ed8; font-size:11.5px; display:flex; align-items:center; gap:6px; margin-bottom:5px;">
+                                <i data-lucide="shield-check" style="width:14px; height:14px; color:#2563eb;"></i>
+                                <span>Dampak Otorisasi:</span>
+                            </div>
+                            <ul style="margin:0; padding-left:18px; list-style-type:disc; color:#1e3a8a;" class="space-y-0.5">
                                 <li>Cicilan kasbon terpotong otomatis dari saldo pinjaman karyawan.</li>
                                 <li>Tabungan karyawan bertambah atau dicairkan sesuai rincian payroll.</li>
                                 <li>Slip gaji resmi diterbitkan dan siap dibagikan ke karyawan.</li>
@@ -742,10 +849,10 @@ ob_start();
                         <button type="submit" 
                                 class="btn btn-primary w-full sm:w-auto transition-all" 
                                 style="background:#059669; border-color:#047857; display:inline-flex; align-items:center; justify-content:center; gap:6px;"
-                                :disabled="selectedKasId && kasBalances[selectedKasId] < totalPayrollNet"
-                                :class="{'opacity-50 cursor-not-allowed': selectedKasId && kasBalances[selectedKasId] < totalPayrollNet}">
+                                :disabled="!selectedKasId || (kasBalances[selectedKasId] !== undefined && kasBalances[selectedKasId] < totalKebutuhanKas)"
+                                :class="{'opacity-50 cursor-not-allowed': !selectedKasId || (kasBalances[selectedKasId] !== undefined && kasBalances[selectedKasId] < totalKebutuhanKas)}">
                             <i data-lucide="check-circle" style="width:16px; height:16px;"></i>
-                            <span x-text="(selectedKasId && kasBalances[selectedKasId] < totalPayrollNet) ? 'Saldo Tidak Cukup' : 'Setujui &amp; Bayar Sekarang'">Setujui &amp; Bayar Sekarang</span>
+                            <span x-text="(!selectedKasId || (kasBalances[selectedKasId] !== undefined && kasBalances[selectedKasId] < totalKebutuhanKas)) ? 'Saldo Tidak Cukup' : 'Setujui &amp; Bayar Sekarang'">Setujui &amp; Bayar Sekarang</span>
                         </button>
                     </div>
                 </form>
@@ -850,6 +957,11 @@ function payrollPreviewApp() {
         showCancelApproveModal: false,
         selectedKasId: '<?= !empty($akunKasList[0]['id']) ? (string)$akunKasList[0]['id'] : '' ?>',
         totalPayrollNet: <?= (float)$totalGajiBersih ?>,
+        totalPotonganTabunganAll: <?= (float)$totalPotonganTabunganAll ?>,
+        totalPenarikanTabunganAll: <?= (float)$totalPenarikanTabunganAll ?>,
+        get totalKebutuhanKas() {
+            return this.totalPayrollNet + this.totalPotonganTabunganAll;
+        },
         cashAccounts: <?= json_encode(array_map(function($a) {
             return [
                 'id' => (string)$a['id'],
@@ -946,6 +1058,18 @@ function payrollPreviewApp() {
                 this.$nextTick(() => {
                     if (typeof window.refreshIcons === 'function') window.refreshIcons();
                 });
+            });
+
+            this.$watch('showApproveModal', val => {
+                if (val) {
+                    this.$nextTick(() => {
+                        if (typeof window.refreshIcons === 'function') {
+                            window.refreshIcons();
+                        } else if (window.lucide && typeof lucide.createIcons === 'function') {
+                            lucide.createIcons();
+                        }
+                    });
+                }
             });
         },
 

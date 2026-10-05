@@ -4,6 +4,11 @@
  * Template Rekapitulasi Penggajian (A4 Landscape PDF)
  */
 use App\Helpers\Format;
+use App\Helpers\CompanySetting;
+use App\Helpers\PrintDocumentHelper;
+
+$company = $company ?? CompanySetting::getAll();
+$logoSrc = PrintDocumentHelper::getLogoSrc($company);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -30,8 +35,10 @@ use App\Helpers\Format;
         }
         .title {
             font-size: 13pt;
-            font-weight: bold;
-            color: #881337;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .subtitle {
             font-size: 9pt;
@@ -65,7 +72,7 @@ use App\Helpers\Format;
             font-weight: bold;
         }
         .font-mono {
-            font-family: Courier, monospace;
+            font-family: 'Helvetica', 'Arial', sans-serif; font-variant-numeric: tabular-nums;
         }
         .total-row td {
             background-color: #f5f5f4;
@@ -83,11 +90,22 @@ use App\Helpers\Format;
     <!-- Header -->
     <table class="header-table">
         <tr>
-            <td style="width: 60%;">
-                <div class="title">REKAPITULASI PENGGAJIAN KARYAWAN</div>
-                <div class="subtitle"><?= htmlspecialchars($company['nama'] ?? 'KEREN SNACK INDONESIA') ?> — <?= htmlspecialchars($run['nama_payroll'] ?: $run['nomor_referensi']) ?></div>
+            <td style="width: 65%; vertical-align: middle;">
+                <table style="width: auto; border-collapse: collapse;">
+                    <tr>
+                        <?php if (!empty($logoSrc)): ?>
+                        <td style="width: 45px; vertical-align: middle; padding-right: 10px;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 40px; max-width: 45px; object-fit: contain;">
+                        </td>
+                        <?php endif; ?>
+                        <td style="vertical-align: middle;">
+                            <div class="title">REKAPITULASI PENGGAJIAN KARYAWAN</div>
+                            <div class="subtitle"><?= htmlspecialchars($company['nama'] ?? 'KEREN SNACK INDONESIA') ?> — <?= htmlspecialchars($run['nama_payroll'] ?: $run['nomor_referensi']) ?></div>
+                        </td>
+                    </tr>
+                </table>
             </td>
-            <td style="width: 40%; text-align: right;">
+            <td style="width: 35%; text-align: right; vertical-align: middle;">
                 <div><strong>No. Ref:</strong> <?= htmlspecialchars($run['nomor_referensi']) ?></div>
                 <div class="subtitle">Periode: <?= Format::tanggalIndo($run['periode_awal']) ?> s/d <?= Format::tanggalIndo($run['periode_akhir']) ?></div>
             </td>

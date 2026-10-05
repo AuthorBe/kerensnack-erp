@@ -956,6 +956,8 @@ class PenggajianController extends Controller
                 'totalPotongan' => $totalPotongan,
                 'totalPotonganTabunganPayroll' => $totalPotonganTabunganPayroll,
                 'totalPenarikanTabunganPayroll' => $totalPenarikanTabunganPayroll,
+                'totalPotonganTabunganAll' => $totalPotonganTabunganPayroll,
+                'totalPenarikanTabunganAll' => $totalPenarikanTabunganPayroll,
                 'includedCount' => $includedCount,
                 'excludedCount' => $excludedCount,
                 'canCancelApprove' => $canCancelApprove
@@ -2035,10 +2037,6 @@ class PenggajianController extends Controller
                 ORDER BY status_aktif DESC, nama_karyawan ASC
             ");
 
-            if (empty($karyawanId) && !empty($karyawanList)) {
-                $karyawanId = $karyawanList[0]['id'];
-            }
-
             $karyawan = null;
             $payrollHistory = [];
             $absensiMonthly = [];
@@ -2187,7 +2185,7 @@ class PenggajianController extends Controller
             $html = ob_get_clean();
 
             $filename = 'Rekap_Karyawan_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $karyawan['nama_karyawan']) . '_' . $tahun . '.pdf';
-            PdfExport::stream($html, $filename, 'A4', 'portrait');
+            PdfExport::download($html, $filename, 'A4', 'portrait');
         } catch (Throwable $e) {
             $this->flashError('Gagal mencetak rekap PDF karyawan: ' . $e->getMessage());
             $this->redirect('/penggajian/rekap/karyawan?karyawan_id=' . $karyawanId);

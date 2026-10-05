@@ -77,15 +77,37 @@ class AbsensiController extends Controller
                     COALESCE(a.ambil_uang, FALSE) as ambil_uang,
                     a.catatan,
                     a.penggajian_id,
-                    pg.nominal as nominal_penarikan
+                    pg.nominal as nominal_penarikan,
+                    pg.akun_kas_id as penarikan_akun_kas_id,
+                    ak.nama_akun as penarikan_akun_kas_nama
                 FROM public.karyawan k
                 JOIN public.v_karyawan_info v ON v.id = k.id
                 LEFT JOIN public.absensi a ON a.karyawan_id = k.id AND a.tanggal = :tanggal
                 LEFT JOIN public.penarikan_gaji pg ON pg.karyawan_id = k.id AND pg.tanggal = :tanggal
                     AND pg.penggajian_id IS NULL
+                LEFT JOIN public.akun_kas ak ON ak.id = pg.akun_kas_id
                 WHERE v.status_aktif = TRUE AND k.tipe_penggajian = 'bulanan'
                 ORDER BY v.nama_karyawan ASC
             ", ['tanggal' => $tanggal]);
+
+            // Deteksi uang kas yang sudah pernah dicairkan hari ini & akun kas yang digunakan
+            $totalDisbursedToday = 0.0;
+            $countDisbursedEmployees = 0;
+            $disbursedKasNames = [];
+            $existingKasId = null;
+            foreach ($karyawanBulanan as $kb) {
+                if (!empty($kb['penarikan_akun_kas_id']) && (float)($kb['nominal_penarikan'] ?? 0) > 0) {
+                    $totalDisbursedToday += (float)$kb['nominal_penarikan'];
+                    $countDisbursedEmployees++;
+                    if (!empty($kb['penarikan_akun_kas_nama'])) {
+                        $disbursedKasNames[$kb['penarikan_akun_kas_nama']] = true;
+                    }
+                    if (!$existingKasId) {
+                        $existingKasId = (string)$kb['penarikan_akun_kas_id'];
+                    }
+                }
+            }
+            $disbursedKasSummary = !empty($disbursedKasNames) ? implode(', ', array_keys($disbursedKasNames)) : '';
 
             // Metrics calculation
             $totalBorongan = count($karyawanBorongan);
@@ -112,6 +134,11 @@ class AbsensiController extends Controller
                 'karyawanBorongan' => $karyawanBorongan,
                 'karyawanBulanan' => $karyawanBulanan,
                 'akunKasList' => $akunKasList,
+                'activeCashAccounts' => $akunKasList,
+                'existingKasId' => $existingKasId,
+                'totalDisbursedToday' => $totalDisbursedToday,
+                'countDisbursedEmployees' => $countDisbursedEmployees,
+                'disbursedKasSummary' => $disbursedKasSummary,
                 'totalBorongan' => $totalBorongan,
                 'totalBulanan' => $totalBulanan,
                 'hadirBorongan' => $hadirBorongan,
@@ -147,7 +174,8 @@ class AbsensiController extends Controller
         }
 
         $absensiData = $this->input('absensi', []);
-        $akunKasId = (string)$this->input('akun_kas_id', '');
+        $rawAkunKasId = trim((string)$this->input('akun_kas_id', ''));
+        $akunKasId = ($rawAkunKasId === '' || $rawAkunKasId === 'none') ? null : $rawAkunKasId;
 
         if (!is_array($absensiData) || empty($absensiData)) {
             $this->flashError('Tidak ada data absensi yang dikirim.');
@@ -163,11 +191,6 @@ class AbsensiController extends Controller
         try {
             $pdo->beginTransaction();
 
-            if (empty($akunKasId)) {
-                $stmtDef = $pdo->query("SELECT id FROM public.akun_kas WHERE is_default_pos = TRUE AND status_aktif = TRUE LIMIT 1");
-                $akunKasId = (string)($stmtDef->fetchColumn() ?: '');
-            }
-
             // Ambil data seluruh karyawan aktif untuk referensi tipe & uang kehadiran
             $karyawanList = Database::fetchAll("
                 SELECT v.id, v.tipe_penggajian, v.uang_kehadiran_harian, v.nama_karyawan 
@@ -177,6 +200,115 @@ class AbsensiController extends Controller
             $karyawanMap = [];
             foreach ($karyawanList as $emp) {
                 $karyawanMap[$emp['id']] = $emp;
+            }
+
+            // Hitung total penarikan uang harian & lembur yang diajukan pada form ini
+            $totalPengajuanPenarikan = 0.0;
+            foreach ($absensiData as $kid => $row) {
+                if (!isset($karyawanMap[$kid])) continue;
+                $empInfo = $karyawanMap[$kid];
+                if ($empInfo['tipe_penggajian'] !== 'bulanan') continue;
+
+                $statusKehadiran = (string)($row['status_kehadiran'] ?? 'hadir');
+                if ($statusKehadiran !== 'hadir') continue;
+
+                $rate = (float)($empInfo['uang_kehadiran_harian'] ?? 0);
+                $wantsAmbil = (!empty($row['ambil_uang']) && $rate > 0);
+
+                $rawLembur = (float)preg_replace('/[^0-9]/', '', (string)($row['lembur_nominal'] ?? '0'));
+                $lemburNominal = $rawLembur > 0 ? $rawLembur : 0.0;
+
+                $totalPengajuanPenarikan += ($wantsAmbil ? $rate : 0.0) + $lemburNominal;
+            }
+
+            // Strict Mandatory Cash Selection Guard:
+            // Jika ada penarikan uang (uang hadir atau lembur), AKUN KAS WAJIB DIPILIH!
+            if ($totalPengajuanPenarikan > 0 && empty($akunKasId)) {
+                $pdo->rollBack();
+                $this->flashError('Pencairan uang kehadiran / lembur harian wajib memilih salah satu akun kas aktif.');
+                $this->redirect('/absensi?tanggal=' . $tanggal);
+                return;
+            }
+
+            // Validasi Akun Kas jika ada penarikan kas
+            $targetKasRow = null;
+            if ($akunKasId !== null) {
+                $stmtKas = $pdo->prepare("
+                    SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_escrow 
+                    FROM public.akun_kas 
+                    WHERE id = :id AND status_aktif = TRUE 
+                    FOR UPDATE
+                ");
+                $stmtKas->execute(['id' => $akunKasId]);
+                $targetKasRow = $stmtKas->fetch(PDO::FETCH_ASSOC);
+
+                if (!$targetKasRow) {
+                    $pdo->rollBack();
+                    $this->flashError('Akun kas sumber pencairan tidak valid atau telah dinonaktifkan.');
+                    $this->redirect('/absensi?tanggal=' . $tanggal);
+                    return;
+                }
+
+                if (!empty($targetKasRow['is_escrow'])) {
+                    $pdo->rollBack();
+                    $this->flashError('Akun kas titipan escrow tabungan tidak boleh digunakan untuk penarikan uang kehadiran/lembur.');
+                    $this->redirect('/absensi?tanggal=' . $tanggal);
+                    return;
+                }
+
+                // Hitung total kas yang dibutuhkan untuk seluruh penarikan uang yang baru/berubah (Hadir + Lembur)
+                $totalKasDibutuhkan = 0.0;
+                foreach ($absensiData as $kid => $row) {
+                    if (!isset($karyawanMap[$kid])) continue;
+                    $empInfo = $karyawanMap[$kid];
+                    if ($empInfo['tipe_penggajian'] !== 'bulanan') continue;
+
+                    $statusKehadiran = (string)($row['status_kehadiran'] ?? 'hadir');
+                    $rate = (float)($empInfo['uang_kehadiran_harian'] ?? 0);
+                    $wantsAmbil = ($statusKehadiran === 'hadir' && !empty($row['ambil_uang']) && $rate > 0);
+
+                    $rawLembur = (float)preg_replace('/[^0-9]/', '', (string)($row['lembur_nominal'] ?? '0'));
+                    $lemburNominal = in_array($statusKehadiran, ['izin', 'sakit', 'alpa'], true) ? 0.00 : $rawLembur;
+
+                    $nominalHadir = $wantsAmbil ? $rate : 0.0;
+                    $nominalLembur = ($statusKehadiran === 'hadir') ? $lemburNominal : 0.0;
+                    $totalEmp = $nominalHadir + $nominalLembur;
+
+                    $existingPenarikan = Database::fetchOne("
+                        SELECT id, nominal, akun_kas_id, penggajian_id 
+                        FROM public.penarikan_gaji 
+                        WHERE karyawan_id = :kid AND tanggal = :tgl
+                    ", ['kid' => $kid, 'tgl' => $tanggal]);
+
+                    if ($existingPenarikan && !empty($existingPenarikan['penggajian_id'])) {
+                        continue; // Terkunci oleh payroll
+                    }
+
+                    if ($totalEmp > 0) {
+                        if (!$existingPenarikan) {
+                            $totalKasDibutuhkan += $totalEmp;
+                        } else {
+                            $oldKasId = $existingPenarikan['akun_kas_id'] ? (string)$existingPenarikan['akun_kas_id'] : null;
+                            if ($oldKasId === (string)$targetKasRow['id']) {
+                                $diff = $totalEmp - (float)$existingPenarikan['nominal'];
+                                if ($diff > 0) {
+                                    $totalKasDibutuhkan += $diff;
+                                }
+                            } else {
+                                // Sumber kas berganti, maka kas baru ini ditarik sebesar totalEmp penuh
+                                $totalKasDibutuhkan += $totalEmp;
+                            }
+                        }
+                    }
+                }
+
+                $currentSaldo = (float)$targetKasRow['saldo_saat_ini'];
+                if ($totalKasDibutuhkan > $currentSaldo) {
+                    $pdo->rollBack();
+                    $this->flashError("Saldo akun kas '{$targetKasRow['nama_akun']}' (" . Format::rupiah($currentSaldo) . ") tidak mencukupi untuk pembayaran ambil uang harian & lembur sebesar " . Format::rupiah($totalKasDibutuhkan) . ". Silakan pilih akun kas lain yang mencukupi atau isi saldo kas terlebih dahulu di menu Kas & Bank.");
+                    $this->redirect('/absensi?tanggal=' . $tanggal);
+                    return;
+                }
             }
 
             foreach ($absensiData as $karyawanId => $row) {
@@ -257,28 +389,41 @@ class AbsensiController extends Controller
                         WHERE karyawan_id = :kid AND tanggal = :tgl
                     ", ['kid' => $karyawanId, 'tgl' => $tanggal]);
 
-                    if ($statusKehadiran === 'hadir' && $ambilUang && $uangKehadiranRate > 0) {
+                    $nominalHadir = ($statusKehadiran === 'hadir' && $ambilUang && $uangKehadiranRate > 0) ? $uangKehadiranRate : 0.0;
+                    $nominalLembur = ($statusKehadiran === 'hadir' && $lemburNominal > 0) ? $lemburNominal : 0.0;
+                    $totalAmbilHariIni = $nominalHadir + $nominalLembur;
+
+                    if ($totalAmbilHariIni > 0) {
+                        // Keterangan terperinci untuk penarikan gaji harian
+                        if ($nominalHadir > 0 && $nominalLembur > 0) {
+                            $ketPenarikan = "Uang hadir " . Format::rupiah($nominalHadir) . " & lembur " . Format::rupiah($nominalLembur) . " via absensi";
+                        } elseif ($nominalHadir > 0) {
+                            $ketPenarikan = "Penarikan uang hadir via absensi";
+                        } else {
+                            $ketPenarikan = "Penarikan uang lembur via absensi";
+                        }
+
                         if (!$existingPenarikan) {
-                            $targetKas = !empty($akunKasId) ? $akunKasId : null;
                             $stmtPg = $pdo->prepare("
                                 INSERT INTO public.penarikan_gaji (
                                     karyawan_id, tanggal, nominal, keterangan, akun_kas_id, dibuat_pada
                                 ) VALUES (
-                                    :kid, :tgl, :nominal, 'Penarikan uang hadir via absensi', :kas_id, NOW()
+                                    :kid, :tgl, :nominal, :keterangan, :kas_id, NOW()
                                 ) RETURNING id
                             ");
                             $stmtPg->execute([
                                 'kid' => $karyawanId,
                                 'tgl' => $tanggal,
-                                'nominal' => $uangKehadiranRate,
-                                'kas_id' => $targetKas
+                                'nominal' => $totalAmbilHariIni,
+                                'keterangan' => $ketPenarikan,
+                                'kas_id' => $akunKasId
                             ]);
                             $newPgId = (string)$stmtPg->fetchColumn();
 
                             // Potong kas & catat mutasi jika ada akun kas
-                            if ($targetKas) {
-                                $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom, diubah_pada = NOW() WHERE id = :id")->execute(['nom' => $uangKehadiranRate, 'id' => $targetKas]);
-                                $saldoNow = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $targetKas]);
+                            if ($akunKasId) {
+                                $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom, diubah_pada = NOW() WHERE id = :id")->execute(['nom' => $totalAmbilHariIni, 'id' => $akunKasId]);
+                                $saldoNow = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $akunKasId]);
 
                                 $pdo->prepare("
                                     INSERT INTO public.arus_kas (
@@ -291,29 +436,103 @@ class AbsensiController extends Controller
                                         :saldo_berjalan, :uid, NOW()
                                     )
                                 ")->execute([
-                                    'kas_id' => $targetKas,
+                                    'kas_id' => $akunKasId,
                                     'tgl' => $tanggal,
-                                    'nom' => $uangKehadiranRate,
-                                    'ket' => "Uang hadir harian {$empInfo['nama_karyawan']} via absensi",
+                                    'nom' => $totalAmbilHariIni,
+                                    'ket' => "{$ketPenarikan} - {$empInfo['nama_karyawan']}",
                                     'ref_id' => $newPgId,
                                     'saldo_berjalan' => $saldoNow,
                                     'uid' => $userId
                                 ]);
                             }
                         } elseif (empty($existingPenarikan['penggajian_id'])) {
-                            // Update nominal jika berubah
+                            // Record penarikan sudah ada dan tidak terkunci penggajian -> handle perubahan kas / nominal
                             $oldNom = (float)$existingPenarikan['nominal'];
-                            $diff = $uangKehadiranRate - $oldNom;
-                            if (abs($diff) > 0.001) {
-                                $pdo->prepare("UPDATE public.penarikan_gaji SET nominal = :nom WHERE id = :id AND penggajian_id IS NULL")->execute(['nom' => $uangKehadiranRate, 'id' => $existingPenarikan['id']]);
-                                if (!empty($existingPenarikan['akun_kas_id'])) {
-                                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :diff, diubah_pada = NOW() WHERE id = :id")->execute(['diff' => $diff, 'id' => $existingPenarikan['akun_kas_id']]);
-                                    $pdo->prepare("UPDATE public.arus_kas SET nominal = :nom WHERE referensi_tabel = 'penarikan_gaji' AND referensi_id = :id")->execute(['nom' => $uangKehadiranRate, 'id' => $existingPenarikan['id']]);
+                            $oldKasId = !empty($existingPenarikan['akun_kas_id']) ? (string)$existingPenarikan['akun_kas_id'] : null;
+                            $newKasId = !empty($akunKasId) ? (string)$akunKasId : null;
+
+                            if ($oldKasId !== $newKasId) {
+                                // 1. Kas berubah: refund kas lama jika sebelumnya menggunakan kas
+                                if ($oldKasId) {
+                                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini + :nom, diubah_pada = NOW() WHERE id = :id")
+                                        ->execute(['nom' => $oldNom, 'id' => $oldKasId]);
+                                    $pdo->prepare("DELETE FROM public.arus_kas WHERE referensi_tabel = 'penarikan_gaji' AND referensi_id = :id")
+                                        ->execute(['id' => $existingPenarikan['id']]);
+                                }
+
+                                // 2. Potong kas baru jika sekarang memilih kas
+                                if ($newKasId) {
+                                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom, diubah_pada = NOW() WHERE id = :id")
+                                        ->execute(['nom' => $totalAmbilHariIni, 'id' => $newKasId]);
+                                    $saldoNow = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $newKasId]);
+                                    $pdo->prepare("
+                                        INSERT INTO public.arus_kas (
+                                            akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
+                                            nominal, keterangan, referensi_tabel, referensi_id,
+                                            saldo_berjalan, dicatat_oleh, dibuat_pada
+                                        ) VALUES (
+                                            :kas_id, :tgl, 'keluar', 'penarikan_gaji_harian',
+                                            :nom, :ket, 'penarikan_gaji', :ref_id,
+                                            :saldo_berjalan, :uid, NOW()
+                                        )
+                                    ")->execute([
+                                        'kas_id' => $newKasId,
+                                        'tgl' => $tanggal,
+                                        'nom' => $totalAmbilHariIni,
+                                        'ket' => "{$ketPenarikan} - {$empInfo['nama_karyawan']}",
+                                        'ref_id' => $existingPenarikan['id'],
+                                        'saldo_berjalan' => $saldoNow,
+                                        'uid' => $userId
+                                    ]);
+                                }
+
+                                // 3. Update penarikan_gaji dengan kas baru dan nominal baru
+                                $pdo->prepare("
+                                    UPDATE public.penarikan_gaji 
+                                    SET nominal = :nom, akun_kas_id = :kas_id, keterangan = :ket 
+                                    WHERE id = :id AND penggajian_id IS NULL
+                                ")->execute([
+                                    'nom' => $totalAmbilHariIni,
+                                    'kas_id' => $newKasId,
+                                    'ket' => $ketPenarikan,
+                                    'id' => $existingPenarikan['id']
+                                ]);
+                            } else {
+                                // Akun kas sama, cek perubahan nominal jika ada selisih
+                                $diff = $totalAmbilHariIni - $oldNom;
+                                if (abs($diff) > 0.001) {
+                                    $pdo->prepare("
+                                        UPDATE public.penarikan_gaji 
+                                        SET nominal = :nom, keterangan = :ket 
+                                        WHERE id = :id AND penggajian_id IS NULL
+                                    ")->execute([
+                                        'nom' => $totalAmbilHariIni, 
+                                        'ket' => $ketPenarikan,
+                                        'id' => $existingPenarikan['id']
+                                    ]);
+
+                                    if ($newKasId) {
+                                        $pdo->prepare("
+                                            UPDATE public.akun_kas 
+                                            SET saldo_saat_ini = saldo_saat_ini - :diff, diubah_pada = NOW() 
+                                            WHERE id = :id
+                                        ")->execute(['diff' => $diff, 'id' => $newKasId]);
+
+                                        $pdo->prepare("
+                                            UPDATE public.arus_kas 
+                                            SET nominal = :nom, keterangan = :ket 
+                                            WHERE referensi_tabel = 'penarikan_gaji' AND referensi_id = :id
+                                        ")->execute([
+                                            'nom' => $totalAmbilHariIni, 
+                                            'ket' => "{$ketPenarikan} - {$empInfo['nama_karyawan']}",
+                                            'id' => $existingPenarikan['id']
+                                        ]);
+                                    }
                                 }
                             }
                         }
                     } else {
-                        // Jika tidak hadir atau ambil_uang = FALSE, batalkan penarikan & refund kas
+                        // Jika totalAmbilHariIni == 0, batalkan penarikan & refund kas
                         if ($existingPenarikan && empty($existingPenarikan['penggajian_id'])) {
                             if (!empty($existingPenarikan['akun_kas_id'])) {
                                 $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini + :nom, diubah_pada = NOW() WHERE id = :id")->execute(['nom' => $existingPenarikan['nominal'], 'id' => $existingPenarikan['akun_kas_id']]);
@@ -342,7 +561,11 @@ class AbsensiController extends Controller
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            $this->flashError('Gagal menyimpan absensi: ' . $e->getMessage());
+            $errMsg = $e->getMessage();
+            if (str_contains($errMsg, 'chk_akun_kas_saldo_positif')) {
+                $errMsg = 'Saldo akun kas tidak mencukupi untuk pembayaran ambil uang harian. Silakan pilih akun kas lain, isi saldo kas di menu Kas & Bank, atau gunakan opsi Tanpa Kas.';
+            }
+            $this->flashError('Gagal menyimpan absensi: ' . $errMsg);
             $this->redirect('/absensi?tanggal=' . $tanggal);
         }
     }
