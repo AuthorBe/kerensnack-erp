@@ -131,16 +131,7 @@ foreach ($tabunganList as $tl) {
         </tr>
     </table>
 </div>
-<script type="text/php">
-if (isset($pdf)) {
-    $font = $fontMetrics->getFont("Helvetica");
-    $w = $pdf->get_width(); $h = $pdf->get_height();
-    $text = "Halaman {PAGE_NUM} dari {PAGE_COUNT}";
-    $size = 7.2;
-    $tw = $fontMetrics->getTextWidth($text, $font, $size);
-    $pdf->page_text($w - 45.4 - $tw, $h - 27, $text, $font, $size, array(0.47, 0.44, 0.42));
-}
-</script>
+<!-- DOMPDF_PAGE_NUMBERS -->
 
 <!-- JUDUL -->
 <div class="doc-title">

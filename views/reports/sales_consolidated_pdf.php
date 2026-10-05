@@ -357,17 +357,6 @@ $lossPct = $totalOmzet > 0 ? round(($totalLoss / $totalOmzet) * 100, 2) : 0;
         </div>
     </div>
 
-    <!-- DOMPDF DYNAMIC PAGE NUMBERING -->
-    <script type="text/php">
-        if (isset($pdf)) {
-            $text = "Halaman " . $PAGE_NUM . " dari " . $PAGE_COUNT;
-            $font = $fontMetrics->get_font("Helvetica", "normal");
-            $size = 6.5;
-            $color = array(0.5, 0.5, 0.5);
-            $y = $pdf->get_height() - 16;
-            $x = $pdf->get_width() - 85;
-            $pdf->page_text($x, $y, $text, $font, $size, $color);
-        }
-    </script>
+    <!-- DOMPDF_PAGE_NUMBERS -->
 </body>
 </html>

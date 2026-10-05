@@ -14,6 +14,7 @@ class PdfExport
 {
     /**
      * Inisialisasi instance Dompdf dengan opsi optimal
+     * isPhpEnabled diset false untuk keamanan dan kebal terhadap DISEVAL / disable_functions di VPS server
      */
     public static function createInstance(): Dompdf
     {
@@ -21,20 +22,35 @@ class PdfExport
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
         $options->set('defaultFont', 'Helvetica');
-        $options->set('isPhpEnabled', true);
+        $options->set('isPhpEnabled', false); // Zero eval: kebal terhadap DISEVAL di production
         
         return new Dompdf($options);
     }
 
     /**
+     * Terapkan nomor halaman dinamis langsung via Canvas Engine Dompdf (Tanpa eval() / script text/php)
+     */
+    private static function applyPageNumbersIfRequested(Dompdf $dompdf, string $html, bool $force = false): void
+    {
+        if ($force || str_contains($html, 'DOMPDF_PAGE_NUMBERS') || str_contains($html, 'DOMPDF DYNAMIC PAGE NUMBERING') || str_contains($html, 'text/php')) {
+            $canvas = $dompdf->getCanvas();
+            $font = $dompdf->getFontMetrics()->getFont('Helvetica', 'normal');
+            $w = $canvas->get_width();
+            $h = $canvas->get_height();
+            $canvas->page_text($w - 85, $h - 18, "Halaman {PAGE_NUM} dari {PAGE_COUNT}", $font, 6.5, [0.5, 0.5, 0.5]);
+        }
+    }
+
+    /**
      * Render HTML string menjadi PDF string binary
      */
-    public static function render(string $html, string $paper = 'A4', string $orientation = 'portrait'): string
+    public static function render(string $html, string $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): string
     {
         $dompdf = self::createInstance();
         $dompdf->loadHtml($html);
         $dompdf->setPaper($paper, $orientation);
         $dompdf->render();
+        self::applyPageNumbersIfRequested($dompdf, $html, $addPageNumbers);
         
         return $dompdf->output() ?: '';
     }
@@ -42,13 +58,15 @@ class PdfExport
     /**
      * Stream PDF langsung ke browser (tampil di browser tab)
      */
-    public static function stream(string $html, string $filename = 'document.pdf', string $paper = 'A4', string $orientation = 'portrait'): void
+    public static function stream(string $html, string $filename = 'document.pdf', string $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): void
     {
         $cleanFilename = self::sanitizeFilename($filename);
         $dompdf = self::createInstance();
         $dompdf->loadHtml($html);
         $dompdf->setPaper($paper, $orientation);
         $dompdf->render();
+        self::applyPageNumbersIfRequested($dompdf, $html, $addPageNumbers);
+
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
@@ -59,13 +77,15 @@ class PdfExport
     /**
      * Download PDF langsung sebagai file lampiran
      */
-    public static function download(string $html, string $filename = 'document.pdf', string $paper = 'A4', string $orientation = 'portrait'): void
+    public static function download(string $html, string $filename = 'document.pdf', string $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): void
     {
         $cleanFilename = self::sanitizeFilename($filename);
         $dompdf = self::createInstance();
         $dompdf->loadHtml($html);
         $dompdf->setPaper($paper, $orientation);
         $dompdf->render();
+        self::applyPageNumbersIfRequested($dompdf, $html, $addPageNumbers);
+
         while (ob_get_level() > 0) {
             ob_end_clean();
         }
