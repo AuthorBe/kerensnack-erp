@@ -326,7 +326,7 @@ $logoSrc = PrintDocumentHelper::getLogoSrc($comp);
             <thead>
                 <tr>
                     <th style="width:30px;" class="text-center">No</th>
-                    <th>Kode / Barcode &amp; Nama Produk (Grup)</th>
+                    <th>Nama Produk</th>
                     <th class="text-center" style="width:85px;">Retur (Pcs)</th>
                     <th class="text-center" style="width:95px;">Laku (Pcs)</th>
                     <th class="text-right" style="width:120px;">Harga Deal</th>

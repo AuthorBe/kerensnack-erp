@@ -164,7 +164,7 @@ ob_start();
         <thead>
             <tr>
                 <th style="width: 3%;">No</th>
-                <th style="width: 27%; text-align: left; padding-left: 6px;">Jenis Kue / Grup Produk &amp; Barcode</th>
+                <th style="width: 27%; text-align: left; padding-left: 6px;">Nama Produk</th>
                 <th style="width: 9%;">Sisa Stok<br>Lalu</th>
                 <th style="width: 9%;">Kiriman<br>Hari Ini</th>
                 <th style="width: 8%;">Retur<br>Rusak</th>
@@ -330,7 +330,7 @@ ob_start();
             <thead>
                 <tr>
                     <th style="width: 3%; text-align: center;">NO</th>
-                    <th style="width: 27%; text-align: left;">JENIS KUE / PRODUK</th>
+                    <th style="width: 27%; text-align: left;">NAMA PRODUK</th>
                     <th style="width: 9%; text-align: center;">SISA STOK LALU</th>
                     <th style="width: 9%; text-align: center;">KIRIM KINI</th>
                     <th style="width: 8%; text-align: center;">RETUR</th>

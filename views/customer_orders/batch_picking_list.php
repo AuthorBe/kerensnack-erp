@@ -238,7 +238,7 @@ foreach ($orders as $o) {
             <tr>
                 <th style="width: 35px;" class="text-center">No</th>
                 <th style="width: 120px;" class="text-center">Kode SKU</th>
-                <th>Nama Produk Snack</th>
+                <th>Nama Produk</th>
                 <th style="width: 130px;" class="text-center">Total Kebutuhan</th>
             </tr>
         </thead>

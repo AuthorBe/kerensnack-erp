@@ -272,7 +272,7 @@ class OrderDocumentController extends Controller
                 ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['id' => $id]);
 
-            $headers = ['No', 'Kode / Barcode', 'Nama Produk (Grup)', 'Satuan', 'Harga Satuan (Rp)', 'Qty (Pcs)', 'Diskon (Rp)', 'Subtotal (Rp)'];
+            $headers = ['No', 'Kode / Barcode', 'Nama Produk', 'Satuan', 'Harga Satuan (Rp)', 'Qty (Pcs)', 'Diskon (Rp)', 'Subtotal (Rp)'];
             $rows = [];
             $no = 1;
             foreach ($items as $it) {

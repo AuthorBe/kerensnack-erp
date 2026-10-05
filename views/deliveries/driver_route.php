@@ -1537,7 +1537,7 @@ ob_start();
                                     <tr style="border-bottom: 1px solid var(--color-hairline);">
                                         <th class="cell-center" style="width: 45px; padding: 12px 16px;">No</th>
                                         <th style="width: 120px; padding: 12px 16px;">Kode SKU</th>
-                                        <th style="padding: 12px 16px;">Nama Snack / Produk</th>
+                                        <th style="padding: 12px 16px;">Nama Produk</th>
                                         <th class="cell-center" style="width: 130px; padding: 12px 16px;">Jumlah Turun</th>
                                     </tr>
                                 </thead>

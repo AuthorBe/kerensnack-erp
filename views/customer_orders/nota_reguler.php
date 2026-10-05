@@ -175,7 +175,7 @@ ob_start();
             <tr>
                 <th class="text-center" style="width:30px;">No</th>
                 <th style="width:125px;">Kode / Barcode</th>
-                <th>Nama Produk (Grup)</th>
+                <th>Nama Produk</th>
                 <th class="text-center" style="width:60px;">Satuan</th>
                 <th class="text-center" style="width:55px;">Qty</th>
                 <th class="text-right" style="width:105px;">Harga Satuan</th>
@@ -427,7 +427,7 @@ ob_start();
                 <tr>
                     <th style="width: 4%; text-align: center;">NO</th>
                     <th style="width: 15%; text-align: left;">KODE/BARCODE</th>
-                    <th style="text-align: left;">NAMA PRODUK (GRUP)</th>
+                    <th style="text-align: left;">NAMA PRODUK</th>
                     <th style="width: 7%; text-align: right;">QTY</th>
                     <th style="width: 7%; text-align: center;">SAT</th>
                     <th style="width: 15%; text-align: right;">HARGA (Rp)</th>
