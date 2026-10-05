@@ -934,7 +934,7 @@ function devArchitectureApp() {
                     { name: 'kasbon/', desc: 'Layar Kasbon: index.php (pengajuan pinjaman), detail.php, dan pencatatan pembayaran cicilan.' },
                     { name: 'layouts/', desc: 'Template induk: master.php (kerangka umum), sidebar.php (navigasi), header.php (topbar).' },
                     { name: 'owner/index.php', desc: 'Layar Owner Command Center: profitabilitas, net working capital, beban kas operasional, dan sales.' },
-                    { name: 'penarikan_gaji/index.php', desc: 'Layar penarikan upah mandiri, otorisasi pembayaran tunai / transfer bank, dan status approval.' },
+                    { name: 'penarikan_gaji/index.php', desc: 'Layar penarikan gaji / uang kehadiran harian karyawan bulanan langsung potong kas, termonitoring otomatis ke payroll.' },
                     { name: 'penggajian/', desc: 'Layar Penggajian & Payroll Engine: index.php, create.php, preview.php, rekap gaji, dan slip PDF thermal/A4.' },
                     { name: 'pos/index.php', desc: 'Layar Kasir POS Retail: keranjang transaksi, scan barcode, diskon, dan cetak struk thermal.' },
                     { name: 'pricing/index.php', desc: 'Layar Matriks Harga: konfigurasi 30 level harga dinamis dan grup produk.' },

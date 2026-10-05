@@ -6,6 +6,7 @@ use App\Core\Router;
 $cssV = file_exists(ROOT_PATH . '/public/assets/css/app.css') ? filemtime(ROOT_PATH . '/public/assets/css/app.css') : '1';
 $jsV  = file_exists(ROOT_PATH . '/public/assets/js/app.js')  ? filemtime(ROOT_PATH . '/public/assets/js/app.js')  : '1';
 $helpersV = file_exists(ROOT_PATH . '/public/assets/js/erp-helpers.js') ? filemtime(ROOT_PATH . '/public/assets/js/erp-helpers.js') : '1';
+$lucideV  = file_exists(ROOT_PATH . '/public/assets/js/lucide.min.js') ? filemtime(ROOT_PATH . '/public/assets/js/lucide.min.js') : '1';
 $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
 ?>
 <!DOCTYPE html>
@@ -106,7 +107,7 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
     <!-- Lucide Icons (100% Local Vendor Asset) -->
-    <script src="<?= Router::asset('/js/lucide.min.js') ?>?v=<?= $jsV ?>"></script>
+    <script src="<?= Router::asset('/js/lucide.min.js') ?>?v=<?= $lucideV ?>"></script>
 
     <!-- ERP Universal Frontend Helpers (Format Rupiah, Unformat, Safe Lucide Refresh) -->
     <script src="<?= Router::asset('/js/erp-helpers.js') ?>?v=<?= $helpersV ?>"></script>

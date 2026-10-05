@@ -275,7 +275,7 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
         <a href="<?= Router::url('/tabungan') ?>"
            class="sidebar-link <?= isActiveSection('/tabungan', $currentPath, $base) ? 'is-active' : '' ?>"
            data-tooltip="Tabungan Karyawan">
-            <i data-lucide="piggy-bank"></i>
+            <i data-lucide="coins"></i>
             <span>Tabungan</span>
         </a>
         <?php endif; ?>

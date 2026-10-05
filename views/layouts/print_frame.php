@@ -223,7 +223,7 @@ $documentTitle = $documentTitle ?? 'Dokumen Cetak';
             box-shadow: 0 10px 35px rgba(0,0,0,0.35);
             position: relative;
             box-sizing: border-box;
-            font-family: 'Consolas', 'Lucida Console', 'Courier New', Courier, monospace;
+            font-family: 'Courier New', Courier, monospace;
             color: #000000;
             margin: 0 auto 40px auto;
             border-radius: 4px;
@@ -278,7 +278,7 @@ $documentTitle = $documentTitle ?? 'Dokumen Cetak';
         .dm-table {
             width: 100%;
             border-collapse: collapse;
-            font-family: 'Consolas', 'Lucida Console', 'Courier New', Courier, monospace;
+            font-family: 'Courier New', Courier, monospace;
             font-size: 9.5pt;
             color: #000000;
         }

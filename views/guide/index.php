@@ -2271,13 +2271,100 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
                     </p>
 
                     <div class="step-timeline">
-                        <div class="step-item">
+                        <div class="step-item" id="panduan-absensi" style="scroll-margin-top: 85px;">
                             <div class="step-circle">1</div>
                             <div class="step-content">
-                                <h4 class="step-title">10.1 Absensi Kehadiran Karyawan</h4>
+                                <h4 class="step-title">10.1 Absensi Kehadiran, Pencairan Kas Harian &amp; Proteksi Saldo</h4>
                                 <p class="step-desc">
-                                    Dikelola di menu <strong>Absensi Karyawan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Absensi</em>). Setiap hari kerja, mandor atau admin mencatat kehadiran staf dengan pilihan status: <code>Hadir</code>, <code>Sakit</code>, <code>Izin</code>, atau <code>Alpa</code>. Rekapitulasi absensi bulanan otomatis menjadi dasar perhitungan tunjangan kehadiran, uang makan harian, atau potongan ketidakhadiran pada slip gaji.
+                                    Dikelola di menu <strong>Absensi Karyawan</strong> (<span class="guide-nav-step"><i data-lucide="users"></i> HR &amp; Personalia <i data-lucide="chevron-right"></i> Absensi</span>). Modul ini berfungsi mencatat presensi harian seluruh staf, menyinkronkan penarikan uang kehadiran &amp; lembur tunai dari kas fisik kantor, serta mengunci proteksi saldo kas agar tidak terjadi kebocoran atau selisih pembukuan:
                                 </p>
+
+                                <!-- A. Dual-Sistem Borongan vs Bulanan -->
+                                <div style="margin: 12px 0;">
+                                    <div style="font-weight:700; font-size:12.5px; color:var(--guide-text-primary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                                        <i data-lucide="layers" style="width:14px; height:14px; color:var(--guide-accent);"></i>
+                                        <span>A. Klasifikasi Karyawan: Tenaga Borongan vs Tenaga Bulanan</span>
+                                    </div>
+                                    <ul style="padding-left:18px; margin:4px 0 8px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.65;">
+                                        <li><strong>Karyawan Bulanan:</strong> Memiliki gaji pokok bulanan dan tunjangan tetap. Status kehadiran (<code>Hadir</code>, <code>Sakit</code>, <code>Izin</code>, <code>Alpa</code>) menjadi dasar akumulasi rekapitulasi bulanan untuk perhitungan tunjangan kehadiran atau pemotongan keterlambatan/mangkir pada slip gaji resmi.</li>
+                                        <li><strong>Karyawan Borongan:</strong> Hak upah pokok dihitung murni berdasarkan volume kemasan/output produk yang dicatat pada menu <em>Produksi Borongan</em>. Namun, tenaga borongan tetap <strong>wajib dipresensi setiap hari</strong> untuk mencatat uang kehadiran harian, lembur tunai, serta evaluasi kedisiplinan kerja harian.</li>
+                                    </ul>
+                                </div>
+
+                                <!-- B. Mekanisme Pencairan Uang Kas Harian -->
+                                <div style="margin: 12px 0;">
+                                    <div style="font-weight:700; font-size:12.5px; color:var(--guide-text-primary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                                        <i data-lucide="banknote" style="width:14px; height:14px; color:var(--guide-accent);"></i>
+                                        <span>B. Mekanisme Pengambilan Uang Harian &amp; Lembur Tunai</span>
+                                    </div>
+                                    <p class="step-desc" style="margin-bottom:6px;">
+                                        Karyawan berhak mengambil uang kehadiran harian dan uang lembur secara tunai langsung di meja kasir presensi:
+                                    </p>
+                                    <ul style="padding-left:18px; margin:4px 0 8px 0; font-size:12px; color:var(--guide-text-secondary); line-height:1.65;">
+                                        <li><strong>Centang "Ambil Uang":</strong> Hanya aktif jika status karyawan <code>Hadir</code>. Nominal uang harian ditarik otomatis dari master data karyawan. Jika status diubah ke Sakit/Izin/Alpa, opsi ini otomatis terkunci nonaktif.</li>
+                                        <li><strong>Uang Lembur (Jam &amp; Nominal):</strong> Mandor dapat menginput durasi lembur (jam) beserta nominal kompensasi lembur harian yang disetujui untuk dibayarkan hari itu.</li>
+                                        <li><strong>Total Tarik Kas = Uang Kehadiran + Uang Lembur:</strong> Sistem otomatis menjumlahkan seluruh dana tunai yang harus diserahkan fisik oleh kasir kepada masing-masing karyawan hari itu.</li>
+                                    </ul>
+                                </div>
+
+                                <!-- C. Alur Pop-up Kas & Direct-Save Cerdas -->
+                                <div style="margin: 12px 0;">
+                                    <div style="font-weight:700; font-size:12.5px; color:var(--guide-text-primary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                                        <i data-lucide="arrow-right-circle" style="width:14px; height:14px; color:var(--guide-accent);"></i>
+                                        <span>C. Alur Konfirmasi Kas &amp; Direct-Save Cerdas</span>
+                                    </div>
+                                    <p class="step-desc" style="margin-bottom:6px;">
+                                        Saat tombol <strong>Simpan Presensi</strong> ditekan, sistem menjalankan verifikasi pintar dua jalur:
+                                    </p>
+                                    <div class="guide-box box-info" style="margin:8px 0;">
+                                        <i data-lucide="check-circle-2"></i>
+                                        <div>
+                                            <strong>1. Direct-Save Otomatis (Tanpa Pop-up):</strong><br>
+                                            Jika <strong>tidak ada penarikan uang kas baru</strong> (total penarikan = Rp 0, atau saat mengedit presensi karyawan lain yang tidak mencairkan uang kas baru), sistem <strong>langsung menyimpan data</strong> secara instan ke database tanpa memunculkan modal pop-up konfirmasi kas.
+                                        </div>
+                                    </div>
+                                    <div class="guide-box box-warning" style="margin:8px 0;">
+                                        <i data-lucide="wallet"></i>
+                                        <div>
+                                            <strong>2. Modal Pop-up Konfirmasi Kas Wajib:</strong><br>
+                                            Hanya muncul jika terdapat <strong>penarikan uang kas tunai baru (Delta &gt; Rp 0)</strong>. Admin kasir wajib memilih <strong>Akun Kas Aktif</strong> (misal Kasir Utama atau Brankas) dengan saldo yang mencukupi. <em>Opsi pencatatan tanpa kas telah ditiadakan 100%</em> demi mencegah mutasi kas gantung atau tidak seimbang.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- D. 4 Lapis Proteksi Anti-Kebocoran Kas -->
+                                <div style="margin: 12px 0;">
+                                    <div style="font-weight:700; font-size:12.5px; color:var(--guide-text-primary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                                        <i data-lucide="shield-check" style="width:14px; height:14px; color:var(--guide-accent);"></i>
+                                        <span>D. 4 Lapis Proteksi Anti-Kebocoran &amp; Selisih Saldo Kas</span>
+                                    </div>
+                                    <div class="guide-box box-success" style="margin:8px 0;">
+                                        <i data-lucide="shield"></i>
+                                        <div>
+                                            <strong>1. Delta-Based Cash Verification:</strong> Mencegah pemotongan kas ganda saat merevisi lembar presensi. Jika mengedit absensi karyawan lain, sistem tidak akan memotong kas lagi ataupun menampilkan pop-up kas jika tidak ada uang tambahan yang ditarik.<br><br>
+                                            <strong>2. Badge Status "Cair":</strong> Karyawan yang uang fisiknya telah diambil diberi penanda tegas <code>[Ambil Rp ... (Cair)]</code>, sehingga mandor dan kasir langsung mengetahui bahwa dana tersebut telah diserahkan fisik.<br><br>
+                                            <strong>3. Konfirmasi Fisik Pembatalan / Revisi:</strong> Jika karyawan yang uangnya sudah berstatus <em>Cair</em> diubah statusnya menjadi Sakit/Izin/Alpa atau centang uangnya dilepas, sistem memicu konfirmasi dialog peringatan agar kasir <strong>wajib menarik kembali fisik uang tunai</strong> yang terlanjur diserahkan ke karyawan.<br><br>
+                                            <strong>4. Banner Rekonsiliasi Real-Time:</strong> Panel ringkasan kas di bagian atas halaman absensi menampilkan akumulasi uang yang telah dicairkan pada tanggal tersebut untuk dicocokkan langsung dengan fisik uang di laci kasir.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- E. Integrasi Slip Gaji Bulanan (Anti-Dobel Bayar) -->
+                                <div style="margin: 12px 0;">
+                                    <div style="font-weight:700; font-size:12.5px; color:var(--guide-text-primary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+                                        <i data-lucide="calculator" style="width:14px; height:14px; color:var(--guide-accent);"></i>
+                                        <span>E. Integrasi Slip Gaji Bulanan (Anti-Dobel Bayar)</span>
+                                    </div>
+                                    <p class="step-desc">
+                                        Seluruh penarikan uang kehadiran harian yang dicairkan otomatis tercatat sebagai mutasi kas keluar operasional dan terhubung ke buku besar penarikan karyawan. Pada saat <strong>Tutup Payroll Bulanan</strong> (Sidebar: <em>HR &amp; Personalia &rarr; Penggajian</em>):
+                                    </p>
+                                    <div class="formula-card">
+                                        Take Home Pay (Gaji Bersih) = (Gaji Pokok + Total Upah Borongan + Total Tunjangan) - (Kasbon + Tabungan + Potongan Penarikan Uang Harian Presensi)
+                                    </div>
+                                    <p class="step-desc" style="font-size:11.5px; color:var(--guide-text-muted); margin-top:4px;">
+                                        Dengan integrasi otomatis ini, uang kehadiran yang telah diambil tunai di hari kerja langsung memotong hak gaji bulanan sehingga perusahaan <strong>terlindungi 100% dari risiko dobel bayar</strong>.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                         <div class="step-item">

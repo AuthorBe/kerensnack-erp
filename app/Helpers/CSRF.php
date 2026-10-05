@@ -26,6 +26,14 @@ class CSRF
     }
 
     /**
+     * Dapatkan nama field CSRF standar
+     */
+    public static function tokenName(): string
+    {
+        return 'csrf_token';
+    }
+
+    /**
      * Render hidden input field untuk form HTML
      */
     public static function field(): string

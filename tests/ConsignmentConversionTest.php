@@ -304,7 +304,7 @@ runTest('Opsi 2A (Beli Putus Lunas): Zeroes shelf stock, creates paid pesanan, i
         $itemPesanan = $pesanan ? $db->query("SELECT * FROM public.item_pesanan WHERE pesanan_id = '{$pesanan['id']}'")->fetch(PDO::FETCH_ASSOC) : null;
         $arusKas = $pesanan ? $db->query("SELECT * FROM public.arus_kas WHERE referensi_tabel = 'pesanan' AND referensi_id = '{$pesanan['id']}'")->fetch(PDO::FETCH_ASSOC) : null;
 
-        if ($checkCust['is_konsinyasi'] === true) return "is_konsinyasi masih true!";
+        if ($checkCust['is_konsinyasi'] === true) return "is_konsinyasi masih true! Error: " . ($ctrl->capturedError ?? 'None');
         if ($checkRak !== 0) return "Stok rak tidak nol!";
         if (!$pesanan) return "Faktur pesanan tidak terbentuk!";
         if ($pesanan['status_pembayaran'] !== 'lunas') return "Status pesanan bukan lunas!";

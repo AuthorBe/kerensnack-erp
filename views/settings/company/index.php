@@ -561,11 +561,13 @@ $cLogoUrl       = $company['logo_url'] ?? '';
     }
 
     .doc-kop-logo {
-        max-height: 28px;
+        max-height: 38px;
+        max-width: 60px;
         width: auto;
         object-fit: contain;
-        margin-bottom: 2px;
+        margin-bottom: 0;
         display: block;
+        flex-shrink: 0;
     }
 
     .doc-kop-brand {
@@ -1456,20 +1458,24 @@ $cLogoUrl       = $company['logo_url'] ?? '';
                         <!-- Kop Dokumen Resmi -->
                         <table class="doc-kop-table">
                             <tr>
-                                <td style="vertical-align: top; width: 62%;">
-                                    <template x-if="formData.logo_url && !removeLogo">
-                                        <img :src="formData.logo_url" alt="Logo" class="doc-kop-logo">
-                                    </template>
-                                    <div class="doc-kop-brand" style="color: #e11d48;" x-text="formData.nama || 'KEREN SNACK INDONESIA'"><?= htmlspecialchars($cNama) ?></div>
-                                    <div class="doc-kop-tagline" x-text="formData.tagline || 'Produsen Aneka Snack Berkualitas'"><?= htmlspecialchars($cTagline) ?></div>
-                                    <div class="doc-kop-details">
-                                        <span x-text="formData.alamat || 'Alamat Kantor/Gudang Perusahaan'"><?= htmlspecialchars($cAlamat) ?></span><br>
-                                        <span>Telp/WA: <strong x-text="formData.telepon || '-'"><?= htmlspecialchars($cTelepon) ?></strong></span>
-                                        <span x-show="formData.email"> &bull; Email: <strong x-text="formData.email"><?= htmlspecialchars($cEmail) ?></strong></span>
-                                        <span x-show="formData.website"> &bull; Web: <strong x-text="formData.website"><?= htmlspecialchars($cWebsite) ?></strong></span>
+                                <td style="vertical-align: middle; width: 64%;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <template x-if="formData.logo_url && !removeLogo">
+                                            <img :src="formData.logo_url" alt="Logo" class="doc-kop-logo">
+                                        </template>
+                                        <div style="min-width: 0; flex: 1;">
+                                            <div class="doc-kop-brand" style="color: #0f172a; letter-spacing: 0.02em;" x-text="formData.nama || 'KEREN SNACK INDONESIA'"><?= htmlspecialchars($cNama) ?></div>
+                                            <div class="doc-kop-tagline" x-text="formData.tagline || 'Produsen Aneka Snack Berkualitas'"><?= htmlspecialchars($cTagline) ?></div>
+                                            <div class="doc-kop-details">
+                                                <span x-text="formData.alamat || 'Alamat Kantor/Gudang Perusahaan'"><?= htmlspecialchars($cAlamat) ?></span><br>
+                                                <span>Telp/WA: <strong x-text="formData.telepon || '-'"><?= htmlspecialchars($cTelepon) ?></strong></span>
+                                                <span x-show="formData.email"> &bull; Email: <strong x-text="formData.email"><?= htmlspecialchars($cEmail) ?></strong></span>
+                                                <span x-show="formData.website"> &bull; Web: <strong x-text="formData.website"><?= htmlspecialchars($cWebsite) ?></strong></span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
-                                <td style="vertical-align: top; text-align: right; width: 38%;">
+                                <td style="vertical-align: middle; text-align: right; width: 36%;">
                                     <div class="doc-title-badge" style="color: #0f172a; font-size: 10.5px;">FAKTUR PENJUALAN</div>
                                     <div style="font-family: var(--font-mono); font-size: 8.5px; font-weight: 700; color: #059669; margin-top: 1px;">INV-2026/09/0128</div>
                                     <div style="font-size: 7.5px; color: #64748b; margin-top: 1px;">Tgl: <?= date('d/m/Y') ?></div>
@@ -1560,14 +1566,19 @@ $cLogoUrl       = $company['logo_url'] ?? '';
 
                         <!-- Kop Dot Matrix Monokrom -->
                         <div style="border-bottom: 2px solid #000000; padding-bottom: 3px; margin-bottom: 4px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div style="width: 58%;">
-                                    <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.03em;" x-text="formData.nama || 'KEREN SNACK INDONESIA'"><?= htmlspecialchars($cNama) ?></div>
-                                    <div style="font-size: 8px; color: #222;" x-text="formData.tagline || 'Produsen &amp; Distributor Snack'"><?= htmlspecialchars($cTagline) ?></div>
-                                    <div style="font-size: 7px; color: #444; line-height: 1.25; margin-top: 1px;">
-                                        <span x-text="formData.alamat || 'Alamat Kantor/Gudang'"><?= htmlspecialchars($cAlamat) ?></span><br>
-                                        <span>Telp/WA: <span x-text="formData.telepon || '-'"><?= htmlspecialchars($cTelepon) ?></span></span>
-                                        <span x-show="formData.email"> &bull; Email: <span x-text="formData.email"><?= htmlspecialchars($cEmail) ?></span></span>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="width: 58%; display: flex; align-items: center; gap: 6px;">
+                                    <template x-if="formData.logo_url && !removeLogo">
+                                        <img :src="formData.logo_url" alt="Logo" style="max-height: 34px; max-width: 54px; object-fit: contain; filter: grayscale(100%); flex-shrink: 0;">
+                                    </template>
+                                    <div style="min-width: 0; flex: 1;">
+                                        <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.03em;" x-text="formData.nama || 'KEREN SNACK INDONESIA'"><?= htmlspecialchars($cNama) ?></div>
+                                        <div style="font-size: 8px; color: #222;" x-text="formData.tagline || 'Produsen &amp; Distributor Snack'"><?= htmlspecialchars($cTagline) ?></div>
+                                        <div style="font-size: 7px; color: #444; line-height: 1.25; margin-top: 1px;">
+                                            <span x-text="formData.alamat || 'Alamat Kantor/Gudang'"><?= htmlspecialchars($cAlamat) ?></span><br>
+                                            <span>Telp/WA: <span x-text="formData.telepon || '-'"><?= htmlspecialchars($cTelepon) ?></span></span>
+                                            <span x-show="formData.email"> &bull; Email: <span x-text="formData.email"><?= htmlspecialchars($cEmail) ?></span></span>
+                                        </div>
                                     </div>
                                 </div>
                                 <div style="text-align: right; width: 42%;">
@@ -1753,20 +1764,24 @@ $cLogoUrl       = $company['logo_url'] ?? '';
                     <div x-show="activeTab === 'standard'" class="zoomed-paper-sheet">
                         <table style="width: 100%; border-collapse: collapse; margin-bottom: 18px; border-bottom: 2px solid #0f172a; padding-bottom: 14px;">
                             <tr>
-                                <td style="vertical-align: top; width: 62%;">
-                                    <template x-if="formData.logo_url && !removeLogo">
-                                        <img :src="formData.logo_url" alt="Logo" style="max-height: 52px; width: auto; object-fit: contain; margin-bottom: 8px; display: block;">
-                                    </template>
-                                    <div style="font-size: 20px; font-weight: 900; text-transform: uppercase; color: #e11d48; letter-spacing: -0.02em;" x-text="formData.nama || 'KEREN SNACK INDONESIA'"><?= htmlspecialchars($cNama) ?></div>
-                                    <div style="font-size: 12px; font-weight: 600; color: #475569; margin-top: 2px;" x-text="formData.tagline || 'Produsen & Distributor Aneka Snack Berkualitas'"><?= htmlspecialchars($cTagline) ?></div>
-                                    <div style="font-size: 11.5px; color: #64748b; margin-top: 6px; line-height: 1.45;">
-                                        <span x-text="formData.alamat || 'Alamat Kantor/Gudang Perusahaan'"><?= htmlspecialchars($cAlamat) ?></span><br>
-                                        <span>Telp/WhatsApp: <strong x-text="formData.telepon || '-'"><?= htmlspecialchars($cTelepon) ?></strong></span>
-                                        <span x-show="formData.email"> &bull; Email: <strong x-text="formData.email"><?= htmlspecialchars($cEmail) ?></strong></span>
-                                        <span x-show="formData.website"> &bull; Website: <strong x-text="formData.website"><?= htmlspecialchars($cWebsite) ?></strong></span>
+                                <td style="vertical-align: middle; width: 64%;">
+                                    <div style="display: flex; align-items: center; gap: 16px;">
+                                        <template x-if="formData.logo_url && !removeLogo">
+                                            <img :src="formData.logo_url" alt="Logo" style="max-height: 60px; max-width: 110px; width: auto; object-fit: contain; display: block; flex-shrink: 0;">
+                                        </template>
+                                        <div style="min-width: 0; flex: 1;">
+                                            <div style="font-size: 20px; font-weight: 900; text-transform: uppercase; color: #0f172a; letter-spacing: 0.02em; line-height: 1.2;" x-text="formData.nama || 'KEREN SNACK INDONESIA'"><?= htmlspecialchars($cNama) ?></div>
+                                            <div style="font-size: 11.5px; font-weight: 600; color: #475569; margin-top: 3px;" x-text="formData.tagline || 'Produsen & Distributor Aneka Snack Berkualitas'"><?= htmlspecialchars($cTagline) ?></div>
+                                            <div style="font-size: 10.5px; color: #64748b; margin-top: 5px; line-height: 1.45;">
+                                                <span x-text="formData.alamat || 'Alamat Kantor/Gudang Perusahaan'"><?= htmlspecialchars($cAlamat) ?></span><br>
+                                                <span>Telp/WhatsApp: <strong x-text="formData.telepon || '-'"><?= htmlspecialchars($cTelepon) ?></strong></span>
+                                                <span x-show="formData.email"> &bull; Email: <strong x-text="formData.email"><?= htmlspecialchars($cEmail) ?></strong></span>
+                                                <span x-show="formData.website"> &bull; Website: <strong x-text="formData.website"><?= htmlspecialchars($cWebsite) ?></strong></span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
-                                <td style="vertical-align: top; text-align: right; width: 38%;">
+                                <td style="vertical-align: middle; text-align: right; width: 36%;">
                                     <div style="font-size: 18px; font-weight: 900; letter-spacing: 0.04em; color: #0f172a;">FAKTUR PENJUALAN</div>
                                     <div style="font-family: var(--font-mono, monospace); font-size: 14px; font-weight: 800; color: #059669; margin-top: 4px;">INV-2026/09/0128</div>
                                     <div style="font-size: 12px; color: #64748b; margin-top: 4px;">Tanggal: <strong><?= date('d/m/Y') ?></strong></div>
@@ -1883,18 +1898,23 @@ $cLogoUrl       = $company['logo_url'] ?? '';
 
                         <!-- Kop Dot Matrix Monokrom -->
                         <div style="border-bottom: 2px solid #000000; padding-bottom: 6px; margin-bottom: 6px;">
-                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                <div style="width: 56%;">
-                                    <div style="font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.02em;" x-text="formData.nama || 'KEREN SNACK INDONESIA'"><?= htmlspecialchars($cNama) ?></div>
-                                    <div style="font-size: 11.5px; font-weight: bold;" x-text="formData.tagline || 'Produsen &amp; Distributor Snack'"><?= htmlspecialchars($cTagline) ?></div>
-                                    <div style="font-size: 11px; color: #333333; margin-top: 2px; line-height: 1.35;">
-                                        <span x-text="formData.alamat || 'Alamat Kantor/Gudang'"><?= htmlspecialchars($cAlamat) ?></span><br>
-                                        <span>Telp/WA: <span x-text="formData.telepon || '-'"><?= htmlspecialchars($cTelepon) ?></span></span>
-                                        <span x-show="formData.email"> &bull; Email: <span x-text="formData.email"><?= htmlspecialchars($cEmail) ?></span></span>
-                                        <span x-show="formData.website"> &bull; Web: <span x-text="formData.website"><?= htmlspecialchars($cWebsite) ?></span></span>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="width: 58%; display: flex; align-items: center; gap: 14px;">
+                                    <template x-if="formData.logo_url && !removeLogo">
+                                        <img :src="formData.logo_url" alt="Logo" style="max-height: 68px; max-width: 108px; object-fit: contain; filter: grayscale(100%) contrast(120%); flex-shrink: 0;">
+                                    </template>
+                                    <div style="min-width: 0; flex: 1;">
+                                        <div style="font-size: 16px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.02em;" x-text="formData.nama || 'KEREN SNACK INDONESIA'"><?= htmlspecialchars($cNama) ?></div>
+                                        <div style="font-size: 11.5px; font-weight: bold;" x-text="formData.tagline || 'Produsen &amp; Distributor Snack'"><?= htmlspecialchars($cTagline) ?></div>
+                                        <div style="font-size: 11px; color: #333333; margin-top: 2px; line-height: 1.35;">
+                                            <span x-text="formData.alamat || 'Alamat Kantor/Gudang'"><?= htmlspecialchars($cAlamat) ?></span><br>
+                                            <span>Telp/WA: <span x-text="formData.telepon || '-'"><?= htmlspecialchars($cTelepon) ?></span></span>
+                                            <span x-show="formData.email"> &bull; Email: <span x-text="formData.email"><?= htmlspecialchars($cEmail) ?></span></span>
+                                            <span x-show="formData.website"> &bull; Web: <span x-text="formData.website"><?= htmlspecialchars($cWebsite) ?></span></span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div style="text-align: right; width: 44%;">
+                                <div style="text-align: right; width: 42%;">
                                     <div style="font-size: 15px; font-weight: bold; letter-spacing: 0.03em;">SURAT JALAN PENGIRIMAN</div>
                                     <div style="font-size: 10.5px; font-weight: bold; color: #333; letter-spacing: 0.05em; margin-bottom: 3px;">BUKTI SERAH TERIMA PENGIRIMAN</div>
                                     <table style="width: 100%; font-size: 11px; margin-top: 2px; line-height: 1.35;">
