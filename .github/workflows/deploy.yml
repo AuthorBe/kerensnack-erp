@@ -69,8 +69,8 @@ jobs:
               -not -path "./vendor/*" \
               -delete
 
-            # 5. Hapus utilitas developer & environment lokal (bin, .env.example)
-            rm -rf bin/
+            # 5. Bersihkan script batch Windows lokal & template environment
+            rm -f bin/*.bat
             rm -f .env.example
 
             # 6. Pastikan direktori runtime dan cache tetap ada dengan hak akses aman
