@@ -123,6 +123,7 @@ $expectedChapters = [
     '#bab-5-konsinyasi-rolling'  => 'Konsinyasi — Alur Rolling Nota',
     '#bab-6-konsinyasi-tagihan'  => 'Konsinyasi — Alur Kolektif Tagihan',
     '#bab-7-pembelian-vendor'    => 'Pengadaan Bahan & Pembelian Vendor',
+    '#bab-inventori-opname'      => 'Inventaris Gudang, Kartu Stok & Bulk Opname Fisik',
     '#bab-8-logistik-pengiriman' => 'Operasional Logistik',
     '#bab-9-keuangan-kas'        => 'Buku Kas, Rekening Bank',
     '#bab-10-faq-masalah'        => 'Penanganan Masalah Lapangan',
@@ -274,9 +275,16 @@ assertPortalTest(
     str_contains($deliveriesCode, "/guide#bab-8-logistik-pengiriman") && str_contains($deliveriesCode, "target=\"_blank\"")
 );
 
+$inventoryCode = (string)file_get_contents(APP_ROOT . '/views/inventory/index.php');
 assertPortalTest(
-    "views/settings/impor_data/index.php deep-links to /guide#bab-11-impor-master",
-    str_contains($imporCode, "/guide#bab-11-impor-master") && str_contains($imporCode, "target=\"_blank\"")
+    "views/inventory/index.php deep-links to /guide#bab-inventori-opname",
+    str_contains($inventoryCode, "/guide#bab-inventori-opname") && str_contains($inventoryCode, "target=\"_blank\"")
+);
+
+$bulkOpnameCode = (string)file_get_contents(APP_ROOT . '/views/inventory/bulk_opname.php');
+assertPortalTest(
+    "views/inventory/bulk_opname.php deep-links to /guide#bab-inventori-opname",
+    str_contains($bulkOpnameCode, "/guide#bab-inventori-opname") && str_contains($bulkOpnameCode, "target=\"_blank\"")
 );
 
 // -------------------------------------------------------------------------

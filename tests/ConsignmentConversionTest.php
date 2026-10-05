@@ -121,10 +121,38 @@ register_shutdown_function(function() use ($db, &$transientIds) {
     }
 });
 
-$grupId = $db->query("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1")->fetchColumn()
-    ?: $db->query("SELECT id FROM public.grup_pelanggan LIMIT 1")->fetchColumn();
+$pair = $db->query("
+    SELECT i.id as item_id, i.nama_item, i.kode_sku, i.stok_fisik_saat_ini, i.harga_pokok_pembelian, gp.id as grup_pelanggan_id
+    FROM public.item i 
+    JOIN public.grup_produk gpr ON i.grup_id = gpr.id 
+    CROSS JOIN public.grup_pelanggan gp 
+    LEFT JOIN public.grup_pelanggan_level_merek gplm 
+           ON gplm.grup_pelanggan_id = gp.id AND gplm.merek_id = gpr.merek_id 
+    JOIN public.grup_produk_harga_level gphl
+           ON gphl.grup_produk_id = gpr.id AND gphl.level_harga = COALESCE(gplm.level_harga, gp.default_level_harga, 1)
+    WHERE i.tipe_item = 'barang_jadi' 
+      AND i.status_aktif = TRUE 
+      AND gp.status_aktif = TRUE 
+      AND (gplm.is_dijual IS NULL OR gplm.is_dijual = TRUE)
+      AND gphl.harga_jual_pcs > 0
+    LIMIT 1
+")->fetch(PDO::FETCH_ASSOC);
+
+if ($pair) {
+    $grupId = $pair['grup_pelanggan_id'];
+    $item = [
+        'id' => $pair['item_id'],
+        'nama_item' => $pair['nama_item'],
+        'kode_sku' => $pair['kode_sku'],
+        'stok_fisik_saat_ini' => $pair['stok_fisik_saat_ini'],
+        'harga_pokok_pembelian' => $pair['harga_pokok_pembelian']
+    ];
+} else {
+    $grupId = $db->query("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1")->fetchColumn()
+        ?: $db->query("SELECT id FROM public.grup_pelanggan LIMIT 1")->fetchColumn();
+    $item = $db->query("SELECT id, nama_item, kode_sku, stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+}
 $wilId = $db->query("SELECT id FROM public.wilayah LIMIT 1")->fetchColumn();
-$item = $db->query("SELECT id, nama_item, kode_sku, stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 $akunKas = $db->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE AND is_escrow = FALSE ORDER BY is_default_pos DESC, nama_akun ASC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 
 if (!$item) {

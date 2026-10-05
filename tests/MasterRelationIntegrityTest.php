@@ -688,15 +688,38 @@ runTest("3.4.1 CustomerController: store() & update() Menyimpan sales_driver_id 
 });
 
 runTest("3.4.2 CustomerOrderController: Order Mewarisi sales_driver_id dari Pelanggan Secara Default", function() use ($pdo) {
-    $grupRow = Database::fetchOne("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1") 
-            ?: Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
-    if (!$grupRow) {
-        $stmtG = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga, status_aktif) VALUES ('GRP-CUST-FXTR3', 'Grup Cust Fixture 3', 1, TRUE) RETURNING id");
-        $stmtG->execute();
-        $grupRow = ['id' => $stmtG->fetchColumn()];
+    // Pilih pasangan grup pelanggan dan item yang kompatibel (dapat dijual sesuai matriks merek)
+    $pair = Database::fetchOne("
+        SELECT i.id as item_id, i.grup_id, gp.id as grup_pelanggan_id
+        FROM public.item i 
+        JOIN public.grup_produk gpr ON i.grup_id = gpr.id 
+        CROSS JOIN public.grup_pelanggan gp 
+        LEFT JOIN public.grup_pelanggan_level_merek gplm 
+               ON gplm.grup_pelanggan_id = gp.id AND gplm.merek_id = gpr.merek_id 
+        JOIN public.grup_produk_harga_level gphl
+               ON gphl.grup_produk_id = gpr.id AND gphl.level_harga = COALESCE(gplm.level_harga, gp.default_level_harga, 1)
+        WHERE i.tipe_item = 'barang_jadi' 
+          AND i.status_aktif = TRUE 
+          AND gp.status_aktif = TRUE 
+          AND (gplm.is_dijual IS NULL OR gplm.is_dijual = TRUE)
+          AND gphl.harga_jual_pcs > 0
+        LIMIT 1
+    ");
+
+    if ($pair) {
+        $grupRow = ['id' => $pair['grup_pelanggan_id']];
+        $itemRow = ['id' => $pair['item_id'], 'grup_id' => $pair['grup_id']];
+    } else {
+        $grupRow = Database::fetchOne("SELECT id FROM public.grup_pelanggan WHERE default_level_harga = 1 LIMIT 1") 
+                ?: Database::fetchOne("SELECT id FROM public.grup_pelanggan LIMIT 1");
+        if (!$grupRow) {
+            $stmtG = $pdo->prepare("INSERT INTO public.grup_pelanggan (kode_grup, nama_grup, default_level_harga, status_aktif) VALUES ('GRP-CUST-FXTR3', 'Grup Cust Fixture 3', 1, TRUE) RETURNING id");
+            $stmtG->execute();
+            $grupRow = ['id' => $stmtG->fetchColumn()];
+        }
+        $itemRow = ks_get_or_create_test_item($pdo);
     }
     $salesRow = ks_get_or_create_test_sales($pdo);
-    $itemRow = ks_get_or_create_test_item($pdo);
 
     // Insert dummy toko yang terikat sales ini
     $dummyCustId = 'ffffffff-bbbb-4444-8888-000000000004';
