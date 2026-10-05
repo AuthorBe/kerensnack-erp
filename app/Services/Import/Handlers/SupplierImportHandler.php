@@ -302,7 +302,8 @@ class SupplierImportHandler implements EntityImportHandlerInterface
 
         $stmtCheckUsage = $pdo->prepare("SELECT 
             COALESCE((SELECT COUNT(*) FROM public.pembelian WHERE pemasok_id = ?), 0) +
-            COALESCE((SELECT COUNT(*) FROM public.item WHERE pemasok_utama_id = ?), 0) AS total_usage");
+            COALESCE((SELECT COUNT(*) FROM public.item WHERE pemasok_utama_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.pemasok_item WHERE pemasok_id = ?), 0) AS total_usage");
 
         foreach ($previewList as $row) {
             $act = $row['action'];
@@ -352,7 +353,7 @@ class SupplierImportHandler implements EntityImportHandlerInterface
                 $updateCount++;
             } elseif ($act === 'DELETE') {
                 $sid = $d['id'];
-                $stmtCheckUsage->execute([$sid, $sid]);
+                $stmtCheckUsage->execute([$sid, $sid, $sid]);
                 $usage = (int)$stmtCheckUsage->fetchColumn();
 
                 if ($usage > 0) {

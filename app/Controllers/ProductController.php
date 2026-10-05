@@ -195,6 +195,7 @@ class ProductController extends Controller
                 SELECT i.id, i.kode_sku, i.nama_item, i.tipe_item, i.satuan_dasar,
                        i.harga_pokok_pembelian, i.stok_fisik_saat_ini, i.stok_minimum_peringatan,
                        i.pemasok_utama_id, i.status_aktif,
+                       p_utama.nama_pemasok, p_utama.kode_pemasok,
                        (SELECT COUNT(*) FROM public.komposisi_item ki WHERE ki.item_bahan_id = i.id) as dipakai_di_resep,
                        (SELECT COUNT(*) FROM public.pemasok_item pi WHERE pi.item_id = i.id AND pi.status_aktif = TRUE) as total_vendor_katalog,
                        (SELECT string_agg(p.nama_pemasok, ', ') 
@@ -202,6 +203,7 @@ class ProductController extends Controller
                         JOIN public.pemasok p ON p.id = pi.pemasok_id 
                         WHERE pi.item_id = i.id AND pi.status_aktif = TRUE) as vendor_names
                 FROM public.item i
+                LEFT JOIN public.pemasok p_utama ON p_utama.id = i.pemasok_utama_id
                 WHERE i.tipe_item IN ('bahan_mentah', 'bahan_kemas')
                 ORDER BY i.tipe_item ASC, i.nama_item ASC
             ");
@@ -731,6 +733,9 @@ class ProductController extends Controller
             ")['max_sku'] ?? 0);
             $kodeSku = 'SUB-' . str_pad((string)($maxSku + 1), 4, '0', STR_PAD_LEFT);
             $pemasokId = $this->input('pemasok_utama_id') ?: null;
+            if (empty($pemasokId)) {
+                $hpp = 0.0;
+            }
 
             $pdo = Database::pdo();
             $pdo->beginTransaction();
@@ -810,6 +815,9 @@ class ProductController extends Controller
         $stokMin = (int)$this->input('stok_minimum_peringatan', 10);
         $kelompokBoronganId = $this->input('kelompok_borongan_id') ?: null;
         $pemasokId = $this->input('pemasok_utama_id') ?: null;
+        if (empty($pemasokId)) {
+            $hpp = 0.0;
+        }
         $statusJual = !empty($this->input('status_jual'));
         $statusAktif = !empty($this->input('status_aktif'));
 
@@ -1011,6 +1019,26 @@ class ProductController extends Controller
                 ]);
             }
 
+            // Auto-sync ke katalog multi-vendor (pemasok_item)
+            if ($newItemId && !empty($pemasokId) && $hpp > 0) {
+                $stmtCatalog = $pdo->prepare("
+                    INSERT INTO public.pemasok_item (
+                        pemasok_id, item_id, harga_beli, status_aktif, dibuat_pada, diubah_pada
+                    ) VALUES (
+                        :pid, :iid, :harga, TRUE, NOW(), NOW()
+                    )
+                    ON CONFLICT (pemasok_id, item_id) DO UPDATE SET
+                        harga_beli = EXCLUDED.harga_beli,
+                        status_aktif = TRUE,
+                        diubah_pada = NOW()
+                ");
+                $stmtCatalog->execute([
+                    'pid' => $pemasokId,
+                    'iid' => $newItemId,
+                    'harga' => $hpp
+                ]);
+            }
+
             $pdo->commit();
 
             ActivityLog::log('master_data', 'Tambah Bahan Baru', "Bahan {$namaItem} ({$kodeSku}) berhasil ditambahkan dengan stok awal {$stokAwal}");
@@ -1071,6 +1099,25 @@ class ProductController extends Controller
                 'stok_min' => $stokMin,
                 'aktif' => $statusAktif ? 'true' : 'false'
             ]);
+
+            // Auto-sync ke katalog multi-vendor (pemasok_item)
+            if (!empty($id) && !empty($pemasokId) && $hpp > 0) {
+                Database::execute("
+                    INSERT INTO public.pemasok_item (
+                        pemasok_id, item_id, harga_beli, status_aktif, dibuat_pada, diubah_pada
+                    ) VALUES (
+                        :pid, :iid, :harga, TRUE, NOW(), NOW()
+                    )
+                    ON CONFLICT (pemasok_id, item_id) DO UPDATE SET
+                        harga_beli = EXCLUDED.harga_beli,
+                        status_aktif = TRUE,
+                        diubah_pada = NOW()
+                ", [
+                    'pid' => $pemasokId,
+                    'iid' => $id,
+                    'harga' => $hpp
+                ]);
+            }
 
             ActivityLog::log('master_data', 'Update Bahan', "Bahan {$namaItem} berhasil diperbarui.");
             $this->flashSuccess("Bahan {$namaItem} berhasil diperbarui!");

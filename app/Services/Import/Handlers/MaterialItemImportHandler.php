@@ -261,11 +261,20 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
 
         $stmtIns = $pdo->prepare("INSERT INTO public.item 
             (kode_sku, nama_item, tipe_item, satuan_dasar, pemasok_utama_id, harga_pokok_pembelian, stok_minimum_peringatan, status_jual, status_aktif)
-            VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, ?)");
+            VALUES (?, ?, ?, ?, ?, ?, ?, FALSE, ?) RETURNING id");
 
         $stmtUpd = $pdo->prepare("UPDATE public.item SET 
             nama_item = ?, tipe_item = ?, satuan_dasar = ?, pemasok_utama_id = ?, harga_pokok_pembelian = ?, stok_minimum_peringatan = ?, status_aktif = ?, diubah_pada = NOW()
             WHERE id = ?");
+
+        $stmtUpsertCatalog = $pdo->prepare("
+            INSERT INTO public.pemasok_item (pemasok_id, item_id, harga_beli, status_aktif, dibuat_pada, diubah_pada)
+            VALUES (:pemasok_id, :item_id, :harga_beli, TRUE, NOW(), NOW())
+            ON CONFLICT (pemasok_id, item_id) DO UPDATE SET
+                harga_beli = EXCLUDED.harga_beli,
+                status_aktif = TRUE,
+                diubah_pada = NOW()
+        ");
 
         $stmtDeactivate = $pdo->prepare("UPDATE public.item SET status_aktif = FALSE, diubah_pada = NOW() WHERE id = ?");
         $stmtDel = $pdo->prepare("DELETE FROM public.item WHERE id = ?");
@@ -273,6 +282,7 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
         $stmtCheckUsage = $pdo->prepare("SELECT 
             COALESCE((SELECT COUNT(*) FROM public.komposisi_item WHERE item_bahan_id = ?), 0) +
             COALESCE((SELECT COUNT(*) FROM public.rincian_pembelian WHERE item_id = ?), 0) +
+            COALESCE((SELECT COUNT(*) FROM public.pemasok_item WHERE item_id = ?), 0) +
             COALESCE((SELECT COUNT(*) FROM public.riwayat_stok WHERE item_id = ?), 0) +
             COALESCE((SELECT COUNT(*) FROM public.opname_gudang_item WHERE item_id = ?), 0) +
             COALESCE((SELECT COUNT(*) FROM public.penyesuaian_stok WHERE item_id = ?), 0) +
@@ -299,7 +309,17 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
                     $d['stok_minimum_peringatan'] ?: 10,
                     $d['status_aktif'] ? 1 : 0
                 ]);
+                $newId = $stmtIns->fetchColumn();
                 $insertCount++;
+
+                // Auto-sync ke katalog vendor (pemasok_item) jika ada pemasok utama
+                if ($newId && !empty($d['pemasok_utama_id'])) {
+                    $stmtUpsertCatalog->execute([
+                        'pemasok_id' => $d['pemasok_utama_id'],
+                        'item_id'    => $newId,
+                        'harga_beli' => $d['harga_pokok_pembelian'] ?: 0
+                    ]);
+                }
             } elseif ($act === 'UPDATE') {
                 $stmtUpd->execute([
                     $d['nama_item'],
@@ -312,9 +332,18 @@ class MaterialItemImportHandler implements EntityImportHandlerInterface
                     $d['id']
                 ]);
                 $updateCount++;
+
+                // Auto-sync ke katalog vendor (pemasok_item) jika ada pemasok utama
+                if (!empty($d['id']) && !empty($d['pemasok_utama_id'])) {
+                    $stmtUpsertCatalog->execute([
+                        'pemasok_id' => $d['pemasok_utama_id'],
+                        'item_id'    => $d['id'],
+                        'harga_beli' => $d['harga_pokok_pembelian'] ?: 0
+                    ]);
+                }
             } elseif ($act === 'DELETE') {
                 $mid = $d['id'];
-                $stmtCheckUsage->execute([$mid, $mid, $mid, $mid, $mid, $mid]);
+                $stmtCheckUsage->execute([$mid, $mid, $mid, $mid, $mid, $mid, $mid]);
                 $usage = (int)$stmtCheckUsage->fetchColumn();
 
                 if ($usage > 0) {

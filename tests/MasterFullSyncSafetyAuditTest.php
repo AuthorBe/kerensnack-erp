@@ -284,6 +284,68 @@ runTest("3.1 - MaterialItemImportHandler: Bahan baku yang dipakai pada resep BOM
     }
 });
 
+// TEST 5.2: Bahan Baku yang terdaftar di katalog vendor (pemasok_item) dinonaktifkan aman saat Full-Sync
+runTest("3.2 - MaterialItemImportHandler: Bahan baku yang ada di katalog pemasok_item dinonaktifkan secara aman", function () use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        $matHandler = new MaterialItemImportHandler();
+
+        $stmtSup = $pdo->prepare("INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, status_aktif) VALUES ('TEST-SUP-SENSOR', 'Test Vendor Sensor', true) RETURNING id");
+        $stmtSup->execute();
+        $supId = $stmtSup->fetchColumn();
+
+        $stmtB = $pdo->prepare("INSERT INTO public.item (kode_sku, nama_item, satuan_dasar, tipe_item, status_jual, status_aktif) VALUES ('TEST-MAT-SENSOR', 'TEST Bahan Sensor Katalog', 'kg', 'bahan_mentah', false, true) RETURNING id");
+        $stmtB->execute();
+        $matId = (string)$stmtB->fetchColumn();
+
+        // Hubungkan hanya di pemasok_item (tanpa ada transaksi pembelian atau resep)
+        $pdo->prepare("INSERT INTO public.pemasok_item (pemasok_id, item_id, harga_beli) VALUES (?, ?, 25000)")->execute([$supId, $matId]);
+
+        $res = $matHandler->applySync([
+            ['action' => 'DELETE', 'data' => ['id' => $matId]]
+        ], $pdo);
+
+        if ($res['deactivate'] !== 1 || $res['delete'] !== 0) {
+            return "Expected 1 deactivate and 0 delete for material with vendor catalog, got " . json_encode($res);
+        }
+
+        return true;
+    } finally {
+        $pdo->rollBack();
+    }
+});
+
+// TEST 5.3: Pemasok yang terdaftar di katalog vendor (pemasok_item) dinonaktifkan aman saat Full-Sync
+runTest("3.3 - SupplierImportHandler: Pemasok yang memiliki entri di pemasok_item dinonaktifkan secara aman", function () use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        $supHandler = new SupplierImportHandler();
+
+        $stmtSup = $pdo->prepare("INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, status_aktif) VALUES ('TEST-SUP-SENSOR-2', 'Test Vendor Sensor 2', true) RETURNING id");
+        $stmtSup->execute();
+        $supId = (string)$stmtSup->fetchColumn();
+
+        $stmtB = $pdo->prepare("INSERT INTO public.item (kode_sku, nama_item, satuan_dasar, tipe_item, status_jual, status_aktif) VALUES ('TEST-MAT-SENSOR-2', 'TEST Bahan Sensor 2', 'kg', 'bahan_mentah', false, true) RETURNING id");
+        $stmtB->execute();
+        $matId = (string)$stmtB->fetchColumn();
+
+        // Pemasok hanya terhubung sebagai vendor alternatif di pemasok_item
+        $pdo->prepare("INSERT INTO public.pemasok_item (pemasok_id, item_id, harga_beli) VALUES (?, ?, 30000)")->execute([$supId, $matId]);
+
+        $res = $supHandler->applySync([
+            ['action' => 'DELETE', 'data' => ['id' => $supId]]
+        ], $pdo);
+
+        if ($res['deactivate'] !== 1 || $res['delete'] !== 0) {
+            return "Expected 1 deactivate and 0 delete for supplier with catalog entries, got " . json_encode($res);
+        }
+
+        return true;
+    } finally {
+        $pdo->rollBack();
+    }
+});
+
 // TEST 6: Wilayah dengan Rute Surat Jalan dinonaktifkan
 runTest("4.1 - TerritoryImportHandler: Wilayah yang tercatat di rute Surat Jalan dinonaktifkan", function () use ($pdo) {
     $pdo->beginTransaction();

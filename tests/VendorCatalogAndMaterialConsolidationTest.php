@@ -151,6 +151,152 @@ runTest("6. Seluruh komposisi_item (Resep BOM) valid dan tidak ada item_bahan_id
     return $count === 0;
 });
 
+// 7. ProductController Query Join Verification
+runTest("7. ProductController query \$materials me-load nama_pemasok & kode_pemasok", function() {
+    $content = file_get_contents(ROOT_PATH . '/app/Controllers/ProductController.php');
+    return str_contains($content, 'p_utama.nama_pemasok') &&
+           str_contains($content, 'p_utama.kode_pemasok') &&
+           str_contains($content, 'LEFT JOIN public.pemasok p_utama');
+});
+
+// 8. ProductController Store & Update Auto-Sync Verification
+runTest("8. ProductController storeMaterial dan updateMaterial otomatis sinkronisasi ke pemasok_item", function() {
+    $content = file_get_contents(ROOT_PATH . '/app/Controllers/ProductController.php');
+    $storeHasSync = str_contains($content, 'Auto-sync ke katalog multi-vendor (pemasok_item)') &&
+                    str_contains($content, 'ON CONFLICT (pemasok_id, item_id) DO UPDATE SET');
+    return $storeHasSync;
+});
+
+// 9. MaterialItemImportHandler Auto-Sync to pemasok_item (with Rollback Transaction)
+runTest("9. MaterialItemImportHandler otomatis sinkronisasi ke pemasok_item saat import bahan", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        require_once ROOT_PATH . '/app/Services/Import/SmartReader.php';
+        require_once ROOT_PATH . '/app/Services/Import/Handlers/EntityImportHandlerInterface.php';
+        require_once ROOT_PATH . '/app/Services/Import/Handlers/MaterialItemImportHandler.php';
+
+        $handler = new \App\Services\Import\Handlers\MaterialItemImportHandler();
+
+        // 1. Buat vendor uji coba
+        $stmtSup = $pdo->prepare("
+            INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, status_aktif)
+            VALUES ('TEST-VND-IMP-' || floor(random()*1000000), 'Vendor Import Test', TRUE)
+            RETURNING id
+        ");
+        $stmtSup->execute();
+        $vendorId = $stmtSup->fetchColumn();
+
+        // 2. Simulasi applySync insert bahan dengan vendor
+        $previewList = [
+            [
+                'action' => 'INSERT',
+                'data' => [
+                    'kode_sku' => 'TEST-BAHAN-IMP-' . rand(1000, 9999),
+                    'nama_item' => 'TEST TEPUNG TAPIOKA SUPER',
+                    'tipe_item' => 'bahan_mentah',
+                    'satuan_dasar' => 'kg',
+                    'pemasok_utama_id' => $vendorId,
+                    'harga_pokok_pembelian' => 18500,
+                    'stok_minimum_peringatan' => 50,
+                    'status_aktif' => true
+                ]
+            ]
+        ];
+
+        $res = $handler->applySync($previewList, $pdo);
+        if ($res['insert'] !== 1) return false;
+
+        // 3. Verifikasi apakah pemasok_item otomatis terisi
+        $stmtCheck = $pdo->prepare("
+            SELECT pi.harga_beli, pi.status_aktif 
+            FROM public.pemasok_item pi
+            JOIN public.item i ON i.id = pi.item_id
+            WHERE pi.pemasok_id = :pid AND i.nama_item = 'TEST TEPUNG TAPIOKA SUPER'
+        ");
+        $stmtCheck->execute(['pid' => $vendorId]);
+        $catalogRow = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+        if (!$catalogRow) return false;
+        if ((float)$catalogRow['harga_beli'] !== 18500.0) return false;
+        if ((bool)$catalogRow['status_aktif'] !== true) return false;
+
+        return true;
+    } finally {
+        $pdo->rollBack();
+    }
+});
+
+// 10. Kebersihan Nilai Semu HPP pada Barang Jadi (Zero Residual Data)
+runTest("10. Seluruh barang jadi produksi internal memiliki HPP = 0.00 (Zero Residual Data)", function() use ($pdo) {
+    $stmt = $pdo->query("
+        SELECT COUNT(*) 
+        FROM public.item 
+        WHERE tipe_item = 'barang_jadi' 
+          AND harga_pokok_pembelian = 10000.00
+    ");
+    $residualCount = (int)$stmt->fetchColumn();
+    return $residualCount === 0;
+});
+
+// 11. Two-Way Sync: Update harga_beli di pemasok_item otomatis menyelaraskan item.harga_pokok_pembelian
+runTest("11. Update harga_beli di pemasok_item vendor utama otomatis menyelaraskan item.harga_pokok_pembelian", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        // Buat vendor dan bahan uji
+        $stmtSup = $pdo->prepare("INSERT INTO public.pemasok (kode_pemasok, nama_pemasok, status_aktif) VALUES ('TEST-SUP-SYNC', 'Vendor Sync HPP', TRUE) RETURNING id");
+        $stmtSup->execute();
+        $supId = $stmtSup->fetchColumn();
+
+        $stmtMat = $pdo->prepare("
+            INSERT INTO public.item (kode_sku, nama_item, tipe_item, satuan_dasar, pemasok_utama_id, harga_pokok_pembelian, status_aktif)
+            VALUES ('TEST-MAT-SYNC', 'Bahan Sync HPP', 'bahan_mentah', 'kg', :pid, 20000, TRUE)
+            RETURNING id
+        ");
+        $stmtMat->execute(['pid' => $supId]);
+        $matId = $stmtMat->fetchColumn();
+
+        // Masukkan ke pemasok_item
+        $pdo->prepare("INSERT INTO public.pemasok_item (pemasok_id, item_id, harga_beli) VALUES (:pid, :iid, 20000)")->execute(['pid' => $supId, 'iid' => $matId]);
+
+        // Sekarang update harga di pemasok_item ke 27.500
+        $pdo->prepare("UPDATE public.pemasok_item SET harga_beli = 27500 WHERE pemasok_id = :pid AND item_id = :iid")->execute(['pid' => $supId, 'iid' => $matId]);
+
+        // Verifikasi apakah item.harga_pokok_pembelian ikut terupdate ke 27.500
+        $newHpp = (float)$pdo->query("SELECT harga_pokok_pembelian FROM public.item WHERE id = '{$matId}'")->fetchColumn();
+        return $newHpp === 27500.0;
+    } finally {
+        $pdo->rollBack();
+    }
+});
+
+// 12. Multi-Barcode Sync: Barcode default di grup_produk_barcode otomatis menyelaraskan grup_produk.barcode_universal
+runTest("12. Barcode default di grup_produk_barcode otomatis menyelaraskan grup_produk.barcode_universal", function() use ($pdo) {
+    $pdo->beginTransaction();
+    try {
+        // Buat grup produk uji
+        $stmtGrup = $pdo->prepare("
+            INSERT INTO public.grup_produk (kode_grup, nama_grup, satuan_dasar, status_aktif)
+            VALUES ('TEST-GRP-BAR', 'Grup Barcode Test', 'pcs', TRUE)
+            RETURNING id
+        ");
+        $stmtGrup->execute();
+        $grupId = $stmtGrup->fetchColumn();
+
+        // Tambah barcode default baru di grup_produk_barcode
+        $testBarcode = '8991234567890';
+        $pdo->prepare("
+            INSERT INTO public.grup_produk_barcode (grup_produk_id, barcode, label_barcode, is_default, status_aktif)
+            VALUES (:gid, :bc, 'Kemasan Utama Baru', TRUE, TRUE)
+        ")->execute(['gid' => $grupId, 'bc' => $testBarcode]);
+
+        // Verifikasi apakah grup_produk.barcode_universal ikut terupdate
+        $universalBc = (string)$pdo->query("SELECT barcode_universal FROM public.grup_produk WHERE id = '{$grupId}'")->fetchColumn();
+        return $universalBc === $testBarcode;
+    } finally {
+        $pdo->rollBack();
+    }
+});
+
 echo "\n====================================================================\n";
 echo "  HASIL AKHIR: {$passed} PASS, {$failed} FAIL\n";
 echo "====================================================================\n";

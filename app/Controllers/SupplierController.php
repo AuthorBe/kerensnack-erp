@@ -482,6 +482,17 @@ class SupplierController extends Controller
                 'status_aktif' => $statusAktif ? 'true' : 'false'
             ]);
 
+            // Selaraskan harga pokok pembelian jika vendor ini adalah pemasok utama item
+            Database::execute("
+                UPDATE public.item 
+                SET harga_pokok_pembelian = :harga_beli, diubah_pada = NOW() 
+                WHERE id = :item_id AND pemasok_utama_id = :pemasok_id
+            ", [
+                'harga_beli' => $hargaBeli,
+                'item_id'    => $itemId,
+                'pemasok_id' => $pemasokId
+            ]);
+
             \App\Helpers\ActivityLog::log(
                 'master_data',
                 'KATALOG_PEMASOK_SIMPAN',
