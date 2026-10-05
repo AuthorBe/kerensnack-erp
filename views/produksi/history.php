@@ -128,10 +128,75 @@ input[type="text"], input[type="date"], select {
     color: #34d399;
     border-color: rgba(16, 185, 129, 0.35);
 }
+.prod-section-icon.is-cyan {
+    background-color: rgba(2, 132, 199, 0.1);
+    color: #0284c7;
+    border: 1px solid rgba(2, 132, 199, 0.25);
+}
+.dark .prod-section-icon.is-cyan {
+    background-color: rgba(2, 132, 199, 0.16);
+    color: #38bdf8;
+    border-color: rgba(2, 132, 199, 0.35);
+}
 .prod-section-icon svg {
     width: 18px;
     height: 18px;
     display: block;
+}
+
+/* Canonical Balanced Header Counter Badges */
+.badge-pill-cyan {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    background: rgba(2, 132, 199, 0.08);
+    color: #0284c7;
+    border: 1px solid rgba(2, 132, 199, 0.22);
+    flex-shrink: 0;
+}
+.dark .badge-pill-cyan {
+    background: rgba(2, 132, 199, 0.16);
+    color: #38bdf8;
+    border-color: rgba(2, 132, 199, 0.35);
+}
+.badge-pill-emerald {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 9999px;
+    background: rgba(16, 185, 129, 0.08);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.22);
+    flex-shrink: 0;
+}
+.dark .badge-pill-emerald {
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+/* Table Cell Canonical Spacing (Thead, Tbody, Tfoot) */
+.data-table thead th {
+    padding: 13px 18px !important;
+    vertical-align: middle;
+}
+.data-table tbody td {
+    padding: 13px 18px !important;
+    vertical-align: middle;
+}
+.data-table tfoot td {
+    padding: 13px 18px !important;
+    vertical-align: middle;
+    background-color: var(--color-canvas-soft);
 }
 
 /* Table Initials Avatar */
@@ -579,6 +644,113 @@ input[type="text"], input[type="date"], select {
     </div>
 
     <!-- ========================================================================= -->
+    <!-- 3B. REKAPITULASI PEMAKAIAN BAHAN CURAH (BAL)                              -->
+    <!-- ========================================================================= -->
+    <div class="table-wrapper" style="position: relative; min-height: 120px;" x-show="rekapBalBahan && rekapBalBahan.length > 0" x-cloak>
+        <!-- Header -->
+        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-hairline);background:var(--color-canvas);" class="flex-wrap sm:flex-nowrap">
+            <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                <div class="prod-section-icon is-cyan" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i data-lucide="boxes" style="width:18px;height:18px;"></i>
+                </div>
+                <div style="min-width:0;">
+                    <div style="font-size:14px;font-weight:800;color:var(--color-ink);line-height:1.2;margin:0;">
+                        Rekap Pemakaian Bahan Baku Curah (Bal) &bull; <span style="color:#0284c7; font-family:var(--font-mono); font-weight:700;" x-text="periodeText"></span>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;line-height:1.3;">Total bahan mentah yang terpotong dari gudang berdasarkan catatan input bal karyawan</div>
+                </div>
+            </div>
+            <div class="badge-pill-cyan self-start sm:self-auto" style="display:inline-flex; align-items:center; gap:6px;">
+                <span class="font-mono font-bold" x-text="rekapBalBahan.length"></span>
+                <span>Jenis Bahan Curah</span>
+            </div>
+        </div>
+
+        <!-- Table Responsive -->
+        <div class="overflow-x-auto custom-scrollbar">
+            <table class="data-table w-full text-left border-collapse text-xs" style="min-width: 860px;">
+                <thead style="background:var(--color-canvas-soft); border-bottom:1px solid var(--color-hairline-strong);">
+                    <tr>
+                        <th class="py-3 px-4 w-12 text-center" style="vertical-align: middle;">No</th>
+                        <th class="py-3 px-4 min-w-[220px]" style="vertical-align: middle;">Bahan Baku Curah</th>
+                        <th class="py-3 px-4 min-w-[170px]" style="vertical-align: middle;">Karyawan Terlibat</th>
+                        <th class="py-3 px-4 w-36" style="text-align: right; vertical-align: middle;">Total Terpakai</th>
+                        <th class="py-3 px-4 w-36" style="text-align: right; vertical-align: middle;">Output Dihasilkan</th>
+                        <th class="py-3 px-4 w-36" style="text-align: right; vertical-align: middle;">Rata-rata Yield</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="(rkb, idx) in rekapBalBahan" :key="rkb.item_bahan_id || idx">
+                        <tr class="hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors">
+                            <!-- No -->
+                            <td class="py-2.5 px-4 text-center font-mono text-xs" style="color:var(--color-ink-mute); vertical-align: middle;" x-text="idx + 1"></td>
+
+                            <!-- Nama Bahan -->
+                            <td class="py-2.5 px-4" style="vertical-align: middle;">
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span class="shrink-0 font-bold" 
+                                          style="display:inline-flex; align-items:center; justify-content:center; line-height:1; font-size:10px; padding:3.5px 8px; border-radius:9999px; background:rgba(2, 132, 199, 0.08); color:#0284c7; border:1px solid rgba(2, 132, 199, 0.22);">
+                                        Curah
+                                    </span>
+                                    <span class="font-bold text-xs" style="color:var(--color-ink);" x-text="rkb.nama_bahan"></span>
+                                </div>
+                            </td>
+
+                            <!-- Karyawan -->
+                            <td class="py-2.5 px-4" style="vertical-align: middle;">
+                                <div class="inline-flex items-center gap-1.5 text-xs" style="color:var(--color-ink-mute);">
+                                    <i data-lucide="users" style="width:13px; height:13px;" class="text-slate-400 shrink-0"></i>
+                                    <span>Dikerjakan oleh <strong class="font-bold" style="color:var(--color-ink);" x-text="rkb.jumlah_karyawan"></strong> karyawan</span>
+                                </div>
+                            </td>
+
+                            <!-- Total Terpakai (Bal) -->
+                            <td class="py-2.5 px-4" style="text-align: right; vertical-align: middle;">
+                                <span class="badge-pill-cyan font-mono" style="padding:4px 10px; font-size:11.5px;">
+                                    <span x-text="rkb.total_bal_formatted"></span>&nbsp;<span x-text="rkb.satuan_dasar"></span>
+                                </span>
+                            </td>
+
+                            <!-- Output Dihasilkan (Pcs) -->
+                            <td class="py-2.5 px-4 font-mono font-bold text-xs" style="text-align: right; color:var(--color-ink); vertical-align: middle;">
+                                <span x-text="rkb.total_pcs_formatted + ' pcs'"></span>
+                            </td>
+
+                            <!-- Yield Real -->
+                            <td class="py-2.5 px-4 font-mono font-extrabold text-xs" style="text-align: right; color:#059669; vertical-align: middle;">
+                                <span x-text="'~' + rkb.yield_real + ' pcs/bal'"></span>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+                <tfoot x-show="rekapBalBahan.length > 0">
+                    <tr class="font-bold border-t-2" style="background:var(--color-canvas-soft); border-color:var(--color-hairline-strong); color:var(--color-ink);">
+                        <td style="vertical-align: middle;"></td>
+                        <td colspan="2" style="vertical-align: middle;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span class="text-xs font-black uppercase tracking-wider" style="color:var(--color-ink);">Total Pemakaian Bahan Curah</span>
+                                <span class="badge-pill-cyan font-mono" style="font-size:11px; padding:3px 10px;" x-text="rekapBalBahan.length + ' Bahan'"></span>
+                            </div>
+                        </td>
+                        <td style="text-align: right; vertical-align: middle;">
+                            <span class="badge-pill-cyan font-mono font-bold text-xs" 
+                                  style="padding:4px 10px; font-size:11.5px; font-weight:800;"
+                                  x-text="(rekapBalBahan.reduce((sum, r) => sum + Number(r.total_bal_terpakai || 0), 0)).toLocaleString('id-ID') + ' bal'">
+                            </span>
+                        </td>
+                        <td class="font-mono font-bold text-xs" style="text-align: right; vertical-align: middle; color:var(--color-ink);">
+                            <span x-text="(rekapBalBahan.reduce((sum, r) => sum + Number(r.total_pcs_dihasilkan || 0), 0)).toLocaleString('id-ID') + ' pcs'"></span>
+                        </td>
+                        <td class="font-mono font-extrabold text-xs" style="text-align: right; vertical-align: middle; color:#059669;">
+                            <span x-text="'~' + ((rekapBalBahan.reduce((sum, r) => sum + Number(r.total_bal_terpakai || 0), 0) > 0) ? Math.round(rekapBalBahan.reduce((sum, r) => sum + Number(r.total_pcs_dihasilkan || 0), 0) / rekapBalBahan.reduce((sum, r) => sum + Number(r.total_bal_terpakai || 0), 0)) : 0) + ' pcs/bal'"></span>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- 4. DATA TABLE / MOBILE CARDS                                              -->
     <!-- ========================================================================= -->
     <div class="table-wrapper" style="position: relative; min-height: 200px;">
@@ -601,7 +773,7 @@ input[type="text"], input[type="date"], select {
             <span style="font-size: 12px; font-weight: 700; color: var(--color-ink);" class="tracking-wide">Memuat Data Riwayat...</span>
         </div>
 
-        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-hairline);background:var(--color-canvas);">
+        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-hairline);background:var(--color-canvas);" class="flex-wrap sm:flex-nowrap">
             <div style="display:flex;align-items:center;gap:12px;min-width:0;">
                 <div class="prod-section-icon is-emerald" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                     <i data-lucide="file-spreadsheet" style="width:18px;height:18px;"></i>
@@ -611,8 +783,9 @@ input[type="text"], input[type="date"], select {
                     <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;line-height:1.3;">Hasil rekapitulasi data produksi borongan sesuai parameter filter</div>
                 </div>
             </div>
-            <div class="text-xs font-bold font-mono px-2.5 py-1 rounded-md" style="background:var(--color-canvas-soft); border:1px solid var(--color-hairline); color:var(--color-ink-mute);">
-                <span x-text="historyGrouped.length"></span> Rekap Karyawan
+            <div class="badge-pill-emerald self-start sm:self-auto" style="display:inline-flex; align-items:center; gap:6px;">
+                <span class="font-mono font-bold" x-text="historyGrouped.length"></span>
+                <span>Rekap Karyawan</span>
             </div>
         </div>
 
@@ -624,9 +797,9 @@ input[type="text"], input[type="date"], select {
                         <th class="py-3 px-4 w-32" style="vertical-align: middle;">Tanggal</th>
                         <th class="py-3 px-4 min-w-[170px]" style="vertical-align: middle;">Karyawan</th>
                         <th class="py-3 px-4 min-w-[170px]" style="vertical-align: middle;">Rincian Item Produk</th>
-                        <th class="py-3 px-4 text-right w-28" style="vertical-align: middle;">Total Reguler</th>
-                        <th class="py-3 px-4 text-right w-24" style="vertical-align: middle;">Lembur</th>
-                        <th class="py-3 px-4 text-right min-w-[130px]" style="vertical-align: middle;">Total Upah</th>
+                        <th class="py-3 px-4 w-28" style="text-align: right; vertical-align: middle;">Total Reguler</th>
+                        <th class="py-3 px-4 w-24" style="text-align: right; vertical-align: middle;">Lembur</th>
+                        <th class="py-3 px-4 min-w-[130px]" style="text-align: right; vertical-align: middle;">Total Upah</th>
                         <th class="py-3 px-4 text-center w-28" style="vertical-align: middle;">Status Payroll</th>
                     </tr>
                 </thead>
@@ -645,9 +818,9 @@ input[type="text"], input[type="date"], select {
                                     <div class="prod-table-avatar" x-text="emp.initials"></div>
                                     <div class="min-w-0 flex-1">
                                         <span class="truncate block text-xs font-bold" style="color:var(--color-ink);" x-text="emp.nama_karyawan"></span>
-                                        <div class="flex items-center gap-1.5 mt-0.5">
+                                        <div style="display:flex; align-items:center; gap:8px; margin-top:3px;">
                                             <span class="text-[10.5px] font-normal" style="color:var(--color-ink-mute);" x-text="emp.posisi || 'Pengemasan'"></span>
-                                            <span class="badge badge-mono text-[9.5px] font-bold py-0 px-1.5" style="background:rgba(136,19,55,0.08); color:#881337;" x-text="(emp.items ? emp.items.length : 0) + ' Produk'"></span>
+                                            <span class="badge text-[9.5px] font-bold" style="display:inline-flex; align-items:center; justify-content:center; line-height:1; padding:2.5px 8px; border-radius:9999px; background:rgba(136,19,55,0.08); color:#881337; border:1px solid rgba(136,19,55,0.22);" x-text="(emp.items ? emp.items.length : 0) + ' Produk'"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -667,7 +840,7 @@ input[type="text"], input[type="date"], select {
                             </td>
                             
                             <!-- Total Reguler -->
-                            <td class="py-2.5 px-4 text-right font-semibold font-mono" style="color:var(--color-ink); vertical-align: middle;">
+                            <td class="py-2.5 px-4 font-semibold font-mono" style="text-align: right; color:var(--color-ink); vertical-align: middle;">
                                 <span x-text="(emp.total_pcs || 0).toLocaleString('id-ID') + ' pcs'"></span>
                                 <template x-if="emp.total_bal > 0">
                                     <span class="text-[10.5px] font-normal block text-slate-400" x-text="emp.total_bal + ' bal'"></span>
@@ -675,7 +848,7 @@ input[type="text"], input[type="date"], select {
                             </td>
                             
                             <!-- Total Lembur -->
-                            <td class="py-2.5 px-4 text-right font-semibold font-mono" style="vertical-align: middle;">
+                            <td class="py-2.5 px-4 font-semibold font-mono" style="text-align: right; vertical-align: middle;">
                                 <template x-if="emp.total_lembur_pcs > 0 || emp.total_lembur_bal > 0">
                                     <div>
                                         <span style="color:#881337;" x-text="(emp.total_lembur_pcs || 0).toLocaleString('id-ID') + ' pcs'"></span>
@@ -690,7 +863,7 @@ input[type="text"], input[type="date"], select {
                             </td>
                             
                             <!-- Total Upah -->
-                            <td class="py-2.5 px-4 text-right font-bold font-mono text-xs" style="color:var(--color-success); vertical-align: middle;" x-text="emp.total_upah_formatted || ('Rp ' + (emp.total_upah || 0).toLocaleString('id-ID'))"></td>
+                            <td class="py-2.5 px-4 font-bold font-mono text-xs" style="text-align: right; color:var(--color-success); vertical-align: middle;" x-text="emp.total_upah_formatted || ('Rp ' + (emp.total_upah || 0).toLocaleString('id-ID'))"></td>
                             
                             <!-- Status Payroll -->
                             <td class="py-2.5 px-4 text-center" style="vertical-align: middle;">
@@ -719,21 +892,25 @@ input[type="text"], input[type="date"], select {
                 </tbody>
                 <tfoot x-show="historyGrouped.length > 0">
                     <tr class="font-bold border-t-2" style="background:var(--color-canvas-soft); border-color:var(--color-hairline-strong); color:var(--color-ink);">
-                        <td colspan="4" class="py-3 px-4 text-right" style="vertical-align: middle;">
-                            <span class="text-xs font-extrabold uppercase tracking-wider" style="color:var(--color-ink);">Total Rekapitulasi:</span>
+                        <td style="vertical-align: middle;"></td>
+                        <td colspan="3" style="vertical-align: middle;">
+                            <div style="display:flex; align-items:center; gap:12px;">
+                                <span class="text-xs font-black uppercase tracking-wider" style="color:var(--color-ink);">Total Rekapitulasi Output</span>
+                                <span class="badge-pill-emerald font-mono" style="font-size:11px; padding:3px 10px;" x-text="historyGrouped.length + ' Karyawan'"></span>
+                            </div>
                         </td>
-                        <td class="py-3 px-4 text-right font-bold font-mono text-xs" style="color:var(--color-ink); vertical-align: middle;">
+                        <td class="font-mono font-bold text-xs" style="text-align: right; color:var(--color-ink); vertical-align: middle;">
                             <span x-text="(totalPcs || 0).toLocaleString('id-ID') + ' pcs'"></span>
                             <template x-if="totalBal > 0">
-                                <span class="text-[10.5px] font-normal block text-slate-400" x-text="(totalBal || 0).toLocaleString('id-ID') + ' bal'"></span>
+                                <span class="text-[10.5px] font-normal block text-slate-400" style="margin-top:2px;" x-text="(totalBal || 0).toLocaleString('id-ID') + ' bal'"></span>
                             </template>
                         </td>
-                        <td class="py-3 px-4 text-right font-bold font-mono text-xs" style="vertical-align: middle;">
+                        <td class="font-mono font-bold text-xs" style="text-align: right; vertical-align: middle;">
                             <template x-if="totalLemburPcs > 0 || totalLemburBal > 0">
                                 <div>
                                     <span style="color:#881337;" x-text="(totalLemburPcs || 0).toLocaleString('id-ID') + ' pcs'"></span>
                                     <template x-if="totalLemburBal > 0">
-                                        <span class="text-[10px] font-normal block text-rose-400" x-text="(totalLemburBal || 0).toLocaleString('id-ID') + ' bal'"></span>
+                                        <span class="text-[10px] font-normal block text-rose-400" style="margin-top:2px;" x-text="(totalLemburBal || 0).toLocaleString('id-ID') + ' bal'"></span>
                                     </template>
                                 </div>
                             </template>
@@ -741,8 +918,8 @@ input[type="text"], input[type="date"], select {
                                 <span style="color:var(--color-ink-mute); font-weight:400;">-</span>
                             </template>
                         </td>
-                        <td class="py-3 px-4 text-right font-bold font-mono text-xs sm:text-sm" style="color:var(--color-success); vertical-align: middle;" x-text="totalUpahFormatted"></td>
-                        <td class="py-3 px-4 text-center" style="vertical-align: middle;"></td>
+                        <td class="font-mono font-bold text-xs sm:text-sm" style="text-align: right; color:var(--color-success); vertical-align: middle;" x-text="totalUpahFormatted"></td>
+                        <td style="vertical-align: middle;"></td>
                     </tr>
                 </tfoot>
             </table>
@@ -888,6 +1065,7 @@ function historyApp() {
         totalUpah: <?= (float)$totalUpah ?>,
         totalUpahFormatted: '<?= addslashes(Format::rupiah($totalUpah)) ?>',
         
+        rekapBalBahan: (<?= json_encode($rekapBalBahan ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>) || [],
         historyGrouped: (<?= json_encode($initialRows, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>) || [],
         
         selectedKaryawan: '<?= addslashes($karyawanId) ?>',
@@ -1070,6 +1248,7 @@ function historyApp() {
                     this.totalUpah = data.totalUpah || 0;
                     this.totalUpahFormatted = data.totalUpahFormatted || 'Rp 0';
                     this.periodeText = data.periodeText || '';
+                    this.rekapBalBahan = data.rekapBalBahan || [];
                     this.historyGrouped = data.historyGrouped || [];
                 }
             } catch (err) {

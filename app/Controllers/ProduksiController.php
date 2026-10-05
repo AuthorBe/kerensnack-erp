@@ -383,7 +383,7 @@ class ProduksiController extends Controller
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            $this->flashError('Gagal menyimpan data produksi: ' . $e->getMessage());
+            $this->flashError('Gagal menyimpan data produksi: ' . $this->cleanErrorMessage($e));
             $this->redirect('/produksi?tanggal=' . $tanggal);
         }
     }
@@ -459,7 +459,7 @@ class ProduksiController extends Controller
             $this->flashSuccess('Data produksi berhasil diperbarui.');
             $this->redirect('/produksi?tanggal=' . $tanggal);
         } catch (Throwable $e) {
-            $this->flashError('Gagal memperbarui produksi: ' . $e->getMessage());
+            $this->flashError('Gagal memperbarui produksi: ' . $this->cleanErrorMessage($e));
             $this->redirect('/produksi?tanggal=' . $tanggal);
         }
     }
@@ -539,7 +539,7 @@ class ProduksiController extends Controller
             $this->flashError('Parameter penghapusan tidak lengkap.');
             $this->redirect('/produksi?tanggal=' . $tanggal);
         } catch (Throwable $e) {
-            $this->flashError('Gagal menghapus produksi: ' . $e->getMessage());
+            $this->flashError('Gagal menghapus produksi: ' . $this->cleanErrorMessage($e));
             $this->redirect('/produksi?tanggal=' . $tanggal);
         }
     }
@@ -652,6 +652,50 @@ class ProduksiController extends Controller
                 }
             }
 
+            // Rekapitulasi Pemakaian Bahan Mentah Curah (Bal) dalam rentang filter
+            $rekapBalBahanRaw = Database::fetchAll("
+                SELECT 
+                    ib.id as item_bahan_id,
+                    ib.nama_item as nama_bahan,
+                    ib.satuan_dasar,
+                    SUM(ph.kuantitas_bal + ph.lembur_bal) as total_bal_terpakai,
+                    SUM(ph.kuantitas_pcs + ph.lembur_pcs) as total_pcs_dihasilkan,
+                    COUNT(DISTINCT ph.karyawan_id) as jumlah_karyawan
+                FROM public.produksi_harian ph
+                JOIN public.komposisi_item ki ON ki.item_jadi_id = ph.item_id AND ki.potong_sesuai_bal = TRUE
+                JOIN public.item ib ON ib.id = ki.item_bahan_id
+                WHERE ph.tanggal BETWEEN :tgl_awal AND :tgl_akhir
+                  AND (:kid = '' OR ph.karyawan_id = :kid_uuid)
+                  AND (:item_id = '' OR ph.item_id = :item_uuid)
+                GROUP BY ib.id, ib.nama_item, ib.satuan_dasar
+                ORDER BY total_bal_terpakai DESC, ib.nama_item ASC
+            ", [
+                'tgl_awal' => $tglAwal,
+                'tgl_akhir' => $tglAkhir,
+                'kid' => $karyawanId,
+                'kid_uuid' => !empty($karyawanId) ? $karyawanId : null,
+                'item_id' => $itemId,
+                'item_uuid' => !empty($itemId) ? $itemId : null
+            ]);
+
+            $rekapBalBahan = [];
+            foreach ($rekapBalBahanRaw as $rkb) {
+                $balUsed = (float)$rkb['total_bal_terpakai'];
+                $pcsProduced = (int)$rkb['total_pcs_dihasilkan'];
+                $yieldReal = ($balUsed > 0) ? round($pcsProduced / $balUsed, 1) : 0;
+                $rekapBalBahan[] = [
+                    'item_bahan_id' => $rkb['item_bahan_id'],
+                    'nama_bahan' => $rkb['nama_bahan'],
+                    'satuan_dasar' => $rkb['satuan_dasar'] ?: 'bal',
+                    'total_bal_terpakai' => $balUsed,
+                    'total_bal_formatted' => number_format($balUsed, 0, ',', '.'),
+                    'total_pcs_dihasilkan' => $pcsProduced,
+                    'total_pcs_formatted' => number_format($pcsProduced, 0, ',', '.'),
+                    'jumlah_karyawan' => (int)$rkb['jumlah_karyawan'],
+                    'yield_real' => $yieldReal
+                ];
+            }
+
             if ($this->isAjax() || (isset($_GET['ajax']) && $_GET['ajax'] === '1')) {
                 $formattedRows = [];
                 foreach ($historyGrouped as $emp) {
@@ -675,6 +719,7 @@ class ProduksiController extends Controller
                     'totalUpah' => $totalUpah,
                     'totalUpahFormatted' => Format::rupiah($totalUpah),
                     'periodeText' => Format::tanggalIndo($tglAwal) . ' s/d ' . Format::tanggalIndo($tglAkhir),
+                    'rekapBalBahan' => $rekapBalBahan,
                     'historyGrouped' => $formattedRows
                 ]);
                 return;
@@ -691,6 +736,7 @@ class ProduksiController extends Controller
                 'itemList' => $itemList,
                 'history' => $history,
                 'historyGrouped' => $historyGrouped,
+                'rekapBalBahan' => $rekapBalBahan,
                 'totalPcs' => $totalPcs,
                 'totalBal' => $totalBal,
                 'totalLemburPcs' => $totalLemburPcs,
@@ -701,5 +747,17 @@ class ProduksiController extends Controller
             $this->flashError('Gagal memuat riwayat produksi: ' . $e->getMessage());
             $this->redirect('/produksi');
         }
+    }
+
+    /**
+     * Ekstrak pesan human-friendly dari exception trigger PostgreSQL
+     */
+    private function cleanErrorMessage(Throwable $e): string
+    {
+        $msg = $e->getMessage();
+        if (preg_match('/ERROR:\s*(.+?)(?:\n|CONTEXT:|$)/is', $msg, $matches)) {
+            return trim($matches[1]);
+        }
+        return $msg;
     }
 }
