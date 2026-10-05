@@ -1757,10 +1757,10 @@ class DeliveryController extends Controller
         Auth::requireLogin();
         $this->validateCsrf();
 
-        $purchaseId = (int)($_POST['purchase_id'] ?? 0);
-        $alasan = trim($_POST['alasan'] ?? '');
+        $purchaseId = trim((string)($_POST['purchase_id'] ?? ''));
+        $alasan = trim((string)($_POST['alasan_kendala'] ?? $_POST['alasan'] ?? ''));
 
-        if (!$purchaseId || empty($alasan)) {
+        if (empty($purchaseId) || empty($alasan)) {
             $this->flashError('ID PO dan alasan kendala wajib diisi!');
             $this->redirect('/driver-deliveries');
             return;

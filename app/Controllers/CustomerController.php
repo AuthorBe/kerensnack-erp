@@ -10,6 +10,7 @@ use App\Helpers\DocumentNumber;
 use Database;
 use PDO;
 use Throwable;
+use RuntimeException;
 
 /**
  * app/Controllers/CustomerController.php

@@ -125,7 +125,7 @@ $grupId = $db->query("SELECT id FROM public.grup_pelanggan WHERE default_level_h
     ?: $db->query("SELECT id FROM public.grup_pelanggan LIMIT 1")->fetchColumn();
 $wilId = $db->query("SELECT id FROM public.wilayah LIMIT 1")->fetchColumn();
 $item = $db->query("SELECT id, nama_item, kode_sku, stok_fisik_saat_ini, harga_pokok_pembelian FROM public.item WHERE tipe_item = 'barang_jadi' AND status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);
-$akunKas = $db->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+$akunKas = $db->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE AND is_escrow = FALSE ORDER BY is_default_pos DESC, nama_akun ASC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
 
 if (!$item) {
     $tmpItemId = 'e0000000-0000-0000-0000-000000000010';
