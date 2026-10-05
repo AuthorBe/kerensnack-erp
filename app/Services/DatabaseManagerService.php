@@ -669,7 +669,7 @@ class DatabaseManagerService
                     } elseif ($table === 'tagihan_kunjungan') {
                         $whereClause = "WHERE \"kunjungan_id\" IN (SELECT id FROM public.\"kunjungan_konsinyasi\" WHERE \"tanggal_kunjungan\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days'))";
                     } elseif ($table === 'opname_gudang_item') {
-                        $whereClause = "WHERE \"opname_gudang_id\" IN (SELECT id FROM public.\"opname_gudang\" WHERE \"tanggal\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"dibuat_pada\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days'))";
+                        $whereClause = "WHERE \"opname_id\" IN (SELECT id FROM public.\"opname_gudang\" WHERE \"tanggal\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days') OR \"dibuat_pada\" >= (CURRENT_DATE - INTERVAL '{$daysWindow} days'))";
                     } else {
                         $dateCandidates = [
                             'tanggal_pesanan',
