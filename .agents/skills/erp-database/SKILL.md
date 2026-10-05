@@ -8,14 +8,30 @@ description: >-
 
 # Database Schema, Supabase Permissions & Replication
 
-## 1. Official Migrations & Dual-Database Execution Protocol
+## 1. Official Migrations & Local-First Staging Protocol
 - Every change to tables, indexes, views, RPC functions, constraints, or official system master entities **must** have a sequentially numbered migration file in `database/migrations/`, formatted as `XX_migration_description.sql` (always verify the highest current migration number first).
 - Every migration **must be atomic**: wrapped within `BEGIN; ... COMMIT;`.
-- **MANDATORY DUAL-DATABASE APPLICATION**:
-  Because Live-to-Local sync (`Supabase -> Local`) is authoritative and wipes local public data, **NEVER apply migrations/fixes to only one database**:
-  1. Any migration or system master fix must be executed on **BOTH** databases: Live Cloud Supabase (`.env.live`) AND Local PostgreSQL (`.env` / `kerensnack_erp_local`).
-  2. If a migration is only run on Local DB, the very next sync from Supabase will wipe the changes and revert the database.
-  3. Never assume updating `.env` alone is sufficient; always execute the migration on Supabase Live as well (or apply to Supabase Live and then run sync).
+- **LOCAL-FIRST STAGING WORKFLOW (MANDATORY DUAL-DATABASE APPLICATION)**:
+  Because Live-to-Local sync (`Supabase -> Local`) is authoritative and wipes local public data, **NEVER apply migrations to only one database, and NEVER run unverified DDL directly against Cloud Live**:
+  1. **Stage 1 (Local Sandbox First)**:
+     Execute and test the migration file on **Local DB (`kerensnack_erp_local`)** first:
+     ```bash
+     php bin/migrate.php --target=local
+     ```
+     Verify that the migration succeeds without SQL syntax errors, broken foreign key constraints, or application regressions.
+  2. **Stage 2 (Cloud Supabase Live Deploy)**:
+     Once 100% verified and working in Local, apply the exact same migration file to **Cloud Supabase (Live)**:
+     ```bash
+     php bin/migrate.php --target=live
+     ```
+     Or execute both stages sequentially via `php bin/migrate.php --target=all`.
+  3. **Stage 3 (Automated Verification & Status Tracking)**:
+     Verify that both databases are fully up-to-date and have zero pending migrations:
+     ```bash
+     php bin/migrate.php --status --target=local
+     php bin/migrate.php --status --target=live
+     ```
+  All executed migrations are automatically recorded in `public.schema_migrations` with batch numbers and execution timestamps.
 
 ## 2. Canonical Schema Synchronization (Single Source of Truth)
 - `database/01_schema.sql` and `database/02_triggers_and_rpc.sql` **must** be synchronized with the latest schema state whenever creating or modifying migrations.

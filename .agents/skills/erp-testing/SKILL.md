@@ -6,24 +6,29 @@ description: >-
   runner. Covers read-only patterns, transaction rollback, try-finally teardown, and post-test hygiene.
 ---
 
-# Testing & Verification Protocols (Zero Persistent Mock Data)
+# Testing & Verification Protocols (Zero Persistent Mock Data & Environment Isolation)
 
-The connected database is **live production**. Tests must not leave mock or test artifacts (`TEST-`, `TMP-`, `FXTR-`, `Dummy`) under any circumstances, even upon assertion failure, fatal exception, or process abort.
+The repository interacts with **live production** (Supabase PostgreSQL) and **local sandbox** (`kerensnack_erp_local`). Tests must adhere strictly to environmental boundaries to protect real accounting sequences and prevent mock data residue.
 
-## A. Read-only queries based on real master data (Highest Priority)
-Utilize existing master data via `SELECT` queries without modifying data state:
-```php
-$item = Database::fetchOne("SELECT id, grup_id FROM public.item WHERE status_aktif = TRUE LIMIT 1");
-if (!$item) {
-    throw new RuntimeException("Active master item not found in real database.");
-}
-```
+## A. Strict Environment Test Isolation (Industry Best Practice)
+1. **Read-Only Queries on Live Supabase**:
+   Live production only accepts **read-only audits & health checks** via `SELECT` queries on real master data.
+   ```php
+   $item = Database::fetchOne("SELECT id, grup_id FROM public.item WHERE status_aktif = TRUE LIMIT 1");
+   if (!$item) {
+       throw new RuntimeException("Active master item not found in real database.");
+   }
+   ```
+2. **Mutations & Lifecycle Simulations Strictly on Local DB**:
+   Any test that performs `INSERT`, `UPDATE`, `DELETE`, or calls controllers that modify state **MUST be run against Local DB (`kerensnack_erp_local`)**.
+   - **Reason**: In PostgreSQL, auto-increment sequences (`nextval`) and advisory locks are non-transactional and never roll back. Running write simulations against production causes transaction/invoice sequence gaps (e.g. `nomor_nota` skips), creating severe auditing issues.
+   - `TestRunnerService` automatically enforces this via `MUTATING_SUITES` safety guard: write suites are safely skipped if the active DB is Live Supabase.
 
-## B. Isolated transactions with automatic rollback (Mandatory for write simulations)
+## B. Isolated transactions with automatic rollback (Mandatory for local write simulations)
 ```php
 $pdo->beginTransaction();
 try {
-    // Execute test simulations and assertions
+    // Execute test simulations and assertions in local sandbox
 } finally {
     if ($pdo->inTransaction()) {
         $pdo->rollBack(); // Guarantees database remains 100% intact and clean
@@ -46,3 +51,4 @@ If a test invokes a Controller method whose internal logic executes `beginTransa
 ## E. Seeders & Test Helpers
 - `database/seeds/` is intended strictly for isolated local sandboxes; executing seeds against live production is **strictly forbidden**.
 - Writing test helpers that perform `INSERT` queries into public database tables without a rollback transaction wrapper is strictly forbidden.
+
