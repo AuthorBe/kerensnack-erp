@@ -196,7 +196,7 @@ $kategori = (string)($kategori ?? $kategoriLabel ?? 'Semua Jenis Item');
             foreach ($items as $it): 
                 $stok = (float)$it['stok_fisik_saat_ini'];
                 $min = (float)$it['stok_minimum_peringatan'];
-                $hpp = (float)$it['harga_pokok_pembelian'];
+                $hpp = (float)($it['hpp_efektif'] ?? $it['harga_pokok_pembelian'] ?? 0);
                 $valuasi = $stok * $hpp;
                 $status = ($stok <= 0) ? 'HABIS' : (($stok <= $min) ? 'MENIPIS' : 'AMAN');
                 $sumStok += $stok;

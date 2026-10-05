@@ -8,7 +8,7 @@ $totalSku = count($items);
 $totalPcsGudang = array_sum(array_column($items, 'stok_fisik_saat_ini'));
 $totalMenipis = count(array_filter($items, fn($i) => (float)$i['stok_fisik_saat_ini'] > 0 && (float)$i['stok_fisik_saat_ini'] <= (float)($i['stok_minimum_peringatan'] ?? 10)));
 $totalKosong = count(array_filter($items, fn($i) => (float)$i['stok_fisik_saat_ini'] <= 0));
-$totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_ini'] * (float)($i['harga_pokok_pembelian'] ?? 0), $items));
+$totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_ini'] * (float)($i['hpp_efektif'] ?? $i['harga_pokok_pembelian'] ?? 0), $items));
 
 $countBarangJadi = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? 'barang_jadi') === 'barang_jadi'));
 $countBahanMentah = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') === 'bahan_mentah'));
@@ -1041,7 +1041,7 @@ function inventoryApp() {
         get kpiTotalValuasi() {
             return this.filteredItems.reduce((acc, item) => {
                 const stok = parseFloat(item.stok_fisik_saat_ini) || 0;
-                const hpp = parseFloat(item.harga_pokok_pembelian) || 0;
+                const hpp = parseFloat(item.hpp_efektif ?? item.harga_pokok_pembelian) || 0;
                 return acc + (stok * hpp);
             }, 0);
         },

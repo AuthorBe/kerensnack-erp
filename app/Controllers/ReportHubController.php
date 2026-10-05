@@ -795,7 +795,7 @@ class ReportHubController extends Controller
             foreach ($stockData['items'] as $idx => $it) {
                 $stok = (float)$it['stok_fisik_saat_ini'];
                 $min = (float)$it['stok_minimum_peringatan'];
-                $hpp = (float)$it['harga_pokok_pembelian'];
+                $hpp = (float)($it['hpp_efektif'] ?? $it['harga_pokok_pembelian'] ?? 0);
                 $valuasi = $stok * $hpp;
                 $status = ($stok <= 0) ? 'HABIS' : (($stok <= $min) ? 'MENIPIS' : 'AMAN');
 
@@ -1314,9 +1314,34 @@ class ReportHubController extends Controller
         }
 
         $items = Database::fetchAll("
-            SELECT i.*, gp.nama_grup as nama_grup_produk
+            SELECT i.*, gp.nama_grup as nama_grup_produk,
+                   COALESCE(kub.upah_per_bungkus, 0) as upah_bungkus_efektif,
+                   COALESCE((
+                       SELECT SUM(ki.jumlah_kebutuhan * mat.harga_pokok_pembelian)
+                       FROM public.komposisi_item ki
+                       JOIN public.item mat ON ki.item_bahan_id = mat.id
+                       WHERE ki.item_jadi_id = i.id
+                   ), 0) as estimasi_biaya_bahan,
+                   CASE 
+                       WHEN i.tipe_item = 'barang_jadi' THEN 
+                           COALESCE(
+                               NULLIF(
+                                   COALESCE((
+                                       SELECT SUM(ki.jumlah_kebutuhan * mat.harga_pokok_pembelian)
+                                       FROM public.komposisi_item ki
+                                       JOIN public.item mat ON ki.item_bahan_id = mat.id
+                                       WHERE ki.item_jadi_id = i.id
+                                   ), 0) + COALESCE(kub.upah_per_bungkus, 0),
+                                   0
+                               ),
+                               i.harga_pokok_pembelian,
+                               0
+                           )
+                       ELSE COALESCE(i.harga_pokok_pembelian, 0)
+                   END as hpp_efektif
             FROM public.item i
             LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+            LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
             {$whereSql}
             ORDER BY i.tipe_item ASC, i.nama_item ASC
         ");
@@ -1324,7 +1349,7 @@ class ReportHubController extends Controller
         $totalValuasi = 0.0;
         foreach ($items as $it) {
             $stok = (float)$it['stok_fisik_saat_ini'];
-            $hpp = (float)$it['harga_pokok_pembelian'];
+            $hpp = (float)($it['hpp_efektif'] ?? $it['harga_pokok_pembelian'] ?? 0);
             $totalValuasi += ($stok * $hpp);
         }
 

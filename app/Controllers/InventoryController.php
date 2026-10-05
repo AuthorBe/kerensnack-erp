@@ -31,9 +31,34 @@ class InventoryController extends Controller
             $items = Database::fetchAll("
                 SELECT i.id, i.kode_sku, i.nama_item, i.tipe_item,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar,
-                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
+                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal,
+                       COALESCE(kub.upah_per_bungkus, 0) as upah_bungkus_efektif,
+                       COALESCE((
+                           SELECT SUM(ki.jumlah_kebutuhan * mat.harga_pokok_pembelian)
+                           FROM public.komposisi_item ki
+                           JOIN public.item mat ON ki.item_bahan_id = mat.id
+                           WHERE ki.item_jadi_id = i.id
+                       ), 0) as estimasi_biaya_bahan,
+                       CASE 
+                           WHEN i.tipe_item = 'barang_jadi' THEN 
+                               COALESCE(
+                                   NULLIF(
+                                       COALESCE((
+                                           SELECT SUM(ki.jumlah_kebutuhan * mat.harga_pokok_pembelian)
+                                           FROM public.komposisi_item ki
+                                           JOIN public.item mat ON ki.item_bahan_id = mat.id
+                                           WHERE ki.item_jadi_id = i.id
+                                       ), 0) + COALESCE(kub.upah_per_bungkus, 0),
+                                       0
+                                   ),
+                                   i.harga_pokok_pembelian,
+                                   0
+                               )
+                           ELSE COALESCE(i.harga_pokok_pembelian, 0)
+                       END as hpp_efektif
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
                 WHERE i.status_aktif = TRUE
                 ORDER BY 
                     CASE 
@@ -369,11 +394,29 @@ class InventoryController extends Controller
 
         try {
             $items = Database::fetchAll("
-                SELECT i.id, i.kode_sku, i.nama_item,
+                SELECT i.id, i.kode_sku, i.nama_item, i.tipe_item,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar,
-                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
+                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal,
+                       CASE 
+                           WHEN i.tipe_item = 'barang_jadi' THEN 
+                               COALESCE(
+                                   NULLIF(
+                                       COALESCE((
+                                           SELECT SUM(ki.jumlah_kebutuhan * mat.harga_pokok_pembelian)
+                                           FROM public.komposisi_item ki
+                                           JOIN public.item mat ON ki.item_bahan_id = mat.id
+                                           WHERE ki.item_jadi_id = i.id
+                                       ), 0) + COALESCE(kub.upah_per_bungkus, 0),
+                                       0
+                                   ),
+                                   i.harga_pokok_pembelian,
+                                   0
+                               )
+                           ELSE COALESCE(i.harga_pokok_pembelian, 0)
+                       END as hpp_efektif
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
                 WHERE i.status_aktif = TRUE
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
@@ -386,7 +429,7 @@ class InventoryController extends Controller
 
             foreach ($items as $it) {
                 $stok = (float)($it['stok_fisik_saat_ini'] ?? 0);
-                $hpp = (float)($it['harga_pokok_pembelian'] ?? 0);
+                $hpp = (float)($it['hpp_efektif'] ?? $it['harga_pokok_pembelian'] ?? 0);
                 $valuation = $stok * $hpp;
                 $totalPcs += $stok;
                 $totalValuation += $valuation;
@@ -427,9 +470,27 @@ class InventoryController extends Controller
             $items = Database::fetchAll("
                 SELECT i.id, i.kode_sku, i.nama_item, i.tipe_item,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar,
-                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
+                       i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal,
+                       CASE 
+                           WHEN i.tipe_item = 'barang_jadi' THEN 
+                               COALESCE(
+                                   NULLIF(
+                                       COALESCE((
+                                           SELECT SUM(ki.jumlah_kebutuhan * mat.harga_pokok_pembelian)
+                                           FROM public.komposisi_item ki
+                                           JOIN public.item mat ON ki.item_bahan_id = mat.id
+                                           WHERE ki.item_jadi_id = i.id
+                                       ), 0) + COALESCE(kub.upah_per_bungkus, 0),
+                                       0
+                                   ),
+                                   i.harga_pokok_pembelian,
+                                   0
+                               )
+                           ELSE COALESCE(i.harga_pokok_pembelian, 0)
+                       END as hpp_efektif
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+                LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
                 WHERE i.status_aktif = TRUE
                 ORDER BY gp.kode_grup ASC, i.nama_item ASC
             ");
@@ -610,10 +671,28 @@ class InventoryController extends Controller
 
                 // Lock row item
                 $itemDb = Database::fetchOne("
-                    SELECT stok_fisik_saat_ini, nama_item, kode_sku, harga_pokok_pembelian 
-                    FROM public.item 
-                    WHERE id = :id 
-                    FOR UPDATE
+                    SELECT i.stok_fisik_saat_ini, i.nama_item, i.kode_sku, i.tipe_item, i.harga_pokok_pembelian,
+                           CASE 
+                               WHEN i.tipe_item = 'barang_jadi' THEN 
+                                   COALESCE(
+                                       NULLIF(
+                                           COALESCE((
+                                               SELECT SUM(ki.jumlah_kebutuhan * mat.harga_pokok_pembelian)
+                                               FROM public.komposisi_item ki
+                                               JOIN public.item mat ON ki.item_bahan_id = mat.id
+                                               WHERE ki.item_jadi_id = i.id
+                                           ), 0) + COALESCE(kub.upah_per_bungkus, 0),
+                                           0
+                                       ),
+                                       i.harga_pokok_pembelian,
+                                       0
+                                   )
+                               ELSE COALESCE(i.harga_pokok_pembelian, 0)
+                           END as hpp_efektif
+                    FROM public.item i 
+                    LEFT JOIN public.kelompok_upah_borongan kub ON i.kelompok_borongan_id = kub.id
+                    WHERE i.id = :id 
+                    FOR UPDATE OF i
                 ", ['id' => $itemId]);
 
                 if (!$itemDb) {
@@ -621,7 +700,7 @@ class InventoryController extends Controller
                 }
 
                 $stokDbSaatIni = (float)$itemDb['stok_fisik_saat_ini'];
-                $hpp = (float)($itemDb['harga_pokok_pembelian'] ?? 0.0);
+                $hpp = (float)($itemDb['hpp_efektif'] ?? $itemDb['harga_pokok_pembelian'] ?? 0.0);
                 $selisihNyata = $stokFisikInput - $stokDbSaatIni;
 
                 if (abs($selisihNyata) < 0.0001) {
