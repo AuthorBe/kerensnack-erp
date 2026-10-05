@@ -93,6 +93,14 @@ class TabunganController extends Controller
                 WHERE DATE_TRUNC('month', tanggal) = DATE_TRUNC('month', CURRENT_DATE)
             ");
 
+            // Master Akun Kas Escrow Khusus Tabungan
+            $escrowAccount = Database::fetchOne("
+                SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_escrow
+                FROM public.akun_kas
+                WHERE is_escrow = TRUE AND status_aktif = TRUE
+                LIMIT 1
+            ");
+
             // Master Akun Kas Aktif (Termasuk Escrow Tabungan sebagai Akun Utama Simpanan)
             $akunKasList = Database::fetchAll("
                 SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_escrow, is_default_pos
@@ -108,6 +116,7 @@ class TabunganController extends Controller
                 'karyawanList' => $karyawanList,
                 'karyawanMapData' => $karyawanMapData,
                 'akunKasList' => $akunKasList,
+                'escrowAccount' => $escrowAccount,
                 'totalSaldo' => (float)$totalSaldo,
                 'karyawanMenabung' => $karyawanMenabung,
                 'totalKaryawan' => $totalKaryawan,
@@ -167,6 +176,14 @@ class TabunganController extends Controller
                 }
             }
 
+            // Master Akun Kas Escrow Khusus Tabungan
+            $escrowAccount = Database::fetchOne("
+                SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_escrow
+                FROM public.akun_kas
+                WHERE is_escrow = TRUE AND status_aktif = TRUE
+                LIMIT 1
+            ");
+
             // Master Akun Kas Aktif
             $akunKasList = Database::fetchAll("
                 SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_escrow, is_default_pos
@@ -181,6 +198,7 @@ class TabunganController extends Controller
                 'karyawan' => $karyawan,
                 'transaksiList' => $transaksiList,
                 'akunKasList' => $akunKasList,
+                'escrowAccount' => $escrowAccount,
                 'totalDeposit' => $totalDeposit,
                 'totalWithdrawal' => $totalWithdrawal
             ], 'layouts.master');
@@ -220,19 +238,32 @@ class TabunganController extends Controller
         try {
             $pdo->beginTransaction();
 
-            // Default ke Kas Tabungan Escrow jika tidak dipilih
-            if (empty($akunKasId)) {
-                $stmtEscrow = $pdo->query("SELECT id FROM public.akun_kas WHERE is_escrow = TRUE AND status_aktif = TRUE LIMIT 1");
-                $akunKasId = (string)($stmtEscrow->fetchColumn() ?: '');
+            // Ambil akun kas escrow tabungan
+            $stmtEscrow = $pdo->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE is_escrow = TRUE AND status_aktif = TRUE LIMIT 1");
+            $escrowAccount = $stmtEscrow->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$escrowAccount) {
+                $pdo->rollBack();
+                $this->flashError('Akun kas tabungan (escrow) belum dikonfigurasi atau tidak aktif.');
+                $this->redirect('/tabungan');
+                return;
             }
 
-            // Validasi & Lock Akun Kas
-            $selectedKas = null;
-            if (!empty($akunKasId)) {
-                $stmtKas = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
-                $stmtKas->execute(['id' => $akunKasId]);
-                $selectedKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
+            // Proteksi Sistem: Jika client mengirimkan akun_kas_id selain akun escrow, tolak mutlak
+            if (!empty($akunKasId) && (string)$akunKasId !== (string)$escrowAccount['id']) {
+                $pdo->rollBack();
+                $this->flashError('Proteksi Keamanan: Setoran tabungan hanya diperbolehkan melalui Akun Kas Tabungan (Escrow).');
+                $this->redirect('/tabungan');
+                return;
             }
+
+            // Kunci mutlak akun kas transaksi ke rekening escrow tabungan
+            $akunKasId = (string)$escrowAccount['id'];
+
+            // Lock Akun Kas Escrow untuk mutasi saldo
+            $stmtKas = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
+            $stmtKas->execute(['id' => $akunKasId]);
+            $selectedKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
 
             // Ambil / buat akun tabungan
             $tabungan = Database::fetchOne("
@@ -369,32 +400,45 @@ class TabunganController extends Controller
                 return;
             }
 
-            // Default ke Kas Tabungan Escrow jika tidak dipilih
-            if (empty($akunKasId)) {
-                $stmtEscrow = $pdo->query("SELECT id FROM public.akun_kas WHERE is_escrow = TRUE AND status_aktif = TRUE LIMIT 1");
-                $akunKasId = (string)($stmtEscrow->fetchColumn() ?: '');
+            // Ambil akun kas escrow tabungan
+            $stmtEscrow = $pdo->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE is_escrow = TRUE AND status_aktif = TRUE LIMIT 1");
+            $escrowAccount = $stmtEscrow->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$escrowAccount) {
+                $pdo->rollBack();
+                $this->flashError('Akun kas tabungan (escrow) belum dikonfigurasi atau tidak aktif.');
+                $this->redirect('/tabungan');
+                return;
             }
 
-            // Validasi & Lock Akun Kas
-            $selectedKas = null;
-            if (!empty($akunKasId)) {
-                $stmtKas = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
-                $stmtKas->execute(['id' => $akunKasId]);
-                $selectedKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
+            // Proteksi Sistem: Jika client mengirimkan akun_kas_id selain akun escrow, tolak mutlak
+            if (!empty($akunKasId) && (string)$akunKasId !== (string)$escrowAccount['id']) {
+                $pdo->rollBack();
+                $this->flashError('Proteksi Keamanan: Penarikan tabungan hanya diperbolehkan melalui Akun Kas Tabungan (Escrow).');
+                $this->redirect('/tabungan/detail?karyawan_id=' . $karyawanId);
+                return;
+            }
 
-                if (!$selectedKas) {
-                    $pdo->rollBack();
-                    $this->flashError('Akun kas sumber penarikan tabungan tidak valid.');
-                    $this->redirect('/tabungan/detail?karyawan_id=' . $karyawanId);
-                    return;
-                }
+            // Kunci mutlak akun kas transaksi ke rekening escrow tabungan
+            $akunKasId = (string)$escrowAccount['id'];
 
-                if ($jumlah > (float)$selectedKas['saldo_saat_ini']) {
-                    $pdo->rollBack();
-                    $this->flashError("Saldo akun kas '{$selectedKas['nama_akun']}' (" . Format::rupiah((float)$selectedKas['saldo_saat_ini']) . ") tidak mencukupi untuk penarikan (" . Format::rupiah($jumlah) . ").");
-                    $this->redirect('/tabungan/detail?karyawan_id=' . $karyawanId);
-                    return;
-                }
+            // Lock Akun Kas Escrow untuk mutasi saldo & verifikasi kecukupan kas fisik
+            $stmtKas = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id AND status_aktif = TRUE FOR UPDATE");
+            $stmtKas->execute(['id' => $akunKasId]);
+            $selectedKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$selectedKas) {
+                $pdo->rollBack();
+                $this->flashError('Akun kas tabungan (escrow) tidak valid atau tidak aktif.');
+                $this->redirect('/tabungan/detail?karyawan_id=' . $karyawanId);
+                return;
+            }
+
+            if ($jumlah > (float)$selectedKas['saldo_saat_ini']) {
+                $pdo->rollBack();
+                $this->flashError("Saldo kas fisik tabungan (" . Format::rupiah((float)$selectedKas['saldo_saat_ini']) . ") tidak mencukupi untuk penarikan (" . Format::rupiah($jumlah) . ").");
+                $this->redirect('/tabungan/detail?karyawan_id=' . $karyawanId);
+                return;
             }
 
             $tid = $tabungan['id'];

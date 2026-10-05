@@ -44,6 +44,7 @@ foreach ($akunKasList ?? [] as $acc) {
         break;
     }
 }
+$defaultKasId = !empty($escrowAccount['id']) ? (string)$escrowAccount['id'] : (!empty($akunKasList[0]['id']) ? (string)$akunKasList[0]['id'] : '');
 ?>
 
 <style>
@@ -344,6 +345,14 @@ foreach ($akunKasList ?? [] as $acc) {
     border-color: #34d399 !important;
     box-shadow: 0 0 0 1px #34d399 !important;
 }
+.pg-currency-group.is-amber:focus-within {
+    border-color: #d97706 !important;
+    box-shadow: 0 0 0 1px #d97706 !important;
+}
+.dark .pg-currency-group.is-amber:focus-within {
+    border-color: #fbbf24 !important;
+    box-shadow: 0 0 0 1px #fbbf24 !important;
+}
 .pg-currency-addon {
     display: inline-flex;
     align-items: center;
@@ -451,17 +460,23 @@ foreach ($akunKasList ?? [] as $acc) {
     border-color: rgba(16, 185, 129, 0.35) !important;
 }
 
-/* Primary Button in Mature Calm Forest Emerald */
+/* Primary Button in Mature Calm Forest Emerald (Solid Flat) */
 .btn-primary-forest {
-    background: linear-gradient(135deg, #047857 0%, #065f46 100%) !important;
+    background: #047857 !important;
     color: #ffffff !important;
-    border: 1px solid #065f46 !important;
-    box-shadow: 0 1px 3px rgba(4, 120, 87, 0.25);
+    border: 1px solid #047857 !important;
+    box-shadow: 0 1px 2px rgba(4, 120, 87, 0.2);
     transition: all 0.15s ease;
 }
 .btn-primary-forest:hover {
-    background: linear-gradient(135deg, #065f46 0%, #064e3b 100%) !important;
+    background: #065f46 !important;
+    border-color: #065f46 !important;
     color: #ffffff !important;
+    box-shadow: 0 2px 5px rgba(4, 120, 87, 0.25);
+}
+.btn-primary-forest:active {
+    background: #064e3b !important;
+    border-color: #064e3b !important;
 }
 
 /* Secondary Button in Warm Amber */
@@ -475,6 +490,7 @@ foreach ($akunKasList ?? [] as $acc) {
     background: #d97706 !important;
     color: #ffffff !important;
     border-color: #b45309 !important;
+    box-shadow: 0 3px 8px rgba(217, 119, 6, 0.35);
 }
 .dark .btn-secondary-amber {
     background: rgba(245, 158, 11, 0.16) !important;
@@ -491,11 +507,12 @@ foreach ($akunKasList ?? [] as $acc) {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 10px;
+    padding: 3.5px 10px;
     border-radius: 9999px;
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono, monospace);
     background: rgba(16, 185, 129, 0.12);
     color: #047857;
     border: 1px solid rgba(16, 185, 129, 0.28);
@@ -511,9 +528,9 @@ foreach ($akunKasList ?? [] as $acc) {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 10px;
+    padding: 3.5px 10px;
     border-radius: 9999px;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
     color: #64748b;
     background: rgba(0, 0, 0, 0.04);
@@ -531,9 +548,9 @@ foreach ($akunKasList ?? [] as $acc) {
 .badge-tipe-bulanan {
     display: inline-flex;
     align-items: center;
-    padding: 2.5px 8px;
+    padding: 2.5px 8.5px;
     border-radius: 9999px;
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 700;
     color: #0284c7;
     background: rgba(2, 132, 199, 0.1);
@@ -549,9 +566,9 @@ foreach ($akunKasList ?? [] as $acc) {
 .badge-tipe-borongan {
     display: inline-flex;
     align-items: center;
-    padding: 2.5px 8px;
+    padding: 2.5px 8.5px;
     border-radius: 9999px;
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 700;
     color: #7e22ce;
     background: rgba(147, 51, 234, 0.1);
@@ -564,90 +581,326 @@ foreach ($akunKasList ?? [] as $acc) {
     border-color: rgba(147, 51, 234, 0.35);
 }
 
-/* Desktop Rules (>= 768px) */
-@media (min-width: 768px) {
-    .tabungan-m-only,
-    .tabungan-m-flex {
+/* =========================================================================
+   CASH ACCOUNT SELECTION GRID IN MODAL
+   ========================================================================= */
+.pg-kas-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    max-height: 190px;
+    overflow-y: auto;
+    padding: 2px;
+}
+@media (min-width: 640px) {
+    .pg-kas-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+.pg-kas-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #ffffff;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+    outline: none;
+    box-sizing: border-box;
+}
+.pg-kas-card:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    transform: translateY(-1px);
+}
+.dark .pg-kas-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+.dark .pg-kas-card:hover {
+    border-color: #475569;
+    background: #273549;
+}
+.pg-kas-card.is-selected {
+    border-color: #047857 !important;
+    background: #f0fdf4 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22) !important;
+}
+.dark .pg-kas-card.is-selected {
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.12) !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+.pg-kas-card.is-selected-amber {
+    border-color: #d97706 !important;
+    background: #fffbeb !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22) !important;
+}
+.dark .pg-kas-card.is-selected-amber {
+    border-color: #f59e0b !important;
+    background: rgba(245, 158, 11, 0.12) !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+}
+.pg-kas-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.pg-kas-icon.is-escrow {
+    background: #f3e8ff !important;
+    color: #7e22ce !important;
+    border: 1px solid #d8b4fe !important;
+}
+.dark .pg-kas-icon.is-escrow {
+    background: rgba(147, 51, 234, 0.16) !important;
+    color: #c084fc !important;
+    border-color: rgba(147, 51, 234, 0.32) !important;
+}
+.pg-kas-icon.is-tunai {
+    background: #ecfdf5 !important;
+    color: #059669 !important;
+    border: 1px solid #a7f3d0 !important;
+}
+.dark .pg-kas-icon.is-tunai {
+    background: rgba(16, 185, 129, 0.16) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.32) !important;
+}
+.pg-kas-icon.is-bank {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+    border: 1px solid #bfdbfe !important;
+}
+.dark .pg-kas-icon.is-bank {
+    background: rgba(59, 130, 246, 0.16) !important;
+    color: #60a5fa !important;
+    border-color: rgba(59, 130, 246, 0.32) !important;
+}
+.pg-kas-pos-pill {
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    background: #d1fae5;
+    color: #065f46;
+}
+.dark .pg-kas-pos-pill {
+    background: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+}
+.pg-kas-escrow-pill {
+    padding: 1.5px 6.5px;
+    border-radius: 9999px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    background: #ede9fe;
+    color: #6d28d9;
+    border: 1px solid rgba(109, 40, 217, 0.2);
+}
+.dark .pg-kas-escrow-pill {
+    background: rgba(147, 51, 234, 0.25);
+    color: #d8b4fe;
+    border-color: rgba(147, 51, 234, 0.35);
+}
+
+/* Refined Auto-Lock Escrow Pill Badge (Red / Rose for Locked Context) */
+.badge-locked-pill,
+.badge-locked-pill-amber {
+    display: inline-flex;
+    align-items: center;
+    gap: 4.5px;
+    padding: 2.5px 8.5px 2.5px 7.5px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    color: #e11d48;
+    background: rgba(225, 29, 72, 0.08);
+    border: 1px solid rgba(225, 29, 72, 0.28);
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+.dark .badge-locked-pill,
+.dark .badge-locked-pill-amber {
+    color: #fb7185;
+    background: rgba(225, 29, 72, 0.18);
+    border-color: rgba(225, 29, 72, 0.38);
+}
+
+/* Alert Warning */
+.pg-alert-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #b45309;
+}
+.dark .pg-alert-warning {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.28);
+    color: #fbbf24;
+}
+
+/* =========================================================================
+   RESPONSIVE SWITCHER: DESKTOP TABLE vs MOBILE CARDS
+   ========================================================================= */
+.pg-desktop-view {
+    display: block !important;
+}
+.pg-mobile-view {
+    display: none !important;
+}
+@media (max-width: 767.98px) {
+    .pg-desktop-view {
         display: none !important;
     }
-    .tabungan-d-only {
-        display: block;
-    }
-    .tabungan-d-flex {
-        display: flex;
+    .pg-mobile-view {
+        display: flex !important;
+        flex-direction: column;
+        gap: 12px;
     }
 }
 
-/* Responsive Table for Mobile App Feel (< 768px) */
-@media (max-width: 767px) {
-    .responsive-tabungan-table,
-    .responsive-tabungan-table tbody {
-        display: block !important;
-        width: 100% !important;
-    }
-    .responsive-tabungan-table thead {
-        display: none !important;
-    }
-    .responsive-tabungan-table tbody tr.tabungan-data-row {
-        display: block !important;
-        background: var(--color-canvas, #ffffff) !important;
-        border: 1px solid var(--color-hairline, #e2e8f0) !important;
-        border-radius: 16px !important;
-        padding: 14px !important;
-        margin-bottom: 12px !important;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03) !important;
-    }
-    .dark .responsive-tabungan-table tbody tr.tabungan-data-row {
-        background: #1e293b !important;
-        border-color: #334155 !important;
-    }
-    /* Hide desktop table cells on mobile */
-    .responsive-tabungan-table td.col-no,
-    .responsive-tabungan-table td.col-tipe,
-    .responsive-tabungan-table td.col-saldo,
-    .responsive-tabungan-table td.col-mutasi,
-    .responsive-tabungan-table td.col-terakhir,
-    .responsive-tabungan-table td.col-aksi {
-        display: none !important;
-    }
-    .responsive-tabungan-table td.col-karyawan {
-        display: block !important;
-        padding: 0 !important;
-        border: none !important;
-    }
-    .tabungan-d-only,
-    .tabungan-d-flex {
-        display: none !important;
-    }
-    .tabungan-m-only {
-        display: block !important;
-    }
-    .tabungan-m-flex {
-        display: flex !important;
-    }
-    .tabungan-m-num-pill {
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 11px !important;
-        font-weight: 800 !important;
-        font-family: var(--font-mono, ui-monospace, monospace) !important;
-        color: #0f766e !important;
-        background: rgba(15, 118, 110, 0.08) !important;
-        border: 1px solid rgba(15, 118, 110, 0.18) !important;
-        padding: 3px 7px !important;
-        border-radius: 7px !important;
-        line-height: 1.2 !important;
-    }
-    .dark .tabungan-m-num-pill {
-        color: #2dd4bf !important;
-        background: rgba(45, 212, 191, 0.12) !important;
-        border-color: rgba(45, 212, 191, 0.25) !important;
-    }
-    .tabungan-search-box {
-        max-width: 100% !important;
-        min-width: 100% !important;
-    }
+/* Ensure Alpine x-show="false" and x-cloak are always honored */
+[style*="display: none"],
+[style*="display:none"],
+[x-cloak] {
+    display: none !important;
+}
+
+/* =========================================================================
+   MOBILE CARD VIEW SPECIFICS
+   ========================================================================= */
+.pg-mobile-card {
+    background: var(--color-canvas, #ffffff);
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    border-radius: 14px;
+    padding: 14px 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.15s ease;
+}
+.dark .pg-mobile-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.pg-mobile-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 22px;
+    padding: 0 5px;
+    border-radius: 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    flex-shrink: 0;
+}
+.dark .pg-mobile-num {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+/* =========================================================================
+   CLEAN ENTERPRISE EMPTY STATE CARD
+   ========================================================================= */
+.pg-empty-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 36px 20px;
+    border-radius: 14px;
+    background: var(--color-canvas, #ffffff);
+    border: 1.5px dashed var(--color-hairline, #cbd5e1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.dark .pg-empty-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+.pg-empty-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(16, 185, 129, 0.08);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+.dark .pg-empty-icon-box {
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+.pg-empty-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-ink, #0f172a);
+    margin-bottom: 4px;
+}
+.dark .pg-empty-title {
+    color: #f1f5f9;
+}
+.pg-empty-desc {
+    font-size: 12px;
+    color: var(--color-ink-mute, #64748b);
+    max-width: 320px;
+    line-height: 1.45;
+}
+.pg-btn-reset-filter {
+    margin-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #047857;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.pg-btn-reset-filter:hover {
+    background: rgba(16, 185, 129, 0.15);
+}
+.dark .pg-btn-reset-filter {
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.32);
 }
 </style>
 
@@ -657,7 +910,7 @@ foreach ($akunKasList ?? [] as $acc) {
     <div class="page-header flex-col sm:flex-row items-start sm:items-center gap-3">
         <div class="page-header-body" style="min-width:0; flex:1;">
             <div class="page-header-icon is-emerald" style="flex-shrink:0;">
-                <i data-lucide="piggy-bank"></i>
+                <i data-lucide="coins"></i>
             </div>
             <div class="page-header-text" style="min-width:0;">
                 <div class="page-header-tag">
@@ -695,7 +948,7 @@ foreach ($akunKasList ?? [] as $acc) {
         <!-- Card 1: Total Saldo -->
         <div class="tabungan-stat-card">
             <div class="tabungan-stat-icon is-emerald">
-                <i data-lucide="piggy-bank"></i>
+                <i data-lucide="coins"></i>
             </div>
             <div class="min-w-0 flex-1">
                 <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Dana Simpanan</div>
@@ -800,214 +1053,271 @@ foreach ($akunKasList ?? [] as $acc) {
         </div>
     </div>
 
-    <!-- 4. DATA TABLE TABUNGAN -->
-    <div class="tabungan-table-card">
-        <div class="table-wrapper">
-            <table class="responsive-tabungan-table data-table w-full text-left border-collapse text-xs">
-                <thead>
-                    <tr class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                        <th class="py-3 px-4 w-12 text-center">No</th>
-                        <th class="py-3 px-4 min-w-[200px]">Nama Karyawan</th>
-                        <th class="py-3 px-4 w-28 text-center">Tipe Gaji</th>
-                        <th class="py-3 px-4 text-right min-w-[140px]">Saldo Simpanan</th>
-                        <th class="py-3 px-4 text-center w-28">Total Mutasi</th>
-                        <th class="py-3 px-4 w-36">Terakhir Transaksi</th>
-                        <th class="py-3 px-4 text-center min-w-[170px]">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
-                    <?php if (empty($tabunganList)): ?>
-                        <tr class="border-0">
-                            <td colspan="7" class="py-12 px-4 text-center border-0">
-                                <div style="width:48px;height:48px;border-radius:14px;background:rgba(16,185,129,0.08);color:#047857;display:flex;align-items:center;justify-content:center;margin:0 auto 12px auto;border:1px solid rgba(16,185,129,0.2);">
-                                    <i data-lucide="piggy-bank" style="width:24px;height:24px;"></i>
-                                </div>
-                                <div class="text-sm font-bold text-slate-800 dark:text-slate-200">Belum Ada Akun Tabungan</div>
-                                <div class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Tidak ada data tabungan karyawan aktif yang terdaftar di sistem.</div>
-                            </td>
+    <!-- 4. DATA PRESENTATION (Desktop Table & Mobile Cards) -->
+    
+    <!-- DESKTOP VIEW (>= 768px) -->
+    <div class="pg-desktop-view">
+        <div class="tabungan-table-card">
+            <div class="table-wrapper">
+                <table class="data-table w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            <th class="py-3.5 px-4 w-12 text-center">No</th>
+                            <th class="py-3.5 px-4 min-w-[220px]">Nama Karyawan</th>
+                            <th class="py-3.5 px-4 w-28 text-center">Tipe Gaji</th>
+                            <th class="py-3.5 px-4 text-right min-w-[150px]">Saldo Simpanan</th>
+                            <th class="py-3.5 px-4 text-center w-28">Total Mutasi</th>
+                            <th class="py-3.5 px-4 w-36">Terakhir Transaksi</th>
+                            <th class="py-3.5 px-4 text-center min-w-[180px]">Aksi</th>
                         </tr>
-                    <?php else: ?>
-                        <?php foreach ($tabunganList as $idx => $t): 
-                            $saldo = (float)$t['saldo'];
-                            $initials = getTabunganInitials($t['nama_karyawan']);
-                            $avatarTheme = getTabunganAvatarColor($t['nama_karyawan']);
-                            $searchKeywords = strtolower($t['nama_karyawan'] . ' ' . ($t['posisi'] ?? '') . ' ' . ($t['tipe_penggajian'] ?? ''));
-                        ?>
-                        <tr class="tabungan-data-row hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
-                            x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', <?= $saldo ?>, '<?= $t['tipe_penggajian'] ?? '' ?>')"
-                            data-kid="<?= htmlspecialchars($t['karyawan_id']) ?>">
-                            
-                            <!-- Col 1: No (Desktop Only) -->
-                            <td class="col-no py-3 px-4 text-center font-mono text-slate-400"><?= $idx + 1 ?></td>
-
-                            <!-- Col 2: Karyawan (Holds Desktop Presentation + Mobile Card) -->
-                            <td class="col-karyawan py-3 px-4">
-                                <!-- MOBILE CARD VIEW (< 768px) -->
-                                <div class="tabungan-m-only">
-                                    <div class="flex items-start justify-between gap-2.5">
-                                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                                            <div class="tabungan-avatar" style="background:<?= $avatarTheme['bg'] ?>; color:<?= $avatarTheme['text'] ?>; border-color:<?= $avatarTheme['border'] ?>;">
-                                                <?= htmlspecialchars($initials) ?>
-                                            </div>
-                                            <div class="min-w-0 flex-1">
-                                                <div class="flex items-center gap-1.5 flex-wrap">
-                                                    <span class="tabungan-m-num-pill">#<?= $idx + 1 ?></span>
-                                                    <span class="font-bold text-slate-900 dark:text-slate-100 truncate text-[13px]"><?= htmlspecialchars($t['nama_karyawan']) ?></span>
-                                                </div>
-                                                <div class="text-[11px] text-slate-400 capitalize truncate mt-0.5">
-                                                    <?= htmlspecialchars($t['posisi'] ?? '-') ?> &bull; 
-                                                    <span class="<?= $t['tipe_penggajian'] === 'borongan' ? 'text-purple-600 dark:text-purple-400 font-semibold' : 'text-sky-600 dark:text-sky-400 font-semibold' ?>">
-                                                        <?= ucfirst($t['tipe_penggajian'] ?? '') ?>
-                                                    </span>
-                                                </div>
-                                            </div>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        <?php if (empty($tabunganList)): ?>
+                            <tr class="border-0">
+                                <td colspan="7" class="py-12 px-4 text-center border-0">
+                                    <div class="pg-empty-card max-w-sm mx-auto">
+                                        <div class="pg-empty-icon-box">
+                                            <i data-lucide="coins"></i>
                                         </div>
-                                        <!-- Mobile Saldo Pill -->
-                                        <div class="shrink-0 text-right">
-                                            <?php if ($saldo > 0): ?>
-                                                <span class="tabungan-saldo-badge">
-                                                    <?= Format::rupiah($saldo) ?>
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="tabungan-saldo-badge-empty">
-                                                    Rp 0
-                                                </span>
-                                            <?php endif; ?>
+                                        <div class="pg-empty-title">Belum Ada Akun Tabungan</div>
+                                        <div class="pg-empty-desc">Tidak ada data tabungan karyawan aktif yang terdaftar di sistem.</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php else: ?>
+                            <!-- Client-side No Search Results State -->
+                            <tr x-show="visibleRowCount === 0" x-cloak class="border-0">
+                                <td colspan="7" class="py-12 px-4 text-center border-0">
+                                    <div class="pg-empty-card max-w-sm mx-auto">
+                                        <div class="pg-empty-icon-box">
+                                            <i data-lucide="search-x"></i>
+                                        </div>
+                                        <div class="pg-empty-title">Tidak Ada Karyawan Yang Cocok</div>
+                                        <div class="pg-empty-desc">Tidak ada data tabungan yang cocok dengan filter atau kata kunci saat ini.</div>
+                                        <button type="button" @click="searchQuery = ''; statusFilter = 'all'" class="pg-btn-reset-filter">
+                                            <i data-lucide="rotate-ccw"></i>
+                                            <span>Reset Filter & Pencarian</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <?php foreach ($tabunganList as $idx => $t): 
+                                $saldo = (float)$t['saldo'];
+                                $initials = getTabunganInitials($t['nama_karyawan']);
+                                $avatarTheme = getTabunganAvatarColor($t['nama_karyawan']);
+                                $searchKeywords = strtolower($t['nama_karyawan'] . ' ' . ($t['posisi'] ?? '') . ' ' . ($t['tipe_penggajian'] ?? ''));
+                            ?>
+                            <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                                x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', <?= $saldo ?>, '<?= $t['tipe_penggajian'] ?? '' ?>')"
+                                data-kid="<?= htmlspecialchars($t['karyawan_id']) ?>">
+                                
+                                <!-- Col 1: No -->
+                                <td class="py-3 px-4 text-center font-mono text-slate-400"><?= $idx + 1 ?></td>
+
+                                <!-- Col 2: Karyawan -->
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="tabungan-avatar" style="background:<?= $avatarTheme['bg'] ?>; color:<?= $avatarTheme['text'] ?>; border-color:<?= $avatarTheme['border'] ?>;">
+                                            <?= htmlspecialchars($initials) ?>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <div class="font-bold text-slate-900 dark:text-slate-100 truncate"><?= htmlspecialchars($t['nama_karyawan']) ?></div>
+                                            <div class="text-[11px] text-slate-400 capitalize truncate"><?= htmlspecialchars($t['posisi'] ?? '-') ?></div>
                                         </div>
                                     </div>
+                                </td>
 
-                                    <!-- Mobile 2-Col Stat Box -->
-                                    <div class="grid grid-cols-2 gap-2 mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-xs">
-                                        <div>
-                                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Mutasi</div>
-                                            <div class="font-mono font-bold text-slate-700 dark:text-slate-200 mt-0.5 flex items-center gap-1.5">
-                                                <i data-lucide="receipt" class="w-3.5 h-3.5 text-sky-500"></i>
-                                                <span><?= $t['jumlah_transaksi'] ?> mutasi</span>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Terakhir Transaksi</div>
-                                            <div class="font-mono font-medium text-slate-600 dark:text-slate-300 mt-0.5 truncate flex items-center gap-1.5">
-                                                <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-500"></i>
-                                                <span><?= !empty($t['terakhir_transaksi']) ? Format::tanggalIndo($t['terakhir_transaksi']) : '<span class="text-slate-400 italic font-sans">Belum ada</span>' ?></span>
-                                            </div>
-                                        </div>
-                                    </div>
+                                <!-- Col 3: Tipe Gaji -->
+                                <td class="py-3 px-4 text-center">
+                                    <span class="<?= $t['tipe_penggajian'] === 'borongan' ? 'badge-tipe-borongan' : 'badge-tipe-bulanan' ?>">
+                                        <?= ucfirst($t['tipe_penggajian'] ?? '') ?>
+                                    </span>
+                                </td>
 
-                                    <!-- Mobile Action Button Row -->
-                                    <div class="grid <?= $saldo > 0 ? 'grid-cols-3' : 'grid-cols-2' ?> gap-2 mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                                <!-- Col 4: Saldo Simpanan -->
+                                <td class="py-3 px-4 text-right">
+                                    <?php if ($saldo > 0): ?>
+                                        <span class="tabungan-saldo-badge">
+                                            <?= Format::rupiah($saldo) ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="tabungan-saldo-badge-empty font-mono">
+                                            Rp 0
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+
+                                <!-- Col 5: Total Mutasi -->
+                                <td class="py-3 px-4 text-center">
+                                    <span class="inline-flex items-center gap-1.5 font-mono text-slate-700 dark:text-slate-300 text-xs font-semibold">
+                                        <i data-lucide="receipt" class="w-3.5 h-3.5 text-sky-500"></i>
+                                        <span><?= $t['jumlah_transaksi'] ?></span>
+                                    </span>
+                                </td>
+
+                                <!-- Col 6: Terakhir Transaksi -->
+                                <td class="py-3 px-4 text-slate-500 font-mono text-xs">
+                                    <?php if (!empty($t['terakhir_transaksi'])): ?>
+                                        <div class="flex items-center gap-1.5">
+                                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
+                                            <span><?= Format::tanggalIndo($t['terakhir_transaksi']) ?></span>
+                                        </div>
+                                    <?php else: ?>
+                                        <span class="text-slate-400 italic font-sans">Belum ada</span>
+                                    <?php endif; ?>
+                                </td>
+
+                                <!-- Col 7: Aksi -->
+                                <td class="py-3 px-4 text-center">
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <!-- Buku Detail Button -->
                                         <a href="<?= Router::url('/tabungan/detail?karyawan_id=' . $t['karyawan_id']) ?>" 
-                                           class="btn btn-secondary btn-sm text-xs font-bold py-2 justify-center flex items-center gap-1.5 rounded-lg">
+                                           class="btn btn-secondary btn-sm text-[11px] px-2.5 py-1" 
+                                           title="Lihat Buku Tabungan">
                                             <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-500"></i>
                                             <span>Buku</span>
                                         </a>
 
+                                        <!-- Quick Setor Button -->
                                         <button type="button" 
                                                 @click="openModalSetor('<?= $t['karyawan_id'] ?>')"
-                                                class="btn btn-sm text-xs font-bold py-2 justify-center flex items-center gap-1 rounded-lg"
-                                                style="background:rgba(4, 120, 87, 0.08); color:#047857; border:1px solid rgba(4, 120, 87, 0.22);">
-                                            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                                                class="btn btn-sm text-[11px] px-2.5 py-1 rounded-md transition"
+                                                style="background:rgba(4, 120, 87, 0.08); color:#047857; border:1px solid rgba(4, 120, 87, 0.22);" 
+                                                title="Setor Simpanan Manual">
+                                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
                                             <span>Setor</span>
                                         </button>
 
+                                        <!-- Quick Tarik Button (Only if saldo > 0) -->
                                         <?php if ($saldo > 0): ?>
                                         <button type="button" 
                                                 @click="openModalTarik('<?= $t['karyawan_id'] ?>')"
-                                                class="btn btn-sm text-xs font-bold py-2 justify-center flex items-center gap-1 rounded-lg"
-                                                style="background:rgba(217, 119, 6, 0.08); color:#b45309; border:1px solid rgba(217, 119, 6, 0.22);">
+                                                class="btn btn-sm text-[11px] px-2.5 py-1 rounded-md transition"
+                                                style="background:rgba(217, 119, 6, 0.08); color:#b45309; border:1px solid rgba(217, 119, 6, 0.22);" 
+                                                title="Tarik Simpanan">
                                             <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
                                             <span>Tarik</span>
                                         </button>
                                         <?php endif; ?>
                                     </div>
-                                </div>
-
-                                <!-- DESKTOP VIEW (>= 768px) -->
-                                <div class="tabungan-d-flex items-center gap-2.5">
-                                    <div class="tabungan-avatar" style="background:<?= $avatarTheme['bg'] ?>; color:<?= $avatarTheme['text'] ?>; border-color:<?= $avatarTheme['border'] ?>;">
-                                        <?= htmlspecialchars($initials) ?>
-                                    </div>
-                                    <div class="min-w-0">
-                                        <div class="font-bold text-slate-900 dark:text-slate-100 truncate"><?= htmlspecialchars($t['nama_karyawan']) ?></div>
-                                        <div class="text-[11px] text-slate-400 capitalize truncate"><?= htmlspecialchars($t['posisi'] ?? '-') ?></div>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- Col 3: Tipe Gaji (Desktop Only) -->
-                            <td class="col-tipe py-3 px-4 text-center">
-                                <span class="<?= $t['tipe_penggajian'] === 'borongan' ? 'badge-tipe-borongan' : 'badge-tipe-bulanan' ?>">
-                                    <?= ucfirst($t['tipe_penggajian'] ?? '') ?>
-                                </span>
-                            </td>
-
-                            <!-- Col 4: Saldo Simpanan (Desktop Only) -->
-                            <td class="col-saldo py-3 px-4 text-right">
-                                <div class="text-sm font-bold font-mono <?= $saldo > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-400' ?>">
-                                    <?= Format::rupiah($saldo) ?>
-                                </div>
-                            </td>
-
-                            <!-- Col 5: Total Mutasi (Desktop Only) -->
-                            <td class="col-mutasi py-3 px-4 text-center">
-                                <span class="inline-flex items-center gap-1.5 font-mono text-slate-700 dark:text-slate-300 text-xs font-semibold">
-                                    <i data-lucide="receipt" class="w-3.5 h-3.5 text-sky-500"></i>
-                                    <span><?= $t['jumlah_transaksi'] ?></span>
-                                </span>
-                            </td>
-
-                            <!-- Col 6: Terakhir Transaksi (Desktop Only) -->
-                            <td class="col-terakhir py-3 px-4 text-slate-500 font-mono text-xs">
-                                <?php if (!empty($t['terakhir_transaksi'])): ?>
-                                    <div class="flex items-center gap-1.5">
-                                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-500 shrink-0"></i>
-                                        <span><?= Format::tanggalIndo($t['terakhir_transaksi']) ?></span>
-                                    </div>
-                                <?php else: ?>
-                                    <span class="text-slate-400 italic font-sans">Belum ada</span>
-                                <?php endif; ?>
-                            </td>
-
-                            <!-- Col 7: Aksi (Desktop Only) -->
-                            <td class="col-aksi py-3 px-4 text-center">
-                                <div class="flex items-center justify-center gap-1.5">
-                                    <!-- Buku Detail Button -->
-                                    <a href="<?= Router::url('/tabungan/detail?karyawan_id=' . $t['karyawan_id']) ?>" 
-                                       class="btn btn-secondary btn-sm text-[11px] px-2.5 py-1" 
-                                       title="Lihat Buku Tabungan">
-                                        <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-500"></i>
-                                        <span>Buku</span>
-                                    </a>
-
-                                    <!-- Quick Setor Button -->
-                                    <button type="button" 
-                                            @click="openModalSetor('<?= $t['karyawan_id'] ?>')"
-                                            class="btn btn-sm text-[11px] px-2.5 py-1 rounded-md transition"
-                                            style="background:rgba(4, 120, 87, 0.08); color:#047857; border:1px solid rgba(4, 120, 87, 0.22);" 
-                                            title="Setor Simpanan Manual">
-                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                                        <span>Setor</span>
-                                    </button>
-
-                                    <!-- Quick Tarik Button (Only if saldo > 0) -->
-                                    <?php if ($saldo > 0): ?>
-                                    <button type="button" 
-                                            @click="openModalTarik('<?= $t['karyawan_id'] ?>')"
-                                            class="btn btn-sm text-[11px] px-2.5 py-1 rounded-md transition"
-                                            style="background:rgba(217, 119, 6, 0.08); color:#b45309; border:1px solid rgba(217, 119, 6, 0.22);" 
-                                            title="Tarik Simpanan">
-                                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
-                                        <span>Tarik</span>
-                                    </button>
-                                    <?php endif; ?>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
+    </div>
+
+    <!-- MOBILE CARD VIEW (< 768px) -->
+    <div class="pg-mobile-view">
+        <?php if (empty($tabunganList)): ?>
+            <div class="pg-empty-card">
+                <div class="pg-empty-icon-box">
+                    <i data-lucide="coins"></i>
+                </div>
+                <div class="pg-empty-title">Belum Ada Akun Tabungan</div>
+                <div class="pg-empty-desc">Tidak ada data tabungan karyawan aktif yang terdaftar di sistem.</div>
+            </div>
+        <?php else: ?>
+            <!-- Client-side No Search Results State Mobile -->
+            <div x-show="visibleRowCount === 0" x-cloak class="pg-empty-card">
+                <div class="pg-empty-icon-box">
+                    <i data-lucide="search-x"></i>
+                </div>
+                <div class="pg-empty-title">Tidak Ada Karyawan Yang Cocok</div>
+                <div class="pg-empty-desc">Tidak ada data tabungan yang cocok dengan filter atau pencarian saat ini.</div>
+                <button type="button" @click="searchQuery = ''; statusFilter = 'all'" class="pg-btn-reset-filter">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span>Reset Filter & Pencarian</span>
+                </button>
+            </div>
+
+            <?php foreach ($tabunganList as $idx => $t): 
+                $saldo = (float)$t['saldo'];
+                $initials = getTabunganInitials($t['nama_karyawan']);
+                $avatarTheme = getTabunganAvatarColor($t['nama_karyawan']);
+                $searchKeywords = strtolower($t['nama_karyawan'] . ' ' . ($t['posisi'] ?? '') . ' ' . ($t['tipe_penggajian'] ?? ''));
+            ?>
+            <div class="pg-mobile-card"
+                 x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', <?= $saldo ?>, '<?= $t['tipe_penggajian'] ?? '' ?>')"
+                 data-kid="<?= htmlspecialchars($t['karyawan_id']) ?>">
+                
+                <!-- Top Row: #No + Avatar + Nama + Saldo Pill -->
+                <div class="flex items-center justify-between gap-2.5">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="pg-mobile-num">#<?= $idx + 1 ?></span>
+                        <div class="tabungan-avatar shrink-0" style="background:<?= $avatarTheme['bg'] ?>; color:<?= $avatarTheme['text'] ?>; border-color:<?= $avatarTheme['border'] ?>;">
+                            <?= htmlspecialchars($initials) ?>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate"><?= htmlspecialchars($t['nama_karyawan']) ?></div>
+                            <div class="text-[11px] text-slate-400 capitalize truncate"><?= htmlspecialchars($t['posisi'] ?? '-') ?> &bull; <?= ucfirst($t['tipe_penggajian'] ?? '') ?></div>
+                        </div>
+                    </div>
+                    <div class="shrink-0 text-right">
+                        <?php if ($saldo > 0): ?>
+                            <span class="tabungan-saldo-badge">
+                                <?= Format::rupiah($saldo) ?>
+                            </span>
+                        <?php else: ?>
+                            <span class="tabungan-saldo-badge-empty">
+                                Rp 0
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Mid Row: 2-Col Stat Box -->
+                <div class="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-xs">
+                    <div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total Mutasi</div>
+                        <div class="font-mono font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                            <i data-lucide="receipt" class="w-3.5 h-3.5 text-sky-500"></i>
+                            <span><?= $t['jumlah_transaksi'] ?> mutasi</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Terakhir Transaksi</div>
+                        <div class="font-mono font-medium text-slate-600 dark:text-slate-300 truncate flex items-center gap-1.5">
+                            <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-500"></i>
+                            <span><?= !empty($t['terakhir_transaksi']) ? Format::tanggalIndo($t['terakhir_transaksi']) : '<span class="text-slate-400 italic font-sans">Belum ada</span>' ?></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons Row -->
+                <div class="grid <?= $saldo > 0 ? 'grid-cols-3' : 'grid-cols-2' ?> gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <a href="<?= Router::url('/tabungan/detail?karyawan_id=' . $t['karyawan_id']) ?>" 
+                       class="btn btn-secondary btn-sm text-xs font-bold py-2 justify-center flex items-center gap-1.5 rounded-lg">
+                        <i data-lucide="book-open" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>Buku</span>
+                    </a>
+
+                    <button type="button" 
+                            @click="openModalSetor('<?= $t['karyawan_id'] ?>')"
+                            class="btn btn-sm text-xs font-bold py-2 justify-center flex items-center gap-1.5 rounded-lg"
+                            style="background:rgba(4, 120, 87, 0.08); color:#047857; border:1px solid rgba(4, 120, 87, 0.22);">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                        <span>Setor</span>
+                    </button>
+
+                    <?php if ($saldo > 0): ?>
+                    <button type="button" 
+                            @click="openModalTarik('<?= $t['karyawan_id'] ?>')"
+                            class="btn btn-sm text-xs font-bold py-2 justify-center flex items-center gap-1.5 rounded-lg"
+                            style="background:rgba(217, 119, 6, 0.08); color:#b45309; border:1px solid rgba(217, 119, 6, 0.22);">
+                        <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+                        <span>Tarik</span>
+                    </button>
+                    <?php endif; ?>
+                </div>
+
+            </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 
     <!-- ========================================================================= -->
@@ -1043,10 +1353,10 @@ foreach ($akunKasList ?? [] as $acc) {
                 </div>
 
                 <!-- Modal Form -->
-                <form action="<?= Router::url('/tabungan/setor') ?>" method="POST" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+                <form action="<?= Router::url('/tabungan/setor') ?>" method="POST" @submit="handleSetorSubmit($event)" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
                     <?= CSRF::field() ?>
 
-                    <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="modal-body custom-scrollbar space-y-3.5">
                         
                         <!-- 1. Karyawan Selection (Searchable Dropdown) -->
                         <div>
@@ -1136,18 +1446,55 @@ foreach ($akunKasList ?? [] as $acc) {
                                     <span>Saldo Simpanan Saat Ini: <strong class="font-mono font-bold" x-text="formatRupiah(currentSetorKaryawan ? currentSetorKaryawan.saldo : 0)"></strong></span>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Escrow Account Target Banner -->
-                            <div class="mt-2 p-2.5 rounded-lg flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs">
-                                <div class="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                                    <i data-lucide="lock" class="w-3.5 h-3.5 text-purple-600"></i>
-                                    <span>Tersimpan di: <strong class="text-slate-900 dark:text-slate-100"><?= htmlspecialchars($escrowAccount['nama_akun'] ?? 'Kas Tabungan Karyawan') ?></strong></span>
+                        <!-- 2. Rekening Kas Titipan Tabungan (Terkunci Otomatis ke Escrow) -->
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1.5" style="flex-wrap:nowrap;">
+                                <label class="form-label text-xs font-bold text-slate-700 dark:text-slate-300" style="margin-bottom:0;white-space:nowrap;">
+                                    Akun Kas Penampung <span style="color:#e11d48;">*</span>
+                                </label>
+                                <span class="badge-locked-pill">
+                                    <i data-lucide="lock" style="width:11.5px;height:11.5px;stroke-width:2.2;"></i>
+                                    <span>Terkunci Otomatis</span>
+                                </span>
+                            </div>
+
+                            <input type="hidden" name="akun_kas_id" value="<?= htmlspecialchars($defaultKasId) ?>">
+
+                            <div style="padding:10px 12px;border-radius:10px;border:1.5px solid rgba(16,185,129,0.3);background:rgba(16,185,129,0.06);">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                                    <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                                        <div style="width:36px;height:36px;border-radius:8px;background:rgba(16,185,129,0.15);color:#047857;border:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                            <i data-lucide="shield-check" style="width:18px;height:18px;"></i>
+                                        </div>
+                                        <div style="min-width:0;flex:1;">
+                                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                <span style="font-size:12.5px;font-weight:700;color:var(--color-ink,#0f172a);white-space:nowrap;">
+                                                    <?= htmlspecialchars(preg_replace('/\s*\(Terkunci\)/i', '', $escrowAccount['nama_akun'] ?? 'Kas Tabungan Karyawan')) ?>
+                                                </span>
+                                                <span class="pg-kas-escrow-pill">ESCROW</span>
+                                            </div>
+                                            <div style="font-size:11px;color:var(--color-ink-mute,#64748b);margin-top:1px;">
+                                                Rekening titipan simpanan karyawan
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right;flex-shrink:0;">
+                                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink-mute,#64748b);font-weight:600;">Saldo Kas Fisik</div>
+                                        <div class="font-mono" style="font-size:12.5px;font-weight:700;color:#047857;">
+                                            <?= Format::rupiah((float)($escrowAccount['saldo_saat_ini'] ?? 0)) ?>
+                                        </div>
+                                    </div>
                                 </div>
-                                <span class="font-mono font-bold text-slate-600 dark:text-slate-400 text-[11px]"><?= Format::rupiah((float)($escrowAccount['saldo_saat_ini'] ?? 0)) ?></span>
+                                <div style="margin-top:8px;padding-top:7px;border-top:1px solid rgba(16,185,129,0.15);font-size:10.5px;color:var(--color-ink-secondary,#475569);display:flex;align-items:center;gap:5px;">
+                                    <i data-lucide="info" style="width:13px;height:13px;flex-shrink:0;color:#059669;"></i>
+                                    <span>Setoran wajib masuk ke rekening kas titipan khusus untuk memisahkan tabungan dari operasional usaha.</span>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- 2. Tanggal & Nominal Setor Grid -->
+                        <!-- 3. Tanggal & Nominal Setor Grid -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="form-label" style="display:block;margin-bottom:6px;">
@@ -1191,7 +1538,7 @@ foreach ($akunKasList ?? [] as $acc) {
                             </div>
                         </div>
 
-                        <!-- 3. Keterangan Setoran -->
+                        <!-- 4. Keterangan Setoran -->
                         <div>
                             <label class="form-label" style="display:block;margin-bottom:6px;">
                                 Keterangan Setoran
@@ -1263,10 +1610,10 @@ foreach ($akunKasList ?? [] as $acc) {
                 </div>
 
                 <!-- Modal Form -->
-                <form action="<?= Router::url('/tabungan/tarik') ?>" method="POST" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
+                <form action="<?= Router::url('/tabungan/tarik') ?>" method="POST" @submit="handleTarikSubmit($event)" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
                     <?= CSRF::field() ?>
 
-                    <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="modal-body custom-scrollbar space-y-3.5">
                         
                         <!-- 1. Karyawan Selection (Searchable Dropdown) -->
                         <div>
@@ -1368,24 +1715,61 @@ foreach ($akunKasList ?? [] as $acc) {
                                     Tarik Semua
                                 </button>
                             </div>
+                        </div>
 
-                            <!-- Escrow Source Account Banner -->
-                            <div class="mt-2 p-2.5 rounded-lg flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-xs">
-                                <div class="flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                                    <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-600"></i>
-                                    <span>Pencairan dari Kas: <strong class="text-slate-900 dark:text-slate-100"><?= htmlspecialchars($escrowAccount['nama_akun'] ?? 'Kas Tabungan Karyawan') ?></strong></span>
-                                </div>
-                                <span class="font-mono font-bold text-slate-600 dark:text-slate-400 text-[11px]">Tersedia: <?= Format::rupiah((float)($escrowAccount['saldo_saat_ini'] ?? 0)) ?></span>
+                        <!-- 2. Rekening Kas Sumber Pencairan (Terkunci Otomatis ke Escrow) -->
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-1.5" style="flex-wrap:nowrap;">
+                                <label class="form-label text-xs font-bold text-slate-700 dark:text-slate-300" style="margin-bottom:0;white-space:nowrap;">
+                                    Akun Kas Sumber Dana <span style="color:#e11d48;">*</span>
+                                </label>
+                                <span class="badge-locked-pill-amber">
+                                    <i data-lucide="lock" style="width:11.5px;height:11.5px;stroke-width:2.2;"></i>
+                                    <span>Terkunci Otomatis</span>
+                                </span>
                             </div>
 
-                            <!-- Overdraft Guard Warning -->
-                            <div x-show="tarikNominal > <?= (float)($escrowAccount['saldo_saat_ini'] ?? 0) ?>" class="mt-2 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/50 text-[11px] text-rose-700 dark:text-rose-300 font-medium flex items-center gap-1.5">
-                                <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-600 shrink-0"></i>
-                                <span>Nominal penarikan melebihi saldo kas fisik tabungan yang tersedia (<?= Format::rupiah((float)($escrowAccount['saldo_saat_ini'] ?? 0)) ?>).</span>
+                            <input type="hidden" name="akun_kas_id" value="<?= htmlspecialchars($defaultKasId) ?>">
+
+                            <div style="padding:10px 12px;border-radius:10px;border:1.5px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.06);">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                                    <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                                        <div style="width:36px;height:36px;border-radius:8px;background:rgba(245,158,11,0.15);color:#b45309;border:1px solid rgba(245,158,11,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                            <i data-lucide="shield-check" style="width:18px;height:18px;"></i>
+                                        </div>
+                                        <div style="min-width:0;flex:1;">
+                                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                                <span style="font-size:12.5px;font-weight:700;color:var(--color-ink,#0f172a);white-space:nowrap;">
+                                                    <?= htmlspecialchars(preg_replace('/\s*\(Terkunci\)/i', '', $escrowAccount['nama_akun'] ?? 'Kas Tabungan Karyawan')) ?>
+                                                </span>
+                                                <span class="pg-kas-escrow-pill">ESCROW</span>
+                                            </div>
+                                            <div style="font-size:11px;color:var(--color-ink-mute,#64748b);margin-top:1px;">
+                                                Rekening titipan simpanan karyawan
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right;flex-shrink:0;">
+                                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:var(--color-ink-mute,#64748b);font-weight:600;">Saldo Kas Fisik</div>
+                                        <div class="font-mono" style="font-size:12.5px;font-weight:700;color:#d97706;">
+                                            <?= Format::rupiah((float)($escrowAccount['saldo_saat_ini'] ?? 0)) ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="margin-top:8px;padding-top:7px;border-top:1px solid rgba(245,158,11,0.15);font-size:10.5px;color:var(--color-ink-secondary,#475569);display:flex;align-items:center;gap:5px;">
+                                    <i data-lucide="info" style="width:13px;height:13px;flex-shrink:0;color:#d97706;"></i>
+                                    <span>Pencairan hanya dapat ditarik langsung dari rekening titipan simpanan karyawan.</span>
+                                </div>
+                            </div>
+
+                            <!-- Overdraft Guard Warning for Escrow Cash Account -->
+                            <div x-show="isKasTarikOverdraft" x-cloak class="pg-alert-warning mt-2">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+                                <span>Nominal penarikan melebihi saldo kas fisik yang tersedia pada rekening tabungan ini.</span>
                             </div>
                         </div>
 
-                        <!-- 2. Tanggal & Nominal Tarik Grid -->
+                        <!-- 3. Tanggal & Nominal Tarik Grid -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                                 <label class="form-label" style="display:block;margin-bottom:6px;">
@@ -1434,7 +1818,7 @@ foreach ($akunKasList ?? [] as $acc) {
                             </div>
                         </div>
 
-                        <!-- 3. Alasan / Keterangan Penarikan -->
+                        <!-- 4. Alasan / Keterangan Penarikan -->
                         <div>
                             <label class="form-label" style="display:block;margin-bottom:6px;">
                                 Alasan / Keterangan Penarikan
@@ -1465,8 +1849,8 @@ foreach ($akunKasList ?? [] as $acc) {
                         </button>
                         <button type="submit" 
                                 :disabled="!currentTarikKaryawan || currentTarikKaryawan.saldo <= 0"
-                                class="btn" 
-                                style="background:#d97706; color:#ffffff; height:38px; border-radius:8px;">
+                                class="btn btn-secondary-amber font-bold" 
+                                style="height:38px; border-radius:8px;">
                             <i data-lucide="arrow-up-right"></i>
                             <span>Proses Penarikan</span>
                         </button>
@@ -1484,6 +1868,20 @@ function tabunganApp() {
     return {
         // Master Data
         karyawans: <?= json_encode($karyawanMapData, JSON_UNESCAPED_UNICODE) ?>,
+        cashAccounts: <?= json_encode($akunKasList, JSON_UNESCAPED_UNICODE) ?>,
+        escrowBalance: <?= (float)($escrowAccount['saldo_saat_ini'] ?? 0) ?>,
+        selectedKasIdSetor: '<?= $defaultKasId ?>',
+        selectedKasIdTarik: '<?= $defaultKasId ?>',
+
+        tabunganItems: <?= json_encode(array_map(function($idx, $t) {
+            return [
+                'index' => $idx + 1,
+                'karyawan_id' => (string)$t['karyawan_id'],
+                'saldo' => (float)$t['saldo'],
+                'tipe_penggajian' => (string)($t['tipe_penggajian'] ?? ''),
+                'keywords' => strtolower($t['nama_karyawan'] . ' ' . ($t['posisi'] ?? '') . ' ' . ($t['tipe_penggajian'] ?? ''))
+            ];
+        }, array_keys($tabunganList), $tabunganList), JSON_UNESCAPED_UNICODE) ?>,
 
         // Filter & Search State
         searchQuery: '',
@@ -1509,13 +1907,33 @@ function tabunganApp() {
         tarikDropdownOpen: false,
         tarikSearch: '',
 
+        init() {
+            this.$watch('statusFilter', () => {
+                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            });
+            this.$watch('searchQuery', () => {
+                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            });
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
         // Getters
+        get visibleRowCount() {
+            if (!this.tabunganItems || this.tabunganItems.length === 0) return 0;
+            return this.tabunganItems.filter(item => this.isRowVisible(item.keywords, item.saldo, item.tipe_penggajian)).length;
+        },
+
         get currentSetorKaryawan() {
             return (this.selectedSetorKid && this.karyawans[this.selectedSetorKid]) ? this.karyawans[this.selectedSetorKid] : null;
         },
 
         get currentTarikKaryawan() {
             return (this.selectedTarikKid && this.karyawans[this.selectedTarikKid]) ? this.karyawans[this.selectedTarikKid] : null;
+        },
+
+        get isKasTarikOverdraft() {
+            if (!this.tarikNominal) return false;
+            return Number(this.tarikNominal) > this.escrowBalance;
         },
 
         get filteredSetorKaryawans() {
@@ -1579,6 +1997,20 @@ function tabunganApp() {
             this.setorNominalDisplay = '';
         },
 
+        handleSetorSubmit(e) {
+            if (!this.selectedSetorKid) {
+                if (window.toast) window.toast('Pilih karyawan terlebih dahulu.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            if (!this.setorNominal || this.setorNominal <= 0) {
+                if (window.toast) window.toast('Nominal setoran harus lebih dari Rp 0.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            return true;
+        },
+
         // Modal Tarik Actions
         openModalTarik(presetKid = '') {
             this.selectedTarikKid = presetKid || '';
@@ -1639,6 +2071,31 @@ function tabunganApp() {
         resetTarikNominal() {
             this.tarikNominal = '';
             this.tarikNominalDisplay = '';
+        },
+
+        handleTarikSubmit(e) {
+            if (!this.selectedTarikKid) {
+                if (window.toast) window.toast('Pilih karyawan terlebih dahulu.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            if (!this.tarikNominal || this.tarikNominal <= 0) {
+                if (window.toast) window.toast('Nominal penarikan harus lebih dari Rp 0.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            const maxSaldo = this.currentTarikKaryawan ? this.currentTarikKaryawan.saldo : 0;
+            if (this.tarikNominal > maxSaldo) {
+                if (window.toast) window.toast('Nominal penarikan melebihi saldo tabungan karyawan.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            if (this.isKasTarikOverdraft) {
+                if (window.toast) window.toast('Saldo kas fisik tabungan tidak mencukupi untuk penarikan.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            return true;
         },
 
         // Helpers

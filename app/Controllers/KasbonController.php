@@ -145,7 +145,6 @@ class KasbonController extends Controller
         $keterangan = trim((string)$this->input('keterangan', 'Pinjaman kasbon'));
         $catatan = trim((string)$this->input('catatan', ''));
         $akunKasId = (string)$this->input('akun_kas_id', '');
-        $bypassKas = !empty($this->input('bypass_kas', ''));
 
         if (empty($karyawanId)) {
             $this->flashError('Karyawan wajib dipilih.');
@@ -159,8 +158,8 @@ class KasbonController extends Controller
             return;
         }
 
-        if (!$bypassKas && empty($akunKasId)) {
-            $this->flashError('Silakan pilih akun kas sumber pengeluaran dana pinjaman, atau centang opsi bypass jika hanya mencatat data lama.');
+        if (empty($akunKasId)) {
+            $this->flashError('Akun kas sumber pengeluaran dana pinjaman wajib dipilih.');
             $this->redirect('/kasbon');
             return;
         }
@@ -185,38 +184,35 @@ class KasbonController extends Controller
                 return;
             }
 
-            $selectedKas = null;
-            if (!$bypassKas) {
-                $stmtKas = $pdo->prepare("
-                    SELECT id, nama_akun, saldo_saat_ini, is_escrow 
-                    FROM public.akun_kas 
-                    WHERE id = :id AND status_aktif = TRUE 
-                    FOR UPDATE
-                ");
-                $stmtKas->execute(['id' => $akunKasId]);
-                $selectedKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
+            $stmtKas = $pdo->prepare("
+                SELECT id, nama_akun, saldo_saat_ini, is_escrow 
+                FROM public.akun_kas 
+                WHERE id = :id AND status_aktif = TRUE 
+                FOR UPDATE
+            ");
+            $stmtKas->execute(['id' => $akunKasId]);
+            $selectedKas = $stmtKas->fetch(\PDO::FETCH_ASSOC);
 
-                if (!$selectedKas) {
-                    $pdo->rollBack();
-                    $this->flashError('Akun kas pengeluaran tidak valid atau non-aktif.');
-                    $this->redirect('/kasbon');
-                    return;
-                }
+            if (!$selectedKas) {
+                $pdo->rollBack();
+                $this->flashError('Akun kas pengeluaran tidak valid atau non-aktif.');
+                $this->redirect('/kasbon');
+                return;
+            }
 
-                if (!empty($selectedKas['is_escrow'])) {
-                    $pdo->rollBack();
-                    $this->flashError('Akun kas titipan escrow tabungan tidak boleh digunakan untuk pencairan pinjaman.');
-                    $this->redirect('/kasbon');
-                    return;
-                }
+            if (!empty($selectedKas['is_escrow'])) {
+                $pdo->rollBack();
+                $this->flashError('Akun kas titipan escrow tabungan tidak boleh digunakan untuk pencairan pinjaman.');
+                $this->redirect('/kasbon');
+                return;
+            }
 
-                $saldoSaatIni = (float)$selectedKas['saldo_saat_ini'];
-                if ($totalPinjaman > $saldoSaatIni) {
-                    $pdo->rollBack();
-                    $this->flashError("Saldo akun kas '{$selectedKas['nama_akun']}' (" . Format::rupiah($saldoSaatIni) . ") tidak mencukupi untuk pinjaman (" . Format::rupiah($totalPinjaman) . ").");
-                    $this->redirect('/kasbon');
-                    return;
-                }
+            $saldoSaatIni = (float)$selectedKas['saldo_saat_ini'];
+            if ($totalPinjaman > $saldoSaatIni) {
+                $pdo->rollBack();
+                $this->flashError("Saldo akun kas '{$selectedKas['nama_akun']}' (" . Format::rupiah($saldoSaatIni) . ") tidak mencukupi untuk pinjaman (" . Format::rupiah($totalPinjaman) . ").");
+                $this->redirect('/kasbon');
+                return;
             }
 
             // 1. Simpan Data Kasbon
@@ -236,58 +232,56 @@ class KasbonController extends Controller
                 'tgl' => $tanggalPengajuan,
                 'total' => $totalPinjaman,
                 'cicilan' => $potonganPerPeriode,
-                'kas_id' => !$bypassKas ? $akunKasId : null,
+                'kas_id' => $akunKasId,
                 'ket' => !empty($keterangan) ? $keterangan : 'Pinjaman kasbon',
                 'catatan' => !empty($catatan) ? $catatan : null
             ]);
             $kasbonId = (string)$stmtInsert->fetchColumn();
 
-            // 2. Potong Saldo Akun Kas & Catat Arus Kas Keluar (jika bukan bypass)
-            if (!$bypassKas && $selectedKas) {
-                $saldoBaru = (float)$selectedKas['saldo_saat_ini'] - $totalPinjaman;
-                
-                $pdo->prepare("
-                    UPDATE public.akun_kas 
-                    SET saldo_saat_ini = saldo_saat_ini - :total, diubah_pada = NOW() 
-                    WHERE id = :id
-                ")->execute([
-                    'total' => $totalPinjaman,
-                    'id' => $akunKasId
-                ]);
+            // 2. Potong Saldo Akun Kas & Catat Arus Kas Keluar
+            $saldoBaru = (float)$selectedKas['saldo_saat_ini'] - $totalPinjaman;
+            
+            $pdo->prepare("
+                UPDATE public.akun_kas 
+                SET saldo_saat_ini = saldo_saat_ini - :total, diubah_pada = NOW() 
+                WHERE id = :id
+            ")->execute([
+                'total' => $totalPinjaman,
+                'id' => $akunKasId
+            ]);
 
-                $userId = Auth::user()['id'] ?? null;
-                $pdo->prepare("
-                    INSERT INTO public.arus_kas (
-                        akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
-                        nominal, keterangan, referensi_tabel, referensi_id,
-                        saldo_berjalan, dicatat_oleh, dibuat_pada
-                    ) VALUES (
-                        :kas_id, :tgl, 'keluar', 'pencairan_kasbon',
-                        :nom, :ket, 'kasbon', :ref_id,
-                        :saldo_berjalan, :uid, NOW()
-                    )
-                ")->execute([
-                    'kas_id' => $akunKasId,
-                    'tgl' => $tanggalPengajuan,
-                    'nom' => $totalPinjaman,
-                    'ket' => "Pencairan kasbon karyawan {$karyawan['nama_karyawan']}" . (!empty($keterangan) ? " ({$keterangan})" : ''),
-                    'ref_id' => $kasbonId,
-                    'saldo_berjalan' => $saldoBaru,
-                    'uid' => $userId
-                ]);
-            }
+            $userId = Auth::user()['id'] ?? null;
+            $pdo->prepare("
+                INSERT INTO public.arus_kas (
+                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
+                    nominal, keterangan, referensi_tabel, referensi_id,
+                    saldo_berjalan, dicatat_oleh, dibuat_pada
+                ) VALUES (
+                    :kas_id, :tgl, 'keluar', 'pencairan_kasbon',
+                    :nom, :ket, 'kasbon', :ref_id,
+                    :saldo_berjalan, :uid, NOW()
+                )
+            ")->execute([
+                'kas_id' => $akunKasId,
+                'tgl' => $tanggalPengajuan,
+                'nom' => $totalPinjaman,
+                'ket' => "Pencairan kasbon karyawan {$karyawan['nama_karyawan']}" . (!empty($keterangan) ? " ({$keterangan})" : ''),
+                'ref_id' => $kasbonId,
+                'saldo_berjalan' => $saldoBaru,
+                'uid' => $userId
+            ]);
 
             $pdo->commit();
 
             ActivityLog::log(
                 'hr_payroll',
                 'CREATE_KASBON',
-                "Membuat kasbon baru untuk {$karyawan['nama_karyawan']} sebesar " . Format::rupiah($totalPinjaman) . ($bypassKas ? " (Bypass Kas)" : " via {$selectedKas['nama_akun']}") . ".",
+                "Membuat kasbon baru untuk {$karyawan['nama_karyawan']} sebesar " . Format::rupiah($totalPinjaman) . " via {$selectedKas['nama_akun']}.",
                 'kasbon',
                 $kasbonId
             );
 
-            $this->flashSuccess('Kasbon berhasil didaftarkan' . (!$bypassKas ? ' dan saldo kas berhasil dipotong.' : '.'));
+            $this->flashSuccess('Kasbon berhasil didaftarkan dan saldo kas berhasil dipotong.');
             $this->redirect('/kasbon');
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {

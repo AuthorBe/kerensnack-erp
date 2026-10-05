@@ -79,6 +79,13 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
     box-shadow: var(--shadow-1, 0 1px 3px rgba(0, 0, 0, 0.03));
     transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
+@media (max-width: 639.98px) {
+    .pg-stat-card {
+        padding: 11px 12px;
+        gap: 10px;
+        border-radius: 12px;
+    }
+}
 .dark .pg-stat-card {
     background-color: #1e293b;
     border-color: #334155;
@@ -101,6 +108,19 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
     justify-content: center;
     flex-shrink: 0;
     box-sizing: border-box;
+}
+@media (max-width: 639.98px) {
+    .pg-stat-icon {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        border-radius: 10px;
+    }
+    .pg-stat-icon svg {
+        width: 18px;
+        height: 18px;
+    }
 }
 .pg-stat-icon svg {
     width: 22px;
@@ -133,37 +153,121 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
     border-color: rgba(251, 113, 133, 0.3);
 }
 
-/* Segmented Control Filter Tabs */
+/* Segmented Control Filter Tabs (Clean Enterprise ERP Style - Horizontally Scrollable) */
+.pg-tab-scroll-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+}
+.pg-tab-scroll-wrap::-webkit-scrollbar {
+    display: none;
+}
+@media (min-width: 640px) {
+    .pg-tab-scroll-wrap {
+        width: auto;
+        overflow-x: visible;
+        padding-bottom: 0;
+    }
+}
+
+.pg-tab-container {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    padding: 3.5px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    gap: 4px;
+    min-width: max-content;
+    box-sizing: border-box;
+}
+.dark .pg-tab-container {
+    background: #0f172a;
+    border-color: #334155;
+}
+
 .pg-filter-tab-btn {
+    flex-shrink: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 6px 14px;
+    height: 33px;
+    padding: 0 13px;
     font-size: 12px;
-    font-weight: 700;
-    border-radius: 8px;
+    font-weight: 600;
+    border-radius: 7px;
     color: #64748b;
     background: transparent;
     transition: all 0.15s ease;
-    border: none;
+    border: 1px solid transparent;
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
     text-decoration: none;
+    white-space: nowrap;
 }
 .pg-filter-tab-btn:hover {
     color: #0f172a;
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.6);
 }
 .dark .pg-filter-tab-btn:hover {
     color: #f8fafc;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.05);
 }
 .pg-filter-tab-btn.is-active {
-    background: #881337 !important;
-    color: #ffffff !important;
-    box-shadow: 0 2px 6px rgba(136, 19, 55, 0.25);
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    border-color: rgba(0, 0, 0, 0.06) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+.dark .pg-filter-tab-btn.is-active {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+.pg-tab-icon {
+    width: 13.5px;
+    height: 13.5px;
+    flex-shrink: 0;
+    display: inline-block;
+    color: inherit;
+}
+
+.pg-tab-counter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-family: var(--font-mono, monospace);
+    font-weight: 700;
+    padding: 0 6px;
+    height: 18px;
+    border-radius: 9999px;
+    line-height: 1;
+    background: #e2e8f0;
+    color: #64748b;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+.dark .pg-tab-counter {
+    background: #334155;
+    color: #94a3b8;
+}
+.pg-filter-tab-btn.is-active .pg-tab-counter {
+    background: rgba(136, 19, 55, 0.1);
+    color: #881337;
+    font-weight: 800;
+}
+.dark .pg-filter-tab-btn.is-active .pg-tab-counter {
+    background: rgba(251, 113, 133, 0.18);
+    color: #fb7185;
 }
 
 /* Filter Dock Top Row & Period Group */
@@ -335,7 +439,7 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
     color: var(--color-ink-mute, #64748b);
     font-size: 11.5px;
     font-weight: 800;
-    font-family: var(--font-mono, monospace);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     user-select: none;
 }
 .dark .pg-currency-addon {
@@ -347,10 +451,13 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
     flex: 1;
     min-width: 0;
     height: 100%;
-    padding: 0 10px;
-    font-size: 13px;
+    padding: 0 12px;
+    font-size: 14px;
     font-weight: 700;
-    font-family: var(--font-mono, monospace);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero" 0 !important;
+    -webkit-font-feature-settings: "zero" 0 !important;
     color: var(--color-ink, #0f172a);
     background: transparent;
     border: none !important;
@@ -360,6 +467,15 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
 }
 .dark .pg-currency-input {
     color: #f8fafc;
+}
+
+/* Disable dotted zero so 0 renders as clean rounded 0 */
+.font-mono,
+[class*="font-mono"],
+.pg-currency-input,
+.pg-currency-addon {
+    font-feature-settings: "zero" 0 !important;
+    -webkit-font-feature-settings: "zero" 0 !important;
 }
 
 /* Quick Nominal / Note Preset Chips */
@@ -475,44 +591,914 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
 }
 
 /* =========================================================================
-   MOBILE RESPONSIVE CARD VIEW (SCREEN WIDTH < 768px)
+   STATUS BADGES & ACTION BUTTONS (KEREN ONE DESIGN SYSTEM)
    ========================================================================= */
+.pg-badge-unprocessed {
+    display: inline-flex;
+    align-items: center;
+    gap: 4.5px;
+    padding: 2.5px 8.5px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+    background-color: #fffbeb !important;
+    color: #b45309 !important;
+    border: 1px solid #fde68a !important;
+    white-space: nowrap;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(217, 119, 6, 0.05);
+}
+.dark .pg-badge-unprocessed {
+    background-color: rgba(245, 158, 11, 0.12) !important;
+    color: #fbbf24 !important;
+    border-color: rgba(245, 158, 11, 0.28) !important;
+}
+.pg-badge-unprocessed svg {
+    width: 12px;
+    height: 12px;
+    color: #d97706 !important;
+    stroke-width: 2.2;
+    flex-shrink: 0;
+}
+.dark .pg-badge-unprocessed svg {
+    color: #fbbf24 !important;
+}
+
+.pg-badge-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 4.5px;
+    padding: 2.5px 8.5px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono, monospace);
+    line-height: 1.25;
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+    white-space: nowrap;
+    user-select: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.dark .pg-badge-locked {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #94a3b8 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.pg-badge-locked svg {
+    width: 12px;
+    height: 12px;
+    color: #64748b !important;
+    stroke-width: 2.2;
+    flex-shrink: 0;
+}
+.dark .pg-badge-locked svg {
+    color: #94a3b8 !important;
+}
+
+/* Action Button Tool Group */
+.pg-action-group {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+.pg-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    background-color: var(--color-canvas, #ffffff);
+    color: var(--color-ink-secondary, #64748b);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0;
+    outline: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.pg-action-btn svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+.pg-action-btn.is-edit:hover {
+    color: #881337 !important;
+    background-color: rgba(136, 19, 55, 0.08) !important;
+    border-color: rgba(136, 19, 55, 0.25) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(136, 19, 55, 0.12);
+}
+.pg-action-btn.is-delete:hover {
+    color: #dc2626 !important;
+    background-color: #fef2f2 !important;
+    border-color: #fecaca !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.12);
+}
+.dark .pg-action-btn {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.dark .pg-action-btn.is-edit:hover {
+    color: #fb7185 !important;
+    background-color: rgba(251, 113, 133, 0.14) !important;
+    border-color: rgba(251, 113, 133, 0.3) !important;
+}
+.dark .pg-action-btn.is-delete:hover {
+    color: #f87171 !important;
+    background-color: rgba(239, 68, 68, 0.14) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* =========================================================================
+   RESPONSIVE SWITCHER: DESKTOP TABLE vs MOBILE CARDS
+   ========================================================================= */
+.pg-desktop-view {
+    display: block !important;
+}
+.pg-mobile-view {
+    display: none !important;
+}
+
 @media (max-width: 767.98px) {
-    .responsive-pg-table thead {
+    .pg-desktop-view {
         display: none !important;
     }
-    .responsive-pg-table,
-    .responsive-pg-table tbody {
+    .pg-mobile-view {
         display: block !important;
-        width: 100% !important;
     }
-    .responsive-pg-table tr.pg-data-row {
-        display: flex !important;
-        flex-direction: column !important;
-        background: var(--color-canvas, #ffffff) !important;
-        border: 1px solid var(--color-hairline, #e2e8f0) !important;
-        border-radius: 14px !important;
-        margin: 10px !important;
-        padding: 14px !important;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
-        gap: 10px !important;
+}
+
+/* Mobile Card View Specifics */
+.pg-mobile-card {
+    background: var(--color-canvas, #ffffff);
+    border: 1px solid var(--color-hairline, #e2e8f0);
+    border-radius: 12px;
+    padding: 13px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.15s ease;
+}
+.dark .pg-mobile-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.pg-mobile-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 22px;
+    padding: 0 5px;
+    border-radius: 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    flex-shrink: 0;
+}
+.dark .pg-mobile-num {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+/* Mobile Card Date & Info Row */
+.pg-mobile-mid-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-hairline, #e2e8f0);
+}
+.dark .pg-mobile-mid-row {
+    border-color: #334155;
+}
+
+.pg-mobile-date-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #475569;
+}
+.dark .pg-mobile-date-wrap {
+    color: #94a3b8;
+}
+.pg-mobile-date-wrap svg {
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    color: #64748b;
+    flex-shrink: 0;
+    display: block;
+}
+.dark .pg-mobile-date-wrap svg {
+    color: #94a3b8;
+}
+.pg-mobile-date-text {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 13px;
+}
+.dark .pg-mobile-date-text {
+    color: #f1f5f9;
+}
+.pg-mobile-time-text {
+    font-size: 12px;
+    color: #64748b;
+    font-family: var(--font-mono, monospace);
+    font-weight: 600;
+}
+.dark .pg-mobile-time-text {
+    color: #94a3b8;
+}
+
+.pg-mobile-nominal {
+    font-size: 15px;
+    font-weight: 800;
+    font-family: var(--font-mono, monospace);
+    color: #881337;
+    text-align: right;
+    white-space: nowrap;
+}
+.dark .pg-mobile-nominal {
+    color: #fb7185;
+}
+
+/* Mobile Card Keterangan / Note Badge */
+.pg-mobile-note {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 11px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.4;
+}
+.dark .pg-mobile-note {
+    background: rgba(30, 41, 59, 0.5);
+    border-color: #334155;
+    color: #cbd5e1;
+}
+.pg-mobile-note svg {
+    width: 15px;
+    height: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    color: #64748b;
+    flex-shrink: 0;
+    display: block;
+}
+.dark .pg-mobile-note svg {
+    color: #94a3b8;
+}
+.pg-mobile-note-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    word-break: break-word;
+}
+.dark .pg-mobile-note-text {
+    color: #e2e8f0;
+}
+
+/* Mobile Card Actions & Locked Info */
+.pg-mobile-action-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 12px;
+    margin-top: 2px;
+    border-top: 1px solid var(--color-hairline, #e2e8f0);
+}
+.dark .pg-mobile-action-row {
+    border-color: #334155;
+}
+.pg-mobile-action-row .btn {
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+}
+.pg-btn-delete-mobile {
+    background-color: #fff1f2 !important;
+    color: #e11d48 !important;
+    border: 1px solid #fecdd3 !important;
+    padding: 0 14px;
+    transition: all 0.15s ease;
+}
+.pg-btn-delete-mobile svg {
+    color: #e11d48 !important;
+}
+.pg-btn-delete-mobile:hover {
+    background-color: #ffe4e6 !important;
+    border-color: #fda4af !important;
+    color: #be123c !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(225, 29, 72, 0.12);
+}
+.dark .pg-btn-delete-mobile {
+    background-color: rgba(244, 63, 94, 0.12) !important;
+    color: #fb7185 !important;
+    border-color: rgba(244, 63, 94, 0.28) !important;
+}
+.dark .pg-btn-delete-mobile svg {
+    color: #fb7185 !important;
+}
+.dark .pg-btn-delete-mobile:hover {
+    background-color: rgba(244, 63, 94, 0.2) !important;
+    border-color: rgba(244, 63, 94, 0.45) !important;
+    color: #fda4af !important;
+}
+.pg-mobile-card .btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    display: block;
+}
+.pg-mobile-locked-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: #64748b;
+    padding-top: 11px;
+    margin-top: 2px;
+    border-top: 1px solid var(--color-hairline, #e2e8f0);
+    font-family: var(--font-mono, monospace);
+}
+.dark .pg-mobile-locked-row {
+    border-color: #334155;
+    color: #94a3b8;
+}
+.pg-mobile-locked-row svg {
+    width: 13px;
+    height: 13px;
+    color: #64748b;
+    flex-shrink: 0;
+    display: block;
+}
+
+/* Clean Enterprise Empty State Card (Mobile & Desktop) */
+.pg-empty-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 36px 20px;
+    border-radius: 14px;
+    background: var(--color-canvas, #ffffff);
+    border: 1.5px dashed var(--color-hairline, #cbd5e1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.dark .pg-empty-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+.pg-empty-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px auto;
+    background: rgba(136, 19, 55, 0.08);
+    color: #881337;
+    border: 1px solid rgba(136, 19, 55, 0.18);
+}
+.pg-empty-icon-box svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+    stroke-width: 2;
+}
+.dark .pg-empty-icon-box {
+    background: rgba(251, 113, 133, 0.12);
+    color: #fb7185;
+    border-color: rgba(251, 113, 133, 0.25);
+}
+.pg-empty-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-ink, #0f172a);
+    margin-bottom: 4px;
+}
+.dark .pg-empty-title {
+    color: #f1f5f9;
+}
+.pg-empty-desc {
+    font-size: 12px;
+    color: var(--color-ink-mute, #64748b);
+    max-width: 280px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+.dark .pg-empty-desc {
+    color: #94a3b8;
+}
+.pg-btn-reset-filter {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--color-canvas, #ffffff);
+    color: #881337;
+    border: 1px solid rgba(136, 19, 55, 0.25);
+    cursor: pointer;
+    margin-top: 14px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.pg-btn-reset-filter svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+    stroke-width: 2;
+    flex-shrink: 0;
+}
+.pg-btn-reset-filter:hover {
+    background: rgba(136, 19, 55, 0.06);
+    border-color: #881337;
+}
+.dark .pg-btn-reset-filter {
+    background: #0f172a;
+    color: #fb7185;
+    border-color: rgba(251, 113, 133, 0.35);
+}
+.dark .pg-btn-reset-filter:hover {
+    background: rgba(251, 113, 133, 0.14);
+}
+
+/* =========================================================================
+   POPUP MODAL: PENARIKAN GAJI DIALOG STYLES (IMMUNE TO CSS PURGE)
+   ========================================================================= */
+
+/* Ensure display:none always beats !important from app.css */
+[style*="display: none"],
+[style*="display:none"] {
+    display: none !important;
+}
+
+/* Modal Body Scroll Container */
+.pg-modal-scroll {
+    max-height: calc(85vh - 125px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+}
+
+/* 1. Karyawan Allowance Hint Banner */
+.pg-allowance-hint {
+    margin-top: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+    box-shadow: 0 1px 2px rgba(136, 19, 55, 0.04);
+}
+.dark .pg-allowance-hint {
+    background: rgba(251, 113, 133, 0.08);
+    border-color: rgba(251, 113, 133, 0.22);
+}
+.pg-allowance-hint-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 12px;
+}
+.pg-allowance-hint-icon {
+    width: 16px;
+    height: 16px;
+    color: #881337;
+    flex-shrink: 0;
+}
+.dark .pg-allowance-hint-icon {
+    color: #fb7185;
+}
+.pg-allowance-hint-label {
+    color: #64748b;
+    font-size: 11.5px;
+}
+.dark .pg-allowance-hint-label {
+    color: #94a3b8;
+}
+.pg-allowance-hint-val {
+    font-weight: 700;
+    color: #881337;
+    font-family: var(--font-mono, monospace);
+    font-size: 13px;
+}
+.dark .pg-allowance-hint-val {
+    color: #fda4af;
+}
+.pg-allowance-hint-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 7px;
+    background: #ffffff;
+    color: #881337;
+    border: 1px solid rgba(136, 19, 55, 0.25);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.pg-allowance-hint-btn:hover {
+    background: #881337;
+    color: #ffffff;
+    border-color: #881337;
+    box-shadow: 0 2px 4px rgba(136, 19, 55, 0.2);
+}
+.dark .pg-allowance-hint-btn {
+    background: #1e293b;
+    color: #fb7185;
+    border-color: rgba(251, 113, 133, 0.35);
+}
+.dark .pg-allowance-hint-btn:hover {
+    background: #fb7185;
+    color: #0f172a;
+    border-color: #fb7185;
+}
+
+/* 2. Quick Preset Chips */
+.pg-preset-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+}
+.dark .pg-preset-label {
+    color: #94a3b8;
+}
+.pg-preset-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.pg-preset-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 5px 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: var(--font-mono, monospace);
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    color: #1e293b;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.pg-preset-chip:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #0f172a;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+.pg-preset-chip:active {
+    transform: translateY(0);
+}
+.dark .pg-preset-chip {
+    background: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.dark .pg-preset-chip:hover {
+    background: #334155;
+    border-color: #475569;
+    color: #ffffff;
+}
+.pg-preset-chip.is-reset {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+    font-family: inherit;
+    font-weight: 700;
+}
+.pg-preset-chip.is-reset:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+.dark .pg-preset-chip.is-reset {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+.dark .pg-preset-chip.is-reset:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+}
+
+/* 3. Cash Account Selection Box */
+.pg-kas-section {
+    padding: 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.dark .pg-kas-section {
+    background: rgba(15, 23, 42, 0.4);
+    border-color: #334155;
+}
+.pg-kas-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pg-kas-section-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+}
+.dark .pg-kas-section-title {
+    color: #f1f5f9;
+}
+.pg-kas-section-title svg {
+    width: 15px;
+    height: 15px;
+    color: #881337;
+}
+.dark .pg-kas-section-title svg {
+    color: #fb7185;
+}
+.pg-kas-section-hint {
+    font-size: 11px;
+    color: #64748b;
+}
+.dark .pg-kas-section-hint {
+    color: #94a3b8;
+}
+
+.pg-kas-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px;
+}
+@media (min-width: 640px) {
+    .pg-kas-grid {
+        grid-template-columns: 1fr 1fr;
     }
-    .dark .responsive-pg-table tr.pg-data-row {
-        background: #1e293b !important;
-        border-color: #334155 !important;
-    }
-    .responsive-pg-table td {
-        display: block !important;
-        padding: 0 !important;
-        border: none !important;
-    }
-    .responsive-pg-table td.col-no {
-        display: none !important;
-    }
+}
+
+.pg-kas-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #ffffff;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+    outline: none;
+    position: relative;
+}
+.pg-kas-card:hover:not(.is-disabled) {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+.dark .pg-kas-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+.dark .pg-kas-card:hover:not(.is-disabled) {
+    border-color: #475569;
+    background: #273549;
+}
+
+/* Selected State (Harmonious Emerald Green, lembut & elegan) */
+.pg-kas-card.is-selected {
+    border-color: #059669 !important;
+    background: #f0fdf4 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22) !important;
+}
+.dark .pg-kas-card.is-selected {
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.12) !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Disabled State (Saldo kurang) */
+.pg-kas-card.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed !important;
+    border-style: dashed !important;
+    background: #f1f5f9 !important;
+}
+.dark .pg-kas-card.is-disabled {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+/* Cash Icon Box */
+.pg-kas-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.pg-kas-icon svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+}
+.pg-kas-icon.is-tunai {
+    background: #ecfdf5 !important;
+    color: #059669 !important;
+    border: 1px solid #a7f3d0 !important;
+}
+.dark .pg-kas-icon.is-tunai {
+    background: rgba(16, 185, 129, 0.16) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.32) !important;
+}
+.pg-kas-icon.is-bank {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+    border: 1px solid #bfdbfe !important;
+}
+.dark .pg-kas-icon.is-bank {
+    background: rgba(59, 130, 246, 0.16) !important;
+    color: #60a5fa !important;
+    border-color: rgba(59, 130, 246, 0.32) !important;
+}
+
+/* Cash Tag / POS Pill */
+.pg-kas-pos-pill {
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    background: #d1fae5;
+    color: #065f46;
+    letter-spacing: 0.02em;
+}
+.dark .pg-kas-pos-pill {
+    background: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+}
+
+/* 4. Alert & Validation Banners */
+.pg-alert-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    color: #b45309 !important;
+}
+.dark .pg-alert-warning {
+    background: rgba(245, 158, 11, 0.12) !important;
+    border-color: rgba(245, 158, 11, 0.28) !important;
+    color: #fbbf24 !important;
+}
+.pg-alert-warning svg {
+    width: 16px;
+    height: 16px;
+    color: #d97706 !important;
+    flex-shrink: 0;
+}
+.dark .pg-alert-warning svg {
+    color: #fbbf24 !important;
+}
+
+.pg-alert-danger {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    background: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+    color: #b91c1c !important;
+}
+.dark .pg-alert-danger {
+    background: rgba(239, 68, 68, 0.12) !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+    color: #f87171 !important;
+}
+.pg-alert-danger svg {
+    width: 16px;
+    height: 16px;
+    color: #dc2626 !important;
+    flex-shrink: 0;
+}
+.dark .pg-alert-danger svg {
+    color: #f87171 !important;
+}
+
+/* 5. Submit CTA Button */
+.pg-btn-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    background: #881337 !important;
+    color: #ffffff !important;
+    border: 1px solid #700f2d !important;
+    box-shadow: 0 1px 2px rgba(136, 19, 55, 0.2);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.pg-btn-submit:hover:not(:disabled) {
+    background: #9f1239 !important;
+    box-shadow: 0 3px 8px rgba(136, 19, 55, 0.3);
+}
+.pg-btn-submit:disabled {
+    opacity: 0.55 !important;
+    cursor: not-allowed !important;
+    background: #64748b !important;
+    border-color: #475569 !important;
+    color: #e2e8f0 !important;
+    box-shadow: none !important;
+    pointer-events: none;
 }
 </style>
 
-<div x-data="penarikanGajiApp()" class="space-y-4 pb-16 md:pb-6">
+<div x-data="penarikanGajiApp()" x-init="init()" class="space-y-4 pb-16 md:pb-6">
 
     <!-- ========================================================================= -->
     <!-- 1. PAGE HEADER (Pola Kanonikal KEREN ONE ERP)                              -->
@@ -531,7 +1517,7 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                     <?= htmlspecialchars($pageTitle) ?>
                 </h1>
                 <p class="page-subtitle text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                    Pencatatan penarikan uang kehadiran harian &amp; kasbon harian karyawan bulanan untuk integrasi payroll
+                    Pencatatan penarikan uang kehadiran harian &amp; kasbon harian karyawan bulanan langsung potong kas, termonitoring otomatis ke payroll
                 </p>
             </div>
         </div>
@@ -549,35 +1535,35 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
     <!-- ========================================================================= -->
     <!-- 2. KPI SUMMARY METRICS (Standardized ERP Stat Strip)                       -->
     <!-- ========================================================================= -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         <!-- Card 1: Total Penarikan -->
         <div class="pg-stat-card">
             <div class="pg-stat-icon" style="background:rgba(136, 19, 55, 0.1); color:#881337; border:1px solid rgba(136, 19, 55, 0.2);">
                 <i data-lucide="badge-dollar-sign"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="text-[10.5px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider truncate">Total Penarikan Periode</div>
-                <div class="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-0.5">
+                <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-snug line-clamp-2">Total Penarikan Periode</div>
+                <div class="text-sm sm:text-base lg:text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-0.5 truncate">
                     <?= Format::rupiah($totalNominal) ?>
                 </div>
-                <div class="text-[11px] text-slate-400 mt-0.5">
+                <div class="text-[10.5px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug truncate sm:whitespace-normal">
                     <?= $countTotal ?> catatan (<?= $countEmployees ?> karyawan)
                 </div>
             </div>
         </div>
 
-        <!-- Card 2: Total Pending -->
+        <!-- Card 2: Total Belum Masuk Payroll -->
         <div class="pg-stat-card">
-            <div class="pg-stat-icon" style="background:rgba(245, 158, 11, 0.1); color:#f59e0b; border:1px solid rgba(245, 158, 11, 0.25);">
-                <i data-lucide="clock-alert"></i>
+            <div class="pg-stat-icon" style="background:rgba(2, 132, 199, 0.1); color:#0284c7; border:1px solid rgba(2, 132, 199, 0.25);">
+                <i data-lucide="wallet"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="text-[10.5px] sm:text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider truncate">Pending (Belum Di-Payroll)</div>
-                <div class="text-base sm:text-lg font-bold font-mono text-amber-700 dark:text-amber-300 mt-0.5">
-                    <?= Format::rupiah($totalPending) ?>
+                <div class="text-[10px] sm:text-[11px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider leading-snug line-clamp-2">Belum Di-Payroll</div>
+                <div class="text-sm sm:text-base lg:text-lg font-bold font-mono text-sky-700 dark:text-sky-300 mt-0.5 truncate">
+                    <?= Format::rupiah($totalBelumPayroll) ?>
                 </div>
-                <div class="text-[11px] text-amber-600/80 dark:text-amber-400/80 mt-0.5">
-                    <?= $countPending ?> transaksi belum dipotong
+                <div class="text-[10.5px] sm:text-[11px] text-sky-600/80 dark:text-sky-400/80 mt-0.5 leading-snug truncate sm:whitespace-normal">
+                    <?= $countBelumPayroll ?> transaksi siap rekonsiliasi
                 </div>
             </div>
         </div>
@@ -588,11 +1574,11 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                 <i data-lucide="shield-check"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="text-[10.5px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider truncate">Terkunci dalam Payroll</div>
-                <div class="text-base sm:text-lg font-bold font-mono text-emerald-700 dark:text-emerald-300 mt-0.5">
+                <div class="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider leading-snug line-clamp-2">Terkunci dalam Payroll</div>
+                <div class="text-sm sm:text-base lg:text-lg font-bold font-mono text-emerald-700 dark:text-emerald-300 mt-0.5 truncate">
                     <?= Format::rupiah($totalLocked) ?>
                 </div>
-                <div class="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">
+                <div class="text-[10.5px] sm:text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5 leading-snug truncate sm:whitespace-normal">
                     <?= $countLocked ?> transaksi resmi terpotong
                 </div>
             </div>
@@ -604,12 +1590,12 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                 <i data-lucide="users"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="text-[10.5px] sm:text-[11px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider truncate">Master Karyawan Bulanan</div>
-                <div class="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-0.5">
+                <div class="text-[10px] sm:text-[11px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider leading-snug line-clamp-2">Master Karyawan Bulanan</div>
+                <div class="text-sm sm:text-base lg:text-lg font-bold font-mono text-slate-900 dark:text-slate-100 mt-0.5 truncate">
                     <?= count($karyawanBulanan) ?> <span class="text-xs font-normal text-slate-400">orang aktif</span>
                 </div>
-                <div class="text-[11px] text-slate-400 mt-0.5">
-                    Memiliki tunjangan kehadiran harian
+                <div class="text-[10.5px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug truncate sm:whitespace-normal">
+                    Tunjangan kehadiran harian
                 </div>
             </div>
         </div>
@@ -672,8 +1658,8 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                 <label class="form-label text-[11px] font-bold text-slate-600 dark:text-slate-300">Status Payroll</label>
                 <select name="status" class="form-select form-select-sm text-xs rounded-lg w-full">
                     <option value="semua" <?= $status === 'semua' ? 'selected' : '' ?>>Semua Status</option>
-                    <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>⏳ Pending (Belum Terpotong)</option>
-                    <option value="locked" <?= $status === 'locked' ? 'selected' : '' ?>>🔒 Terkunci Payroll</option>
+                    <option value="belum_payroll" <?= in_array($status, ['belum_payroll', 'pending', 'terbuka', 'aktif'], true) ? 'selected' : '' ?>>💵 Belum Masuk Payroll</option>
+                    <option value="terkunci" <?= in_array($status, ['terkunci', 'locked', 'payroll'], true) ? 'selected' : '' ?>>🔒 Terkunci Payroll</option>
                 </select>
             </div>
             <div class="flex items-center gap-2">
@@ -691,41 +1677,40 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
     <!-- ========================================================================= -->
     <!-- 4. MAIN DATA CARD WITH LIVE SEARCH & RESPONSIVE DATA TABLE                -->
     <!-- ========================================================================= -->
-    <div class="card overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-xs">
+    <div class="card pg-table-card overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-2xl shadow-xs">
         
         <!-- Table Toolbar Header -->
-        <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/70">
-            <!-- Left: Filter Pills & Counts -->
-            <div class="flex items-center gap-2 flex-wrap">
-                <div class="inline-flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80 gap-0.5">
+        <div class="p-3 sm:p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/70">
+            <!-- Left: Filter Pills & Counts (Responsive Horizontally Scrollable Bar) -->
+            <div class="pg-tab-scroll-wrap">
+                <div class="pg-tab-container">
                     <button type="button" 
                             @click="tableFilterStatus = 'all'" 
                             :class="tableFilterStatus === 'all' ? 'is-active' : ''"
                             class="pg-filter-tab-btn">
                         <span>Semua</span>
-                        <span class="text-[10px] py-0.2 px-1.5 rounded-full font-mono font-bold"
-                              :class="tableFilterStatus === 'all' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
+                        <span class="pg-tab-counter font-mono">
                             <?= count($penarikanList) ?>
                         </span>
                     </button>
                     <button type="button" 
-                            @click="tableFilterStatus = 'pending'" 
-                            :class="tableFilterStatus === 'pending' ? 'is-active' : ''"
+                            @click="tableFilterStatus = 'unprocessed'" 
+                            :class="tableFilterStatus === 'unprocessed' ? 'is-active' : ''"
                             class="pg-filter-tab-btn">
-                        <span>⏳ Pending</span>
-                        <span class="text-[10px] py-0.2 px-1.5 rounded-full font-mono font-bold"
-                              :class="tableFilterStatus === 'pending' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'">
-                            <?= $countPending ?>
+                        <i data-lucide="clock-3" class="pg-tab-icon"></i>
+                        <span>Belum Payroll</span>
+                        <span class="pg-tab-counter font-mono">
+                            <?= $countBelumPayroll ?>
                         </span>
                     </button>
                     <button type="button" 
                             @click="tableFilterStatus = 'locked'" 
                             :class="tableFilterStatus === 'locked' ? 'is-active' : ''"
                             class="pg-filter-tab-btn">
-                        <span>🔒 Terkunci</span>
-                        <span class="text-[10px] py-0.2 px-1.5 rounded-full font-mono font-bold"
-                              :class="tableFilterStatus === 'locked' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'">
-                            <?= $countLocked ?>
+                        <i data-lucide="lock" class="pg-tab-icon"></i>
+                        <span>Terkunci</span>
+                        <span class="pg-tab-counter font-mono">
+                            <?= $countTerkunciPayroll ?? $countLocked ?>
                         </span>
                     </button>
                 </div>
@@ -738,7 +1723,7 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                     <input type="text" 
                            x-model="searchQuery" 
                            @keydown.enter.prevent
-                           placeholder="Cari nama karyawan / ket / nomor..." 
+                           placeholder="Cari karyawan atau catatan..." 
                            class="pg-search-input">
                     <button type="button" 
                             @click="searchQuery = ''" 
@@ -752,60 +1737,83 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
             </div>
         </div>
 
-        <!-- Table Body -->
-        <div class="table-wrapper overflow-x-auto">
-            <table class="responsive-pg-table data-table w-full text-left border-collapse text-xs">
+        <!-- ========================================================================= -->
+        <!-- 4A. DESKTOP VIEW: FULL ENTERPRISE DATA TABLE (Pristine 7-Column Layout)   -->
+        <!-- ========================================================================= -->
+        <div class="pg-desktop-view table-wrapper overflow-x-auto custom-scrollbar">
+            <table class="data-table w-full text-left border-collapse text-xs" style="min-width: 860px;">
                 <thead>
                     <tr class="bg-slate-50/60 dark:bg-slate-800/40 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                         <th class="py-3 px-4 w-12 text-center">No</th>
-                        <th class="py-3 px-4 w-32">Tanggal</th>
+                        <th class="py-3 px-4 w-36">Tanggal</th>
                         <th class="py-3 px-4 min-w-[200px]">Karyawan</th>
                         <th class="py-3 px-4 text-right min-w-[140px]">Nominal Ambil</th>
                         <th class="py-3 px-4 min-w-[220px]">Keterangan</th>
                         <th class="py-3 px-4 text-center w-36">Status Payroll</th>
-                        <th class="py-3 px-4 text-center w-20">Aksi</th>
+                        <th class="py-3 px-4 text-center w-24">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
                     <?php if (empty($penarikanList)): ?>
-                        <tr class="border-0">
-                            <td colspan="7" class="py-12 px-4 text-center border-0">
-                                <div style="width:48px;height:48px;border-radius:14px;background:rgba(136,19,55,0.08);color:#881337;display:flex;align-items:center;justify-content:center;margin:0 auto 12px auto;border:1px solid rgba(136,19,55,0.18);">
-                                    <i data-lucide="hand-coins" style="width:24px;height:24px;"></i>
+                        <tr class="empty-row border-0">
+                            <td colspan="7" class="empty-state-cell border-0 p-6">
+                                <div class="pg-empty-card max-w-md mx-auto">
+                                    <div class="pg-empty-icon-box">
+                                        <i data-lucide="hand-coins"></i>
+                                    </div>
+                                    <div class="pg-empty-title">Belum Ada Catatan Penarikan Gaji</div>
+                                    <div class="pg-empty-desc">Tidak ada riwayat penarikan uang harian untuk rentang tanggal yang dipilih.</div>
+                                    <button type="button" 
+                                            @click="openModalTambah()" 
+                                            class="pg-btn-reset-filter"
+                                            style="background:#881337; color:#ffffff; border-color:#700f2d;">
+                                        <i data-lucide="plus"></i>
+                                        <span>Catat Penarikan Baru</span>
+                                    </button>
                                 </div>
-                                <div class="text-sm font-bold text-slate-800 dark:text-slate-200">Belum Ada Catatan Penarikan Gaji</div>
-                                <div class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Tidak ada riwayat penarikan uang harian untuk rentang tanggal atau kriteria filter yang dipilih.</div>
-                                <button type="button" @click="openModalTambah()" class="btn btn-primary-maroon btn-sm text-xs font-bold mt-4 inline-flex items-center gap-1.5" style="border-radius:8px;">
-                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                                    <span>Catat Penarikan Baru</span>
-                                </button>
                             </td>
                         </tr>
                     <?php else: ?>
+                        <!-- Client-side No Search Results Row -->
+                        <tr x-show="visibleCount === 0" x-cloak class="empty-row border-0">
+                            <td colspan="7" class="empty-state-cell border-0 p-6">
+                                <div class="pg-empty-card max-w-md mx-auto">
+                                    <div class="pg-empty-icon-box">
+                                        <i data-lucide="search-x"></i>
+                                    </div>
+                                    <div class="pg-empty-title">Tidak Ada Data Yang Cocok</div>
+                                    <div class="pg-empty-desc">Tidak ada catatan yang sesuai dengan kata kunci pencarian atau filter status saat ini.</div>
+                                    <button type="button" 
+                                            @click="searchQuery = ''; tableFilterStatus = 'all'" 
+                                            class="pg-btn-reset-filter">
+                                        <i data-lucide="rotate-ccw"></i>
+                                        <span>Reset Filter & Pencarian</span>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+
                         <?php foreach ($penarikanList as $idx => $pg): 
                             $isLocked = !empty($pg['penggajian_id']);
                             $initials = getInitials($pg['nama_karyawan']);
                             $searchKeywords = strtolower($pg['nama_karyawan'] . ' ' . ($pg['posisi'] ?? '') . ' ' . ($pg['keterangan'] ?? '') . ' ' . ($pg['nomor_payroll'] ?? '') . ' ' . $pg['tanggal']);
                         ?>
-                        <tr class="pg-data-row hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                        <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
                             x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', <?= $isLocked ? 'true' : 'false' ?>)"
                             data-id="<?= htmlspecialchars($pg['id']) ?>">
                             
-                            <!-- Col: No -->
-                            <td class="col-no py-3 px-4 text-center font-mono text-slate-400"><?= $idx + 1 ?></td>
+                            <!-- Col 1: No -->
+                            <td class="py-3 px-4 text-center font-mono text-slate-400"><?= $idx + 1 ?></td>
                             
-                            <!-- Col: Tanggal -->
-                            <td class="py-3 px-4">
+                            <!-- Col 2: Tanggal -->
+                            <td class="py-3 px-4 whitespace-nowrap">
                                 <div class="flex items-center gap-2">
-                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400 shrink-0 hidden sm:inline"></i>
+                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
                                     <span class="font-mono font-semibold text-slate-800 dark:text-slate-200"><?= Format::tanggalIndo($pg['tanggal']) ?></span>
-                                </div>
-                                <div class="text-[10.5px] text-slate-400 sm:hidden">
-                                    Dicatat: <?= date('d/m/Y H:i', strtotime($pg['dibuat_pada'] ?? $pg['tanggal'])) ?>
                                 </div>
                             </td>
 
-                            <!-- Col: Karyawan -->
+                            <!-- Col 3: Karyawan -->
                             <td class="py-3 px-4">
                                 <div class="flex items-center gap-2.5">
                                     <div class="pg-table-avatar">
@@ -818,46 +1826,41 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                                 </div>
                             </td>
 
-                            <!-- Col: Nominal -->
-                            <td class="py-3 px-4 text-left sm:text-right">
-                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider sm:hidden">Nominal Penarikan</div>
+                            <!-- Col 4: Nominal -->
+                            <td class="py-3 px-4 text-right whitespace-nowrap">
                                 <div class="text-sm font-bold font-mono text-rose-900 dark:text-rose-400">
                                     <?= Format::rupiah((float)$pg['nominal']) ?>
                                 </div>
                             </td>
 
-                            <!-- Col: Keterangan -->
+                            <!-- Col 5: Keterangan -->
                             <td class="py-3 px-4 text-slate-600 dark:text-slate-300">
-                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider sm:hidden">Alasan / Catatan</div>
                                 <div class="leading-relaxed">
                                     <?= htmlspecialchars($pg['keterangan'] ?: 'Ambil Uang Harian') ?>
                                 </div>
                             </td>
 
-                            <!-- Col: Status Payroll -->
-                            <td class="py-3 px-4 text-left sm:text-center">
-                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider sm:hidden mb-1">Status Payroll</div>
+                            <!-- Col 6: Status Payroll -->
+                            <td class="py-3 px-4 text-center whitespace-nowrap">
                                 <?php if ($isLocked): ?>
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                                        <i data-lucide="lock" class="w-3 h-3 text-slate-500"></i>
-                                        <span><?= htmlspecialchars($pg['nomor_payroll'] ?: 'Terkunci Payroll') ?></span>
+                                    <span class="pg-badge-locked">
+                                        <i data-lucide="lock"></i>
+                                        <span><?= htmlspecialchars($pg['nomor_payroll'] ?: 'Terkunci') ?></span>
                                     </span>
                                 <?php else: ?>
-                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/40">
-                                        <i data-lucide="clock" class="w-3 h-3 text-amber-600"></i>
-                                        <span>Pending (Belum Di-Payroll)</span>
+                                    <span class="pg-badge-unprocessed">
+                                        <i data-lucide="clock-3"></i>
+                                        <span>Belum Payroll</span>
                                     </span>
                                 <?php endif; ?>
                             </td>
 
-                            <!-- Col: Aksi -->
-                            <td class="py-3 px-4 text-left sm:text-center">
-                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider sm:hidden mb-1">Tindakan</div>
+                            <!-- Col 7: Aksi -->
+                            <td class="py-3 px-4 text-center whitespace-nowrap">
                                 <?php if ($isLocked): ?>
                                     <span class="text-[11px] font-semibold text-slate-400 italic">Terkunci</span>
                                 <?php else: ?>
-                                    <div class="flex items-center sm:justify-center gap-1">
-                                        <!-- Edit Button -->
+                                    <div class="pg-action-group">
                                         <button type="button" 
                                                 @click="openModalEdit({
                                                     id: '<?= htmlspecialchars($pg['id']) ?>',
@@ -867,23 +1870,16 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                                                     nominal: <?= (float)$pg['nominal'] ?>,
                                                     keterangan: '<?= htmlspecialchars($pg['keterangan'] ?? '', ENT_QUOTES, 'UTF-8') ?>'
                                                 })"
-                                                class="p-1.5 rounded-lg text-slate-500 hover:text-rose-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" 
+                                                class="pg-action-btn is-edit" 
                                                 title="Edit Catatan Penarikan">
-                                            <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                            <i data-lucide="edit-3"></i>
                                         </button>
-
-                                        <!-- Delete Form -->
-                                        <form method="POST" action="<?= Router::url('/penarikan-gaji/delete') ?>" 
-                                              onsubmit="return confirm('Apakah Anda yakin ingin menghapus catatan penarikan gaji sebesar <?= Format::rupiah((float)$pg['nominal']) ?> untuk <?= htmlspecialchars($pg['nama_karyawan']) ?>?');"
-                                              class="inline-block m-0">
-                                            <?= CSRF::field() ?>
-                                            <input type="hidden" name="id" value="<?= htmlspecialchars($pg['id']) ?>">
-                                            <button type="submit" 
-                                                    class="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition" 
-                                                    title="Hapus Catatan">
-                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" 
+                                                @click="confirmDelete('<?= htmlspecialchars($pg['id']) ?>', '<?= htmlspecialchars($pg['nama_karyawan'], ENT_QUOTES, 'UTF-8') ?>', <?= (float)$pg['nominal'] ?>)"
+                                                class="pg-action-btn is-delete" 
+                                                title="Hapus Catatan">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
                                     </div>
                                 <?php endif; ?>
                             </td>
@@ -892,6 +1888,139 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+
+        <!-- ========================================================================= -->
+        <!-- 4B. MOBILE VIEW: CLEAN APP-STYLE LIST (High Density & Zero Clutter)       -->
+        <!-- ========================================================================= -->
+        <div class="pg-mobile-view p-3 sm:p-4 space-y-3 bg-slate-50/60 dark:bg-slate-900/40">
+            <?php if (empty($penarikanList)): ?>
+                <!-- Initial Empty State on Mobile -->
+                <div class="pg-empty-card">
+                    <div class="pg-empty-icon-box">
+                        <i data-lucide="hand-coins"></i>
+                    </div>
+                    <div class="pg-empty-title">Belum Ada Catatan Penarikan Gaji</div>
+                    <div class="pg-empty-desc">Tidak ada riwayat penarikan uang harian untuk rentang tanggal yang dipilih.</div>
+                    <button type="button" 
+                            @click="openModalTambah()" 
+                            class="pg-btn-reset-filter"
+                            style="background:#881337; color:#ffffff; border-color:#700f2d;">
+                        <i data-lucide="plus"></i>
+                        <span>Catat Penarikan Baru</span>
+                    </button>
+                </div>
+            <?php else: ?>
+                <!-- Client-side No Search Results State on Mobile -->
+                <div x-show="visibleCount === 0" x-cloak class="pg-empty-card">
+                    <div class="pg-empty-icon-box">
+                        <i data-lucide="search-x"></i>
+                    </div>
+                    <div class="pg-empty-title">Tidak Ada Data Yang Cocok</div>
+                    <div class="pg-empty-desc">Tidak ada catatan yang sesuai dengan kata kunci pencarian atau filter status saat ini.</div>
+                    <button type="button" 
+                            @click="searchQuery = ''; tableFilterStatus = 'all'" 
+                            class="pg-btn-reset-filter">
+                        <i data-lucide="rotate-ccw"></i>
+                        <span>Reset Filter & Pencarian</span>
+                    </button>
+                </div>
+
+                <?php foreach ($penarikanList as $idx => $pg): 
+                    $isLocked = !empty($pg['penggajian_id']);
+                    $initials = getInitials($pg['nama_karyawan']);
+                    $searchKeywords = strtolower($pg['nama_karyawan'] . ' ' . ($pg['posisi'] ?? '') . ' ' . ($pg['keterangan'] ?? '') . ' ' . ($pg['nomor_payroll'] ?? '') . ' ' . $pg['tanggal']);
+                ?>
+                <div class="pg-mobile-card"
+                     x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', <?= $isLocked ? 'true' : 'false' ?>)"
+                     data-id="<?= htmlspecialchars($pg['id']) ?>">
+
+                    <!-- Top: Nomor Urut + Avatar + Name + Status Badge -->
+                    <div class="flex items-center justify-between gap-2.5">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <!-- Nomor Urut Badge -->
+                            <span class="pg-mobile-num">#<?= $idx + 1 ?></span>
+
+                            <div class="pg-table-avatar shrink-0">
+                                <?= htmlspecialchars($initials) ?>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate"><?= htmlspecialchars($pg['nama_karyawan']) ?></div>
+                                <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate"><?= htmlspecialchars($pg['posisi'] ?? 'Staff') ?></div>
+                            </div>
+                        </div>
+                        <div class="shrink-0">
+                            <?php if ($isLocked): ?>
+                                <span class="pg-badge-locked">
+                                    <i data-lucide="lock"></i>
+                                    <span><?= htmlspecialchars($pg['nomor_payroll'] ?: 'Terkunci') ?></span>
+                                </span>
+                            <?php else: ?>
+                                <span class="pg-badge-unprocessed">
+                                    <i data-lucide="clock-3"></i>
+                                    <span>Belum Payroll</span>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Middle: Date & Nominal Row -->
+                    <div class="pg-mobile-mid-row">
+                        <div class="pg-mobile-date-wrap">
+                            <i data-lucide="calendar"></i>
+                            <span class="pg-mobile-date-text"><?= Format::tanggalIndo($pg['tanggal']) ?></span>
+                            <span style="color:#94a3b8; font-size:11px;">&bull;</span>
+                            <span class="pg-mobile-time-text"><?= date('H:i', strtotime($pg['dibuat_pada'] ?? $pg['tanggal'])) ?></span>
+                        </div>
+                        <div class="pg-mobile-nominal">
+                            <?= Format::rupiah((float)$pg['nominal']) ?>
+                        </div>
+                    </div>
+
+                    <!-- Catatan (if any) -->
+                    <?php if (!empty($pg['keterangan'])): ?>
+                        <div class="pg-mobile-note">
+                            <i data-lucide="file-text"></i>
+                            <span class="pg-mobile-note-text"><?= htmlspecialchars($pg['keterangan']) ?></span>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Actions / Locked state -->
+                    <?php if ($isLocked): ?>
+                        <div class="pg-mobile-locked-row">
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="lock"></i>
+                                <span>Sudah dipotong payroll</span>
+                            </span>
+                            <span class="font-semibold text-slate-700 dark:text-slate-200"><?= htmlspecialchars($pg['nomor_payroll'] ?: 'Diproses') ?></span>
+                        </div>
+                    <?php else: ?>
+                        <div class="pg-mobile-action-row">
+                            <button type="button" 
+                                    @click="openModalEdit({
+                                        id: '<?= htmlspecialchars($pg['id']) ?>',
+                                        karyawan_id: '<?= htmlspecialchars($pg['karyawan_id']) ?>',
+                                        akun_kas_id: '<?= htmlspecialchars($pg['akun_kas_id'] ?? '') ?>',
+                                        tanggal: '<?= htmlspecialchars($pg['tanggal']) ?>',
+                                        nominal: <?= (float)$pg['nominal'] ?>,
+                                        keterangan: '<?= htmlspecialchars($pg['keterangan'] ?? '', ENT_QUOTES, 'UTF-8') ?>'
+                                    })"
+                                    class="btn btn-secondary flex-1">
+                                <i data-lucide="edit-3"></i>
+                                <span>Edit Data</span>
+                            </button>
+                            <button type="button" 
+                                    @click="confirmDelete('<?= htmlspecialchars($pg['id']) ?>', '<?= htmlspecialchars($pg['nama_karyawan'], ENT_QUOTES, 'UTF-8') ?>', <?= (float)$pg['nominal'] ?>)"
+                                    class="btn pg-btn-delete-mobile">
+                                <i data-lucide="trash-2"></i>
+                                <span>Hapus</span>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -905,7 +2034,7 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
              @click="closeModal()" 
              @keydown.escape.window="closeModal()">
             
-            <div class="modal-box modal-box-md" style="max-width:520px;" @click.stop>
+            <div class="modal-box modal-box-md" style="max-width:540px; display:flex; flex-direction:column; max-height:calc(92vh - 20px);" @click.stop>
                 
                 <!-- Mobile Bottom-Sheet Pull Handle Indicator -->
                 <div class="modal-handle">
@@ -922,8 +2051,8 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                             <div class="modal-title" x-text="isEditMode ? 'Edit Catatan Penarikan Gaji' : 'Catat Penarikan Uang Harian'">
                                 Catat Penarikan Uang Harian
                             </div>
-                            <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="isEditMode ? 'Sesuaikan data penarikan uang harian yang belum di-payroll' : 'Khusus karyawan bulanan yang mengambil uang harian'">
-                                Khusus karyawan bulanan yang mengambil uang harian
+                            <div style="font-size:11.5px;color:var(--color-ink-mute);margin-top:2px;" x-text="isEditMode ? 'Sesuaikan data penarikan uang harian yang belum masuk payroll' : 'Khusus karyawan bulanan yang mengambil uang harian (langsung dicairkan)'">
+                                Khusus karyawan bulanan yang mengambil uang harian (langsung dicairkan)
                             </div>
                         </div>
                     </div>
@@ -935,12 +2064,13 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                 <!-- Modal Form -->
                 <form :action="isEditMode ? '<?= Router::url('/penarikan-gaji/update') ?>' : '<?= Router::url('/penarikan-gaji/store') ?>'" 
                       method="POST" 
+                      @submit="return handleFormSubmit($event)"
                       style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
                     <?= CSRF::field() ?>
                     <input type="hidden" name="id" :value="formId" x-show="isEditMode">
 
                     <!-- Modal Body with Scrollable Area -->
-                    <div class="modal-body custom-scrollbar" style="display:flex;flex-direction:column;gap:14px;">
+                    <div class="modal-body custom-scrollbar pg-modal-scroll" style="display:flex;flex-direction:column;gap:14px;">
                         
                         <!-- 1. Karyawan Selection (Searchable Dropdown) -->
                         <div>
@@ -1024,21 +2154,27 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                                 </div>
                             </div>
 
-                            <!-- Selected Karyawan Allowance Hint Banner (Only shown if selected and allowance > 0) -->
-                            <div x-show="selectedKid && currentKaryawan && currentKaryawan.uang_kehadiran > 0" x-cloak 
-                                 class="mt-2 p-2.5 rounded-lg flex items-center justify-between gap-2"
-                                 style="background:rgba(136,19,55,0.06);border:1px solid rgba(136,19,55,0.18);">
-                                <div class="flex items-center gap-1.5 text-xs text-rose-900 dark:text-rose-300">
-                                    <i data-lucide="badge-percent" class="w-4 h-4 shrink-0 text-rose-800"></i>
-                                    <span>Uang Harian Standar: <strong class="font-mono font-bold" x-text="formatRupiah(currentKaryawan ? currentKaryawan.uang_kehadiran : 0)"></strong></span>
+                            <!-- Selected Karyawan Allowance Hint Banner (Immune to CSS leak with template x-if) -->
+                            <template x-if="selectedKid && currentKaryawan && currentKaryawan.uang_kehadiran > 0">
+                                <div class="pg-allowance-hint">
+                                    <div class="pg-allowance-hint-content">
+                                        <svg width="16" height="16" style="width:16px;height:16px;min-width:16px;min-height:16px;flex-shrink:0;" class="pg-allowance-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m3.85 8.62 4.77-4.76a2 2 0 0 1 2.83 0l4.77 4.76a2 2 0 0 1 0 2.83l-4.77 4.77a2 2 0 0 1-2.83 0L3.85 11.45a2 2 0 0 1 0-2.83Z"/>
+                                            <path d="m14.5 9.5 2.5-2.5"/>
+                                            <path d="m7 15 2.5-2.5"/>
+                                            <path d="M12 12h.01"/>
+                                        </svg>
+                                        <div class="min-w-0">
+                                            <span class="pg-allowance-hint-label">Standar Harian:</span>
+                                            <span class="pg-allowance-hint-val ml-1" x-text="formatRupiah(currentKaryawan ? currentKaryawan.uang_kehadiran : 0)"></span>
+                                        </div>
+                                    </div>
+                                    <button type="button" @click="setNominalDefault()" class="pg-allowance-hint-btn">
+                                        <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                        <span>Gunakan Standar</span>
+                                    </button>
                                 </div>
-                                <button type="button" 
-                                        @click="setNominalDefault()" 
-                                        class="btn btn-ghost btn-xs text-[10.5px] font-bold py-1 px-2 rounded-md border"
-                                        style="background:var(--color-canvas, #ffffff);color:#881337;border-color:rgba(136,19,55,0.25);">
-                                    Gunakan Standar
-                                </button>
-                            </div>
+                            </template>
                         </div>
 
                         <!-- 2. Tanggal & Nominal Grid -->
@@ -1057,89 +2193,116 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
 
                             <div>
                                 <label class="form-label" style="display:block;margin-bottom:6px;">
-                                    Nominal Penarikan <span style="color:#e11d48;">*</span>
+                                    Nominal Penarikan (Rp) <span style="color:#e11d48;">*</span>
                                 </label>
                                 <div class="pg-currency-group">
                                     <span class="pg-currency-addon">Rp</span>
-                                    <input type="number" 
-                                           name="nominal" 
-                                           x-model="nominalInput" 
-                                           min="1000" 
-                                           step="1000" 
+                                    <input type="text" 
+                                           x-model="nominalDisplay" 
+                                           @input="onNominalInput($event)"
+                                           @focus="$event.target.select()"
+                                           @click="$event.target.select()"
                                            required 
                                            placeholder="0" 
-                                           class="pg-currency-input">
+                                           class="pg-currency-input"
+                                           autocomplete="off">
+                                    <input type="hidden" name="nominal" :value="nominalRaw">
                                 </div>
                             </div>
                         </div>
 
                         <!-- Quick Nominal Preset Chips -->
                         <div>
-                            <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Preset Nominal Cepat:</div>
-                            <div class="flex items-center gap-1.5 flex-wrap">
-                                <button type="button" @click="addNominal(10000)" class="quick-chip-btn">+10.000</button>
-                                <button type="button" @click="addNominal(20000)" class="quick-chip-btn">+20.000</button>
-                                <button type="button" @click="addNominal(50000)" class="quick-chip-btn">+50.000</button>
-                                <button type="button" @click="addNominal(100000)" class="quick-chip-btn">+100.000</button>
-                                <button type="button" @click="nominalInput = ''" class="quick-chip-btn text-rose-600 dark:text-rose-400">Reset</button>
+                            <div class="pg-preset-label">Preset Nominal Cepat:</div>
+                            <div class="pg-preset-group">
+                                <button type="button" @click="addNominal(10000)" class="pg-preset-chip">+10.000</button>
+                                <button type="button" @click="addNominal(20000)" class="pg-preset-chip">+20.000</button>
+                                <button type="button" @click="addNominal(50000)" class="pg-preset-chip">+50.000</button>
+                                <button type="button" @click="addNominal(100000)" class="pg-preset-chip">+100.000</button>
+                                <button type="button" @click="resetNominal()" class="pg-preset-chip is-reset">
+                                    <svg width="12" height="12" style="width:12px;height:12px;min-width:12px;min-height:12px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                    <span>Reset</span>
+                                </button>
                             </div>
                         </div>
 
                         <!-- 3. Pilihan Sumber Kas Pencairan Uang Harian -->
-                        <div class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 space-y-2">
-                            <label class="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between">
-                                <span class="flex items-center gap-1.5">
-                                    <i data-lucide="wallet" class="w-3.5 h-3.5 text-rose-600"></i>
+                        <div class="pg-kas-section">
+                            <div class="pg-kas-section-header">
+                                <div class="pg-kas-section-title">
+                                    <svg width="16" height="16" style="width:16px;height:16px;min-width:16px;min-height:16px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/>
+                                        <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>
+                                    </svg>
                                     <span>Sumber Kas Pencairan</span>
-                                    <span class="text-rose-500">*</span>
-                                </span>
-                                <span class="text-[11px] text-slate-400 font-normal">Pilih laci kasir / kas</span>
-                            </label>
+                                    <span style="color:#e11d48;">*</span>
+                                </div>
+                                <span class="pg-kas-section-hint">Pilih laci kasir / kas</span>
+                            </div>
 
                             <input type="hidden" name="akun_kas_id" :value="selectedKasId" required>
 
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto custom-scrollbar p-0.5">
+                            <div class="pg-kas-grid custom-scrollbar">
                                 <template x-for="acc in (cashAccounts || [])" :key="acc.id">
-                                    <div @click="selectedKasId = acc.id"
-                                         :class="{
-                                             'border-rose-600 dark:border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/40 dark:bg-rose-950/20': selectedKasId === acc.id,
-                                             'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600': selectedKasId !== acc.id,
-                                             'opacity-60 cursor-not-allowed border-dashed': acc.saldo < (nominalInput || 0)
-                                         }"
-                                         class="relative flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer select-none">
-                                        <div class="flex items-center gap-2 min-w-0 flex-1">
-                                            <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-                                                 :class="acc.tipe_akun === 'kas_tunai' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50' : 'bg-blue-50 text-blue-600 dark:bg-blue-950/50'">
+                                    <button type="button" 
+                                            @click.prevent.stop="selectKas(acc.id)"
+                                            :disabled="nominalRaw > 0 && acc.saldo < nominalRaw"
+                                            :class="{
+                                                'is-selected': String(selectedKasId) === String(acc.id),
+                                                'is-disabled': (nominalRaw > 0 && acc.saldo < nominalRaw)
+                                            }"
+                                            class="pg-kas-card">
+                                        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                                            <div class="pg-kas-icon" :class="acc.tipe_akun === 'kas_tunai' ? 'is-tunai' : 'is-bank'">
                                                 <template x-if="acc.tipe_akun === 'kas_tunai'">
-                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                                    <svg width="18" height="18" style="width:18px;height:18px;min-width:18px;min-height:18px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
                                                 </template>
                                                 <template x-if="acc.tipe_akun !== 'kas_tunai'">
-                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                                    <svg width="18" height="18" style="width:18px;height:18px;min-width:18px;min-height:18px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
                                                 </template>
                                             </div>
-                                            <div class="min-w-0 flex-1">
-                                                <div class="flex items-center gap-1">
-                                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" x-text="acc.nama_akun"></span>
-                                                    <span x-show="acc.is_default_pos" class="px-1 py-0.2 text-[9px] font-bold rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">POS</span>
+                                            <div style="min-width:0;flex:1;">
+                                                <div style="display:flex;align-items:center;gap:5px;">
+                                                    <span style="font-size:12px;font-weight:700;color:var(--color-ink,#0f172a);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" x-text="acc.nama_akun"></span>
+                                                    <template x-if="acc.is_default_pos">
+                                                        <span class="pg-kas-pos-pill">POS</span>
+                                                    </template>
                                                 </div>
-                                                <div class="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                                                    Saldo: <span :class="acc.saldo < (nominalInput || 0) ? 'text-rose-600 font-bold' : 'text-slate-700 dark:text-slate-200'" x-text="formatRupiah(acc.saldo)"></span>
+                                                <div style="font-size:11px;color:var(--color-ink-mute,#64748b);margin-top:2px;">
+                                                    <span>Saldo:</span>
+                                                    <strong :style="(nominalRaw > 0 && acc.saldo < nominalRaw) ? 'color:#dc2626;font-weight:700;' : 'color:var(--color-ink,#0f172a);font-weight:600;'" 
+                                                            class="font-mono ml-0.5" 
+                                                            x-text="formatRupiah(acc.saldo)">
+                                                    </strong>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="ml-1.5 flex-shrink-0">
-                                            <div class="w-3.5 h-3.5 rounded-full border flex items-center justify-center"
-                                                 :class="selectedKasId === acc.id ? 'border-rose-600 bg-rose-600 text-white' : 'border-slate-300 dark:border-slate-600'">
-                                                <svg x-show="selectedKasId === acc.id" class="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </button>
                                 </template>
                             </div>
-                            <div x-show="selectedAccount && selectedAccount.saldo < (nominalInput || 0)" class="text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                                <i data-lucide="alert-circle" class="w-3 h-3"></i>
-                                <span>Saldo kas terpilih tidak mencukupi nominal penarikan ini.</span>
-                            </div>
+
+                            <!-- Feedback Notification Banners wrapped in template x-if so DOM is clean -->
+                            <template x-if="!selectedKasId">
+                                <div class="pg-alert-warning">
+                                    <svg width="16" height="16" style="width:16px;height:16px;min-width:16px;min-height:16px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                        <line x1="12" y1="9" x2="12" y2="13"/>
+                                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                    </svg>
+                                    <span>Wajib memilih salah satu sumber kas di atas sebelum menyimpan.</span>
+                                </div>
+                            </template>
+
+                            <template x-if="selectedKasId && selectedAccount && (nominalRaw > 0) && (selectedAccount.saldo < nominalRaw)">
+                                <div class="pg-alert-danger">
+                                    <svg width="16" height="16" style="width:16px;height:16px;min-width:16px;min-height:16px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="12" y1="8" x2="12" y2="12"/>
+                                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                    </svg>
+                                    <span>Saldo kas terpilih (<strong x-text="formatRupiah(selectedAccount.saldo)"></strong>) tidak mencukupi nominal penarikan (<strong x-text="formatRupiah(nominalRaw)"></strong>).</span>
+                                </div>
+                            </template>
                         </div>
 
                         <!-- 4. Keterangan / Alasan -->
@@ -1149,18 +2312,18 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                             </label>
                             <input type="text" 
                                    name="keterangan" 
-                                   x-model="formKeterangan"
+                                   x-model="formKeterangan" 
                                    placeholder="Contoh: Ambil Uang Harian..." 
                                    class="form-input text-xs w-full"
                                    style="height:38px; border-radius:var(--rounded-md, 8px);">
 
                             <!-- Quick Reason Chips -->
-                            <div class="flex items-center gap-1.5 mt-2 flex-wrap">
-                                <span class="text-[10.5px] font-semibold text-slate-400">Pilihan Cepat:</span>
-                                <button type="button" @click="formKeterangan = 'Ambil Uang Harian'" class="quick-chip-btn text-[10.5px]">Ambil Uang Harian</button>
-                                <button type="button" @click="formKeterangan = 'Kasbon Harian'" class="quick-chip-btn text-[10.5px]">Kasbon Harian</button>
-                                <button type="button" @click="formKeterangan = 'Transportasi Operasional'" class="quick-chip-btn text-[10.5px]">Transportasi</button>
-                                <button type="button" @click="formKeterangan = 'Keperluan Pribadi Mendesak'" class="quick-chip-btn text-[10.5px]">Keperluan Mendesak</button>
+                            <div style="display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                                <span style="font-size:10.5px;font-weight:600;color:var(--color-ink-mute,#94a3b8);">Pilihan Cepat:</span>
+                                <button type="button" @click="formKeterangan = 'Ambil Uang Harian'" class="quick-chip-btn">Ambil Uang Harian</button>
+                                <button type="button" @click="formKeterangan = 'Kasbon Harian'" class="quick-chip-btn">Kasbon Harian</button>
+                                <button type="button" @click="formKeterangan = 'Transportasi Operasional'" class="quick-chip-btn">Transportasi</button>
+                                <button type="button" @click="formKeterangan = 'Keperluan Mendesak'" class="quick-chip-btn">Keperluan Mendesak</button>
                             </div>
                         </div>
 
@@ -1171,9 +2334,11 @@ input[type="text"], input[type="number"], input[type="search"], input[type="date
                         <button type="button" @click="closeModal()" class="btn btn-secondary modal-btn-cancel-desktop">
                             Batal
                         </button>
-                        <button type="submit" class="btn btn-primary" style="background:#881337; border-color:#700f2d;">
-                            <i data-lucide="save"></i>
-                            <span x-text="isEditMode ? 'Simpan Perubahan' : 'Simpan Penarikan'">Simpan Penarikan</span>
+                        <button type="submit" 
+                                :disabled="!isFormValid"
+                                class="pg-btn-submit">
+                            <i data-lucide="save" style="width:16px;height:16px;"></i>
+                            <span x-text="isEditMode ? 'Simpan Perubahan' : 'Simpan &amp; Cairkan Langsung'">Simpan &amp; Cairkan Langsung</span>
                         </button>
                     </div>
                 </form>
@@ -1197,26 +2362,58 @@ function penarikanGajiApp() {
                 'saldo' => (float)$a['saldo_saat_ini'],
                 'is_default_pos' => (bool)($a['is_default_pos'] ?? false),
             ];
-        }, $activeCashAccounts ?? []), JSON_UNESCAPED_UNICODE) ?>,
+        }, $activeCashAccounts ?? $akunKasList ?? []), JSON_UNESCAPED_UNICODE) ?>,
         
         // Modal State
         modalOpen: false,
         isEditMode: false,
         formId: '',
         selectedKid: '',
-        selectedKasId: '<?= !empty($activeCashAccounts[0]['id']) ? (string)$activeCashAccounts[0]['id'] : '' ?>',
+        selectedKasId: '',
         formTanggal: '<?= date('Y-m-d') ?>',
-        nominalInput: '',
+        nominalRaw: 0,
+        nominalDisplay: '',
         formKeterangan: 'Ambil Uang Harian',
         karyawanDropdownOpen: false,
         karyawanSearch: '',
 
         // Table Filter & Search State
         searchQuery: '',
-        tableFilterStatus: 'all', // 'all', 'pending', 'locked'
+        tableFilterStatus: 'all', // 'all', 'unprocessed', 'locked'
+        items: <?= json_encode(array_map(function($pg) {
+            return [
+                'id' => (string)$pg['id'],
+                'keywords' => strtolower($pg['nama_karyawan'] . ' ' . ($pg['posisi'] ?? '') . ' ' . ($pg['keterangan'] ?? '') . ' ' . ($pg['nomor_payroll'] ?? '') . ' ' . $pg['tanggal']),
+                'isLocked' => !empty($pg['penggajian_id'])
+            ];
+        }, $penarikanList ?? []), JSON_UNESCAPED_UNICODE) ?>,
+
+        init() {
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            this.$watch('tableFilterStatus', () => {
+                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            });
+            this.$watch('searchQuery', () => {
+                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            });
+        },
+
+        get visibleCount() {
+            if (!this.items || this.items.length === 0) return 0;
+            return this.items.filter(item => this.isRowVisible(item.keywords, item.isLocked)).length;
+        },
 
         get selectedAccount() {
-            return this.cashAccounts.find(a => a.id === this.selectedKasId) || null;
+            if (!this.selectedKasId) return null;
+            return this.cashAccounts.find(a => String(a.id) === String(this.selectedKasId)) || null;
+        },
+
+        get isFormValid() {
+            if (!this.selectedKid) return false;
+            if (!this.nominalRaw || this.nominalRaw <= 0) return false;
+            if (!this.selectedKasId) return false;
+            if (this.selectedAccount && this.selectedAccount.saldo < this.nominalRaw) return false;
+            return true;
         },
 
         get currentKaryawan() {
@@ -1230,13 +2427,24 @@ function penarikanGajiApp() {
             return list.filter(k => k.nama.toLowerCase().includes(q) || k.posisi.toLowerCase().includes(q));
         },
 
+        selectKas(id) {
+            const strId = String(id || '');
+            const acc = this.cashAccounts.find(a => String(a.id) === strId);
+            if (acc && this.nominalRaw > 0 && acc.saldo < this.nominalRaw) {
+                if (window.toast) window.toast('Saldo kas ' + acc.nama_akun + ' tidak mencukupi (' + this.formatRupiah(acc.saldo) + ').', 'warning');
+                return; // Saldo tidak mencukupi, abaikan pemilihan
+            }
+            this.selectedKasId = strId;
+        },
+
         openModalTambah() {
             this.isEditMode = false;
             this.formId = '';
             this.selectedKid = '';
-            this.selectedKasId = this.cashAccounts[0] ? this.cashAccounts[0].id : '';
+            this.selectedKasId = '';
             this.formTanggal = '<?= date('Y-m-d') ?>';
-            this.nominalInput = '';
+            this.nominalRaw = 0;
+            this.nominalDisplay = '';
             this.formKeterangan = 'Ambil Uang Harian';
             this.karyawanSearch = '';
             this.karyawanDropdownOpen = false;
@@ -1248,14 +2456,42 @@ function penarikanGajiApp() {
             this.isEditMode = true;
             this.formId = data.id || '';
             this.selectedKid = data.karyawan_id || '';
-            this.selectedKasId = data.akun_kas_id || (this.cashAccounts[0] ? this.cashAccounts[0].id : '');
+            let targetKas = String(data.akun_kas_id || '');
+            const exists = this.cashAccounts.some(a => String(a.id) === targetKas);
+            this.selectedKasId = exists ? targetKas : (this.cashAccounts[0] ? String(this.cashAccounts[0].id) : '');
             this.formTanggal = data.tanggal || '<?= date('Y-m-d') ?>';
-            this.nominalInput = data.nominal || '';
+            let val = Math.round(Number(data.nominal) || 0);
+            this.nominalRaw = val;
+            this.nominalDisplay = val > 0 ? val.toLocaleString('id-ID') : '';
             this.formKeterangan = data.keterangan || 'Ambil Uang Harian';
             this.karyawanSearch = '';
             this.karyawanDropdownOpen = false;
             this.modalOpen = true;
             this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        handleFormSubmit(e) {
+            if (!this.selectedKid) {
+                if (window.toast) window.toast('Pilih karyawan bulanan terlebih dahulu.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            if (!this.nominalRaw || this.nominalRaw <= 0) {
+                if (window.toast) window.toast('Nominal penarikan harus lebih dari Rp 0.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            if (!this.selectedKasId) {
+                if (window.toast) window.toast('Silakan pilih salah satu sumber kas pencairan.', 'warning');
+                e.preventDefault();
+                return false;
+            }
+            if (this.selectedAccount && this.selectedAccount.saldo < this.nominalRaw) {
+                if (window.toast) window.toast('Saldo kas terpilih tidak mencukupi nominal penarikan.', 'error');
+                e.preventDefault();
+                return false;
+            }
+            return true;
         },
 
         closeModal() {
@@ -1272,13 +2508,29 @@ function penarikanGajiApp() {
 
         setNominalDefault() {
             if (this.currentKaryawan && this.currentKaryawan.uang_kehadiran > 0) {
-                this.nominalInput = this.currentKaryawan.uang_kehadiran;
+                let val = Math.round(Number(this.currentKaryawan.uang_kehadiran) || 0);
+                this.nominalRaw = val;
+                this.nominalDisplay = val > 0 ? val.toLocaleString('id-ID') : '';
             }
         },
 
         addNominal(amount) {
-            let current = parseFloat(this.nominalInput) || 0;
-            this.nominalInput = current + amount;
+            let current = parseInt(this.nominalRaw, 10) || 0;
+            let val = current + amount;
+            this.nominalRaw = val;
+            this.nominalDisplay = val > 0 ? val.toLocaleString('id-ID') : '';
+        },
+
+        resetNominal() {
+            this.nominalRaw = 0;
+            this.nominalDisplay = '';
+        },
+
+        onNominalInput(e) {
+            let raw = String(e.target.value || '').replace(/\D/g, '');
+            let val = parseInt(raw, 10) || 0;
+            this.nominalRaw = val;
+            this.nominalDisplay = val > 0 ? val.toLocaleString('id-ID') : '';
         },
 
         formatRupiah(num) {
@@ -1287,13 +2539,44 @@ function penarikanGajiApp() {
 
         isRowVisible(searchKeywords, isLocked) {
             // Status Tab Check
-            if (this.tableFilterStatus === 'pending' && isLocked) return false;
+            if ((this.tableFilterStatus === 'unprocessed' || this.tableFilterStatus === 'pending') && isLocked) return false;
             if (this.tableFilterStatus === 'locked' && !isLocked) return false;
 
             // Search Query Check
             if (!this.searchQuery.trim()) return true;
             const q = this.searchQuery.toLowerCase().trim();
             return searchKeywords.includes(q);
+        },
+
+        async confirmDelete(id, nama, nominal) {
+            const ok = await window.AppConfirm({
+                title: 'Hapus Catatan Penarikan',
+                message: 'Apakah Anda yakin ingin menghapus catatan penarikan gaji sebesar ' + this.formatRupiah(nominal) + ' untuk ' + nama + '?',
+                submessage: 'Data yang dihapus tidak dapat dipulihkan kembali.',
+                type: 'danger',
+                confirmText: 'Ya, Hapus',
+                cancelText: 'Batal'
+            });
+            if (!ok) return;
+
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '<?= Router::url('/penarikan-gaji/delete') ?>';
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = '<?= \App\Helpers\CSRF::token() ?>';
+            form.appendChild(csrfInput);
+
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            idInput.value = id;
+            form.appendChild(idInput);
+
+            document.body.appendChild(form);
+            form.submit();
         }
     };
 }

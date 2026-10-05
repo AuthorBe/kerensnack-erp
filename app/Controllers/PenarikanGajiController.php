@@ -36,6 +36,7 @@ class PenarikanGajiController extends Controller
             $penarikanList = Database::fetchAll("
                 SELECT
                     pg.id, pg.karyawan_id, pg.tanggal, pg.nominal, pg.keterangan, pg.penggajian_id,
+                    pg.akun_kas_id, pg.dibuat_pada,
                     v.nama_karyawan, v.nama_panggilan, v.posisi,
                     p.nomor_referensi as nomor_payroll, p.nama_payroll
                 FROM public.penarikan_gaji pg
@@ -45,8 +46,8 @@ class PenarikanGajiController extends Controller
                   AND (:kid = '' OR pg.karyawan_id = :kid_uuid)
                   AND (
                       :status = 'semua'
-                      OR (:status = 'pending' AND pg.penggajian_id IS NULL)
-                      OR (:status = 'locked' AND pg.penggajian_id IS NOT NULL)
+                      OR (:status IN ('belum_payroll', 'pending', 'terbuka', 'aktif') AND pg.penggajian_id IS NULL)
+                      OR (:status IN ('terkunci', 'locked', 'payroll') AND pg.penggajian_id IS NOT NULL)
                   )
                 ORDER BY pg.tanggal DESC, v.nama_karyawan ASC
             ", [
@@ -68,19 +69,19 @@ class PenarikanGajiController extends Controller
 
             // Summary metrics
             $totalNominal = array_sum(array_column($penarikanList, 'nominal'));
-            $totalPending = 0.00;
-            $totalLocked = 0.00;
-            $countPending = 0;
-            $countLocked = 0;
+            $totalBelumPayroll = 0.00;
+            $totalTerkunciPayroll = 0.00;
+            $countBelumPayroll = 0;
+            $countTerkunciPayroll = 0;
             $uniqueEmployees = [];
 
             foreach ($penarikanList as $p) {
                 if (!empty($p['penggajian_id'])) {
-                    $totalLocked += (float)$p['nominal'];
-                    $countLocked++;
+                    $totalTerkunciPayroll += (float)$p['nominal'];
+                    $countTerkunciPayroll++;
                 } else {
-                    $totalPending += (float)$p['nominal'];
-                    $countPending++;
+                    $totalBelumPayroll += (float)$p['nominal'];
+                    $countBelumPayroll++;
                 }
                 $uniqueEmployees[$p['karyawan_id']] = true;
             }
@@ -103,12 +104,17 @@ class PenarikanGajiController extends Controller
                 'penarikanList' => $penarikanList,
                 'karyawanBulanan' => $karyawanBulanan,
                 'akunKasList' => $akunKasList,
+                'activeCashAccounts' => $akunKasList,
                 'totalNominal' => $totalNominal,
-                'totalPending' => $totalPending,
-                'totalLocked' => $totalLocked,
+                'totalBelumPayroll' => $totalBelumPayroll,
+                'totalTerkunciPayroll' => $totalTerkunciPayroll,
+                'totalPending' => $totalBelumPayroll,
+                'totalLocked' => $totalTerkunciPayroll,
                 'countTotal' => count($penarikanList),
-                'countPending' => $countPending,
-                'countLocked' => $countLocked,
+                'countBelumPayroll' => $countBelumPayroll,
+                'countTerkunciPayroll' => $countTerkunciPayroll,
+                'countPending' => $countBelumPayroll,
+                'countLocked' => $countTerkunciPayroll,
                 'countEmployees' => count($uniqueEmployees)
             ], 'layouts.master');
         } catch (Throwable $e) {
@@ -265,7 +271,7 @@ class PenarikanGajiController extends Controller
                 $pgId
             );
 
-            $this->flashSuccess("Penarikan gaji berhasil dicatat dan dipotong dari kas {$selectedKas['nama_akun']}.");
+            $this->flashSuccess("Penarikan gaji berhasil dicatat dan langsung dipotong dari kas {$selectedKas['nama_akun']}.");
             $this->redirect('/penarikan-gaji');
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {

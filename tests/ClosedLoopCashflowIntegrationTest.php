@@ -917,6 +917,58 @@ try {
         }
     });
 
+    // =========================================================================
+    // TEST 17: Proteksi Database: Trigger Menolak Transaksi Tabungan pada Akun Kas Non-Escrow (Migration 89)
+    // =========================================================================
+    runTest("17. Proteksi Database: Trigger Menolak Transaksi Tabungan pada Akun Kas Non-Escrow", function() use ($pdo, $employeeId, $opCashId) {
+        $savedPoint = 'sp_tabungan_non_escrow_test';
+        $pdo->exec("SAVEPOINT {$savedPoint}");
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO public.transaksi_tabungan (
+                    karyawan_id, tanggal, tipe, jumlah, sumber, akun_kas_id, keterangan, dibuat_pada
+                ) VALUES (
+                    :kid, CURRENT_DATE, 'deposit', 50000, 'manual', :kas_id, 'Test Tabungan Non-Escrow', NOW()
+                )
+            ");
+            $stmt->execute(['kid' => $employeeId, 'kas_id' => $opCashId]);
+            $pdo->exec("ROLLBACK TO SAVEPOINT {$savedPoint}");
+            return "Database trigger gagal memblokir transaksi tabungan menggunakan akun kas non-escrow!";
+        } catch (\PDOException $e) {
+            $pdo->exec("ROLLBACK TO SAVEPOINT {$savedPoint}");
+            if (strpos($e->getMessage(), 'hanya diperbolehkan melalui Akun Kas Tabungan') === false) {
+                return "Pesan exception trigger transaksi tabungan tidak sesuai: " . $e->getMessage();
+            }
+            return true;
+        }
+    });
+
+    // =========================================================================
+    // TEST 18: Proteksi Database: Trigger Menolak Arus Kas Tabungan pada Akun Kas Non-Escrow (Migration 89)
+    // =========================================================================
+    runTest("18. Proteksi Database: Trigger Menolak Arus Kas Tabungan pada Akun Kas Non-Escrow", function() use ($pdo, $opCashId) {
+        $savedPoint = 'sp_arus_kas_tabungan_non_escrow';
+        $pdo->exec("SAVEPOINT {$savedPoint}");
+        try {
+            $stmt = $pdo->prepare("
+                INSERT INTO public.arus_kas (
+                    nomor_transaksi, akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, saldo_berjalan, keterangan, dicatat_oleh, dibuat_pada
+                ) VALUES (
+                    'TEST-ARUS-TAB-NON-ESCROW', :acc, CURRENT_DATE, 'masuk', 'setoran_tabungan', 50000, 50000, 'Test Arus Kas Tabungan Non-Escrow', '00000000-0000-0000-0000-000000000000', NOW()
+                )
+            ");
+            $stmt->execute(['acc' => $opCashId]);
+            $pdo->exec("ROLLBACK TO SAVEPOINT {$savedPoint}");
+            return "Database trigger gagal memblokir arus kas tabungan pada akun kas non-escrow!";
+        } catch (\PDOException $e) {
+            $pdo->exec("ROLLBACK TO SAVEPOINT {$savedPoint}");
+            if (strpos($e->getMessage(), 'hanya diperbolehkan pada Akun Kas Tabungan') === false) {
+                return "Pesan exception trigger arus kas tabungan tidak sesuai: " . $e->getMessage();
+            }
+            return true;
+        }
+    });
+
 } finally {
     // ------------------------------------------------------------------
     // MANDATORY ROLLBACK: GUARANTEE ZERO PRODUCTION DATA RESIDUE
