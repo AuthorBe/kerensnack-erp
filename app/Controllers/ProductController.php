@@ -210,7 +210,7 @@ class ProductController extends Controller
 
             // 4. Master Resep / BOM (Komposisi Item)
             $recipes = Database::fetchAll("
-                SELECT ki.id, ki.item_jadi_id, ki.item_bahan_id, ki.jumlah_kebutuhan,
+                SELECT ki.id, ki.item_jadi_id, ki.item_bahan_id, ki.jumlah_kebutuhan, ki.potong_sesuai_bal,
                        ij.nama_item as item_jadi_nama, ij.kode_sku as item_jadi_sku,
                        ib.nama_item as item_bahan_nama, ib.kode_sku as item_bahan_sku,
                        ib.satuan_dasar as item_bahan_satuan, ib.tipe_item as item_bahan_tipe,
@@ -1234,19 +1234,23 @@ class ProductController extends Controller
                 return;
             }
 
+            $potongSesuaiBal = (!empty($this->input('potong_sesuai_bal')) && $bahan['tipe_item'] === 'bahan_mentah') ? 'true' : 'false';
+
             Database::execute("
                 INSERT INTO public.komposisi_item (
-                    item_jadi_id, item_bahan_id, jumlah_kebutuhan, dibuat_pada
+                    item_jadi_id, item_bahan_id, jumlah_kebutuhan, potong_sesuai_bal, dibuat_pada
                 ) VALUES (
-                    :jadi, :bahan, :jumlah, NOW()
+                    :jadi, :bahan, :jumlah, :potong_bal, NOW()
                 )
                 ON CONFLICT (item_jadi_id, item_bahan_id)
                 DO UPDATE SET 
-                    jumlah_kebutuhan = EXCLUDED.jumlah_kebutuhan
+                    jumlah_kebutuhan = EXCLUDED.jumlah_kebutuhan,
+                    potong_sesuai_bal = EXCLUDED.potong_sesuai_bal
             ", [
                 'jadi' => $itemJadiId,
                 'bahan' => $itemBahanId,
-                'jumlah' => $jumlahKebutuhan
+                'jumlah' => $jumlahKebutuhan,
+                'potong_bal' => $potongSesuaiBal
             ]);
 
             ActivityLog::log('master_data', 'Simpan Resep BOM', "Komponen {$bahan['nama_item']} ({$jumlahKebutuhan}) disimpan untuk produk ID {$itemJadiId}");
@@ -1319,7 +1323,7 @@ class ProductController extends Controller
                 return;
             }
 
-            $sourceRecipes = Database::fetchAll("SELECT item_bahan_id, jumlah_kebutuhan FROM public.komposisi_item WHERE item_jadi_id = :id", ['id' => $sourceId]);
+            $sourceRecipes = Database::fetchAll("SELECT item_bahan_id, jumlah_kebutuhan, potong_sesuai_bal FROM public.komposisi_item WHERE item_jadi_id = :id", ['id' => $sourceId]);
 
             if (empty($sourceRecipes)) {
                 $this->flashError("Produk sumber '{$sourceItem['nama_item']}' belum memiliki komposisi bahan resep untuk disalin.");
@@ -1332,8 +1336,8 @@ class ProductController extends Controller
 
             $delStmt = $pdo->prepare("DELETE FROM public.komposisi_item WHERE item_jadi_id = :target_id");
             $stmt = $pdo->prepare("
-                INSERT INTO public.komposisi_item (item_jadi_id, item_bahan_id, jumlah_kebutuhan, dibuat_pada)
-                VALUES (:target_id, :bahan_id, :kebutuhan, NOW())
+                INSERT INTO public.komposisi_item (item_jadi_id, item_bahan_id, jumlah_kebutuhan, potong_sesuai_bal, dibuat_pada)
+                VALUES (:target_id, :bahan_id, :kebutuhan, :potong_bal, NOW())
             ");
 
             foreach ($targetIds as $tId) {
@@ -1342,7 +1346,8 @@ class ProductController extends Controller
                     $stmt->execute([
                         'target_id' => $tId,
                         'bahan_id' => $sr['item_bahan_id'],
-                        'kebutuhan' => $sr['jumlah_kebutuhan']
+                        'kebutuhan' => $sr['jumlah_kebutuhan'],
+                        'potong_bal' => !empty($sr['potong_sesuai_bal']) ? 'true' : 'false'
                     ]);
                 }
             }

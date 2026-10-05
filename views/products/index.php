@@ -62,6 +62,39 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+/* Custom Searchable Dropdown for BOM Recipe Modal */
+.dropdown-menu-searchable {
+    animation: prodDropdownFadeIn 0.15s ease-out;
+}
+@keyframes prodDropdownFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.searchable-option {
+    transition: background-color 0.12s ease;
+    user-select: none;
+}
+.searchable-option:hover,
+.searchable-option.is-active {
+    background-color: var(--color-canvas-soft, #f8fafc);
+}
+.dark .searchable-option:hover,
+.dark .searchable-option.is-active {
+    background-color: #1e293b;
+}
+.searchable-option.is-selected {
+    background-color: rgba(16, 185, 129, 0.08) !important;
+}
+.dark .searchable-option.is-selected {
+    background-color: rgba(16, 185, 129, 0.14) !important;
+}
+.searchable-option.is-highlighted {
+    background-color: rgba(16, 185, 129, 0.05);
+}
+.dark .searchable-option.is-highlighted {
+    background-color: rgba(16, 185, 129, 0.08);
+}
 </style>
 
 <div x-data="productApp('<?= htmlspecialchars($activeTab) ?>', '<?= htmlspecialchars($selectedRecipeItemId ?? '') ?>')" x-init="init()" class="space-y-5">
@@ -887,10 +920,15 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                             </div>
                                         </td>
                                         <td class="cell-nowrap" style="padding:12px 14px;">
-                                            <span class="badge"
-                                                  :class="r.item_bahan_tipe === 'bahan_mentah' ? 'badge-warning' : 'badge-secondary'"
-                                                  style="font-size:10.5px;padding:2px 7px;font-weight:600;"
-                                                  x-text="r.item_bahan_tipe === 'bahan_mentah' ? 'Curah Mentah' : 'Bahan Kemas'"></span>
+                                            <div class="flex flex-col gap-1 items-start">
+                                                <span class="badge"
+                                                      :class="r.item_bahan_tipe === 'bahan_mentah' ? 'badge-warning' : 'badge-secondary'"
+                                                      style="font-size:10.5px;padding:2px 7px;font-weight:600;"
+                                                      x-text="r.item_bahan_tipe === 'bahan_mentah' ? 'Curah Mentah' : 'Bahan Kemas'"></span>
+                                                <span x-show="r.potong_sesuai_bal" class="badge badge-success text-[10px] font-bold" style="padding:1px 6px;">
+                                                    Potong Sesuai Bal
+                                                </span>
+                                            </div>
                                         </td>
                                         <td class="cell-center cell-nowrap" style="padding:12px 14px;">
                                             <span class="badge" style="font-family:var(--font-mono);font-size:12.5px;font-weight:700;background:var(--color-canvas-soft);border:1px solid var(--color-hairline);color:var(--color-primary-deep);padding:3px 8px;">
@@ -1602,40 +1640,144 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                 <input type="hidden" name="item_jadi_id" :value="selectedRecipeProduct?.id">
 
                 <div class="modal-body custom-scrollbar space-y-3.5">
-                    <div>
-                        <label class="form-label font-bold">Pilih Bahan Baku / Kemasan *</label>
-                        <select name="item_bahan_id" x-model="recipeForm.item_bahan_id" @change="onRecipeMaterialChange()" required class="form-input">
-                            <option value="">-- Pilih Bahan Baku Curah / Kemasan --</option>
-                            <?php
-                            $bahanKemas = [];
-                            $bahanMentah = [];
-                            foreach ($materials as $m) {
-                                if (($m['tipe_item'] ?? '') === 'bahan_kemas') {
-                                    $bahanKemas[] = $m;
-                                } else {
-                                    $bahanMentah[] = $m;
-                                }
-                            }
-                            ?>
-                            <?php if (!empty($bahanKemas)): ?>
-                            <optgroup label="Bahan Kemasan">
-                                <?php foreach ($bahanKemas as $m): ?>
-                                <option value="<?= $m['id'] ?>">
-                                    <?= htmlspecialchars($m['nama_item']) ?> (Kemas - <?= $m['satuan_dasar'] ?> | HPP Rp <?= number_format((float)$m['harga_pokok_pembelian'], 0, ',', '.') ?>)
-                                </option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <?php endif; ?>
-                            <?php if (!empty($bahanMentah)): ?>
-                            <optgroup label="Bahan Mentah / Curah">
-                                <?php foreach ($bahanMentah as $m): ?>
-                                <option value="<?= $m['id'] ?>">
-                                    <?= htmlspecialchars($m['nama_item']) ?> (Mentah Curah - <?= $m['satuan_dasar'] ?> | HPP Rp <?= number_format((float)$m['harga_pokok_pembelian'], 0, ',', '.') ?>)
-                                </option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                            <?php endif; ?>
-                        </select>
+                    <!-- SEARCHABLE DROPDOWN: PILIH BAHAN BAKU / KEMASAN -->
+                    <div class="relative" @click.outside="recipeMaterialDropdownOpen = false">
+                        <label class="form-label font-bold flex items-center justify-between">
+                            <span>Pilih Bahan Baku / Kemasan <span class="text-rose-500">*</span></span>
+                            <span class="text-[11px] font-normal text-slate-400" x-show="selectedMaterialInModal" x-text="selectedMaterialInModal?.kode_sku ? 'SKU: ' + selectedMaterialInModal.kode_sku : ''"></span>
+                        </label>
+
+                        <!-- Dropdown Trigger Button -->
+                        <button type="button"
+                                @click="toggleRecipeMaterialDropdown()"
+                                class="form-input flex items-center justify-between w-full text-left font-medium transition cursor-pointer"
+                                style="height:42px; border-radius:var(--rounded-md, 8px); background-color:var(--color-canvas); border:1px solid var(--color-hairline); padding:0 12px;"
+                                :style="recipeMaterialDropdownOpen ? 'border-color:var(--color-primary); box-shadow:0 0 0 3px rgba(16,185,129,0.15);' : ''">
+                            <div class="flex items-center gap-2 min-w-0 pr-2">
+                                <template x-if="selectedMaterialInModal">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <span class="badge text-[10px] font-bold shrink-0" 
+                                              :style="selectedMaterialInModal.tipe_item === 'bahan_mentah' 
+                                                ? 'background:rgba(136,19,55,0.1); color:#881337; border:1px solid rgba(136,19,55,0.2); padding:2px 6px; border-radius:4px;' 
+                                                : 'background:rgba(16,185,129,0.1); color:#059669; border:1px solid rgba(16,185,129,0.2); padding:2px 6px; border-radius:4px;'"
+                                              x-text="selectedMaterialInModal.tipe_item === 'bahan_mentah' ? 'Curah' : 'Kemas'">
+                                        </span>
+                                        <span class="truncate text-xs font-bold" style="color:var(--color-ink);" x-text="selectedMaterialInModal.nama_item"></span>
+                                        <span class="text-[11px] font-mono text-slate-400 shrink-0" x-text="'(' + selectedMaterialInModal.satuan_dasar + ' | ' + formatRupiah(selectedMaterialInModal.harga_pokok_pembelian) + ')'"></span>
+                                    </div>
+                                </template>
+                                <template x-if="!selectedMaterialInModal">
+                                    <span class="text-xs" style="color:var(--color-ink-mute); font-weight:500;">-- Pilih Bahan Baku Curah / Kemasan --</span>
+                                </template>
+                            </div>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200" :style="recipeMaterialDropdownOpen ? 'transform:rotate(180deg)' : ''"></i>
+                        </button>
+
+                        <input type="hidden" name="item_bahan_id" :value="recipeForm.item_bahan_id" required>
+
+                        <!-- Floating Searchable Menu -->
+                        <div x-show="recipeMaterialDropdownOpen" x-cloak
+                             class="dropdown-menu-searchable"
+                             style="position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:1050; border-radius:12px; overflow:hidden; background:var(--color-canvas); border:1px solid var(--color-hairline); box-shadow:0 14px 34px -4px rgba(0,0,0,0.18);">
+                            
+                            <!-- Search & Filter Header -->
+                            <div style="padding:8px 10px; border-bottom:1px solid var(--color-hairline); background:var(--color-canvas-soft);" class="space-y-2">
+                                <div style="position:relative; display:flex; align-items:center;">
+                                    <i data-lucide="search" style="position:absolute; left:10px; width:14px; height:14px; color:var(--color-ink-mute); pointer-events:none;"></i>
+                                    <input type="text" 
+                                           x-ref="recipeMaterialSearchInput"
+                                           x-model="recipeMaterialSearch"
+                                           @keydown.escape.prevent="recipeMaterialDropdownOpen = false"
+                                           @keydown.down.prevent="navigateRecipeMaterial(1)"
+                                           @keydown.up.prevent="navigateRecipeMaterial(-1)"
+                                           @keydown.enter.prevent="selectHighlightedRecipeMaterial()"
+                                           placeholder="Ketik untuk cari nama bahan, kemasan, atau bal..."
+                                           class="form-input"
+                                           style="height:34px; padding-left:32px; padding-right:28px; font-size:12px; border-radius:8px; width:100%; background:var(--color-canvas);">
+                                    <button type="button" 
+                                            x-show="recipeMaterialSearch.length > 0" 
+                                            @click="recipeMaterialSearch = ''; $refs.recipeMaterialSearchInput?.focus()" 
+                                            style="position:absolute; right:8px; width:18px; height:18px; border:none; background:transparent; color:var(--color-ink-mute); cursor:pointer; display:flex; align-items:center; justify-content:center;">
+                                        <i data-lucide="x" style="width:12px; height:12px;"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Filter Pills (Semua / Curah / Kemas) -->
+                                <div class="flex items-center gap-1.5 pt-0.5">
+                                    <button type="button" 
+                                            @click="recipeMaterialTypeFilter = 'all'; recipeMaterialHighlightedIndex = 0"
+                                            class="btn btn-xs"
+                                            :class="recipeMaterialTypeFilter === 'all' ? 'btn-primary' : 'btn-secondary'"
+                                            style="font-size:10.5px; padding:2px 8px; border-radius:6px;">
+                                        Semua (<span x-text="materials.length"></span>)
+                                    </button>
+                                    <button type="button" 
+                                            @click="recipeMaterialTypeFilter = 'bahan_mentah'; recipeMaterialHighlightedIndex = 0"
+                                            class="btn btn-xs"
+                                            :class="recipeMaterialTypeFilter === 'bahan_mentah' ? 'btn-primary' : 'btn-secondary'"
+                                            style="font-size:10.5px; padding:2px 8px; border-radius:6px;">
+                                        Curah / Bal (<span x-text="materials.filter(m => m.tipe_item === 'bahan_mentah').length"></span>)
+                                    </button>
+                                    <button type="button" 
+                                            @click="recipeMaterialTypeFilter = 'bahan_kemas'; recipeMaterialHighlightedIndex = 0"
+                                            class="btn btn-xs"
+                                            :class="recipeMaterialTypeFilter === 'bahan_kemas' ? 'btn-primary' : 'btn-secondary'"
+                                            style="font-size:10.5px; padding:2px 8px; border-radius:6px;">
+                                        Kemasan (<span x-text="materials.filter(m => m.tipe_item === 'bahan_kemas').length"></span>)
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Option List -->
+                            <div style="max-height:220px; overflow-y:auto;" class="custom-scrollbar divide-y divide-slate-100 dark:divide-slate-800/60" x-ref="recipeMaterialListWrap">
+                                <template x-for="(m, idx) in filteredRecipeMaterials" :key="m.id">
+                                    <div :id="'recipe-mat-opt-' + idx"
+                                         @click="selectRecipeMaterial(m.id)"
+                                         class="searchable-option"
+                                         :class="[(String(m.id) === String(recipeForm.item_bahan_id) ? 'is-selected' : ''), (recipeMaterialHighlightedIndex === idx ? 'is-highlighted' : '')]"
+                                         style="padding:8px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                                        <div style="min-width:0; flex:1;">
+                                            <div class="flex items-center gap-2">
+                                                <span class="badge text-[9.5px] font-bold shrink-0" 
+                                                      :style="m.tipe_item === 'bahan_mentah' 
+                                                        ? 'background:rgba(136,19,55,0.1); color:#881337; border:1px solid rgba(136,19,55,0.2); padding:1px 5px; border-radius:4px;' 
+                                                        : 'background:rgba(16,185,129,0.1); color:#059669; border:1px solid rgba(16,185,129,0.2); padding:1px 5px; border-radius:4px;'"
+                                                      x-text="m.tipe_item === 'bahan_mentah' ? 'Curah' : 'Kemas'">
+                                                </span>
+                                                <div style="font-weight:700; color:var(--color-ink);" class="truncate" x-text="m.nama_item"></div>
+                                            </div>
+                                            <div style="font-size:11px; color:var(--color-ink-mute); margin-top:2px;" class="flex items-center gap-2">
+                                                <span x-text="'Satuan: ' + m.satuan_dasar"></span>
+                                                <template x-if="m.kode_sku">
+                                                    <span>• SKU: <span class="font-mono" x-text="m.kode_sku"></span></span>
+                                                </template>
+                                            </div>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                                            <div class="text-right">
+                                                <div style="font-size:11.5px; font-weight:700; font-family:var(--font-mono); color:var(--color-ink);" x-text="formatRupiah(m.harga_pokok_pembelian)"></div>
+                                                <div style="font-size:10px; color:var(--color-ink-mute);">HPP</div>
+                                            </div>
+                                            <div style="width:18px; display:flex; align-items:center; justify-content:center;">
+                                                <i data-lucide="check" style="width:16px; height:16px; color:#10b981;" x-show="String(m.id) === String(recipeForm.item_bahan_id)"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Empty Search State -->
+                                <div x-show="filteredRecipeMaterials.length === 0" style="padding:24px 16px; text-align:center;">
+                                    <div style="display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:50%; background:var(--color-canvas-soft); color:var(--color-ink-mute); margin-bottom:8px;">
+                                        <i data-lucide="search-x" style="width:18px; height:18px;"></i>
+                                    </div>
+                                    <div style="font-size:12px; font-weight:600; color:var(--color-ink);">Bahan tidak ditemukan</div>
+                                    <div style="font-size:11px; color:var(--color-ink-mute); margin-top:2px;" x-text="'Tidak ada bahan yang cocok dengan pencarian \'' + recipeMaterialSearch + '\''"></div>
+                                    <button type="button" @click="recipeMaterialSearch = ''; recipeMaterialTypeFilter = 'all'" class="btn btn-secondary btn-xs" style="margin-top:10px; font-size:11px;">
+                                        Reset Pencarian
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- MODE INPUT SELECTION -->
@@ -1708,6 +1850,24 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                 <span style="color:var(--color-ink-mute);">Estimasi biaya bahan per bungkus:</span>
                                 <span style="font-weight:800;font-family:var(--font-mono);color:var(--color-primary);" x-text="formatRupiah(estimatedCostPerPiece) + '/pack'"></span>
                             </div>
+                        </div>
+                    </template>
+
+                    <!-- OPSI KHUSUS BAHAN MENTAH: POTONG SESUAI INPUT BAL DI PRODUKSI -->
+                    <template x-if="selectedMaterialInModal?.tipe_item === 'bahan_mentah'">
+                        <div class="p-3 rounded-lg border border-hairline mt-3" style="background:var(--color-canvas-soft, #f8fafc);">
+                            <label class="flex items-start gap-2.5 cursor-pointer m-0">
+                                <input type="checkbox" name="potong_sesuai_bal" value="1" 
+                                       x-model="recipeForm.potong_sesuai_bal" 
+                                       class="rounded text-rose-700 focus:ring-rose-500 mt-0.5"
+                                       style="width:16px;height:16px;accent-color:#881337;">
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-xs font-bold" style="color:var(--color-ink);">Potong Stok Mengikuti Input Bal di Form Produksi</div>
+                                    <div class="text-[11px] leading-relaxed mt-0.5" style="color:var(--color-ink-mute);">
+                                        Centang agar stok bahan curah ini dipotong utuh sesuai angka Bal yang dicatat mandor saat produksi, bukan pecahan desimal.
+                                    </div>
+                                </div>
+                            </label>
                         </div>
                     </template>
 
@@ -2067,6 +2227,10 @@ function productApp(initialTab, initialRecipeItemId) {
         copyOnlyWithoutRecipe: true,
         recipeInputMode: 'yield',
         recipeYieldPcs: '',
+        recipeMaterialDropdownOpen: false,
+        recipeMaterialSearch: '',
+        recipeMaterialTypeFilter: 'all',
+        recipeMaterialHighlightedIndex: 0,
 
         brandForm: {
             id: '',
@@ -2128,6 +2292,19 @@ function productApp(initialTab, initialRecipeItemId) {
                 this.$nextTick(() => lucide.createIcons());
             });
             this.$watch('activeTab', () => {
+                this.$nextTick(() => lucide.createIcons());
+            });
+            this.$watch('recipeMaterialDropdownOpen', (isOpen) => {
+                if (isOpen) {
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            });
+            this.$watch('recipeMaterialSearch', () => {
+                this.recipeMaterialHighlightedIndex = 0;
+                this.$nextTick(() => lucide.createIcons());
+            });
+            this.$watch('recipeMaterialTypeFilter', () => {
+                this.recipeMaterialHighlightedIndex = 0;
                 this.$nextTick(() => lucide.createIcons());
             });
         },
@@ -2227,6 +2404,26 @@ function productApp(initialTab, initialRecipeItemId) {
 
         get selectedMaterialInModal() {
             return this.materials.find(m => m.id === this.recipeForm.item_bahan_id) || null;
+        },
+
+        get filteredRecipeMaterials() {
+            const q = (this.recipeMaterialSearch || '').toLowerCase().trim();
+            const filterType = this.recipeMaterialTypeFilter || 'all';
+            return this.materials.filter(m => {
+                if (filterType !== 'all' && m.tipe_item !== filterType) {
+                    return false;
+                }
+                if (!q) return true;
+                const matchName = m.nama_item && m.nama_item.toLowerCase().includes(q);
+                const matchSku = m.kode_sku && m.kode_sku.toLowerCase().includes(q);
+                const matchSatuan = m.satuan_dasar && m.satuan_dasar.toLowerCase().includes(q);
+                const matchTipe = m.tipe_item && (
+                    m.tipe_item.toLowerCase().includes(q) ||
+                    (m.tipe_item === 'bahan_mentah' && ('mentah curah'.includes(q) || 'curah'.includes(q) || 'mentah'.includes(q) || 'bal'.includes(q))) ||
+                    (m.tipe_item === 'bahan_kemas' && ('kemasan'.includes(q) || 'kemas'.includes(q) || 'plastik'.includes(q) || 'label'.includes(q) || 'stiker'.includes(q)))
+                );
+                return matchName || matchSku || matchSatuan || matchTipe;
+            });
         },
 
         get currentProductRecipeList() {
@@ -2340,8 +2537,56 @@ function productApp(initialTab, initialRecipeItemId) {
             return num.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
         },
 
+        toggleRecipeMaterialDropdown() {
+            this.recipeMaterialDropdownOpen = !this.recipeMaterialDropdownOpen;
+            if (this.recipeMaterialDropdownOpen) {
+                const currentId = this.recipeForm.item_bahan_id;
+                const list = this.filteredRecipeMaterials;
+                const foundIdx = list.findIndex(m => String(m.id) === String(currentId));
+                this.recipeMaterialHighlightedIndex = foundIdx >= 0 ? foundIdx : 0;
+                this.$nextTick(() => {
+                    this.$refs.recipeMaterialSearchInput?.focus();
+                    lucide.createIcons();
+                    const activeEl = document.getElementById('recipe-mat-opt-' + this.recipeMaterialHighlightedIndex);
+                    if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+                });
+            }
+        },
+
+        selectRecipeMaterial(materialId) {
+            this.recipeForm.item_bahan_id = materialId;
+            this.recipeMaterialDropdownOpen = false;
+            this.recipeMaterialSearch = '';
+            this.onRecipeMaterialChange();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        navigateRecipeMaterial(direction) {
+            const list = this.filteredRecipeMaterials;
+            if (list.length === 0) return;
+            this.recipeMaterialHighlightedIndex = (this.recipeMaterialHighlightedIndex + direction + list.length) % list.length;
+            this.$nextTick(() => {
+                const activeEl = document.getElementById('recipe-mat-opt-' + this.recipeMaterialHighlightedIndex);
+                if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+            });
+        },
+
+        selectHighlightedRecipeMaterial() {
+            const list = this.filteredRecipeMaterials;
+            if (list.length === 0) return;
+            const idx = Math.max(0, Math.min(this.recipeMaterialHighlightedIndex, list.length - 1));
+            if (list[idx]) {
+                this.selectRecipeMaterial(list[idx].id);
+            }
+        },
+
         onRecipeMaterialChange() {
             const mat = this.selectedMaterialInModal;
+            if (mat && mat.tipe_item === 'bahan_mentah') {
+                this.recipeForm.potong_sesuai_bal = true;
+            } else {
+                this.recipeForm.potong_sesuai_bal = false;
+            }
             if (mat && (mat.satuan_dasar === 'lembar' || mat.satuan_dasar === 'pcs')) {
                 this.recipeInputMode = 'direct';
                 this.recipeForm.jumlah_kebutuhan = '1';
@@ -2586,11 +2831,16 @@ function productApp(initialTab, initialRecipeItemId) {
             this.showCopyRecipeModal = false;
             this.recipeInputMode = 'yield';
             this.recipeYieldPcs = '';
-            this.recipeForm = {
-                item_bahan_id: this.materials[0]?.id || '',
-                jumlah_kebutuhan: ''
-            };
+            this.recipeMaterialDropdownOpen = false;
+            this.recipeMaterialSearch = '';
+            this.recipeMaterialTypeFilter = 'all';
+            this.recipeMaterialHighlightedIndex = 0;
             const firstMat = this.materials[0];
+            this.recipeForm = {
+                item_bahan_id: firstMat?.id || '',
+                jumlah_kebutuhan: '',
+                potong_sesuai_bal: (firstMat?.tipe_item === 'bahan_mentah')
+            };
             if (firstMat && (firstMat.satuan_dasar === 'lembar' || firstMat.satuan_dasar === 'pcs')) {
                 this.recipeInputMode = 'direct';
                 this.recipeForm.jumlah_kebutuhan = '1';
