@@ -61,7 +61,11 @@ class DatabaseManagerService
         if (str_contains($host, ',')) {
             $host = trim(explode(',', $host)[0]);
         }
-        if (str_contains($host, ':')) {
+        if (str_starts_with($host, '[')) {
+            if (str_contains($host, ']')) {
+                $host = trim(explode(']', $host)[0], '[');
+            }
+        } elseif (substr_count($host, ':') === 1) {
             $host = explode(':', $host)[0];
         }
 
@@ -156,6 +160,11 @@ class DatabaseManagerService
      */
     public static function switchConnection(string $target): array
     {
+        $target = strtolower(trim($target));
+        if (!in_array($target, ['local', 'live'], true)) {
+            throw new InvalidArgumentException("Target database tidak valid. Pilihan: 'local' atau 'live'.");
+        }
+
         if (!self::isLocalEnvironment()) {
             throw new RuntimeException("Aksi ditolak: Peralihan database dikunci permanen pada domain aktif. Aksi ini hanya dapat dilakukan di lingkungan lokal developer.");
         }
@@ -164,11 +173,6 @@ class DatabaseManagerService
         $hasSessionUser = (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['user']));
         if (($hasHost || $hasSessionUser || PHP_SAPI !== 'cli') && class_exists('\App\Core\Auth') && !\App\Core\Auth::isDeveloper()) {
             throw new RuntimeException("Aksi ditolak: Hanya peran developer yang berwenang beralih target database.");
-        }
-
-        $target = strtolower(trim($target));
-        if (!in_array($target, ['local', 'live'], true)) {
-            throw new InvalidArgumentException("Target database tidak valid. Pilihan: 'local' atau 'live'.");
         }
 
         $rootPath = dirname(__DIR__, 2);

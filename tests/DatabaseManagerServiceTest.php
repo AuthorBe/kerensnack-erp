@@ -99,6 +99,19 @@ runTest("2. DatabaseManagerService::switchConnection() rejects invalid targets",
 
 // TEST 3: Switch Connection to Local and Verify
 runTest("3. DatabaseManagerService::switchConnection('local') ensures Local DB connection", function() {
+    if (DatabaseManagerService::isProductionDomain()) {
+        // Pada domain produksi/aktif (misal: aplikasi.kerensnack.id), peralihan ke local WAJIB ditolak demi proteksi sistem live
+        try {
+            DatabaseManagerService::switchConnection('local');
+            return "Peralihan ke local pada domain produksi harusnya ditolak!";
+        } catch (RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'Aksi ditolak')) {
+                return true; // Sukses terproteksi sesuai standar keamanan produksi
+            }
+            throw $e;
+        }
+    }
+
     $res = DatabaseManagerService::switchConnection('local');
     if (!$res['success']) return "Switch to local gagal";
     if ($res['target'] !== 'local') return "Target bukan local";
@@ -160,6 +173,8 @@ runTest("5. Essential RPC & Views exist in local database", function() {
 runTest("6. Strict Domain Whitelist: Local vs Active/Remote Domains", function() {
     $origHost = $_SERVER['HTTP_HOST'] ?? null;
     $origServerName = $_SERVER['SERVER_NAME'] ?? null;
+    $origForwardedHost = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? null;
+    unset($_SERVER['HTTP_X_FORWARDED_HOST']);
 
     try {
         // 1. Remote production domains must be recognized as non-local (production domain)
@@ -220,17 +235,26 @@ runTest("6. Strict Domain Whitelist: Local vs Active/Remote Domains", function()
         } else {
             unset($_SERVER['SERVER_NAME']);
         }
+        if ($origForwardedHost !== null) {
+            $_SERVER['HTTP_X_FORWARDED_HOST'] = $origForwardedHost;
+        } else {
+            unset($_SERVER['HTTP_X_FORWARDED_HOST']);
+        }
     }
 });
 
 // TEST 7: isActionAllowed Authorization & Domain Boundary Guard
 runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local Boundaries", function() {
     $origHost = $_SERVER['HTTP_HOST'] ?? null;
+    $origServerName = $_SERVER['SERVER_NAME'] ?? null;
+    $origForwardedHost = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? null;
     $origUser = $_SESSION['user'] ?? null;
+    unset($_SERVER['HTTP_X_FORWARDED_HOST']);
 
     try {
         // A. Remote Production Domain + Developer role -> MUST BE FORBIDDEN
         $_SERVER['HTTP_HOST'] = 'aplikasi.kerensnack.id';
+        $_SERVER['SERVER_NAME'] = 'aplikasi.kerensnack.id';
         $_SESSION['user'] = [
             'peran' => 'developer',
             'role_nama' => 'Developer'
@@ -241,6 +265,7 @@ runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local
 
         // B. Local Domain + Kasir role -> MUST BE FORBIDDEN (Non-Developer Guard)
         $_SERVER['HTTP_HOST'] = '127.0.0.1';
+        $_SERVER['SERVER_NAME'] = '127.0.0.1';
         $_SESSION['user'] = [
             'peran' => 'kasir',
             'role_nama' => 'Kasir'
@@ -251,12 +276,14 @@ runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local
 
         // C. Cloudflare Preview Domain + Kasir role -> MUST BE FORBIDDEN
         $_SERVER['HTTP_HOST'] = 'preview.ajisakha.my.id';
+        $_SERVER['SERVER_NAME'] = 'preview.ajisakha.my.id';
         if (DatabaseManagerService::isActionAllowed()) {
             return "isActionAllowed() mengizinkan aksi untuk peran non-developer di preview domain!";
         }
 
         // D. Local Domain + Developer role -> MUST BE ALLOWED
         $_SERVER['HTTP_HOST'] = '127.0.0.1';
+        $_SERVER['SERVER_NAME'] = '127.0.0.1';
         $_SESSION['user'] = [
             'peran' => 'developer',
             'role_nama' => 'Developer'
@@ -267,6 +294,7 @@ runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local
 
         // E. Cloudflare Preview Domain + Developer role -> MUST BE ALLOWED
         $_SERVER['HTTP_HOST'] = 'preview.ajisakha.my.id';
+        $_SERVER['SERVER_NAME'] = 'preview.ajisakha.my.id';
         if (!DatabaseManagerService::isActionAllowed()) {
             return "isActionAllowed() menolak aksi developer di preview.ajisakha.my.id!";
         }
@@ -278,6 +306,16 @@ runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local
         } else {
             unset($_SERVER['HTTP_HOST']);
         }
+        if ($origServerName !== null) {
+            $_SERVER['SERVER_NAME'] = $origServerName;
+        } else {
+            unset($_SERVER['SERVER_NAME']);
+        }
+        if ($origForwardedHost !== null) {
+            $_SERVER['HTTP_X_FORWARDED_HOST'] = $origForwardedHost;
+        } else {
+            unset($_SERVER['HTTP_X_FORWARDED_HOST']);
+        }
         $_SESSION['user'] = $origUser;
     }
 });
@@ -285,9 +323,13 @@ runTest("7. DatabaseManagerService::isActionAllowed() enforces Developer & Local
 // TEST 8: Anti-Crash Guard: Switch & Replication Throw RuntimeException on Active Domain
 runTest("8. switchConnection() and replicateLiveToLocal() hard-block on remote domain", function() {
     $origHost = $_SERVER['HTTP_HOST'] ?? null;
+    $origServerName = $_SERVER['SERVER_NAME'] ?? null;
+    $origForwardedHost = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? null;
+    unset($_SERVER['HTTP_X_FORWARDED_HOST']);
 
     try {
         $_SERVER['HTTP_HOST'] = 'aplikasi.kerensnack.id';
+        $_SERVER['SERVER_NAME'] = 'aplikasi.kerensnack.id';
 
         // 1. switchConnection harus melempar RuntimeException
         $switchBlocked = false;
@@ -320,11 +362,25 @@ runTest("8. switchConnection() and replicateLiveToLocal() hard-block on remote d
         } else {
             unset($_SERVER['HTTP_HOST']);
         }
+        if ($origServerName !== null) {
+            $_SERVER['SERVER_NAME'] = $origServerName;
+        } else {
+            unset($_SERVER['SERVER_NAME']);
+        }
+        if ($origForwardedHost !== null) {
+            $_SERVER['HTTP_X_FORWARDED_HOST'] = $origForwardedHost;
+        } else {
+            unset($_SERVER['HTTP_X_FORWARDED_HOST']);
+        }
     }
 });
 
 // TEST 9: Mutex Concurrency Lock Guard
 runTest("9. replicateLiveToLocal() blocks concurrent executions via mutex lock", function() {
+    $origHost = $_SERVER['HTTP_HOST'] ?? null;
+    $origServerName = $_SERVER['SERVER_NAME'] ?? null;
+    $origForwardedHost = $_SERVER['HTTP_X_FORWARDED_HOST'] ?? null;
+
     $lockFile = sys_get_temp_dir() . '/keren_erp_replication_mutex.lock';
     $fp = fopen($lockFile, 'c+');
     if (!$fp) {
@@ -339,6 +395,11 @@ runTest("9. replicateLiveToLocal() blocks concurrent executions via mutex lock",
 
     $concurrencyBlocked = false;
     try {
+        // Simulasi context local dev agar engine mengecek mutex lock tanpa terhalang guard domain
+        $_SERVER['HTTP_HOST'] = '127.0.0.1';
+        $_SERVER['SERVER_NAME'] = '127.0.0.1';
+        unset($_SERVER['HTTP_X_FORWARDED_HOST']);
+
         // Jalankan replicate saat lock sedang aktif
         DatabaseManagerService::replicateLiveToLocal();
     } catch (RuntimeException $e) {
@@ -346,6 +407,22 @@ runTest("9. replicateLiveToLocal() blocks concurrent executions via mutex lock",
     } finally {
         flock($fp, LOCK_UN);
         fclose($fp);
+
+        if ($origHost !== null) {
+            $_SERVER['HTTP_HOST'] = $origHost;
+        } else {
+            unset($_SERVER['HTTP_HOST']);
+        }
+        if ($origServerName !== null) {
+            $_SERVER['SERVER_NAME'] = $origServerName;
+        } else {
+            unset($_SERVER['SERVER_NAME']);
+        }
+        if ($origForwardedHost !== null) {
+            $_SERVER['HTTP_X_FORWARDED_HOST'] = $origForwardedHost;
+        } else {
+            unset($_SERVER['HTTP_X_FORWARDED_HOST']);
+        }
     }
 
     if (!$concurrencyBlocked) {
