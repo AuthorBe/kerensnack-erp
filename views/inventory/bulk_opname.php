@@ -111,51 +111,170 @@ ob_start();
     <!-- ========================================================================= -->
     <!-- 3. SUMMARY METRIC CARDS & ACTIONS (Clean Flow - No Sticky Gap)            -->
     <!-- ========================================================================= -->
-    <div class="card" style="padding:14px 20px; background:var(--color-surface); border:1px solid var(--color-hairline); border-radius:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px;">
-        <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
-            <div>
-                <span style="font-size:10.5px; text-transform:uppercase; color:var(--color-ink-mute); font-weight:700; letter-spacing:0.04em;">Total Produk</span>
-                <div style="font-size:16px; font-weight:800; font-family:var(--font-mono); color:var(--color-ink);" x-text="items.length + ' SKU'"></div>
+    <div class="card bulk-summary-card">
+        <!-- Metric Items: Horizontal Bar on Desktop, 2x2 Grid on Mobile -->
+        <div class="bulk-summary-metrics">
+            <!-- 1. Total Produk -->
+            <div class="bulk-metric-item">
+                <span class="bulk-metric-label">Total Produk</span>
+                <div class="bulk-metric-value" x-text="items.length + ' SKU'"></div>
             </div>
 
-            <div style="height:24px; width:1px; background:var(--color-hairline);"></div>
+            <div class="bulk-metric-divider"></div>
 
-            <div>
-                <span style="font-size:10.5px; text-transform:uppercase; color:var(--color-ink-mute); font-weight:700; letter-spacing:0.04em;">Item Disesuaikan</span>
-                <div style="font-size:16px; font-weight:800; font-family:var(--font-mono);"
+            <!-- 2. Item Disesuaikan -->
+            <div class="bulk-metric-item">
+                <span class="bulk-metric-label">Item Disesuaikan</span>
+                <div class="bulk-metric-value"
                      :style="totalModified > 0 ? 'color:var(--color-primary);' : 'color:var(--color-ink-mute);'"
                      x-text="totalModified + ' Item'"></div>
             </div>
 
-            <div style="height:24px; width:1px; background:var(--color-hairline);"></div>
+            <div class="bulk-metric-divider"></div>
 
-            <div>
-                <span style="font-size:10.5px; text-transform:uppercase; color:#047857; font-weight:700; letter-spacing:0.04em;">Stok Masuk (+)</span>
-                <div style="font-size:16px; font-weight:800; font-family:var(--font-mono); color:#059669;" x-text="'+' + formatQty(totalQtyIn) + ' pcs'"></div>
+            <!-- 3. Stok Masuk (+) -->
+            <div class="bulk-metric-item">
+                <span class="bulk-metric-label" style="color:#047857;">Stok Masuk (+)</span>
+                <div class="bulk-metric-value" style="color:#059669;" x-text="'+' + formatQty(totalQtyIn) + ' pcs'"></div>
             </div>
 
-            <div style="height:24px; width:1px; background:var(--color-hairline);"></div>
+            <div class="bulk-metric-divider"></div>
 
-            <div>
-                <span style="font-size:10.5px; text-transform:uppercase; color:#b91c1c; font-weight:700; letter-spacing:0.04em;">Stok Keluar (-)</span>
-                <div style="font-size:16px; font-weight:800; font-family:var(--font-mono); color:#dc2626;" x-text="'-' + formatQty(totalQtyOut) + ' pcs'"></div>
+            <!-- 4. Stok Keluar (-) -->
+            <div class="bulk-metric-item">
+                <span class="bulk-metric-label" style="color:#b91c1c;">Stok Keluar (-)</span>
+                <div class="bulk-metric-value" style="color:#dc2626;" x-text="'-' + formatQty(totalQtyOut) + ' pcs'"></div>
             </div>
         </div>
 
-        <div style="display:flex; align-items:center; gap:10px;">
-            <button type="button" @click="resetAllRows()" x-show="totalModified > 0" class="btn btn-ghost btn-sm" style="color:#dc2626; border:1px solid #fecaca; height:38px;">
+        <!-- Actions: Sits gracefully on the right on Desktop, full-width thumb reachable on Mobile -->
+        <div class="bulk-summary-actions">
+            <button type="button" @click="resetAllRows()" x-show="totalModified > 0"
+                    class="btn btn-ghost btn-sm bulk-btn-reset"
+                    style="color:#dc2626; border:1px solid #fecaca; height:38px;">
                 <i data-lucide="rotate-ccw" style="width:14px; height:14px;"></i>
                 <span>Reset (<span x-text="totalModified"></span>)</span>
             </button>
 
             <button type="button" @click="openConfirmModal()"
                     :style="totalModified === 0 ? 'opacity:0.5; cursor:not-allowed;' : ''"
-                    class="btn btn-primary" style="height:38px; padding:0 18px; font-weight:700; display:inline-flex; align-items:center; gap:8px;">
+                    class="btn btn-primary bulk-btn-submit"
+                    style="height:38px; padding:0 20px; font-weight:700;">
                 <i data-lucide="check-circle-2" style="width:16px; height:16px;"></i>
                 <span>Review &amp; Simpan (<span x-text="totalModified"></span>)</span>
             </button>
         </div>
     </div>
+
+    <style>
+    .bulk-summary-card {
+        padding: 14px 20px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-hairline);
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        box-sizing: border-box;
+    }
+    .bulk-summary-metrics {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        flex-wrap: nowrap;
+    }
+    .bulk-metric-item {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .bulk-metric-label {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        color: var(--color-ink-mute);
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+    }
+    .bulk-metric-value {
+        font-size: 16px;
+        font-weight: 800;
+        font-family: var(--font-mono);
+        color: var(--color-ink);
+        margin-top: 2px;
+        white-space: nowrap;
+    }
+    .bulk-metric-divider {
+        height: 26px;
+        width: 1px;
+        background: var(--color-hairline);
+        flex-shrink: 0;
+    }
+    .bulk-summary-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+    }
+    .bulk-summary-actions .bulk-btn-reset {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+    .bulk-summary-actions .bulk-btn-submit {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+    @media (max-width: 768px) {
+        .bulk-summary-card {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 12px;
+            gap: 12px;
+        }
+        .bulk-summary-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            width: 100%;
+        }
+        .bulk-metric-divider {
+            display: none !important;
+        }
+        .bulk-metric-item {
+            background: rgba(148, 163, 184, 0.08);
+            border: 1px solid var(--color-hairline);
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+        .bulk-metric-label {
+            font-size: 10px;
+        }
+        .bulk-metric-value {
+            font-size: 15px;
+        }
+        .bulk-summary-actions {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-top: 4px;
+            border-top: 1px solid var(--color-hairline);
+        }
+        .bulk-summary-actions .bulk-btn-reset {
+            flex: 1;
+        }
+        .bulk-summary-actions .bulk-btn-submit {
+            flex: 2;
+        }
+    }
+    </style>
 
     <!-- ========================================================================= -->
     <!-- 3.5 TAB FILTER KATEGORI ITEM (Semua, Barang Jadi, Bahan Mentah, Bahan Kemas) -->
@@ -411,7 +530,7 @@ ob_start();
                                        @blur="onPhysicalBlur(it, $event.target)"
                                        class="form-input font-mono"
                                        style="height:36px; text-align:right; font-weight:700; font-size:13.5px;"
-                                       :style="it.is_modified ? 'border-color:var(--color-primary); background:#ffffff;' : ''">
+                                       :style="it.is_modified ? 'border-color:var(--color-primary); background:var(--color-surface);' : ''">
                             </td>
 
                             <!-- Input 2: Penyesuaian (+/-) -->
@@ -429,7 +548,7 @@ ob_start();
                                        @blur="onDiffBlur(it, $event.target)"
                                        class="form-input font-mono"
                                        style="height:36px; text-align:right; font-weight:700; font-size:13.5px;"
-                                       :style="it.selisih_val > 0 ? 'color:#059669; border-color:#10b981; background:#ffffff;' : (it.selisih_val < 0 ? 'color:#dc2626; border-color:#ef4444; background:#ffffff;' : '')">
+                                       :style="it.selisih_val > 0 ? 'color:#059669; border-color:#10b981; background:var(--color-surface);' : (it.selisih_val < 0 ? 'color:#dc2626; border-color:#ef4444; background:var(--color-surface);' : '')">
                             </td>
 
                             <!-- Status Mutasi -->
@@ -549,15 +668,23 @@ ob_start();
                         </div>
                     </div>
 
-                    <div class="table-wrapper" style="max-height:360px; overflow-y:auto; border-radius:10px;">
-                        <table class="data-table" style="font-size:12px;">
+                    <!-- Petunjuk Gesture Scroll untuk Layar Mobile / HP -->
+                    <div class="sm:hidden flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 px-1 pt-0.5">
+                        <span class="inline-flex items-center gap-1.5 font-medium">
+                            <i data-lucide="move-horizontal" style="width:12px; height:12px; flex-shrink:0;"></i>
+                            <span>Geser tabel ke samping untuk melihat detail</span>
+                        </span>
+                    </div>
+
+                    <div class="table-wrapper custom-scrollbar" style="max-height:380px; overflow-x:auto !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; touch-action:pan-x pan-y; overscroll-behavior-x:contain; border-radius:10px;">
+                        <table class="data-table" style="min-width:620px; font-size:12px;">
                             <thead>
                                 <tr>
-                                    <th>Waktu &amp; Tanggal</th>
-                                    <th>Tipe Mutasi</th>
-                                    <th style="text-align:right;">Perubahan</th>
-                                    <th style="text-align:right;">Stok Akhir</th>
-                                    <th>Keterangan / Oleh</th>
+                                    <th style="min-width:130px; position:sticky; top:0; z-index:2;" class="cell-nowrap">Waktu &amp; Tanggal</th>
+                                    <th style="min-width:130px; position:sticky; top:0; z-index:2;" class="cell-nowrap">Tipe Mutasi</th>
+                                    <th class="cell-right cell-nowrap" style="min-width:105px; text-align:right; position:sticky; top:0; z-index:2;">Perubahan</th>
+                                    <th class="cell-right cell-nowrap" style="min-width:95px; text-align:right; position:sticky; top:0; z-index:2;">Stok Akhir</th>
+                                    <th style="min-width:160px; position:sticky; top:0; z-index:2;">Keterangan / Oleh</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -570,15 +697,15 @@ ob_start();
                                 </template>
                                 <template x-for="log in itemHistoryList" :key="log.id">
                                     <tr>
-                                        <td style="font-family:var(--font-mono); font-size:11px; color:var(--color-ink-mute);" x-text="formatDate(log.dibuat_pada)"></td>
-                                        <td>
+                                        <td class="cell-nowrap" style="font-family:var(--font-mono); font-size:11px; color:var(--color-ink-mute); white-space:nowrap;" x-text="formatDate(log.dibuat_pada)"></td>
+                                        <td class="cell-nowrap">
                                             <span class="badge" :class="getMutationBadgeClass(log.tipe_mutasi)" x-text="formatMutationType(log.tipe_mutasi)"></span>
                                         </td>
-                                        <td style="text-align:right; font-family:var(--font-mono); font-weight:700;"
+                                        <td class="cell-right cell-nowrap" style="text-align:right; font-family:var(--font-mono); font-weight:700; white-space:nowrap;"
                                             :style="isStockIn(log.tipe_mutasi) ? 'color:#059669;' : 'color:#dc2626;'"
                                             x-text="(isStockIn(log.tipe_mutasi) ? '+' : '-') + formatQty(log.jumlah_perubahan) + ' pcs'"></td>
-                                        <td style="text-align:right; font-family:var(--font-mono); color:var(--color-ink);" x-text="formatQty(log.stok_sesudah) + ' pcs'"></td>
-                                        <td>
+                                        <td class="cell-right cell-nowrap" style="text-align:right; font-family:var(--font-mono); color:var(--color-ink); white-space:nowrap;" x-text="formatQty(log.stok_sesudah) + ' pcs'"></td>
+                                        <td style="min-width:160px;">
                                             <div style="font-size:11.5px; color:var(--color-ink);" x-text="log.keterangan || '—'"></div>
                                             <div x-show="log.nama_user" style="font-size:10px; color:var(--color-ink-mute); font-style:italic;" x-text="'Oleh: ' + log.nama_user"></div>
                                         </td>
@@ -642,11 +769,11 @@ ob_start();
                             <span style="font-size:11px; text-transform:uppercase; color:var(--color-ink-mute); font-weight:700;">Item Disesuaikan</span>
                             <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:var(--color-primary); margin-top:2px;" x-text="totalModified + ' Produk'"></div>
                         </div>
-                        <div style="background:#ecfdf5; padding:12px 14px; border-radius:12px; border:1px solid #a7f3d0;">
+                        <div style="background:rgba(16,185,129,0.08); padding:12px 14px; border-radius:12px; border:1px solid rgba(16,185,129,0.22);">
                             <span style="font-size:11px; text-transform:uppercase; color:#047857; font-weight:700;">Total Stok Masuk</span>
                             <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:#059669; margin-top:2px;" x-text="'+' + formatQty(totalQtyIn) + ' pcs'"></div>
                         </div>
-                        <div style="background:#fef2f2; padding:12px 14px; border-radius:12px; border:1px solid #fecaca;">
+                        <div style="background:rgba(239,68,68,0.08); padding:12px 14px; border-radius:12px; border:1px solid rgba(239,68,68,0.22);">
                             <span style="font-size:11px; text-transform:uppercase; color:#b91c1c; font-weight:700;">Total Stok Keluar</span>
                             <div style="font-size:14px; font-weight:800; font-family:var(--font-mono); color:#dc2626; margin-top:2px;" x-text="'-' + formatQty(totalQtyOut) + ' pcs'"></div>
                         </div>
@@ -658,16 +785,24 @@ ob_start();
                         <span x-text="formCatatan || '—'"></span>
                     </div>
 
+                    <!-- Petunjuk Gesture Scroll untuk Layar Mobile / HP -->
+                    <div class="sm:hidden flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 px-1 pt-0.5">
+                        <span class="inline-flex items-center gap-1.5 font-medium">
+                            <i data-lucide="move-horizontal" style="width:12px; height:12px; flex-shrink:0;"></i>
+                            <span>Geser tabel ke samping untuk melihat detail rincian</span>
+                        </span>
+                    </div>
+
                     <!-- Tabel Rincian Perubahan -->
-                    <div class="table-wrapper" style="max-height:300px; overflow-y:auto; border-radius:10px;">
-                        <table class="data-table" style="font-size:12px;">
+                    <div class="table-wrapper custom-scrollbar" style="max-height:320px; overflow-x:auto !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; touch-action:pan-x pan-y; overscroll-behavior-x:contain; border-radius:10px;">
+                        <table class="data-table" style="min-width:580px; font-size:12px;">
                             <thead>
                                 <tr>
-                                    <th>Produk &amp; SKU</th>
-                                    <th style="text-align:right;">Stok Lama</th>
-                                    <th style="text-align:right;">Stok Baru</th>
-                                    <th style="text-align:right;">Mutasi (+/-)</th>
-                                    <th>Catatan Item</th>
+                                    <th style="min-width:180px; position:sticky; top:0; z-index:2;">Produk &amp; SKU</th>
+                                    <th class="cell-right cell-nowrap" style="min-width:90px; text-align:right; position:sticky; top:0; z-index:2;">Stok Lama</th>
+                                    <th class="cell-right cell-nowrap" style="min-width:90px; text-align:right; position:sticky; top:0; z-index:2;">Stok Baru</th>
+                                    <th class="cell-right cell-nowrap" style="min-width:105px; text-align:right; position:sticky; top:0; z-index:2;">Mutasi (+/-)</th>
+                                    <th style="min-width:140px; position:sticky; top:0; z-index:2;">Catatan Item</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -677,9 +812,9 @@ ob_start();
                                             <div style="font-weight:700; color:var(--color-ink);" x-text="row.nama_item"></div>
                                             <div style="font-size:11px; font-family:var(--font-mono); color:var(--color-ink-mute);" x-text="row.kode_sku"></div>
                                         </td>
-                                        <td style="text-align:right; font-family:var(--font-mono);" x-text="formatQty(row.stok_sistem) + ' pcs'"></td>
-                                        <td style="text-align:right; font-family:var(--font-mono); font-weight:700;" x-text="formatQty(row.stok_fisik) + ' pcs'"></td>
-                                        <td style="text-align:right; font-family:var(--font-mono); font-weight:800;"
+                                        <td class="cell-right cell-nowrap" style="text-align:right; font-family:var(--font-mono);" x-text="formatQty(row.stok_sistem) + ' pcs'"></td>
+                                        <td class="cell-right cell-nowrap" style="text-align:right; font-family:var(--font-mono); font-weight:700;" x-text="formatQty(row.stok_fisik) + ' pcs'"></td>
+                                        <td class="cell-right cell-nowrap" style="text-align:right; font-family:var(--font-mono); font-weight:800;"
                                             :style="row.selisih > 0 ? 'color:#059669;' : 'color:#dc2626;'"
                                             x-text="(row.selisih > 0 ? '+' : '') + formatQty(row.selisih) + ' pcs'"></td>
                                         <td style="font-size:11.5px; color:var(--color-ink-mute);" x-text="row.catatan_item || '—'"></td>

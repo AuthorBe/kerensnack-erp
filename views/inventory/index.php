@@ -574,83 +574,104 @@ $countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') 
                         <strong class="font-mono" style="font-size:14px; color:var(--color-ink);" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
                     </div>
 
-                    <!-- Info Panduan Peruntukan Mode & Dampak Laporan Keuangan (Modern Multi-Tone Card) -->
-                    <div style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-radius:12px; font-size:12px; line-height:1.55; color:var(--color-ink);"
-                         :style="adjustMode === 'opname' 
-                             ? 'border-left:3.5px solid #2563eb;' 
-                             : (adjustMode === 'masuk' 
-                                 ? 'border-left:3.5px solid #059669;' 
-                                 : 'border-left:3.5px solid #e11d48;')">
-                        
-                        <!-- Mode Opname Fisik -->
-                        <div x-show="adjustMode === 'opname'">
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
-                                <div style="display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:12px; color:var(--color-ink);">
-                                    <span style="width:22px; height:22px; border-radius:6px; background:rgba(37,99,235,0.12); color:#2563eb; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
-                                        <i data-lucide="clipboard-check" style="width:13px; height:13px;"></i>
-                                    </span>
-                                    <span>Audit Stok Opname Fisik</span>
-                                </div>
-                                <span class="badge-counter" style="background:rgba(37,99,235,0.08); color:#1d4ed8; border-color:rgba(37,99,235,0.22); font-size:10.5px; font-weight:700; padding:2px 8px;">
-                                    Selisih Rak
+                    <!-- Info Panduan Peruntukan Mode (1 Banner Eksklusif per Tab Mode) -->
+                    <!-- 1. Banner Mode Opname Fisik -->
+                    <div x-cloak x-show="adjustMode === 'opname'"
+                         style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-left:3.5px solid #2563eb; border-radius:12px; font-size:12px; line-height:1.55;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
+                            <div style="display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:12.5px; color:var(--color-ink);">
+                                <span style="width:24px; height:24px; border-radius:7px; background:rgba(37,99,235,0.12); color:#2563eb; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i data-lucide="clipboard-check" style="width:14px; height:14px;"></i>
                                 </span>
+                                <span>Audit Stok Opname Fisik</span>
                             </div>
+                            <span style="display:inline-flex; align-items:center; justify-content:center; line-height:1; border-radius:9999px; background:rgba(37,99,235,0.08); color:#1d4ed8; border:1px solid rgba(37,99,235,0.22); font-size:11px; font-weight:700; padding:2.5px 10px;">
+                                Selisih Rak
+                            </span>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:6px;">
                             <div style="display:flex; align-items:flex-start; gap:8px;">
                                 <span style="width:6px; height:6px; border-radius:50%; background:#2563eb; flex-shrink:0; margin-top:6px;"></span>
-                                <div style="flex:1; color:var(--color-ink-mute);">
-                                    Menyelaraskan stok sistem dengan hitungan riil di rak gudang saat audit berkala. Selisih lebih (+) atau kurang (-) otomatis dibukukan ke pos <strong style="color:var(--color-primary);">Selisih Persediaan (Inventory Variance)</strong>.
+                                <div style="flex:1; color:var(--color-ink);">
+                                    Menyelaraskan stok sistem dengan hitungan riil di rak gudang saat audit berkala. Selisih lebih (+) atau kurang (-) otomatis dibukukan resmi ke pos <strong style="color:var(--color-primary);">Selisih Persediaan (Inventory Variance)</strong>.
+                                </div>
+                            </div>
+
+                            <div style="display:flex; align-items:flex-start; gap:8px; padding-top:6px; margin-top:2px; border-top:1px dashed var(--color-hairline); font-size:11.5px; color:var(--color-ink-mute);">
+                                <span style="width:18px; height:18px; border-radius:5px; background:rgba(37,99,235,0.08); color:#2563eb; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">
+                                    <i data-lucide="info" style="width:12px; height:12px;"></i>
+                                </span>
+                                <div style="flex:1;">
+                                    Jumlah stok akhir baru setelah disimpan akan disesuaikan secara absolut mengikuti hitungan fisik nyata di rak gudang.
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Mode Item Masuk -->
-                        <div x-show="adjustMode === 'masuk'">
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
-                                <div style="display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:12px; color:var(--color-ink);">
-                                    <span style="width:22px; height:22px; border-radius:6px; background:rgba(16,185,129,0.12); color:#059669; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
-                                        <i data-lucide="arrow-down-left" style="width:13px; height:13px;"></i>
-                                    </span>
-                                    <span>Penerimaan Masuk Manual</span>
-                                </div>
-                                <span class="badge-counter" style="background:rgba(16,185,129,0.08); color:#047857; border-color:rgba(16,185,129,0.22); font-size:10.5px; font-weight:700; padding:2px 8px;">
-                                    Non-PO
+                    <!-- 2. Banner Mode Item Masuk -->
+                    <div x-cloak x-show="adjustMode === 'masuk'"
+                         style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-left:3.5px solid #059669; border-radius:12px; font-size:12px; line-height:1.55;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
+                            <div style="display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:12.5px; color:var(--color-ink);">
+                                <span style="width:24px; height:24px; border-radius:7px; background:rgba(16,185,129,0.12); color:#059669; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i data-lucide="arrow-down-left" style="width:14px; height:14px;"></i>
                                 </span>
+                                <span>Penerimaan Masuk Manual</span>
                             </div>
+                            <span style="display:inline-flex; align-items:center; justify-content:center; line-height:1; border-radius:9999px; background:rgba(16,185,129,0.08); color:#047857; border:1px solid rgba(16,185,129,0.22); font-size:11px; font-weight:700; padding:2.5px 10px;">
+                                Non-PO
+                            </span>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:6px;">
                             <div style="display:flex; align-items:flex-start; gap:8px;">
                                 <span style="width:6px; height:6px; border-radius:50%; background:#059669; flex-shrink:0; margin-top:6px;"></span>
-                                <div style="flex:1; color:var(--color-ink-mute);">
-                                    Menambah saldo stok untuk penerimaan insidental di luar PO Pembelian (misal: bonus supplier, sampel masuk, atau temuan fisik barang di rak).
+                                <div style="flex:1; color:var(--color-ink);">
+                                    Menambah saldo stok untuk penerimaan insidental di luar PO Pembelian resmi (seperti bonus supplier, sampel masuk, atau temuan fisik barang di rak gudang).
+                                </div>
+                            </div>
+
+                            <div style="display:flex; align-items:flex-start; gap:8px; padding-top:6px; margin-top:2px; border-top:1px dashed var(--color-hairline); font-size:11.5px; color:var(--color-ink-mute);">
+                                <span style="width:18px; height:18px; border-radius:5px; background:rgba(16,185,129,0.08); color:#059669; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">
+                                    <i data-lucide="info" style="width:12px; height:12px;"></i>
+                                </span>
+                                <div style="flex:1;">
+                                    Kuantitas yang diinput akan otomatis ditambahkan (+) ke saldo stok fisik gudang saat ini.
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Mode Item Keluar -->
-                        <div x-show="adjustMode === 'keluar'">
-                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
-                                <div style="display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:12px; color:var(--color-ink);">
-                                    <span style="width:22px; height:22px; border-radius:6px; background:rgba(245,158,11,0.12); color:#d97706; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
-                                        <i data-lucide="arrow-up-right" style="width:13px; height:13px;"></i>
-                                    </span>
-                                    <span>Pengurangan Stok Administratif</span>
-                                </div>
-                                <span class="badge-counter" style="background:rgba(245,158,11,0.08); color:#b45309; border-color:rgba(245,158,11,0.22); font-size:10.5px; font-weight:700; padding:2px 8px;">
-                                    Perhatian
+                    <!-- 3. Banner Mode Item Keluar -->
+                    <div x-cloak x-show="adjustMode === 'keluar'"
+                         style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-left:3.5px solid #d97706; border-radius:12px; font-size:12px; line-height:1.55;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
+                            <div style="display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:12.5px; color:var(--color-ink);">
+                                <span style="width:24px; height:24px; border-radius:7px; background:rgba(245,158,11,0.12); color:#d97706; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i data-lucide="arrow-up-right" style="width:14px; height:14px;"></i>
                                 </span>
+                                <span>Pengurangan Stok Administratif</span>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:6px;">
-                                <div style="display:flex; align-items:flex-start; gap:8px;">
-                                    <span style="width:6px; height:6px; border-radius:50%; background:#d97706; flex-shrink:0; margin-top:6px;"></span>
-                                    <div style="flex:1; color:var(--color-ink-mute);">
-                                        Digunakan untuk koreksi pengeluaran administratif non-penjualan atau selisih nota.
-                                    </div>
+                            <span style="display:inline-flex; align-items:center; justify-content:center; line-height:1; border-radius:9999px; background:rgba(245,158,11,0.08); color:#b45309; border:1px solid rgba(245,158,11,0.22); font-size:11px; font-weight:700; padding:2.5px 10px;">
+                                Perhatian
+                            </span>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <div style="display:flex; align-items:flex-start; gap:8px;">
+                                <span style="width:6px; height:6px; border-radius:50%; background:#d97706; flex-shrink:0; margin-top:6px;"></span>
+                                <div style="flex:1; color:var(--color-ink);">
+                                    Digunakan khusus untuk koreksi pembukuan administratif non-penjualan atau selisih pencatatan nota.
                                 </div>
-                                <div style="display:flex; align-items:flex-start; gap:8px; padding-top:6px; margin-top:2px; border-top:1px dashed var(--color-hairline); font-size:11.5px;">
-                                    <span style="width:18px; height:18px; border-radius:5px; background:rgba(225,29,72,0.1); color:#e11d48; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">
-                                        <i data-lucide="alert-triangle" style="width:12px; height:12px;"></i>
-                                    </span>
-                                    <div style="flex:1; color:var(--color-ink);">
-                                        Jika barang keluar karena <strong>rusak, remuk, bocor kemasan, expired, atau sampel promosi</strong>: tutup modal ini dan gunakan tombol <span style="background:rgba(225,29,72,0.1); color:#be123c; padding:1px 6px; border-radius:4px; font-weight:700; border:1px solid rgba(225,29,72,0.2);">[Waste]</span> agar tercatat di pos <strong>Beban Kerusakan / Promosi</strong>.
-                                    </div>
+                            </div>
+
+                            <div style="display:flex; align-items:flex-start; gap:8px; padding-top:6px; margin-top:2px; border-top:1px dashed var(--color-hairline); font-size:11.5px; color:var(--color-ink-mute);">
+                                <span style="width:18px; height:18px; border-radius:5px; background:rgba(225,29,72,0.1); color:#e11d48; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">
+                                    <i data-lucide="alert-triangle" style="width:12px; height:12px;"></i>
+                                </span>
+                                <div style="flex:1;">
+                                    Jika fisik barang keluar karena <strong>rusak, expired, remuk, bocor kemasan,</strong> atau <strong>sampel</strong>: tutup modal ini dan gunakan tombol <span style="background:rgba(225,29,72,0.1); color:#be123c; padding:1px 6px; border-radius:4px; font-weight:700; border:1px solid rgba(225,29,72,0.2);">[Waste]</span> di tabel agar tercatat di pos <strong>Beban Kerusakan / Promosi</strong>.
                                 </div>
                             </div>
                         </div>
@@ -785,21 +806,21 @@ $countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') 
                     <?= \App\Helpers\CSRF::field() ?>
                     <input type="hidden" name="item_id" :value="selectedItem.id">
 
-                    <div style="padding:10px 12px; background:#fef2f2; border:1px solid #fee2e2; border-radius:10px; font-size:12px; color:#991b1b; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="padding:10px 12px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.22); border-radius:10px; font-size:12px; color:#dc2626; display:flex; align-items:center; justify-content:space-between;">
                         <span>Sisa Stok Fisik Saat Ini:</span>
                         <strong class="font-mono" style="font-size:14px;" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
                     </div>
 
-                    <!-- Info Panduan Peruntukan Waste & Laporan Keuangan (Multi-Tone Responsive Card) -->
-                    <div style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-left:3.5px solid #e11d48; border-radius:12px; font-size:12px; line-height:1.55; color:var(--color-ink);">
+                    <!-- Info Panduan Peruntukan Waste & Laporan Keuangan -->
+                    <div style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-left:3.5px solid #e11d48; border-radius:12px; font-size:12px; line-height:1.55;">
                         <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
-                            <div style="display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:12px; color:var(--color-ink);">
-                                <span style="width:22px; height:22px; border-radius:6px; background:rgba(225,29,72,0.12); color:#e11d48; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
-                                    <i data-lucide="scale" style="width:13px; height:13px;"></i>
+                            <div style="display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:12.5px; color:var(--color-ink);">
+                                <span style="width:24px; height:24px; border-radius:7px; background:rgba(225,29,72,0.12); color:#e11d48; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i data-lucide="scale" style="width:14px; height:14px;"></i>
                                 </span>
                                 <span>Panduan Peruntukan &amp; Pembukuan</span>
                             </div>
-                            <span class="badge-counter" style="background:rgba(225,29,72,0.08); color:#be123c; border-color:rgba(225,29,72,0.22); font-size:10.5px; font-weight:700; padding:2px 8px;">
+                            <span style="display:inline-flex; align-items:center; justify-content:center; line-height:1; border-radius:9999px; background:rgba(225,29,72,0.08); color:#be123c; border:1px solid rgba(225,29,72,0.22); font-size:11px; font-weight:700; padding:2.5px 10px;">
                                 Akuntansi
                             </span>
                         </div>
@@ -841,20 +862,20 @@ $countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') 
                     </div>
 
                     <!-- Live Calculation Preview for Waste -->
-                    <div style="padding:10px 14px; background:#fef2f2; border:1px dashed #f87171; border-radius:10px; display:flex; flex-direction:column; gap:4px;">
-                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#991b1b;">
-                            <span>Sisa Stok Sebelum Waste:</span>
+                    <div style="padding:10px 14px; background:rgba(239,68,68,0.06); border:1px dashed rgba(239,68,68,0.35); border-radius:10px; display:flex; flex-direction:column; gap:4px;">
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--color-ink);">
+                            <span style="color:var(--color-ink-mute);">Sisa Stok Sebelum Waste:</span>
                             <span class="font-mono" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
                         </div>
-                        <div style="display:flex; justify-content:space-between; font-size:12px; color:#991b1b;">
-                            <span>Pemotongan Waste (-):</span>
+                        <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--color-ink);">
+                            <span style="color:var(--color-ink-mute);">Pemotongan Waste (-):</span>
                             <span class="font-mono" style="font-weight:700; color:#dc2626;"
                                   x-text="'-' + (wasteQty || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
                         </div>
-                        <div style="height:1px; background:#fecaca; margin:2px 0;"></div>
+                        <div style="height:1px; background:var(--color-hairline); margin:2px 0;"></div>
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:12.5px; font-weight:700; color:#991b1b;">Estimasi Sisa Stok Akhir:</span>
-                            <strong class="font-mono" style="font-size:14.5px; color:#b91c1c;"
+                            <span style="font-size:12.5px; font-weight:700; color:var(--color-ink);">Estimasi Sisa Stok Akhir:</span>
+                            <strong class="font-mono" style="font-size:14.5px; color:#dc2626;"
                                     x-text="calculateWastePreview() + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
                         </div>
                     </div>
@@ -930,15 +951,23 @@ $countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') 
                         </div>
                     </div>
 
-                    <div class="table-wrapper" style="max-height:360px; overflow-y:auto; border-radius:10px;">
-                        <table class="data-table" style="font-size:12px;">
+                    <!-- Petunjuk Gesture Scroll untuk Layar Mobile / HP -->
+                    <div class="sm:hidden flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 px-1 pt-0.5">
+                        <span class="inline-flex items-center gap-1.5 font-medium">
+                            <i data-lucide="move-horizontal" style="width:12px; height:12px; flex-shrink:0;"></i>
+                            <span>Geser tabel ke samping untuk melihat detail</span>
+                        </span>
+                    </div>
+
+                    <div class="table-wrapper custom-scrollbar" style="max-height:380px; overflow-x:auto !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; touch-action:pan-x pan-y; overscroll-behavior-x:contain; border-radius:10px;">
+                        <table class="data-table" style="min-width:620px; font-size:12px;">
                             <thead>
                                 <tr>
-                                    <th>Waktu &amp; Tanggal</th>
-                                    <th>Tipe Mutasi</th>
-                                    <th style="text-align:right;">Perubahan</th>
-                                    <th style="text-align:right;">Stok Akhir</th>
-                                    <th>Keterangan / Oleh</th>
+                                    <th style="min-width:130px; position:sticky; top:0; z-index:2;" class="cell-nowrap">Waktu &amp; Tanggal</th>
+                                    <th style="min-width:130px; position:sticky; top:0; z-index:2;" class="cell-nowrap">Tipe Mutasi</th>
+                                    <th class="cell-right cell-nowrap" style="min-width:105px; text-align:right; position:sticky; top:0; z-index:2;">Perubahan</th>
+                                    <th class="cell-right cell-nowrap" style="min-width:95px; text-align:right; position:sticky; top:0; z-index:2;">Stok Akhir</th>
+                                    <th style="min-width:160px; position:sticky; top:0; z-index:2;">Keterangan / Oleh</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -951,15 +980,15 @@ $countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') 
                                 </template>
                                 <template x-for="log in itemHistoryList" :key="log.id">
                                     <tr>
-                                        <td style="font-family:var(--font-mono); font-size:11px; color:var(--color-ink-mute);" x-text="formatDate(log.dibuat_pada)"></td>
-                                        <td>
+                                        <td class="cell-nowrap" style="font-family:var(--font-mono); font-size:11px; color:var(--color-ink-mute); white-space:nowrap;" x-text="formatDate(log.dibuat_pada)"></td>
+                                        <td class="cell-nowrap">
                                             <span class="badge" :class="getMutationBadgeClass(log.tipe_mutasi)" x-text="formatMutationType(log.tipe_mutasi)"></span>
                                         </td>
-                                        <td style="text-align:right; font-family:var(--font-mono); font-weight:700;"
+                                        <td class="cell-right cell-nowrap" style="text-align:right; font-family:var(--font-mono); font-weight:700; white-space:nowrap;"
                                             :style="isStockIn(log.tipe_mutasi) ? 'color:#059669;' : 'color:#dc2626;'"
                                             x-text="(isStockIn(log.tipe_mutasi) ? '+' : '-') + formatQty(log.jumlah_perubahan) + ' pcs'"></td>
-                                        <td style="text-align:right; font-family:var(--font-mono); color:var(--color-ink);" x-text="formatQty(log.stok_sesudah) + ' pcs'"></td>
-                                        <td>
+                                        <td class="cell-right cell-nowrap" style="text-align:right; font-family:var(--font-mono); color:var(--color-ink); white-space:nowrap;" x-text="formatQty(log.stok_sesudah) + ' pcs'"></td>
+                                        <td style="min-width:160px;">
                                             <div style="font-size:11.5px; color:var(--color-ink);" x-text="log.keterangan || '—'"></div>
                                             <div x-show="log.nama_user" style="font-size:10px; color:var(--color-ink-mute); font-style:italic;" x-text="'Oleh: ' + log.nama_user"></div>
                                         </td>

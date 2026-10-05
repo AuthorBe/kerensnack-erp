@@ -75,21 +75,21 @@ $totalKatalog = !empty($opname['total_item_katalog']) ? (int)$opname['total_item
             </div>
         </div>
 
-        <div class="card" style="padding:16px 18px; border-radius:16px; border:1px solid #a7f3d0; background:#ecfdf5;">
+        <div class="card" style="padding:16px 18px; border-radius:16px; border:1px solid rgba(16,185,129,0.25); background:rgba(16,185,129,0.06);">
             <div style="font-size:11px; text-transform:uppercase; color:#047857; font-weight:700; letter-spacing:0.04em;">Total Stok Masuk (+)</div>
             <div style="font-size:16px; font-weight:800; font-family:var(--font-mono); color:#059669; margin-top:4px;">
                 +<?= Format::qty($opname['total_qty_masuk']) ?> pcs
             </div>
         </div>
 
-        <div class="card" style="padding:16px 18px; border-radius:16px; border:1px solid #fecaca; background:#fef2f2;">
+        <div class="card" style="padding:16px 18px; border-radius:16px; border:1px solid rgba(239,68,68,0.25); background:rgba(239,68,68,0.06);">
             <div style="font-size:11px; text-transform:uppercase; color:#b91c1c; font-weight:700; letter-spacing:0.04em;">Total Stok Keluar (-)</div>
             <div style="font-size:16px; font-weight:800; font-family:var(--font-mono); color:#dc2626; margin-top:4px;">
                 -<?= Format::qty($opname['total_qty_keluar']) ?> pcs
             </div>
         </div>
 
-        <div class="card" style="padding:16px 18px; border-radius:16px; border:1px solid <?= $nilaiSelisihRp > 0 ? '#a7f3d0' : ($nilaiSelisihRp < 0 ? '#fecaca' : 'var(--color-hairline)') ?>; background:<?= $nilaiSelisihRp > 0 ? '#ecfdf5' : ($nilaiSelisihRp < 0 ? '#fef2f2' : 'var(--color-surface)') ?>;">
+        <div class="card" style="padding:16px 18px; border-radius:16px; border:1px solid <?= $nilaiSelisihRp > 0 ? 'rgba(16,185,129,0.25)' : ($nilaiSelisihRp < 0 ? 'rgba(239,68,68,0.25)' : 'var(--color-hairline)') ?>; background:<?= $nilaiSelisihRp > 0 ? 'rgba(16,185,129,0.06)' : ($nilaiSelisihRp < 0 ? 'rgba(239,68,68,0.06)' : 'var(--color-surface)') ?>;">
             <div style="font-size:11px; text-transform:uppercase; color:<?= $nilaiSelisihRp > 0 ? '#047857' : ($nilaiSelisihRp < 0 ? '#b91c1c' : 'var(--color-ink-mute)') ?>; font-weight:700; letter-spacing:0.04em;">Dampak Valuasi Selisih</div>
             <div style="font-size:16px; font-weight:800; font-family:var(--font-mono); color:<?= $nilaiSelisihRp > 0 ? '#059669' : ($nilaiSelisihRp < 0 ? '#dc2626' : 'var(--color-ink)') ?>; margin-top:4px;">
                 <?= ($nilaiSelisihRp > 0 ? '+' : '') . Format::rupiah($nilaiSelisihRp) ?>
@@ -126,9 +126,17 @@ $totalKatalog = !empty($opname['total_item_katalog']) ? (int)$opname['total_item
     <!-- ========================================================================= -->
     <!-- TABEL RINCIAN ITEM OPNAME                                                 -->
     <!-- ========================================================================= -->
+    <!-- Petunjuk Gesture Scroll untuk Layar Mobile / HP -->
+    <div class="sm:hidden flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 px-1 pt-0.5 mb-1.5">
+        <span class="inline-flex items-center gap-1.5 font-medium">
+            <i data-lucide="move-horizontal" style="width:12px; height:12px; flex-shrink:0;"></i>
+            <span>Geser tabel ke samping untuk melihat detail rincian</span>
+        </span>
+    </div>
+
     <div class="table-wrapper">
-        <div class="table-scroll">
-            <table class="data-table">
+        <div class="table-scroll custom-scrollbar">
+            <table class="data-table" style="min-width:980px;">
                 <thead>
                     <tr>
                         <th style="width:45px; text-align:center;">No</th>
@@ -241,39 +249,6 @@ $totalKatalog = !empty($opname['total_item_katalog']) ? (int)$opname['total_item
         </div>
     </div>
 
-    <!-- Bottom Actions -->
-    <div class="opname-detail-actions">
-        <a href="<?= Router::url('/inventory/bulk-opname') ?>" class="btn btn-primary opname-action-btn">
-            <i data-lucide="plus-circle" style="width:16px; height:16px;"></i>
-            <span>Buat Bulk Opname Baru</span>
-        </a>
-    </div>
-
-    <style>
-    .opname-detail-actions {
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        padding-top: 14px;
-        margin-bottom: 12px;
-        width: 100%;
-        box-sizing: border-box;
-    }
-    .opname-detail-actions .opname-action-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        height: 40px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-    @media (max-width: 640px) {
-        .opname-detail-actions .opname-action-btn {
-            width: 100% !important;
-            justify-content: center !important;
-            box-sizing: border-box !important;
-        }
-    </style>
 
     <script>
     async function downloadOpnameDoc(format, id, nomor) {
