@@ -29,13 +29,20 @@ class InventoryController extends Controller
     {
         try {
             $items = Database::fetchAll("
-                SELECT i.id, i.kode_sku, i.nama_item,
+                SELECT i.id, i.kode_sku, i.nama_item, i.tipe_item,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar,
                        i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i
                 LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
                 WHERE i.status_aktif = TRUE
-                ORDER BY gp.kode_grup ASC, i.nama_item ASC
+                ORDER BY 
+                    CASE 
+                        WHEN i.tipe_item = 'barang_jadi' THEN 1
+                        WHEN i.tipe_item = 'bahan_mentah' THEN 2
+                        WHEN i.tipe_item = 'bahan_kemas' THEN 3
+                        ELSE 4
+                    END ASC,
+                    gp.kode_grup ASC NULLS LAST, i.nama_item ASC
             ");
 
             // Derive distinct groups in memory to avoid extra database round-trip
@@ -77,18 +84,14 @@ class InventoryController extends Controller
         }
 
         $itemId = (string)$this->input('item_id');
-        $qty = (float)$this->input('kuantitas', 0);
-        $tipe = (string)$this->input('tipe_penyesuaian', 'opname_lebih');
-        $alasan = trim((string)$this->input('alasan', 'Penyesuaian stok fisik'));
-
-        if (!in_array($tipe, ['opname_lebih', 'opname_hilang', 'retur_masuk_manual'], true)) {
-            $this->flashError('Tipe penyesuaian stok fisik tidak valid.');
-            $this->redirect('/inventory');
-            return;
+        $mode = trim((string)$this->input('mode', '')); // 'opname', 'masuk', 'keluar'
+        $alasan = trim((string)$this->input('alasan', ''));
+        if ($alasan === '') {
+            $alasan = 'Penyesuaian stok fisik';
         }
 
-        if (empty($itemId) || $qty <= 0) {
-            $this->flashError('Jumlah kuantitas harus lebih besar dari 0.');
+        if (empty($itemId)) {
+            $this->flashError('ID Produk tidak valid.');
             $this->redirect('/inventory');
             return;
         }
@@ -97,7 +100,7 @@ class InventoryController extends Controller
             $pdo = Database::getConnection();
             $pdo->beginTransaction();
 
-            $item = Database::fetchOne("SELECT stok_fisik_saat_ini, nama_item FROM public.item WHERE id = :id FOR UPDATE", ['id' => $itemId]);
+            $item = Database::fetchOne("SELECT stok_fisik_saat_ini, nama_item, satuan_dasar FROM public.item WHERE id = :id FOR UPDATE", ['id' => $itemId]);
             if (!$item) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 $this->flashError('Produk tidak ditemukan di database.');
@@ -106,28 +109,117 @@ class InventoryController extends Controller
             }
 
             $stokLama = (float)($item['stok_fisik_saat_ini'] ?? 0);
+            $satuan = $item['satuan_dasar'] ?? 'pcs';
+            $namaItem = $item['nama_item'] ?? 'Item';
 
-            // Pengaman Anti-Minus: Pengurangan tidak boleh melebihi sisa stok
-            if (!in_array($tipe, ['opname_lebih', 'retur_masuk_manual'], true) && $stokLama < $qty) {
-                if ($pdo->inTransaction()) $pdo->rollBack();
-                $this->flashError("Jumlah penyesuaian minus ({$qty} pcs) melebihi stok fisik saat ini ({$stokLama} pcs). Stok tidak boleh minus.");
-                $this->redirect('/inventory');
-                return;
+            $stokBaru = $stokLama;
+            $qtyMutasi = 0.0;
+            $tipeMutasi = 'penyesuaian_opname_tambah';
+            $keteranganDetail = '';
+
+            if ($mode === 'opname') {
+                $rawPhysical = $this->input('stok_fisik_baru');
+                if ($rawPhysical === null || $rawPhysical === '') {
+                    $rawPhysical = $this->input('kuantitas');
+                }
+                $stokFisikBaru = (float)$rawPhysical;
+                if ($stokFisikBaru < 0) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $this->flashError('Stok fisik hasil opname tidak boleh bernilai negatif.');
+                    $this->redirect('/inventory');
+                    return;
+                }
+
+                $selisih = $stokFisikBaru - $stokLama;
+                if (abs($selisih) < 0.00001) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $this->flashInfo("Stok fisik '{$namaItem}' ({$stokFisikBaru} {$satuan}) sudah sesuai dengan sistem. Tidak ada perubahan.");
+                    $this->redirect('/inventory');
+                    return;
+                }
+
+                $stokBaru = $stokFisikBaru;
+                $qtyMutasi = abs($selisih);
+                if ($selisih > 0) {
+                    $tipeMutasi = 'penyesuaian_opname_tambah';
+                    $keteranganDetail = "Opname Fisik (Surplus +{$qtyMutasi} {$satuan}): {$alasan}";
+                } else {
+                    $tipeMutasi = 'penyesuaian_opname_kurang';
+                    $keteranganDetail = "Opname Fisik (Selisih Kurang -{$qtyMutasi} {$satuan}): {$alasan}";
+                }
+            } elseif ($mode === 'masuk') {
+                $qtyInput = (float)$this->input('kuantitas', 0);
+                if ($qtyInput <= 0) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $this->flashError('Jumlah kuantitas item masuk harus berupa angka positif lebih besar dari 0.');
+                    $this->redirect('/inventory');
+                    return;
+                }
+                $stokBaru = $stokLama + $qtyInput;
+                $qtyMutasi = $qtyInput;
+                $tipeMutasi = 'penyesuaian_opname_tambah';
+                $keteranganDetail = "Item Masuk (+{$qtyMutasi} {$satuan}): {$alasan}";
+            } elseif ($mode === 'keluar') {
+                $qtyInput = (float)$this->input('kuantitas', 0);
+                if ($qtyInput <= 0) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $this->flashError('Jumlah kuantitas item keluar harus berupa angka positif lebih besar dari 0.');
+                    $this->redirect('/inventory');
+                    return;
+                }
+                if ($stokLama < $qtyInput) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $this->flashError("Jumlah item keluar ({$qtyInput} {$satuan}) melebihi stok fisik saat ini ({$stokLama} {$satuan}). Stok tidak boleh minus.");
+                    $this->redirect('/inventory');
+                    return;
+                }
+                $stokBaru = max(0.0, $stokLama - $qtyInput);
+                $qtyMutasi = $qtyInput;
+                $tipeMutasi = 'penyesuaian_opname_kurang';
+                $keteranganDetail = "Item Keluar (-{$qtyMutasi} {$satuan}): {$alasan}";
+            } else {
+                // Legacy fallback support for existing tests and scripts
+                $tipe = (string)$this->input('tipe_penyesuaian', 'opname_lebih');
+                $qty = (float)$this->input('kuantitas', 0);
+
+                if (!in_array($tipe, ['opname_lebih', 'opname_hilang', 'retur_masuk_manual'], true)) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $this->flashError('Tipe penyesuaian stok fisik tidak valid.');
+                    $this->redirect('/inventory');
+                    return;
+                }
+
+                if ($qty <= 0) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $this->flashError('Jumlah kuantitas harus lebih besar dari 0.');
+                    $this->redirect('/inventory');
+                    return;
+                }
+
+                // Pengaman Anti-Minus: Pengurangan tidak boleh melebihi sisa stok
+                if (!in_array($tipe, ['opname_lebih', 'retur_masuk_manual'], true) && $stokLama < $qty) {
+                    if ($pdo->inTransaction()) $pdo->rollBack();
+                    $this->flashError("Jumlah penyesuaian minus ({$qty} pcs) melebihi stok fisik saat ini ({$stokLama} pcs). Stok tidak boleh minus.");
+                    $this->redirect('/inventory');
+                    return;
+                }
+
+                $stokBaru = in_array($tipe, ['opname_lebih', 'retur_masuk_manual'], true) ? ($stokLama + $qty) : max(0.0, $stokLama - $qty);
+                $qtyMutasi = $qty;
+                $tipeMutasi = match($tipe) {
+                    'opname_lebih'       => 'penyesuaian_opname_tambah',
+                    'retur_masuk_manual' => 'retur_masuk_manual',
+                    default              => 'penyesuaian_opname_kurang'
+                };
+                $keteranganDetail = "Manual Opname: {$alasan}";
             }
 
-            $stokBaru = in_array($tipe, ['opname_lebih', 'retur_masuk_manual'], true) ? ($stokLama + $qty) : max(0.0, $stokLama - $qty);
-
-            // Update item
+            // Update item stock
             $pdo->prepare("UPDATE public.item SET stok_fisik_saat_ini = :baru, diubah_pada = NOW() WHERE id = :id")
                 ->execute(['baru' => $stokBaru, 'id' => $itemId]);
 
             // Insert riwayat stok dengan user ID pelaksana & timestamp lengkap
             $userId = Auth::id() ?: null;
-            $tipeMutasi = match($tipe) {
-                'opname_lebih'       => 'penyesuaian_opname_tambah',
-                'retur_masuk_manual' => 'retur_masuk_manual',
-                default              => 'penyesuaian_opname_kurang'
-            };
             $pdo->prepare("
                 INSERT INTO public.riwayat_stok (
                     item_id, tipe_mutasi, jumlah_perubahan, stok_sebelum, stok_sesudah,
@@ -139,30 +231,30 @@ class InventoryController extends Controller
             ")->execute([
                 'item_id' => $itemId,
                 'tipe' => $tipeMutasi,
-                'qty' => $qty,
+                'qty' => $qtyMutasi,
                 'sebelum' => $stokLama,
                 'sesudah' => $stokBaru,
-                'ket' => "Manual Opname: {$alasan}",
+                'ket' => $keteranganDetail,
                 'user_id' => $userId
             ]);
 
             ActivityLog::log(
                 'logistik',
                 'UPDATE',
-                "Penyesuaian Stok Opname '{$item['nama_item']}' dari {$stokLama} menjadi {$stokBaru} (Alasan: {$alasan})",
+                "Penyesuaian Stok '{$namaItem}' dari {$stokLama} menjadi {$stokBaru} {$satuan} ({$keteranganDetail})",
                 'item',
                 $itemId
             );
 
             $pdo->commit();
-            $this->flashSuccess("Opname fisik berhasil! Stok '{$item['nama_item']}' kini menjadi {$stokBaru} pcs.");
+            $this->flashSuccess("Penyesuaian stok berhasil! Stok '{$namaItem}' kini menjadi {$stokBaru} {$satuan}.");
             $this->redirect('/inventory');
 
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            $this->flashError("Gagal menyimpan opname: " . $e->getMessage());
+            $this->flashError("Gagal menyimpan penyesuaian stok: " . $e->getMessage());
             $this->redirect('/inventory');
         }
     }
@@ -333,7 +425,7 @@ class InventoryController extends Controller
 
         try {
             $items = Database::fetchAll("
-                SELECT i.id, i.kode_sku, i.nama_item,
+                SELECT i.id, i.kode_sku, i.nama_item, i.tipe_item,
                        i.stok_fisik_saat_ini, i.stok_minimum_peringatan, i.satuan_dasar,
                        i.harga_pokok_pembelian, gp.nama_grup, gp.kode_grup, gp.barcode_universal
                 FROM public.item i

@@ -44,13 +44,17 @@ ob_start();
             </div>
         </div>
         <div class="page-header-actions" style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
-            <a href="<?= Router::url('/inventory') ?>" class="btn btn-secondary" style="height:38px; display:inline-flex; align-items:center; gap:6px;">
+            <a href="<?= Router::url('/inventory') ?>" @click.prevent="navigateAway('<?= Router::url('/inventory') ?>')" class="btn btn-secondary" style="height:38px; display:inline-flex; align-items:center; gap:6px;">
                 <i data-lucide="arrow-left" style="width:15px; height:15px;"></i>
                 <span>Kembali ke Stok</span>
             </a>
-            <a href="<?= Router::url('/inventory/opname/history') ?>" class="btn btn-secondary" style="height:38px; display:inline-flex; align-items:center; gap:6px;">
+            <a href="<?= Router::url('/inventory/opname/history') ?>" @click.prevent="navigateAway('<?= Router::url('/inventory/opname/history') ?>')" class="btn btn-secondary" style="height:38px; display:inline-flex; align-items:center; gap:6px;">
                 <i data-lucide="history" style="width:15px; height:15px;"></i>
                 <span>Riwayat Dokumen</span>
+            </a>
+            <a href="<?= Router::url('/guide#bab-inventori-opname') ?>" target="_blank" class="btn btn-ghost" style="height:38px; font-weight:700; color:var(--color-primary); background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); display:inline-flex; align-items:center; gap:6px; text-decoration:none;" title="Buka Panduan Bulk Opname di Tab Baru">
+                <i data-lucide="book-open" style="width:15px; height:15px;"></i>
+                <span>Panduan</span>
             </a>
         </div>
     </div>
@@ -154,19 +158,138 @@ ob_start();
     </div>
 
     <!-- ========================================================================= -->
+    <!-- 3.5 TAB FILTER KATEGORI ITEM (Semua, Barang Jadi, Bahan Mentah, Bahan Kemas) -->
+    <!-- ========================================================================= -->
+    <div class="card" style="padding:10px 14px; border-radius:14px; border:1px solid var(--color-hairline); background:var(--color-surface); display:flex; flex-direction:column; gap:8px;">
+        <!-- Row 1: Tab Navigation Buttons -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5" style="min-width:0; width:100%;">
+            <!-- Tab 1: Semua -->
+            <button type="button" 
+                    @click="setTab('all')"
+                    :class="activeTab === 'all' ? 'shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800/80'"
+                    class="btn btn-sm"
+                    :style="activeTab === 'all' 
+                        ? 'background:#881337; color:#ffffff; border-color:#881337; font-weight:700;' 
+                        : 'border-color:var(--color-hairline); color:var(--color-ink); font-weight:600; background:transparent;'"
+                    style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border-radius:8px; font-size:12px; white-space:nowrap;">
+                <i data-lucide="layers" style="width:14px; height:14px;"></i>
+                <span>Semua Item</span>
+                <span class="badge-counter"
+                      :style="activeTab === 'all' 
+                          ? 'background:rgba(255,255,255,0.25); color:#fff;' 
+                          : 'background:var(--color-canvas-soft); color:var(--color-ink-mute); border-color:var(--color-hairline);'"
+                      x-text="countAll"></span>
+            </button>
+
+            <!-- Tab 2: Barang Jadi -->
+            <button type="button" 
+                    @click="setTab('barang_jadi')"
+                    :class="activeTab === 'barang_jadi' ? 'shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800/80'"
+                    class="btn btn-sm"
+                    :style="activeTab === 'barang_jadi' 
+                        ? 'background:#2563eb; color:#ffffff; border-color:#2563eb; font-weight:700;' 
+                        : 'border-color:var(--color-hairline); color:var(--color-ink); font-weight:600; background:transparent;'"
+                    style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border-radius:8px; font-size:12px; white-space:nowrap;">
+                <i data-lucide="package" style="width:14px; height:14px;"></i>
+                <span>Barang Jadi</span>
+                <span class="badge-counter"
+                      :style="activeTab === 'barang_jadi' 
+                          ? 'background:rgba(255,255,255,0.25); color:#fff;' 
+                          : 'background:rgba(37,99,235,0.1); color:#2563eb; border-color:rgba(37,99,235,0.25);'"
+                      x-text="countBarangJadi"></span>
+            </button>
+
+            <!-- Tab 3: Bahan Mentah -->
+            <button type="button" 
+                    @click="setTab('bahan_mentah')"
+                    :class="activeTab === 'bahan_mentah' ? 'shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800/80'"
+                    class="btn btn-sm"
+                    :style="activeTab === 'bahan_mentah' 
+                        ? 'background:#d97706; color:#ffffff; border-color:#d97706; font-weight:700;' 
+                        : 'border-color:var(--color-hairline); color:var(--color-ink); font-weight:600; background:transparent;'"
+                    style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border-radius:8px; font-size:12px; white-space:nowrap;">
+                <i data-lucide="archive" style="width:14px; height:14px;"></i>
+                <span>Bahan Mentah</span>
+                <span class="badge-counter"
+                      :style="activeTab === 'bahan_mentah' 
+                          ? 'background:rgba(255,255,255,0.25); color:#fff;' 
+                          : 'background:rgba(217,119,6,0.1); color:#d97706; border-color:rgba(217,119,6,0.25);'"
+                      x-text="countBahanMentah"></span>
+            </button>
+
+            <!-- Tab 4: Bahan Kemas -->
+            <button type="button" 
+                    @click="setTab('bahan_kemas')"
+                    :class="activeTab === 'bahan_kemas' ? 'shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800/80'"
+                    class="btn btn-sm"
+                    :style="activeTab === 'bahan_kemas' 
+                        ? 'background:#0f766e; color:#ffffff; border-color:#0f766e; font-weight:700;' 
+                        : 'border-color:var(--color-hairline); color:var(--color-ink); font-weight:600; background:transparent;'"
+                    style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border-radius:8px; font-size:12px; white-space:nowrap;">
+                <i data-lucide="box" style="width:14px; height:14px;"></i>
+                <span>Bahan Kemas</span>
+                <span class="badge-counter"
+                      :style="activeTab === 'bahan_kemas' 
+                          ? 'background:rgba(255,255,255,0.25); color:#fff;' 
+                          : 'background:rgba(15,118,110,0.1); color:#0f766e; border-color:rgba(15,118,110,0.25);'"
+                      x-text="countBahanKemas"></span>
+            </button>
+        </div>
+
+        <!-- Row 2: Active Filter Status & Reset Action -->
+        <div x-cloak x-show="hasActiveFilter" x-transition
+             class="flex items-center justify-between gap-3 pt-2.5 mt-0.5 flex-wrap"
+             style="border-top:1px solid var(--color-hairline);">
+            <div class="inline-flex items-center gap-2">
+                <div class="inline-flex items-center justify-center gap-1.5 rounded-full"
+                     style="height:24px; padding:0 10px; font-size:11.5px; font-weight:600; line-height:1; background:rgba(37,99,235,0.08); color:var(--color-primary); border:1px solid rgba(37,99,235,0.22); box-sizing:border-box;">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" style="flex-shrink:0;"></span>
+                    <span x-text="filteredItems.length + ' item cocok'" style="line-height:1; display:inline-block; transform:translateY(-0.5px);"></span>
+                </div>
+                <span class="text-xs text-slate-400 dark:text-slate-500 font-normal hidden sm:inline" style="line-height:1;">
+                    menyesuaikan kriteria filter &amp; pencarian aktif
+                </span>
+            </div>
+
+            <button type="button" @click="resetAllFilters()"
+                    class="btn btn-secondary btn-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                    style="height:26px; padding:0 10px; font-size:11.5px; font-weight:600; line-height:1; display:inline-flex; align-items:center; gap:5px; border-radius:6px; border:1px solid var(--color-hairline);"
+                    title="Kembalikan semua filter ke kondisi awal">
+                <i data-lucide="rotate-ccw" style="width:12px; height:12px;"></i>
+                <span>Reset Filter</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- 4. TOOLBAR FILTER & SEARCH                                                -->
     <!-- ========================================================================= -->
     <div class="card" style="padding:12px 18px; border-radius:14px; border:1px solid var(--color-hairline); background:var(--color-surface); display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
         <!-- Live Search -->
-        <div class="form-input-icon" style="flex:1; min-width:240px;">
-            <i data-lucide="search" class="icon-left"></i>
-            <input type="text" x-model="searchQuery" @input="currentPage = 1"
-                   placeholder="Cari SKU, Nama Produk, atau Barcode..." class="form-input" style="height:38px;">
+        <div class="form-input-icon flex-1 relative" style="min-width:240px;">
+            <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+            <input type="text" x-ref="searchInput" x-model="searchQuery" @input="onSearchInput()"
+                   placeholder="Cari SKU, Nama Produk/Bahan, Barcode..." class="form-input" style="height:38px; padding-right:58px; font-size:13px;">
+            
+            <!-- Shortcut Hint '/' when query is empty -->
+            <span x-show="!searchQuery" 
+                  class="hidden sm:inline-flex items-center justify-center font-mono text-[10px] text-slate-400 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5"
+                  style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none;">
+                /
+            </span>
+
+            <!-- Clear Search Button when query is present -->
+            <button type="button" x-cloak x-show="searchQuery" @click="clearSearch()"
+                    class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    style="position:absolute; right:8px; top:50%; transform:translateY(-50%); height:24px; width:24px; padding:0; display:flex; align-items:center; justify-content:center;"
+                    title="Hapus pencarian">
+                <i data-lucide="x" style="width:14px; height:14px;"></i>
+            </button>
         </div>
 
-        <!-- Filter Grup Kemasan -->
-        <div style="min-width:180px;">
-            <select x-model="selectedGroup" @change="currentPage = 1" class="form-select" style="height:38px; font-size:13px;">
+        <!-- Filter Grup Kemasan (Tampil untuk 'all' dan 'barang_jadi') -->
+        <div style="min-width:180px;" x-show="activeTab === 'all' || activeTab === 'barang_jadi'">
+            <select x-model="selectedGroup" @change="onFilterChange()" class="form-select" style="height:38px; font-size:13px;">
                 <option value="">Semua Grup Kemasan</option>
                 <template x-for="g in groups" :key="g.id">
                     <option :value="g.kode_grup" x-text="g.kode_grup + ' - ' + g.nama_grup"></option>
@@ -176,7 +299,7 @@ ob_start();
 
         <!-- Filter Status Perubahan -->
         <div style="min-width:180px;">
-            <select x-model="filterStatus" @change="currentPage = 1" class="form-select" style="height:38px; font-size:13px;">
+            <select x-model="filterStatus" @change="onFilterChange()" class="form-select" style="height:38px; font-size:13px;">
                 <option value="all">Semua Status</option>
                 <option value="changed">Hanya yang Diubah (Selisih)</option>
                 <option value="unmodified">Belum Dihitung / Belum Diperiksa</option>
@@ -188,7 +311,7 @@ ob_start();
         <!-- Per Page Selector -->
         <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:12px; color:var(--color-ink-mute); white-space:nowrap;">Baris:</span>
-            <select x-model="perPage" @change="currentPage = 1" class="form-select" style="height:38px; width:80px; font-size:12.5px; font-family:var(--font-mono);">
+            <select x-model="perPage" @change="onPerPageChange()" class="form-select" style="height:38px; width:80px; font-size:12.5px; font-family:var(--font-mono);">
                 <option value="50">50</option>
                 <option value="100">100</option>
                 <option value="all">Semua</option>
@@ -200,7 +323,7 @@ ob_start();
     <!-- 5. TABEL FORM BULK OPNAME                                                 -->
     <!-- ========================================================================= -->
     <div class="table-wrapper" x-ref="tableWrapper"
-         style="overflow-anchor:none;">
+         style="overflow-anchor:none; scroll-behavior:auto !important;">
         <div class="table-scroll"
              style="overflow-anchor:none;">
             <table class="data-table" style="overflow-anchor:none;">
@@ -243,6 +366,18 @@ ob_start();
                                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                     <span class="badge badge-mono" x-text="it.kode_sku"></span>
                                     <span style="font-size:13px; font-weight:700; color:var(--color-ink);" x-text="it.nama_item"></span>
+
+                                    <!-- Category Pill Badges for easy distinction -->
+                                    <span x-show="it.tipe_item === 'bahan_mentah'" 
+                                          class="badge badge-warning" 
+                                          style="font-size:10px; font-weight:700; padding:1px 6px;">
+                                        Bahan Mentah
+                                    </span>
+                                    <span x-show="it.tipe_item === 'bahan_kemas'" 
+                                          class="badge" 
+                                          style="background:rgba(15,118,110,0.12); color:#0f766e; border:1px solid rgba(15,118,110,0.25); font-size:10px; font-weight:700; padding:1px 6px;">
+                                        Bahan Kemas
+                                    </span>
                                 </div>
                                 <div x-show="it.kode_grup || it.nama_grup"
                                      style="font-size:11px; font-family:var(--font-mono); color:var(--color-ink-mute); margin-top:2px;"
@@ -337,14 +472,6 @@ ob_start();
                             </td>
                         </tr>
                     </template>
-
-                    <!-- Filler Row: always in DOM, height driven reactively by fillerHeight getter -->
-                    <tr class="filler-row" aria-hidden="true"
-                        style="border:none; background:transparent; pointer-events:none; visibility:hidden;">
-                        <td colspan="9" style="border:none; padding:0; background:transparent;">
-                            <div :style="'height:' + fillerHeight + 'px;'"></div>
-                        </td>
-                    </tr>
                 </tbody>
             </table>
         </div>
@@ -595,6 +722,7 @@ function bulkOpnameApp() {
             barcode: it.barcode,
             barcode_universal: it.barcode_universal,
             nama_item: it.nama_item,
+            tipe_item: it.tipe_item || 'barang_jadi',
             varian_rasa: it.varian_rasa,
             nama_grup: it.nama_grup,
             kode_grup: it.kode_grup,
@@ -613,13 +741,21 @@ function bulkOpnameApp() {
         groups: groups,
         formTanggal: '<?= date('Y-m-d') ?>',
         formCatatan: 'Bulk Opname Stok Fisik Gudang Pusat',
+        activeTab: 'all',
         searchQuery: '',
         selectedGroup: '',
         filterStatus: 'all',
         perPage: '50',
         currentPage: 1,
-        avgRowHeight: 44,
         csrfToken: document.querySelector('meta[name="csrf-token"]')?.content || '',
+
+        // High-Performance Filtering & Totals State
+        cachedFilteredItems: [],
+        totalModified: 0,
+        totalQtyIn: 0,
+        totalQtyOut: 0,
+        _recalcTimer: null,
+        _bypassBeforeUnload: false,
 
         // Draft & Resilience State
         STORAGE_KEY: 'kerensnack_bulk_opname_draft_v1',
@@ -638,9 +774,6 @@ function bulkOpnameApp() {
         selectedItem: {},
 
         // ── Scroll Helper ─────────────────────────────────────────────────────
-        // Returns the real scroll container: on desktop (≥1024px) it is
-        // `main.app-content` (overflow-y:auto, fixed height); on mobile it is
-        // `window` (body scrolls).
         _getScrollContainer() {
             const el = document.querySelector('main.app-content') || document.querySelector('.app-content');
             if (el && (el.scrollHeight > el.clientHeight)) {
@@ -661,90 +794,203 @@ function bulkOpnameApp() {
             }
         },
 
-        // ── Row Height ────────────────────────────────────────────────────────
-        // Measures the median height of all real rows (excluding filler) for an
-        // accurate fillerHeight calculation even when rows have varied content.
-        updateRowHeight() {
-            const rows = Array.from(
-                this.$refs.tableWrapper?.querySelectorAll('tbody tr:not(.filler-row)') || []
-            ).filter(r => r.offsetHeight > 0);
+        // ── Navigation & In-App Link Interception (AppConfirm instead of Native Dialog) ──
+        async navigateAway(url) {
+            if (this.totalModified > 0 && !this.isSubmitting) {
+                const confirmed = window.AppConfirm ? await window.AppConfirm({
+                    title: 'Tinggalkan Halaman Opname?',
+                    message: 'Terdapat ' + this.totalModified + ' item yang telah Anda sesuaikan namun belum disimpan permanen ke database.',
+                    submessage: 'Draf perubahan Anda tersimpan otomatis di perangkat ini dan akan langsung dipulihkan saat Anda kembali.',
+                    type: 'warning',
+                    confirmText: 'Ya, Tinggalkan',
+                    cancelText: 'Tetap di Halaman Ini'
+                }) : confirm('Terdapat data opname yang belum disimpan. Tinggalkan halaman?');
 
-            if (rows.length === 0) return;
-
-            const heights = rows.map(r => r.offsetHeight).sort((a, b) => a - b);
-            const mid = Math.floor(heights.length / 2);
-            this.avgRowHeight = heights.length % 2 !== 0
-                ? heights[mid]
-                : Math.round((heights[mid - 1] + heights[mid]) / 2);
+                if (!confirmed) return;
+            }
+            this._bypassBeforeUnload = true;
+            window.location.href = url;
         },
 
         init() {
-            // Check for previous session auto-saved draft
+            // 1. Initial filter and totals computation
+            this.applyFilter();
+            this.recalculateTotals();
+
+            // 2. Auto-restore saved draft from previous session
             try {
                 const draftRaw = localStorage.getItem(this.STORAGE_KEY);
                 if (draftRaw) {
                     const draft = JSON.parse(draftRaw);
-                    const count = Object.keys(draft.changes || {}).length;
-                    if (count > 0) {
-                        this.hasDraft = true;
-                        this.draftSavedAt = draft.saved_at || 'Sesi Sebelumnya';
-                        this.draftItemCount = count;
+                    const changes = draft.changes || {};
+                    const changeCount = Object.keys(changes).length;
+                    if (changeCount > 0) {
+                        if (draft.formTanggal) this.formTanggal = draft.formTanggal;
+                        if (draft.formCatatan) this.formCatatan = draft.formCatatan;
+                        this.items.forEach(it => {
+                            const ch = changes[it.id];
+                            if (ch) {
+                                it.stok_fisik_val = ch.stok_fisik_val;
+                                it.selisih_val = ch.selisih_val;
+                                it.is_modified = ch.is_modified;
+                                it.catatan_item = ch.catatan_item || '';
+                                if (it.selisih_val > 0) {
+                                    it.selisih_input_val = '+' + this.formatQty(it.selisih_val);
+                                } else if (it.selisih_val < 0) {
+                                    it.selisih_input_val = '-' + this.formatQty(Math.abs(it.selisih_val));
+                                } else if (it.stok_fisik_val !== null) {
+                                    it.selisih_input_val = '0';
+                                } else {
+                                    it.selisih_input_val = '';
+                                }
+                            }
+                        });
+                        this.recalculateTotals();
+                        this.applyFilter();
+                        this.$nextTick(() => {
+                            if (window.toast && window.toast.info) {
+                                window.toast.info(`Draf opname otomatis dipulihkan (${changeCount} item).`);
+                            }
+                        });
                     }
                 }
             } catch (e) {
                 console.warn("Gagal membaca draft opname:", e);
             }
 
-            // Guard against accidental navigation / tab closure
-            window.addEventListener('beforeunload', (e) => {
-                if (this.totalModified > 0 && !this.isSubmitting) {
+            // 3. Intercept in-app link clicks (Sidebar, Header, etc.) with AppConfirm
+            document.addEventListener('click', async (e) => {
+                const link = e.target.closest('a[href]');
+                if (!link) return;
+                const href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank') return;
+                if (this.totalModified > 0 && !this.isSubmitting && !this._bypassBeforeUnload) {
                     e.preventDefault();
-                    e.returnValue = '';
+                    e.stopPropagation();
+                    const confirmed = window.AppConfirm ? await window.AppConfirm({
+                        title: 'Tinggalkan Halaman Opname?',
+                        message: 'Terdapat ' + this.totalModified + ' item opname yang telah Anda ubah namun belum disimpan ke database.',
+                        submessage: 'Draf perubahan tetap aman tersimpan di browser ini dan tidak akan hilang.',
+                        type: 'warning',
+                        confirmText: 'Ya, Tinggalkan',
+                        cancelText: 'Tetap di Halaman Ini'
+                    }) : confirm('Ada data opname belum disimpan. Tinggalkan halaman?');
+
+                    if (confirmed) {
+                        this._bypassBeforeUnload = true;
+                        window.location.href = link.href;
+                    }
                 }
+            }, true);
+
+            // 4. Fallback guard if user attempts to close browser tab directly
+            window.addEventListener('beforeunload', (e) => {
+                if (this._bypassBeforeUnload || this.isSubmitting || this.totalModified === 0) {
+                    return;
+                }
+                e.preventDefault();
+                e.returnValue = '';
             });
 
             this.$nextTick(() => {
                 if (window.lucide) lucide.createIcons();
-                this.updateRowHeight();
-            });
-            // Second pass after fonts/icons settle
-            setTimeout(() => this.updateRowHeight(), 300);
-
-            this.$watch('searchQuery', () => {
-                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
-            });
-            this.$watch('selectedGroup', () => {
-                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
-            });
-            this.$watch('filterStatus', () => {
-                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
-            });
-            this.$watch('perPage', () => {
-                this.$nextTick(() => {
-                    if (window.lucide) lucide.createIcons();
-                    this.updateRowHeight();
-                });
             });
         },
 
-        get filteredItems() {
+        // ── Category Tab Counters ─────────────────────────────────────────────
+        get countAll() {
+            return this.items.length;
+        },
+
+        get countBarangJadi() {
+            return this.items.filter(it => it.tipe_item === 'barang_jadi' || !it.tipe_item).length;
+        },
+
+        get countBahanMentah() {
+            return this.items.filter(it => it.tipe_item === 'bahan_mentah').length;
+        },
+
+        get countBahanKemas() {
+            return this.items.filter(it => it.tipe_item === 'bahan_kemas').length;
+        },
+
+        setTab(tab) {
+            if (this.activeTab === tab) return;
+            this.activeTab = tab;
+            this.currentPage = 1;
+            this.applyFilter();
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        // ── High-Performance Caching Filter Engine ────────────────────────────
+        onSearchInput() {
+            this.currentPage = 1;
+            this.applyFilter();
+        },
+
+        clearSearch() {
+            this.searchQuery = '';
+            this.currentPage = 1;
+            this.applyFilter();
+            if (this.$refs.searchInput) this.$refs.searchInput.focus();
+        },
+
+        onFilterChange() {
+            this.currentPage = 1;
+            this.applyFilter();
+        },
+
+        onPerPageChange() {
+            this.currentPage = 1;
+            this.applyFilter();
+            this.$nextTick(() => {
+                if (window.lucide) lucide.createIcons();
+            });
+        },
+
+        get hasActiveFilter() {
+            return this.activeTab !== 'all' || 
+                   this.searchQuery.trim() !== '' || 
+                   this.selectedGroup !== '' || 
+                   this.filterStatus !== 'all';
+        },
+
+        resetAllFilters() {
+            this.activeTab = 'all';
+            this.searchQuery = '';
+            this.selectedGroup = '';
+            this.filterStatus = 'all';
+            this.currentPage = 1;
+            this.applyFilter();
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        applyFilter() {
             let res = this.items;
 
-            if (this.searchQuery.trim()) {
-                const q = this.searchQuery.toLowerCase();
+            // 1. Tab Kategori
+            if (this.activeTab !== 'all') {
+                res = res.filter(it => it.tipe_item === this.activeTab);
+            }
+
+            // 2. Live Search
+            const q = this.searchQuery.trim().toLowerCase();
+            if (q) {
                 res = res.filter(it =>
                     (it.nama_item && it.nama_item.toLowerCase().includes(q)) ||
                     (it.kode_sku && it.kode_sku.toLowerCase().includes(q)) ||
-                    (it.barcode && it.barcode.toLowerCase().includes(q)) ||
-                    (it.barcode_universal && it.barcode_universal.toLowerCase().includes(q)) ||
+                    (it.barcode && String(it.barcode).toLowerCase().includes(q)) ||
+                    (it.barcode_universal && String(it.barcode_universal).toLowerCase().includes(q)) ||
                     (it.nama_grup && it.nama_grup.toLowerCase().includes(q))
                 );
             }
 
-            if (this.selectedGroup) {
+            // 3. Grup Kemasan (khusus all & barang_jadi)
+            if (this.selectedGroup && (this.activeTab === 'all' || this.activeTab === 'barang_jadi')) {
                 res = res.filter(it => it.kode_grup === this.selectedGroup);
             }
 
+            // 4. Status Perubahan
             if (this.filterStatus === 'changed') {
                 res = res.filter(it => it.is_modified);
             } else if (this.filterStatus === 'unmodified') {
@@ -755,7 +1001,11 @@ function bulkOpnameApp() {
                 res = res.filter(it => it.is_modified && it.selisih_val < 0);
             }
 
-            return res;
+            this.cachedFilteredItems = res;
+        },
+
+        get filteredItems() {
+            return this.cachedFilteredItems;
         },
 
         get totalPages() {
@@ -776,16 +1026,28 @@ function bulkOpnameApp() {
             return (this.currentPage - 1) * parseInt(this.perPage);
         },
 
-        // Reactive computed filler height — pads tbody to always equal `perPage`
-        // rows. Because fillerHeight is a getter, Alpine recomputes it in the
-        // same synchronous batch as paginatedItems when currentPage changes,
-        // so there is never a frame where the table is shorter than expected.
-        get fillerHeight() {
-            if (this.perPage === 'all' || this.totalPages <= 1) return 0;
-            const size = parseInt(this.perPage) || 50;
-            const missing = size - this.paginatedItems.length;
-            if (missing <= 0) return 0;
-            return missing * (this.avgRowHeight || 44);
+        // ── Single-Pass High Speed Totals Calculation ─────────────────────────
+        recalculateTotals() {
+            let mod = 0, qIn = 0, qOut = 0;
+            const len = this.items.length;
+            for (let i = 0; i < len; i++) {
+                const it = this.items[i];
+                if (it.is_modified) {
+                    mod++;
+                    if (it.selisih_val > 0) qIn += it.selisih_val;
+                    else if (it.selisih_val < 0) qOut += Math.abs(it.selisih_val);
+                }
+            }
+            this.totalModified = mod;
+            this.totalQtyIn = qIn;
+            this.totalQtyOut = qOut;
+        },
+
+        recalculateTotalsDebounced() {
+            if (this._recalcTimer) cancelAnimationFrame(this._recalcTimer);
+            this._recalcTimer = requestAnimationFrame(() => {
+                this.recalculateTotals();
+            });
         },
 
         // ── Page Navigation ───────────────────────────────────────────────────
@@ -795,7 +1057,6 @@ function bulkOpnameApp() {
             const paginationEl = this.$refs.paginationBar;
             const tableEl = this.$refs.tableWrapper;
 
-            // 1. Pre-emptively lock current height so DOM cannot collapse during Alpine render
             if (tableEl && tableEl.offsetHeight > 0) {
                 tableEl.style.minHeight = tableEl.offsetHeight + 'px';
             }
@@ -803,16 +1064,12 @@ function bulkOpnameApp() {
             const paginationTopBefore = paginationEl ? paginationEl.getBoundingClientRect().top : null;
             const scrollEl = this._getScrollContainer();
 
-            // 2. Change page (triggers Alpine reactive re-render)
             this.currentPage = targetPage;
 
-            // 3. Immediately after Alpine finishes DOM updates (synchronous nextTick before browser paint):
             this.$nextTick(() => {
-                // Instantly clear the temporary minHeight lock after Alpine renders the new page
                 if (tableEl) {
                     tableEl.style.minHeight = '';
                 }
-                this.updateRowHeight();
 
                 if (paginationTopBefore !== null && paginationEl) {
                     const paginationTopAfter = paginationEl.getBoundingClientRect().top;
@@ -843,35 +1100,19 @@ function bulkOpnameApp() {
             this.goToPage(this.currentPage + 1);
         },
 
-        get totalModified() {
-            return this.items.filter(it => it.is_modified).length;
-        },
-
-        get totalQtyIn() {
-            return this.items
-                .filter(it => it.is_modified && it.selisih_val > 0)
-                .reduce((acc, it) => acc + (it.selisih_val || 0), 0);
-        },
-
-        get totalQtyOut() {
-            return this.items
-                .filter(it => it.is_modified && it.selisih_val < 0)
-                .reduce((acc, it) => acc + Math.abs(it.selisih_val || 0), 0);
-        },
-
         // ── Draft & Auto-Save Mechanics ───────────────────────────────────────
         scheduleAutoSave() {
             clearTimeout(this.autoSaveTimeout);
             this.autoSaveTimeout = setTimeout(() => {
                 this.saveDraftNow();
-            }, 500);
+            }, 600);
         },
 
         saveDraftNow() {
             if (this.isSubmitting) return;
             const changes = {};
             this.items.forEach(it => {
-                if (it.is_modified || (it.catatan_item && it.catatan_item.trim() !== '')) {
+                if (it.is_modified || (it.catatan_item && it.catatan_item.trim() !== '') || it.stok_fisik_val !== null) {
                     changes[it.id] = {
                         stok_fisik_val: it.stok_fisik_val,
                         selisih_val: it.selisih_val,
@@ -894,39 +1135,6 @@ function bulkOpnameApp() {
                 localStorage.setItem(this.STORAGE_KEY, JSON.stringify(payload));
             } else {
                 localStorage.removeItem(this.STORAGE_KEY);
-            }
-        },
-
-        restoreDraft() {
-            try {
-                const draftRaw = localStorage.getItem(this.STORAGE_KEY);
-                if (!draftRaw) return;
-                const draft = JSON.parse(draftRaw);
-                if (draft.formTanggal) this.formTanggal = draft.formTanggal;
-                if (draft.formCatatan) this.formCatatan = draft.formCatatan;
-                if (draft.changes) {
-                    this.items.forEach(it => {
-                        const ch = draft.changes[it.id];
-                        if (ch) {
-                            it.stok_fisik_val = ch.stok_fisik_val;
-                            it.selisih_val = ch.selisih_val;
-                            it.is_modified = ch.is_modified;
-                            it.catatan_item = ch.catatan_item || '';
-                            if (it.selisih_val > 0) {
-                                it.selisih_input_val = '+' + this.formatQty(it.selisih_val);
-                            } else if (it.selisih_val < 0) {
-                                it.selisih_input_val = '-' + this.formatQty(Math.abs(it.selisih_val));
-                            } else {
-                                it.selisih_input_val = '';
-                            }
-                        }
-                    });
-                }
-                this.hasDraft = false;
-                this.draftDismissed = true;
-                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
-            } catch (e) {
-                console.error("Gagal memulihkan draft:", e);
             }
         },
 
@@ -955,15 +1163,15 @@ function bulkOpnameApp() {
 
         onFormSubmit(e) {
             this.isSubmitting = true;
+            this._bypassBeforeUnload = true;
             localStorage.removeItem(this.STORAGE_KEY);
         },
 
-        // Navigasi Enter cepat ke baris bawahnya
         focusNextRow(evt, colType) {
             const td = evt.target.closest('td');
             const tr = td?.closest('tr');
             const nextTr = tr?.nextElementSibling;
-            if (nextTr && !nextTr.classList.contains('filler-row')) {
+            if (nextTr) {
                 const targetInput = nextTr.querySelector(`input[data-col="${colType}"]`);
                 if (targetInput) {
                     targetInput.focus();
@@ -972,7 +1180,7 @@ function bulkOpnameApp() {
             }
         },
 
-        // Two-way Binding 1: Saat user mengetik Stok Fisik Realita
+        // ── High Speed Two-way Binding 1: Stok Fisik Realita ─────────────────
         onPhysicalKeydown(evt) {
             if (evt.ctrlKey || evt.metaKey) return;
             const allowed = [
@@ -982,10 +1190,10 @@ function bulkOpnameApp() {
             ];
             if (allowed.includes(evt.key)) return;
 
-            // Hanya terima angka 0-9
+            // Only allow 0-9
             if (/^[0-9]$/.test(evt.key)) return;
 
-            // Pemisah desimal (. atau ,) maksimal 1 kali
+            // Decimal separator (. or ,) max 1
             if (evt.key === '.' || evt.key === ',') {
                 const target = evt.target;
                 const val = target.value || '';
@@ -995,7 +1203,7 @@ function bulkOpnameApp() {
                 if (!hasDecimal || selectionHasDecimal) return;
             }
 
-            // Blokir tombol selain angka dan desimal (termasuk -, +, huruf)
+            // Strictly prevent negative (-), plus (+), and other letters
             evt.preventDefault();
         },
 
@@ -1006,11 +1214,20 @@ function bulkOpnameApp() {
                 it.selisih_val = 0;
                 it.selisih_input_val = '';
                 it.is_modified = false;
+
+                const tr = target?.closest ? target.closest('tr') : null;
+                const diffInput = tr?.querySelector('input[data-col="diff"]');
+                if (diffInput) {
+                    diffInput.value = '';
+                    diffInput.style.color = '';
+                    diffInput.style.borderColor = '';
+                }
+
+                this.recalculateTotalsDebounced();
                 this.scheduleAutoSave();
                 return;
             }
 
-            // Bersihkan hanya angka dan satu desimal
             let raw = String(val).replace(/[^0-9.,]/g, '');
             let parts = raw.split(/[.,]/);
             if (parts.length > 2) {
@@ -1025,18 +1242,32 @@ function bulkOpnameApp() {
             if (isNaN(num)) return;
             if (num < 0) num = 0;
 
+            const diff = num - it.stok_sistem;
             it.stok_fisik_val = num;
-            it.selisih_val = num - it.stok_sistem;
-            it.is_modified = Math.abs(it.selisih_val) > 0.0001;
+            it.selisih_val = diff;
+            it.is_modified = Math.abs(diff) > 0.0001;
 
-            if (it.selisih_val > 0) {
-                it.selisih_input_val = '+' + this.formatQty(it.selisih_val);
-            } else if (it.selisih_val < 0) {
-                it.selisih_input_val = '-' + this.formatQty(Math.abs(it.selisih_val));
-            } else {
-                it.selisih_input_val = '';
+            const formattedDiff = diff > 0 ? ('+' + this.formatQty(diff)) : (diff < 0 ? ('-' + this.formatQty(Math.abs(diff))) : '0');
+            it.selisih_input_val = formattedDiff;
+
+            // Direct sister DOM update for instant 60fps response
+            const tr = target?.closest ? target.closest('tr') : null;
+            const diffInput = tr?.querySelector('input[data-col="diff"]');
+            if (diffInput) {
+                diffInput.value = formattedDiff;
+                if (diff > 0) {
+                    diffInput.style.color = '#059669';
+                    diffInput.style.borderColor = '#10b981';
+                } else if (diff < 0) {
+                    diffInput.style.color = '#dc2626';
+                    diffInput.style.borderColor = '#ef4444';
+                } else {
+                    diffInput.style.color = 'var(--color-ink)';
+                    diffInput.style.borderColor = 'var(--color-hairline)';
+                }
             }
 
+            this.recalculateTotalsDebounced();
             this.scheduleAutoSave();
         },
 
@@ -1048,25 +1279,26 @@ function bulkOpnameApp() {
             }
             const clean = String(val).replace(',', '.').replace(/\s+/g, '');
             let num = parseFloat(clean);
-            if (isNaN(num) || Math.abs(num - it.stok_sistem) <= 0.0001) {
+            if (isNaN(num)) {
                 this.resetRow(it);
-            } else {
-                if (num < 0) num = 0;
-                it.stok_fisik_val = num;
-                it.selisih_val = num - it.stok_sistem;
-                it.is_modified = true;
-                if (it.selisih_val > 0) {
-                    it.selisih_input_val = '+' + this.formatQty(it.selisih_val);
-                } else if (it.selisih_val < 0) {
-                    it.selisih_input_val = '-' + this.formatQty(Math.abs(it.selisih_val));
-                } else {
-                    it.selisih_input_val = '';
-                }
+                return;
             }
+            if (num < 0) num = 0;
+            const diff = num - it.stok_sistem;
+            it.stok_fisik_val = num;
+            it.selisih_val = diff;
+            it.is_modified = Math.abs(diff) > 0.0001;
+            it.selisih_input_val = diff > 0 ? ('+' + this.formatQty(diff)) : (diff < 0 ? ('-' + this.formatQty(Math.abs(diff))) : '');
+
+            // Format physical display on blur
+            if (typeof target === 'object' && target) {
+                target.value = this.formatQty(num);
+            }
+            this.recalculateTotals();
             this.scheduleAutoSave();
         },
 
-        // Two-way Binding 2: Saat user mengetik Selisih (+/-)
+        // ── High Speed Two-way Binding 2: Penyesuaian (+/-) ───────────────────
         onDiffKeydown(evt) {
             if (evt.ctrlKey || evt.metaKey) return;
             const allowed = [
@@ -1081,14 +1313,13 @@ function bulkOpnameApp() {
             const selStart = target.selectionStart;
             const selEnd = target.selectionEnd;
 
-            // Izinkan tanda + dan -
+            // Allow + and -
             if (evt.key === '+' || evt.key === '-') {
                 const hasExistingSign = /^[+-]/.test(val);
                 const selectionReplacesSign = (selStart === 0 && (selEnd > 0 || !hasExistingSign));
                 if (selStart === 0 || selectionReplacesSign) {
                     return;
                 }
-                // Jika kursor bukan di awal tapi user menekan +/-, gantikan tanda di awal
                 evt.preventDefault();
                 let withoutSign = val.replace(/^[+-]/, '');
                 let newVal = evt.key + withoutSign;
@@ -1099,10 +1330,8 @@ function bulkOpnameApp() {
                 return;
             }
 
-            // Hanya terima angka 0-9
             if (/^[0-9]$/.test(evt.key)) return;
 
-            // Pemisah desimal (. atau ,) maksimal 1 kali
             if (evt.key === '.' || evt.key === ',') {
                 const hasDecimal = val.includes('.') || val.includes(',');
                 const selectionSpansDecimal = selStart !== selEnd &&
@@ -1110,7 +1339,6 @@ function bulkOpnameApp() {
                 if (!hasDecimal || selectionSpansDecimal) return;
             }
 
-            // Blokir tombol selain tanda +, -, angka, dan pemisah desimal
             evt.preventDefault();
         },
 
@@ -1128,10 +1356,7 @@ function bulkOpnameApp() {
                 str = str.substring(1);
             }
 
-            // Hapus semua karakter yang BUKAN angka dan BUKAN pemisah desimal
             str = str.replace(/[^0-9.,]/g, '');
-
-            // Maksimal satu pemisah desimal
             let parts = str.split(/[.,]/);
             if (parts.length > 2) {
                 str = parts[0] + '.' + parts.slice(1).join('');
@@ -1168,7 +1393,6 @@ function bulkOpnameApp() {
             it.selisih_input_val = sanitized;
 
             if (sanitized === '' || sanitized === '-' || sanitized === '+' || sanitized === null) {
-                // Biarkan user leluasa mengetik tanda + atau - terlebih dahulu
                 return;
             }
 
@@ -1176,7 +1400,6 @@ function bulkOpnameApp() {
             let diff = parseFloat(clean);
             if (isNaN(diff)) return;
 
-            // Pengaman: nominal minus (-) tidak boleh melebihi stok yang ada di sistem
             const systemStock = Number(it.stok_sistem) || 0;
             if (diff < 0) {
                 const maxReduction = Math.max(0, systemStock);
@@ -1191,15 +1414,19 @@ function bulkOpnameApp() {
                 }
             }
 
-            let targetPhysical = systemStock + diff;
-            if (targetPhysical < 0) {
-                targetPhysical = 0;
-                diff = -Math.max(0, systemStock);
-            }
-
+            let targetPhysical = Math.max(0, systemStock + diff);
             it.selisih_val = diff;
             it.stok_fisik_val = targetPhysical;
-            it.is_modified = Math.abs(it.selisih_val) > 0.0001;
+            it.is_modified = Math.abs(diff) > 0.0001;
+
+            // Direct sister DOM update
+            const tr = target?.closest ? target.closest('tr') : null;
+            const physInput = tr?.querySelector('input[data-col="physical"]');
+            if (physInput) {
+                physInput.value = this.formatQty(targetPhysical);
+            }
+
+            this.recalculateTotalsDebounced();
             this.scheduleAutoSave();
         },
 
@@ -1213,7 +1440,7 @@ function bulkOpnameApp() {
             let sanitized = this.sanitizeDiffInput(rawVal);
             const clean = sanitized.replace(',', '.').replace(/\s+/g, '');
             let diff = parseFloat(clean);
-            if (isNaN(diff) || Math.abs(diff) <= 0.0001) {
+            if (isNaN(diff)) {
                 this.resetRow(it);
                 return;
             }
@@ -1227,26 +1454,25 @@ function bulkOpnameApp() {
                 }
             }
 
-            let targetPhysical = systemStock + diff;
-            if (targetPhysical < 0) {
-                targetPhysical = 0;
-                diff = -Math.max(0, systemStock);
-            }
-
+            let targetPhysical = Math.max(0, systemStock + diff);
             it.selisih_val = diff;
             it.stok_fisik_val = targetPhysical;
-            it.is_modified = Math.abs(it.selisih_val) > 0.0001;
-            it.selisih_input_val = diff > 0 ? ('+' + this.formatQty(diff)) : ('-' + this.formatQty(Math.abs(diff)));
+            it.is_modified = Math.abs(diff) > 0.0001;
+            it.selisih_input_val = diff > 0 ? ('+' + this.formatQty(diff)) : (diff < 0 ? ('-' + this.formatQty(Math.abs(diff))) : '');
+
+            if (typeof target === 'object' && target) {
+                target.value = it.selisih_input_val;
+            }
+            this.recalculateTotals();
             this.scheduleAutoSave();
         },
 
-        // Resets only the stock values. The note is intentionally preserved —
-        // user may have typed a note before deciding to revert the quantity.
         resetRow(it) {
             it.stok_fisik_val = null;
             it.selisih_val = 0;
             it.selisih_input_val = '';
             it.is_modified = false;
+            this.recalculateTotals();
             this.scheduleAutoSave();
         },
 
@@ -1263,7 +1489,6 @@ function bulkOpnameApp() {
                 return;
             }
 
-            // Full reset including notes, because user explicitly requested a total wipe.
             this.items.forEach(it => {
                 it.stok_fisik_val = null;
                 it.selisih_val = 0;
@@ -1271,6 +1496,8 @@ function bulkOpnameApp() {
                 it.is_modified = false;
                 it.catatan_item = '';
             });
+            this.recalculateTotals();
+            this.applyFilter();
             this.clearDraft();
             if (window.toast && window.toast.info) {
                 window.toast.info('Semua perubahan opname berhasil dibatalkan.');

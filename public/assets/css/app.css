@@ -1728,6 +1728,28 @@ html.dark .header-theme-btn .theme-icon-moon {
   border-color: #8ab4f8;
 }
 
+.btn-success,
+.btn-success-solid {
+  background-color: #10b981 !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.2);
+}
+.btn-success:hover,
+.btn-success-solid:hover {
+  background-color: #059669 !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+}
+.btn-success svg,
+.btn-success i,
+.btn-success-solid svg,
+.btn-success-solid i {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
 .btn-danger {
   background-color: var(--color-danger-soft);
   color: var(--color-danger);
@@ -1772,6 +1794,71 @@ html.dark .header-theme-btn .theme-icon-moon {
 .btn-sm svg { width: 14px; height: 14px; }
 .btn-lg { padding: var(--space-md) var(--space-xxl); font-size: 14px; }
 .btn-lg svg { width: 18px; height: 18px; }
+
+/* Universal Segmented Control Component */
+.segmented-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-canvas-soft);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--rounded-md);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.segmented-btn {
+  border: none !important;
+  outline: none !important;
+  background: transparent;
+  color: var(--color-ink-mute);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  line-height: 1;
+  user-select: none;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: none;
+}
+
+.segmented-btn:hover:not(.is-active) {
+  color: var(--color-ink);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.dark .segmented-btn:hover:not(.is-active) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.segmented-btn.is-active {
+  background: var(--color-surface) !important;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04) !important;
+}
+
+.dark .segmented-btn.is-active {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+.segmented-btn.is-active.is-opname { color: #2563eb !important; }
+.dark .segmented-btn.is-active.is-opname { color: #60a5fa !important; }
+
+.segmented-btn.is-active.is-masuk { color: #059669 !important; }
+.dark .segmented-btn.is-active.is-masuk { color: #34d399 !important; }
+
+.segmented-btn.is-active.is-keluar { color: #e11d48 !important; }
+.dark .segmented-btn.is-active.is-keluar { color: #fb7185 !important; }
 
 /* =============================================================================
    9. CARDS
@@ -2068,8 +2155,27 @@ button.badge:focus-visible {
 .dark .badge-purple    { background-color: rgba(139, 92, 246, 0.12); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.25); }
 .dark .badge-muted     { background-color: rgba(255,255,255,0.03); color: #888888; border: 1px solid #242424; }
 
+/* --- 11.1 Standard Pill Counter Badge (Tabs & Notifications) --- */
+.badge-counter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: var(--rounded-full);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid transparent;
+  transition: all 0.15s ease-in-out;
+  user-select: none;
+  vertical-align: middle;
+}
+
 /* =============================================================================
-   12. TABLES (Enterprise Material Design 3)
+   12. TABLES (Modern Clean Enterprise)
    ============================================================================= */
 .table,
 .data-table {

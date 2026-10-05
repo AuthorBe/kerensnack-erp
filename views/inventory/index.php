@@ -9,6 +9,10 @@ $totalPcsGudang = array_sum(array_column($items, 'stok_fisik_saat_ini'));
 $totalMenipis = count(array_filter($items, fn($i) => (float)$i['stok_fisik_saat_ini'] > 0 && (float)$i['stok_fisik_saat_ini'] <= (float)($i['stok_minimum_peringatan'] ?? 10)));
 $totalKosong = count(array_filter($items, fn($i) => (float)$i['stok_fisik_saat_ini'] <= 0));
 $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_ini'] * (float)($i['harga_pokok_pembelian'] ?? 0), $items));
+
+$countBarangJadi = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? 'barang_jadi') === 'barang_jadi'));
+$countBahanMentah = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') === 'bahan_mentah'));
+$countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') === 'bahan_kemas'));
 ?>
 
 <div x-data="inventoryApp()" class="space-y-5">
@@ -47,6 +51,10 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                 <span>Riwayat Opname</span>
             </a>
             <?php endif; ?>
+            <a href="<?= Router::url('/guide#bab-inventori-opname') ?>" target="_blank" class="btn btn-ghost" style="height:38px; font-weight:700; color:var(--color-primary); background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); display:inline-flex; align-items:center; gap:6px; text-decoration:none;" title="Buka Panduan Modul Inventaris &amp; Bulk Opname di Tab Baru">
+                <i data-lucide="book-open" style="width:15px; height:15px;"></i>
+                <span>Panduan</span>
+            </a>
         </div>
     </div>
 
@@ -121,20 +129,148 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
     </div>
 
     <!-- ========================================================================= -->
+    <!-- 2.5 TAB FILTER KATEGORI ITEM (Barang Jadi, Bahan Mentah, Bahan Kemas)       -->
+    <!-- ========================================================================= -->
+    <div class="card" style="padding:10px 14px; border-radius:14px; border:1px solid var(--color-hairline); background:var(--color-surface); display:flex; flex-direction:column; gap:8px;">
+        <!-- Row 1: Tab Navigation Buttons -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5" style="min-width:0; width:100%;">
+            <!-- Tab 1: Semua -->
+            <button type="button" 
+                    @click="setTab('all')"
+                    :class="activeTab === 'all' ? 'shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800/80'"
+                    class="btn btn-sm"
+                    :style="activeTab === 'all' 
+                        ? 'background:#881337; color:#ffffff; border-color:#881337; font-weight:700;' 
+                        : 'border-color:var(--color-hairline); color:var(--color-ink); font-weight:600; background:transparent;'"
+                    style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border-radius:8px; font-size:12px; white-space:nowrap;">
+                <i data-lucide="layers" style="width:14px; height:14px;"></i>
+                <span>Semua Stok</span>
+                <span class="badge-counter"
+                      :style="activeTab === 'all' 
+                          ? 'background:rgba(255,255,255,0.25); color:#fff;' 
+                          : 'background:var(--color-canvas-soft); color:var(--color-ink-mute); border-color:var(--color-hairline);'"
+                      x-text="items.length"></span>
+            </button>
+
+            <!-- Tab 2: Barang Jadi -->
+            <button type="button" 
+                    @click="setTab('barang_jadi')"
+                    :class="activeTab === 'barang_jadi' ? 'shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800/80'"
+                    class="btn btn-sm"
+                    :style="activeTab === 'barang_jadi' 
+                        ? 'background:#2563eb; color:#ffffff; border-color:#2563eb; font-weight:700;' 
+                        : 'border-color:var(--color-hairline); color:var(--color-ink); font-weight:600; background:transparent;'"
+                    style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border-radius:8px; font-size:12px; white-space:nowrap;">
+                <i data-lucide="package" style="width:14px; height:14px;"></i>
+                <span>Barang Jadi</span>
+                <span class="badge-counter"
+                      :style="activeTab === 'barang_jadi' 
+                          ? 'background:rgba(255,255,255,0.25); color:#fff;' 
+                          : 'background:rgba(37,99,235,0.1); color:#2563eb; border-color:rgba(37,99,235,0.25);'"
+                      x-text="countBarangJadi"></span>
+            </button>
+
+            <!-- Tab 3: Bahan Mentah -->
+            <button type="button" 
+                    @click="setTab('bahan_mentah')"
+                    :class="activeTab === 'bahan_mentah' ? 'shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800/80'"
+                    class="btn btn-sm"
+                    :style="activeTab === 'bahan_mentah' 
+                        ? 'background:#d97706; color:#ffffff; border-color:#d97706; font-weight:700;' 
+                        : 'border-color:var(--color-hairline); color:var(--color-ink); font-weight:600; background:transparent;'"
+                    style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border-radius:8px; font-size:12px; white-space:nowrap;">
+                <i data-lucide="archive" style="width:14px; height:14px;"></i>
+                <span>Bahan Mentah</span>
+                <span class="badge-counter"
+                      :style="activeTab === 'bahan_mentah' 
+                          ? 'background:rgba(255,255,255,0.25); color:#fff;' 
+                          : 'background:rgba(217,119,6,0.1); color:#d97706; border-color:rgba(217,119,6,0.25);'"
+                      x-text="countBahanMentah"></span>
+            </button>
+
+            <!-- Tab 4: Bahan Kemas -->
+            <button type="button" 
+                    @click="setTab('bahan_kemas')"
+                    :class="activeTab === 'bahan_kemas' ? 'shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800/80'"
+                    class="btn btn-sm"
+                    :style="activeTab === 'bahan_kemas' 
+                        ? 'background:#0f766e; color:#ffffff; border-color:#0f766e; font-weight:700;' 
+                        : 'border-color:var(--color-hairline); color:var(--color-ink); font-weight:600; background:transparent;'"
+                    style="height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border-radius:8px; font-size:12px; white-space:nowrap;">
+                <i data-lucide="box" style="width:14px; height:14px;"></i>
+                <span>Bahan Kemas</span>
+                <span class="badge-counter"
+                      :style="activeTab === 'bahan_kemas' 
+                          ? 'background:rgba(255,255,255,0.25); color:#fff;' 
+                          : 'background:rgba(15,118,110,0.1); color:#0f766e; border-color:rgba(15,118,110,0.25);'"
+                      x-text="countBahanKemas"></span>
+            </button>
+        </div>
+
+        <!-- Row 2: Active Filter Status & Reset Action (Harmonis, Seimbang, & Tidak Ngegantung) -->
+        <div x-cloak x-show="hasActiveFilter" x-transition
+             class="flex items-center justify-between gap-3 pt-2.5 mt-0.5 flex-wrap"
+             style="border-top:1px solid var(--color-hairline);">
+            <!-- Sisi Kiri: Status & Jumlah Cocok -->
+            <div class="inline-flex items-center gap-2">
+                <div class="inline-flex items-center justify-center gap-1.5 rounded-full"
+                     style="height:24px; padding:0 10px; font-size:11.5px; font-weight:600; line-height:1; background:rgba(37,99,235,0.08); color:var(--color-primary); border:1px solid rgba(37,99,235,0.22); box-sizing:border-box;">
+                    <span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" style="flex-shrink:0;"></span>
+                    <span x-text="filteredItems.length + ' item cocok'" style="line-height:1; display:inline-block; transform:translateY(-0.5px);"></span>
+                </div>
+                <span class="text-xs text-slate-400 dark:text-slate-500 font-normal hidden sm:inline" style="line-height:1;">
+                    menyesuaikan kriteria pencarian &amp; filter aktif
+                </span>
+            </div>
+
+            <!-- Sisi Kanan: Tombol Reset yang Terdefinisi Rapi di Ujung Kanan (Bukan Teks Melayang) -->
+            <button type="button" @click="resetAllFilters()"
+                    class="btn btn-secondary btn-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                    style="height:26px; padding:0 10px; font-size:11.5px; font-weight:600; line-height:1; display:inline-flex; align-items:center; gap:5px; border-radius:6px; border:1px solid var(--color-hairline);"
+                    title="Kembalikan semua filter ke kondisi awal">
+                <i data-lucide="rotate-ccw" style="width:12px; height:12px;"></i>
+                <span>Reset Filter</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- 3. TOOLBAR & FILTER CARD                                                  -->
     <!-- ========================================================================= -->
     <div class="card" style="padding:14px 18px; border-radius:14px; border:1px solid var(--color-hairline); background:var(--color-surface); display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <!-- Live Search -->
-        <div class="form-input-icon" style="flex:1; min-width:240px;">
-            <i data-lucide="search" class="icon-left"></i>
-            <input type="text" x-model="searchQuery" @input="currentPage = 1"
-                   placeholder="Cari SKU, Nama Produk, atau Barcode..."
-                   class="form-input" style="height:38px;">
+        <!-- Live Search with Enhanced Multi-keyword & Clear Button -->
+        <div class="form-input-icon flex-1 relative" style="min-width:240px;">
+            <i data-lucide="search" class="icon-left" style="color:var(--color-ink-mute);"></i>
+            <input type="text" 
+                   x-ref="searchInput"
+                   x-model="searchQuery" 
+                   @input.debounce.180ms="onSearchInput()"
+                   placeholder="Cari SKU, Nama Produk/Bahan, Barcode, Kemasan..."
+                   class="form-input" 
+                   style="height:38px; padding-right:58px; font-size:13px;">
+
+            <!-- Shortcut Hint '/' when query is empty -->
+            <span x-show="!searchQuery" 
+                  class="hidden sm:inline-flex items-center justify-center font-mono text-[10px] text-slate-400 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5"
+                  style="position:absolute; right:10px; top:50%; transform:translateY(-50%); pointer-events:none;">
+                /
+            </span>
+
+            <!-- Clear Search Button when query is present -->
+            <button type="button" 
+                    x-cloak 
+                    x-show="searchQuery" 
+                    @click="clearSearch()"
+                    class="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    style="position:absolute; right:8px; top:50%; transform:translateY(-50%); height:24px; width:24px; padding:0; display:flex; align-items:center; justify-content:center;"
+                    title="Hapus pencarian">
+                <i data-lucide="x" style="width:14px; height:14px;"></i>
+            </button>
         </div>
 
-        <!-- Filter Grup Kemasan -->
-        <div style="min-width:180px;">
-            <select x-model="selectedGroup" @change="currentPage = 1" class="form-select" style="height:38px; font-size:13px;">
+        <!-- Filter Grup Kemasan (Tampil untuk 'all' dan 'barang_jadi') -->
+        <div style="min-width:180px;" x-show="activeTab === 'all' || activeTab === 'barang_jadi'">
+            <select x-model="selectedGroup" @change="applyFilterWithSkeleton()" class="form-select" style="height:38px; font-size:13px;">
                 <option value="">Semua Grup Kemasan</option>
                 <?php foreach ($groups ?? [] as $g): ?>
                 <option value="<?= htmlspecialchars($g['kode_grup']) ?>"><?= htmlspecialchars($g['kode_grup'] . ' - ' . $g['nama_grup']) ?></option>
@@ -144,10 +280,10 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
 
         <!-- Filter Status Ketersediaan -->
         <div style="min-width:150px;">
-            <select x-model="filterStatus" @change="currentPage = 1" class="form-select" style="height:38px; font-size:13px;">
+            <select x-model="filterStatus" @change="applyFilterWithSkeleton()" class="form-select" style="height:38px; font-size:13px;">
                 <option value="all">Semua Status</option>
-                <option value="available">Tersedia (&gt; 10)</option>
-                <option value="low">Menipis (1 - 10)</option>
+                <option value="available">Tersedia (> Min)</option>
+                <option value="low">Menipis (1 - Min)</option>
                 <option value="empty">Kosong (0)</option>
             </select>
         </div>
@@ -155,7 +291,7 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
         <!-- Tampilkan per Halaman -->
         <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:12px; color:var(--color-ink-mute); white-space:nowrap;">Baris:</span>
-            <select x-model="perPage" @change="currentPage = 1" class="form-select" style="height:38px; width:80px; font-size:12.5px; font-family:var(--font-mono);">
+            <select x-model="perPage" @change="applyFilterWithSkeleton()" class="form-select" style="height:38px; width:80px; font-size:12.5px; font-family:var(--font-mono);">
                 <option value="25">25</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
@@ -182,11 +318,72 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                         <th style="text-align:center; width:160px;">Aksi</th>
                     </tr>
                 </thead>
-                <tbody>
+                <!-- ============================================================= -->
+                <!-- SKELETON LOADING TBODY (HANYA TABEL YANG MENAMPILKAN SKELETON) -->
+                <!-- ============================================================= -->
+                <tbody x-show="isTableLoading" x-cloak>
+                    <template x-for="n in skeletonRows" :key="n">
+                        <tr class="skeleton-row" style="background:transparent;">
+                            <!-- No -->
+                            <td style="text-align:center;">
+                                <div class="skeleton-shimmer skeleton-box" style="width:20px; height:15px; margin:0 auto; border-radius:4px;"></div>
+                            </td>
+
+                            <!-- Produk & SKU -->
+                            <td>
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                                    <div class="skeleton-shimmer skeleton-pill" style="width:72px; height:18px;"></div>
+                                    <div class="skeleton-shimmer skeleton-line" style="width:50%; height:14px;"></div>
+                                </div>
+                                <div class="skeleton-shimmer skeleton-line" style="width:28%; height:11px;"></div>
+                            </td>
+
+                            <!-- Barcode -->
+                            <td class="hide-sm">
+                                <div class="skeleton-shimmer skeleton-box" style="width:88px; height:18px; border-radius:4px;"></div>
+                            </td>
+
+                            <!-- Stok Fisik -->
+                            <td style="text-align:right;">
+                                <div class="skeleton-shimmer skeleton-line" style="width:75px; height:16px; margin-left:auto; margin-bottom:4px;"></div>
+                                <div class="skeleton-shimmer skeleton-pill show-mobile" style="width:48px; height:13px; margin-left:auto;"></div>
+                            </td>
+
+                            <!-- Status -->
+                            <td class="hide-mobile" style="text-align:center;">
+                                <div class="skeleton-shimmer skeleton-pill" style="width:65px; height:20px; margin:0 auto;"></div>
+                            </td>
+
+                            <!-- Aksi -->
+                            <td style="text-align:center;">
+                                <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
+                                    <div class="skeleton-shimmer skeleton-box" style="width:58px; height:26px; border-radius:6px;"></div>
+                                    <div class="skeleton-shimmer skeleton-box" style="width:52px; height:26px; border-radius:6px;"></div>
+                                    <div class="skeleton-shimmer skeleton-box" style="width:28px; height:26px; border-radius:6px;"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+
+                <!-- ============================================================= -->
+                <!-- REAL DATA TBODY                                               -->
+                <!-- ============================================================= -->
+                <tbody x-show="!isTableLoading">
                     <template x-if="paginatedItems.length === 0">
                         <tr>
-                            <td colspan="6" style="text-align:center; padding:48px 16px; color:var(--color-ink-mute); font-size:13px;">
-                                Tidak ada produk yang cocok dengan pencarian / filter.
+                            <td colspan="6" style="text-align:center; padding:48px 16px; color:var(--color-ink-mute);">
+                                <div style="width:44px; height:44px; border-radius:12px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); display:flex; align-items:center; justify-content:center; margin:0 auto 10px auto; color:var(--color-ink-mute); opacity:0.75;">
+                                    <i data-lucide="package-search" style="width:22px; height:22px;"></i>
+                                </div>
+                                <div style="font-weight:700; color:var(--color-ink); font-size:13.5px; margin-bottom:4px;">Tidak ada item yang cocok</div>
+                                <div style="font-size:12px; color:var(--color-ink-mute); max-width:320px; margin:0 auto 12px auto;">
+                                    Tidak ditemukan rekaman stok dengan kata kunci atau filter status yang dipilih.
+                                </div>
+                                <button type="button" @click="resetAllFilters()" class="btn btn-secondary btn-sm" style="font-size:11.5px; display:inline-flex; align-items:center; gap:5px;">
+                                    <i data-lucide="rotate-ccw" style="width:12px; height:12px;"></i>
+                                    <span>Reset Filter &amp; Pencarian</span>
+                                </button>
                             </td>
                         </tr>
                     </template>
@@ -202,6 +399,18 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                                 <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                                     <span class="badge badge-mono" x-text="item.kode_sku"></span>
                                     <span style="font-size:13px; font-weight:700; color:var(--color-ink);" x-text="item.nama_item"></span>
+
+                                    <!-- Category Pill Badges for easy distinction -->
+                                    <span x-show="item.tipe_item === 'bahan_mentah'" 
+                                          class="badge badge-warning" 
+                                          style="font-size:10px; font-weight:700; padding:1px 6px;">
+                                        Bahan Mentah
+                                    </span>
+                                    <span x-show="item.tipe_item === 'bahan_kemas'" 
+                                          class="badge" 
+                                          style="background:rgba(15,118,110,0.12); color:#0f766e; border:1px solid rgba(15,118,110,0.25); font-size:10px; font-weight:700; padding:1px 6px;">
+                                        Bahan Kemas
+                                    </span>
                                 </div>
                                 <div x-show="item.kode_grup || item.nama_grup"
                                      style="font-size:11px; font-family:var(--font-mono); color:var(--color-ink-mute); margin-top:2px;"
@@ -256,15 +465,6 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                             </td>
                         </tr>
                     </template>
-
-                    <!-- Filler Row: Ensures Table Height Never Changes Across Pages -->
-                    <tr class="filler-row"
-                        x-show="perPage !== 'all' && totalPages > 1 && paginatedItems.length < parseInt(perPage)"
-                        style="border:none; background:transparent; pointer-events:none;">
-                        <td colspan="6" style="border:none; padding:0; background:transparent;">
-                            <div :style="'height:' + ((parseInt(perPage) - paginatedItems.length) * (avgRowHeight || 48)) + 'px; pointer-events:none;'"></div>
-                        </td>
-                    </tr>
                 </tbody>
             </table>
         </div>
@@ -309,19 +509,20 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
     </div>
 
     <!-- ========================================================================= -->
-    <!-- MODAL 1: OPNAME TUNGGAL                                                   -->
+    <!-- MODAL 1: PENYESUAIAN STOK (OPNAME FISIK, ITEM MASUK, ITEM KELUAR)          -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showAdjustModal" x-cloak class="modal-backdrop" @click="showAdjustModal = false">
-        <div class="modal-box" style="max-width:520px;" @click.stop>
+        <div class="modal-box" style="max-width:540px;" @click.stop>
             <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="sliders" style="width:20px;height:20px;"></i>
+                    <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;"
+                         :style="adjustMode === 'opname' ? 'background:rgba(37,99,235,0.12); color:#2563eb;' : (adjustMode === 'masuk' ? 'background:rgba(16,185,129,0.12); color:#10b981;' : 'background:rgba(239,68,68,0.12); color:#ef4444;')">
+                        <i :data-lucide="adjustMode === 'opname' ? 'clipboard-check' : (adjustMode === 'masuk' ? 'arrow-down-left' : 'arrow-up-right')" style="width:20px;height:20px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <div class="modal-title">Penyesuaian Stok (Opname Tunggal)</div>
+                        <div class="modal-title">Penyesuaian Stok Barang</div>
                         <div style="font-size:12px; font-family:var(--font-mono); color:var(--color-primary); margin-top:1px;"
                              x-text="(selectedItem.kode_sku || '') + ' — ' + (selectedItem.nama_item || '')"></div>
                     </div>
@@ -335,66 +536,220 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                 <div class="modal-body custom-scrollbar space-y-3.5">
                     <?= \App\Helpers\CSRF::field() ?>
                     <input type="hidden" name="item_id" :value="selectedItem.id">
+                    <input type="hidden" name="mode" :value="adjustMode">
 
-                    <div style="padding:10px 12px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-radius:10px; display:flex; align-items:center; justify-content:space-between;">
-                        <span style="font-size:12px; color:var(--color-ink-mute);">Stok Fisik Saat Ini:</span>
-                        <strong class="font-mono" style="font-size:14px;" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
-                    </div>
-
+                    <!-- 3-Way Mode Switcher (Universal Segmented Control) -->
                     <div>
-                        <label class="form-label font-semibold">Jenis Penyesuaian</label>
-                        <select name="tipe_penyesuaian" x-model="adjustType" class="form-select">
-                            <option value="opname_lebih">Opname Lebih (Tambah Stok Masuk)</option>
-                            <option value="opname_hilang">Opname Hilang / Selisih Fisik (Potong Stok Keluar)</option>
-                        </select>
+                        <label class="form-label font-semibold mb-1.5 block">Pilih Aksi Penyesuaian</label>
+                        <div class="segmented-track">
+                            <!-- Mode 1: Opname Fisik -->
+                            <button type="button" @click="setAdjustMode('opname')"
+                                    class="segmented-btn"
+                                    :class="adjustMode === 'opname' ? 'is-active is-opname' : ''">
+                                <i data-lucide="clipboard-check" style="width:14px; height:14px;"></i>
+                                <span>Opname Fisik</span>
+                            </button>
+
+                            <!-- Mode 2: Item Masuk -->
+                            <button type="button" @click="setAdjustMode('masuk')"
+                                    class="segmented-btn"
+                                    :class="adjustMode === 'masuk' ? 'is-active is-masuk' : ''">
+                                <i data-lucide="arrow-down-left" style="width:14px; height:14px;"></i>
+                                <span>Item Masuk</span>
+                            </button>
+
+                            <!-- Mode 3: Item Keluar -->
+                            <button type="button" @click="setAdjustMode('keluar')"
+                                    class="segmented-btn"
+                                    :class="adjustMode === 'keluar' ? 'is-active is-keluar' : ''">
+                                <i data-lucide="arrow-up-right" style="width:14px; height:14px;"></i>
+                                <span>Item Keluar</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="form-label font-semibold">Jumlah Kuantitas Penyesuaian *</label>
-                        <input type="number" step="any" name="kuantitas" x-model="adjustQty" @wheel="$event.target.blur()" required min="0.0001" placeholder="Masukkan jumlah selisih pcs..."
-                               class="form-input font-mono" style="font-weight:700;">
+                    <!-- Banner Stok Sistem Saat Ini -->
+                    <div style="padding:10px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-radius:10px; display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-size:12px; color:var(--color-ink-mute); font-weight:500;">Stok Fisik di Sistem:</span>
+                        <strong class="font-mono" style="font-size:14px; color:var(--color-ink);" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
                     </div>
 
-                    <!-- Live Calculation Preview -->
-                    <div style="padding:10px 14px; background:rgba(99,102,241,0.06); border:1px dashed var(--color-primary); border-radius:10px; display:flex; flex-direction:column; gap:4px;">
+                    <!-- Info Panduan Peruntukan Mode & Dampak Laporan Keuangan (Modern Multi-Tone Card) -->
+                    <div style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-radius:12px; font-size:12px; line-height:1.55; color:var(--color-ink);"
+                         :style="adjustMode === 'opname' 
+                             ? 'border-left:3.5px solid #2563eb;' 
+                             : (adjustMode === 'masuk' 
+                                 ? 'border-left:3.5px solid #059669;' 
+                                 : 'border-left:3.5px solid #e11d48;')">
+                        
+                        <!-- Mode Opname Fisik -->
+                        <div x-show="adjustMode === 'opname'">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
+                                <div style="display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:12px; color:var(--color-ink);">
+                                    <span style="width:22px; height:22px; border-radius:6px; background:rgba(37,99,235,0.12); color:#2563eb; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <i data-lucide="clipboard-check" style="width:13px; height:13px;"></i>
+                                    </span>
+                                    <span>Audit Stok Opname Fisik</span>
+                                </div>
+                                <span class="badge-counter" style="background:rgba(37,99,235,0.08); color:#1d4ed8; border-color:rgba(37,99,235,0.22); font-size:10.5px; font-weight:700; padding:2px 8px;">
+                                    Selisih Rak
+                                </span>
+                            </div>
+                            <div style="display:flex; align-items:flex-start; gap:8px;">
+                                <span style="width:6px; height:6px; border-radius:50%; background:#2563eb; flex-shrink:0; margin-top:6px;"></span>
+                                <div style="flex:1; color:var(--color-ink-mute);">
+                                    Menyelaraskan stok sistem dengan hitungan riil di rak gudang saat audit berkala. Selisih lebih (+) atau kurang (-) otomatis dibukukan ke pos <strong style="color:var(--color-primary);">Selisih Persediaan (Inventory Variance)</strong>.
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mode Item Masuk -->
+                        <div x-show="adjustMode === 'masuk'">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
+                                <div style="display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:12px; color:var(--color-ink);">
+                                    <span style="width:22px; height:22px; border-radius:6px; background:rgba(16,185,129,0.12); color:#059669; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <i data-lucide="arrow-down-left" style="width:13px; height:13px;"></i>
+                                    </span>
+                                    <span>Penerimaan Masuk Manual</span>
+                                </div>
+                                <span class="badge-counter" style="background:rgba(16,185,129,0.08); color:#047857; border-color:rgba(16,185,129,0.22); font-size:10.5px; font-weight:700; padding:2px 8px;">
+                                    Non-PO
+                                </span>
+                            </div>
+                            <div style="display:flex; align-items:flex-start; gap:8px;">
+                                <span style="width:6px; height:6px; border-radius:50%; background:#059669; flex-shrink:0; margin-top:6px;"></span>
+                                <div style="flex:1; color:var(--color-ink-mute);">
+                                    Menambah saldo stok untuk penerimaan insidental di luar PO Pembelian (misal: bonus supplier, sampel masuk, atau temuan fisik barang di rak).
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Mode Item Keluar -->
+                        <div x-show="adjustMode === 'keluar'">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
+                                <div style="display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:12px; color:var(--color-ink);">
+                                    <span style="width:22px; height:22px; border-radius:6px; background:rgba(245,158,11,0.12); color:#d97706; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                        <i data-lucide="arrow-up-right" style="width:13px; height:13px;"></i>
+                                    </span>
+                                    <span>Pengurangan Stok Administratif</span>
+                                </div>
+                                <span class="badge-counter" style="background:rgba(245,158,11,0.08); color:#b45309; border-color:rgba(245,158,11,0.22); font-size:10.5px; font-weight:700; padding:2px 8px;">
+                                    Perhatian
+                                </span>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:6px;">
+                                <div style="display:flex; align-items:flex-start; gap:8px;">
+                                    <span style="width:6px; height:6px; border-radius:50%; background:#d97706; flex-shrink:0; margin-top:6px;"></span>
+                                    <div style="flex:1; color:var(--color-ink-mute);">
+                                        Digunakan untuk koreksi pengeluaran administratif non-penjualan atau selisih nota.
+                                    </div>
+                                </div>
+                                <div style="display:flex; align-items:flex-start; gap:8px; padding-top:6px; margin-top:2px; border-top:1px dashed var(--color-hairline); font-size:11.5px;">
+                                    <span style="width:18px; height:18px; border-radius:5px; background:rgba(225,29,72,0.1); color:#e11d48; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">
+                                        <i data-lucide="alert-triangle" style="width:12px; height:12px;"></i>
+                                    </span>
+                                    <div style="flex:1; color:var(--color-ink);">
+                                        Jika barang keluar karena <strong>rusak, remuk, bocor kemasan, expired, atau sampel promosi</strong>: tutup modal ini dan gunakan tombol <span style="background:rgba(225,29,72,0.1); color:#be123c; padding:1px 6px; border-radius:4px; font-weight:700; border:1px solid rgba(225,29,72,0.2);">[Waste]</span> agar tercatat di pos <strong>Beban Kerusakan / Promosi</strong>.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Input: MODE OPNAME FISIK -->
+                    <div x-show="adjustMode === 'opname'">
+                        <label class="form-label font-semibold" style="margin-bottom:4px;">
+                            <span>Hasil Hitung Fisik Nyata di Gudang *</span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" step="any" min="0" name="stok_fisik_baru" x-model="adjustPhysicalCount"
+                                   @keydown="if (['-', 'e', 'E', '+'].includes($event.key)) $event.preventDefault()"
+                                   @input="adjustPhysicalCount = $event.target.value.replace(/[^0-9.]/g, '')"
+                                   @paste="setTimeout(() => { adjustPhysicalCount = adjustPhysicalCount.replace(/[^0-9.]/g, '') }, 10)"
+                                   @wheel="$event.target.blur()"
+                                   :required="adjustMode === 'opname'"
+                                   placeholder="Contoh: 15"
+                                   class="form-input font-mono" style="font-weight:700; height:38px; font-size:14px; padding-right:55px;">
+                            <span class="font-mono text-xs font-semibold" 
+                                   style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--color-ink-mute); pointer-events:none;"
+                                   x-text="selectedItem.satuan_dasar || 'pcs'"></span>
+                        </div>
+                        <span class="text-[11.5px] text-slate-400 dark:text-slate-500 mt-1 block">
+                            Masukkan jumlah riil yang dihitung di rak gudang (minimal 0). Selisih lebih (+) atau kurang (-) otomatis dihitung sistem.
+                        </span>
+                    </div>
+
+                    <!-- Dynamic Input: MODE MASUK / KELUAR -->
+                    <div x-show="adjustMode !== 'opname'">
+                        <label class="form-label font-semibold" style="margin-bottom:4px;">
+                            <span x-text="adjustMode === 'masuk' ? 'Jumlah Kuantitas Item Masuk (+) *' : 'Jumlah Kuantitas Item Keluar (-) *'"></span>
+                        </label>
+                        <div class="relative">
+                            <input type="number" step="any" min="0.0001" name="kuantitas" x-model="adjustDeltaQty"
+                                   @keydown="if (['-', 'e', 'E', '+'].includes($event.key)) $event.preventDefault()"
+                                   @input="adjustDeltaQty = $event.target.value.replace(/[^0-9.]/g, '')"
+                                   @paste="setTimeout(() => { adjustDeltaQty = adjustDeltaQty.replace(/[^0-9.]/g, '') }, 10)"
+                                   @wheel="$event.target.blur()"
+                                   :required="adjustMode !== 'opname'"
+                                   :placeholder="adjustMode === 'masuk' ? 'Contoh: 5' : 'Contoh: 3'"
+                                   class="form-input font-mono" style="font-weight:700; height:38px; font-size:14px; padding-right:55px;">
+                            <span class="font-mono text-xs font-semibold" 
+                                   style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:var(--color-ink-mute); pointer-events:none;"
+                                   x-text="selectedItem.satuan_dasar || 'pcs'"></span>
+                        </div>
+                        <span class="text-[11.5px] text-slate-400 dark:text-slate-500 mt-1 block"
+                              x-text="adjustMode === 'masuk' ? 'Kuantitas ini akan ditambahkan ke saldo stok saat ini.' : 'Kuantitas ini akan dipotong dari saldo stok saat ini.'">
+                        </span>
+                    </div>
+
+                    <!-- Live Calculation Preview Card -->
+                    <div style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-radius:10px; display:flex; flex-direction:column; gap:7px;">
                         <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--color-ink-mute);">
                             <span>Stok Sistem Saat Ini:</span>
-                            <span class="font-mono" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+                            <span class="font-mono font-semibold" style="color:var(--color-ink);" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
                         </div>
+
                         <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--color-ink-mute);">
-                            <span>Perubahan Mutasi:</span>
-                            <span class="font-mono" :style="adjustType === 'opname_lebih' ? 'color:#059669; font-weight:700;' : 'color:#dc2626; font-weight:700;'"
-                                  x-text="(adjustType === 'opname_lebih' ? '+' : '-') + (adjustQty || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></span>
+                            <span x-text="adjustMode === 'opname' ? 'Selisih Hasil Opname:' : (adjustMode === 'masuk' ? 'Mutasi Penambahan:' : 'Mutasi Pengurangan:')"></span>
+                            <span class="font-mono font-bold"
+                                  :style="getAdjustDiffStyle()"
+                                  x-text="getAdjustDiffText()"></span>
                         </div>
+
                         <div style="height:1px; background:var(--color-hairline); margin:2px 0;"></div>
+
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span style="font-size:12.5px; font-weight:700; color:var(--color-ink);">Estimasi Stok Baru:</span>
-                            <strong class="font-mono" style="font-size:14.5px; color:var(--color-primary);"
-                                    x-text="calculateAdjustPreview() + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
+                            <span style="font-size:12.5px; font-weight:700; color:var(--color-ink);">Stok Akhir Baru:</span>
+                            <strong class="font-mono" style="font-size:16px; color:var(--color-primary);"
+                                    x-text="getAdjustFinalStock() + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
                         </div>
                     </div>
 
-                    <div x-show="adjustType === 'opname_hilang' && parseFloat(adjustQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
-                         style="padding:8px 12px; background:#fee2e2; border:1px solid #fecaca; border-radius:8px; font-size:12px; color:#b91c1c; font-weight:600; display:flex; align-items:center; gap:6px;">
-                        <i data-lucide="alert-triangle" style="width:14px; height:14px; flex-shrink:0;"></i>
-                        <span>Pengurangan opname melebihi sisa stok fisik saat ini!</span>
+                    <!-- Warning: Item Keluar Melebihi Stok -->
+                    <div x-cloak x-show="adjustMode === 'keluar' && parseFloat(adjustDeltaQty || 0) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
+                         style="padding:8px 12px; background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; font-size:12px; color:#dc2626; font-weight:600; display:flex; align-items:center; gap:6px;">
+                         <i data-lucide="alert-triangle" style="width:14px; height:14px; flex-shrink:0;"></i>
+                         <span>Jumlah item keluar melebihi sisa stok fisik saat ini! Stok tidak boleh minus.</span>
                     </div>
 
+                    <!-- Catatan / Alasan -->
                     <div>
-                        <label class="form-label font-semibold">Catatan / Alasan *</label>
-                        <input type="text" name="alasan" required placeholder="Contoh: Hasil hitung fisik rak A2"
-                               class="form-input">
+                        <label class="form-label font-semibold" style="margin-bottom:4px;">Catatan / Alasan *</label>
+                        <input type="text" name="alasan" required x-model="adjustReason"
+                               :placeholder="adjustMode === 'opname' ? 'Contoh: Hitung fisik opname rak gudang A' : (adjustMode === 'masuk' ? 'Contoh: Bonus supplier / Koreksi stok masuk' : 'Contoh: Koreksi selisih hitung nota / Penyesuaian administratif')"
+                               class="form-input" style="height:38px; font-size:13px;">
                     </div>
                 </div>
 
                 <div class="modal-footer">
                     <button type="button" @click="showAdjustModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
-                    <button type="submit" class="btn btn-primary w-full sm:w-auto"
-                            :disabled="adjustType === 'opname_hilang' && parseFloat(adjustQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)"
-                            :style="(adjustType === 'opname_hilang' && parseFloat(adjustQty) > parseFloat(selectedItem.stok_fisik_saat_ini || 0)) ? 'opacity:0.5; cursor:not-allowed;' : ''"
-                            style="display:inline-flex;align-items:center;justify-content:center;gap:6px;">
-                        <i data-lucide="save" style="width:16px;height:16px;"></i>
-                        <span>Simpan Opname</span>
+                    <button type="submit" class="btn w-full sm:w-auto"
+                            :class="adjustMode === 'opname' ? 'btn-primary' : (adjustMode === 'masuk' ? 'btn-success' : 'btn-danger-solid')"
+                            :disabled="isAdjustSubmitDisabled()"
+                            :style="isAdjustSubmitDisabled() ? 'opacity:0.5; cursor:not-allowed;' : ''"
+                            style="display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:600; color:#ffffff !important;">
+                        <i :data-lucide="adjustMode === 'opname' ? 'save' : (adjustMode === 'masuk' ? 'plus-circle' : 'minus-circle')" style="width:16px; height:16px; color:#ffffff !important;"></i>
+                        <span x-text="adjustMode === 'opname' ? 'Simpan Opname Fisik' : (adjustMode === 'masuk' ? 'Simpan Item Masuk' : 'Simpan Item Keluar')"></span>
                     </button>
                 </div>
             </form>
@@ -433,6 +788,39 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
                     <div style="padding:10px 12px; background:#fef2f2; border:1px solid #fee2e2; border-radius:10px; font-size:12px; color:#991b1b; display:flex; align-items:center; justify-content:space-between;">
                         <span>Sisa Stok Fisik Saat Ini:</span>
                         <strong class="font-mono" style="font-size:14px;" x-text="(selectedItem.stok_fisik_saat_ini || 0) + ' ' + (selectedItem.satuan_dasar || 'pcs')"></strong>
+                    </div>
+
+                    <!-- Info Panduan Peruntukan Waste & Laporan Keuangan (Multi-Tone Responsive Card) -->
+                    <div style="padding:12px 14px; background:var(--color-canvas-soft); border:1px solid var(--color-hairline); border-left:3.5px solid #e11d48; border-radius:12px; font-size:12px; line-height:1.55; color:var(--color-ink);">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid var(--color-hairline); flex-wrap:wrap;">
+                            <div style="display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:12px; color:var(--color-ink);">
+                                <span style="width:22px; height:22px; border-radius:6px; background:rgba(225,29,72,0.12); color:#e11d48; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                    <i data-lucide="scale" style="width:13px; height:13px;"></i>
+                                </span>
+                                <span>Panduan Peruntukan &amp; Pembukuan</span>
+                            </div>
+                            <span class="badge-counter" style="background:rgba(225,29,72,0.08); color:#be123c; border-color:rgba(225,29,72,0.22); font-size:10.5px; font-weight:700; padding:2px 8px;">
+                                Akuntansi
+                            </span>
+                        </div>
+
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <div style="display:flex; align-items:flex-start; gap:8px;">
+                                <span style="width:6px; height:6px; border-radius:50%; background:#e11d48; flex-shrink:0; margin-top:6px;"></span>
+                                <div style="flex:1; color:var(--color-ink);">
+                                    Gunakan tombol ini <strong>hanya jika wujud fisik barang nyata ada &amp; diketahui penyebab rusaknya/dibuangnya</strong> (kemasan bocor, remuk, kadaluarsa, atau sampel promosi uji rasa). Mutasi dibukukan resmi ke pos <strong style="color:#be123c;">Beban Kerusakan / Beban Promosi</strong>.
+                                </div>
+                            </div>
+
+                            <div style="display:flex; align-items:flex-start; gap:8px; padding-top:6px; margin-top:2px; border-top:1px dashed var(--color-hairline); font-size:11.5px; color:var(--color-ink-mute);">
+                                <span style="width:18px; height:18px; border-radius:5px; background:rgba(37,99,235,0.08); color:#2563eb; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">
+                                    <i data-lucide="info" style="width:12px; height:12px;"></i>
+                                </span>
+                                <div style="flex:1;">
+                                    Jika fisik barang <strong>tidak ada / selisih rak</strong> saat audit berkala tanpa bukti kerusakan fisik riil, gunakan fitur <strong style="color:var(--color-primary);">Opname Fisik</strong> agar dibukukan sebagai <strong>Selisih Persediaan (Shrinkage)</strong>.
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
@@ -596,12 +984,15 @@ $totalValuasiGudang = array_sum(array_map(fn($i) => (float)$i['stok_fisik_saat_i
 function inventoryApp() {
     return {
         items: <?= json_encode($items) ?>,
+        activeTab: 'all',
         searchQuery: '',
         selectedGroup: '',
         filterStatus: 'all',
         perPage: '25',
         currentPage: 1,
-        avgRowHeight: 48,
+
+        isTableLoading: false,
+        _tableTimer: null,
 
         showAdjustModal: false,
         showWasteModal: false,
@@ -609,9 +1000,35 @@ function inventoryApp() {
         historyLoading: false,
         itemHistoryList: [],
         selectedItem: {},
+        adjustMode: 'opname',
+        adjustPhysicalCount: '',
+        adjustDeltaQty: '',
+        adjustReason: '',
         adjustQty: '',
         adjustType: 'opname_lebih',
         wasteQty: '',
+
+        get skeletonRows() {
+            if (this.perPage === 'all') return 6;
+            const p = parseInt(this.perPage) || 6;
+            return Math.min(p, 8);
+        },
+
+        get countBarangJadi() {
+            return this.items.filter(i => (i.tipe_item || 'barang_jadi') === 'barang_jadi').length;
+        },
+
+        get countBahanMentah() {
+            return this.items.filter(i => i.tipe_item === 'bahan_mentah').length;
+        },
+
+        get countBahanKemas() {
+            return this.items.filter(i => i.tipe_item === 'bahan_kemas').length;
+        },
+
+        get hasActiveFilter() {
+            return this.activeTab !== 'all' || this.searchQuery.trim() !== '' || this.selectedGroup !== '' || this.filterStatus !== 'all';
+        },
 
         get kpiTotalSku() {
             return this.filteredItems.length;
@@ -624,7 +1041,7 @@ function inventoryApp() {
         get kpiTotalValuasi() {
             return this.filteredItems.reduce((acc, item) => {
                 const stok = parseFloat(item.stok_fisik_saat_ini) || 0;
-                const hpp = parseFloat(item.harga_pokok) || 0;
+                const hpp = parseFloat(item.harga_pokok_pembelian) || 0;
                 return acc + (stok * hpp);
             }, 0);
         },
@@ -641,54 +1058,115 @@ function inventoryApp() {
             return this.filteredItems.filter(item => (parseFloat(item.stok_fisik_saat_ini) || 0) <= 0).length;
         },
 
-        updateRowHeight() {
-            const row = this.$refs.tableWrapper?.querySelector('tbody tr:not(.filler-row)');
-            if (row && row.offsetHeight > 0) {
-                this.avgRowHeight = row.offsetHeight;
-            }
-        },
-
         init() {
             this.$nextTick(() => {
                 if (window.lucide) lucide.createIcons();
-                this.updateRowHeight();
             });
-            setTimeout(() => this.updateRowHeight(), 100);
-            this.$watch('searchQuery', () => {
-                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+
+            // Global shortcut: tekan '/' untuk fokus ke live search, Escape untuk reset/unfocus
+            window.addEventListener('keydown', (e) => {
+                if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+                    e.preventDefault();
+                    this.$refs.searchInput?.focus();
+                    this.$refs.searchInput?.select();
+                }
+                if (e.key === 'Escape' && document.activeElement === this.$refs.searchInput) {
+                    if (this.searchQuery) {
+                        this.clearSearch();
+                    } else {
+                        this.$refs.searchInput?.blur();
+                    }
+                }
             });
-            this.$watch('selectedGroup', () => {
-                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
+        setTab(tab) {
+            if (this.activeTab === tab) return;
+            this.activeTab = tab;
+            // Jika pindah ke bahan, reset grup kemasan karena bahan tidak terikat grup kemasan
+            if (tab === 'bahan_mentah' || tab === 'bahan_kemas') {
+                this.selectedGroup = '';
+            }
+            this.applyFilterWithSkeleton();
+        },
+
+        onSearchInput() {
+            this.applyFilterWithSkeleton(160);
+        },
+
+        clearSearch() {
+            this.searchQuery = '';
+            this.applyFilterWithSkeleton(120);
+            this.$nextTick(() => {
+                this.$refs.searchInput?.focus();
             });
-            this.$watch('filterStatus', () => {
-                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
-            });
-            this.$watch('perPage', () => {
-                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
-            });
+        },
+
+        resetAllFilters() {
+            this.activeTab = 'all';
+            this.searchQuery = '';
+            this.selectedGroup = '';
+            this.filterStatus = 'all';
+            this.applyFilterWithSkeleton(140);
+        },
+
+        applyFilterWithSkeleton(duration = 180) {
+            this.isTableLoading = true;
+            this.currentPage = 1;
+
+            if (this._tableTimer) {
+                clearTimeout(this._tableTimer);
+            }
+
+            this._tableTimer = setTimeout(() => {
+                this.isTableLoading = false;
+                this.$nextTick(() => {
+                    if (window.lucide) lucide.createIcons();
+                });
+            }, duration);
         },
 
         get filteredItems() {
             let res = this.items;
 
-            // Filter Search Text
-            if (this.searchQuery.trim()) {
-                const q = this.searchQuery.toLowerCase();
+            // 1. Filter Tab Kategori Tipe Item
+            if (this.activeTab !== 'all') {
                 res = res.filter(item => {
-                    return (item.nama_item && item.nama_item.toLowerCase().includes(q)) ||
-                           (item.kode_sku && item.kode_sku.toLowerCase().includes(q)) ||
-                           (item.barcode && item.barcode.toLowerCase().includes(q)) ||
-                           (item.barcode_universal && item.barcode_universal.toLowerCase().includes(q)) ||
-                           (item.nama_grup && item.nama_grup.toLowerCase().includes(q));
+                    const tipe = item.tipe_item || 'barang_jadi';
+                    return tipe === this.activeTab;
                 });
             }
 
-            // Filter Group
+            // 2. Enhanced Search: Multi-keyword / Tokenized Matching
+            if (this.searchQuery.trim()) {
+                const rawTokens = this.searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
+                res = res.filter(item => {
+                    const nama = (item.nama_item || '').toLowerCase();
+                    const sku = (item.kode_sku || '').toLowerCase();
+                    const bc = (item.barcode || '').toLowerCase();
+                    const bcu = (item.barcode_universal || '').toLowerCase();
+                    const grup = (item.nama_grup || '').toLowerCase();
+                    const grupKode = (item.kode_grup || '').toLowerCase();
+                    const satuan = (item.satuan_dasar || '').toLowerCase();
+                    const tipe = (item.tipe_item || 'barang_jadi').toLowerCase();
+
+                    let alias = '';
+                    if (tipe === 'barang_jadi') alias = 'barang jadi finish goods produk kemasan siap jual';
+                    else if (tipe === 'bahan_mentah') alias = 'bahan mentah curah baku kilo bal bumbu';
+                    else if (tipe === 'bahan_kemas') alias = 'bahan kemas plastik standing pouch kardus karton stiker label kemasan';
+
+                    const searchBlob = `${nama} ${sku} ${bc} ${bcu} ${grup} ${grupKode} ${satuan} ${tipe} ${alias}`;
+
+                    return rawTokens.every(token => searchBlob.includes(token));
+                });
+            }
+
+            // 3. Filter Group Kemasan
             if (this.selectedGroup) {
                 res = res.filter(item => item.kode_grup === this.selectedGroup);
             }
 
-            // Filter Stock Status sesuai stok_minimum_peringatan tiap produk
+            // 4. Filter Stock Status sesuai stok_minimum_peringatan tiap produk
             if (this.filterStatus === 'available') {
                 res = res.filter(item => {
                     const s = parseFloat(item.stok_fisik_saat_ini) || 0;
@@ -739,30 +1217,33 @@ function inventoryApp() {
 
             const paginationTopBefore = paginationEl ? paginationEl.getBoundingClientRect().top : null;
 
+            this.isTableLoading = true;
             this.currentPage = targetPage;
 
-            this.$nextTick(() => {
-                // Instantly clear the temporary minHeight lock after Alpine finishes rendering the new page
-                if (tableEl) {
-                    tableEl.style.minHeight = '';
-                }
-                this.updateRowHeight();
+            if (this._tableTimer) clearTimeout(this._tableTimer);
+            this._tableTimer = setTimeout(() => {
+                this.isTableLoading = false;
+                this.$nextTick(() => {
+                    if (tableEl) {
+                        tableEl.style.minHeight = '';
+                    }
+                    if (window.lucide) lucide.createIcons();
 
-                if (paginationTopBefore !== null && paginationEl) {
-                    const paginationTopAfter = paginationEl.getBoundingClientRect().top;
-                    const delta = paginationTopAfter - paginationTopBefore;
+                    if (paginationTopBefore !== null && paginationEl) {
+                        const paginationTopAfter = paginationEl.getBoundingClientRect().top;
+                        const delta = paginationTopAfter - paginationTopBefore;
 
-                    // Pixel-perfect compensation: neutralize any shift >= 1px
-                    if (Math.abs(delta) >= 1) {
-                        const scrollContainer = document.querySelector('.app-content');
-                        if (scrollContainer && (scrollContainer.scrollHeight > scrollContainer.clientHeight)) {
-                            scrollContainer.scrollBy({ top: delta, behavior: 'instant' });
-                        } else {
-                            window.scrollBy({ top: delta, behavior: 'instant' });
+                        if (Math.abs(delta) >= 1) {
+                            const scrollContainer = document.querySelector('.app-content');
+                            if (scrollContainer && (scrollContainer.scrollHeight > scrollContainer.clientHeight)) {
+                                scrollContainer.scrollBy({ top: delta, behavior: 'instant' });
+                            } else {
+                                window.scrollBy({ top: delta, behavior: 'instant' });
+                            }
                         }
                     }
-                }
-            });
+                });
+            }, 130);
         },
 
         prevPage(evt) {
@@ -777,23 +1258,104 @@ function inventoryApp() {
             this.goToPage(this.currentPage + 1);
         },
 
+        setAdjustMode(mode) {
+            this.adjustMode = mode;
+            this.adjustDeltaQty = '';
+            this.adjustReason = '';
+            if (mode === 'opname') {
+                const cur = parseFloat(this.selectedItem.stok_fisik_saat_ini) || 0;
+                this.adjustPhysicalCount = cur % 1 === 0 ? cur.toString() : cur.toFixed(2);
+            } else {
+                this.adjustPhysicalCount = '';
+            }
+            this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+        },
+
         openAdjust(item) {
             this.selectedItem = item;
-            this.adjustQty = '';
-            this.adjustType = 'opname_lebih';
+            this.setAdjustMode('opname');
             this.showAdjustModal = true;
             this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
         },
 
-        calculateAdjustPreview() {
+        getAdjustDiffText() {
             const cur = parseFloat(this.selectedItem.stok_fisik_saat_ini) || 0;
-            const q = parseFloat(this.adjustQty) || 0;
-            if (this.adjustType === 'opname_lebih') {
-                const res = cur + q;
+            const unit = this.selectedItem.satuan_dasar || 'pcs';
+
+            if (this.adjustMode === 'opname') {
+                if (this.adjustPhysicalCount === '' || isNaN(parseFloat(this.adjustPhysicalCount))) {
+                    return '0 ' + unit + ' (Belum diisi)';
+                }
+                const target = parseFloat(this.adjustPhysicalCount) || 0;
+                const diff = target - cur;
+                if (Math.abs(diff) < 0.0001) {
+                    return '0 ' + unit + ' (Sesuai / Pas)';
+                }
+                const formatted = diff % 1 === 0 ? Math.abs(diff).toString() : Math.abs(diff).toFixed(2);
+                return (diff > 0 ? '+' : '-') + formatted + ' ' + unit + (diff > 0 ? ' (Surplus / Lebih)' : ' (Kurang / Selisih)');
+            } else if (this.adjustMode === 'masuk') {
+                const raw = parseFloat(this.adjustDeltaQty);
+                if (isNaN(raw) || raw <= 0) return '+0 ' + unit;
+                const formatted = raw % 1 === 0 ? raw.toString() : raw.toFixed(2);
+                return '+' + formatted + ' ' + unit;
+            } else {
+                const raw = parseFloat(this.adjustDeltaQty);
+                if (isNaN(raw) || raw <= 0) return '-0 ' + unit;
+                const formatted = raw % 1 === 0 ? raw.toString() : raw.toFixed(2);
+                return '-' + formatted + ' ' + unit;
+            }
+        },
+
+        getAdjustDiffStyle() {
+            if (this.adjustMode === 'opname') {
+                const cur = parseFloat(this.selectedItem.stok_fisik_saat_ini) || 0;
+                const target = parseFloat(this.adjustPhysicalCount);
+                if (isNaN(target) || Math.abs(target - cur) < 0.0001) return 'color:var(--color-ink-mute); font-weight:600;';
+                return target > cur ? 'color:#059669; font-weight:700;' : 'color:#dc2626; font-weight:700;';
+            } else if (this.adjustMode === 'masuk') {
+                const raw = parseFloat(this.adjustDeltaQty);
+                if (isNaN(raw) || raw <= 0) return 'color:var(--color-ink-mute); font-weight:600;';
+                return 'color:#059669; font-weight:700;';
+            } else {
+                const raw = parseFloat(this.adjustDeltaQty);
+                if (isNaN(raw) || raw <= 0) return 'color:var(--color-ink-mute); font-weight:600;';
+                return 'color:#dc2626; font-weight:700;';
+            }
+        },
+
+        getAdjustFinalStock() {
+            const cur = parseFloat(this.selectedItem.stok_fisik_saat_ini) || 0;
+
+            if (this.adjustMode === 'opname') {
+                if (this.adjustPhysicalCount === '' || isNaN(parseFloat(this.adjustPhysicalCount))) {
+                    return cur % 1 === 0 ? cur.toString() : cur.toFixed(2);
+                }
+                const target = parseFloat(this.adjustPhysicalCount) || 0;
+                return target % 1 === 0 ? target.toString() : target.toFixed(2);
+            } else if (this.adjustMode === 'masuk') {
+                const raw = parseFloat(this.adjustDeltaQty);
+                if (isNaN(raw) || raw <= 0) return cur % 1 === 0 ? cur.toString() : cur.toFixed(2);
+                const res = cur + raw;
                 return res % 1 === 0 ? res.toString() : res.toFixed(2);
             } else {
-                const res = Math.max(0, cur - q);
+                const raw = parseFloat(this.adjustDeltaQty);
+                if (isNaN(raw) || raw <= 0) return cur % 1 === 0 ? cur.toString() : cur.toFixed(2);
+                const res = Math.max(0, cur - raw);
                 return res % 1 === 0 ? res.toString() : res.toFixed(2);
+            }
+        },
+
+        isAdjustSubmitDisabled() {
+            const cur = parseFloat(this.selectedItem.stok_fisik_saat_ini) || 0;
+            if (this.adjustMode === 'opname') {
+                if (this.adjustPhysicalCount === '' || isNaN(parseFloat(this.adjustPhysicalCount))) return true;
+                return parseFloat(this.adjustPhysicalCount) < 0;
+            } else if (this.adjustMode === 'masuk') {
+                const q = parseFloat(this.adjustDeltaQty);
+                return isNaN(q) || q <= 0;
+            } else {
+                const q = parseFloat(this.adjustDeltaQty);
+                return isNaN(q) || q <= 0 || q > cur;
             }
         },
 

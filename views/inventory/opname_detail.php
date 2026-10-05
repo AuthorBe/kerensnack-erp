@@ -36,14 +36,14 @@ $totalKatalog = !empty($opname['total_item_katalog']) ? (int)$opname['total_item
                 <i data-lucide="history" style="width:15px; height:15px;"></i>
                 <span>Riwayat Dokumen</span>
             </a>
-            <a href="<?= Router::url('/inventory/opname/excel?id=' . urlencode($opname['id'])) ?>" class="btn btn-secondary" style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+            <button type="button" onclick="downloadOpnameDoc('excel', '<?= $opname['id'] ?>', '<?= htmlspecialchars($opname['nomor_dokumen']) ?>')" class="btn btn-secondary" style="height:38px; background:#10b981; color:#fff; border-color:#059669; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
                 <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i>
                 <span>Export Excel</span>
-            </a>
-            <a href="<?= Router::url('/inventory/opname/pdf?id=' . urlencode($opname['id'])) ?>" target="_blank" class="btn btn-primary" style="height:38px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+            </button>
+            <button type="button" onclick="downloadOpnameDoc('pdf', '<?= $opname['id'] ?>', '<?= htmlspecialchars($opname['nomor_dokumen']) ?>')" class="btn btn-primary" style="height:38px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
                 <i data-lucide="printer" style="width:15px; height:15px;"></i>
                 <span>Cetak PDF</span>
-            </a>
+            </button>
         </div>
     </div>
 
@@ -273,8 +273,84 @@ $totalKatalog = !empty($opname['total_item_katalog']) ? (int)$opname['total_item
             justify-content: center !important;
             box-sizing: border-box !important;
         }
-    }
     </style>
+
+    <script>
+    async function downloadOpnameDoc(format, id, nomor) {
+        const isPdf = format === 'pdf';
+        const url = '<?= Router::url('/inventory/opname/') ?>' + (isPdf ? 'pdf' : 'excel') + '?id=' + encodeURIComponent(id);
+        const label = isPdf ? 'PDF' : 'Excel';
+
+        if (window.AppAction && typeof window.AppAction.show === 'function') {
+            window.AppAction.show('Menyiapkan Berkas ' + label + '...', 'Mengompilasi data ' + nomor + '...');
+        }
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const contentType = response.headers.get('content-type') || '';
+
+            if (!response.ok || contentType.includes('application/json') || contentType.includes('text/html')) {
+                let errorMsg = 'Terjadi kesalahan saat memproses berkas ' + label + '.';
+                try {
+                    const errData = await response.json();
+                    errorMsg = errData.message || errorMsg;
+                } catch (e) {
+                    const txt = await response.text();
+                    if (txt && txt.length < 200) errorMsg = txt;
+                }
+                if (window.AppAction && typeof window.AppAction.error === 'function') {
+                    window.AppAction.error('Gagal Mengunduh ' + label + '!', errorMsg, 3500);
+                } else if (window.toast && window.toast.error) {
+                    window.toast.error('Gagal mengunduh: ' + errorMsg);
+                }
+                return;
+            }
+
+            let filename = (nomor ? nomor : 'Opname') + (isPdf ? '.pdf' : '.xlsx');
+            const disposition = response.headers.get('content-disposition');
+            if (disposition) {
+                const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '').trim();
+                }
+            }
+
+            const blob = await response.blob();
+            if (blob.size === 0) {
+                throw new Error('Ukuran berkas ' + label + ' kosong.');
+            }
+
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            }, 400);
+
+            if (window.AppAction && typeof window.AppAction.success === 'function') {
+                window.AppAction.success('Berhasil Diunduh! ✨', filename, 1800);
+            }
+        } catch (err) {
+            if (window.AppAction && typeof window.AppAction.error === 'function') {
+                window.AppAction.error('Gagal Mengunduh!', err.message || 'Koneksi terputus saat mengunduh berkas.', 3500);
+            } else if (window.toast && window.toast.error) {
+                window.toast.error('Gagal mengunduh: ' + err.message);
+            }
+        }
+    }
+    </script>
 </div>
 
 <?php
