@@ -91,14 +91,25 @@ class Controller
         $redirectUrl = (string)$this->input('redirect_url', '');
 
         if (!empty($redirectUrl)) {
-            $this->redirect($redirectUrl);
-            return;
+            // Anti-Open Redirect: pastikan hanya relative path internal (misal /customers) dan bukan protocol-relative (//evil.com) atau external URL
+            $parsedRedirect = parse_url($redirectUrl);
+            $currentHost = $_SERVER['HTTP_HOST'] ?? '';
+            $isInternal = (empty($parsedRedirect['host']) || $parsedRedirect['host'] === $currentHost)
+                       && (empty($parsedRedirect['scheme']) || in_array(strtolower($parsedRedirect['scheme']), ['http', 'https'], true))
+                       && !str_starts_with($redirectUrl, '//')
+                       && (str_starts_with($redirectUrl, '/') || !empty($parsedRedirect['host']));
+
+            if ($isInternal) {
+                $target = ($parsedRedirect['path'] ?? '/') . (!empty($parsedRedirect['query']) ? '?' . $parsedRedirect['query'] : '');
+                $this->redirect($target);
+                return;
+            }
         }
 
         if (!empty($referer)) {
             $parsed = parse_url($referer);
             $currentHost = $_SERVER['HTTP_HOST'] ?? '';
-            if (empty($parsed['host']) || $parsed['host'] === $currentHost) {
+            if ((empty($parsed['host']) || $parsed['host'] === $currentHost) && !str_starts_with($referer, '//')) {
                 $target = ($parsed['path'] ?? '/') . (!empty($parsed['query']) ? '?' . $parsed['query'] : '');
                 $this->redirect($target);
                 return;
