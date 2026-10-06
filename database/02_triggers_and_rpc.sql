@@ -214,7 +214,9 @@ $$;
 -- Fungsi: fn_cari_item_by_barcode
 -- Mencari semua SKU varian rasa yang menggunakan barcode kemasan bersama
 CREATE OR REPLACE FUNCTION public.fn_cari_item_by_barcode(p_barcode character varying)
-RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_items JSONB;
 BEGIN
@@ -249,6 +251,9 @@ BEGIN
     RETURN jsonb_build_object('ditemukan', true, 'total_varian', jsonb_array_length(v_items), 'data', v_items);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_cari_item_by_barcode(character varying) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_cari_item_by_barcode(character varying) TO postgres, service_role;
 
 -- ==============================================================================
 -- 3. MESIN DISTRIBUSI KONSINYASI & AUDIT RAK TOKO
@@ -1738,6 +1743,9 @@ CREATE TRIGGER trg_guard_locked_hr_penarikan_gaji
 BEFORE UPDATE OR DELETE ON public.penarikan_gaji
 FOR EACH ROW EXECUTE FUNCTION public.fn_guard_locked_hr_transactions();
 
+REVOKE EXECUTE ON FUNCTION public.fn_guard_locked_hr_transactions() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_locked_hr_transactions() TO postgres, service_role;
+
 -- Fungsi Guard untuk tabel dengan rincian_penggajian_id (potongan_kasbon, transaksi_tabungan)
 CREATE OR REPLACE FUNCTION public.fn_guard_locked_hr_rincian_transactions()
  RETURNS trigger
@@ -1774,12 +1782,18 @@ CREATE TRIGGER trg_guard_locked_hr_transaksi_tabungan
 BEFORE UPDATE OR DELETE ON public.transaksi_tabungan
 FOR EACH ROW EXECUTE FUNCTION public.fn_guard_locked_hr_rincian_transactions();
 
+REVOKE EXECUTE ON FUNCTION public.fn_guard_locked_hr_rincian_transactions() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_locked_hr_rincian_transactions() TO postgres, service_role;
+
 -- -----------------------------------------------------------------------------
 -- PROTEKSI ARUS KAS: REKENING TITIPAN ESCROW TABUNGAN KARYAWAN
 -- Dilarang digunakan untuk transaksi komersial penjualan dan pembelian
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_guard_escrow_cash_account()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_is_escrow BOOLEAN;
     v_nama_akun TEXT;
@@ -1804,7 +1818,10 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_guard_escrow_cash_account() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_escrow_cash_account() TO postgres, service_role;
 
 DROP TRIGGER IF EXISTS trg_guard_escrow_cash_account ON public.arus_kas;
 CREATE TRIGGER trg_guard_escrow_cash_account
@@ -1816,7 +1833,10 @@ CREATE TRIGGER trg_guard_escrow_cash_account
 -- Trigger Proteksi Mutasi Akun Kas Escrow (Blokir Hapus & Nonaktif saat Bersaldo)
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_guard_escrow_account_mutation()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     -- Blokir penghapusan akun escrow master sistem
     IF TG_OP = 'DELETE' THEN
@@ -1835,7 +1855,10 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_guard_escrow_account_mutation() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_escrow_account_mutation() TO postgres, service_role;
 
 DROP TRIGGER IF EXISTS trg_guard_escrow_account_mutation ON public.akun_kas;
 CREATE TRIGGER trg_guard_escrow_account_mutation
@@ -1848,7 +1871,10 @@ CREATE TRIGGER trg_guard_escrow_account_mutation
 -- Trigger Proteksi Transaksi Tabungan Khusus Akun Kas Escrow (Migration 89)
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_guard_transaksi_tabungan_escrow()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_is_escrow BOOLEAN;
     v_nama_akun TEXT;
@@ -1865,7 +1891,10 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_guard_transaksi_tabungan_escrow() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_transaksi_tabungan_escrow() TO postgres, service_role;
 
 DROP TRIGGER IF EXISTS trg_guard_transaksi_tabungan_escrow ON public.transaksi_tabungan;
 CREATE TRIGGER trg_guard_transaksi_tabungan_escrow
@@ -1875,7 +1904,10 @@ CREATE TRIGGER trg_guard_transaksi_tabungan_escrow
 
 -- Trigger Proteksi Arus Kas Transaksi Tabungan Khusus Akun Escrow (Migration 89)
 CREATE OR REPLACE FUNCTION public.fn_guard_arus_kas_tabungan_escrow()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 DECLARE
     v_is_escrow BOOLEAN;
     v_nama_akun TEXT;
@@ -1892,7 +1924,10 @@ BEGIN
 
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_guard_arus_kas_tabungan_escrow() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_arus_kas_tabungan_escrow() TO postgres, service_role;
 
 DROP TRIGGER IF EXISTS trg_guard_arus_kas_tabungan_escrow ON public.arus_kas;
 CREATE TRIGGER trg_guard_arus_kas_tabungan_escrow
@@ -1906,7 +1941,9 @@ CREATE TRIGGER trg_guard_arus_kas_tabungan_escrow
 
 -- Trigger Sinkronisasi Otomatis Harga Katalog Vendor Utama ke item.harga_pokok_pembelian
 CREATE OR REPLACE FUNCTION public.trg_sync_pemasok_item_to_item_hpp()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     UPDATE public.item
     SET harga_pokok_pembelian = NEW.harga_beli,
@@ -1930,7 +1967,9 @@ EXECUTE FUNCTION public.trg_sync_pemasok_item_to_item_hpp();
 
 -- Trigger Sinkronisasi Otomatis Barcode Default ke grup_produk.barcode_universal
 CREATE OR REPLACE FUNCTION public.trg_sync_grup_barcode_default_to_grup_produk()
-RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
 BEGIN
     IF NEW.is_default = TRUE AND NEW.status_aktif = TRUE THEN
         UPDATE public.grup_produk_barcode
@@ -1959,3 +1998,39 @@ CREATE TRIGGER trg_sync_grup_barcode_default_to_grup_produk
 AFTER INSERT OR UPDATE OF barcode, is_default, status_aktif ON public.grup_produk_barcode
 FOR EACH ROW
 EXECUTE FUNCTION public.trg_sync_grup_barcode_default_to_grup_produk();
+
+-- ==============================================================================
+-- PENGUNCIAN EKSEKUSI API RPC PUBLIK (Mencegah Eksekusi Tak Sah via Supabase REST API)
+-- ==============================================================================
+REVOKE EXECUTE ON FUNCTION public.fn_buat_tagihan_konsinyasi(uuid[], uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_buat_tagihan_konsinyasi(uuid[], uuid) TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_catat_log_aktivitas(uuid, character varying, character varying, character varying, character varying, character varying, character varying, uuid, text, jsonb, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_catat_log_aktivitas(uuid, character varying, character varying, character varying, character varying, character varying, character varying, uuid, text, jsonb, jsonb) TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_catat_pembayaran_konsinyasi(uuid, uuid, numeric, uuid, text, date, numeric, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_catat_pembayaran_konsinyasi(uuid, uuid, numeric, uuid, text, date, numeric, text) TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_guard_developer_account() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_developer_account() TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_guard_pelanggan_sales_driver() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_guard_pelanggan_sales_driver() TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_hitung_harga_jual_item(uuid, uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_hitung_harga_jual_item(uuid, uuid) TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_hitung_tier_komisi_sales(numeric) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_hitung_tier_komisi_sales(numeric) TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_rekonsiliasi_piutang_pelanggan(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_rekonsiliasi_piutang_pelanggan(uuid) TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_trg_potongan_kasbon_update_saldo() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_trg_potongan_kasbon_update_saldo() TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_trg_proses_pengiriman_konsinyasi() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_trg_proses_pengiriman_konsinyasi() TO postgres, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.fn_trg_transaksi_tabungan_update_saldo() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_trg_transaksi_tabungan_update_saldo() TO postgres, service_role;

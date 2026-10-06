@@ -1014,13 +1014,37 @@ CREATE POLICY service_role_all_pesanan ON public.pesanan FOR ALL TO service_role
 CREATE POLICY service_role_all_stok ON public.riwayat_stok FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_kas ON public.arus_kas FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_logs ON public.log_aktivitas FOR ALL TO service_role USING (true) WITH CHECK (true);
+ALTER TABLE public.grup_produk_barcode ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.grup_produk_barcode FROM PUBLIC, anon, authenticated;
+GRANT ALL ON public.grup_produk_barcode TO postgres, service_role;
+DROP POLICY IF EXISTS service_role_all_grup_produk_barcode ON public.grup_produk_barcode;
+CREATE POLICY service_role_all_grup_produk_barcode ON public.grup_produk_barcode FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.merek ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.merek FROM PUBLIC, anon, authenticated;
+GRANT ALL ON public.merek TO postgres, service_role;
+DROP POLICY IF EXISTS service_role_all_merek ON public.merek;
 CREATE POLICY service_role_all_merek ON public.merek FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.pelanggan_grup_barcode ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.pelanggan_grup_barcode FROM PUBLIC, anon, authenticated;
+GRANT ALL ON public.pelanggan_grup_barcode TO postgres, service_role;
+DROP POLICY IF EXISTS service_role_all_pelanggan_grup_barcode ON public.pelanggan_grup_barcode;
+CREATE POLICY service_role_all_pelanggan_grup_barcode ON public.pelanggan_grup_barcode FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.skema_komisi_sales ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.skema_komisi_sales FROM PUBLIC, anon, authenticated;
+GRANT ALL ON public.skema_komisi_sales TO postgres, service_role;
+DROP POLICY IF EXISTS service_role_all_skema_komisi_sales ON public.skema_komisi_sales;
+CREATE POLICY service_role_all_skema_komisi_sales ON public.skema_komisi_sales FOR ALL TO service_role USING (true) WITH CHECK (true);
+
 CREATE POLICY service_role_all_opname_gudang ON public.opname_gudang FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_opname_gudang_item ON public.opname_gudang_item FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_gplm ON public.grup_pelanggan_level_merek FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY service_role_all_pemasok_item ON public.pemasok_item FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- Keamanan & Hak Akses schema_migrations
-REVOKE ALL ON public.schema_migrations FROM PUBLIC, anon;
-GRANT SELECT ON public.schema_migrations TO authenticated;
-GRANT ALL ON public.schema_migrations TO postgres, service_role;
+ALTER TABLE public.schema_migrations ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.schema_migrations FROM PUBLIC, anon, authenticated;
+GRANT ALL ON public.schema_migrations TO postgres, service_role;
+CREATE POLICY service_role_all_schema_migrations ON public.schema_migrations FOR ALL TO service_role USING (true) WITH CHECK (true);
