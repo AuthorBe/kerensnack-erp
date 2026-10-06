@@ -2168,6 +2168,8 @@ button.badge:focus-visible {
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
+  white-space: nowrap;
+  flex-shrink: 0;
   border: 1px solid transparent;
   transition: all 0.15s ease-in-out;
   user-select: none;
@@ -2719,6 +2721,81 @@ body.ksnack-popup-freeze .app-header {
   letter-spacing: -0.015em !important;
   margin: 0 !important;
   line-height: 1.3 !important;
+}
+
+/* 4.1 Modal Header Icon Standard Box (DNA: Rounded 12px, Soft Tinted Hairline Border, Perfect Centering) */
+.modal-header-icon {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  border-radius: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.modal-header-icon svg,
+.modal-header-icon i {
+  width: 20px !important;
+  height: 20px !important;
+  display: block;
+}
+
+.modal-header-icon.is-blue,
+.modal-header-icon.is-opname {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #2563eb !important;
+  border: 1px solid rgba(37, 99, 235, 0.25) !important;
+}
+.dark .modal-header-icon.is-blue,
+.dark .modal-header-icon.is-opname {
+  background: rgba(37, 99, 235, 0.18) !important;
+  color: #60a5fa !important;
+  border-color: rgba(37, 99, 235, 0.35) !important;
+}
+
+.modal-header-icon.is-emerald,
+.modal-header-icon.is-masuk {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+}
+.dark .modal-header-icon.is-emerald,
+.dark .modal-header-icon.is-masuk {
+  background: rgba(16, 185, 129, 0.18) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+.modal-header-icon.is-rose,
+.modal-header-icon.is-keluar,
+.modal-header-icon.is-danger {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+}
+.dark .modal-header-icon.is-rose,
+.dark .modal-header-icon.is-keluar,
+.dark .modal-header-icon.is-danger {
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+.modal-header-icon.is-amber,
+.modal-header-icon.is-warning {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #d97706 !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+}
+.dark .modal-header-icon.is-amber,
+.dark .modal-header-icon.is-warning {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
 }
 
 /* 5. Header Close X Button (DNA Standard: Ditampilkan di HP & Tablet < 1024px, Disembunyikan di Laptop & Desktop >= 1024px) */

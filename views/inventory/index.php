@@ -517,8 +517,9 @@ $countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') 
             <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;"
-                         :style="adjustMode === 'opname' ? 'background:rgba(37,99,235,0.12); color:#2563eb;' : (adjustMode === 'masuk' ? 'background:rgba(16,185,129,0.12); color:#10b981;' : 'background:rgba(239,68,68,0.12); color:#ef4444;')">
+                    <div class="modal-header-icon"
+                         :class="adjustMode === 'opname' ? 'is-opname' : (adjustMode === 'masuk' ? 'is-masuk' : 'is-keluar')"
+                         style="width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s ease;">
                         <i :data-lucide="adjustMode === 'opname' ? 'clipboard-check' : (adjustMode === 'masuk' ? 'arrow-down-left' : 'arrow-up-right')" style="width:20px;height:20px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
@@ -787,7 +788,7 @@ $countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') 
             <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(239,68,68,0.12);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div class="modal-header-icon is-rose" style="width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i data-lucide="trash-2" style="width:20px;height:20px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
@@ -917,7 +918,7 @@ $countBahanKemas = count(array_filter($items, fn($i) => ($i['tipe_item'] ?? '') 
             <div class="modal-handle"><div class="modal-handle-bar"></div></div>
             <div class="modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.12);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <div class="modal-header-icon is-blue" style="width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
                         <i data-lucide="activity" style="width:20px;height:20px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
