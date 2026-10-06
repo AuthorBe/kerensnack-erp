@@ -35,24 +35,58 @@ description: >-
 
 ## 2. Canonical Schema Synchronization (Single Source of Truth)
 - `database/01_schema.sql` and `database/02_triggers_and_rpc.sql` **must** be synchronized with the latest schema state whenever creating or modifying migrations.
-- Avoid PostgreSQL 15+ exclusive parameters (e.g., `security_invoker`) in canonical DDL to maintain backwards compatibility with local PostgreSQL environments.
+- Avoid PostgreSQL 15+ exclusive parameters (e.g., `security_invoker`) directly in canonical `CREATE VIEW` DDL to maintain backwards compatibility with local PostgreSQL 14.5 environments. Instead, use migration scripts with version-aware dynamic SQL blocks for cross-version hardening.
 
-## 3. Supabase PostgREST Permissions (Post-October 30, 2026 Ready)
+## 3. Supabase PostgREST & Database Hardening Protocols (1000% Zero Leak Standard)
 
-**`SECURITY DEFINER` functions must be locked down** (revoke public access, grant strictly to `postgres` and `service_role`):
+KEREN ONE connects to the database via internal PHP PDO as the database owner (`postgres`). PostgREST is exposed by Supabase on port 443, so every database entity **must be hardened against side-channel exposure**:
+
+### 3.1 Total RLS Enforcement (Zero Table Without RLS)
+Every table in schema `public` **MUST** have Row Level Security enabled. Never leave a table unprotected:
 ```sql
-REVOKE EXECUTE ON FUNCTION public.fn_function_name(...) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.fn_function_name(...) TO postgres, service_role;
+ALTER TABLE public.nama_tabel ENABLE ROW LEVEL SECURITY;
+```
+For internal/system tables that should never be accessed via PostgREST:
+```sql
+REVOKE ALL ON public.nama_tabel FROM PUBLIC, anon, authenticated;
+GRANT ALL ON public.nama_tabel TO postgres, service_role;
+CREATE POLICY service_role_all_nama_tabel ON public.nama_tabel FOR ALL TO service_role USING (true) WITH CHECK (true);
 ```
 
-**New tables accessed directly by public SDK/API** (Mobile App / Client JS): include explicit GRANT and RLS:
+### 3.2 Immutable Function Search Path (Prevent Search Path Hijacking)
+Every function created or updated with `CREATE OR REPLACE FUNCTION` **MUST** explicitly define a static `search_path` directly in its definition before `AS $$`:
 ```sql
-GRANT SELECT, INSERT ON public.new_table_name TO authenticated;
-GRANT ALL ON public.new_table_name TO service_role;
-ALTER TABLE public.new_table_name ENABLE ROW LEVEL SECURITY;
+CREATE OR REPLACE FUNCTION public.fn_nama_fungsi(...)
+RETURNS ...
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+...
+```
+*Note*: `CREATE OR REPLACE FUNCTION` resets previous function attributes if omitted. Omitting `SET search_path` immediately triggers Supabase Linter warning `0011 (function_search_path_mutable)`.
+
+### 3.3 Trigger & RPC Lockdown (Prevent Accidental Public API Exposure)
+PostgreSQL by default grants `EXECUTE` on new functions to `PUBLIC`. Supabase PostgREST automatically exposes callable routines via `/rest/v1/rpc/*`.
+Every trigger function, internal guard, and backend-only RPC **MUST** revoke public execution:
+```sql
+REVOKE EXECUTE ON FUNCTION public.fn_nama_fungsi(...) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.fn_nama_fungsi(...) TO postgres, service_role;
 ```
 
-**Sensitive & financial tables (Zero Public Exposure)**: financial, cash, user, and system-settings tables are **strictly forbidden** from being GRANTed to `anon` / `authenticated`. Database access must be strictly handled through the PHP PDO backend as the database owner.
+### 3.4 Cross-Version View Security (`security_invoker` Blueprint)
+Views querying RLS-protected tables must evaluate caller permissions on Cloud Supabase (PostgreSQL 15+) without causing `unrecognized parameter "security_invoker"` errors on Local Sandbox (PostgreSQL 14.5).
+Always wrap view security hardening in a dynamic version check block:
+```sql
+DO $$
+BEGIN
+    IF current_setting('server_version_num')::int >= 150000 THEN
+        EXECUTE 'ALTER VIEW public.v_nama_view SET (security_invoker = true)';
+    END IF;
+END $$;
+```
+
+### 3.5 Sensitive & Financial Tables (Zero Public Exposure)
+Financial, cash (`arus_kas`, `akun_kas`), HR (`penggajian`, `karyawan`, `tabungan`, `kasbon`), user (`pengguna`, `izin`), and system settings tables are **strictly forbidden** from being GRANTed to `anon` / `authenticated`. Database access must be strictly handled through the PHP PDO backend.
 
 ## 4. Live-to-Local Replication & Hybrid Smart Sync Architecture
 
@@ -74,6 +108,13 @@ ALTER TABLE public.new_table_name ENABLE ROW LEVEL SECURITY;
 ## Pre-flight Completion Checklist
 - [ ] Sequentially numbered migration file wrapped in `BEGIN; ... COMMIT;`
 - [ ] `01_schema.sql` & `02_triggers_and_rpc.sql` fully synchronized
-- [ ] `SECURITY DEFINER` functions REVOKEd/GRANTed; sensitive tables have zero public GRANT
+- [ ] `ALTER TABLE public.table_name ENABLE ROW LEVEL SECURITY;` on every new table
+- [ ] `SET search_path = public, pg_temp` included on every `CREATE/ALTER FUNCTION`
+- [ ] `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated;` on all trigger/internal functions
+- [ ] Views querying RLS tables hardened via version-aware `security_invoker = true` block
+- [ ] Sensitive/financial tables have zero public GRANT (`anon`/`authenticated`)
 - [ ] New master/lookup tables registered in `DatabaseManagerService::MASTER_TABLES`
 - [ ] New transaction/log tables include standard timestamp column (`created_at` or `tanggal_*`)
+- [ ] Stage 1 Local migration verified (`php bin/migrate.php --target=local`)
+- [ ] Stage 2 Cloud Live migration deployed (`php bin/migrate.php --target=live`)
+- [ ] Stage 3 Dual-database status verified (`php bin/migrate.php --status`)

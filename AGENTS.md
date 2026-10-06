@@ -36,8 +36,12 @@ Skills hold the complete rules (testing, schema/permissions/replication, UI/UX, 
   1. **Stage 1 (Local First)**: Apply and verify the migration in **Local PostgreSQL (`kerensnack_erp_local`)** first via `php bin/migrate.php --target=local`. Validate zero SQL syntax or constraint regressions.
   2. **Stage 2 (Live Deploy)**: Once 100% verified in Local, apply the exact same migration file to **Cloud Supabase (Live)** via `php bin/migrate.php --target=live`.
   3. **Stage 3 (Automated Tracking & Status)**: Track and verify applied status across both databases using `php bin/migrate.php --status`.
-- Always keep `database/01_schema.sql` & `database/02_triggers_and_rpc.sql` in sync (Single Source of Truth); avoid PostgreSQL 15+ features (e.g. `security_invoker`) in canonical DDL.
-- `SECURITY DEFINER` functions must `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated` and `GRANT EXECUTE ... TO postgres, service_role`.
+- **Mandatory Supabase Hardening (Zero Leak & Zero Warning Standard)**:
+  1. **100% Table RLS**: Every new table in schema `public` **MUST** execute `ALTER TABLE public.table_name ENABLE ROW LEVEL SECURITY;`.
+  2. **Static Search Path**: Every function (triggers & RPC) **MUST** include `SET search_path = public, pg_temp` before `AS $$` (prevents Search Path Hijacking and Supabase linter warning 0011).
+  3. **RPC Lockdown**: PostgreSQL grants `EXECUTE` to `PUBLIC` by default. Every trigger function and internal procedure **MUST** execute `REVOKE EXECUTE ON FUNCTION public.fn_name(...) FROM PUBLIC, anon, authenticated;` and `GRANT EXECUTE ... TO postgres, service_role;` (prevents accidental public RPC exposure via `/rest/v1/rpc/*`).
+  4. **Cross-Version View Security**: Views querying RLS-protected tables must enforce caller security without breaking Local DB (PostgreSQL 14.5). Always wrap `security_invoker` in a dynamic block: `DO $$ BEGIN IF current_setting('server_version_num')::int >= 150000 THEN EXECUTE 'ALTER VIEW public.v_name SET (security_invoker = true)'; END IF; END $$;`.
+- Always keep `database/01_schema.sql` & `database/02_triggers_and_rpc.sql` in sync (Single Source of Truth); avoid PostgreSQL 15+ syntax directly in canonical DDL (use migrations/dynamic blocks for cross-version compatibility).
 - Replication: master data 100% complete; transactions/logs use a 14-day sliding window. New master tables must be registered in `App\Services\DatabaseManagerService::MASTER_TABLES`; new transaction tables must provide standard timestamp columns (`created_at`, `dibuat_pada`, `tanggal_*`). Large datasets or batch runs via CLI: `php bin/sync_db.php --mode=14d|full` or 1-click `bin\sync-db-from-live.bat`.
 
 ## 5. Core UI/UX Rules
