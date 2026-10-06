@@ -1,5 +1,6 @@
 <?php
 use App\Core\Router;
+use App\Helpers\CSRF;
 use App\Helpers\Format;
 ob_start();
 ?>
@@ -35,6 +36,7 @@ ob_start();
     <!-- MAIN FORM                                                                 -->
     <!-- ========================================================================= -->
     <form id="salesOrderForm" data-add-row-btn="#btnAddRow" data-action-text="Menerbitkan Purchase Order..." action="<?= Router::url('/customer-orders/store') ?>" method="POST">
+        <?= CSRF::field() ?>
         <input type="hidden" name="items_json" :value="JSON.stringify(items)">
 
         <div class="space-y-5">
@@ -1706,8 +1708,24 @@ function createSalesOrderApp() {
             this.$nextTick(() => {
                 const form = document.getElementById('salesOrderForm');
                 if (form) {
+                    let csrfInp = form.querySelector('input[name="csrf_token"]');
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    if (!csrfInp && token) {
+                        csrfInp = document.createElement('input');
+                        csrfInp.type = 'hidden';
+                        csrfInp.name = 'csrf_token';
+                        csrfInp.value = token;
+                        form.appendChild(csrfInp);
+                    } else if (csrfInp && (!csrfInp.value || !csrfInp.value.trim()) && token) {
+                        csrfInp.value = token;
+                    }
+
                     if (typeof form.requestSubmit === 'function') {
-                        form.requestSubmit();
+                        try {
+                            form.requestSubmit();
+                        } catch (e) {
+                            form.submit();
+                        }
                     } else {
                         form.submit();
                     }

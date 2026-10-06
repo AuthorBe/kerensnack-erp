@@ -1948,6 +1948,7 @@ ob_start();
                                           data-confirm-title="Batalkan &amp; Hapus Transaksi"
                                           data-confirm-type="danger"
                                           data-confirm-btn="Ya, Batalkan Transaksi">
+                                        <?= \App\Helpers\CSRF::field() ?>
                                         <input type="hidden" name="id" :value="orderDetail?.id">
                                         <button type="submit" class="btn btn-danger w-full sm:w-auto" style="padding:9px 18px;font-size:12.5px;font-weight:700;border-radius:10px;">
                                             <i data-lucide="trash-2"></i>

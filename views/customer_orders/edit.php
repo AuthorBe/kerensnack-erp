@@ -1,6 +1,7 @@
 <?php
 use App\Core\Router;
 use App\Core\Auth;
+use App\Helpers\CSRF;
 use App\Helpers\Format;
 ob_start();
 $isRetryEdit = !empty($isRetryEdit) || ($order['status_pemrosesan'] ?? '') === 'gagal_dikirim';
@@ -68,6 +69,7 @@ $initialDiskonFaktur = max(0, (float)($order['total_diskon'] ?? 0) - $initialIte
     <!-- MAIN FORM                                                                 -->
     <!-- ========================================================================= -->
     <form id="salesOrderForm" data-add-row-btn="#btnAddRow" data-action-text="<?= $isRetryEdit ? 'Menjadwalkan Kirim Ulang...' : 'Menyimpan Perubahan...' ?>" action="<?= Router::url('/customer-orders/update') ?>" method="POST">
+        <?= CSRF::field() ?>
         <input type="hidden" name="id" value="<?= htmlspecialchars($order['id']) ?>">
         <input type="hidden" name="items_json" :value="JSON.stringify(items)">
         <input type="hidden" name="refund_akun_kas_id" :value="refundForm.akun_kas_id">
@@ -1629,8 +1631,24 @@ function editSalesOrderApp() {
             this.$nextTick(() => {
                 const form = document.getElementById('salesOrderForm');
                 if (form) {
+                    let csrfInp = form.querySelector('input[name="csrf_token"]');
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    if (!csrfInp && token) {
+                        csrfInp = document.createElement('input');
+                        csrfInp.type = 'hidden';
+                        csrfInp.name = 'csrf_token';
+                        csrfInp.value = token;
+                        form.appendChild(csrfInp);
+                    } else if (csrfInp && (!csrfInp.value || !csrfInp.value.trim()) && token) {
+                        csrfInp.value = token;
+                    }
+
                     if (typeof form.requestSubmit === 'function') {
-                        form.requestSubmit();
+                        try {
+                            form.requestSubmit();
+                        } catch (e) {
+                            form.submit();
+                        }
                     } else {
                         form.submit();
                     }
