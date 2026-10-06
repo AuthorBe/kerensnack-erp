@@ -239,8 +239,8 @@ $logoSrc = PrintDocumentHelper::getLogoSrc($comp);
                     <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                         <span style="font-weight: 700; color: #0f172a; font-size: 13px;"><?= htmlspecialchars($it['nama_item']) ?></span>
                         <?php if (!empty($it['is_bonus'])): ?>
-                        <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 4px; text-transform: uppercase;">
-                            🎁 BONUS
+                        <span style="background: #fffbeb; color: #b45309; border: 1px solid #fde68a; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; display: inline-block; vertical-align: middle;">
+                            BONUS
                         </span>
                         <?php endif; ?>
                     </div>

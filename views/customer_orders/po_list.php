@@ -8,14 +8,14 @@ ob_start();
 
 <style>
 /* ========================================================================= */
-/* MATERIAL DESIGN 3 / COMPACT PO CARD & MODAL STYLES                       */
+/* KEREN ONE - DAFTAR PO PELANGGAN (CLEAN ENTERPRISE UI)                     */
 /* ========================================================================= */
 
 .po-stat-card {
     background: var(--color-surface);
     border: 1px solid var(--color-hairline);
-    border-radius: 16px;
-    padding: 18px 20px;
+    border-radius: var(--rounded-lg, 12px);
+    padding: 16px 18px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -31,18 +31,18 @@ ob_start();
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 .po-stat-label {
     font-size: 11px;
     font-weight: 800;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
 }
 .po-stat-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -58,13 +58,13 @@ ob_start();
     gap: 6px;
 }
 
-/* 2. SEGMENTED TABS (M3 PILLS) */
+/* 2. SEGMENTED TABS (ENTERPRISE FILTER BAR) */
 .po-segmented-tabs-wrapper {
     display: flex;
     align-items: center;
     background: var(--color-canvas-soft);
-    padding: 5px;
-    border-radius: 14px;
+    padding: 4px;
+    border-radius: var(--rounded-lg, 12px);
     border: 1px solid var(--color-hairline);
     gap: 4px;
     overflow-x: auto;
@@ -80,7 +80,7 @@ ob_start();
     align-items: center;
     gap: 8px;
     padding: 7px 14px;
-    border-radius: 10px;
+    border-radius: 8px;
     font-size: 12.5px;
     font-weight: 600;
     color: var(--color-ink-mute);
@@ -104,7 +104,7 @@ ob_start();
     background: var(--color-canvas) !important;
     color: #2563eb !important;
     font-weight: 700 !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--color-hairline) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06), 0 0 0 1px var(--color-hairline) !important;
 }
 .dark .po-tab-btn.is-active {
     color: #60a5fa !important;
@@ -135,82 +135,48 @@ ob_start();
 .po-compact-card {
     background: var(--color-surface);
     border: 1px solid var(--color-hairline);
-    border-radius: 16px;
-    padding: 20px 24px;
+    border-radius: var(--rounded-lg, 12px);
+    padding: 18px 20px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 1px 3px rgba(0,0,0,0.03);
 }
 .po-compact-card:hover {
     border-color: var(--color-hairline-strong);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
-    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-/* 4. STOCK STATUS CHIPS */
-.stock-chip-ok {
+/* 4. REUSABLE BADGE / CHIP COMPONENT */
+.ui-badge {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    background: #f0fdf4;
-    color: #15803d;
-    border: 1px solid #bbf7d0;
+    justify-content: center;
+    gap: 4px;
+    height: 24px;
+    padding: 0 8px;
     font-size: 11.5px;
-    font-weight: 700;
-    padding: 5px 11px;
-    border-radius: 8px;
-}
-.dark .stock-chip-ok {
-    background: rgba(22, 163, 74, 0.15);
-    color: #4ade80;
-    border-color: rgba(34, 197, 94, 0.3);
-}
-
-.stock-chip-danger {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-    font-size: 11.5px;
-    font-weight: 700;
-    padding: 5px 11px;
-    border-radius: 8px;
-}
-.dark .stock-chip-danger {
-    background: rgba(220, 38, 38, 0.15);
-    color: #f87171;
-    border-color: rgba(239, 68, 68, 0.3);
-}
-
-/* 5. PO NOTE BADGE (FIT CONTENT, NO OVERFLOW) */
-.po-note-badge {
-    display: inline-block;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: var(--rounded-md, 8px);
     width: fit-content;
-    max-width: 100%;
-    background: var(--color-canvas-soft);
-    border: 1px solid var(--color-hairline);
-    border-radius: 8px;
-    padding: 3.5px 10px;
-    font-size: 11.5px;
-    line-height: 1.45;
-    color: var(--color-ink-secondary);
-    word-break: break-word;
-    overflow-wrap: break-word;
     box-sizing: border-box;
 }
-.po-note-label {
-    font-weight: 800;
-    color: var(--color-ink);
-    margin-right: 4px;
+.ui-badge .lucide {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
-.po-note-text {
-    color: var(--color-ink-secondary);
-}
-.dark .po-note-badge {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.08);
-}
+.ui-badge.is-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.ui-badge.is-green { background: rgba(16, 185, 129, 0.12); color: #047857; border: 1px solid rgba(16, 185, 129, 0.25); }
+.ui-badge.is-orange { background: rgba(245, 158, 11, 0.12); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.25); }
+.ui-badge.is-blue { background: rgba(37, 99, 235, 0.1); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); }
+.ui-badge.is-indigo { background: rgba(99, 102, 241, 0.12); color: #4338ca; border: 1px solid rgba(99, 102, 241, 0.25); }
+.ui-badge.is-red { background: rgba(239, 68, 68, 0.12); color: #b91c1c; border: 1px solid rgba(239, 68, 68, 0.25); }
+.ui-badge.is-gray { background: var(--color-canvas-soft); color: var(--color-ink-mute); border: 1px solid var(--color-hairline); }
+
+.dark .ui-badge.is-green { background: rgba(16, 185, 129, 0.18); color: #34d399; border-color: rgba(16, 185, 129, 0.35); }
+.dark .ui-badge.is-red { background: rgba(239, 68, 68, 0.18); color: #f87171; border-color: rgba(239, 68, 68, 0.35); }
+.dark .ui-badge.is-gray { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08); }
 
 /* 6. FLOATING BATCH ACTION BAR (Desktop Sidebar Aware) */
 .po-floating-bar {
@@ -435,8 +401,8 @@ ob_start();
                 <span>Pilih Semua (<?= count($poList) ?> PO)</span>
             </label>
             <div class="flex items-center gap-2">
-                <a href="<?= Router::url('/customer-orders/po-list/batch-pdf?tab=' . urlencode($tab) . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '') . $sortParam) ?>"
-                   target="_blank"
+                <a href="#"
+                   @click.prevent="downloadPdfWithLoader('<?= Router::url('/customer-orders/po-list/batch-pdf?tab=' . urlencode($tab) . (!empty($q) ? '&q=' . urlencode($q) : '') . (!empty($pelangganId) ? '&pelanggan_id=' . urlencode($pelangganId) : '') . $sortParam) ?>')"
                    class="btn btn-secondary btn-sm"
                    style="font-weight: 700; color: #dc2626; border-color: #fca5a5; background: #fef2f2; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px;"
                    title="Unduh seluruh PO pada tab & filter ini ke dalam 1 file PDF gabungan">
@@ -469,144 +435,134 @@ ob_start();
             $isCompleted = in_array($po['status_pemrosesan'], ['selesai_dikirim', 'selesai', 'selesai_diterima'], true);
             $isFailed = ($po['status_pemrosesan'] === 'gagal_dikirim');
         ?>
-        <div class="po-compact-card">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                
-                <!-- SISI KIRI: NAMA TOKO (UTAMA/BESAR) & INFO MINIMALIS -->
-                <div class="flex items-start gap-3.5 min-w-0 flex-1">
-                    <!-- Checkbox Seleksi -->
-                    <label class="flex items-center cursor-pointer" style="margin-top: 13px;">
-                        <input type="checkbox" :value="'<?= $po['id'] ?>'" x-model="selectedPoIds" style="width: 18px; height: 18px; border-radius: 5px; accent-color: #2563eb; cursor: pointer;">
-                    </label>
-
-                    <div style="width: 46px; height: 46px; border-radius: 14px; background: rgba(37, 99, 235, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
-                        <i data-lucide="store" style="width: 22px; height: 22px;"></i>
+        <div class="po-compact-card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--color-surface); border: 1px solid var(--color-hairline); border-radius: var(--rounded-md, 8px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+            <!-- ROW 1: Header (Checkbox, Icon, Title + Meta) -->
+            <div class="flex items-center" style="gap: 12px;">
+                <label class="flex items-center cursor-pointer m-0">
+                    <input type="checkbox" :value="'<?= $po['id'] ?>'" x-model="selectedPoIds" style="width: 18px; height: 18px; border-radius: 5px; accent-color: #2563eb; cursor: pointer;">
+                </label>
+                <div style="width: 40px; height: 40px; border-radius: var(--rounded-md, 8px); background: rgba(37, 99, 235, 0.08); color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <i data-lucide="store" style="width: 20px; height: 20px;"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center flex-wrap" style="gap: 8px;">
+                        <h2 style="font-size: 15px; font-weight: 700; color: var(--color-ink); line-height: 1.2; margin: 0;" class="truncate">
+                            <?= htmlspecialchars($po['nama_toko']) ?>
+                        </h2>
+                        <span class="ui-badge is-mono is-gray">
+                            <?= htmlspecialchars($po['kode_pelanggan']) ?>
+                        </span>
+                        <?php if (!empty($po['catatan']) && str_contains($po['catatan'], '[Kirim Ulang]')): ?>
+                        <span class="ui-badge is-blue">
+                            🔁 Kirim Ulang
+                        </span>
+                        <?php endif; ?>
                     </div>
-                    <div class="min-w-0 flex-1">
-                        <!-- 1. NAMA TOKO JELAS & BESAR -->
-                        <div class="flex items-center gap-2.5 flex-wrap">
-                            <h2 style="font-size: 16.5px; font-weight: 900; color: var(--color-ink); line-height: 1.3; margin: 0;">
-                                <?= htmlspecialchars($po['nama_toko']) ?>
-                            </h2>
-                            <span class="badge badge-mono" style="font-size: 11px; padding: 2px 6px; color: var(--color-ink-mute); border-color: var(--color-hairline);">
-                                <?= htmlspecialchars($po['kode_pelanggan']) ?>
-                            </span>
-                            <?php if (!empty($po['catatan']) && str_contains($po['catatan'], '[Kirim Ulang]')): ?>
-                            <span class="badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-weight:800;font-size:11px;padding:2px 8px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;">
-                                🔁 Kirim Ulang
-                            </span>
-                            <?php endif; ?>
-                        </div>
-
-                        <!-- 2. KODE TRANSAKSI & DETAIL LAIN (MINIMALIS / BERSIH) -->
-                        <div class="flex items-center gap-x-3 gap-y-2 text-xs text-ink-mute flex-wrap" style="font-size: 12.5px; line-height: 1.5; margin-top: 8px;">
-                            <span class="font-mono text-ink-secondary" style="font-weight: 700;"><?= htmlspecialchars($po['nomor_nota']) ?></span>
-                            <span style="color: var(--color-ink-mute); opacity: 0.4;">&bull;</span>
-                            <span class="flex items-center gap-1.5" style="white-space: nowrap;">
-                                <i data-lucide="calendar" style="width: 13.5px; height: 13.5px; color: var(--color-ink-mute); flex-shrink: 0;"></i>
-                                <span><?= date('d/m/Y H:i', strtotime($po['dibuat_pada'])) ?> WIB</span>
-                            </span>
-                            <?php if (!empty($po['nama_wilayah'])): ?>
-                            <span style="color: var(--color-ink-mute); opacity: 0.4;">&bull;</span>
-                            <span class="flex items-center gap-1.5">
-                                <i data-lucide="map-pin" style="width: 13px; height: 13px; color: var(--color-ink-mute); flex-shrink: 0;"></i>
-                                <span>Wilayah: <strong class="text-ink"><?= htmlspecialchars($po['nama_wilayah']) ?></strong></span>
-                            </span>
-                            <?php endif; ?>
-                        </div>
-
-                        <!-- 3. CATATAN PO (JIKA ADA) -->
-                        <?php if (!empty($po['catatan'])): ?>
-                        <div style="margin-top: 10px;">
-                            <div class="po-note-badge">
-                                <strong class="po-note-label">Catatan:</strong>
-                                <span class="po-note-text"><?= nl2br(htmlspecialchars($po['catatan'])) ?></span>
-                            </div>
-                        </div>
+                    <div class="flex flex-wrap items-center mt-1" style="gap: 4px 12px; font-size: 12px; color: var(--color-ink-mute);">
+                        <span class="ui-badge is-mono is-gray" style="background: transparent; border: none; padding: 0; height: auto;">
+                            <?= htmlspecialchars($po['nomor_nota']) ?>
+                        </span>
+                        <span class="inline-flex items-center gap-1" style="gap: 4px;">
+                            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i>
+                            <span><?= date('d/m/Y H:i', strtotime($po['dibuat_pada'])) ?> WIB</span>
+                        </span>
+                        <?php if (!empty($po['nama_wilayah'])): ?>
+                        <span class="inline-flex items-center gap-1" style="gap: 4px;">
+                            <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                            <span>Wilayah: <strong class="font-semibold text-slate-700 dark:text-zinc-300"><?= htmlspecialchars($po['nama_wilayah']) ?></strong></span>
+                        </span>
                         <?php endif; ?>
                     </div>
                 </div>
+            </div>
 
-                <!-- SISI TENGAH & KANAN: RINGKASAN BARANG, KESIAPAN STOK & TOMBOL AKSI -->
-                <div class="flex items-center justify-between lg:justify-end gap-4 sm:gap-5 flex-wrap pt-3 lg:pt-0 border-t lg:border-t-0 border-hairline flex-shrink-0">
-                    
-                    <!-- Kuantitas Barang -->
-                    <div class="text-left lg:text-right">
-                        <div class="font-mono font-black text-ink" style="font-size: 15px;">
-                            <?= number_format($po['total_pcs']) ?> <span style="font-size: 11.5px; font-weight: 600; color: var(--color-ink-mute);">Pcs</span>
+            <!-- ROW 2: Note Chip (if any) -->
+            <?php if (!empty($po['catatan'])): ?>
+            <div class="truncate w-full bg-slate-50 dark:bg-zinc-800/50 border border-hairline" style="border-radius: var(--rounded-md, 8px); padding: 6px 10px; font-size: 12px; color: var(--color-ink-secondary);">
+                <span class="font-semibold text-ink inline-flex items-center gap-1">
+                    <i data-lucide="message-square" style="width: 14px; height: 14px; color: var(--color-ink-mute);"></i>
+                    Catatan:
+                </span>
+                <span><?= htmlspecialchars(str_replace('[Kirim Ulang]', '', $po['catatan'])) ?></span>
+            </div>
+            <?php endif; ?>
+
+            <!-- DIVIDER -->
+            <div style="border-top: 1px solid var(--color-hairline);"></div>
+
+            <!-- ROW 3 & 4: Summary & Actions -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between" style="gap: 16px;">
+                
+                <!-- Summary Area -->
+                <div class="flex items-center justify-between sm:justify-start" style="gap: 16px;">
+                    <div>
+                        <div style="font-family: var(--font-sans); color: var(--color-ink); line-height: 1.2;">
+                            <strong style="font-size: 15px; font-weight: 700;"><?= number_format($po['total_pcs']) ?></strong> <span style="font-size: 12px; font-weight: 500; color: var(--color-ink-mute);">Pcs</span>
                         </div>
-                        <div style="font-size: 11.5px; color: var(--color-ink-mute); margin-top: 1px;">
-                            <?= number_format($po['total_sku']) ?> SKU Produk
+                        <div style="font-family: var(--font-sans); color: var(--color-ink); line-height: 1.2; margin-top: 2px;">
+                            <strong style="font-size: 13px; font-weight: 600;"><?= number_format($po['total_sku']) ?></strong> <span style="font-size: 12px; font-weight: 500; color: var(--color-ink-mute);">SKU Produk</span>
                         </div>
                     </div>
 
-                    <!-- Badge Kesiapan Stok Gudang -->
                     <div>
                         <?php if ($isPending): ?>
                             <?php if ($po['is_stock_sufficient']): ?>
-                                <span class="stock-chip-ok">
-                                    <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i>
-                                    <span>Stok Cukup</span>
+                                <span class="ui-badge is-green">
+                                    <i data-lucide="check-circle"></i> Stok Cukup
                                 </span>
                             <?php else: ?>
-                                <span class="stock-chip-danger">
-                                    <i data-lucide="alert-circle" style="width: 14px; height: 14px;"></i>
-                                    <span>Defisit (<?= $po['stock_deficit_count'] ?>)</span>
+                                <span class="ui-badge is-red">
+                                    <i data-lucide="alert-circle"></i> Defisit (<?= $po['stock_deficit_count'] ?>)
                                 </span>
                             <?php endif; ?>
                         <?php elseif ($isReady): ?>
                             <?php if (!empty($po['nomor_surat_jalan'])): ?>
-                                <span class="badge" style="background: #e0e7ff; color: #3730a3; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
+                                <span class="ui-badge is-indigo">
                                     📦 Siap Kirim &bull; SJ: <?= htmlspecialchars($po['nomor_surat_jalan']) ?>
                                 </span>
                             <?php else: ?>
-                                <span class="badge" style="background: #d1fae5; color: #065f46; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
+                                <span class="ui-badge is-green">
                                     📦 Siap Kirim (Belum SJ)
                                 </span>
                             <?php endif; ?>
                         <?php elseif ($isDelivering): ?>
-                            <span class="badge" style="background: #fef3c7; color: #92400e; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
+                            <span class="ui-badge is-orange">
                                 🚚 Sedang Kirim
                             </span>
                         <?php elseif ($isCompleted): ?>
-                            <span class="badge" style="background: #ecfdf5; color: #047857; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
+                            <span class="ui-badge is-green">
                                 ✅ Selesai
                             </span>
                         <?php elseif ($isFailed): ?>
-                            <span class="badge" style="background: #ffe4e6; color: #9f1239; font-weight: 700; font-size: 11.5px; border-radius: 6px; padding: 4px 9px;">
+                            <span class="ui-badge is-red">
                                 ❌ Gagal Kirim
                             </span>
                         <?php endif; ?>
                     </div>
-
-                    <!-- Tombol Aksi: Aksi Cepat + Rincian Item -->
-                    <div class="flex items-center gap-2">
-                        <?php if ($isPending && $po['is_stock_sufficient'] && Auth::can('orders.po_process')): ?>
-                        <button type="button" 
-                                class="btn btn-primary btn-sm" 
-                                style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 5px;"
-                                @click="openConfirmReadyModal(<?= htmlspecialchars(json_encode($po)) ?>)">
-                            <i data-lucide="package-check" style="width: 15px; height: 15px;"></i>
-                            <span>Siap Dikirim</span>
-                        </button>
-                        <?php elseif ($isReady && empty($po['nomor_surat_jalan']) && Auth::can('deliveries.create')): ?>
-                        <a href="<?= Router::url('/deliveries?create_for_order=' . urlencode($po['id'])) ?>" class="btn btn-primary btn-sm" style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 5px; background: #059669; border-color: #059669;">
-                            <i data-lucide="truck" style="width: 15px; height: 15px;"></i>
-                            <span>Buat SJ</span>
-                        </a>
-                        <?php endif; ?>
-
-                        <button type="button" 
-                                class="btn btn-secondary btn-sm"
-                                style="font-size: 12.5px; font-weight: 700; border-radius: 10px; padding: 8px 16px; display: inline-flex; align-items: center; gap: 6px;"
-                                @click="openItemModal(<?= htmlspecialchars(json_encode($po)) ?>)">
-                            <i data-lucide="list" style="width: 15px; height: 15px; color: var(--color-primary);"></i>
-                            <span>Rincian Item</span>
-                        </button>
-                    </div>
-
                 </div>
 
+                <!-- Action Buttons -->
+                <div class="grid grid-cols-2 sm:flex sm:items-center shrink-0 w-full sm:w-auto" style="gap: 8px;">
+                    <?php if ($isPending && $po['is_stock_sufficient'] && Auth::can('orders.po_process')): ?>
+                    <button type="button" 
+                            class="btn btn-primary w-full sm:w-auto" 
+                            style="height: 40px; padding: 0 16px; font-size: 13px; font-weight: 600; border-radius: var(--rounded-md, 8px); display: inline-flex; align-items: center; justify-content: center; gap: 6px;"
+                            @click="openConfirmReadyModal(<?= htmlspecialchars(json_encode($po)) ?>)">
+                        <i data-lucide="package-check" style="width: 16px; height: 16px;"></i>
+                        <span>Siap Dikirim</span>
+                    </button>
+                    <?php else: ?>
+                    <div class="hidden sm:block"></div>
+                    <?php endif; ?>
+
+                    <button type="button" 
+                            class="btn btn-secondary w-full sm:w-auto <?= (!($isPending && $po['is_stock_sufficient'] && Auth::can('orders.po_process'))) ? 'col-span-2' : '' ?>"
+                            style="height: 40px; padding: 0 16px; font-size: 13px; font-weight: 600; border-radius: var(--rounded-md, 8px); display: inline-flex; align-items: center; justify-content: center; gap: 6px;"
+                            @click="openItemModal(<?= htmlspecialchars(json_encode($po)) ?>)">
+                        <i data-lucide="list" style="width: 16px; height: 16px; color: var(--color-primary);"></i>
+                        <span>Rincian Item</span>
+                    </button>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>
@@ -614,7 +570,7 @@ ob_start();
     </div>
 
     <!-- ========================================================================= -->
-    <!-- 5. MODAL DIALOG POP-UP: RINCIAN ITEM PRODUK (MATERIAL DESIGN 3)            -->
+    <!-- 5. MODAL DIALOG POP-UP: RINCIAN ITEM PRODUK                                -->
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showItemModal" x-cloak class="modal-backdrop" @click="showItemModal = false" style="z-index: 9999;">
@@ -627,20 +583,20 @@ ob_start();
             <!-- MODAL HEADER -->
             <div class="modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i data-lucide="package" style="width:22px;height:22px;"></i>
+                    <div style="width:40px;height:40px;border-radius:12px;background:rgba(37,99,235,0.1);color:#2563eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i data-lucide="package" style="width:20px;height:20px;"></i>
                     </div>
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2 flex-wrap">
                             <div class="modal-title" x-text="activePo?.nama_toko"></div>
                             <template x-if="activePo?.catatan && activePo.catatan.includes('[Kirim Ulang]')">
-                                <span class="badge" style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;font-weight:800;font-size:11px;padding:2px 8px;border-radius:6px;">
+                                <span class="badge" style="background:rgba(37,99,235,0.1);color:#2563eb;border:1px solid rgba(37,99,235,0.25);font-weight:700;font-size:11px;padding:2px 8px;border-radius:9999px;">
                                     🔁 Kirim Ulang
                                 </span>
                             </template>
                         </div>
                         <div style="font-size: 12px; color: var(--color-ink-mute); margin-top: 1px;">
-                            <span class="font-mono font-bold" x-text="activePo?.nomor_nota"></span> &bull; 
+                            <span class="font-mono font-bold text-slate-700 dark:text-zinc-300" x-text="activePo?.nomor_nota"></span> &bull; 
                             <span x-text="activePo?.total_pcs + ' Pcs (' + activePo?.total_sku + ' SKU)'"></span>
                         </div>
                     </div>
@@ -655,10 +611,10 @@ ob_start();
 
             <!-- WARNING JIKA DEFISIT STOK -->
             <template x-if="activePo?.is_stock_sufficient === false">
-                <div style="padding: 12px 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; font-size: 12.5px; color: #991b1b; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px;">
-                    <i data-lucide="alert-octagon" style="width: 18px; height: 18px; color: #dc2626; flex-shrink: 0; margin-top: 2px;"></i>
+                <div style="padding: 12px 16px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 12px; font-size: 12.5px; color: #b91c1c; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px;">
+                    <i data-lucide="alert-octagon" style="width: 18px; height: 18px; color: #dc2626; flex-shrink: 0; margin-top: 1px;"></i>
                     <div>
-                        <strong>Stok Gudang Tidak Mencukupi:</strong> Terdapat produk yang kuantitasnya kurang dari pesanan PO. Harap lengkapi stok fisik gudang terlebih dahulu.
+                        <strong style="color: #991b1b;">Stok Gudang Tidak Mencukupi:</strong> Terdapat produk yang kuantitasnya kurang dari pesanan PO. Harap lengkapi stok fisik gudang terlebih dahulu.
                     </div>
                 </div>
             </template>
@@ -678,7 +634,7 @@ ob_start();
                             </tr>
                         </thead>
                         <tbody>
-                            <template x-for="(item, idx) in activePo?.items || []" :key="item.item_id">
+                            <template x-for="(item, idx) in activePo?.items || []" :key="idx">
                                 <tr style="border-bottom: 1px solid var(--color-hairline);" :class="Number(item.stok_fisik_saat_ini) < Number(item.kuantitas_satuan_dasar) ? 'bg-red-50/40 dark:bg-red-950/20' : ''">
                                     <td class="cell-center text-ink-mute font-semibold" style="padding: 10px 12px;" x-text="idx + 1"></td>
                                     <td style="padding: 10px 12px;">
@@ -688,8 +644,8 @@ ob_start();
                                         <div class="flex items-center gap-2 flex-wrap">
                                             <span style="font-weight: 700; color: var(--color-ink);" x-text="item.nama_item"></span>
                                             <template x-if="item.is_bonus">
-                                                <span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:10px; font-weight:800; padding:1px 6px; border-radius:4px;">
-                                                    🎁 BONUS
+                                                <span class="ui-badge is-orange">
+                                                    <i data-lucide="gift"></i> Bonus
                                                 </span>
                                             </template>
                                         </div>
@@ -701,10 +657,10 @@ ob_start();
                                     <td class="cell-center font-mono font-bold" style="padding: 10px 12px;" :style="Number(item.stok_fisik_saat_ini) >= Number(item.kuantitas_satuan_dasar) ? 'color: #16a34a;' : 'color: #dc2626;'" x-text="item.stok_fisik_saat_ini + ' ' + (item.satuan_dasar || 'Pcs')"></td>
                                     <td class="cell-center" style="padding: 10px 12px;">
                                         <template x-if="Number(item.stok_fisik_saat_ini) >= Number(item.kuantitas_satuan_dasar)">
-                                            <span class="stock-chip-ok" style="font-size: 10.5px; padding: 2px 6px;">Cukup</span>
+                                            <span class="stock-chip-ok" style="font-size: 10.5px; padding: 2px 8px;">Cukup</span>
                                         </template>
                                         <template x-if="Number(item.stok_fisik_saat_ini) < Number(item.kuantitas_satuan_dasar)">
-                                            <span class="stock-chip-danger" style="font-size: 10.5px; padding: 2px 6px;">Kurang</span>
+                                            <span class="stock-chip-danger" style="font-size: 10.5px; padding: 2px 8px;">Kurang</span>
                                         </template>
                                     </td>
                                 </tr>
@@ -717,7 +673,10 @@ ob_start();
             <!-- CATATAN PO -->
             <template x-if="activePo?.catatan">
                 <div style="margin-bottom: 18px; padding: 10px 14px; background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 10px; font-size: 12px; color: var(--color-ink-secondary); line-height: 1.5; word-break: break-word;">
-                    <span style="font-weight: 800; color: var(--color-ink); text-transform: uppercase; font-size: 10.5px;">Catatan:</span>
+                    <div class="flex items-center gap-1.5 mb-1 text-slate-700 dark:text-zinc-200">
+                        <i data-lucide="message-square" style="width: 13px; height: 13px; color: var(--color-ink-mute);"></i>
+                        <strong style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;">Catatan Pemesanan:</strong>
+                    </div>
                     <span x-text="activePo?.catatan" style="word-break: break-word;"></span>
                 </div>
             </template>
@@ -729,10 +688,10 @@ ob_start();
                 </button>
 
                 <!-- Tombol Unduh PDF List Item PO -->
-                <a :href="'<?= Router::url('/customer-orders/picking-list/pdf?id=') ?>' + (activePo ? activePo.id : '')"
-                   target="_blank"
+                <a href="#"
+                   @click.prevent="downloadPdfWithLoader('<?= Router::url('/customer-orders/picking-list/pdf?id=') ?>' + (activePo ? activePo.id : ''))"
                    class="btn btn-secondary"
-                   style="color:#dc2626; border-color:#fca5a5; background:#fef2f2;"
+                   style="color: #dc2626; border-color: rgba(239, 68, 68, 0.3); background: rgba(239, 68, 68, 0.06);"
                    title="Unduh PDF Daftar Item Pesanan (PO)">
                     <i data-lucide="file-text" style="width: 15px; height: 15px;"></i>
                     <span>Unduh PDF</span>
@@ -759,18 +718,6 @@ ob_start();
                     </div>
                 </template>
                 <?php endif; ?>
-
-                <!-- Tombol Terbitkan SJ Langsung Dari Modal jika Sudah Siap Kirim -->
-                <?php if (Auth::can('deliveries.create')): ?>
-                <template x-if="activePo && (activePo.status_pemrosesan === 'siap_dikirim' || activePo.status_pemrosesan === 'siap_kirim') && !activePo.surat_jalan_id">
-                    <a :href="'<?= Router::url('/deliveries?create_for_order=') ?>' + (activePo ? activePo.id : '')"
-                       class="btn btn-primary"
-                       style="background: #059669; border-color: #059669;">
-                        <i data-lucide="truck" style="width: 15px; height: 15px;"></i>
-                        <span>Buat Surat Jalan</span>
-                    </a>
-                </template>
-                <?php endif; ?>
             </div>
 
         </div>
@@ -782,7 +729,7 @@ ob_start();
     <!-- ========================================================================= -->
     <template x-teleport="body">
     <div x-show="showConfirmReadyModal" x-cloak class="modal-backdrop" @click="showConfirmReadyModal = false" style="z-index: 9999;">
-        <div class="modal-box modal-box-lg" @click.stop>
+        <div class="modal-box modal-box-lg" style="max-width: 620px;" @click.stop>
             
             <!-- Mobile Pull Handle -->
             <div class="modal-handle">
@@ -792,14 +739,14 @@ ob_start();
             <!-- MODAL HEADER -->
             <div class="modal-header">
                 <div class="flex items-center gap-3 min-w-0 flex-1">
-                    <div style="width: 44px; height: 44px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                        <i data-lucide="package-check" style="width: 24px; height: 24px;"></i>
+                    <div class="modal-header-icon is-emerald">
+                        <i data-lucide="package-check"></i>
                     </div>
                     <div class="min-w-0 flex-1">
                         <div class="modal-title">Konfirmasi Penyiapan &amp; Bonus PO</div>
-                        <div style="font-size: 12.5px; color: var(--color-ink-mute); margin-top: 2px;">
+                        <div style="font-size: 12px; color: var(--color-ink-mute); margin-top: 2px;" class="truncate">
                             <span class="font-bold text-ink" x-text="targetPoForReady?.nama_toko"></span> &bull; 
-                            <span class="font-mono font-bold text-primary" x-text="targetPoForReady?.nomor_nota"></span>
+                            <span class="font-mono font-semibold" style="color: var(--color-primary);" x-text="targetPoForReady?.nomor_nota"></span>
                         </div>
                     </div>
                 </div>
@@ -808,120 +755,285 @@ ob_start();
                 </button>
             </div>
 
-            <!-- Modal Body -->
-            <div class="modal-body custom-scrollbar">
+            <!-- FORM WRAPPER (Standard Golden Template: wraps modal-body and modal-footer) -->
+            <form action="<?= Router::url('/customer-orders/process-po') ?>" method="POST" @submit="onSubmitReadyForm($event)">
+                <?= \App\Helpers\CSRF::field() ?>
+                <input type="hidden" name="order_id" :value="targetPoForReady?.id">
+                <input type="hidden" name="bonuses_json" :value="JSON.stringify(bonusItems)">
 
-                <!-- INFO PENYIAPAN BARANG -->
-                <div style="padding: 12px 16px; background: rgba(37, 99, 235, 0.06); border: 1px solid rgba(37, 99, 235, 0.18); border-radius: 12px; font-size: 12.5px; color: var(--color-ink-secondary); margin-bottom: 18px; line-height: 1.45;">
-                    <div class="flex items-center gap-2 font-bold text-primary" style="margin-bottom: 3px;">
-                        <i data-lucide="info" style="width: 15px; height: 15px;"></i>
-                        <span>Verifikasi Fisik Logistik Gudang</span>
-                    </div>
-                    <span>Pastikan seluruh <strong><span x-text="targetPoForReady?.total_pcs"></span> Pcs (<span x-text="targetPoForReady?.total_sku"></span> SKU)</strong> barang pesanan PO ini telah selesai disiapkan secara fisik. Stok fisik gudang akan otomatis terpotong saat dikonfirmasi.</span>
-                </div>
+                <!-- MODAL BODY -->
+                <div class="modal-body custom-scrollbar" style="max-height: calc(85vh - 140px); overflow-y: auto; min-height: 360px;">
 
-                <!-- FORM INPUT BONUS GUDANG (OPSIONAL) -->
-                <div style="margin-bottom: 20px;">
-                    <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
-                        <div>
-                            <div style="font-size: 13.5px; font-weight: 800; color: var(--color-ink); display: flex; align-items: center; gap: 6px;">
-                                <i data-lucide="gift" style="width: 16px; height: 16px; color: #059669;"></i>
-                                <span>Item Bonus Tambahan (Opsional)</span>
+                    <!-- INFO PENYIAPAN BARANG (VERIFIKASI FISIK LOGISTIK GUDANG) -->
+                    <div class="rounded-xl border p-3.5 mb-4" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2);">
+                        <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                            <div class="flex items-center gap-2 font-bold text-xs" style="color: #047857;">
+                                <i data-lucide="check-circle-2" style="width: 15px; height: 15px; color: #10b981;"></i>
+                                <span style="font-size: 12.5px;">Verifikasi Fisik Logistik Gudang</span>
                             </div>
-                            <p style="font-size: 11.5px; color: var(--color-ink-mute); margin: 2px 0 0 0;">Tambahkan produk bonus untuk toko jika ada kebijakan promo gudang, tester, atau kompensasi.</p>
+                            <span class="ui-badge is-green">
+                                <span x-text="targetPoForReady?.total_pcs ?? 0"></span> Pcs
+                                <span class="opacity-40">&bull;</span>
+                                <span x-text="targetPoForReady?.total_sku ?? 0"></span> SKU
+                            </span>
                         </div>
-                        <button type="button" @click="addBonusRow()" class="btn btn-secondary btn-sm" style="font-size: 12px; font-weight: 700; border-radius: 8px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 5px; color: #059669; border-color: #a7f3d0; background: #ecfdf5;">
-                            <i data-lucide="plus-circle" style="width: 14px; height: 14px;"></i>
-                            <span>+ Tambah Bonus</span>
-                        </button>
+                        <p class="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed m-0" style="font-size: 13px;">
+                            Pastikan seluruh barang pesanan PO ini telah selesai dipacking secara fisik. Stok barang jadi di gudang akan otomatis terpotong saat pesanan dikonfirmasi siap kirim.
+                        </p>
                     </div>
 
-                    <!-- EMPTY STATE BONUS -->
-                    <template x-if="bonusItems.length === 0">
-                        <div style="padding: 18px; background: var(--color-canvas-soft); border: 1px dashed var(--color-hairline); border-radius: 12px; text-align: center; color: var(--color-ink-mute); font-size: 12.5px; line-height: 1.4;">
-                            Tidak ada item bonus tambahan yang dipilih.<br>
-                            <span style="font-size: 11.5px; opacity: 0.8;">Klik tombol <strong>+ Tambah Bonus</strong> jika ingin menyertakan barang gratis ke toko ini.</span>
+                    <!-- FORM INPUT BONUS GUDANG (OPSIONAL) -->
+                    <div style="margin-bottom: 8px;">
+                        <div class="flex items-start justify-between gap-3 mb-4">
+                            <div class="flex items-start gap-2.5 min-w-0">
+                                <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(245, 158, 11, 0.12); color: #d97706; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                                    <i data-lucide="gift" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                <div class="min-w-0 flex flex-col gap-1">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <span class="font-bold text-ink" style="font-size: 13.5px; line-height: 1.2;">Item Bonus Tambahan</span>
+                                        <template x-if="bonusItems.length > 0">
+                                            <span class="ui-badge is-orange" x-text="bonusItems.length + ' Item'"></span>
+                                        </template>
+                                    </div>
+                                    <p class="text-ink-mute m-0 text-xs" style="font-size: 11.5px; line-height: 1.4;">
+                                        Opsional &bull; Promo toko, tester produk, atau kompensasi pesanan.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button type="button" @click="addBonusRow()" 
+                                    class="btn btn-secondary flex-shrink-0" 
+                                    style="height: 36px; font-size: 13px; font-weight: 600; border-radius: var(--rounded-md, 8px); padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; color: #059669; border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.08); white-space: nowrap;">
+                                <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                                <span>Tambah Bonus</span>
+                            </button>
                         </div>
-                    </template>
 
-                    <!-- DAFTAR BARIS BONUS -->
-                    <template x-if="bonusItems.length > 0">
-                        <div class="space-y-3" style="max-height: 290px; overflow-y: auto; padding-right: 2px;">
-                            <template x-for="(row, bIdx) in bonusItems" :key="bIdx">
-                                <div style="background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: 12px; padding: 12px 14px;">
-                                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-start">
+                        <!-- EMPTY STATE BONUS -->
+                        <template x-if="bonusItems.length === 0">
+                            <div class="p-4 rounded-xl text-center border border-dashed" style="background: var(--color-canvas-soft); border-color: var(--color-hairline);">
+                                <div class="inline-flex items-center justify-center w-8 h-8 rounded-full mb-1.5" style="background: rgba(0,0,0,0.04); color: var(--color-ink-mute);">
+                                    <i data-lucide="gift" style="width: 16px; height: 16px;"></i>
+                                </div>
+                                <div class="text-xs font-semibold text-ink" style="margin-bottom: 2px;">Tidak Ada Item Bonus</div>
+                                <p class="text-ink-mute m-0" style="font-size: 11.5px; line-height: 1.4;">
+                                    Klik tombol <strong>+ Tambah Bonus</strong> jika ingin menyertakan barang gratis ke toko ini.
+                                </p>
+                            </div>
+                        </template>
+
+                        <!-- DAFTAR BARIS BONUS -->
+                        <template x-if="bonusItems.length > 0">
+                            <div class="space-y-3" style="padding-bottom: 24px;">
+                                <template x-for="(row, bIdx) in bonusItems" :key="bIdx">
+                                    <div class="rounded-xl border p-3.5 transition-all"
+                                         style="background: var(--color-canvas-soft); border-color: var(--color-hairline);"
+                                         :style="row.dropdownOpen ? 'position: relative; z-index: 50;' : 'position: relative; z-index: 1;'">
                                         
-                                        <!-- Pilih Produk -->
-                                        <div class="sm:col-span-5">
-                                            <label class="form-label text-xs font-bold mb-1" style="font-size: 11px;">Pilih Produk Bonus *</label>
-                                            <select x-model="row.item_id" @change="onBonusItemChange(row)" class="form-input text-xs font-medium" style="height: 38px; border-radius: 8px;" required>
-                                                <option value="">-- Pilih Barang Jadi --</option>
-                                                <template x-for="p in availableBonusItems" :key="p.id">
-                                                    <option :value="p.id" :disabled="Number(p.stok_fisik_saat_ini) <= 0" x-text="'[' + p.kode_sku + '] ' + p.nama_item + ' (Stok: ' + p.stok_fisik_saat_ini + ' ' + (p.satuan_dasar || 'Pcs') + ')'"></option>
+                                        <!-- Card Header: Pill & Action -->
+                                        <div class="flex items-center justify-between gap-2 border-b" style="border-color: var(--color-hairline); padding-bottom: 12px; margin-bottom: 12px;">
+                                            <div class="flex items-center gap-2 min-w-0 flex-wrap">
+                                                <span class="ui-badge is-orange">
+                                                    <i data-lucide="gift"></i>
+                                                    <span x-text="'Item Bonus #' + (bIdx + 1)"></span>
+                                                </span>
+                                                <template x-if="row.item_id">
+                                                    <span class="ui-badge is-gray is-mono" style="font-weight: 500;">
+                                                        <span style="color: var(--color-ink-mute); font-family: var(--font-sans);">Sisa stok:</span>
+                                                        <strong class="font-bold text-ink" x-text="getAvailableStock(row.item_id) + ' Pcs'"></strong>
+                                                    </span>
                                                 </template>
-                                            </select>
-                                        </div>
-
-                                        <!-- Qty Bonus -->
-                                        <div class="sm:col-span-2">
-                                            <label class="form-label text-xs font-bold mb-1" style="font-size: 11px;">
-                                                Qty <span class="text-ink-mute font-normal">(Pcs)</span> *
-                                            </label>
-                                            <input type="number" x-model.number="row.qty" :min="1" :max="getAvailableStock(row.item_id)" class="form-input text-xs font-mono font-bold text-center" style="height: 38px; border-radius: 8px;" placeholder="1" required>
-                                        </div>
-
-                                        <!-- Alasan Dropdown -->
-                                        <div class="sm:col-span-4">
-                                            <label class="form-label text-xs font-bold mb-1" style="font-size: 11px;">Alasan Bonus *</label>
-                                            <select x-model="row.reason" class="form-input text-xs font-semibold" style="height: 38px; border-radius: 8px;">
-                                                <option value="Bonus Promo Gudang">Bonus Promo Gudang</option>
-                                                <option value="Tester Produk Baru">Tester Produk Baru</option>
-                                                <option value="Bonus Toko">Bonus Toko</option>
-                                                <option value="Pengganti / Kompensasi">Pengganti / Kompensasi</option>
-                                                <option value="Lainnya">Lainnya (Catatan Manual)</option>
-                                            </select>
-                                        </div>
-
-                                        <!-- Tombol Hapus Baris -->
-                                        <div class="sm:col-span-1 flex items-center justify-end sm:justify-center" style="margin-top: 22px;">
-                                            <button type="button" @click="removeBonusRow(bIdx)" class="btn btn-secondary btn-sm" style="width: 36px; height: 36px; padding: 0; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #dc2626; border-color: #fca5a5; background: #fef2f2;" title="Hapus Baris Bonus">
-                                                <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                                            </div>
+                                            <button type="button" @click="removeBonusRow(bIdx)" 
+                                                    class="btn btn-ghost btn-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30" 
+                                                    style="padding: 4px 8px; font-size: 11.5px; font-weight: 600; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" 
+                                                    title="Hapus Baris Bonus">
+                                                <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                                                <span>Hapus</span>
                                             </button>
                                         </div>
-                                    </div>
 
-                                    <!-- Input Teks Catatan Kustom jika 'Lainnya' dipilih -->
-                                    <template x-if="row.reason === 'Lainnya'">
-                                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--color-hairline);">
-                                            <input type="text" x-model="row.custom_reason" class="form-input text-xs font-medium" style="height: 34px; border-radius: 8px;" placeholder="Tuliskan keterangan / alasan khusus pemberian bonus toko ini..." required>
+                                        <!-- Card Form Inputs -->
+                                        <div class="space-y-4">
+                                            <!-- Row 1: Pilih Produk (Searchable Dropdown) -->
+                                            <div class="relative flex flex-col gap-1.5" @click.outside="row.dropdownOpen = false">
+                                                <label class="form-label text-xs font-semibold" style="font-size: 12px; line-height: 1;">
+                                                    Pilih Produk Bonus <span class="text-rose-500">*</span>
+                                                </label>
+
+                                                <!-- Dropdown Trigger Button -->
+                                                <button type="button"
+                                                        @click="toggleBonusDropdown(row, bIdx)"
+                                                        class="form-input flex items-center justify-between w-full text-left transition cursor-pointer font-medium"
+                                                        style="height: 44px; border-radius: var(--rounded-md, 8px); background-color: var(--color-canvas); padding: 0 12px; font-size: 14px;"
+                                                        :style="row.dropdownOpen ? 'border-color: var(--color-primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);' : ''">
+                                                    
+                                                    <div class="flex items-center gap-2 min-w-0 flex-1 pr-1">
+                                                        <template x-if="row.item_id">
+                                                            <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                                                                <span class="badge badge-mono text-[10px] font-bold shrink-0 whitespace-nowrap" style="padding: 1px 5px;" x-text="getItemById(row.item_id)?.kode_sku"></span>
+                                                                <span class="truncate font-semibold text-ink" style="font-size: 14px;" x-text="getItemById(row.item_id)?.nama_item"></span>
+                                                                <span class="text-[12px] font-mono shrink-0 whitespace-nowrap" style="color: var(--color-ink-mute); white-space: nowrap;" x-text="'(Stok: ' + getAvailableStock(row.item_id) + ')'"></span>
+                                                            </div>
+                                                        </template>
+                                                        <template x-if="!row.item_id">
+                                                            <span style="color: var(--color-ink-mute); font-weight: 500; font-size: 14px;">-- Cari &amp; Pilih Barang Jadi --</span>
+                                                        </template>
+                                                    </div>
+
+                                                    <div class="flex items-center gap-1 shrink-0">
+                                                        <template x-if="row.item_id">
+                                                            <span role="button"
+                                                                  @click.stop="clearBonusProduct(row)"
+                                                                  class="text-ink-mute hover:text-rose-600 p-0.5 rounded cursor-pointer"
+                                                                  title="Hapus Pilihan">
+                                                                <i data-lucide="x" style="width: 13px; height: 13px;"></i>
+                                                            </span>
+                                                        </template>
+                                                        <i data-lucide="chevron-down" style="width: 14px; height: 14px; color: var(--color-ink-mute); transition: transform 0.2s;" :style="row.dropdownOpen ? 'transform: rotate(180deg);' : ''"></i>
+                                                    </div>
+                                                </button>
+
+                                                <!-- Floating Searchable Menu -->
+                                                <div x-show="row.dropdownOpen" x-cloak
+                                                     class="dropdown-menu-searchable"
+                                                     style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 1050; border-radius: 10px; overflow: hidden; background: var(--color-canvas); border: 1px solid var(--color-hairline); box-shadow: 0 14px 34px -4px rgba(0,0,0,0.18);">
+                                                    
+                                                    <!-- Search Header -->
+                                                    <div style="padding: 7px 9px; border-bottom: 1px solid var(--color-hairline); background: var(--color-canvas-soft);">
+                                                        <div style="position: relative; display: flex; align-items: center;">
+                                                            <i data-lucide="search" style="position: absolute; left: 9px; width: 13px; height: 13px; color: var(--color-ink-mute); pointer-events: none;"></i>
+                                                            <input type="text"
+                                                                   :id="'bonus-search-' + bIdx"
+                                                                   x-model="row.search"
+                                                                   @keydown.down.prevent="navigateBonusDropdown(row, bIdx, 1)"
+                                                                   @keydown.up.prevent="navigateBonusDropdown(row, bIdx, -1)"
+                                                                   @keydown.enter.prevent="selectHighlightedBonus(row)"
+                                                                   @keydown.escape.prevent="row.dropdownOpen = false"
+                                                                   placeholder="Ketik nama produk atau kode SKU..."
+                                                                   class="form-input"
+                                                                   style="height: 32px; padding-left: 28px; padding-right: 24px; font-size: 11.5px; border-radius: 6px; width: 100%; background: var(--color-canvas);">
+                                                            <button type="button"
+                                                                    x-show="row.search && row.search.length > 0"
+                                                                    @click="row.search = ''; $nextTick(() => document.getElementById('bonus-search-' + bIdx)?.focus())"
+                                                                    style="position: absolute; right: 7px; width: 16px; height: 16px; border: none; background: transparent; color: var(--color-ink-mute); cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                                                                <i data-lucide="x" style="width: 12px; height: 12px;"></i>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Options List -->
+                                                    <div :id="'bonus-list-' + bIdx" style="max-height: 200px; overflow-y: auto;" class="custom-scrollbar divide-y divide-hairline">
+                                                        <template x-for="(p, pIdx) in getFilteredBonusProducts(row)" :key="p.id">
+                                                            <div :id="'bonus-opt-' + bIdx + '-' + pIdx"
+                                                                 @click="selectBonusProduct(row, p)"
+                                                                 class="searchable-option"
+                                                                 :class="{
+                                                                     'is-selected': String(p.id) === String(row.item_id),
+                                                                     'is-active': pIdx === (row.highlightedIndex || 0),
+                                                                     'opacity-40 cursor-not-allowed': Number(p.stok_fisik_saat_ini) <= 0,
+                                                                     'cursor-pointer': Number(p.stok_fisik_saat_ini) > 0
+                                                                 }"
+                                                                 style="padding: 8px 10px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                                                
+                                                                <div class="flex items-center gap-2 min-w-0 flex-1">
+                                                                    <span class="badge badge-mono text-[9.5px] font-bold shrink-0" style="padding: 1.5px 5px;" x-text="p.kode_sku"></span>
+                                                                    <div class="truncate">
+                                                                        <span class="font-semibold text-ink truncate block text-[12px]" x-text="p.nama_item"></span>
+                                                                    </div>
+                                                                </div>
+
+                                                                <!-- Stock Pill -->
+                                                                <div class="shrink-0 flex items-center gap-1.5">
+                                                                    <template x-if="Number(p.stok_fisik_saat_ini) > 0">
+                                                                        <span class="badge text-[10px] font-mono font-bold"
+                                                                              style="background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); padding: 1.5px 6px; border-radius: 9999px;"
+                                                                              x-text="'Stok: ' + p.stok_fisik_saat_ini + ' ' + (p.satuan_dasar || 'Pcs')"></span>
+                                                                    </template>
+                                                                    <template x-if="Number(p.stok_fisik_saat_ini) <= 0">
+                                                                        <span class="badge text-[10px] font-mono font-bold"
+                                                                              style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.25); padding: 1.5px 6px; border-radius: 9999px;">
+                                                                            Stok Habis
+                                                                        </span>
+                                                                    </template>
+                                                                    <template x-if="String(p.id) === String(row.item_id)">
+                                                                        <i data-lucide="check" style="width: 14px; height: 14px; color: #059669;"></i>
+                                                                    </template>
+                                                                </div>
+
+                                                            </div>
+                                                        </template>
+
+                                                        <!-- Empty Search Results -->
+                                                        <template x-if="getFilteredBonusProducts(row).length === 0">
+                                                            <div style="padding: 14px 10px; text-align: center; color: var(--color-ink-mute); font-size: 11.5px;">
+                                                                <i data-lucide="search-x" style="width: 18px; height: 18px; margin: 0 auto 4px auto; opacity: 0.6; display: block;"></i>
+                                                                <span>Produk tidak ditemukan</span>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 2: Qty (Pcs) & Alasan Bonus Side-by-Side (2 Columns) -->
+                                            <div class="grid grid-cols-12 gap-4 items-start mt-4">
+                                                <!-- Qty -->
+                                                <div class="col-span-4 sm:col-span-3 flex flex-col gap-1.5">
+                                                    <label class="form-label text-xs font-semibold" style="font-size: 12px; line-height: 1;">
+                                                        Qty <span class="text-ink-mute font-normal">(Pcs)</span> <span class="text-rose-500">*</span>
+                                                    </label>
+                                                    <input type="number" x-model.number="row.qty" :min="1" :max="getAvailableStock(row.item_id)" class="form-input font-medium w-full text-left" style="height: 44px; border-radius: var(--rounded-md, 8px); padding-left: 12px; font-size: 14px; font-family: var(--font-sans);" placeholder="1" required>
+                                                </div>
+
+                                                <!-- Alasan -->
+                                                <div class="col-span-8 sm:col-span-9 flex flex-col gap-1.5">
+                                                    <label class="form-label text-xs font-semibold" style="font-size: 12px; line-height: 1;">Alasan Bonus <span class="text-rose-500">*</span></label>
+                                                    <div class="relative w-full">
+                                                        <select x-model="row.reason" class="form-input font-medium w-full" style="height: 44px; border-radius: var(--rounded-md, 8px); padding-left: 12px; font-size: 14px; padding-right: 36px; background-color: var(--color-canvas); cursor: pointer; appearance: none; -webkit-appearance: none;">
+                                                            <option value="Bonus Promo Gudang">Bonus Promo Gudang</option>
+                                                            <option value="Tester Produk Baru">Tester Produk Baru</option>
+                                                            <option value="Bonus Toko">Bonus Toko</option>
+                                                            <option value="Pengganti / Kompensasi">Pengganti / Kompensasi</option>
+                                                            <option value="Lainnya">Lainnya (Catatan Manual)</option>
+                                                        </select>
+                                                        <i data-lucide="chevron-down" style="width: 16px; height: 16px; color: var(--color-ink-mute); position: absolute; right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Row 3: Catatan Khusus if reason === 'Lainnya' -->
+                                            <template x-if="row.reason === 'Lainnya'">
+                                                <div class="mt-4 flex flex-col gap-1.5">
+                                                    <input type="text" x-model="row.custom_reason" class="form-input font-medium w-full" style="height: 44px; border-radius: var(--rounded-md, 8px); padding-left: 12px; font-size: 14px;" placeholder="Tuliskan keterangan / alasan khusus pemberian bonus toko ini..." required>
+                                                </div>
+                                            </template>
                                         </div>
-                                    </template>
-                                </div>
-                            </template>
-                        </div>
-                    </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
                 </div>
 
-            </div>
-
-            <!-- MODAL FOOTER -->
-            <div class="modal-footer">
-                <button type="button" @click="showConfirmReadyModal = false" class="btn btn-secondary modal-btn-cancel-desktop" :disabled="isSubmitting">
-                    Batal
-                </button>
-                <form action="<?= Router::url('/customer-orders/process-po') ?>" method="POST" @submit="onSubmitReadyForm($event)">
-                    <input type="hidden" name="order_id" :value="targetPoForReady?.id">
-                    <input type="hidden" name="bonuses_json" :value="JSON.stringify(bonusItems)">
-                    <button type="submit" class="btn btn-primary w-full sm:w-auto" :disabled="isSubmitting" style="display: inline-flex; align-items: center; justify-content: center; gap: 7px;">
+                <!-- MODAL FOOTER -->
+                <div class="modal-footer" style="padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 16px); position: sticky; bottom: 0; background: var(--color-surface); z-index: 10;">
+                    <button type="button" @click="showConfirmReadyModal = false" class="btn btn-secondary modal-btn-cancel-desktop" :disabled="isSubmitting" style="height: 48px; font-size: 14px; border-radius: var(--rounded-md, 8px);">
+                        Batal
+                    </button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto" :disabled="isSubmitting" style="height: 48px; font-size: 14px; border-radius: var(--rounded-md, 8px); display: inline-flex; align-items: center; justify-content: center; gap: 7px; background: #059669; border-color: #059669;">
                         <template x-if="!isSubmitting">
-                            <i data-lucide="package-check" style="width: 16px; height: 16px;"></i>
+                            <i data-lucide="package-check" style="width: 18px; height: 18px;"></i>
                         </template>
                         <template x-if="isSubmitting">
-                            <i data-lucide="loader-2" class="animate-spin" style="width: 16px; height: 16px;"></i>
+                            <i data-lucide="loader-2" class="animate-spin" style="width: 18px; height: 18px;"></i>
                         </template>
                         <span x-text="isSubmitting ? 'Memproses...' : getSubmitButtonText()"></span>
                     </button>
-                </form>
+                </div>
+            </form>
         </div>
     </div>
     </template>
@@ -940,7 +1052,7 @@ ob_start();
          class="po-floating-bar">
         <div style="background: #0f172a; color: #ffffff; border-radius: 16px; padding: 12px 18px; box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.4), 0 8px 12px -6px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid rgba(255, 255, 255, 0.12);">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <span class="badge" style="background: #2563eb; color: #ffffff; font-size: 13px; font-weight: 800; padding: 4px 10px; border-radius: 8px;" x-text="selectedPoIds.length + ' PO'"></span>
+                <span class="badge" style="background: #2563eb; color: #ffffff; font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 9999px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;" x-text="selectedPoIds.length + ' PO'"></span>
                 <span style="font-size: 13px; font-weight: 600; color: #f8fafc;">Dipilih</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -1000,6 +1112,37 @@ function poCompactApp() {
             });
         },
 
+        async downloadPdfWithLoader(url, defaultFilename = 'Dokumen.pdf') {
+            if (window.AppAction) window.AppAction.show('Mengunduh PDF...');
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Gagal mengunduh');
+                
+                let filename = defaultFilename;
+                const disposition = response.headers.get('content-disposition');
+                if (disposition && disposition.indexOf('filename=') !== -1) {
+                    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                const blob = await response.blob();
+                const a = document.createElement('a');
+                a.href = window.URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(a.href);
+            } catch (err) {
+                console.error(err);
+                if (window.toast) window.toast.error('Gagal mengunduh dokumen PDF.');
+            } finally {
+                if (window.AppAction) window.AppAction.hide();
+            }
+        },
+
         openConfirmReadyModal(po) {
             this.targetPoForReady = po;
             this.bonusItems = [];
@@ -1012,13 +1155,20 @@ function poCompactApp() {
         },
 
         addBonusRow() {
+            this.bonusItems.forEach(r => r.dropdownOpen = false);
             this.bonusItems.push({
                 item_id: '',
                 qty: 1,
                 reason: 'Bonus Toko',
-                custom_reason: ''
+                custom_reason: '',
+                search: '',
+                dropdownOpen: true,
+                highlightedIndex: 0
             });
+            const newIdx = this.bonusItems.length - 1;
             this.$nextTick(() => {
+                const searchInput = document.getElementById('bonus-search-' + newIdx);
+                if (searchInput) searchInput.focus();
                 if (typeof lucide !== 'undefined') lucide.createIcons();
             });
         },
@@ -1030,9 +1180,14 @@ function poCompactApp() {
             });
         },
 
+        getItemById(itemId) {
+            if (!itemId) return null;
+            return this.availableBonusItems.find(i => String(i.id) === String(itemId)) || null;
+        },
+
         getAvailableStock(itemId) {
             if (!itemId) return 9999;
-            const found = this.availableBonusItems.find(i => String(i.id) === String(itemId));
+            const found = this.getItemById(itemId);
             return found ? Number(found.stok_fisik_saat_ini) : 0;
         },
 
@@ -1040,6 +1195,80 @@ function poCompactApp() {
             const maxStock = this.getAvailableStock(row.item_id);
             if (row.qty > maxStock) {
                 row.qty = Math.max(1, maxStock);
+            }
+        },
+
+        getFilteredBonusProducts(row) {
+            const q = (row.search || '').trim().toLowerCase();
+            if (!q) return this.availableBonusItems;
+            return this.availableBonusItems.filter(p => {
+                const name = (p.nama_item || '').toLowerCase();
+                const sku = (p.kode_sku || '').toLowerCase();
+                return name.includes(q) || sku.includes(q);
+            });
+        },
+
+        toggleBonusDropdown(row, bIdx) {
+            const wasOpen = row.dropdownOpen;
+            this.bonusItems.forEach((r, idx) => {
+                if (idx !== bIdx) r.dropdownOpen = false;
+            });
+            row.dropdownOpen = !wasOpen;
+            if (row.dropdownOpen) {
+                row.search = '';
+                row.highlightedIndex = 0;
+                this.$nextTick(() => {
+                    const searchInput = document.getElementById('bonus-search-' + bIdx);
+                    if (searchInput) searchInput.focus();
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                });
+            }
+        },
+
+        selectBonusProduct(row, product) {
+            if (!product || Number(product.stok_fisik_saat_ini) <= 0) return;
+            row.item_id = product.id;
+            row.dropdownOpen = false;
+            row.search = '';
+            this.onBonusItemChange(row);
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        clearBonusProduct(row) {
+            row.item_id = '';
+            row.dropdownOpen = false;
+            row.search = '';
+            row.qty = 1;
+            this.$nextTick(() => {
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        },
+
+        navigateBonusDropdown(row, bIdx, step) {
+            const filtered = this.getFilteredBonusProducts(row);
+            if (!filtered || filtered.length === 0) return;
+            const max = filtered.length - 1;
+            let current = row.highlightedIndex ?? 0;
+            current += step;
+            if (current < 0) current = max;
+            if (current > max) current = 0;
+            row.highlightedIndex = current;
+            this.$nextTick(() => {
+                const optEl = document.getElementById('bonus-opt-' + bIdx + '-' + current);
+                if (optEl) optEl.scrollIntoView({ block: 'nearest' });
+            });
+        },
+
+        selectHighlightedBonus(row) {
+            const filtered = this.getFilteredBonusProducts(row);
+            if (filtered && filtered.length > 0) {
+                const idx = row.highlightedIndex ?? 0;
+                const target = filtered[idx];
+                if (target && Number(target.stok_fisik_saat_ini) > 0) {
+                    this.selectBonusProduct(row, target);
+                }
             }
         },
 
@@ -1064,23 +1293,43 @@ function poCompactApp() {
             for (let i = 0; i < this.bonusItems.length; i++) {
                 const b = this.bonusItems[i];
                 if (!b.item_id) {
-                    alert('Harap pilih produk bonus pada baris ke-' + (i + 1) + ' atau hapus baris jika tidak jadi.');
+                    const msg = 'Harap pilih produk bonus pada baris ke-' + (i + 1) + ' atau hapus baris jika tidak jadi.';
+                    if (window.toast && window.toast.warning) {
+                        window.toast.warning(msg);
+                    } else if (window.AppAlert) {
+                        window.AppAlert({ title: 'Item Bonus Belum Dipilih', message: msg, type: 'warning' });
+                    }
                     event.preventDefault();
                     return false;
                 }
                 const maxStock = this.getAvailableStock(b.item_id);
                 if (Number(b.qty) <= 0) {
-                    alert('Kuantitas produk bonus harus minimal 1 pcs.');
+                    const msg = 'Kuantitas bonus baris ke-' + (i + 1) + ' harus minimal 1 pcs.';
+                    if (window.toast && window.toast.warning) {
+                        window.toast.warning(msg);
+                    } else if (window.AppAlert) {
+                        window.AppAlert({ title: 'Kuantitas Tidak Valid', message: msg, type: 'warning' });
+                    }
                     event.preventDefault();
                     return false;
                 }
                 if (Number(b.qty) > maxStock) {
-                    alert('Kuantitas bonus melebihi sisa stok fisik di gudang (Maksimal: ' + maxStock + ' pcs).');
+                    const msg = 'Kuantitas bonus baris ke-' + (i + 1) + ' melebihi sisa stok fisik di gudang (Maksimal: ' + maxStock + ' pcs).';
+                    if (window.toast && window.toast.warning) {
+                        window.toast.warning(msg);
+                    } else if (window.AppAlert) {
+                        window.AppAlert({ title: 'Stok Tidak Mencukupi', message: msg, type: 'warning' });
+                    }
                     event.preventDefault();
                     return false;
                 }
                 if (b.reason === 'Lainnya' && (!b.custom_reason || b.custom_reason.trim() === '')) {
-                    alert('Harap tuliskan keterangan khusus bonus pada baris ke-' + (i + 1) + '.');
+                    const msg = 'Harap tuliskan keterangan khusus bonus pada baris ke-' + (i + 1) + '.';
+                    if (window.toast && window.toast.warning) {
+                        window.toast.warning(msg);
+                    } else if (window.AppAlert) {
+                        window.AppAlert({ title: 'Keterangan Kosong', message: msg, type: 'warning' });
+                    }
                     event.preventDefault();
                     return false;
                 }
