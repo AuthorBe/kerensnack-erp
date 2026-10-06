@@ -283,6 +283,7 @@ ob_start();
             </div>
 
             <form action="<?= Router::url('/deliveries/store') ?>" method="POST">
+                <?= \App\Helpers\CSRF::field() ?>
                 <div class="modal-body custom-scrollbar space-y-4">
                     <div>
                         <label class="form-label font-bold">Pilih Nota Pesanan Toko *</label>
@@ -367,6 +368,7 @@ ob_start();
             </div>
 
             <form action="<?= Router::url('/deliveries/update') ?>" method="POST">
+                <?= \App\Helpers\CSRF::field() ?>
                 <div class="modal-body custom-scrollbar space-y-4">
                     <input type="hidden" name="id" :value="editData.id">
 
