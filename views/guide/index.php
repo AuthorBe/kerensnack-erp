@@ -3582,6 +3582,17 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             if (window.lucide && typeof window.lucide.createIcons === 'function') {
                 window.lucide.createIcons();
             }
+
+            // Shield against unwanted zoom in iOS Safari & desktop browsers
+            document.addEventListener('gesturestart', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+            document.addEventListener('gesturechange', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+            document.addEventListener('gestureend', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches && e.touches.length > 1 && e.cancelable) e.preventDefault();
+            }, { passive: false });
+            window.addEventListener('wheel', (e) => {
+                if (e.ctrlKey && e.cancelable) e.preventDefault();
+            }, { passive: false });
         });
     </script>
 </body>

@@ -12,7 +12,7 @@ $login_redirect = Router::url('/login') . ($is_auto_logout ? '?timeout=1' : '');
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Keluar — Keren One</title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
@@ -47,6 +47,12 @@ $login_redirect = Router::url('/login') . ($is_auto_logout ? '?timeout=1' : '');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         
+        html, body {
+            touch-action: manipulation;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-body);

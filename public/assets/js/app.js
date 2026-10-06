@@ -2716,6 +2716,150 @@
   window.PopupManager = PopupManager;
   window.ModalFreezeManager = PopupManager;
 
+  /* =====================================================================
+     10. VIEWPORT ZOOM SHIELD ENGINE (PWA, iOS Safari & Mobile Zero-Zoom)
+     Mencegah zoom tak diinginkan di seluruh browser, iOS, dan PWA:
+     - Memblokir gesturestart/gesturechange/gestureend iOS Safari pinch-to-zoom
+     - Memblokir multi-touch touchmove pada viewport dokumen umum
+     - Memblokir Ctrl+MouseWheel dan Laptop Precision Touchpad pinch zoom
+     - Memblokir tombol pintas keyboard Ctrl/Cmd + Plus/Minus/Zero
+     - Menghilangkan iOS Safari input auto-zoom & scroll drift pada form
+     - SANGAT PENTING: Menjamin zoom foto preview interaktif di pop up
+       (seperti .receipt-viewport, .co-receipt-viewport, dan container foto)
+       tetap berjalan 100% normal, lancar, dan responsif tanpa hambatan!
+     ===================================================================== */
+  const ViewportZoomShield = {
+    /**
+     * Memeriksa apakah target event berada di dalam kontainer zoom foto/pratinjau
+     * atau saat pop-up photo viewer sedang aktif dan terbuka di layar.
+     * Fitur zoom foto interaktif TIDAK BOLEH dihambat sedikit pun.
+     */
+    isZoomable(target) {
+      if (target && target instanceof Element) {
+        if (target.closest(
+          '.receipt-viewport, .co-receipt-viewport, ' +
+          '[x-ref="photoViewport"], [x-ref="coPhotoViewport"], [x-ref="receiptViewport"], ' +
+          '.receipt-container, .co-receipt-container, ' +
+          '.receipt-backdrop, .co-receipt-backdrop, ' +
+          '.photo-viewer, .lightbox-viewport, .image-zoom-container, ' +
+          '[data-zoomable], .zoomable, .pinch-zoom, [data-photo-viewport], ' +
+          '.photo-uploader-thumb-preview'
+        )) {
+          return true;
+        }
+      }
+
+      // Deteksi jika ada modal lightbox / foto viewer yang sedang aktif ditampilkan
+      try {
+        const activeModal = document.querySelector(
+          '.receipt-backdrop:not([style*="display: none"]):not([style*="display:none"]), ' +
+          '.co-receipt-backdrop:not([style*="display: none"]):not([style*="display:none"]), ' +
+          '[data-photo-modal]:not([style*="display: none"]):not([style*="display:none"])'
+        );
+        if (activeModal && (activeModal.offsetWidth > 0 || activeModal.offsetHeight > 0 || activeModal.getClientRects().length > 0)) {
+          return true;
+        }
+      } catch (e) {}
+
+      return false;
+    },
+
+    /**
+     * Pastikan meta viewport selalu terkonfigurasi dengan pembatas zoom optimal
+     */
+    enforceMetaViewport() {
+      try {
+        let meta = document.querySelector('meta[name="viewport"]');
+        const desiredContent = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.name = 'viewport';
+          meta.content = desiredContent;
+          document.head.appendChild(meta);
+        } else {
+          const current = meta.getAttribute('content') || '';
+          if (!current.includes('maximum-scale=1.0') || !current.includes('user-scalable=no')) {
+            meta.setAttribute('content', desiredContent);
+          }
+        }
+      } catch (e) {}
+    },
+
+    init() {
+      this.enforceMetaViewport();
+
+      // 1. Tangkal iOS Safari proprietary gesture zoom (pinch pada halaman viewport).
+      // Memanggil preventDefault pada gesturestart mencegah Safari memperbesar seluruh halaman HTML,
+      // sementara touch events (touchstart, touchmove, touchend) tetap mengalir normal ke
+      // Alpine.js untuk menghitung pinch foto tanpa membuat modal pop-up bergeser/rusak.
+      const handleGesture = (e) => {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+      };
+
+      document.addEventListener('gesturestart', handleGesture, { passive: false });
+      document.addEventListener('gesturechange', handleGesture, { passive: false });
+      document.addEventListener('gestureend', handleGesture, { passive: false });
+
+      // 2. Tangkal multi-touch (2 jari atau lebih) pinch pada dokumen umum
+      document.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length > 1) {
+          if (this.isZoomable(e.target)) return;
+          if (e.cancelable) {
+            e.preventDefault();
+          }
+        }
+      }, { passive: false });
+
+      // 3. Tangkal desktop Ctrl + Mouse Wheel & Laptop Precision Touchpad pinch zoom
+      window.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) {
+          if (this.isZoomable(e.target)) return;
+          if (e.cancelable) {
+            e.preventDefault();
+          }
+        }
+      }, { passive: false });
+
+      // 4. Tangkal tombol keyboard pintas zoom (Ctrl/Cmd + Plus, Minus, 0)
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && (
+          e.key === '+' || e.key === '-' || e.key === '=' || e.key === '_' || e.key === '0' ||
+          e.code === 'NumpadAdd' || e.code === 'NumpadSubtract' || e.code === 'Equal' || e.code === 'Minus' ||
+          e.code === 'Digit0' || e.code === 'Numpad0'
+        )) {
+          if (this.isZoomable(e.target)) return;
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      // 5. Tangkal scroll drift & auto-zoom sisa iOS Safari saat form input kehilangan fokus (blur)
+      document.addEventListener('focusout', (e) => {
+        const tag = e.target?.tagName;
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+          // Reset viewport horizontal offset bila Safari sempat menggesernya
+          if (window.scrollX !== 0) {
+            window.scrollTo(0, window.scrollY);
+          }
+        }
+      });
+
+      // 6. Jaga stabilitas skala 1.0 saat rotasi layar perangkat (PWA & iOS)
+      window.addEventListener('orientationchange', () => {
+        this.enforceMetaViewport();
+        setTimeout(() => {
+          if (window.scrollX !== 0) {
+            window.scrollTo(0, window.scrollY);
+          }
+        }, 150);
+      });
+    }
+  };
+
+  window.ViewportZoomShield = ViewportZoomShield;
+  ViewportZoomShield.init();
+
   function onReady(fn) {
     if (document.readyState !== 'loading') {
       fn();
@@ -2733,6 +2877,7 @@
     PWAEngine.init();
     SessionTimeoutEngine.init();
     PopupManager.init();
+    ViewportZoomShield.enforceMetaViewport();
   });
 
 })();

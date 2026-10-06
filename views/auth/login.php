@@ -10,7 +10,7 @@ $flash = Flash::get();
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Login — Keren One</title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
@@ -65,6 +65,12 @@ $flash = Flash::get();
         @keyframes floatBlob3 {
             0%, 100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.18; }
             50%      { transform: translate(-40%, -55%) scale(1.12); opacity: 0.28; }
+        }
+
+        html, body {
+            touch-action: manipulation;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
         }
 
         body {
@@ -241,10 +247,11 @@ $flash = Flash::get();
             border: 1px solid #e5e7eb;
             background-color: #f9fafb;
             font-family: 'Poppins', sans-serif;
-            font-size: 0.95rem;
+            font-size: 1rem;
             color: #111827;
             outline: none;
             transition: all 0.15s ease;
+            touch-action: manipulation;
         }
 
         .input-modern::placeholder {

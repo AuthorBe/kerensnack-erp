@@ -1716,6 +1716,7 @@ $encodedWaUrl = !empty($waPhone) ? "https://wa.me/{$waPhone}?text=" . urlencode(
             <!-- Viewport Area Foto Gambar (Interactive Pinch & Pan Viewport) -->
             <div class="receipt-viewport relative" 
                  x-ref="photoViewport"
+                 data-zoomable="true"
                  @wheel.prevent="handleWheel($event)"
                  @mousedown="handleMouseDown($event)"
                  @touchstart="handleTouchStart($event)"
