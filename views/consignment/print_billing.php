@@ -11,7 +11,7 @@ $logoSrc = PrintDocumentHelper::getLogoSrc($comp);
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title><?= htmlspecialchars($pageTitle ?? 'Faktur Rekap Tagihan Konsinyasi') ?></title>
 
     <!-- PWA & Mobile Web App Meta Tags -->

@@ -19,7 +19,7 @@ $totalNilaiRp = (float)($opname['total_nilai_selisih_rp'] ?? 0);
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Bukti Opname - <?= htmlspecialchars($nomorDokumen) ?></title>
 
     <!-- PWA & Mobile Web App Meta Tags -->
