@@ -40,10 +40,10 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
     <link rel="shortcut icon" type="image/svg+xml" href="<?= Router::asset('/favicon/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
     <link rel="apple-touch-icon" href="<?= Router::asset('/favicon/favicon_guide.svg') ?>?v=<?= $favGuideV ?>">
 
-    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
     <!-- Lucide Icons -->
     <script src="<?= Router::asset('/js/lucide.min.js') ?>?v=<?= $jsV ?>"></script>
@@ -890,7 +890,8 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
             border-radius: 12px;
             padding: 12px 14px;
             margin: 12px 0;
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-variant-numeric: tabular-nums;
             font-size: 12px;
             font-weight: 600;
             color: var(--guide-text-primary);
@@ -977,7 +978,7 @@ $favGuideV = file_exists($favGuideFile) ? (string)filemtime($favGuideFile) : (st
 
         /* 5.1 CODE BLOCKS & TYPOGRAPHY */
         code {
-            font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 0.88em;
             background: var(--guide-accent-soft);
             color: var(--guide-accent);

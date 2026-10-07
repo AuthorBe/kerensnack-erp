@@ -276,12 +276,12 @@ ob_start();
                         <div style="width:10px;height:10px;border-radius:50%;background:#10b981;"></div>
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span style="font-family:'JetBrains Mono', monospace;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;">TERMINAL SIMULATOR OUTPUT</span>
-                        <span style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono', monospace;">LIVE TELEMETRY STREAM</span>
+                        <span style="font-family:var(--font-code, monospace);font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;">TERMINAL SIMULATOR OUTPUT</span>
+                        <span style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--font-code, monospace);">LIVE TELEMETRY STREAM</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2.5">
-                    <button type="button" onclick="clearSimLog()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono', monospace;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
+                    <button type="button" onclick="clearSimLog()" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 10px;border-radius:6px;font-size:11px;font-family:var(--font-code, monospace);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
                         <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
                         <span>Bersihkan</span>
                     </button>
@@ -289,7 +289,7 @@ ob_start();
             </div>
 
             <!-- Console Body Output -->
-            <div class="p-3.5 sm:p-4" style="background:#040711;border:1px solid #1e293b;border-radius:10px;font-family:'JetBrains Mono', monospace;font-size:12px;line-height:1.8;color:#94a3b8;min-height:85px;max-height:180px;overflow-y:auto;" id="sim-log-console">
+            <div class="p-3.5 sm:p-4" style="background:#040711;border:1px solid #1e293b;border-radius:10px;font-family:var(--font-code, monospace);font-size:12px;line-height:1.8;color:#94a3b8;min-height:85px;max-height:180px;overflow-y:auto;" id="sim-log-console">
                 <span style="color: #64748b;">[Ready]</span> Simulator sesi siap digunakan. Silakan klik salah satu tombol uji di atas untuk menguji alur secara instan.
             </div>
         </div>
@@ -308,11 +308,11 @@ ob_start();
                     <div style="width:10px;height:10px;border-radius:50%;background:#10b981;"></div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
-                    <span style="font-family:'JetBrains Mono', monospace;font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;">TERMINAL CLI SHORTCUTS</span>
-                    <span style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono', monospace;">ZERO DUPLICATION ARCHITECTURE</span>
+                    <span style="font-family:var(--font-code, monospace);font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:0.06em;">TERMINAL CLI SHORTCUTS</span>
+                    <span style="background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);color:#60a5fa;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;font-family:var(--font-code, monospace);">ZERO DUPLICATION ARCHITECTURE</span>
                 </div>
             </div>
-            <div class="flex items-center gap-2 text-xs" style="color:#64748b;font-family:'JetBrains Mono', monospace;">
+            <div class="flex items-center gap-2 text-xs" style="color:#64748b;font-family:var(--font-code, monospace);">
                 <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#10b981;"></span>
                 <span>PowerShell / Bash Ready</span>
             </div>
@@ -336,9 +336,9 @@ ob_start();
                 <div class="flex items-center justify-between gap-3 p-2.5 mt-auto" style="background:#040711;border:1px solid #1e293b;border-radius:8px;">
                     <div class="flex items-center gap-2 overflow-x-auto py-0.5">
                         <span style="color:#64748b;font-family:monospace;font-weight:700;user-select:none;">$</span>
-                        <code style="font-family:'JetBrains Mono', monospace;font-size:12px;color:#38bdf8;font-weight:600;white-space:nowrap;">php developer/test_db.php</code>
+                        <code style="font-family:var(--font-code, monospace);font-size:12px;color:#38bdf8;font-weight:600;white-space:nowrap;">php developer/test_db.php</code>
                     </div>
-                    <button type="button" onclick="copyCliCommand('php developer/test_db.php', this)" title="Salin perintah ke clipboard" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 9px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono', monospace;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
+                    <button type="button" onclick="copyCliCommand('php developer/test_db.php', this)" title="Salin perintah ke clipboard" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 9px;border-radius:6px;font-size:11px;font-family:var(--font-code, monospace);cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
                         <i data-lucide="copy" style="width:12px;height:12px;"></i>
                         <span>Copy</span>
                     </button>
@@ -361,9 +361,9 @@ ob_start();
                 <div class="flex items-center justify-between gap-3 p-2.5 mt-auto" style="background:#040711;border:1px solid #1e293b;border-radius:8px;">
                     <div class="flex items-center gap-2 overflow-x-auto py-0.5">
                         <span style="color:#64748b;font-family:monospace;font-weight:700;user-select:none;">$</span>
-                        <code style="font-family:'JetBrains Mono', monospace;font-size:12px;color:#a78bfa;font-weight:600;white-space:nowrap;">php tests/run_all.php</code>
+                        <code style="font-family:var(--font-code, monospace);font-size:12px;color:#a78bfa;font-weight:600;white-space:nowrap;">php tests/run_all.php</code>
                     </div>
-                    <button type="button" onclick="copyCliCommand('php tests/run_all.php', this)" title="Salin perintah ke clipboard" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 9px;border-radius:6px;font-size:11px;font-family:'JetBrains Mono', monospace;cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
+                    <button type="button" onclick="copyCliCommand('php tests/run_all.php', this)" title="Salin perintah ke clipboard" style="background:#1e293b;border:1px solid #334155;color:#94a3b8;padding:4px 9px;border-radius:6px;font-size:11px;font-family:var(--font-code, monospace);cursor:pointer;display:inline-flex;align-items:center;gap:4px;flex-shrink:0;transition:all 0.15s ease;" onmouseover="this.style.color='#f8fafc';this.style.background='#334155';" onmouseout="this.style.color='#94a3b8';this.style.background='#1e293b';">
                         <i data-lucide="copy" style="width:12px;height:12px;"></i>
                         <span>Copy</span>
                     </button>
@@ -377,7 +377,7 @@ ob_start();
                 <i data-lucide="shield-check" style="width:16px;height:16px;color:#10b981;flex-shrink:0;"></i>
                 <span><strong style="color:#f1f5f9;">Keamanan Terjamin:</strong> Seluruh fungsi pengujian menggunakan transaksi rollback otomatis &mdash; database operasional 100% steril dan aman.</span>
             </div>
-            <div class="flex items-center gap-2 flex-shrink-0" style="font-family:'JetBrains Mono', monospace;font-size:11px;">
+            <div class="flex items-center gap-2 flex-shrink-0" style="font-family:var(--font-code, monospace);font-size:11px;">
                 <span style="color:#64748b;">Runtime:</span>
                 <span style="background:#1e293b;color:#e2e8f0;padding:2px 8px;border-radius:5px;border:1px solid #334155;">PHP <?= htmlspecialchars(PHP_VERSION) ?></span>
             </div>

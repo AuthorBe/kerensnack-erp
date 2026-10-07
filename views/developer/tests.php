@@ -25,7 +25,7 @@ use App\Core\Auth;
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="<?= Router::asset('/js/alpine.min.js') ?>" defer></script>
     <style>
         :root {
@@ -42,7 +42,8 @@ use App\Core\Auth;
             --accent-yellow: #f59e0b;
             --accent-red: #ef4444;
             --accent-purple: #c084fc;
-            --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+            --font-mono: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-code: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }

@@ -65,9 +65,10 @@
   --sidebar-active-text: #60a5fa;
   --sidebar-active-bg:   rgba(59, 130, 246, 0.14);
 
-  /* --- Typography --- */
+  /* --- Typography (Inter Tabular DNA: Clean Zero Standard) --- */
   --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono:   'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-mono:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-code:   ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* --- Spacing (8px base) --- */
   --space-xxs:   2px;
@@ -2153,6 +2154,10 @@ button.badge:focus-visible {
 
 .badge-mono {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  -moz-font-feature-settings: "tnum" 1;
+  -webkit-font-feature-settings: "tnum" 1;
+  font-feature-settings: "tnum" 1;
   font-size: 11.5px;
   font-weight: 800;
   padding: 3px 8px;
@@ -3495,7 +3500,7 @@ body.ksnack-popup-freeze .app-header {
    17. CODE BLOCKS
    ============================================================================= */
 code, .code {
-  font-family: var(--font-mono);
+  font-family: var(--font-code);
   font-size: 12px;
   background-color: var(--color-canvas-night);
   color: var(--color-on-dark);
@@ -3506,7 +3511,7 @@ code, .code {
 pre.code-block {
   background-color: var(--color-canvas-night);
   color: var(--color-on-dark);
-  font-family: var(--font-mono);
+  font-family: var(--font-code);
   font-size: 13px;
   padding: var(--space-lg);
   border-radius: var(--rounded-sm);
@@ -3703,7 +3708,17 @@ pre.code-block {
 /* =============================================================================
    24. UTILITIES & STANDALONE ENGINE (Zero Runtime CDN)
    ============================================================================= */
-.font-mono { font-family: var(--font-mono) !important; }
+/* Inter Tabular Figures (Clean Zero DNA - Zero Dot Invariant) */
+.font-mono,
+[class*="font-mono"],
+.tabular-nums {
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums;
+  -moz-font-feature-settings: "tnum" 1;
+  -webkit-font-feature-settings: "tnum" 1;
+  font-feature-settings: "tnum" 1;
+}
+.font-code { font-family: var(--font-code) !important; }
 .font-sans { font-family: var(--font-sans) !important; }
 .font-normal { font-weight: 400 !important; }
 .font-medium { font-weight: 500 !important; }
@@ -5828,7 +5843,8 @@ body.action-loader-frozen {
 
 .m3-hero-total-amount {
   font-size: 26px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-weight: 900;
   color: var(--color-ink, #0f172a);
   letter-spacing: -0.02em;
@@ -5965,7 +5981,8 @@ body.action-loader-frozen {
 .m3-input-prefix {
   position: absolute;
   left: 14px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 15px;
   font-weight: 800;
   color: var(--color-ink-mute, #94a3b8);
@@ -6010,7 +6027,8 @@ body.action-loader-frozen {
   border: 1px solid var(--color-hairline, #e2e8f0);
   background: var(--color-canvas-soft, #f8fafc);
   color: var(--color-ink, #0f172a);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;

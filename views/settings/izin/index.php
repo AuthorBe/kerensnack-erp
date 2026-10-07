@@ -264,7 +264,8 @@ ob_start();
         flex-wrap: wrap;
     }
     .perm-code-tag {
-        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
         font-size: 0.73rem;
         background: #f1f5f9;
         color: #475569;

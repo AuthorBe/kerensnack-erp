@@ -267,7 +267,7 @@ const OFFLINE_HTML = `<!DOCTYPE html>
       margin-bottom: 26px;
       max-width: 100%;
       overflow: hidden;
-      font-family: 'JetBrains Mono', Consolas, monospace;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 12px;
       color: #e2e8f0;
     }

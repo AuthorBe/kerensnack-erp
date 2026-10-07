@@ -2,7 +2,7 @@
 /**
  * views/components/cash_account_selector.php
  * Reusable Interactive Cash Account Selector Component
- * 100% Mengikuti Standar ERP UI Design (Inter & JetBrains Mono, Supabase Clean UI, Lucide Icons)
+ * 100% Mengikuti Standar ERP UI Design (Inter & Tabular Numbers, Supabase Clean UI, Lucide Icons)
  * 
  * Props expected in view scope or passed array:
  * - $akunKasOptions: array of active cash accounts [id, nama_akun, tipe_akun, saldo_saat_ini, is_escrow, is_default_pos]

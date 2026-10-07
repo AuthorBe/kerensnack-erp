@@ -101,10 +101,10 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
         })();
     </script>
 
-    <!-- Google Fonts: Inter + JetBrains Mono (Supabase design language) -->
+    <!-- Google Fonts: Inter (Clean Zero & Tabular Numbers Design System) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Lucide Icons (100% Local Vendor Asset) -->
     <script src="<?= Router::asset('/js/lucide.min.js') ?>?v=<?= $lucideV ?>"></script>

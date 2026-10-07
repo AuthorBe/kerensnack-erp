@@ -1119,7 +1119,7 @@ document.addEventListener('alpine:init', () => {
 
             <div class="modal-body custom-scrollbar">
                 <!-- TAMPILAN FISIK STRUK NOTA (THERMAL PREVIEW) -->
-                <div id="printable-receipt" class="receipt-paper" style="background:#ffffff;color:#111827;padding:16px;border-radius:8px;font-family:'JetBrains Mono', monospace;font-size:11px;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,0.15);margin-bottom:6px;max-height:360px;overflow-y:auto;">
+                <div id="printable-receipt" class="receipt-paper" style="background:#ffffff;color:#111827;padding:16px;border-radius:8px;font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:11px;line-height:1.4;box-shadow:0 2px 8px rgba(0,0,0,0.15);margin-bottom:6px;max-height:360px;overflow-y:auto;">
                     <div style="text-align:center;margin-bottom:10px;">
                         <div style="font-size:14px;font-weight:800;letter-spacing:0.5px;" x-text="receiptData?.store?.nama || 'KEREN SNACK'"></div>
                         <div style="font-size:9.5px;color:#4b5563;" x-text="receiptData?.store?.alamat || 'Distribusi Makanan Ringan'"></div>

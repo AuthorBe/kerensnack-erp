@@ -239,7 +239,7 @@ ob_start();
     border: 1px solid #1e293b;
     background: #0b0f19;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 10px 30px rgba(0, 0, 0, 0.4);
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-family: var(--font-code, monospace);
     overflow: hidden;
 }
 .dev-terminal-topbar {
@@ -277,7 +277,7 @@ ob_start();
     display: inline-block;
 }
 .dev-terminal-path {
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-family: var(--font-code, monospace);
     font-size: 11px;
     display: inline-flex;
     align-items: center;
@@ -291,7 +291,7 @@ ob_start();
     padding: 18px 20px !important;
     background: #0b0f19;
     color: #f1f5f9;
-    font-family: var(--font-mono, 'JetBrains Mono', monospace);
+    font-family: var(--font-code, monospace);
     font-size: 12px;
     line-height: 1.7;
     min-height: 180px;

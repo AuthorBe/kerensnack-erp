@@ -535,7 +535,7 @@ document.addEventListener('alpine:init', () => {
                             grid: { color: theme.gridColor },
                             ticks: {
                                 color: theme.textColor,
-                                font: { family: 'JetBrains Mono', size: 10.5 },
+                                font: { family: 'Inter', size: 10.5 },
                                 callback: (val) => {
                                     if (val >= 1000000) return (val / 1000000).toFixed(1) + ' jt';
                                     if (val >= 1000) return (val / 1000).toFixed(0) + ' rb';
@@ -663,14 +663,14 @@ document.addEventListener('alpine:init', () => {
                             grid: { display: false },
                             ticks: {
                                 color: theme.textColor,
-                                font: { family: 'JetBrains Mono', size: 10.5 }
+                                font: { family: 'Inter', size: 10.5 }
                             }
                         },
                         y: {
                             grid: { color: theme.gridColor },
                             ticks: {
                                 color: theme.textColor,
-                                font: { family: 'JetBrains Mono', size: 10.5 },
+                                font: { family: 'Inter', size: 10.5 },
                                 callback: (val) => {
                                     if (val >= 1000000) return (val / 1000000).toFixed(1) + ' jt';
                                     if (val >= 1000) return (val / 1000).toFixed(0) + ' rb';
@@ -794,14 +794,14 @@ document.addEventListener('alpine:init', () => {
                             grid: { display: false },
                             ticks: {
                                 color: theme.textColor,
-                                font: { family: 'JetBrains Mono', size: 10 }
+                                font: { family: 'Inter', size: 10 }
                             }
                         },
                         y: {
                             grid: { color: theme.gridColor },
                             ticks: {
                                 color: theme.textColor,
-                                font: { family: 'JetBrains Mono', size: 9.5 },
+                                font: { family: 'Inter', size: 9.5 },
                                 callback: (val) => {
                                     if (val >= 1000000) return (val / 1000000).toFixed(1) + ' jt';
                                     if (val >= 1000) return (val / 1000).toFixed(0) + ' rb';
