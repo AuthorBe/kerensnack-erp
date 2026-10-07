@@ -2034,3 +2034,16 @@ GRANT EXECUTE ON FUNCTION public.fn_trg_proses_pengiriman_konsinyasi() TO postgr
 
 REVOKE EXECUTE ON FUNCTION public.fn_trg_transaksi_tabungan_update_saldo() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.fn_trg_transaksi_tabungan_update_saldo() TO postgres, service_role;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_proc p 
+        JOIN pg_namespace n ON n.oid = p.pronamespace 
+        WHERE n.nspname = 'public' AND p.proname = 'rls_auto_enable'
+    ) THEN
+        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC, anon, authenticated;';
+        EXECUTE 'GRANT EXECUTE ON FUNCTION public.rls_auto_enable() TO postgres, service_role;';
+    END IF;
+END $$;
+
