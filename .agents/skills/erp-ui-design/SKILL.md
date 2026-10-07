@@ -17,7 +17,7 @@ description: >-
 KEREN ONE adopts the **Modern Enterprise Clean UI** design language guided by **Contextual Harmony & Peer-View Replication** paired with the **Google Chrome Dark Mode Standard**:
 - **Contextual Harmony & Peer-View Replication (First Principle)**: Every UI modification MUST visually align with existing active pages of the same category in the repository (`views/products`, `views/customers`, `views/customer_orders`). Never invent arbitrary styles, force external UI dogmas, or construct components in isolation without referencing active views.
 - **High Information Density**: Layouts are designed to be concise, dense, and space-efficient without wasted whitespace.
-- **Clean & Crisp Typography**: Uses the **Inter** font family for interface copy and **JetBrains Mono** for numbers, transaction codes, currency, and dates.
+- **Clean & Crisp Typography**: Uses the **Inter** font family across the entire application, paired with **Tabular Figures** (`font-variant-numeric: tabular-nums`) for numbers, transaction codes, currency, and dates, guaranteeing clean, undotted zeroes and perfect vertical column alignment.
 - **Brand Identity Colors (Brand DNA)**:
   - PWA Status Bar / Notch / Header Accent: `#881337` (*Deep Maroon / Rose*)
   - Brand Accent Dark Mode: `#fb7185` (*Rose 400*)
@@ -37,10 +37,12 @@ Applying Google Material Design 3 patterns or rigid artificial styling is strict
 1. ❌ **Forbidden**: Using Floating Action Buttons (large circular FAB in bottom corners).
 2. ❌ **Forbidden**: Using full-pill buttons or excessively rounded corners (`rounded-2xl`, `rounded-3xl`) for **primary form action buttons** (Save, Submit, Modal Actions). *(Exception: Numeric counter badges and status tags MUST be `rounded-full`)*.
 3. ❌ **Forbidden**: Using heavy multi-level elevation shadows (*M3 surface container tonal palettes*).
-4. ❌ **Forbidden**: Using legacy serif or Roboto fonts; `Inter` and `JetBrains Mono` are mandatory.
+4. ❌ **Forbidden**: Using legacy serif, Roboto, or dotted-zero monospace fonts on business data; `Inter` with tabular figures is mandatory for all UI copy, numbers, and currency.
 5. ❌ **Forbidden**: Building components from scratch or inventing isolated styles without inspecting and replicating the structure of existing reference files (*Golden Templates & Peer Views*).
 6. ❌ **Forbidden**: Using native browser dialogs `alert()` or `confirm()`.
 7. ❌ **Forbidden**: Using raw, unclassed `<button>` elements without standard button classes (`.btn`, `.btn-primary`, `.btn-ghost`) or dedicated segmented controls (`.segmented-track` + `.segmented-btn`). Because KEREN ONE uses pure CSS without full Tailwind preflight, raw `<button>` elements render default browser User-Agent styles (`border: 2px outset buttonface`), generating dated 3D beveled black borders.
+8. ❌ **Forbidden**: Using dotted zero or slashed zero (`0` with center dot or slash) on business figures, invoices, financial tables, badges, and user interfaces. All numbers must display clean, solid zeroes without internal dots. Monospace fonts with dotted zeroes are strictly prohibited on business views.
+9. ❌ **Forbidden**: Manual currency or quantity string concatenation (e.g. `'Rp ' + val` or `'Rp ' + (val).toLocaleString(...)`). Bypassing official helpers (`Format::rupiah()` in PHP, `window.formatRupiah()` / `window.formatQty()` in JS) causes decimal leakage (`.00` / sen), inconsistent spacing (`Rp` vs `Rp `), and unformatted strings when database models return PostgreSQL string numbers.
 
 ---
 
@@ -74,6 +76,36 @@ To prevent numeric counter badges from appearing as rigid, blocky dice, apply th
      line-height: 1;
      ```
    - Avoid browser default line-heights (such as 1.4–1.5) which cause text to sag below the badge boundary. When a badge includes a pulse dot or Lucide icon, always apply `flex-shrink: 0;` to ensure symmetrical vertical alignment.
+
+---
+
+## 3.6. Universal Currency & Number Formatting Standard
+All monetary figures and quantitative metrics across KEREN ONE **MUST** strictly follow standardized formatting rules to prevent visual discrepancies, accidental `.00` cent leakage, or missing space between `Rp` and the value:
+
+1. **Indonesian Rupiah Currency Standard**:
+   - Format: `Rp [space] [thousand separator with dot]`, with **no decimal cents** (`.00`) by default.
+   - Example: `Rp 15.000`, `Rp 400`, `Rp 2.500.000` (Never `Rp15.000`, `Rp. 15.000`, or `Rp 400.00`).
+   - **In PHP Views & Controllers**:
+     ```php
+     use App\Helpers\Format;
+     Format::rupiah($amount); // Outputs "Rp 15.000"
+     ```
+   - **In Frontend / Alpine.js**:
+     ```javascript
+     // ALWAYS use the global helper:
+     window.formatRupiah(val);       // Outputs "Rp 15.000"
+     window.formatRupiahNumber(val); // Outputs "15.000" (number only)
+     ```
+   - ⚠️ **The String `.toLocaleString()` Trap**:
+     PostgreSQL `NUMERIC(15,2)` returns string representations (e.g. `"400.00"`) via PDO. In JavaScript, calling `'Rp ' + ("400.00").toLocaleString('id-ID')` **does NOT format strings** and returns `"Rp 400.00"`. Always ensure inputs are parsed via `window.formatRupiah()` which handles string casting, NaN fallbacks, and integer rounding automatically.
+
+2. **Quantities & Counts (Pcs / Bal / Unit)**:
+   - Format: Dot for thousand separators, comma for actual fractional quantities if any:
+   - **In PHP**: `Format::qty($number, $maxDecimals = 2)` or `(int) $qty`.
+   - **In Frontend / Alpine.js**: `window.formatQty(val, maxDecimals = 2)` (available globally from `public/assets/js/erp-helpers.js`).
+     ```html
+     <span x-text="formatQty(item.kuantitas_pcs) + ' pcs'"></span>
+     ```
 
 ---
 
@@ -371,8 +403,9 @@ For standalone portal views or independent popups such as `/guide` or printable 
 | `--color-hairline` | `#e2e8f0` (Light) / `#3c4043` (Dark) | Table borders, row dividers, card edges |
 | `--color-ink` | `#0f172a` (Light) / `#e8eaed` (Dark) | Heading text, primary titles, bold content |
 | `--color-ink-mute` | `#64748b` (Light) / `#9aa0a6` (Dark) | Descriptive text, subtitles, placeholders |
-| `--font-sans` | `'Inter', sans-serif` | Default font across the entire interface |
-| `--font-mono` | `'JetBrains Mono', monospace` | Numbers, transaction codes, currency, dates |
+| `--font-sans` | `'Inter', sans-serif` | Default interface font across the entire app |
+| `--font-mono` | `'Inter', sans-serif` (`tabular-nums`) | Numbers, transaction codes, currency, dates (clean zero invariant) |
+| `--font-code` | `ui-monospace, Consolas, monospace` | Raw developer terminal simulation, syntax code |
 
 ---
 
@@ -383,6 +416,6 @@ For standalone portal views or independent popups such as `/guide` or printable 
 - [ ] No raw unclassed `<button>` tags; all buttons use `.btn` variants or `.segmented-btn` with explicit resets.
 - [ ] Modal conforms to standard DNA (`x-teleport`, `.modal-backdrop`, `.modal-box`, `.modal-handle`, 40x40 header icon, responsive footer).
 - [ ] All interactive dialogs use `AppConfirm()`, `AppAlert()`, `window.toast` (zero native `alert()`/`confirm()`).
-- [ ] Monetary inputs and transaction codes use monospace typography (`font-mono`).
+- [ ] Clean Zero Invariant: Monetary inputs, tables, and numeric codes use Inter tabular typography (`font-mono` / `tabular-nums`) with 100% clean, undotted zeroes. Dotted zeroes are strictly eliminated.
 - [ ] `$nextTick(() => refreshIcons())` is invoked during dynamic Alpine.js DOM manipulations.
 - [ ] Colors conform to light & dark mode specifications (`#881337` / `#fb7185`).
