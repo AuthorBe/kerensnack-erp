@@ -262,7 +262,7 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                         <div style="display:grid;grid-template-columns:1fr;gap:4px;font-size:11.5px;color:var(--color-ink);">
                             <div>• <b>Nama Barang Jadi &amp; Varian Rasa</b></div>
                             <div>• <b>Kode SKU</b> (<code>FG-xxxx</code>)</div>
-                            <div>• <b>Barcode Universal EAN-13</b></div>
+                            <div>• <b>Barcode Universal &amp; Barcode Khusus Toko</b> (EAN-13 / Toko 16-Digit)</div>
                             <div>• <b>Nama Merek &amp; Kode Merek</b></div>
                             <div>• <b>Nama Grup Kemasan Luar</b></div>
                             <div>• <b>Vendor Pemasok Utama</b></div>
@@ -1353,8 +1353,8 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     
                                     <!-- Input Barcode -->
                                     <input type="text" x-model="bc.barcode"
-                                           @input="bc.barcode = $event.target.value.replace(/[^0-9]/g, '').slice(0, 13)"
-                                           maxlength="13" class="form-input font-mono" style="height:32px;font-size:12px;width:130px;flex-shrink:0;" placeholder="8-13 Digit">
+                                           @input="bc.barcode = $event.target.value.replace(/[^0-9A-Za-z\-_]/g, '').slice(0, 50)"
+                                           maxlength="50" class="form-input font-mono" style="height:32px;font-size:12px;width:155px;flex-shrink:0;" placeholder="EAN / Toko (s/d 50)">
 
                                     <!-- Input Label -->
                                     <input type="text" x-model="bc.label_barcode" class="form-input" style="height:32px;font-size:11.5px;flex:1;" placeholder="Label (Standar, Alfamart, dll)">
@@ -1457,8 +1457,8 @@ $activeTab = $_GET['tab'] ?? 'finished_goods';
                                     
                                     <!-- Input Barcode -->
                                     <input type="text" x-model="bc.barcode"
-                                           @input="bc.barcode = $event.target.value.replace(/[^0-9]/g, '').slice(0, 13)"
-                                           maxlength="13" class="form-input font-mono" style="height:32px;font-size:12px;width:130px;flex-shrink:0;" placeholder="8-13 Digit">
+                                           @input="bc.barcode = $event.target.value.replace(/[^0-9A-Za-z\-_]/g, '').slice(0, 50)"
+                                           maxlength="50" class="form-input font-mono" style="height:32px;font-size:12px;width:155px;flex-shrink:0;" placeholder="EAN / Toko (s/d 50)">
 
                                     <!-- Input Label -->
                                     <input type="text" x-model="bc.label_barcode" class="form-input" style="height:32px;font-size:11.5px;flex:1;" placeholder="Label (Standar, Alfamart, dll)">
