@@ -65,13 +65,18 @@ AS $$
 ```
 *Note*: `CREATE OR REPLACE FUNCTION` resets previous function attributes if omitted. Omitting `SET search_path` immediately triggers Supabase Linter warning `0011 (function_search_path_mutable)`.
 
-### 3.3 Trigger & RPC Lockdown (Prevent Accidental Public API Exposure)
-PostgreSQL by default grants `EXECUTE` on new functions to `PUBLIC`. Supabase PostgREST automatically exposes callable routines via `/rest/v1/rpc/*`.
-Every trigger function, internal guard, and backend-only RPC **MUST** revoke public execution:
+### 3.3 Trigger & RPC Lockdown (Prevent Accidental Public API Exposure & Linter 0028/0029)
+PostgreSQL by default grants `EXECUTE` on new functions to `PUBLIC`. Supabase PostgREST automatically exposes callable routines in schema `public` via `/rest/v1/rpc/*`.
+Every table trigger function, internal guard, backend-only RPC, and **DDL event trigger function (such as `rls_auto_enable()` / `ensure_rls`)** with `SECURITY DEFINER` **MUST** revoke public execution:
 ```sql
 REVOKE EXECUTE ON FUNCTION public.fn_nama_fungsi(...) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.fn_nama_fungsi(...) TO postgres, service_role;
 ```
+*Note*: Omitting `REVOKE EXECUTE` on `SECURITY DEFINER` functions in schema `public` immediately triggers Supabase Security Advisor warnings:
+- `0028 (anon_security_definer_function_executable)`
+- `0029 (authenticated_security_definer_function_executable)`
+Even though an event trigger is invoked internally by the PostgreSQL engine upon DDL execution, PostgREST will still expose it via HTTP if `anon`/`authenticated` have `EXECUTE` privilege. Revoking execute secures the API boundary while allowing internal database triggers to run normally.
+
 
 ### 3.4 Cross-Version View Security (`security_invoker` Blueprint)
 Views querying RLS-protected tables must evaluate caller permissions on Cloud Supabase (PostgreSQL 15+) without causing `unrecognized parameter "security_invoker"` errors on Local Sandbox (PostgreSQL 14.5).
@@ -110,7 +115,7 @@ Financial, cash (`arus_kas`, `akun_kas`), HR (`penggajian`, `karyawan`, `tabunga
 - [ ] `01_schema.sql` & `02_triggers_and_rpc.sql` fully synchronized
 - [ ] `ALTER TABLE public.table_name ENABLE ROW LEVEL SECURITY;` on every new table
 - [ ] `SET search_path = public, pg_temp` included on every `CREATE/ALTER FUNCTION`
-- [ ] `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated;` on all trigger/internal functions
+- [ ] `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated;` on all triggers, event triggers (e.g. `rls_auto_enable`), and internal functions (Linter 0028 & 0029)
 - [ ] Views querying RLS tables hardened via version-aware `security_invoker = true` block
 - [ ] Sensitive/financial tables have zero public GRANT (`anon`/`authenticated`)
 - [ ] New master/lookup tables registered in `DatabaseManagerService::MASTER_TABLES`
