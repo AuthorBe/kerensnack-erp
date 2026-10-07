@@ -69,10 +69,17 @@ echo "       OWNER EXECUTIVE DASHBOARD VERIFICATION SUITE\n";
 echo "====================================================================\n";
 
 // Test 1: Instantiation & Permission Check
-runTest("1. OwnerController instantiates and enforces owner.dashboard permission", function() {
+runTest("1. OwnerController instantiates and enforces owner.dashboard permission in 'Executive Menu'", function() {
     $ctrl = new \App\Controllers\OwnerController();
     if (!($ctrl instanceof \App\Controllers\OwnerController)) {
         throw new Exception("OwnerController instantiation failed");
+    }
+
+    $permCheck = Database::fetchOne("
+        SELECT grup_izin, nama_izin FROM public.izin WHERE kode_izin = 'owner.dashboard'
+    ");
+    if (empty($permCheck) || $permCheck['grup_izin'] !== 'Executive Menu') {
+        throw new Exception("owner.dashboard harus terdaftar dalam grup_izin 'Executive Menu', didapatkan: " . ($permCheck['grup_izin'] ?? 'null'));
     }
 });
 

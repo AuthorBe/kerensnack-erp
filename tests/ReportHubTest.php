@@ -84,6 +84,11 @@ assertHubTest(
     !empty($perm) && $perm['kode_izin'] === 'reports.download_hub',
     "Data: " . json_encode($perm)
 );
+assertHubTest(
+    "1b. Izin 'reports.download_hub' terkelompok dalam grup resmi 'Executive Menu'",
+    !empty($perm) && $perm['grup_izin'] === 'Executive Menu',
+    "Grup Izin: " . ($perm['grup_izin'] ?? 'NULL')
+);
 
 // TEST 2: Verifikasi Izin Diberikan ke Role Owner
 $ownerRole = Database::fetchOne("SELECT id FROM public.peran WHERE nama_peran = 'owner'");
