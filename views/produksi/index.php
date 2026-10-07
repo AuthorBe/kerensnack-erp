@@ -868,7 +868,7 @@ button.enter-nav:focus {
                                 <span class="text-[11px] font-semibold" 
                                       style="color:#881337; font-family:var(--font-mono);" 
                                       x-show="getRowRate(row.item_id) > 0" 
-                                      x-text="'(Rp ' + getRowRate(row.item_id).toLocaleString('id-ID') + '/pcs)'">
+                                      x-text="'(' + formatRupiah(getRowRate(row.item_id)) + '/pcs)'">
                                 </span>
                             </div>
 
@@ -938,7 +938,7 @@ button.enter-nav:focus {
                                                     <div style="font-weight:700; color:var(--color-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" x-text="item.nama_item"></div>
                                                     <div style="font-size:11px; color:var(--color-ink-mute); display:flex; align-items:center; gap:6px; margin-top:2px;">
                                                         <span class="badge badge-mono text-[10px] py-0 px-1 font-bold" style="background:rgba(136,19,55,0.08); color:#881337;" x-text="item.nama_kelompok"></span>
-                                                        <span x-text="'Rp ' + parseFloat(item.upah_per_bungkus).toLocaleString('id-ID') + '/pcs'"></span>
+                                                        <span x-text="formatRupiah(item.upah_per_bungkus) + '/pcs'"></span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -993,7 +993,7 @@ button.enter-nav:focus {
                             
                             <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);">
                                 <span style="font-size:11px;color:var(--color-ink-mute);">Subtotal Upah:</span>
-                                <span class="badge badge-success text-xs font-bold py-0.5 px-2" x-text="'Rp ' + calculateRowSubtotal(row).toLocaleString('id-ID')">Rp 0</span>
+                                <span class="badge badge-success text-xs font-bold py-0.5 px-2" x-text="formatRupiah(calculateRowSubtotal(row))">Rp 0</span>
                             </div>
                         </div>
                     </div>
@@ -1019,12 +1019,12 @@ button.enter-nav:focus {
                             </div>
                             <div>
                                 <div style="font-size:11px; color:var(--color-ink-mute); line-height:1.2;">Total Estimasi Upah:</div>
-                                <div class="hidden sm:block text-base font-bold" style="color:var(--color-success); font-family:var(--font-mono); line-height:1.2; margin-top:2px;" x-text="'Rp ' + totalGrandPreview.toLocaleString('id-ID')">Rp 0</div>
+                                <div class="hidden sm:block text-base font-bold" style="color:var(--color-success); font-family:var(--font-mono); line-height:1.2; margin-top:2px;" x-text="formatRupiah(totalGrandPreview)">Rp 0</div>
                             </div>
                         </div>
                         
                         <!-- Big Green Rupiah on Mobile (Right aligned) -->
-                        <div class="sm:hidden text-base font-extrabold" style="color:var(--color-success); font-family:var(--font-mono);" x-text="'Rp ' + totalGrandPreview.toLocaleString('id-ID')">
+                        <div class="sm:hidden text-base font-extrabold" style="color:var(--color-success); font-family:var(--font-mono);" x-text="formatRupiah(totalGrandPreview)">
                             Rp 0
                         </div>
                     </div>
@@ -1312,17 +1312,17 @@ button.enter-nav:focus {
                     <div class="grid grid-cols-3 gap-2.5 p-3 rounded-xl border" style="background: var(--color-canvas-soft); border-color: var(--color-hairline);">
                         <div class="text-center">
                             <div class="text-[10.5px] uppercase font-bold text-slate-400">Total Output</div>
-                            <div class="text-sm font-black text-slate-800 dark:text-slate-100 font-mono mt-0.5" x-text="detailEmp ? ((detailEmp.total_pcs || 0).toLocaleString('id-ID') + ' pcs') : '0 pcs'"></div>
-                            <div class="text-[10px] text-slate-400" x-show="detailEmp && detailEmp.total_bal > 0" x-text="detailEmp ? (detailEmp.total_bal + ' bal') : ''"></div>
+                            <div class="text-sm font-black text-slate-800 dark:text-slate-100 font-mono mt-0.5" x-text="detailEmp ? (formatQty(detailEmp.total_pcs) + ' pcs') : '0 pcs'"></div>
+                            <div class="text-[10px] text-slate-400" x-show="detailEmp && detailEmp.total_bal > 0" x-text="detailEmp ? (formatQty(detailEmp.total_bal) + ' bal') : ''"></div>
                         </div>
                         <div class="text-center border-x" style="border-color: var(--color-hairline);">
                             <div class="text-[10.5px] uppercase font-bold text-slate-400">Total Lembur</div>
-                            <div class="text-sm font-black font-mono mt-0.5" :style="detailEmp && (detailEmp.total_lembur_pcs > 0 || detailEmp.total_lembur_bal > 0) ? 'color:#881337;' : 'color:var(--color-ink-mute);'" x-text="detailEmp && detailEmp.total_lembur_pcs > 0 ? (detailEmp.total_lembur_pcs.toLocaleString('id-ID') + ' pcs') : '-'"></div>
-                            <div class="text-[10px] text-rose-400" x-show="detailEmp && detailEmp.total_lembur_bal > 0" x-text="detailEmp ? (detailEmp.total_lembur_bal + ' bal') : ''"></div>
+                            <div class="text-sm font-black font-mono mt-0.5" :style="detailEmp && (detailEmp.total_lembur_pcs > 0 || detailEmp.total_lembur_bal > 0) ? 'color:#881337;' : 'color:var(--color-ink-mute);'" x-text="detailEmp && detailEmp.total_lembur_pcs > 0 ? (formatQty(detailEmp.total_lembur_pcs) + ' pcs') : '-'"></div>
+                            <div class="text-[10px] text-rose-400" x-show="detailEmp && detailEmp.total_lembur_bal > 0" x-text="detailEmp ? (formatQty(detailEmp.total_lembur_bal) + ' bal') : ''"></div>
                         </div>
                         <div class="text-center">
                             <div class="text-[10.5px] uppercase font-bold text-slate-400">Total Upah</div>
-                            <div class="text-sm font-black font-mono mt-0.5 text-emerald-600 dark:text-emerald-400" x-text="detailEmp ? ('Rp ' + (detailEmp.total_upah || 0).toLocaleString('id-ID')) : 'Rp 0'"></div>
+                            <div class="text-sm font-black font-mono mt-0.5 text-emerald-600 dark:text-emerald-400" x-text="detailEmp ? (detailEmp.total_upah_formatted || formatRupiah(detailEmp.total_upah)) : 'Rp 0'"></div>
                         </div>
                     </div>
 
@@ -1356,7 +1356,7 @@ button.enter-nav:focus {
                                         </template>
                                     </div>
                                     <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-3">
-                                        <span>Rate Upah: <strong class="font-mono text-slate-700 dark:text-slate-200" style="color: var(--color-ink);" x-text="'Rp ' + (it.upah_per_pcs_snapshot || 0).toLocaleString('id-ID') + '/pcs'"></strong></span>
+                                        <span>Rate Upah: <strong class="font-mono text-slate-700 dark:text-slate-200" style="color: var(--color-ink);" x-text="(it.upah_per_pcs_formatted || formatRupiah(it.upah_per_pcs_snapshot)) + '/pcs'"></strong></span>
                                         <template x-if="it.kode_sku">
                                             <span class="font-mono text-slate-400" x-text="'SKU: ' + it.kode_sku"></span>
                                         </template>
@@ -1366,14 +1366,14 @@ button.enter-nav:focus {
                                 <div class="flex items-center justify-between sm:justify-end gap-3.5 border-t sm:border-t-0 pt-2.5 sm:pt-0 flex-shrink-0" style="border-color: var(--color-hairline);">
                                     <!-- Output Pcs & Bal -->
                                     <div class="text-left sm:text-right flex items-center gap-1.5 font-mono">
-                                        <span class="font-bold text-xs text-slate-800 dark:text-slate-100" style="color: var(--color-ink);" x-text="(it.lembur_pcs > 0 ? it.lembur_pcs : it.kuantitas_pcs).toLocaleString('id-ID') + ' pcs'"></span>
-                                        <span class="text-[11px] text-slate-400 font-medium" x-show="(it.lembur_bal > 0 ? it.lembur_bal : it.kuantitas_bal) > 0" x-text="'(' + (it.lembur_bal > 0 ? it.lembur_bal : it.kuantitas_bal) + ' bal)'"></span>
+                                        <span class="font-bold text-xs text-slate-800 dark:text-slate-100" style="color: var(--color-ink);" x-text="formatQty(it.lembur_pcs > 0 ? it.lembur_pcs : it.kuantitas_pcs) + ' pcs'"></span>
+                                        <span class="text-[11px] text-slate-400 font-medium" x-show="(it.lembur_bal > 0 ? it.lembur_bal : it.kuantitas_bal) > 0" x-text="'(' + formatQty(it.lembur_bal > 0 ? it.lembur_bal : it.kuantitas_bal) + ' bal)'"></span>
                                     </div>
 
                                     <!-- Subtotal Upah Badge dengan padding dan kontras yang aman -->
                                     <div class="flex-shrink-0">
                                         <span class="badge badge-success font-mono font-extrabold text-xs py-1 px-2.5 shadow-xs inline-flex items-center justify-center" 
-                                              x-text="'Rp ' + (it.total_upah_didapat || 0).toLocaleString('id-ID')">
+                                              x-text="it.total_upah_didapat_formatted || formatRupiah(it.total_upah_didapat)">
                                         </span>
                                     </div>
                                 </div>
@@ -1823,6 +1823,14 @@ function productionApp() {
             if (!this.searchQuery || !this.searchQuery.trim()) return true;
             const q = this.searchQuery.toLowerCase().trim();
             return (key || '').toLowerCase().includes(q);
+        },
+
+        formatRupiah(val) {
+            return window.formatRupiah ? window.formatRupiah(val) : ('Rp ' + Number(val || 0).toLocaleString('id-ID'));
+        },
+
+        formatQty(val) {
+            return window.formatQty ? window.formatQty(val) : Number(val || 0).toLocaleString('id-ID');
         }
     };
 }

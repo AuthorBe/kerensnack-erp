@@ -639,6 +639,15 @@ class ProduksiController extends Controller
                     $historyGrouped[$groupKey]['has_lembur'] = true;
                 }
 
+                $h['kuantitas_pcs'] = (int)$h['kuantitas_pcs'];
+                $h['kuantitas_bal'] = (int)$h['kuantitas_bal'];
+                $h['lembur_pcs'] = (int)$h['lembur_pcs'];
+                $h['lembur_bal'] = (int)$h['lembur_bal'];
+                $h['upah_per_pcs_snapshot'] = (float)$h['upah_per_pcs_snapshot'];
+                $h['total_upah_didapat'] = (float)$h['total_upah_didapat'];
+                $h['upah_per_pcs_formatted'] = Format::rupiah((float)$h['upah_per_pcs_snapshot']);
+                $h['total_upah_didapat_formatted'] = Format::rupiah((float)$h['total_upah_didapat']);
+
                 $historyGrouped[$groupKey]['items'][] = $h;
                 $historyGrouped[$groupKey]['total_pcs'] += (int)$h['kuantitas_pcs'];
                 $historyGrouped[$groupKey]['total_bal'] += (int)$h['kuantitas_bal'];
@@ -706,7 +715,21 @@ class ProduksiController extends Controller
                     }
                     $emp['initials'] = strtoupper($initials ?: 'KR');
                     $emp['tanggal_indo'] = Format::tanggalIndo($emp['tanggal']);
+                    $emp['total_upah'] = (float)$emp['total_upah'];
                     $emp['total_upah_formatted'] = Format::rupiah((float)$emp['total_upah']);
+                    if (!empty($emp['items'])) {
+                        foreach ($emp['items'] as &$it) {
+                            $it['kuantitas_pcs'] = (int)$it['kuantitas_pcs'];
+                            $it['kuantitas_bal'] = (int)$it['kuantitas_bal'];
+                            $it['lembur_pcs'] = (int)$it['lembur_pcs'];
+                            $it['lembur_bal'] = (int)$it['lembur_bal'];
+                            $it['upah_per_pcs_snapshot'] = (float)$it['upah_per_pcs_snapshot'];
+                            $it['total_upah_didapat'] = (float)$it['total_upah_didapat'];
+                            $it['upah_per_pcs_formatted'] = Format::rupiah((float)$it['upah_per_pcs_snapshot']);
+                            $it['total_upah_didapat_formatted'] = Format::rupiah((float)$it['total_upah_didapat']);
+                        }
+                        unset($it);
+                    }
                     $formattedRows[] = $emp;
                 }
 

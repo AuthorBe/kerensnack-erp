@@ -3524,7 +3524,7 @@ function driverDeliveryApp() {
         },
 
         formatRupiah(val) {
-            return new Intl.NumberFormat('id-ID').format(val || 0);
+            return window.formatRupiahNumber ? window.formatRupiahNumber(val) : Number(val || 0).toLocaleString('id-ID');
         },
 
         formatDateTime(dateStr) {

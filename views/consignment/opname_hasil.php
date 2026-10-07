@@ -1886,9 +1886,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         formatRupiah(num) {
-            return 'Rp ' + new Intl.NumberFormat('id-ID', {
-                minimumFractionDigits: 0
-            }).format(num || 0);
+            return window.formatRupiah ? window.formatRupiah(num) : ('Rp ' + Number(num || 0).toLocaleString('id-ID'));
         },
 
         copyWhatsAppText() {

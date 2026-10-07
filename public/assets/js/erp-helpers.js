@@ -80,6 +80,26 @@
     }
 
     /**
+     * Format quantity / count with Indonesian thousand separator and optional decimals
+     * (e.g. 53 -> "53", 1000 -> "1.000", 12.5 -> "12,5")
+     */
+    function formatQty(val, maxDecimals) {
+        if (maxDecimals === undefined) maxDecimals = 2;
+        var num = toValidNumber(val);
+        var isNegative = num < 0;
+        var absNum = Math.abs(num);
+        var formatted = '';
+        try {
+            formatted = new Intl.NumberFormat('id-ID', {
+                maximumFractionDigits: maxDecimals
+            }).format(absNum);
+        } catch (e) {
+            formatted = String(absNum);
+        }
+        return isNegative ? '-' + formatted : formatted;
+    }
+
+    /**
      * Parse formatted currency string back to pure integer/float (e.g. "Rp 15.000" -> 15000)
      */
     function unformatRupiah(str) {
@@ -353,6 +373,7 @@
     window.formatRupiah = formatRupiah;
     window.unformatRupiah = unformatRupiah;
     window.formatRupiahNumber = formatRupiahNumber;
+    window.formatQty = formatQty;
     window.refreshIcons = refreshIcons;
 
     // ERP Universal Branded Dialogs

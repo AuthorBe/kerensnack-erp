@@ -3205,8 +3205,7 @@ function opnameApp() {
         },
 
         formatRupiah(amount) {
-            const val = parseFloat(amount) || 0;
-            return 'Rp ' + val.toLocaleString('id-ID');
+            return window.formatRupiah ? window.formatRupiah(amount) : ('Rp ' + (parseFloat(amount) || 0).toLocaleString('id-ID'));
         }
     };
 }
