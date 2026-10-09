@@ -459,6 +459,17 @@ class CustomerOrderController extends Controller
             $custSql = "
                 SELECT p.id, p.kode_pelanggan, p.nama_toko, p.nama_pemilik, p.nomor_whatsapp, 
                        p.alamat_lengkap, p.tipe_pembayaran_default, p.is_konsinyasi, p.sales_driver_id,
+                       COALESCE(p.plafon_piutang, 0) as plafon_piutang,
+                       COALESCE(p.total_piutang_berjalan, 0) as total_piutang_berjalan,
+                       (
+                           SELECT COUNT(*) 
+                           FROM public.pesanan pes 
+                           WHERE pes.pelanggan_id = p.id 
+                             AND pes.status_pemrosesan != 'dibatalkan' 
+                             AND pes.status_pembayaran != 'lunas' 
+                             AND pes.status_pembayaran != 'dibatalkan'
+                             AND pes.is_tagihan = TRUE
+                       ) as total_faktur_gantung,
                        COALESCE(gp.default_level_harga, 1) as level_harga,
                        gp.nama_grup as nama_grup_harga,
                        COALESCE(gp.diskon_persen_default, 0) as grup_diskon_persen,
@@ -1624,11 +1635,11 @@ class CustomerOrderController extends Controller
                 SELECT COALESCE(gp.id, i.id) as grup_id,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
-                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as kode_sku,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as barcode_universal,
                        COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
                        SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
-                       MAX(ip.harga_satuan) as harga_satuan,
+                       MAX(ip.harga_satuan_deal) as harga_satuan,
                        MAX(ip.harga_satuan_deal) as harga_satuan_deal,
                        SUM(ip.diskon_item_nominal) as diskon_item_nominal,
                        SUM(ip.subtotal) as subtotal
@@ -1639,7 +1650,7 @@ class CustomerOrderController extends Controller
                   AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
                 GROUP BY COALESCE(gp.id, i.id),
                          COALESCE(gp.nama_grup, i.nama_item),
-                         COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku),
                          COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                 ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['id' => $id]);

@@ -6501,7 +6501,15 @@ body.action-loader-frozen {
   justify-content: center;
   padding: 16px;
   opacity: 0;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.16s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 0.16s ease, -webkit-backdrop-filter 0.16s ease;
+  will-change: opacity, backdrop-filter;
+}
+
+.confirm-overlay.is-closing {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  backdrop-filter: blur(0px) !important;
+  -webkit-backdrop-filter: blur(0px) !important;
 }
 
 .confirm-modal {
@@ -6517,8 +6525,14 @@ body.action-loader-frozen {
   display: flex;
   flex-direction: column;
   transform: scale(0.94) translateY(10px);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s ease;
   font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  will-change: transform, opacity;
+}
+
+.confirm-overlay.is-closing .confirm-modal {
+  transform: scale(0.96) translateY(4px) !important;
+  opacity: 0 !important;
 }
 
 .dark .confirm-modal {

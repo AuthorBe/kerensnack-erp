@@ -165,9 +165,34 @@ ob_start();
                                             Toko pelanggan tidak ditemukan
                                         </div>
                                     </template>
-                                </div>
                             </div>
                         </div>
+
+                        <!-- Credit Health Pill / Banner -->
+                        <template x-if="selectedCustomer && !selectedCustomer.is_konsinyasi">
+                            <div class="credit-health-pill" style="margin-top: 8px; padding: 10px 14px; border-radius: 12px; background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); display: flex; flex-direction: column; gap: 4px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; font-size: 11.5px;">
+                                    <div>
+                                        <span style="color: var(--color-ink-mute);">Plafon Kredit:</span> 
+                                        <strong class="font-mono" style="color: var(--color-ink);" x-text="Number(selectedCustomer.plafon_piutang) > 0 ? formatRupiah(selectedCustomer.plafon_piutang) : 'Tanpa Batas'"></strong>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--color-ink-mute);">Piutang Berjalan:</span> 
+                                        <strong class="font-mono" :style="Number(selectedCustomer.total_piutang_berjalan) > Number(selectedCustomer.plafon_piutang) && Number(selectedCustomer.plafon_piutang) > 0 ? 'color: var(--color-danger); font-weight:800;' : 'color: var(--color-ink);'" x-text="formatRupiah(selectedCustomer.total_piutang_berjalan)"></strong>
+                                    </div>
+                                    <div>
+                                        <span style="color: var(--color-ink-mute);">Faktur Gantung:</span> 
+                                        <strong class="font-mono" :style="Number(selectedCustomer.total_faktur_gantung) > 1 ? 'color: #b45309; font-weight:800;' : 'color: var(--color-ink);'" x-text="selectedCustomer.total_faktur_gantung + ' Nota'"></strong>
+                                    </div>
+                                </div>
+                                <template x-if="Number(selectedCustomer.total_piutang_berjalan) > Number(selectedCustomer.plafon_piutang) && Number(selectedCustomer.plafon_piutang) > 0">
+                                    <div style="font-size: 11px; color: var(--color-danger); font-weight: 700; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                        <i data-lucide="alert-triangle" style="width: 13px; height: 13px; flex-shrink: 0;"></i>
+                                        <span>Peringatan: Piutang toko telah melampaui batas plafon kredit maksimal.</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
                     </div>
 
                     <!-- BARIS 2 KANAN: Petugas Pengantar / Driver (Opsional) -->
@@ -1664,7 +1689,7 @@ function createSalesOrderApp() {
             return Math.max(0, subtotalItems - diskonFaktur);
         },
 
-        submitOrder() {
+        async submitOrder() {
             if (!this.header.pelanggan_id) {
                 toast.warning('Mohon pilih Toko Pelanggan terlebih dahulu.');
                 return;
@@ -1689,6 +1714,42 @@ function createSalesOrderApp() {
                 if (dp > totalPo) {
                     toast.error(`Gagal Simpan: Nominal DP (${this.formatRupiah(dp)}) melebihi Total PO (${this.formatRupiah(totalPo)}). Transaksi ditolak oleh sistem!`);
                     return;
+                }
+            }
+
+            // Soft Confirmation (Opsi A): Peringatan Plafon & Faktur Gantung untuk Pembayaran Tempo
+            if (['tempo_faktur', 'tempo_tanggal', 'sebagian'].includes(this.header.tipe_pembayaran) && !this.selectedCustomer?.is_konsinyasi) {
+                const plafon = Number(this.selectedCustomer?.plafon_piutang || 0);
+                const piutang = Number(this.selectedCustomer?.total_piutang_berjalan || 0);
+                const gantung = Number(this.selectedCustomer?.total_faktur_gantung || 0);
+                const totalNettoBaru = this.calcNetto();
+                const proyeksiPiutang = piutang + (this.header.tipe_pembayaran === 'sebagian' ? Math.max(0, totalNettoBaru - Number(this.header.nominal_dibayar || 0)) : totalNettoBaru);
+                const isOverPlafon = (plafon > 0 && proyeksiPiutang > plafon);
+
+                if (isOverPlafon || gantung > 0) {
+                    let confirmMessage = `Toko ${this.selectedCustomer?.nama_toko || ''} `;
+                    if (isOverPlafon && gantung > 0) {
+                        confirmMessage += `memiliki piutang berjalan ${this.formatRupiah(piutang)} (proyeksi ${this.formatRupiah(proyeksiPiutang)} melebihi plafon ${this.formatRupiah(plafon)}) dan masih ada ${gantung} faktur tempo yang belum lunas.`;
+                    } else if (isOverPlafon) {
+                        confirmMessage += `memiliki proyeksi piutang ${this.formatRupiah(proyeksiPiutang)} yang melampaui plafon kredit ${this.formatRupiah(plafon)}.`;
+                    } else {
+                        confirmMessage += `masih memiliki ${gantung} lembar faktur tempo yang belum lunas.`;
+                    }
+                    confirmMessage += ` Apakah Anda yakin ingin tetap menerbitkan PO ini?`;
+
+                    if (window.AppConfirm) {
+                        const ok = await window.AppConfirm({
+                            title: 'Konfirmasi Kredit & Plafon Toko',
+                            message: confirmMessage,
+                            submessage: 'Pastikan kesepakatan tempo telah diverifikasi dengan pihak toko sebelum barang disiapkan.',
+                            type: 'warning',
+                            confirmText: 'Ya, Tetap Terbitkan PO',
+                            cancelText: 'Periksa Kembali'
+                        });
+                        if (!ok) {
+                            return;
+                        }
+                    }
                 }
             }
 

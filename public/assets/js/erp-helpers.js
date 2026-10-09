@@ -163,8 +163,9 @@
 
     /**
      * Modern Promise-based Confirmation Dialog
+     * Supports both Promise (await AppConfirm(...)) and legacy Callbacks (AppConfirm(options, onConfirm, onCancel))
      */
-    function AppConfirm(options) {
+    function AppConfirm(options, onConfirm, onCancel) {
         return new Promise(function(resolve) {
             var opts = typeof options === 'string' ? { message: options } : (options || {});
             var title = escapeHtml(opts.title || 'Konfirmasi Tindakan');
@@ -249,15 +250,28 @@
             function closeDialog(result) {
                 if (isClosed) return;
                 isClosed = true;
-                if (window.PopupManager) window.PopupManager.unfreeze(overlay);
+                overlay.setAttribute('data-popup-closing', 'true');
+                overlay.classList.add('is-closing');
+                overlay.style.pointerEvents = 'none';
                 overlay.style.opacity = '0';
-                modalEl.style.transform = 'scale(0.95) translateY(6px)';
+                modalEl.style.transform = 'scale(0.96) translateY(4px)';
+                modalEl.style.opacity = '0';
                 document.removeEventListener('keydown', handleKey);
-                document.body.classList.remove('modal-open');
                 setTimeout(function() {
+                    if (window.PopupManager) window.PopupManager.unfreeze(overlay);
+                    document.body.classList.remove('modal-open');
                     if (overlay.parentNode) overlay.remove();
+                    try {
+                        if (result && typeof onConfirm === 'function') {
+                            onConfirm();
+                        } else if (!result && typeof onCancel === 'function') {
+                            onCancel();
+                        }
+                    } catch (err) {
+                        console.error('[AppConfirm callback error]', err);
+                    }
                     resolve(result);
-                }, 180);
+                }, 160);
             }
 
             function handleKey(e) {
@@ -345,15 +359,19 @@
             function closeDialog() {
                 if (isClosed) return;
                 isClosed = true;
-                if (window.PopupManager) window.PopupManager.unfreeze(overlay);
+                overlay.setAttribute('data-popup-closing', 'true');
+                overlay.classList.add('is-closing');
+                overlay.style.pointerEvents = 'none';
                 overlay.style.opacity = '0';
-                modalEl.style.transform = 'scale(0.95) translateY(6px)';
+                modalEl.style.transform = 'scale(0.96) translateY(4px)';
+                modalEl.style.opacity = '0';
                 document.removeEventListener('keydown', handleKey);
-                document.body.classList.remove('modal-open');
                 setTimeout(function() {
+                    if (window.PopupManager) window.PopupManager.unfreeze(overlay);
+                    document.body.classList.remove('modal-open');
                     if (overlay.parentNode) overlay.remove();
                     resolve(true);
-                }, 180);
+                }, 160);
             }
 
             function handleKey(e) {

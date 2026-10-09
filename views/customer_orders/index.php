@@ -1038,7 +1038,7 @@ ob_start();
                 <button type="button" @click="activeTab = 'items'" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'items' }">
                     <i data-lucide="package" style="width:14px;height:14px;"></i>
                     <span>Produk &amp; Nota</span>
-                    <span class="badge" style="font-size:10px;padding:1px 6px;border-radius:10px;" x-text="orderItems.length || '0'"></span>
+                    <span class="badge badge-counter rounded-full" style="font-size:10px;padding:2px 7px;display:inline-flex;align-items:center;justify-content:center;line-height:1;" x-text="orderItems.length || '0'"></span>
                 </button>
                 <button type="button" @click="activeTab = 'shipping'" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'shipping' }">
                     <i data-lucide="truck" style="width:14px;height:14px;"></i>
@@ -1048,10 +1048,10 @@ ob_start();
                     <i data-lucide="credit-card" style="width:14px;height:14px;"></i>
                     <span>Pembayaran</span>
                     <template x-if="calcSisaTagihan() > 0 && !['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'].includes(orderDetail?.status_pemrosesan)">
-                        <span class="badge badge-danger" style="font-size:9.5px;padding:1px 5px;border-radius:8px;">Sisa</span>
+                        <span class="badge badge-danger rounded-full" style="font-size:9.5px;padding:2px 7px;display:inline-flex;align-items:center;justify-content:center;line-height:1;">Sisa</span>
                     </template>
                     <template x-if="calcSisaTagihan() > 0 && ['gagal_dikirim', 'gagal_kembali', 'gagal_kirim'].includes(orderDetail?.status_pemrosesan)">
-                        <span class="badge" style="font-size:9.5px;padding:1px 5px;border-radius:8px;background:#fee2e2;color:#991b1b;border:1px solid #fecdd3;">Tertunda</span>
+                        <span class="badge rounded-full" style="font-size:9.5px;padding:2px 7px;background:#fee2e2;color:#991b1b;border:1px solid #fecdd3;display:inline-flex;align-items:center;justify-content:center;line-height:1;">Tertunda</span>
                     </template>
                 </button>
                 <button type="button" @click="activeTab = 'actions'" class="modal-tab-btn" :class="{ 'is-active': activeTab === 'actions' }">
@@ -1062,7 +1062,7 @@ ob_start();
                     <i data-lucide="history" style="width:14px;height:14px;"></i>
                     <span>Log Aktivitas</span>
                     <template x-if="activityLogs && activityLogs.length > 0">
-                        <span class="badge" style="font-size:10px;padding:1px 6px;border-radius:10px;background:rgba(99,102,241,0.1);color:#6366f1;" x-text="activityLogs.length"></span>
+                        <span class="badge badge-counter rounded-full" style="font-size:10px;padding:2px 7px;background:rgba(99,102,241,0.1);color:#6366f1;display:inline-flex;align-items:center;justify-content:center;line-height:1;" x-text="activityLogs.length"></span>
                     </template>
                 </button>
             </div>
@@ -1815,7 +1815,7 @@ ob_start();
                                 <div style="flex:1;">
                                     <div style="font-size:13.5px;font-weight:800;color:#334155;display:flex;align-items:center;gap:8px;">
                                         <span>Dokumen Cetak Belum Dapat Diterbitkan</span>
-                                        <span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10.5px;font-weight:800;">STATUS PO</span>
+                                        <span class="badge rounded-full" style="background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:800;padding:2px 8px;display:inline-flex;align-items:center;justify-content:center;line-height:1;">STATUS PO</span>
                                     </div>
                                     <div style="font-size:12px;color:#64748b;margin-top:3px;line-height:1.45;">
                                         Pesanan ini masih menunggu penyiapan fisik barang oleh gudang di <strong>Daftar PO</strong>. Dokumen <em>Faktur &amp; Surat Jalan Gabungan</em> resmi akan aktif setelah barang siap dan Surat Jalan diterbitkan.
@@ -1829,6 +1829,7 @@ ob_start();
                             <div class="grid grid-cols-1 sm:grid-cols-3" style="gap:12px;">
                                 <!-- 1. CETAK FAKTUR & SURAT JALAN (TERPUSAT: A4 / DOT MATRIX) -->
                                 <a :href="'<?= Router::url('/customer-orders/invoice?id=') ?>' + orderDetail?.id"
+                                   target="_blank"
                                    class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(2,132,199,0.25);border-radius:14px;background:#f0f9ff;">
                                     <div style="width:42px;height:42px;border-radius:12px;background:rgba(2,132,199,0.12);color:#0284c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                         <i data-lucide="printer" style="width:22px;height:22px;"></i>
@@ -1839,9 +1840,10 @@ ob_start();
                                     </div>
                                 </a>
 
-                                <!-- 2. UNDUH PDF HYBRID -->
-                                <a :href="'<?= Router::url('/customer-orders/invoice/pdf?id=') ?>' + orderDetail?.id"
-                                   class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(220,38,38,0.22);border-radius:14px;background:#fef2f2;">
+                                <!-- 2. UNDUH PDF HYBRID DENGAN ACTION LOADING POPUP -->
+                                <button type="button"
+                                        @click="downloadOrderPdf(orderDetail?.id, orderDetail?.nomor_nota)"
+                                        class="card hover:shadow-md transition text-left" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(220,38,38,0.22);border-radius:14px;background:#fef2f2;appearance:none;-webkit-appearance:none;width:100%;">
                                     <div style="width:42px;height:42px;border-radius:12px;background:rgba(220,38,38,0.1);color:#dc2626;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                         <i data-lucide="file-text" style="width:20px;height:20px;"></i>
                                     </div>
@@ -1849,11 +1851,12 @@ ob_start();
                                         <div style="font-weight:800;font-size:13.5px;color:#991b1b;">Unduh PDF</div>
                                         <div style="font-size:11.5px;color:#dc2626;margin-top:2px;line-height:1.4;">Salinan PDF resmi Faktur &amp; SJ</div>
                                     </div>
-                                </a>
+                                </button>
 
-                                <!-- 3. UNDUH EXCEL RINCIAN FAKTUR -->
-                                <a :href="'<?= Router::url('/customer-orders/invoice/excel?id=') ?>' + orderDetail?.id"
-                                   class="card hover:shadow-md transition" style="text-decoration:none;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(16,185,129,0.22);border-radius:14px;background:#ecfdf5;">
+                                <!-- 3. UNDUH EXCEL RINCIAN FAKTUR DENGAN ACTION LOADING POPUP -->
+                                <button type="button"
+                                        @click="downloadOrderExcel(orderDetail?.id, orderDetail?.nomor_nota)"
+                                        class="card hover:shadow-md transition text-left" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 16px;border:1.5px solid rgba(16,185,129,0.22);border-radius:14px;background:#ecfdf5;appearance:none;-webkit-appearance:none;width:100%;">
                                     <div style="width:42px;height:42px;border-radius:12px;background:rgba(16,185,129,0.1);color:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                         <i data-lucide="file-spreadsheet" style="width:20px;height:20px;"></i>
                                     </div>
@@ -1861,7 +1864,7 @@ ob_start();
                                         <div style="font-weight:800;font-size:13.5px;color:#065f46;">Unduh Excel</div>
                                         <div style="font-size:11.5px;color:#059669;margin-top:2px;line-height:1.4;">Spreadsheet rincian pesanan &amp; produk</div>
                                     </div>
-                                </a>
+                                </button>
                             </div>
                         </template>
                     </div>
@@ -1942,6 +1945,7 @@ ob_start();
                                         </template>
                                     </p>
                                     <form action="<?= Router::url('/customer-orders/cancel') ?>" method="POST"
+                                          data-action-text="Membatalkan transaksi pesanan..."
                                           :data-confirm="orderDetail.status_pemrosesan === 'po'
                                               ? 'Apakah Anda YAKIN ingin membatalkan draf PO #' + orderDetail.nomor_nota + '? Antrean pesanan akan dihapus.'
                                               : 'Apakah Anda YAKIN ingin membatalkan transaksi #' + orderDetail.nomor_nota + '?'"
@@ -3043,6 +3047,90 @@ function salesOrderListApp() {
                 }
             } finally {
                 this.isSubmittingPayment = false;
+            }
+        },
+
+        async downloadOrderPdf(id, nomorNota) {
+            if (!id) return;
+            const docLabel = nomorNota ? '#' + nomorNota : '';
+            if (window.AppAction) {
+                window.AppAction.show('Menyiapkan Salinan PDF...', 'Mengompilasi Faktur & Surat Jalan ' + docLabel + '...');
+            }
+            try {
+                const url = '<?= Router::url('/customer-orders/invoice/pdf?id=') ?>' + id;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Gagal mengunduh berkas PDF (' + response.status + ')');
+
+                let filename = 'FAKTUR-SJ-' + (nomorNota || id) + '.pdf';
+                const disposition = response.headers.get('content-disposition');
+                if (disposition && disposition.indexOf('filename=') !== -1) {
+                    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+
+                const blob = await response.blob();
+                const a = document.createElement('a');
+                a.href = window.URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(a.href);
+
+                if (window.AppAction) {
+                    await window.AppAction.success('Berhasil Diunduh! ✨', filename, 1800);
+                }
+            } catch (err) {
+                console.error('Download PDF error:', err);
+                if (window.AppAction) {
+                    await window.AppAction.error('Gagal Mengunduh PDF!', err.message || 'Terjadi gangguan saat memproses berkas.', 2500);
+                } else if (window.toast) {
+                    window.toast.error('Gagal mengunduh dokumen PDF.');
+                }
+            }
+        },
+
+        async downloadOrderExcel(id, nomorNota) {
+            if (!id) return;
+            const docLabel = nomorNota ? '#' + nomorNota : '';
+            if (window.AppAction) {
+                window.AppAction.show('Menyiapkan Berkas Excel...', 'Mengompilasi spreadsheet faktur ' + docLabel + '...');
+            }
+            try {
+                const url = '<?= Router::url('/customer-orders/invoice/excel?id=') ?>' + id;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Gagal mengunduh berkas Excel (' + response.status + ')');
+
+                let filename = 'FAKTUR-' + (nomorNota || id) + '.xlsx';
+                const disposition = response.headers.get('content-disposition');
+                if (disposition && disposition.indexOf('filename=') !== -1) {
+                    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+
+                const blob = await response.blob();
+                const a = document.createElement('a');
+                a.href = window.URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(a.href);
+
+                if (window.AppAction) {
+                    await window.AppAction.success('Berhasil Diunduh! ✨', filename, 1800);
+                }
+            } catch (err) {
+                console.error('Download Excel error:', err);
+                if (window.AppAction) {
+                    await window.AppAction.error('Gagal Mengunduh Excel!', err.message || 'Terjadi gangguan saat memproses berkas.', 2500);
+                } else if (window.toast) {
+                    window.toast.error('Gagal mengunduh berkas Excel.');
+                }
             }
         },
 

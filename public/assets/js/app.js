@@ -472,7 +472,7 @@
   /* =====================================================================
      6. APP CONFIRMATION & ALERT DIALOG (Modern, High-Clarity, Responsive)
      ===================================================================== */
-  const AppConfirm = (options) => {
+  const AppConfirm = (options, onConfirm, onCancel) => {
     return new Promise((resolve) => {
       let opts = typeof options === 'string' ? { message: options } : (options || {});
 
@@ -572,14 +572,27 @@
       });
 
       const closeDialog = (result) => {
-        if (window.PopupManager) window.PopupManager.unfreeze(overlay);
+        overlay.setAttribute('data-popup-closing', 'true');
+        overlay.classList.add('is-closing');
+        overlay.style.pointerEvents = 'none';
         overlay.style.opacity = '0';
-        modalEl.style.transform = 'scale(0.95) translateY(6px)';
+        modalEl.style.transform = 'scale(0.96) translateY(4px)';
+        modalEl.style.opacity = '0';
         document.removeEventListener('keydown', handleKey);
         setTimeout(() => {
+          if (window.PopupManager) window.PopupManager.unfreeze(overlay);
           overlay.remove();
+          try {
+            if (result && typeof onConfirm === 'function') {
+              onConfirm();
+            } else if (!result && typeof onCancel === 'function') {
+              onCancel();
+            }
+          } catch (err) {
+            console.error('[AppConfirm callback error]', err);
+          }
           resolve(result);
-        }, 180);
+        }, 160);
       };
 
       const handleKey = (e) => {
@@ -663,6 +676,7 @@
       `;
 
       document.body.appendChild(overlay);
+      if (window.PopupManager) window.PopupManager.freeze(overlay);
       if (typeof lucide !== 'undefined') lucide.createIcons({ el: overlay });
 
       const modalEl = overlay.querySelector('.confirm-modal');
@@ -676,13 +690,18 @@
       });
 
       const closeDialog = () => {
+        overlay.setAttribute('data-popup-closing', 'true');
+        overlay.classList.add('is-closing');
+        overlay.style.pointerEvents = 'none';
         overlay.style.opacity = '0';
-        modalEl.style.transform = 'scale(0.95) translateY(6px)';
+        modalEl.style.transform = 'scale(0.96) translateY(4px)';
+        modalEl.style.opacity = '0';
         document.removeEventListener('keydown', handleKey);
         setTimeout(() => {
+          if (window.PopupManager) window.PopupManager.unfreeze(overlay);
           overlay.remove();
           resolve(true);
-        }, 180);
+        }, 160);
       };
 
       const handleKey = (e) => {
@@ -1505,14 +1524,20 @@
 
     const href = link.getAttribute('href');
     const target = link.getAttribute('target');
-    const isDownload = link.hasAttribute('download');
+    const isDownload = link.hasAttribute('download') || link.getAttribute('data-download') === 'true';
     const isNoLoader = link.classList.contains('no-loader') || link.getAttribute('data-no-loader') === 'true';
     const hasConfirm = link.hasAttribute('data-confirm') || link.getAttribute('onclick')?.includes('confirm');
+    const isExportOrDownloadUrl = href && (
+      href.includes('/pdf') || 
+      href.includes('/excel') || 
+      href.includes('/export') || 
+      href.includes('/download')
+    );
 
     // Ignore anchors, javascript, mailto, tel, new tabs, downloads, confirms, or key modifiers
     if (!href || href.startsWith('#') || href.startsWith('javascript:') ||
         href.startsWith('mailto:') || href.startsWith('tel:') ||
-        target === '_blank' || isDownload || isNoLoader || hasConfirm ||
+        target === '_blank' || isDownload || isExportOrDownloadUrl || isNoLoader || hasConfirm ||
         e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
       return;
     }
@@ -2516,11 +2541,14 @@
         }
       }
 
+      // Check closing animation state (prevent double-freeze / flicker during exit)
+      if (el.hasAttribute('data-popup-closing') || el.classList.contains('is-closing')) return false;
+
       // Check x-cloak or hidden attribute
       if (el.hasAttribute('x-cloak') || el.hidden) return false;
 
-      // Check inline style display: none
-      if (el.style.display === 'none' || el.style.getPropertyValue('display') === 'none') return false;
+      // Check inline style display: none or opacity: 0
+      if (el.style.display === 'none' || el.style.getPropertyValue('display') === 'none' || el.style.opacity === '0') return false;
 
       // Check computed style
       try {
@@ -2543,6 +2571,8 @@
 
     freeze(popupEl) {
       if (popupEl && popupEl instanceof Element) {
+        popupEl.removeAttribute('data-popup-closing');
+        popupEl.classList.remove('is-closing');
         this.activePopups.add(popupEl);
       }
       this.applyFreeze();
@@ -2550,6 +2580,8 @@
 
     unfreeze(popupEl) {
       if (popupEl && popupEl instanceof Element) {
+        popupEl.setAttribute('data-popup-closing', 'true');
+        popupEl.classList.add('is-closing');
         this.activePopups.delete(popupEl);
       }
       this.updateState();
@@ -2615,6 +2647,12 @@
       let foundVisible = false;
 
       candidates.forEach(el => {
+        // Skip elements currently in closing animation (prevent double-freeze loop)
+        if (el.hasAttribute('data-popup-closing') || el.classList.contains('is-closing')) {
+          this.activePopups.delete(el);
+          return;
+        }
+
         // Skip child dialog elements (e.g. .m3-dialog inside .modal-backdrop)
         if (el.matches('[role="dialog"]') && el.closest('.modal-backdrop, .confirm-overlay, .tagihan-modal-backdrop, .receipt-backdrop, .m3-payment-backdrop, .session-warning-backdrop')) {
           return;
