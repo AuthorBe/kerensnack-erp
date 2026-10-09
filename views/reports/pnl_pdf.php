@@ -133,6 +133,7 @@ $netProfit = (float)($netProfit ?? $pnl['laba_bersih_final'] ?? ($grossProfit - 
             display: inline-block;
             min-width: 120px;
             padding-bottom: 2px;
+            white-space: nowrap;
         }
         .signature-role { font-size: 6.8pt; color: #64748b; margin-top: 3px; }
 
@@ -309,13 +310,13 @@ $netProfit = (float)($netProfit ?? $pnl['laba_bersih_final'] ?? ($grossProfit - 
             <td>
                 <div class="signature-title">Diperiksa Oleh,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Finance Manager / Supervisor</div>
             </td>
             <td>
                 <div class="signature-title">Disetujui &amp; Disahkan Oleh,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Direktur / Owner Perusahaan</div>
             </td>
         </tr>

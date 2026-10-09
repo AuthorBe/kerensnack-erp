@@ -187,6 +187,7 @@ $logoSrc = PrintDocumentHelper::getLogoSrc($comp);
             padding-top: 6px;
             display: inline-block;
             min-width: 180px;
+            white-space: nowrap;
         }
         .no-print-bar {
             max-width: 820px;
@@ -400,12 +401,12 @@ $logoSrc = PrintDocumentHelper::getLogoSrc($comp);
         <div class="signatures">
             <div class="sig-block">
                 <div class="sig-title">Pihak Toko yang Menyetujui Tagihan,</div>
-                <div class="sig-line">( ........................................ )</div>
+                <div class="sig-line">( .................... )</div>
                 <div style="font-size:10.5px;color:#64748b;margin-top:4px;">Tanda Tangan dan Cap Toko</div>
             </div>
             <div class="sig-block">
                 <div class="sig-title">Pihak Penagih (Keren Snack),</div>
-                <div class="sig-line">( ........................................ )</div>
+                <div class="sig-line">( .................... )</div>
                 <div style="font-size:10.5px;color:#64748b;margin-top:4px;">Serah Terima Pembayaran</div>
             </div>
         </div>

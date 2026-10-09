@@ -432,17 +432,19 @@ $documentTitle = $documentTitle ?? 'Dokumen Cetak';
         .dm-sig-line {
             font-weight: bold;
             font-size: 9pt;
+            white-space: nowrap;
         }
         .dm-sig-sub {
             font-size: 8pt;
         }
 
         .dm-ncr-footer {
-            font-size: 8pt;
+            font-size: 7.8pt;
             text-align: center;
             padding-top: 6px;
             font-weight: bold;
             letter-spacing: 0.1px;
+            white-space: nowrap;
         }
 
         /* ========================================================================= */
@@ -451,7 +453,8 @@ $documentTitle = $documentTitle ?? 'Dokumen Cetak';
         <?php if ($isPdf): ?>
             <?php if ($formatMode !== 'standard'): ?>
             #sheet-standard { display: none !important; }
-            #sheet-dotmatrix { display: block !important; width: 100% !important; margin: 0 !important; box-shadow: none !important; border: none !important; }
+            #sheet-dotmatrix { display: block !important; width: 100% !important; min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
+            .continuous-wrapper { min-height: 0 !important; height: auto !important; margin: 0 !important; padding: 0 !important; }
             .continuous-inner { padding: 0 !important; margin: 0 !important; }
             .tractor-strip { display: none !important; }
             <?php else: ?>
@@ -505,7 +508,17 @@ $documentTitle = $documentTitle ?? 'Dokumen Cetak';
                 box-shadow: none !important;
                 border: none !important;
                 width: 100% !important;
+                min-height: 0 !important;
+                height: auto !important;
                 margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.mode-dotmatrix .continuous-wrapper,
+            body.mode-dotmatrix_half .continuous-wrapper {
+                min-height: 0 !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
             body.mode-dotmatrix .continuous-inner,
             body.mode-dotmatrix_half .continuous-inner {

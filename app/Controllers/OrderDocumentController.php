@@ -155,11 +155,11 @@ class OrderDocumentController extends Controller
                 SELECT COALESCE(gp.id, i.id) as grup_id,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as kode_sku,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as barcode_universal,
                        COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
                        SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
-                       MAX(ip.harga_satuan) as harga_satuan,
+                       MAX(ip.harga_satuan_deal) as harga_satuan,
                        MAX(ip.harga_satuan_deal) as harga_satuan_deal,
                        SUM(ip.diskon_item_nominal) as diskon_item_nominal,
                        SUM(ip.subtotal) as subtotal
@@ -170,7 +170,7 @@ class OrderDocumentController extends Controller
                   AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
                 GROUP BY COALESCE(gp.id, i.id),
                          COALESCE(gp.nama_grup, i.nama_item),
-                         COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku),
                          COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                 ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['id' => $id]);
@@ -252,11 +252,11 @@ class OrderDocumentController extends Controller
                 SELECT COALESCE(gp.id, i.id) as grup_id,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as kode_sku,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as barcode_universal,
                        COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
                        SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
-                       MAX(ip.harga_satuan) as harga_satuan,
+                       MAX(ip.harga_satuan_deal) as harga_satuan,
                        MAX(ip.harga_satuan_deal) as harga_satuan_deal,
                        SUM(ip.diskon_item_nominal) as diskon_nominal,
                        SUM(ip.subtotal) as subtotal
@@ -267,7 +267,7 @@ class OrderDocumentController extends Controller
                   AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
                 GROUP BY COALESCE(gp.id, i.id),
                          COALESCE(gp.nama_grup, i.nama_item),
-                         COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku),
                          COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                 ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['id' => $id]);
@@ -569,7 +569,7 @@ class OrderDocumentController extends Controller
             }
 
             $rawItems = Database::fetchAll("
-                SELECT ip.*, it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar, it.barcode
+                SELECT ip.*, it.nama_item, it.kode_sku, it.stok_fisik_saat_ini, it.satuan_dasar, COALESCE(ip.barcode_universal, it.kode_sku) as barcode
                 FROM public.item_pesanan ip
                 JOIN public.item it ON ip.item_id = it.id
                 WHERE ip.pesanan_id IN (" . implode(',', $itemPlaceholders) . ")

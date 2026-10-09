@@ -149,6 +149,7 @@ $lossPct = $totalOmzet > 0 ? round(($totalLoss / $totalOmzet) * 100, 2) : 0;
             display: inline-block;
             min-width: 130px;
             padding-bottom: 2px;
+            white-space: nowrap;
         }
         .signature-role { font-size: 6.8pt; color: #64748b; margin-top: 2px; }
 
@@ -335,13 +336,13 @@ $lossPct = $totalOmzet > 0 ? round(($totalLoss / $totalOmzet) * 100, 2) : 0;
             <td>
                 <div class="signature-title">Diperiksa &amp; Direkonsiliasi,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Finance &amp; AR Supervisor</div>
             </td>
             <td>
                 <div class="signature-title">Disetujui &amp; Disahkan Oleh,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Direktur / Owner Perusahaan</div>
             </td>
         </tr>

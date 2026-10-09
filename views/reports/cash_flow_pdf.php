@@ -127,6 +127,7 @@ $outflowBreakdown = $outflowBreakdown ?? $kategoriKeluar ?? [];
             display: inline-block;
             min-width: 120px;
             padding-bottom: 2px;
+            white-space: nowrap;
         }
         .signature-role { font-size: 6.8pt; color: #64748b; margin-top: 3px; }
 
@@ -279,13 +280,13 @@ $outflowBreakdown = $outflowBreakdown ?? $kategoriKeluar ?? [];
             <td>
                 <div class="signature-title">Diperiksa &amp; Direkonsiliasi,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Supervisor / Finance Manager</div>
             </td>
             <td>
                 <div class="signature-title">Disetujui Oleh,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Direktur / Owner</div>
             </td>
         </tr>

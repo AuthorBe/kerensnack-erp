@@ -461,8 +461,8 @@ class PosController extends Controller
                 SELECT COALESCE(gp.id, i.id) as grup_id,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as kode_sku,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as barcode_universal,
                        COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
                        SUM(ip.kuantitas_satuan_dasar) as qty_pcs,
                        MAX(ip.harga_satuan_deal) as harga,
@@ -475,7 +475,7 @@ class PosController extends Controller
                   AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
                 GROUP BY COALESCE(gp.id, i.id),
                          COALESCE(gp.nama_grup, i.nama_item),
-                         COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku),
                          COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                 ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['id' => $pesananId]);

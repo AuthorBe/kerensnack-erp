@@ -43,8 +43,9 @@ class PdfExport
 
     /**
      * Render HTML string menjadi PDF string binary
+     * @param string|array<int, float|int> $paper Ukuran kertas standard (misal 'A4') atau koordinat array [0, 0, width, height]
      */
-    public static function render(string $html, string $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): string
+    public static function render(string $html, string|array $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): string
     {
         $dompdf = self::createInstance();
         $dompdf->loadHtml($html);
@@ -57,8 +58,9 @@ class PdfExport
 
     /**
      * Stream PDF langsung ke browser (tampil di browser tab)
+     * @param string|array<int, float|int> $paper Ukuran kertas standard (misal 'A4') atau koordinat array [0, 0, width, height]
      */
-    public static function stream(string $html, string $filename = 'document.pdf', string $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): void
+    public static function stream(string $html, string $filename = 'document.pdf', string|array $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): void
     {
         $cleanFilename = self::sanitizeFilename($filename);
         $dompdf = self::createInstance();
@@ -76,8 +78,9 @@ class PdfExport
 
     /**
      * Download PDF langsung sebagai file lampiran
+     * @param string|array<int, float|int> $paper Ukuran kertas standard (misal 'A4') atau koordinat array [0, 0, width, height]
      */
-    public static function download(string $html, string $filename = 'document.pdf', string $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): void
+    public static function download(string $html, string $filename = 'document.pdf', string|array $paper = 'A4', string $orientation = 'portrait', bool $addPageNumbers = false): void
     {
         $cleanFilename = self::sanitizeFilename($filename);
         $dompdf = self::createInstance();

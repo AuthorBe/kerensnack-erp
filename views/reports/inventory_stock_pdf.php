@@ -113,6 +113,7 @@ $kategori = (string)($kategori ?? $kategoriLabel ?? 'Semua Jenis Item');
             display: inline-block;
             min-width: 120px;
             padding-bottom: 2px;
+            white-space: nowrap;
         }
         .signature-role { font-size: 6.8pt; color: #64748b; margin-top: 3px; }
 
@@ -251,13 +252,13 @@ $kategori = (string)($kategori ?? $kategoriLabel ?? 'Semua Jenis Item');
             <td>
                 <div class="signature-title">Kepala Gudang / Supervisor,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Verifikasi Fisik &amp; Kuantitas</div>
             </td>
             <td>
                 <div class="signature-title">Disetujui &amp; Diaudit Oleh,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Owner / Finance Management</div>
             </td>
         </tr>

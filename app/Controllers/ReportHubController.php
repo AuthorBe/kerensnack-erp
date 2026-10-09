@@ -1366,11 +1366,24 @@ class ReportHubController extends Controller
             SELECT 
                 COALESCE(SUM(p.total_netto), 0) as omzet,
                 COALESCE(SUM(p.total_dibayar), 0) as terbayar,
-                COALESCE(SUM(p.sisa_tagihan), 0) as piutang,
+                COALESCE(SUM(p.sisa_tagihan), 0) as piutang
+            FROM public.pesanan p
+            LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+              AND p.is_tagihan = TRUE
+              AND (pel.is_konsinyasi = FALSE OR pel.is_konsinyasi IS NULL)
+              AND p.tipe_pembayaran != 'konsinyasi'
+              AND (pel.kode_pelanggan = 'CUST-001' OR p.catatan ILIKE '%POS%' OR p.catatan ILIKE '%kasir%' OR COALESCE(p.uang_diterima, 0) > 0)
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $posHppRow = Database::fetchOne("
+            SELECT 
                 COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
             FROM public.pesanan p
             LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-            LEFT JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
+            JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
             LEFT JOIN public.item i ON ip.item_id = i.id
             WHERE p.tanggal_pesanan BETWEEN :start AND :end
               AND p.status_pemrosesan != 'dibatalkan'
@@ -1386,11 +1399,26 @@ class ReportHubController extends Controller
             SELECT 
                 COALESCE(SUM(p.total_netto), 0) as omzet,
                 COALESCE(SUM(p.total_dibayar), 0) as terbayar,
-                COALESCE(SUM(p.sisa_tagihan), 0) as piutang,
+                COALESCE(SUM(p.sisa_tagihan), 0) as piutang
+            FROM public.pesanan p
+            LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+              AND p.is_tagihan = TRUE
+              AND (pel.is_konsinyasi = FALSE OR pel.is_konsinyasi IS NULL)
+              AND p.tipe_pembayaran != 'konsinyasi'
+              AND (pel.kode_pelanggan != 'CUST-001' OR pel.kode_pelanggan IS NULL)
+              AND (p.catatan NOT ILIKE '%POS%' AND p.catatan NOT ILIKE '%kasir%' OR p.catatan IS NULL)
+              AND COALESCE(p.uang_diterima, 0) = 0
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $b2bHppRow = Database::fetchOne("
+            SELECT 
                 COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
             FROM public.pesanan p
             LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-            LEFT JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
+            JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
             LEFT JOIN public.item i ON ip.item_id = i.id
             WHERE p.tanggal_pesanan BETWEEN :start AND :end
               AND p.status_pemrosesan != 'dibatalkan'
@@ -1408,11 +1436,22 @@ class ReportHubController extends Controller
             SELECT 
                 COALESCE(SUM(p.total_netto), 0) as omzet,
                 COALESCE(SUM(p.total_dibayar), 0) as terbayar,
-                COALESCE(SUM(p.sisa_tagihan), 0) as piutang,
+                COALESCE(SUM(p.sisa_tagihan), 0) as piutang
+            FROM public.pesanan p
+            LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
+            WHERE p.tanggal_pesanan BETWEEN :start AND :end
+              AND p.status_pemrosesan != 'dibatalkan'
+              AND p.status_pembayaran != 'dibatalkan'
+              AND p.is_tagihan = TRUE
+              AND (pel.is_konsinyasi = TRUE OR p.tipe_pembayaran = 'konsinyasi')
+        ", ['start' => $startDate, 'end' => $endDate]);
+
+        $consHppRow = Database::fetchOne("
+            SELECT 
                 COALESCE(SUM(ip.kuantitas_satuan_dasar * COALESCE(ip.harga_pokok_satuan, i.harga_pokok_pembelian, 0)), 0) as hpp
             FROM public.pesanan p
             LEFT JOIN public.pelanggan pel ON p.pelanggan_id = pel.id
-            LEFT JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
+            JOIN public.item_pesanan ip ON p.id = ip.pesanan_id
             LEFT JOIN public.item i ON ip.item_id = i.id
             WHERE p.tanggal_pesanan BETWEEN :start AND :end
               AND p.status_pemrosesan != 'dibatalkan'
@@ -1432,19 +1471,19 @@ class ReportHubController extends Controller
         $posOmzet = (float)($posRow['omzet'] ?? 0);
         $posTerbayar = (float)($posRow['terbayar'] ?? 0);
         $posPiutang = (float)($posRow['piutang'] ?? 0);
-        $posHpp = (float)($posRow['hpp'] ?? 0);
+        $posHpp = (float)($posHppRow['hpp'] ?? 0);
         $posLaba = $posOmzet - $posHpp;
 
         $b2bOmzet = (float)($b2bRow['omzet'] ?? 0);
         $b2bTerbayar = (float)($b2bRow['terbayar'] ?? 0);
         $b2bPiutang = (float)($b2bRow['piutang'] ?? 0);
-        $b2bHpp = (float)($b2bRow['hpp'] ?? 0);
+        $b2bHpp = (float)($b2bHppRow['hpp'] ?? 0);
         $b2bLaba = $b2bOmzet - $b2bHpp;
 
         $consOmzet = (float)($consRow['omzet'] ?? 0);
         $consTerbayar = (float)($consRow['terbayar'] ?? 0);
         $consPiutang = (float)($consRow['piutang'] ?? 0);
-        $consHpp = (float)($consRow['hpp'] ?? 0);
+        $consHpp = (float)($consHppRow['hpp'] ?? 0);
         $consLoss = (float)($consLossRow['kerugian_rusak'] ?? 0);
         $consLaba = $consOmzet - $consHpp;
 

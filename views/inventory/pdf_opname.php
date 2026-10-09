@@ -253,6 +253,7 @@ $totalNilaiRp = (float)($opname['total_nilai_selisih_rp'] ?? 0);
             display: inline-block;
             min-width: 130px;
             padding-bottom: 2px;
+            white-space: nowrap;
         }
         .signature-role {
             font-size: 6.8pt;
@@ -462,21 +463,21 @@ $totalNilaiRp = (float)($opname['total_nilai_selisih_rp'] ?? 0);
                 <div class="signature-space"></div>
                 <div class="signature-name">( <?= htmlspecialchars($petugas) ?> )</div>
                 <div class="signature-role">Staf Logistik / Gudang</div>
-                <div class="signature-date">Tgl: .......................................</div>
+                <div class="signature-date">Tgl: ....................</div>
             </td>
             <td>
                 <div class="signature-title">Diverifikasi Oleh,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Kepala Gudang / Supervisor</div>
-                <div class="signature-date">Tgl: .......................................</div>
+                <div class="signature-date">Tgl: ....................</div>
             </td>
             <td>
                 <div class="signature-title">Disetujui &amp; Diaudit Oleh,</div>
                 <div class="signature-space"></div>
-                <div class="signature-name">( ........................................ )</div>
+                <div class="signature-name">( .................... )</div>
                 <div class="signature-role">Admin / Owner / Keuangan</div>
-                <div class="signature-date">Tgl: .......................................</div>
+                <div class="signature-date">Tgl: ....................</div>
             </td>
         </tr>
     </table>

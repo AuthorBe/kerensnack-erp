@@ -180,6 +180,14 @@ class PrintDocumentHelper
         $appRoot = defined('APP_ROOT') ? APP_ROOT : (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2));
 
         if ($raw !== '') {
+            if (str_starts_with($raw, 'data:image/svg+xml;base64,')) {
+                $b64 = substr($raw, strlen('data:image/svg+xml;base64,'));
+                $decoded = base64_decode($b64);
+                if ($decoded !== false) {
+                    return 'data:image/svg+xml;base64,' . base64_encode(self::normalizeSvgForDompdf($decoded));
+                }
+                return $raw;
+            }
             if (str_starts_with($raw, 'data:')) {
                 return $raw;
             }
@@ -196,6 +204,9 @@ class PrintDocumentHelper
                 };
                 $content = @file_get_contents($local);
                 if ($content !== false && $content !== '') {
+                    if ($ext === 'svg') {
+                        $content = self::normalizeSvgForDompdf($content);
+                    }
                     return 'data:' . $mime . ';base64,' . base64_encode($content);
                 }
             }
@@ -214,4 +225,34 @@ class PrintDocumentHelper
 
         return '';
     }
+
+    /**
+     * Normalisasi atribut SVG agar kompatibel 100% dengan Dompdf.
+     * Dompdf menghitung skala path SVG dari (target_width / svg_tag_width) tanpa memperhitungkan
+     * rasio skala viewBox. Jika width/height berbeda dari viewBox (misal width 992 vs viewBox 491),
+     * Dompdf mengecilkan logo hingga separuh ukuran dan menyisakan ruang kosong besar di dalam tabel.
+     */
+    public static function normalizeSvgForDompdf(string $content): string
+    {
+        if (preg_match('/viewBox=["\']\s*([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\s*["\']/i', $content, $vb)) {
+            $vbW = $vb[3];
+            $vbH = $vb[4];
+            if (preg_match('/<svg\b([^>]*)>/i', $content, $svgTag)) {
+                $attrs = $svgTag[1];
+                if (preg_match('/\bwidth=["\'][^"\']*["\']/i', $attrs)) {
+                    $attrs = preg_replace('/\bwidth=["\'][^"\']*["\']/i', 'width="' . $vbW . '"', $attrs);
+                } else {
+                    $attrs .= ' width="' . $vbW . '"';
+                }
+                if (preg_match('/\bheight=["\'][^"\']*["\']/i', $attrs)) {
+                    $attrs = preg_replace('/\bheight=["\'][^"\']*["\']/i', 'height="' . $vbH . '"', $attrs);
+                } else {
+                    $attrs .= ' height="' . $vbH . '"';
+                }
+                $content = str_replace($svgTag[0], '<svg' . $attrs . '>', $content);
+            }
+        }
+        return $content;
+    }
 }
+

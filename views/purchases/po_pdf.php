@@ -46,12 +46,12 @@ ob_start();
     <!-- KOP RESMI -->
     <table class="kop-table">
         <tr>
-            <td style="vertical-align:middle; width:58%;">
+            <td style="vertical-align:middle; width:60%;">
                 <table style="width: 100%; border-collapse: collapse; border: none;">
                     <tr>
                         <?php if (!empty($logoSrc)): ?>
-                        <td style="width: 65px; vertical-align: middle; padding-right: 14px; border: none;">
-                            <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 52px; max-width: 65px; object-fit: contain; display: block;">
+                        <td style="width: 1%; white-space: nowrap; vertical-align: middle; padding-right: 8px; border: none;">
+                            <img src="<?= $logoSrc ?>" alt="Logo" style="width: 135px; height: auto; max-height: 52px; display: block;">
                         </td>
                         <?php endif; ?>
                         <td style="vertical-align: middle; border: none; padding: 0;">
@@ -65,7 +65,7 @@ ob_start();
                     </tr>
                 </table>
             </td>
-            <td style="vertical-align:middle; width:42%;" class="doc-title-box">
+            <td style="vertical-align:middle; width:40%;" class="doc-title-box">
                 <div class="doc-title"><?= $docTitle ?></div>
                 <div class="doc-number"><?= htmlspecialchars($nomorDokumen) ?></div>
                 <div style="font-size:8pt; color:#6b7280; margin-top:2px;">
@@ -214,12 +214,12 @@ ob_start();
         <!-- KOP RESMI PERUSAHAAN & HEADER PO -->
         <table class="dm-table">
             <tr>
-                <td style="width: 55%; vertical-align: middle;">
+                <td style="width: 60%; vertical-align: middle;">
                     <table style="width: 100%; border-collapse: collapse; border: none;">
                         <tr>
                             <?php if (!empty($logoSrc)): ?>
-                            <td style="width: 66px; vertical-align: middle; padding-right: 10px; border: none;">
-                                <img src="<?= $logoSrc ?>" alt="Logo" style="max-height: 56px; max-width: 66px; object-fit: contain; filter: grayscale(100%); display: block;">
+                            <td style="width: 1%; white-space: nowrap; vertical-align: middle; padding-right: 8px; border: none;">
+                                <img src="<?= $logoSrc ?>" alt="Logo" style="width: 130px; height: auto; max-height: 48px; display: block;">
                             </td>
                             <?php endif; ?>
                             <td style="vertical-align: middle; border: none; padding: 0;">
@@ -231,7 +231,7 @@ ob_start();
                         </tr>
                     </table>
                 </td>
-                <td style="width: 45%; vertical-align: middle; text-align: right;">
+                <td style="width: 40%; vertical-align: middle; text-align: right;">
                     <div class="dm-title"><?= $docTitle ?></div>
                     <table class="dm-meta-table">
                         <tr>
@@ -406,9 +406,9 @@ ob_start();
 
         <!-- FOOTER COPY INDIKATOR RANGKAP NCR -->
         <div class="dm-ncr-footer">
-            <span>[ ] Lembar 1 (Putih): Purchasing / Arsip</span> &nbsp;&bull;&nbsp;
+            <span>[ ] Lembar 1 (Putih): Purchasing/Arsip</span> &nbsp;&bull;&nbsp;
             <span>[ ] Lembar 2 (Merah): Vendor Pemasok</span> &nbsp;&bull;&nbsp;
-            <span>[ ] Lembar 3 (Kuning): Petugas Gudang / Driver</span>
+            <span>[ ] Lembar 3 (Kuning): Gudang/Driver</span>
         </div>
     </div>
     <div class="tractor-strip tractor-right"></div>
