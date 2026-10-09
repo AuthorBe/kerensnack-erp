@@ -1663,6 +1663,22 @@ ob_start();
                             </div>
                         </template>
 
+                        <!-- 2b. Titipan Uang Toko (Khusus Pembayaran Tempo Faktur / Tempo Tanggal) -->
+                        <template x-if="activeDelivery?.tipe_pembayaran !== 'tunai' && activeDelivery?.tipe_pembayaran !== 'cash'">
+                            <div style="padding: 14px 16px; background: rgba(245,158,11,0.06); border: 1.5px solid rgba(245,158,11,0.28); border-radius: 16px;" class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="block font-bold text-xs uppercase tracking-wider" style="color:#b45309;">
+                                        💼 Titipan Uang Toko (Opsional)
+                                    </label>
+                                    <span class="badge badge-warning" style="font-size:10px;">Tempo Toko</span>
+                                </div>
+                                <input type="text" name="catatan_titipan_tunai" placeholder="Contoh: Toko titip cash Rp 1.500.000 bayar nota sebelumnya" class="form-input text-xs font-semibold" style="height: 42px; border-radius: 12px; background: #ffffff;">
+                                <div style="font-size: 11px; color: var(--color-ink-mute); line-height: 1.35;">
+                                    Jika toko menitipkan uang tunai untuk nota sebelumnya, tulis nominalnya di sini agar kasir kantor memotong nota terkait saat setoran sore.
+                                </div>
+                            </div>
+                        </template>
+
                         <!-- 3. Upload Foto Bukti Serah Terima (Kamera / Galeri HP - Maksimal 5 Foto) -->
                         <div class="photo-uploader-wrap">
                             <div class="flex items-center justify-between">

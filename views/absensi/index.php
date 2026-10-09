@@ -334,6 +334,165 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
     flex-shrink: 0;
 }
 
+/* Employee Name Alignment & Status Indicators */
+.emp-name-wrapper {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    max-width: 100% !important;
+    line-height: 1.25 !important;
+}
+.emp-name-title {
+    font-weight: 700 !important;
+    font-size: 13px !important;
+    color: #0f172a !important;
+    white-space: nowrap !important;
+}
+.dark .emp-name-title {
+    color: #f8fafc !important;
+}
+
+/* 1. Ikon Centang Hijau Minimalis (Absensi Terisi di Tanggal Ini) */
+.badge-presence-check {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
+    min-height: 14px !important;
+    border-radius: 9999px !important;
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+    flex-shrink: 0 !important;
+    line-height: 1 !important;
+    box-shadow: 0 1px 2px rgba(16, 185, 129, 0.35) !important;
+}
+.badge-presence-check svg {
+    width: 9px !important;
+    height: 9px !important;
+    stroke: #ffffff !important;
+    stroke-width: 3.5 !important;
+    fill: none !important;
+    display: block !important;
+}
+
+/* 2. Badge Locked Merah Modern (Rapi, Sejajar, Presisi) */
+.badge-locked-pill {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 2px 7.5px !important;
+    border-radius: 9999px !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    background-color: #fef2f2 !important;
+    color: #b91c1c !important;
+    border: 1px solid #fecaca !important;
+    flex-shrink: 0 !important;
+    user-select: none !important;
+    box-shadow: 0 1px 2px rgba(220, 38, 38, 0.06) !important;
+}
+.dark .badge-locked-pill {
+    background-color: rgba(153, 27, 27, 0.25) !important;
+    color: #fca5a5 !important;
+    border-color: rgba(185, 28, 28, 0.5) !important;
+}
+.badge-locked-pill svg {
+    width: 10.5px !important;
+    height: 10.5px !important;
+    stroke: #dc2626 !important;
+    flex-shrink: 0 !important;
+    display: block !important;
+}
+.dark .badge-locked-pill svg {
+    stroke: #fca5a5 !important;
+}
+
+/* Banner Kas Harian Terproteksi (Hijau Harmonis & Elegan Sesuai Kesan Info) */
+.kas-disbursement-banner {
+    background-color: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+    border-radius: 14px !important;
+    padding: 12px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    font-size: 12px !important;
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.08) !important;
+    margin-bottom: 4px !important;
+}
+.dark .kas-disbursement-banner {
+    background-color: rgba(6, 78, 59, 0.25) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+}
+.kas-banner-icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 10px !important;
+    background-color: #d1fae5 !important;
+    color: #047857 !important;
+    border: 1px solid #a7f3d0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+.dark .kas-banner-icon {
+    background-color: rgba(6, 95, 70, 0.5) !important;
+    color: #6ee7b7 !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+}
+.kas-banner-badge {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #065f46 !important;
+    background-color: #d1fae5 !important;
+    border: 1px solid #a7f3d0 !important;
+    padding: 4px 10px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+}
+.dark .kas-banner-badge {
+    background-color: rgba(6, 95, 70, 0.5) !important;
+    color: #a7f3d0 !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+}
+.kas-banner-title {
+    font-weight: 700 !important;
+    color: #065f46 !important;
+}
+.dark .kas-banner-title {
+    color: #a7f3d0 !important;
+}
+.kas-banner-nominal {
+    font-family: var(--font-mono, monospace) !important;
+    font-weight: 800 !important;
+    color: #047857 !important;
+}
+.dark .kas-banner-nominal {
+    color: #34d399 !important;
+}
+.kas-banner-subtitle {
+    font-size: 11px !important;
+    color: #047857 !important;
+    opacity: 0.85 !important;
+    margin-top: 2px !important;
+    line-height: 1.4 !important;
+}
+.dark .kas-banner-subtitle {
+    color: #a7f3d0 !important;
+    opacity: 0.8 !important;
+}
+
 /* 6. Professional Currency Input Group (Zero Overlap) */
 .input-group-currency {
     display: flex;
@@ -405,6 +564,28 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
    MOBILE RESPONSIVE CARD VIEW (SCREEN WIDTH < 768px)
    ========================================================================= */
 @media (max-width: 767.98px) {
+    .kas-disbursement-banner {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        padding: 10px 12px !important;
+        border-radius: 12px !important;
+    }
+    .kas-banner-icon {
+        width: 30px !important;
+        height: 30px !important;
+        border-radius: 8px !important;
+    }
+    .kas-banner-icon svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+    .emp-name-title {
+        max-width: 180px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
     /* Hide Table Header on Mobile */
     .responsive-absensi-table thead {
         display: none !important;
@@ -1034,26 +1215,30 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
     <!-- 3.5. BANNER STATUS KAS & PROTEKSI SELISIH FISIK                          -->
     <!-- ========================================================================= -->
     <?php if ($totalDisbursedToday > 0): ?>
-    <div class="kas-disbursement-banner bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-xl p-3 sm:p-3.5 flex items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
-        <div class="flex items-start sm:items-center gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
-                <i data-lucide="shield-check" class="w-4 h-4"></i>
+    <div class="kas-disbursement-banner">
+        <div class="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div class="kas-banner-icon shrink-0">
+                <i data-lucide="shield-check" style="width:18px; height:18px;"></i>
             </div>
-            <div class="min-w-0">
-                <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 flex-wrap">
-                    <span>Kas Harian Terproteksi:</span>
-                    <span class="text-emerald-700 dark:text-emerald-400 font-mono font-extrabold"><?= Format::rupiah($totalDisbursedToday) ?></span>
-                    <span class="text-slate-400 font-normal">telah dicairkan dari</span>
-                    <span class="font-semibold text-slate-700 dark:text-slate-300"><?= htmlspecialchars($disbursedKasSummary ?: 'Kas Toko') ?></span>
-                    <span class="text-slate-400 font-normal">(<?= $countDisbursedEmployees ?> karyawan)</span>
+            <div class="min-w-0 flex-1">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:gap-2 text-xs">
+                    <div class="kas-banner-title flex items-baseline gap-1.5 flex-wrap">
+                        <span>Kas Harian Terproteksi:</span>
+                        <span class="kas-banner-nominal text-[13px] sm:text-xs"><?= Format::rupiah($totalDisbursedToday) ?></span>
+                    </div>
+                    <div class="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5 sm:mt-0 flex items-center gap-1 flex-wrap">
+                        <span class="hidden sm:inline opacity-50">&bull;</span>
+                        <span>telah dicairkan dari <strong class="text-slate-800 dark:text-slate-100 font-semibold underline decoration-emerald-400 dark:decoration-emerald-500"><?= htmlspecialchars($disbursedKasSummary ?: 'Kas Toko') ?></strong></span>
+                        <span class="opacity-80">(<?= $countDisbursedEmployees ?> karyawan)</span>
+                    </div>
                 </div>
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                <div class="kas-banner-subtitle mt-1">
                     Uang yang sudah dicairkan aman terkunci. Mengedit kehadiran karyawan lain <strong>tidak akan memotong kas kembali</strong> dan tidak memunculkan pop-up kas.
                 </div>
             </div>
         </div>
-        <div class="hidden md:flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 shrink-0 bg-emerald-100/70 dark:bg-emerald-900/50 px-2.5 py-1 rounded-md">
-            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+        <div class="hidden md:flex kas-banner-badge shrink-0">
+            <i data-lucide="check" style="width:14px; height:14px;"></i>
             <span>Sinkron Fisik 100%</span>
         </div>
     </div>
@@ -1146,6 +1331,7 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                             <?php $no = 1; foreach ($karyawanBorongan as $emp): 
                                 $kid = $emp['karyawan_id'];
                                 $isLocked = !empty($emp['penggajian_id']);
+                                $hasAbsensi = !empty($emp['absensi_id']);
                                 $statusKehadiran = $emp['status_kehadiran'] ?? 'hadir';
                                 $initials = strtoupper(substr($emp['nama_karyawan'], 0, 2));
                                 $uangHadir = (float)($emp['uang_kehadiran_harian'] ?? 0);
@@ -1162,10 +1348,23 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                                              <?= $initials ?>
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                <span class="font-bold text-slate-900 dark:text-slate-100 truncate text-xs sm:text-sm"><?= htmlspecialchars($emp['nama_karyawan']) ?></span>
+                                            <div class="emp-name-wrapper">
+                                                <span class="emp-name-title"><?= htmlspecialchars($emp['nama_karyawan']) ?></span>
+                                                <?php if ($hasAbsensi): ?>
+                                                    <span class="badge-presence-check" title="Sudah ada data absensi pada tanggal ini">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                                        </svg>
+                                                    </span>
+                                                <?php endif; ?>
                                                 <?php if ($isLocked): ?>
-                                                    <span class="badge badge-neutral text-[9px] py-0 px-1">🔒 Locked</span>
+                                                    <span class="badge-locked-pill" title="Data absensi terkunci oleh periode penggajian">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                                        </svg>
+                                                        <span>Locked</span>
+                                                    </span>
                                                 <?php endif; ?>
                                             </div>
                                             <div class="flex items-center gap-1.5 mt-0.5">
@@ -1215,9 +1414,10 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
 
                                 <!-- Catatan Khusus -->
                                 <td class="col-catatan py-2.5 px-3.5">
+                                    <?php $catatanVal = ($emp['catatan'] && strtoupper(trim((string)$emp['catatan'])) !== 'NULL') ? $emp['catatan'] : ''; ?>
                                     <input type="text" 
                                            name="absensi[<?= $kid ?>][catatan]" 
-                                           value="<?= htmlspecialchars($emp['catatan'] ?? '') ?>" 
+                                           value="<?= htmlspecialchars($catatanVal) ?>" 
                                            placeholder="Keterangan opsional..." 
                                            <?= $isLocked ? 'disabled' : '' ?>
                                            class="form-input form-input-sm text-xs rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 w-full py-1.5 px-2.5 focus:ring-1 focus:ring-rose-800">
@@ -1267,6 +1467,7 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                             <?php $no = 1; foreach ($karyawanBulanan as $emp): 
                                 $kid = $emp['karyawan_id'];
                                 $isLocked = !empty($emp['penggajian_id']);
+                                $hasAbsensi = !empty($emp['absensi_id']);
                                 $statusKehadiran = $emp['status_kehadiran'] ?? 'hadir';
                                 $initials = strtoupper(substr($emp['nama_karyawan'], 0, 2));
                                 $gajiPokok = (float)($emp['gaji_pokok_bulanan'] ?? 0);
@@ -1284,10 +1485,23 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                                             <?= $initials ?>
                                         </div>
                                         <div class="min-w-0 flex-1">
-                                            <div class="flex items-center gap-1.5 flex-wrap">
-                                                <span class="font-bold text-slate-900 dark:text-slate-100 truncate text-xs sm:text-sm"><?= htmlspecialchars($emp['nama_karyawan']) ?></span>
+                                            <div class="emp-name-wrapper">
+                                                <span class="emp-name-title"><?= htmlspecialchars($emp['nama_karyawan']) ?></span>
+                                                <?php if ($hasAbsensi): ?>
+                                                    <span class="badge-presence-check" title="Sudah ada data absensi pada tanggal ini">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                                        </svg>
+                                                    </span>
+                                                <?php endif; ?>
                                                 <?php if ($isLocked): ?>
-                                                    <span class="badge badge-neutral text-[9px] py-0 px-1">🔒 Locked</span>
+                                                    <span class="badge-locked-pill" title="Data absensi terkunci oleh periode penggajian">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                                        </svg>
+                                                        <span>Locked</span>
+                                                    </span>
                                                 <?php endif; ?>
                                             </div>
                                             <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
@@ -1353,9 +1567,6 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                                             <span class="toggle-pill-badge is-ambil <?= $isAlreadyDisbursed ? 'border-emerald-400 dark:border-emerald-700 bg-emerald-50/60 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-semibold' : '' ?>">
                                                 <i data-lucide="<?= $isAlreadyDisbursed ? 'shield-check' : 'wallet' ?>" class="w-3.5 h-3.5 <?= $isAlreadyDisbursed ? 'text-emerald-600 dark:text-emerald-400' : '' ?>"></i>
                                                 <span>Ambil <?= Format::rupiah($uangHadir) ?></span>
-                                                <?php if ($isAlreadyDisbursed): ?>
-                                                    <span class="text-[9.5px] bg-emerald-600 text-white font-extrabold px-1.5 py-0.2 rounded-full ml-1">Cair</span>
-                                                <?php endif; ?>
                                             </span>
                                         </label>
                                     <?php else: ?>
@@ -1380,9 +1591,10 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
 
                                 <!-- Catatan Khusus -->
                                 <td class="col-catatan py-2.5 px-3.5">
+                                    <?php $catatanVal = ($emp['catatan'] && strtoupper(trim((string)$emp['catatan'])) !== 'NULL') ? $emp['catatan'] : ''; ?>
                                     <input type="text" 
                                            name="absensi[<?= $kid ?>][catatan]" 
-                                           value="<?= htmlspecialchars($emp['catatan'] ?? '') ?>" 
+                                           value="<?= htmlspecialchars($catatanVal) ?>" 
                                            placeholder="Catatan..." 
                                            <?= $isLocked ? 'disabled' : '' ?> 
                                            class="form-input form-input-sm text-xs rounded-lg border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 w-full py-1.5 px-2.5 focus:ring-1 focus:ring-rose-800">
@@ -1404,19 +1616,39 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                 </table>
             </div>
 
-            <!-- Footer Bar (Desktop) -->
-            <div class="p-3 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs text-slate-500">
-                <div class="flex items-center gap-1.5 text-[11.5px]">
-                    <i data-lucide="info" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                    <span>Data yang sudah disetujui dalam periode penggajian akan terkunci (🔒) dan tidak dapat dimodifikasi.</span>
+            <!-- Footer Bar / Keterangan Status Presensi -->
+            <div class="p-3 sm:px-4 bg-slate-50/90 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-500">
+                <div class="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3.5 text-[11px] sm:text-[11.5px] text-slate-600 dark:text-slate-400">
+                    <div class="flex items-center gap-2">
+                        <span class="badge-presence-check shrink-0" style="width:14px; height:14px; min-width:14px; min-height:14px; margin-left:0;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" style="width:9px; height:9px;">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </span>
+                        <span class="leading-tight">Sudah ada catatan absensi di tanggal ini</span>
+                    </div>
+                    <span class="text-slate-300 dark:text-slate-600 hidden sm:inline">•</span>
+                    <div class="flex items-center gap-2">
+                        <span class="badge-locked-pill shrink-0" style="padding: 1.5px 6px; font-size: 9.5px; margin-left:0;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:9px; height:9px;">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <span>Locked</span>
+                        </span>
+                        <span class="leading-tight">Terkunci periode penggajian (tidak dapat diubah)</span>
+                    </div>
                 </div>
-                <div class="hidden sm:block">
+                <div class="hidden sm:block shrink-0">
                     <button type="button" 
                             @click="handleSimpanPresensi()" 
+                            :disabled="isSubmitting || <?= $isTanggalLocked ? 'true' : 'false' ?>"
+                            :class="{'opacity-75 cursor-not-allowed': isSubmitting}"
                             class="btn btn-primary-maroon btn-sm flex items-center gap-1.5 px-4 py-1.5 font-semibold text-xs rounded-lg" 
                             <?= $isTanggalLocked ? 'disabled' : '' ?>>
-                        <i data-lucide="save" class="w-3.5 h-3.5"></i>
-                        <span>Simpan Presensi</span>
+                        <i data-lucide="save" class="w-3.5 h-3.5" x-show="!isSubmitting"></i>
+                        <svg x-show="isSubmitting" class="animate-spin w-3.5 h-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span x-text="isSubmitting ? 'Menyimpan...' : 'Simpan Presensi'">Simpan Presensi</span>
                     </button>
                 </div>
             </div>
@@ -1431,10 +1663,13 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
         </div>
         <button type="button" 
                 @click="handleSimpanPresensi()" 
+                :disabled="isSubmitting || <?= $isTanggalLocked ? 'true' : 'false' ?>"
+                :class="{'opacity-75 cursor-not-allowed': isSubmitting}"
                 class="btn btn-primary-maroon btn-sm flex items-center gap-1.5 px-4 py-2 font-semibold text-xs rounded-xl shadow-md" 
                 <?= $isTanggalLocked ? 'disabled' : '' ?>>
-            <i data-lucide="save" class="w-4 h-4"></i>
-            <span>Simpan Presensi</span>
+            <i data-lucide="save" class="w-4 h-4" x-show="!isSubmitting"></i>
+            <svg x-show="isSubmitting" class="animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <span x-text="isSubmitting ? 'Menyimpan...' : 'Simpan Presensi'">Simpan Presensi</span>
         </button>
     </div>
 
@@ -1591,11 +1826,12 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                     </button>
                     <button type="button" 
                             @click="confirmAndSubmit()" 
-                            :disabled="!selectedKasId"
-                            :class="{'opacity-50 cursor-not-allowed': !selectedKasId}"
+                            :disabled="!selectedKasId || isSubmitting"
+                            :class="{'opacity-50 cursor-not-allowed': !selectedKasId || isSubmitting}"
                             class="modal-btn-submit-custom">
-                        <i data-lucide="check" style="width:15px; height:15px;"></i>
-                        <span>Konfirmasi & Simpan</span>
+                        <i data-lucide="check" style="width:15px; height:15px;" x-show="!isSubmitting"></i>
+                        <svg x-show="isSubmitting" class="animate-spin w-3.5 h-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <span x-text="isSubmitting ? 'Menyimpan...' : 'Konfirmasi & Simpan'">Konfirmasi & Simpan</span>
                     </button>
                 </div>
             </div>
@@ -1629,6 +1865,7 @@ function absensiApp() {
         tab: 'borongan',
         searchQuery: '',
         isDirty: false,
+        isSubmitting: false,
         showKasModal: false,
         modalAmbilList: [],
         modalTotalNominal: 0,
@@ -1668,6 +1905,9 @@ function absensiApp() {
         ), JSON_UNESCAPED_UNICODE) ?: '{}' ?>,
         selectedKasId: '<?= $initialKasId ?>',
         formatRupiah(val) {
+            if (window.formatRupiah) {
+                return window.formatRupiah(val);
+            }
             return 'Rp ' + Number(val || 0).toLocaleString('id-ID');
         },
         boronganList: <?= json_encode(array_values(array_map(function($e) { return strtolower($e['nama_karyawan'] . ' ' . ($e['posisi'] ?? '')); }, $karyawanBorongan ?? []))) ?>,
@@ -1694,7 +1934,7 @@ function absensiApp() {
             });
             this.isDirty = true;
         },
-        onStatusChanged(radioEl) {
+        async onStatusChanged(radioEl) {
             this.isDirty = true;
             const row = radioEl.closest('.attendance-row');
             if (!row) return;
@@ -1716,16 +1956,21 @@ function absensiApp() {
                     `Pastikan uang fisik telah disetorkan kembali oleh karyawan ke kasir agar tidak terjadi selisih kas fisik!\n\n` +
                     `Apakah Anda yakin ingin melanjutkan perubahan status?`;
 
+                let confirmed = false;
                 if (window.AppConfirm) {
-                    window.AppConfirm(warnMsg, () => {
-                        this.applyStatusChange(row, status, telatBox, ambilBox, lemburInput);
-                    }, () => {
-                        // Batal -> kembalikan radio ke 'hadir'
-                        const hadirRadio = row.querySelector('input[type="radio"][value="hadir"]');
-                        if (hadirRadio) hadirRadio.checked = true;
+                    confirmed = await window.AppConfirm({
+                        title: 'Konfirmasi Tindakan',
+                        message: warnMsg,
+                        type: 'danger',
+                        confirmText: 'Lanjutkan',
+                        cancelText: 'Batal'
                     });
-                    return;
-                } else if (!confirm(warnMsg)) {
+                } else {
+                    confirmed = window.confirm(warnMsg);
+                }
+
+                if (!confirmed) {
+                    // Batal -> kembalikan radio ke 'hadir'
                     const hadirRadio = row.querySelector('input[type="radio"][value="hadir"]');
                     if (hadirRadio) hadirRadio.checked = true;
                     return;
@@ -1743,7 +1988,7 @@ function absensiApp() {
                 }
             }
         },
-        onAmbilUangChanged(boxEl, kid) {
+        async onAmbilUangChanged(boxEl, kid) {
             this.isDirty = true;
             const existing = this.existingPenarikanMap[kid];
             if (!boxEl.checked && existing && Number(existing.nominal || 0) > 0) {
@@ -1754,16 +1999,27 @@ function absensiApp() {
                     `Pastikan uang fisik telah disetorkan kembali oleh karyawan ke kasir agar tidak ada selisih kas fisik!\n\n` +
                     `Apakah uang fisik benar-benar telah dikembalikan?`;
 
+                let confirmed = false;
                 if (window.AppConfirm) {
-                    window.AppConfirm(warnMsg, () => {}, () => {
-                        boxEl.checked = true; // Batal -> tetap centang
+                    confirmed = await window.AppConfirm({
+                        title: 'Konfirmasi Tindakan',
+                        message: warnMsg,
+                        type: 'danger',
+                        confirmText: 'Ya, Kembalikan',
+                        cancelText: 'Batal'
                     });
-                } else if (!confirm(warnMsg)) {
-                    boxEl.checked = true;
+                } else {
+                    confirmed = window.confirm(warnMsg);
+                }
+
+                if (!confirmed) {
+                    boxEl.checked = true; // Batal -> tetap centang
                 }
             }
         },
-        handleSimpanPresensi() {
+        async handleSimpanPresensi() {
+            if (this.isSubmitting) return;
+
             const newList = [];
             let totalNewCashNeeded = 0;
             let hasCanceledDisbursements = false;
@@ -1829,12 +2085,20 @@ function absensiApp() {
                     `Pastikan uang fisik telah disetorkan kembali oleh karyawan ke kasir agar tidak terjadi selisih kas fisik!\n\n` +
                     `Apakah Anda yakin ingin memproses simpan?`;
 
+                let confirmed = false;
                 if (window.AppConfirm) {
-                    window.AppConfirm(confirmMsg, () => {
-                        this.processSubmitWithCashCheck(totalNewCashNeeded, newList);
+                    confirmed = await window.AppConfirm({
+                        title: 'Konfirmasi Tindakan',
+                        message: confirmMsg,
+                        type: 'danger',
+                        confirmText: 'Konfirmasi',
+                        cancelText: 'Batal'
                     });
-                    return;
-                } else if (!confirm(confirmMsg)) {
+                } else {
+                    confirmed = window.confirm(confirmMsg);
+                }
+
+                if (!confirmed) {
                     return;
                 }
             }
@@ -1847,6 +2111,7 @@ function absensiApp() {
             // LANGSUNG SIMPAN tanpa memunculkan modal pop up!
             // Karyawan lain yang diedit tidak akan memicu pemotongan kas ulang!
             if (totalNewCashNeeded <= 0 || newList.length === 0) {
+                this.isSubmitting = true;
                 window._isSubmittingPresensi = true;
                 const form = document.getElementById('formPresensi');
                 if (form) {
@@ -1887,6 +2152,7 @@ function absensiApp() {
                 return;
             }
 
+            this.isSubmitting = true;
             this.showKasModal = false;
             window._isSubmittingPresensi = true;
             this.$nextTick(() => {

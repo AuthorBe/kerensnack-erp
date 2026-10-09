@@ -663,11 +663,11 @@ class DeliveryController extends Controller
                 SELECT COALESCE(gp.id, i.id) as grup_id,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as kode_sku,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as barcode_universal,
                        COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
                        SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
-                       MAX(ip.harga_satuan) as harga_satuan,
+                       MAX(ip.harga_satuan_deal) as harga_satuan,
                        MAX(ip.harga_satuan_deal) as harga_satuan_deal,
                        SUM(ip.diskon_item_nominal) as diskon_item_nominal,
                        SUM(ip.subtotal) as subtotal
@@ -678,7 +678,7 @@ class DeliveryController extends Controller
                   AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
                 GROUP BY COALESCE(gp.id, i.id),
                          COALESCE(gp.nama_grup, i.nama_item),
-                         COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku),
                          COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                 ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['pesanan_id' => $delivery['pesanan_id']]);
@@ -1143,6 +1143,10 @@ class DeliveryController extends Controller
         $nominalTunai = (float)str_replace(['.', ','], '', (string)$this->input('nominal_tunai_diterima', 0));
         $akunKasId = $this->input('akun_kas_id');
         $catatanDriver = trim((string)$this->input('catatan_driver', ''));
+        $catatanTitipanTunai = trim((string)$this->input('catatan_titipan_tunai', ''));
+        if (!empty($catatanTitipanTunai)) {
+            $catatanDriver = trim("[Titipan Tunai Toko: {$catatanTitipanTunai}] " . $catatanDriver);
+        }
 
         if (empty($sjId) || empty($penerima)) {
             $this->flashError('Nama penerima toko wajib diisi.');
@@ -1541,11 +1545,11 @@ class DeliveryController extends Controller
                 SELECT COALESCE(gp.id, i.id) as grup_id,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_item,
                        COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as kode_sku,
-                       COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku) as barcode_universal,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as kode_sku,
+                       COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as barcode_universal,
                        COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
                        SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
-                       MAX(ip.harga_satuan) as harga_satuan,
+                       MAX(ip.harga_satuan_deal) as harga_satuan,
                        MAX(ip.harga_satuan_deal) as harga_satuan_deal,
                        SUM(ip.diskon_item_nominal) as diskon_item_nominal,
                        SUM(ip.subtotal) as subtotal
@@ -1556,7 +1560,7 @@ class DeliveryController extends Controller
                   AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
                 GROUP BY COALESCE(gp.id, i.id),
                          COALESCE(gp.nama_grup, i.nama_item),
-                         COALESCE(gp.barcode_universal, gp.kode_grup, i.barcode, i.kode_sku),
+                         COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku),
                          COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
                 ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
             ", ['pesanan_id' => $delivery['pesanan_id']]);

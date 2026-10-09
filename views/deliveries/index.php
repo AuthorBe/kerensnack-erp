@@ -170,25 +170,33 @@ ob_start();
                                 </template>
                             </td>
                             <?php endif; ?>
+                            <td class="cell-center cell-nowrap">
                                 <template x-if="d.status_surat_jalan === 'siap_kirim'">
-                                    <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-weight:700;font-size:11px;">
-                                        📦 Siap Berangkat
+                                    <span class="badge badge-primary" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:700;font-size:11px;padding:3.5px 10px;line-height:1;">
+                                        <i data-lucide="package" style="width:12px;height:12px;flex-shrink:0;"></i>
+                                        <span>Siap Berangkat</span>
                                     </span>
                                 </template>
                                 <template x-if="d.status_surat_jalan === 'sedang_dikirim'">
-                                    <span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-weight:700;font-size:11px;">
-                                        🚚 Sedang Dikirim
+                                    <span class="badge badge-info" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:700;font-size:11px;padding:3.5px 10px;line-height:1;">
+                                        <i data-lucide="truck" style="width:12px;height:12px;flex-shrink:0;"></i>
+                                        <span>Sedang Dikirim</span>
                                     </span>
                                 </template>
                                 <template x-if="d.status_surat_jalan === 'selesai_diterima'">
-                                    <span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-weight:700;font-size:11px;">
-                                        ✅ Selesai Diterima
+                                    <span class="badge badge-success" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:700;font-size:11px;padding:3.5px 10px;line-height:1;">
+                                        <i data-lucide="check-circle-2" style="width:12px;height:12px;flex-shrink:0;"></i>
+                                        <span>Selesai Diterima</span>
                                     </span>
                                 </template>
                                 <template x-if="d.status_surat_jalan === 'gagal_kembali' || d.status_surat_jalan === 'gagal_kirim' || d.status_surat_jalan === 'dibatalkan'">
-                                    <span class="badge" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;font-weight:700;font-size:11px;">
-                                        ❌ Gagal Kirim / Retur
+                                    <span class="badge badge-danger" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:700;font-size:11px;padding:3.5px 10px;line-height:1;">
+                                        <i data-lucide="alert-triangle" style="width:12px;height:12px;flex-shrink:0;"></i>
+                                        <span>Gagal Kirim / Retur</span>
                                     </span>
+                                </template>
+                                <template x-if="!['siap_kirim', 'sedang_dikirim', 'selesai_diterima', 'gagal_kembali', 'gagal_kirim', 'dibatalkan'].includes(d.status_surat_jalan)">
+                                    <span class="badge badge-secondary" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;font-weight:700;font-size:11px;padding:3.5px 10px;line-height:1;" x-text="(d.status_surat_jalan || 'Draft').replace(/_/g, ' ')"></span>
                                 </template>
                             </td>
                             <td class="cell-center cell-nowrap">
@@ -233,10 +241,6 @@ ob_start();
                                     <?php if (Auth::can('deliveries.print')): ?>
                                     <a :href="'<?= Router::url('/deliveries/print') ?>?id=' + d.id" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#0284c7;" title="Cetak Surat Jalan (Standar / Dot Matrix)">
                                         <i data-lucide="printer" style="width:14px;height:14px;"></i>
-                                    </a>
-
-                                    <a :href="'<?= Router::url('/deliveries/pdf') ?>?id=' + d.id" target="_blank" class="btn btn-ghost btn-sm" style="padding:6px 8px;color:#dc2626;" title="Unduh PDF Surat Jalan">
-                                        <i data-lucide="file-text" style="width:14px;height:14px;"></i>
                                     </a>
                                     <?php endif; ?>
                                 </div>
@@ -619,8 +623,11 @@ function deliveryApp() {
                     lucide.createIcons();
                 });
             } else {
-                this.$nextTick(() => lucide.createIcons());
+                this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
             }
+
+            this.$watch('searchQuery', () => this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }));
+            this.$watch('filterStatus', () => this.$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); }));
         },
 
         get filteredDeliveries() {

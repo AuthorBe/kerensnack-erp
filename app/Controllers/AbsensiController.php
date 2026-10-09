@@ -351,7 +351,8 @@ class AbsensiController extends Controller
                     ? !empty($row['ambil_uang']) 
                     : false;
                 
-                $catatan = !empty(trim((string)($row['catatan'] ?? ''))) ? trim((string)$row['catatan']) : null;
+                $rawCatatan = trim((string)($row['catatan'] ?? ''));
+                $catatan = (!empty($rawCatatan) && strtoupper($rawCatatan) !== 'NULL') ? $rawCatatan : null;
 
                 // UPSERT Absensi
                 $stmt = $pdo->prepare("

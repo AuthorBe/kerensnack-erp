@@ -15,4 +15,7 @@ if (!isset($order) && isset($delivery)) {
 }
 
 $backUrl = $backUrl ?? (\App\Core\Auth::can('deliveries.view_all') ? \App\Core\Router::url('/deliveries') : \App\Core\Router::url('/driver-deliveries'));
+if (!isset($pdfUrl) && !empty($delivery['id'])) {
+    $pdfUrl = \App\Core\Router::url('/deliveries/pdf?id=' . urlencode((string)$delivery['id']));
+}
 require ROOT_PATH . '/views/customer_orders/nota_reguler.php';

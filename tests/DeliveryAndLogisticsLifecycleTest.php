@@ -394,6 +394,60 @@ runTest("8. DeliveryController::store: Sanitasi input otomatis menormalkan input
 });
 
 // ------------------------------------------------------------------
+// 9. PRINT DOCUMENT QUERY INTEGRITY (ANTI i.barcode & ip.harga_satuan)
+// ------------------------------------------------------------------
+runTest("9. Delivery & Order Print: Query agregasi dokumen bebas dari kolom invalid (i.barcode, ip.harga_satuan)", function() use ($pdo) {
+    // 1. Static codebase cleanliness check across document controllers
+    $controllers = [
+        APP_ROOT . '/app/Controllers/DeliveryController.php',
+        APP_ROOT . '/app/Controllers/CustomerOrderController.php',
+        APP_ROOT . '/app/Controllers/OrderDocumentController.php',
+        APP_ROOT . '/app/Controllers/PosController.php',
+        APP_ROOT . '/app/Controllers/ConsignmentController.php',
+    ];
+
+    foreach ($controllers as $ctrlPath) {
+        $content = file_get_contents($ctrlPath);
+        if (preg_match('/i\.barcode\b/i', $content)) {
+            return "Ditemukan kolom invalid 'i.barcode' pada " . basename($ctrlPath);
+        }
+        if (preg_match('/it\.barcode\b/i', $content)) {
+            return "Ditemukan kolom invalid 'it.barcode' pada " . basename($ctrlPath);
+        }
+        if (preg_match('/ip\.harga_satuan\b/i', $content)) {
+            return "Ditemukan kolom invalid 'ip.harga_satuan' pada " . basename($ctrlPath);
+        }
+    }
+
+    // 2. Real query execution test
+    $stmt = $pdo->prepare("
+        SELECT COALESCE(gp.id, i.id) as grup_id,
+               COALESCE(gp.nama_grup, i.nama_item) as nama_item,
+               COALESCE(gp.nama_grup, i.nama_item) as nama_grup,
+               COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as kode_sku,
+               COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku) as barcode_universal,
+               COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs') as satuan_dasar,
+               SUM(ip.kuantitas_satuan_dasar) as kuantitas_satuan_dasar,
+               MAX(ip.harga_satuan_deal) as harga_satuan,
+               MAX(ip.harga_satuan_deal) as harga_satuan_deal,
+               SUM(ip.diskon_item_nominal) as diskon_item_nominal,
+               SUM(ip.subtotal) as subtotal
+        FROM public.item_pesanan ip
+        JOIN public.item i ON ip.item_id = i.id
+        LEFT JOIN public.grup_produk gp ON i.grup_id = gp.id
+        WHERE ip.pesanan_id = '00000000-0000-0000-0000-000000000000'
+          AND (ip.is_bonus IS FALSE OR ip.is_bonus IS NULL)
+        GROUP BY COALESCE(gp.id, i.id),
+                 COALESCE(gp.nama_grup, i.nama_item),
+                 COALESCE(ip.barcode_universal, gp.barcode_universal, gp.kode_grup, i.kode_sku),
+                 COALESCE(gp.satuan_dasar, i.satuan_dasar, 'pcs')
+        ORDER BY COALESCE(gp.nama_grup, i.nama_item) ASC
+    ");
+    $stmt->execute();
+    return true;
+});
+
+// ------------------------------------------------------------------
 // SUMMARY
 // ------------------------------------------------------------------
 echo "\n============================================================\n";
