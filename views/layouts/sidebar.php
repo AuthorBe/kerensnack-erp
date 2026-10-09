@@ -91,6 +91,15 @@ $isSidebarCollapsed = (($_COOKIE['ksnack_sidebar_collapsed'] ?? '1') !== '0');
         </a>
         <?php endif; ?>
 
+        <?php if (Auth::can(['orders.view_all', 'orders.view_assigned'])): ?>
+        <a href="<?= Router::url('/reguler') ?>"
+           class="sidebar-link <?= isActiveSection('/reguler', $currentPath, $base) ? 'is-active' : '' ?>"
+           data-tooltip="Portal Reguler">
+            <i data-lucide="store"></i>
+            <span>Portal Reguler</span>
+        </a>
+        <?php endif; ?>
+
         <?php if (Auth::can(['consignment.view_all', 'consignment.view_assigned'])): ?>
         <a href="<?= Router::url('/consignment') ?>"
            class="sidebar-link <?= isActiveSection('/consignment', $currentPath, $base) ? 'is-active' : '' ?>"

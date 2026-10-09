@@ -330,6 +330,12 @@ class TestRunnerService
             'category'    => 'Produksi & Gudang',
             'description' => 'Validasi pemotongan bahan mentah curah berbasis input bal riil, pemotongan kemasan berbasis pcs bungkus jadi, dan proteksi anti-stok minus.'
         ],
+        'reguler_portal' => [
+            'file'        => 'RegulerPortalTest.php',
+            'title'       => 'Portal Pesanan Reguler, Tempo & Credit Health',
+            'category'    => 'Penjualan & Piutang',
+            'description' => 'Validasi modul Portal Reguler (/reguler), Buku Piutang & Invoice Tagihan Tempo, Early Warning Kredit, serta Titipan Uang Toko Driver.'
+        ],
     ];
 
     /**

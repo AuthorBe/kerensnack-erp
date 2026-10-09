@@ -14,7 +14,7 @@ define('ROOT_PATH', dirname(__DIR__));
 // Load Environment Variables (.env)
 require_once ROOT_PATH . '/config/env.php';
 
-$isDev = (getenv('APP_ENV') === 'local' || getenv('APP_DEBUG') === 'true');
+$isDev = (($_ENV['APP_ENV'] ?? getenv('APP_ENV')) === 'local' || ($_ENV['APP_DEBUG'] ?? getenv('APP_DEBUG')) === 'true');
 
 // Reset OPcache only in development environment
 if ($isDev && function_exists('opcache_reset')) {
@@ -140,6 +140,7 @@ use App\Controllers\PenarikanGajiController;
 use App\Controllers\KasbonController;
 use App\Controllers\TabunganController;
 use App\Controllers\PenggajianController;
+use App\Controllers\RegulerPortalController;
 
 // =========================================================================
 // ROUTE REGISTRATION (Enterprise Router)
@@ -206,6 +207,13 @@ Router::get('/customer-orders/print', [CustomerOrderController::class, 'invoice'
 Router::post('/customer-orders/pay', [CustomerOrderController::class, 'pay']);
 Router::post('/customer-orders/cancel', [CustomerOrderController::class, 'cancel']);
 Router::post('/customer-orders/update-delivery-status', [CustomerOrderController::class, 'updateDeliveryStatus']);
+
+// --- TRANSAKSI: PORTAL REGULER (B2B GROSIR, BUKU PIUTANG & PENAGIHAN) ---
+Router::get('/reguler', [RegulerPortalController::class, 'index']);
+Router::get('/reguler/tagihan', [RegulerPortalController::class, 'tagihan']);
+Router::get('/reguler/tagihan/cetak', [RegulerPortalController::class, 'cetakInvoiceTagihan']);
+Router::get('/reguler/early-warning', [RegulerPortalController::class, 'earlyWarning']);
+Router::get('/reguler/laporan-toko', [RegulerPortalController::class, 'laporanToko']);
 
 // --- TRANSAKSI 2: MATRIKS HARGA 30 LEVEL & TIER PELANGGAN ---
 Router::get('/pricing', [PricingController::class, 'index']);
