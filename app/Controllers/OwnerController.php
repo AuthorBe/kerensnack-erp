@@ -193,10 +193,27 @@ class OwnerController extends Controller
 
             $agingSummary = Database::fetchOne("
                 SELECT 
-                    COALESCE(SUM(CASE WHEN CURRENT_DATE <= COALESCE(tanggal_jatuh_tempo, tanggal_pesanan) THEN sisa_tagihan ELSE 0 END), 0) as piutang_lancar,
-                    COALESCE(SUM(CASE WHEN CURRENT_DATE > COALESCE(tanggal_jatuh_tempo, tanggal_pesanan) AND CURRENT_DATE - COALESCE(tanggal_jatuh_tempo, tanggal_pesanan) <= 14 THEN sisa_tagihan ELSE 0 END), 0) as overdue_1_14,
-                    COALESCE(SUM(CASE WHEN CURRENT_DATE - COALESCE(tanggal_jatuh_tempo, tanggal_pesanan) BETWEEN 15 AND 30 THEN sisa_tagihan ELSE 0 END), 0) as overdue_15_30,
-                    COALESCE(SUM(CASE WHEN CURRENT_DATE - COALESCE(tanggal_jatuh_tempo, tanggal_pesanan) > 30 THEN sisa_tagihan ELSE 0 END), 0) as overdue_over_30,
+                    COALESCE(SUM(CASE 
+                        WHEN (tanggal_jatuh_tempo IS NOT NULL AND CURRENT_DATE <= tanggal_jatuh_tempo)
+                          OR (tanggal_jatuh_tempo IS NULL AND (CURRENT_DATE - tanggal_pesanan) <= 30)
+                        THEN sisa_tagihan ELSE 0 
+                    END), 0) as piutang_lancar,
+                    COALESCE(SUM(CASE 
+                        WHEN tanggal_jatuh_tempo IS NOT NULL 
+                          AND CURRENT_DATE > tanggal_jatuh_tempo 
+                          AND (CURRENT_DATE - tanggal_jatuh_tempo) <= 14 
+                        THEN sisa_tagihan ELSE 0 
+                    END), 0) as overdue_1_14,
+                    COALESCE(SUM(CASE 
+                        WHEN tanggal_jatuh_tempo IS NOT NULL 
+                          AND (CURRENT_DATE - tanggal_jatuh_tempo) BETWEEN 15 AND 30 
+                        THEN sisa_tagihan ELSE 0 
+                    END), 0) as overdue_15_30,
+                    COALESCE(SUM(CASE 
+                        WHEN (tanggal_jatuh_tempo IS NOT NULL AND (CURRENT_DATE - tanggal_jatuh_tempo) > 30)
+                          OR (tanggal_jatuh_tempo IS NULL AND (CURRENT_DATE - tanggal_pesanan) > 30)
+                        THEN sisa_tagihan ELSE 0 
+                    END), 0) as overdue_over_30,
                     COALESCE(SUM(sisa_tagihan), 0) as total_outstanding
                 FROM public.pesanan
                 WHERE status_pemrosesan != 'dibatalkan'
