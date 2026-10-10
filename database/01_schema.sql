@@ -801,7 +801,7 @@ CREATE TABLE IF NOT EXISTS public.rincian_penggajian (
     total_penarikan_gaji NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     is_excluded BOOLEAN NOT NULL DEFAULT FALSE,
     catatan_pengecualian TEXT,
-    gaji_bersih_diterima NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    gaji_bersih_diterima NUMERIC(15, 2) NOT NULL DEFAULT 0.00 CHECK (gaji_bersih_diterima >= 0),
     rincian_json JSONB NOT NULL DEFAULT '{}'::jsonb,
     dibuat_pada TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
