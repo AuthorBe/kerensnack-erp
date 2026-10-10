@@ -387,12 +387,106 @@
         });
     }
 
+    /**
+     * Universal File Download with AppAction Animated Loading Pop-up
+     * Fetches file as blob, displays animated AppAction modal, extracts filename from Content-Disposition,
+     * triggers native browser download, and shows success/error morph.
+     */
+    async function downloadFileWithLoading(url, options) {
+        options = options || {};
+        var title = options.title || 'Menyiapkan Berkas...';
+        var subtitle = options.subtitle || 'Mengompilasi data dan memproses unduhan...';
+        var defaultFilename = options.defaultFilename || 'download.pdf';
+
+        if (window.AppAction && typeof window.AppAction.show === 'function') {
+            window.AppAction.show(title, subtitle);
+        }
+
+        try {
+            var response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+
+            var contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+            if (!response.ok || (contentType.indexOf('application/json') !== -1 && contentType.indexOf('pdf') === -1)) {
+                var errorMsg = 'Terjadi kesalahan saat memproses berkas.';
+                try {
+                    var errData = await response.json();
+                    errorMsg = errData.message || errorMsg;
+                } catch (e) {
+                    var txt = await response.text();
+                    if (txt && txt.length < 300) errorMsg = txt;
+                }
+                if (window.AppAction && typeof window.AppAction.error === 'function') {
+                    await window.AppAction.error('Gagal Mengunduh!', errorMsg, 3200);
+                } else if (window.toast) {
+                    window.toast.error(errorMsg);
+                }
+                return false;
+            }
+
+            var filename = defaultFilename;
+            var disposition = response.headers.get('content-disposition');
+            if (disposition) {
+                var mUtf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+                if (mUtf8 && mUtf8[1]) {
+                    filename = decodeURIComponent(mUtf8[1]).trim();
+                } else {
+                    var matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '').trim();
+                    }
+                }
+            }
+
+            var blob = await response.blob();
+            if (blob.size === 0) {
+                throw new Error('Berkas yang diterima kosong.');
+            }
+
+            var blobUrl = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+
+            setTimeout(function() {
+                if (a.parentNode) a.parentNode.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            }, 1000);
+
+            if (window.AppAction && typeof window.AppAction.success === 'function') {
+                await window.AppAction.success('Berhasil Diunduh! ✨', filename, 1800);
+            } else if (window.toast) {
+                window.toast.success('Berkas ' + filename + ' berhasil diunduh.');
+            }
+            return true;
+        } catch (err) {
+            console.error('[erp-helpers] Download error:', err);
+            var msg = err.message || 'Koneksi terputus saat mengunduh berkas.';
+            if (window.AppAction && typeof window.AppAction.error === 'function') {
+                await window.AppAction.error('Gagal Mengunduh!', msg, 3200);
+            } else if (window.toast) {
+                window.toast.error(msg);
+            }
+            return false;
+        }
+    }
+
     // Export to global window scope
     window.formatRupiah = formatRupiah;
     window.unformatRupiah = unformatRupiah;
     window.formatRupiahNumber = formatRupiahNumber;
     window.formatQty = formatQty;
     window.refreshIcons = refreshIcons;
+    window.downloadFileWithLoading = downloadFileWithLoading;
 
     // ERP Universal Branded Dialogs
     window.AppConfirm = AppConfirm;

@@ -1359,12 +1359,68 @@
           const sjMatch = msg.match(/SJ-[A-Z0-9\-]+/i);
           subtext = sjMatch ? `Nomor ${sjMatch[0]} siap untuk proses pengiriman.` : 'Dokumen surat jalan telah berhasil dibuat.';
         }
-      } else if ((lower.includes('po') || lower.includes('pesanan') || lower.includes('order')) && (lower.includes('disiapkan') || lower.includes('siap dikirim') || lower.includes('siap kirim'))) {
-        title = 'PO Berhasil Disiapkan! ✨';
-        subtext = 'Stok fisik gudang telah terpotong.';
-      } else if ((lower.includes('po') || lower.includes('pesanan') || lower.includes('purchase order') || lower.includes('antrean')) && (lower.includes('terbit') || lower.includes('diterbitkan') || lower.includes('masuk ke antrean'))) {
-        title = 'PO Berhasil Diterbitkan! ✨';
-        subtext = 'Pesanan masuk ke antrean daftar PO gudang.';
+      } else if (lower.includes('penggajian') || lower.includes('payroll') || lower.includes('gaji')) {
+        if (lower.includes('batal approval') || lower.includes('approval dibatalkan') || (lower.includes('batal') && lower.includes('approval'))) {
+          title = 'Approval Dibatalkan! ↩️';
+          subtext = msg;
+        } else if (lower.includes('disetujui') || lower.includes('approval') || lower.includes('approve')) {
+          title = 'Penggajian Disetujui! 🎉';
+          subtext = msg;
+        } else if (lower.includes('dibayarkan') || lower.includes('pelunasan') || lower.includes('lunas')) {
+          title = 'Gaji Berhasil Dibayarkan! 💵';
+          subtext = msg;
+        } else if (lower.includes('penyesuaian') || lower.includes('komponen') || lower.includes('rincian')) {
+          title = 'Penyesuaian Gaji Diperbarui! ✨';
+          subtext = msg;
+        } else if (lower.includes('dihapus') || lower.includes('hapus')) {
+          title = 'Data Penggajian Dihapus! 🗑️';
+          subtext = msg;
+        } else if (lower.includes('dibuat') || lower.includes('draft') || lower.includes('kalkulasi')) {
+          title = 'Draft Payroll Siap! 📋';
+          subtext = msg;
+        } else {
+          title = 'Penggajian Berhasil Diproses! ✨';
+          subtext = msg;
+        }
+      } else if (lower.includes('kasbon')) {
+        if (lower.includes('batal') || lower.includes('batalkan')) {
+          title = 'Kasbon Dibatalkan! ↩️';
+        } else if (lower.includes('lunas') || lower.includes('potong') || lower.includes('bayar')) {
+          title = 'Kasbon Berhasil Dipotong! 💵';
+        } else if (lower.includes('disetujui') || lower.includes('approve')) {
+          title = 'Kasbon Disetujui! ✨';
+        } else if (lower.includes('diajukan') || lower.includes('pengajuan') || lower.includes('tambah')) {
+          title = 'Pengajuan Kasbon Berhasil! 📝';
+        } else {
+          title = 'Data Kasbon Diperbarui! ✨';
+        }
+        subtext = msg;
+      } else if (lower.includes('tabungan')) {
+        if (lower.includes('tarik') || lower.includes('penarikan')) {
+          title = 'Penarikan Tabungan Berhasil! 💰';
+        } else if (lower.includes('setor') || lower.includes('simpan') || lower.includes('potong')) {
+          title = 'Setoran Tabungan Berhasil! 💰';
+        } else {
+          title = 'Data Tabungan Diperbarui! ✨';
+        }
+        subtext = msg;
+      } else if (lower.includes('karyawan')) {
+        if (lower.includes('dihapus') || lower.includes('hapus')) {
+          title = 'Karyawan Dihapus! 🗑️';
+        } else if (lower.includes('ditambahkan') || lower.includes('tambah') || lower.includes('baru')) {
+          title = 'Karyawan Baru Ditambahkan! 👤';
+        } else {
+          title = 'Data Karyawan Diperbarui! 👤';
+        }
+        subtext = msg;
+      } else if (/\bpo\b/i.test(lower) || lower.includes('pesanan') || lower.includes('purchase order')) {
+        if (lower.includes('disiapkan') || lower.includes('siap dikirim') || lower.includes('siap kirim')) {
+          title = 'PO Berhasil Disiapkan! ✨';
+          subtext = 'Stok fisik gudang telah terpotong.';
+        } else if (lower.includes('terbit') || lower.includes('diterbitkan') || lower.includes('masuk ke antrean')) {
+          title = 'PO Berhasil Diterbitkan! ✨';
+          subtext = 'Pesanan masuk ke antrean daftar PO gudang.';
+        }
       } else if (lower.includes('checkout') || lower.includes('transaksi')) {
         title = 'Transaksi Berhasil! ✨';
       } else if (lower.includes('dihapus') || lower.includes('delete')) {
@@ -1377,14 +1433,16 @@
         title = 'Berhasil Direset! ✨';
       }
 
-      // Ambil nomor nota atau referensi jika ada
-      const poMatch = msg.match(/(?:PO|Nota|Faktur)\s*#?([A-Z0-9\-_]+)/i);
-      if (poMatch && poMatch[0] && !subtext) {
-        subtext = `${poMatch[0]} siap diproses.`;
+      // Ambil referensi nomor dokumen valid HANYA jika dalam konteks pesanan/faktur/nota dan menggunakan batas kata (\b)
+      if (!subtext && (lower.includes('pesanan') || lower.includes('purchase order') || lower.includes('order') || lower.includes('faktur') || lower.includes('nota'))) {
+        const poMatch = msg.match(/\b(?:PO|Nota|Faktur)\s*#?([A-Z0-9\-_]+)\b/i);
+        if (poMatch && poMatch[0]) {
+          subtext = `${poMatch[0]} siap diproses.`;
+        }
       }
 
       if (!subtext && msg) {
-        const cleanTitle = title.toLowerCase().replace(/[!✨🎉🚚📦🧾🗑️]/g, '').trim();
+        const cleanTitle = title.toLowerCase().replace(/[!✨🎉🚚📦🧾🗑️📋💵💰📝👤↩️]/gu, '').trim();
         if (lower !== cleanTitle && lower !== cleanTitle.replace(/^data\s+/, '')) {
           subtext = msg;
         }
@@ -1404,6 +1462,12 @@
         title = 'Sinkronisasi Gagal!';
       } else if (lower.includes('stok') && (lower.includes('kurang') || lower.includes('tidak cukup') || lower.includes('mencukupi') || lower.includes('defisit'))) {
         title = 'Stok Gudang Tidak Cukup!';
+      } else if (lower.includes('saldo tabungan') || (lower.includes('tabungan') && lower.includes('tidak cukup'))) {
+        title = 'Saldo Tabungan Tidak Mencukupi!';
+      } else if (lower.includes('kasbon') && (lower.includes('melebihi') || lower.includes('limit') || lower.includes('maksimal'))) {
+        title = 'Batas Kasbon Terlampaui!';
+      } else if (lower.includes('minus') && (lower.includes('gaji') || lower.includes('upah'))) {
+        title = 'Gaji Bersih Tidak Boleh Minus!';
       } else if (lower.includes('ditolak') || lower.includes('melebihi')) {
         title = 'Transaksi Ditolak Sistem!';
       } else if (lower.includes('tidak ditemukan')) {

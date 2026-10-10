@@ -227,6 +227,25 @@ class PrintDocumentHelper
     }
 
     /**
+     * Ambil Data URI logo resmi aplikasi KEREN ONE (icon app bawaan, bukan logo perusahaan).
+     * Digunakan khusus untuk dokumen internal payroll (Slip Gaji & Rekapitulasi Penggajian).
+     *
+     * @return string Data URI base64 logo aplikasi
+     */
+    public static function getAppLogoSrc(): string
+    {
+        $appRoot = defined('APP_ROOT') ? APP_ROOT : (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__, 2));
+        $appLogoPath = $appRoot . '/public/assets/favicon/apple-touch-icon.png';
+        if (is_file($appLogoPath)) {
+            $content = @file_get_contents($appLogoPath);
+            if ($content !== false && $content !== '') {
+                return 'data:image/png;base64,' . base64_encode($content);
+            }
+        }
+        return '';
+    }
+
+    /**
      * Normalisasi atribut SVG agar kompatibel 100% dengan Dompdf.
      * Dompdf menghitung skala path SVG dari (target_width / svg_tag_width) tanpa memperhitungkan
      * rasio skala viewBox. Jika width/height berbeda dari viewBox (misal width 992 vs viewBox 491),
