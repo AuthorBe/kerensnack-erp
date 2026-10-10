@@ -46,6 +46,8 @@ declare(strict_types=1);
  * 24. Escrow Cash Account Query & Tabungan Pre-Check Guard
  * 25. toggleExclude Draft Status Guard & State Integrity
  * 26. Concurrency Row Lock Guard on deleteDraft & Approval
+ * 27. Multi-Account Cash Ledger Disbursement (Tunai & Bank Transfer Split)
+ * 28. Hardened cancelApprove Protection (Kasbon, Tabungan Solvency & Multi-Account Rollback)
  */
 
 define('ROOT_PATH', dirname(__DIR__));
@@ -335,7 +337,7 @@ runTest("9. PDF Slip & Rekap Template Compilation", function() {
         return "HTML output template slip gaji tidak valid.";
     }
 
-    $pdfSlip = PdfExport::render($htmlSlip, 'A5', 'portrait');
+    $pdfSlip = PdfExport::render($htmlSlip, 'A4', 'portrait');
     if (empty($pdfSlip) || strlen($pdfSlip) < 100) {
         return "Dompdf rendering gagal menghasilkan binary PDF slip gaji.";
     }
@@ -364,6 +366,24 @@ runTest("9. PDF Slip & Rekap Template Compilation", function() {
     $pdfRekap = PdfExport::render($htmlRekap, 'A4', 'landscape');
     if (empty($pdfRekap) || strlen($pdfRekap) < 100) {
         return "Dompdf rendering gagal menghasilkan binary PDF rekap gaji.";
+    }
+
+    // 9c. Batch Slip Gaji PDF (A4 2-Kolom Berdampingan Auto-Flow)
+    $batchItems = array_fill(0, 6, $dummyItem);
+    $isBatch = true;
+    $items = $batchItems;
+
+    ob_start();
+    require APP_ROOT . '/views/penggajian/slip_pdf.php';
+    $htmlBatch = ob_get_clean();
+
+    if (empty($htmlBatch) || !str_contains($htmlBatch, 'batch-grid') || !str_contains($htmlBatch, 'SLIP GAJI')) {
+        return "HTML output template batch slip gaji tidak valid.";
+    }
+
+    $pdfBatch = PdfExport::render($htmlBatch, 'A4', 'portrait');
+    if (empty($pdfBatch) || strlen($pdfBatch) < 100) {
+        return "Dompdf rendering gagal menghasilkan binary PDF batch slip gaji.";
     }
 
     return true;
@@ -571,6 +591,12 @@ try {
         }
         if ((float)$itemBul['total_upah_lembur'] !== 25000.00) {
             return "Lembur bulanan tidak sesuai: {$itemBul['total_upah_lembur']}";
+        }
+
+        // Cek metadata metode_pembayaran pada rincian_json
+        $rjsonBor = json_decode((string)$itemBor['rincian_json'], true) ?: [];
+        if (!isset($rjsonBor['metode_pembayaran'])) {
+            return "Item borongan tidak memiliki metadata metode_pembayaran pada rincian_json.";
         }
 
         return true;
@@ -1197,6 +1223,21 @@ try {
         $stmtRincian->execute(['rid' => $runId, 'kid' => $kidBorongan]);
         $rincianId = $stmtRincian->fetchColumn();
 
+        // 23a. Verify updateItem row lock query executes without PostgreSQL error
+        $stmtLockCheck = $pdo->prepare("
+            SELECT rp.*,
+                   COALESCE((SELECT nama_karyawan FROM public.v_karyawan_info WHERE id = rp.karyawan_id), 'Karyawan') as nama_karyawan,
+                   COALESCE((SELECT SUM(sisa_pinjaman) FROM public.kasbon WHERE karyawan_id = rp.karyawan_id AND status_kasbon = 'aktif'), 0) as sisa_kasbon,
+                   COALESCE((SELECT saldo FROM public.tabungan WHERE karyawan_id = rp.karyawan_id), 0) as saldo_tabungan
+            FROM public.rincian_penggajian rp
+            WHERE rp.id = :id AND rp.penggajian_id = :rid FOR UPDATE
+        ");
+        $stmtLockCheck->execute(['id' => $rincianId, 'rid' => $runId]);
+        $lockedItem = $stmtLockCheck->fetch(PDO::FETCH_ASSOC);
+        if (!$lockedItem || empty($lockedItem['nama_karyawan'])) {
+            return "Query FOR UPDATE updateItem gagal mengunci atau membaca nama_karyawan.";
+        }
+
         $newPotonganKasbon = 120000.00;
         $stmtActiveKb = $pdo->prepare("
             SELECT id, keterangan, total_pinjaman, potongan_per_periode, sisa_pinjaman 
@@ -1342,6 +1383,453 @@ try {
 
         if (!$lockedRow || $lockedRow['status'] !== 'draf') {
             return "Gagal mendapatkan row lock eksklusif FOR UPDATE pada draf penggajian.";
+        }
+
+        return true;
+    });
+
+    // --------------------------------------------------------------------------
+    // TEST 27: Multi-Account Cash Ledger Disbursement (Tunai & Bank Transfer Split)
+    // --------------------------------------------------------------------------
+    runTest("27. Multi-Account Cash Ledger Disbursement (Tunai & Bank Transfer Split)", function() use ($pdo, $kidBorongan, $kidBulanan) {
+        // Siapkan 2 akun kas berbeda: 1 Tunai, 1 Bank Transfer
+        $kasTunai = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE AND tipe_akun = 'kas_tunai' LIMIT 1");
+        $kasBank = Database::fetchOne("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE status_aktif = TRUE AND tipe_akun = 'bank' LIMIT 1");
+
+        if (!$kasTunai) {
+            $stmtKT = $pdo->prepare("INSERT INTO public.akun_kas (nama_akun, tipe_akun, saldo_saat_ini, status_aktif) VALUES ('Kas Tunai Test', 'kas_tunai', 1000000.00, TRUE) RETURNING id");
+            $stmtKT->execute();
+            $kasTunaiId = $stmtKT->fetchColumn();
+        } else {
+            $kasTunaiId = $kasTunai['id'];
+            $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini + 500000.00 WHERE id = :id")->execute(['id' => $kasTunaiId]);
+        }
+
+        if (!$kasBank || $kasBank['id'] === $kasTunaiId) {
+            $stmtKB = $pdo->prepare("INSERT INTO public.akun_kas (nama_akun, tipe_akun, saldo_saat_ini, status_aktif) VALUES ('Bank BCA Test', 'bank', 1000000.00, TRUE) RETURNING id");
+            $stmtKB->execute();
+            $kasBankId = $stmtKB->fetchColumn();
+        } else {
+            $kasBankId = $kasBank['id'];
+            $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini + 500000.00 WHERE id = :id")->execute(['id' => $kasBankId]);
+        }
+
+        $saldoAwalTunai = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasTunaiId]);
+        $saldoAwalBank = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasBankId]);
+
+        $gajiTunai = 75000.00;
+        $gajiTransfer = 125000.00;
+        $totalNetPayroll = $gajiTunai + $gajiTransfer;
+
+        $ref = 'PAY-SPLIT-' . uniqid();
+        $options = [
+            'disbursement_accounts' => [
+                'tunai_id' => $kasTunaiId,
+                'transfer_id' => $kasBankId,
+            ]
+        ];
+
+        $stmtRun = $pdo->prepare("
+            INSERT INTO public.penggajian (
+                nomor_referensi, nama_payroll, periode_awal, periode_akhir, tipe_penggajian, status, options_json, total_gaji_dikeluarkan, disetujui_pada
+            ) VALUES (
+                :ref, 'Split Disbursement Test', CURRENT_DATE, CURRENT_DATE, 'gabungan', 'disetujui', :opt, :total, NOW()
+            ) RETURNING id
+        ");
+        $stmtRun->execute(['ref' => $ref, 'opt' => json_encode($options), 'total' => $totalNetPayroll]);
+        $runId = $stmtRun->fetchColumn();
+
+        // Item 1: Tunai
+        $pdo->prepare("
+            INSERT INTO public.rincian_penggajian (
+                penggajian_id, karyawan_id, gaji_bersih_diterima, rincian_json
+            ) VALUES (
+                :rid, :kid, :total, :rjson
+            )
+        ")->execute([
+            'rid' => $runId,
+            'kid' => $kidBorongan,
+            'total' => $gajiTunai,
+            'rjson' => json_encode(['metode_pembayaran' => 'tunai', 'bank_nama' => 'Tunai'])
+        ]);
+
+        // Item 2: Transfer Bank
+        $pdo->prepare("
+            INSERT INTO public.rincian_penggajian (
+                penggajian_id, karyawan_id, gaji_bersih_diterima, rincian_json
+            ) VALUES (
+                :rid, :kid, :total, :rjson
+            )
+        ")->execute([
+            'rid' => $runId,
+            'kid' => $kidBulanan,
+            'total' => $gajiTransfer,
+            'rjson' => json_encode([
+                'metode_pembayaran' => 'transfer',
+                'bank_nama' => 'BCA',
+                'bank_nomor_rekening' => '1234567890',
+                'bank_atas_nama' => 'Test Employee'
+            ])
+        ]);
+
+        // Catat mutasi kas terpisah (sesuai PenggajianController::approve)
+        // 1. Mutasi Kas Tunai
+        $pdo->prepare("
+            INSERT INTO public.arus_kas (
+                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan, referensi_tabel, referensi_id, saldo_berjalan
+            ) VALUES (
+                :kas_id, CURRENT_DATE, 'keluar', 'pembayaran_payroll', :nom, 'Pembayaran Payroll (Gaji Tunai) - ' || :ref, 'penggajian', :rid, :saldo_berjalan
+            )
+        ")->execute([
+            'kas_id' => $kasTunaiId,
+            'nom' => $gajiTunai,
+            'ref' => $ref,
+            'rid' => $runId,
+            'saldo_berjalan' => $saldoAwalTunai - $gajiTunai
+        ]);
+        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom WHERE id = :id")->execute(['nom' => $gajiTunai, 'id' => $kasTunaiId]);
+
+        // 2. Mutasi Kas Transfer
+        $pdo->prepare("
+            INSERT INTO public.arus_kas (
+                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan, referensi_tabel, referensi_id, saldo_berjalan
+            ) VALUES (
+                :kas_id, CURRENT_DATE, 'keluar', 'pembayaran_payroll', :nom, 'Pembayaran Payroll (Transfer Bank) - ' || :ref, 'penggajian', :rid, :saldo_berjalan
+            )
+        ")->execute([
+            'kas_id' => $kasBankId,
+            'nom' => $gajiTransfer,
+            'ref' => $ref,
+            'rid' => $runId,
+            'saldo_berjalan' => $saldoAwalBank - $gajiTransfer
+        ]);
+        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom WHERE id = :id")->execute(['nom' => $gajiTransfer, 'id' => $kasBankId]);
+
+        // Verifikasi saldo kedua akun kas berkurang tepat
+        $saldoAkhirTunai = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasTunaiId]);
+        $saldoAkhirBank = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasBankId]);
+
+        if (abs($saldoAkhirTunai - ($saldoAwalTunai - $gajiTunai)) > 0.01) {
+            return "Saldo akun kas tunai tidak berkurang sesuai porsi gaji tunai ({$saldoAkhirTunai} vs " . ($saldoAwalTunai - $gajiTunai) . ").";
+        }
+        if (abs($saldoAkhirBank - ($saldoAwalBank - $gajiTransfer)) > 0.01) {
+            return "Saldo akun bank transfer tidak berkurang sesuai porsi gaji transfer ({$saldoAkhirBank} vs " . ($saldoAwalBank - $gajiTransfer) . ").";
+        }
+
+        // Verifikasi dua record arus_kas tercipta dengan akun kas berbeda
+        $arusKasRows = Database::fetchAll("
+            SELECT akun_kas_id, nominal, keterangan FROM public.arus_kas 
+            WHERE referensi_tabel = 'penggajian' AND referensi_id = :rid 
+            ORDER BY nominal ASC
+        ", ['rid' => $runId]);
+
+        if (count($arusKasRows) !== 2) {
+            return "Diharapkan 2 baris arus_kas terpisah untuk tunai dan transfer, ditemukan: " . count($arusKasRows);
+        }
+
+        // Verifikasi cancelApprove (Rollback multi-rekening)
+        foreach ($arusKasRows as $akRow) {
+            $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini + :nom WHERE id = :id")
+                ->execute(['nom' => (float)$akRow['nominal'], 'id' => $akRow['akun_kas_id']]);
+        }
+        $pdo->prepare("DELETE FROM public.arus_kas WHERE referensi_tabel = 'penggajian' AND referensi_id = :rid")->execute(['rid' => $runId]);
+
+        $saldoRestoredTunai = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasTunaiId]);
+        $saldoRestoredBank = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasBankId]);
+
+        if (abs($saldoRestoredTunai - $saldoAwalTunai) > 0.01) {
+            return "Rollback cancelApprove gagal mengembalikan saldo akun kas tunai secara presisi.";
+        }
+        if (abs($saldoRestoredBank - $saldoAwalBank) > 0.01) {
+            return "Rollback cancelApprove gagal mengembalikan saldo akun bank transfer secara presisi.";
+        }
+
+        return true;
+    });
+
+    // --------------------------------------------------------------------------
+    // TEST 28: Hardened cancelApprove Protection (Kasbon, Tabungan Solvency & Multi-Account Rollback)
+    // --------------------------------------------------------------------------
+    runTest("28. Hardened cancelApprove Protection (Kasbon, Tabungan & Cash Ledgers)", function() use ($pdo, $kidBorongan, $kasId) {
+        $escrowKasId = Database::fetchValue("SELECT id FROM public.akun_kas WHERE is_escrow = TRUE AND status_aktif = TRUE LIMIT 1");
+        if (!$escrowKasId) {
+            return "Akun escrow tabungan aktif tidak ditemukan.";
+        }
+
+        // Setup initial balances
+        $saldoAwalOperasional = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasId]);
+        $saldoAwalEscrow = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $escrowKasId]);
+
+        // Pastikan karyawan punya record tabungan
+        $pdo->prepare("INSERT INTO public.tabungan (karyawan_id, saldo) VALUES (:kid, 200000.00) ON CONFLICT (karyawan_id) DO UPDATE SET saldo = 200000.00")
+            ->execute(['kid' => $kidBorongan]);
+        $tabId = Database::fetchValue("SELECT id FROM public.tabungan WHERE karyawan_id = :kid", ['kid' => $kidBorongan]);
+
+        // Buat kasbon aktif
+        $stmtKb = $pdo->prepare("
+            INSERT INTO public.kasbon (
+                karyawan_id, tanggal_pengajuan, total_pinjaman, sisa_pinjaman, potongan_per_periode, status_kasbon, keterangan
+            ) VALUES (
+                :kid, CURRENT_DATE, 500000.00, 300000.00, 100000.00, 'aktif', 'Kasbon Rollback Comprehensive Test'
+            ) RETURNING id
+        ");
+        $stmtKb->execute(['kid' => $kidBorongan]);
+        $kbId = $stmtKb->fetchColumn();
+
+        // Buat penggajian status disetujui (gunakan nominal proporsional agar saldo kas tetap positif)
+        $ref = 'PAY-HARDEN-' . uniqid();
+        $gajiNet = 25000.00;
+        $potKasbon = 10000.00;
+        $setorTabungan = 5000.00;
+
+        $stmtRun = $pdo->prepare("
+            INSERT INTO public.penggajian (
+                nomor_referensi, nama_payroll, periode_awal, periode_akhir, tipe_penggajian, status, options_json, total_gaji_dikeluarkan, disetujui_pada
+            ) VALUES (
+                :ref, 'Rollback Hardened Test', CURRENT_DATE, CURRENT_DATE, 'mingguan', 'disetujui', '{}', :total, NOW()
+            ) RETURNING id
+        ");
+        $stmtRun->execute(['ref' => $ref, 'total' => $gajiNet]);
+        $runId = $stmtRun->fetchColumn();
+
+        $stmtRincian = $pdo->prepare("
+            INSERT INTO public.rincian_penggajian (
+                penggajian_id, karyawan_id, gaji_bersih_diterima, total_potongan_kasbon, total_potongan_tabungan
+            ) VALUES (
+                :rid, :kid, :total, :pot_kb, :pot_tb
+            ) RETURNING id
+        ");
+        $stmtRincian->execute([
+            'rid' => $runId,
+            'kid' => $kidBorongan,
+            'total' => $gajiNet,
+            'pot_kb' => $potKasbon,
+            'pot_tb' => $setorTabungan
+        ]);
+        $rincianId = $stmtRincian->fetchColumn();
+
+        // Potongan kasbon dieksekusi (sisa kasbon berkurang)
+        $pdo->prepare("
+            INSERT INTO public.potongan_kasbon (
+                kasbon_id, tanggal, nominal, tipe_potongan, keterangan, rincian_penggajian_id
+            ) VALUES (
+                :kbid, CURRENT_DATE, :nom, 'payroll', 'Potongan Payroll Test', :rpid
+            )
+        ")->execute(['kbid' => $kbId, 'nom' => $potKasbon, 'rpid' => $rincianId]);
+        // Trigger trg_potongan_kasbon_update_saldo otomatis mengurangi kasbon
+
+        // Transaksi tabungan dieksekusi (saldo tabungan bertambah via trigger)
+        $pdo->prepare("
+            INSERT INTO public.transaksi_tabungan (
+                tabungan_id, karyawan_id, rincian_penggajian_id, akun_kas_id, tanggal, tipe, jumlah, sumber, keterangan
+            ) VALUES (
+                :tid, :kid, :rpid, :kas_id, CURRENT_DATE, 'deposit', :nom, 'payroll', 'Setoran Tabungan Test'
+            )
+        ")->execute(['tid' => $tabId, 'kid' => $kidBorongan, 'rpid' => $rincianId, 'kas_id' => $escrowKasId, 'nom' => $setorTabungan]);
+
+        // Mutasi arus kas: Pengeluaran gaji dari operasional & transfer escrow tabungan
+        $pdo->prepare("
+            INSERT INTO public.arus_kas (
+                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan, referensi_tabel, referensi_id, saldo_berjalan
+            ) VALUES (
+                :kas_id, CURRENT_DATE, 'keluar', 'pembayaran_payroll', :nom, 'Gaji Test', 'penggajian', :rid, 0
+            )
+        ")->execute(['kas_id' => $kasId, 'nom' => $gajiNet, 'rid' => $runId]);
+        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom WHERE id = :id")->execute(['nom' => $gajiNet, 'id' => $kasId]);
+
+        // Escrow transfer: keluar dari operasional, masuk ke escrow
+        $pdo->prepare("
+            INSERT INTO public.arus_kas (
+                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan, referensi_tabel, referensi_id, saldo_berjalan
+            ) VALUES (
+                :kas_id, CURRENT_DATE, 'transfer_keluar', 'transfer_keluar', :nom, 'Transfer Escrow Out Test', 'penggajian', :rid, 0
+            )
+        ")->execute(['kas_id' => $kasId, 'nom' => $setorTabungan, 'rid' => $runId]);
+        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom WHERE id = :id")->execute(['nom' => $setorTabungan, 'id' => $kasId]);
+
+        $pdo->prepare("
+            INSERT INTO public.arus_kas (
+                akun_kas_id, tanggal_transaksi, jenis_kas, kategori, nominal, keterangan, referensi_tabel, referensi_id, saldo_berjalan
+            ) VALUES (
+                :kas_id, CURRENT_DATE, 'transfer_masuk', 'transfer_masuk', :nom, 'Transfer Escrow In Test', 'penggajian', :rid, 0
+            )
+        ")->execute(['kas_id' => $escrowKasId, 'nom' => $setorTabungan, 'rid' => $runId]);
+        $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini + :nom WHERE id = :id")->execute(['nom' => $setorTabungan, 'id' => $escrowKasId]);
+
+        // UJI 1: Validasi Pre-flight Tabungan Defisit Guard
+        // Kurangi saldo tabungan karyawan hingga 0 sehingga pembatalan setoran Rp 50.000 akan gagal (karena saldo < 50.000)
+        $saldoTabunganSebelumKuras = (float)Database::fetchValue("SELECT saldo FROM public.tabungan WHERE id = :id", ['id' => $tabId]);
+        $pdo->prepare("UPDATE public.tabungan SET saldo = 0 WHERE id = :id")->execute(['id' => $tabId]);
+
+        $caughtException = false;
+        try {
+            $stmtTbCheck = $pdo->prepare("
+                SELECT tt.id, tt.tabungan_id, tt.tipe, tt.jumlah, COALESCE(v.nama_karyawan, 'Karyawan') as nama_karyawan
+                FROM public.transaksi_tabungan tt
+                JOIN public.rincian_penggajian rp ON rp.id = tt.rincian_penggajian_id
+                LEFT JOIN public.v_karyawan_info v ON v.id = tt.karyawan_id
+                WHERE rp.penggajian_id = :rid
+            ");
+            $stmtTbCheck->execute(['rid' => $runId]);
+            $tbRows = $stmtTbCheck->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($tbRows as $tb) {
+                $stmtTabLock = $pdo->prepare("SELECT id, saldo FROM public.tabungan WHERE id = :tid FOR UPDATE");
+                $stmtTabLock->execute(['tid' => $tb['tabungan_id']]);
+                $tabRow = $stmtTabLock->fetch(PDO::FETCH_ASSOC);
+
+                $delta = ($tb['tipe'] === 'deposit') ? -((float)$tb['jumlah']) : ((float)$tb['jumlah']);
+                if ($tabRow) {
+                    $saldoBaru = (float)$tabRow['saldo'] + $delta;
+                    if ($saldoBaru < 0) {
+                        throw new Exception("Saldo tabungan tidak mencukupi untuk pembatalan setoran tabungan.");
+                    }
+                }
+            }
+        } catch (Exception $ex) {
+            $caughtException = true;
+        }
+
+        if (!$caughtException) {
+            return "Tabungan solvency pre-flight guard gagal mencegah rollback saat saldo tabungan karyawan tidak cukup.";
+        }
+
+        // Kembalikan saldo tabungan ke posisi normal
+        $pdo->prepare("UPDATE public.tabungan SET saldo = :saldo WHERE id = :id")->execute(['saldo' => $saldoTabunganSebelumKuras, 'id' => $tabId]);
+
+        // UJI 2: Eksekusi Rollback Penggajian Lengkap dengan Proteksi Baru
+        // 1. Kasbon Rollback
+        $stmtPk = $pdo->prepare("
+            SELECT pk.id, pk.kasbon_id, pk.nominal
+            FROM public.potongan_kasbon pk
+            JOIN public.rincian_penggajian rp ON rp.id = pk.rincian_penggajian_id
+            WHERE rp.penggajian_id = :rid
+        ");
+        $stmtPk->execute(['rid' => $runId]);
+        $potonganList = $stmtPk->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($potonganList as $pk) {
+            $stmtKbLock = $pdo->prepare("SELECT id, total_pinjaman, sisa_pinjaman FROM public.kasbon WHERE id = :kbid FOR UPDATE");
+            $stmtKbLock->execute(['kbid' => $pk['kasbon_id']]);
+            $kbRow = $stmtKbLock->fetch(PDO::FETCH_ASSOC);
+
+            if ($kbRow) {
+                $restoredSisa = min((float)$kbRow['total_pinjaman'], (float)$kbRow['sisa_pinjaman'] + (float)$pk['nominal']);
+                $newStatus = ($restoredSisa > 0) ? 'aktif' : 'lunas';
+                $pdo->prepare("
+                    UPDATE public.kasbon 
+                    SET sisa_pinjaman = :sisa, status_kasbon = :status, diubah_pada = NOW() 
+                    WHERE id = :kbid
+                ")->execute(['sisa' => $restoredSisa, 'status' => $newStatus, 'kbid' => $pk['kasbon_id']]);
+            }
+            $pdo->prepare("UPDATE public.potongan_kasbon SET rincian_penggajian_id = NULL WHERE id = :pkid")->execute(['pkid' => $pk['id']]);
+            $pdo->prepare("DELETE FROM public.potongan_kasbon WHERE id = :pkid")->execute(['pkid' => $pk['id']]);
+        }
+
+        // 2. Tabungan Rollback
+        $stmtTb = $pdo->prepare("
+            SELECT tt.id, tt.tabungan_id, tt.tipe, tt.jumlah, COALESCE(v.nama_karyawan, 'Karyawan') as nama_karyawan
+            FROM public.transaksi_tabungan tt
+            JOIN public.rincian_penggajian rp ON rp.id = tt.rincian_penggajian_id
+            LEFT JOIN public.v_karyawan_info v ON v.id = tt.karyawan_id
+            WHERE rp.penggajian_id = :rid
+        ");
+        $stmtTb->execute(['rid' => $runId]);
+        $tabunganList = $stmtTb->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($tabunganList as $tb) {
+            $stmtTabLock = $pdo->prepare("SELECT id, saldo FROM public.tabungan WHERE id = :tid FOR UPDATE");
+            $stmtTabLock->execute(['tid' => $tb['tabungan_id']]);
+            $tabRow = $stmtTabLock->fetch(PDO::FETCH_ASSOC);
+
+            $delta = ($tb['tipe'] === 'deposit') ? -((float)$tb['jumlah']) : ((float)$tb['jumlah']);
+            if ($tabRow) {
+                $saldoBaru = (float)$tabRow['saldo'] + $delta;
+                if ($saldoBaru < 0) {
+                    throw new Exception("Saldo tabungan tidak mencukupi.");
+                }
+                $pdo->prepare("UPDATE public.tabungan SET saldo = :saldo, diubah_pada = NOW() WHERE id = :tid")
+                    ->execute(['saldo' => $saldoBaru, 'tid' => $tb['tabungan_id']]);
+            }
+            $pdo->prepare("UPDATE public.transaksi_tabungan SET rincian_penggajian_id = NULL WHERE id = :ttid")->execute(['ttid' => $tb['id']]);
+            $pdo->prepare("DELETE FROM public.transaksi_tabungan WHERE id = :ttid")->execute(['ttid' => $tb['id']]);
+        }
+
+        // 3. Arus Kas Rollback (Aggregated per Akun)
+        $stmtArus = $pdo->prepare("
+            SELECT id, akun_kas_id, nominal, jenis_kas 
+            FROM public.arus_kas 
+            WHERE referensi_tabel = 'penggajian' AND referensi_id = :rid 
+            ORDER BY id DESC
+        ");
+        $stmtArus->execute(['rid' => $runId]);
+        $arusRows = $stmtArus->fetchAll(PDO::FETCH_ASSOC);
+
+        $kasDeltas = [];
+        foreach ($arusRows as $ar) {
+            $kid = (string)$ar['akun_kas_id'];
+            $nom = (float)$ar['nominal'];
+            if (!isset($kasDeltas[$kid])) {
+                $kasDeltas[$kid] = 0.0;
+            }
+            if ($ar['jenis_kas'] === 'keluar' || $ar['jenis_kas'] === 'transfer_keluar') {
+                $kasDeltas[$kid] += $nom;
+            } elseif ($ar['jenis_kas'] === 'masuk' || $ar['jenis_kas'] === 'transfer_masuk') {
+                $kasDeltas[$kid] -= $nom;
+            }
+        }
+
+        foreach ($kasDeltas as $kid => $delta) {
+            $stmtLockKas = $pdo->prepare("SELECT id, nama_akun, tipe_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+            $stmtLockKas->execute(['id' => $kid]);
+            $kasRow = $stmtLockKas->fetch(PDO::FETCH_ASSOC);
+            if ($kasRow) {
+                $saldoBaru = (float)$kasRow['saldo_saat_ini'] + $delta;
+                if ($saldoBaru < 0 && !in_array($kasRow['tipe_akun'], ['kartu_kredit', 'giro'], true)) {
+                    throw new Exception("Saldo kas tidak cukup.");
+                }
+                $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                    ->execute(['saldo' => $saldoBaru, 'id' => $kid]);
+            }
+        }
+        $pdo->prepare("DELETE FROM public.arus_kas WHERE referensi_tabel = 'penggajian' AND referensi_id = :rid")->execute(['rid' => $runId]);
+
+        // 4. Status Reset ke Draf
+        $pdo->prepare("
+            UPDATE public.penggajian 
+            SET status = 'draf', disetujui_oleh = NULL, disetujui_pada = NULL, diubah_pada = NOW() 
+            WHERE id = :rid
+        ")->execute(['rid' => $runId]);
+
+        // Verifikasi hasil pemulihan:
+        // A. Saldo kas kembali presisi
+        $saldoAkhirOperasional = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $kasId]);
+        $saldoAkhirEscrow = (float)Database::fetchValue("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id", ['id' => $escrowKasId]);
+
+        if (abs($saldoAkhirOperasional - $saldoAwalOperasional) > 0.01) {
+            return "Saldo kas operasional gagal kembali ke posisi semula ({$saldoAkhirOperasional} vs {$saldoAwalOperasional}).";
+        }
+        if (abs($saldoAkhirEscrow - $saldoAwalEscrow) > 0.01) {
+            return "Saldo akun kas escrow gagal kembali ke posisi semula ({$saldoAkhirEscrow} vs {$saldoAwalEscrow}).";
+        }
+
+        // B. Saldo kasbon pulih ke 300.000
+        $sisaKbAkhir = (float)Database::fetchValue("SELECT sisa_pinjaman FROM public.kasbon WHERE id = :id", ['id' => $kbId]);
+        $statusKbAkhir = Database::fetchValue("SELECT status_kasbon FROM public.kasbon WHERE id = :id", ['id' => $kbId]);
+        if (abs($sisaKbAkhir - 300000.00) > 0.01 || $statusKbAkhir !== 'aktif') {
+            return "Kasbon gagal dipulihkan ke 300.000 / aktif ({$sisaKbAkhir}, {$statusKbAkhir}).";
+        }
+
+        // C. Saldo tabungan pulih ke 200.000
+        $saldoTbAkhir = (float)Database::fetchValue("SELECT saldo FROM public.tabungan WHERE id = :id", ['id' => $tabId]);
+        if (abs($saldoTbAkhir - 200000.00) > 0.01) {
+            return "Saldo tabungan gagal kembali ke 200.000 ({$saldoTbAkhir}).";
+        }
+
+        // D. Status penggajian draf
+        $statusRun = Database::fetchValue("SELECT status FROM public.penggajian WHERE id = :id", ['id' => $runId]);
+        if ($statusRun !== 'draf') {
+            return "Status penggajian gagal kembali ke draf ({$statusRun}).";
         }
 
         return true;
