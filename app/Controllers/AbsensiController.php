@@ -109,12 +109,18 @@ class AbsensiController extends Controller
             }
             $disbursedKasSummary = !empty($disbursedKasNames) ? implode(', ', array_keys($disbursedKasNames)) : '';
 
-            // Metrics calculation
+            // Deteksi apakah data absensi sudah pernah disimpan pada tanggal ini
+            $savedBoronganCount = count(array_filter($karyawanBorongan, fn($k) => !empty($k['absensi_id'])));
+            $savedBulananCount = count(array_filter($karyawanBulanan, fn($k) => !empty($k['absensi_id'])));
+            $isBoronganSaved = ($savedBoronganCount > 0);
+            $isBulananSaved = ($savedBulananCount > 0);
+
+            // Metrics calculation (Hanya hitung hadir/alpa dari data yang memang sudah tersimpan pada tanggal ini)
             $totalBorongan = count($karyawanBorongan);
             $totalBulanan = count($karyawanBulanan);
-            $hadirBorongan = count(array_filter($karyawanBorongan, fn($k) => $k['status_kehadiran'] === 'hadir'));
-            $hadirBulanan = count(array_filter($karyawanBulanan, fn($k) => $k['status_kehadiran'] === 'hadir'));
-            $alpaTotal = count(array_filter(array_merge($karyawanBorongan, $karyawanBulanan), fn($k) => $k['status_kehadiran'] === 'alpa'));
+            $hadirBorongan = count(array_filter($karyawanBorongan, fn($k) => !empty($k['absensi_id']) && $k['status_kehadiran'] === 'hadir'));
+            $hadirBulanan = count(array_filter($karyawanBulanan, fn($k) => !empty($k['absensi_id']) && $k['status_kehadiran'] === 'hadir'));
+            $alpaTotal = count(array_filter(array_merge($karyawanBorongan, $karyawanBulanan), fn($k) => !empty($k['absensi_id']) && $k['status_kehadiran'] === 'alpa'));
             
             $lockedRows = count(array_filter(array_merge($karyawanBorongan, $karyawanBulanan), fn($k) => !empty($k['penggajian_id'])));
             $isTanggalLocked = ($lockedRows > 0 && $lockedRows === ($totalBorongan + $totalBulanan));
@@ -144,6 +150,10 @@ class AbsensiController extends Controller
                 'hadirBorongan' => $hadirBorongan,
                 'hadirBulanan' => $hadirBulanan,
                 'alpaTotal' => $alpaTotal,
+                'isBoronganSaved' => $isBoronganSaved,
+                'isBulananSaved' => $isBulananSaved,
+                'savedBoronganCount' => $savedBoronganCount,
+                'savedBulananCount' => $savedBulananCount,
                 'lockedRows' => $lockedRows,
                 'isTanggalLocked' => $isTanggalLocked
             ], 'layouts.master');
@@ -176,6 +186,10 @@ class AbsensiController extends Controller
         $absensiData = $this->input('absensi', []);
         $rawAkunKasId = trim((string)$this->input('akun_kas_id', ''));
         $akunKasId = ($rawAkunKasId === '' || $rawAkunKasId === 'none') ? null : $rawAkunKasId;
+        $cakupan = (string)$this->input('cakupan', 'all');
+        if (!in_array($cakupan, ['borongan', 'bulanan', 'all'], true)) {
+            $cakupan = 'all';
+        }
 
         if (!is_array($absensiData) || empty($absensiData)) {
             $this->flashError('Tidak ada data absensi yang dikirim.');
@@ -202,37 +216,39 @@ class AbsensiController extends Controller
                 $karyawanMap[$emp['id']] = $emp;
             }
 
-            // Hitung total penarikan uang harian & lembur yang diajukan pada form ini
+            // Hitung total penarikan uang harian & lembur yang diajukan pada form ini (Hanya jika cakupan bukan borongan)
             $totalPengajuanPenarikan = 0.0;
-            foreach ($absensiData as $kid => $row) {
-                if (!isset($karyawanMap[$kid])) continue;
-                $empInfo = $karyawanMap[$kid];
-                if ($empInfo['tipe_penggajian'] !== 'bulanan') continue;
+            if ($cakupan !== 'borongan') {
+                foreach ($absensiData as $kid => $row) {
+                    if (!isset($karyawanMap[$kid])) continue;
+                    $empInfo = $karyawanMap[$kid];
+                    if ($empInfo['tipe_penggajian'] !== 'bulanan') continue;
 
-                $statusKehadiran = (string)($row['status_kehadiran'] ?? 'hadir');
-                if ($statusKehadiran !== 'hadir') continue;
+                    $statusKehadiran = (string)($row['status_kehadiran'] ?? 'hadir');
+                    if ($statusKehadiran !== 'hadir') continue;
 
-                $rate = (float)($empInfo['uang_kehadiran_harian'] ?? 0);
-                $wantsAmbil = (!empty($row['ambil_uang']) && $rate > 0);
+                    $rate = (float)($empInfo['uang_kehadiran_harian'] ?? 0);
+                    $wantsAmbil = (!empty($row['ambil_uang']) && $rate > 0);
 
-                $rawLembur = (float)preg_replace('/[^0-9]/', '', (string)($row['lembur_nominal'] ?? '0'));
-                $lemburNominal = $rawLembur > 0 ? $rawLembur : 0.0;
+                    $rawLembur = (float)preg_replace('/[^0-9]/', '', (string)($row['lembur_nominal'] ?? '0'));
+                    $lemburNominal = $rawLembur > 0 ? $rawLembur : 0.0;
 
-                $totalPengajuanPenarikan += ($wantsAmbil ? $rate : 0.0) + $lemburNominal;
+                    $totalPengajuanPenarikan += ($wantsAmbil ? $rate : 0.0) + $lemburNominal;
+                }
             }
 
             // Strict Mandatory Cash Selection Guard:
             // Jika ada penarikan uang (uang hadir atau lembur), AKUN KAS WAJIB DIPILIH!
-            if ($totalPengajuanPenarikan > 0 && empty($akunKasId)) {
+            if ($cakupan !== 'borongan' && $totalPengajuanPenarikan > 0 && empty($akunKasId)) {
                 $pdo->rollBack();
                 $this->flashError('Pencairan uang kehadiran / lembur harian wajib memilih salah satu akun kas aktif.');
-                $this->redirect('/absensi?tanggal=' . $tanggal);
+                $this->redirect('/absensi?tanggal=' . $tanggal . '&tab=bulanan');
                 return;
             }
 
             // Validasi Akun Kas jika ada penarikan kas
             $targetKasRow = null;
-            if ($akunKasId !== null) {
+            if ($cakupan !== 'borongan' && $akunKasId !== null) {
                 $stmtKas = $pdo->prepare("
                     SELECT id, nama_akun, tipe_akun, saldo_saat_ini, is_escrow 
                     FROM public.akun_kas 
@@ -306,7 +322,7 @@ class AbsensiController extends Controller
                 if ($totalKasDibutuhkan > $currentSaldo) {
                     $pdo->rollBack();
                     $this->flashError("Saldo akun kas '{$targetKasRow['nama_akun']}' (" . Format::rupiah($currentSaldo) . ") tidak mencukupi untuk pembayaran ambil uang harian & lembur sebesar " . Format::rupiah($totalKasDibutuhkan) . ". Silakan pilih akun kas lain yang mencukupi atau isi saldo kas terlebih dahulu di menu Kas & Bank.");
-                    $this->redirect('/absensi?tanggal=' . $tanggal);
+                    $this->redirect('/absensi?tanggal=' . $tanggal . '&tab=bulanan');
                     return;
                 }
             }
@@ -319,6 +335,14 @@ class AbsensiController extends Controller
                 $empInfo = $karyawanMap[$karyawanId];
                 $tipePenggajian = $empInfo['tipe_penggajian'];
                 $uangKehadiranRate = (float)($empInfo['uang_kehadiran_harian'] ?? 0);
+
+                // Strict Scope Guard: Hanya proses karyawan yang sesuai dengan cakupan yang dipilih
+                if ($cakupan === 'borongan' && $tipePenggajian !== 'borongan') {
+                    continue;
+                }
+                if ($cakupan === 'bulanan' && $tipePenggajian !== 'bulanan') {
+                    continue;
+                }
 
                 // Cek apakah record absensi sudah ada dan terkunci oleh payroll
                 $existingAbsensi = Database::fetchOne("
@@ -549,15 +573,22 @@ class AbsensiController extends Controller
 
             $pdo->commit();
 
+            $labelCakupan = match($cakupan) {
+                'borongan' => 'karyawan borongan',
+                'bulanan' => 'karyawan bulanan',
+                default => 'seluruh karyawan (borongan & bulanan)'
+            };
+
             ActivityLog::log(
                 'hr_payroll',
                 'BULK_ABSENSI',
-                "Menyimpan data presensi massal tanggal {$tanggal} untuk {$processedCount} karyawan." . ($skippedLockedCount > 0 ? " ({$skippedLockedCount} baris terkunci dilewati)" : ""),
+                "Menyimpan data presensi massal ({$labelCakupan}) tanggal {$tanggal} untuk {$processedCount} karyawan." . ($skippedLockedCount > 0 ? " ({$skippedLockedCount} baris terkunci dilewati)" : ""),
                 'absensi'
             );
 
-            $this->flashSuccess("Data kehadiran tanggal {$tanggal} berhasil disimpan ({$processedCount} diproses).");
-            $this->redirect('/absensi?tanggal=' . $tanggal);
+            $this->flashSuccess("Data kehadiran {$labelCakupan} tanggal {$tanggal} berhasil disimpan ({$processedCount} diproses).");
+            $redirectTab = ($cakupan === 'bulanan') ? 'bulanan' : 'borongan';
+            $this->redirect('/absensi?tanggal=' . $tanggal . '&tab=' . $redirectTab);
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -567,7 +598,8 @@ class AbsensiController extends Controller
                 $errMsg = 'Saldo akun kas tidak mencukupi untuk pembayaran ambil uang harian. Silakan pilih akun kas lain, isi saldo kas di menu Kas & Bank, atau gunakan opsi Tanpa Kas.';
             }
             $this->flashError('Gagal menyimpan absensi: ' . $errMsg);
-            $this->redirect('/absensi?tanggal=' . $tanggal);
+            $redirectTab = ($cakupan === 'bulanan') ? 'bulanan' : 'borongan';
+            $this->redirect('/absensi?tanggal=' . $tanggal . '&tab=' . $redirectTab);
         }
     }
 

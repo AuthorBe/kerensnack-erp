@@ -214,36 +214,216 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
     flex-shrink: 0;
 }
 
-/* 5. Main Card Header & Tabs */
+/* Horizontal Scrollable Tabs on Mobile (Anti Tumpang Tindih) */
+.tabs-scroll-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE 10+ */
+    padding: 1px 0;
+}
+.tabs-scroll-wrapper::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+}
+
+.tabs-pill-track {
+    display: inline-flex;
+    align-items: center;
+    min-width: max-content;
+    padding: 3.5px;
+    gap: 4px;
+    border-radius: 12px;
+    background: rgba(241, 245, 249, 0.95);
+    border: 1px solid rgba(226, 232, 240, 0.85);
+}
+.dark .tabs-pill-track {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(51, 65, 85, 0.85);
+}
+
 .tab-pill-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 6px 14px;
+    gap: 6.5px;
+    padding: 6px 12px;
     font-size: 12px;
-    font-weight: 700;
+    font-weight: 600;
     border-radius: 8px;
     color: #64748b;
     background: transparent;
-    transition: all 0.15s ease;
-    border: none;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 .tab-pill-btn:hover {
     color: #0f172a;
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.6);
+}
+@media (max-width: 639px) {
+    .tab-pill-btn {
+        padding: 5px 9px;
+        gap: 5px;
+        font-size: 11.5px;
+    }
+}
+.dark .tab-pill-btn {
+    color: #94a3b8;
 }
 .dark .tab-pill-btn:hover {
     color: #f8fafc;
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.05);
 }
+
+/* Elevated Segmented Active Tab (Clean Light Card, No Red Brick Clash) */
 .tab-pill-btn.is-active {
-    background: #881337 !important;
-    color: #ffffff !important;
-    box-shadow: 0 2px 6px rgba(136, 19, 55, 0.3);
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    border-color: rgba(226, 232, 240, 0.9) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+.dark .tab-pill-btn.is-active {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Tab Icon Micro-Badges (Vibrant, Tactile & Non-Plain) */
+.tab-icon-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+@media (max-width: 639px) {
+    .tab-icon-box {
+        width: 19px;
+        height: 19px;
+        border-radius: 5px;
+    }
+}
+
+/* Borongan Icon: Rose / Berry Warm Accent */
+.tab-icon-box-borongan {
+    background: #fff1f2;
+    color: #e11d48 !important;
+    border: 1px solid #fecdd3;
+}
+.tab-icon-box-borongan svg,
+.tab-icon-box-borongan i {
+    color: #e11d48 !important;
+    stroke: #e11d48 !important;
+}
+.dark .tab-icon-box-borongan {
+    background: rgba(225, 29, 72, 0.16);
+    color: #fb7185 !important;
+    border-color: rgba(225, 29, 72, 0.35);
+}
+.dark .tab-icon-box-borongan svg,
+.dark .tab-icon-box-borongan i {
+    color: #fb7185 !important;
+    stroke: #fb7185 !important;
+}
+
+/* Bulanan Icon: Sky / Tech Blue Clean Accent */
+.tab-icon-box-bulanan {
+    background: #f0f9ff;
+    color: #0284c7 !important;
+    border: 1px solid #bae6fd;
+}
+.tab-icon-box-bulanan svg,
+.tab-icon-box-bulanan i {
+    color: #0284c7 !important;
+    stroke: #0284c7 !important;
+}
+.dark .tab-icon-box-bulanan {
+    background: rgba(2, 132, 199, 0.16);
+    color: #38bdf8 !important;
+    border-color: rgba(2, 132, 199, 0.35);
+}
+.dark .tab-icon-box-bulanan svg,
+.dark .tab-icon-box-bulanan i {
+    color: #38bdf8 !important;
+    stroke: #38bdf8 !important;
+}
+
+/* Tab Active State Enhancements */
+.tab-pill-btn.is-active .tab-icon-box-borongan {
+    background: #ffe4e6;
+    color: #be123c !important;
+    border-color: #fca5a5;
+    box-shadow: 0 1px 2px rgba(225, 29, 72, 0.12);
+}
+.tab-pill-btn.is-active .tab-icon-box-borongan svg,
+.tab-pill-btn.is-active .tab-icon-box-borongan i {
+    color: #be123c !important;
+    stroke: #be123c !important;
+}
+
+.tab-pill-btn.is-active .tab-icon-box-bulanan {
+    background: #e0f2fe;
+    color: #0369a1 !important;
+    border-color: #7dd3fc;
+    box-shadow: 0 1px 2px rgba(2, 132, 199, 0.12);
+}
+.tab-pill-btn.is-active .tab-icon-box-bulanan svg,
+.tab-pill-btn.is-active .tab-icon-box-bulanan i {
+    color: #0369a1 !important;
+    stroke: #0369a1 !important;
+}
+
+/* Inactive State Gentle Softness (Still Colorful, Never Dull Gray) */
+.tab-pill-btn:not(.is-active) .tab-icon-box-borongan {
+    opacity: 0.85;
+}
+.tab-pill-btn:not(.is-active) .tab-icon-box-bulanan {
+    opacity: 0.85;
+}
+
+/* Tab Counter Pill */
+.tab-counter-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    line-height: 1;
+    padding: 2.5px 6.5px;
+    border-radius: 9999px;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    transition: all 0.15s ease;
+}
+.dark .tab-counter-pill {
+    background: #334155;
+    color: #cbd5e1;
+    border-color: #475569;
+}
+.tab-pill-btn.is-active .tab-counter-pill {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+}
+.dark .tab-pill-btn.is-active .tab-counter-pill {
+    background: #334155;
+    color: #f8fafc;
+    border-color: #475569;
 }
 
 .btn-primary-maroon {
@@ -256,6 +436,173 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
 .btn-primary-maroon:hover {
     background: #9f1239 !important;
     box-shadow: 0 3px 8px rgba(136, 19, 55, 0.3);
+}
+
+/* 5.1 Scope Dropup Menu (Opens Upward Above Footer with High Stacking Context) */
+.scope-dropup-menu {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 8px);
+    width: 260px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 14px 34px -4px rgba(0, 0, 0, 0.16), 0 6px 14px -4px rgba(0, 0, 0, 0.08);
+    padding: 6px;
+    z-index: 100;
+    font-size: 12px;
+}
+.dark .scope-dropup-menu {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6);
+}
+.scope-dropup-item {
+    width: 100%;
+    text-align: left;
+    padding: 7px 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+.scope-dropup-item:hover {
+    background: #f8fafc;
+}
+.dark .scope-dropup-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Scope Dropup Icon Micro-Boxes (Visual Alignment & Identity) */
+.scope-icon-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    flex-shrink: 0;
+    transition: transform 0.12s ease;
+}
+.scope-dropup-item:hover .scope-icon-box {
+    transform: scale(1.06);
+}
+
+.scope-icon-box-borongan {
+    background: #fff1f2;
+    color: #e11d48 !important;
+    border: 1px solid #fecdd3;
+}
+.scope-icon-box-borongan svg,
+.scope-icon-box-borongan i {
+    color: #e11d48 !important;
+    stroke: #e11d48 !important;
+}
+.dark .scope-icon-box-borongan {
+    background: rgba(225, 29, 72, 0.16);
+    color: #fb7185 !important;
+    border-color: rgba(225, 29, 72, 0.35);
+}
+.dark .scope-icon-box-borongan svg,
+.dark .scope-icon-box-borongan i {
+    color: #fb7185 !important;
+    stroke: #fb7185 !important;
+}
+
+.scope-icon-box-bulanan {
+    background: #f0f9ff;
+    color: #0284c7 !important;
+    border: 1px solid #bae6fd;
+}
+.scope-icon-box-bulanan svg,
+.scope-icon-box-bulanan i {
+    color: #0284c7 !important;
+    stroke: #0284c7 !important;
+}
+.dark .scope-icon-box-bulanan {
+    background: rgba(2, 132, 199, 0.16);
+    color: #38bdf8 !important;
+    border-color: rgba(2, 132, 199, 0.35);
+}
+.dark .scope-icon-box-bulanan svg,
+.dark .scope-icon-box-bulanan i {
+    color: #38bdf8 !important;
+    stroke: #38bdf8 !important;
+}
+
+.scope-icon-box-all {
+    background: #eef2ff;
+    color: #4f46e5 !important;
+    border: 1px solid #c7d2fe;
+}
+.scope-icon-box-all svg,
+.scope-icon-box-all i {
+    color: #4f46e5 !important;
+    stroke: #4f46e5 !important;
+}
+.dark .scope-icon-box-all {
+    background: rgba(99, 102, 241, 0.16);
+    color: #818cf8 !important;
+    border-color: rgba(99, 102, 241, 0.35);
+}
+.dark .scope-icon-box-all svg,
+.dark .scope-icon-box-all i {
+    color: #818cf8 !important;
+    stroke: #818cf8 !important;
+}
+
+/* Status Badges: Harmonious, Clean, Anti-Clash */
+.badge-saved-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3.5px;
+    line-height: 1;
+    margin-left: 2px;
+    border-radius: 9999px;
+    padding: 2.5px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    transition: all 0.15s ease;
+}
+
+/* Status Tersimpan (Saved): Soft Mint Emerald */
+.badge-saved-indicator.is-saved {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+.dark .badge-saved-indicator.is-saved {
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.32);
+}
+
+/* Status Draft: Warm Soft Yellow / Amber (Elegan & Nyaman di Mata, Tidak Mencolok) */
+.badge-saved-indicator.is-draft {
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+.dark .badge-saved-indicator.is-draft {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.32);
+}
+.draft-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #d97706;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.dark .draft-dot {
+    background: #fbbf24;
 }
 
 .search-input-wrapper {
@@ -1150,9 +1497,18 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                 <i data-lucide="boxes" class="w-4 h-4"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="text-[10px] sm:text-[10.5px] font-bold text-slate-400 uppercase tracking-wider truncate">Hadir Borongan</div>
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] sm:text-[10.5px] font-bold text-slate-400 uppercase tracking-wider truncate">Hadir Borongan</span>
+                    <?php if ($isBoronganSaved): ?>
+                        <span class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            <i data-lucide="check-circle-2" style="width:11px; height:11px;"></i> Tersimpan
+                        </span>
+                    <?php else: ?>
+                        <span class="text-[9.5px] font-medium text-slate-400 dark:text-slate-500">Belum Disimpan</span>
+                    <?php endif; ?>
+                </div>
                 <div class="flex items-baseline gap-1 mt-0.5">
-                    <span class="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-slate-100"><?= $hadirBorongan ?></span>
+                    <span class="text-base sm:text-lg font-bold font-mono <?= $isBoronganSaved ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500' ?>"><?= $hadirBorongan ?></span>
                     <span class="text-[11px] sm:text-xs font-mono text-slate-400">/ <?= $totalBorongan ?></span>
                 </div>
             </div>
@@ -1164,9 +1520,18 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                 <i data-lucide="briefcase" class="w-4 h-4"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="text-[10px] sm:text-[10.5px] font-bold text-slate-400 uppercase tracking-wider truncate">Hadir Bulanan</div>
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] sm:text-[10.5px] font-bold text-slate-400 uppercase tracking-wider truncate">Hadir Bulanan</span>
+                    <?php if ($isBulananSaved): ?>
+                        <span class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            <i data-lucide="check-circle-2" style="width:11px; height:11px;"></i> Tersimpan
+                        </span>
+                    <?php else: ?>
+                        <span class="text-[9.5px] font-medium text-slate-400 dark:text-slate-500">Belum Disimpan</span>
+                    <?php endif; ?>
+                </div>
                 <div class="flex items-baseline gap-1 mt-0.5">
-                    <span class="text-base sm:text-lg font-bold font-mono text-slate-900 dark:text-slate-100"><?= $hadirBulanan ?></span>
+                    <span class="text-base sm:text-lg font-bold font-mono <?= $isBulananSaved ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500' ?>"><?= $hadirBulanan ?></span>
                     <span class="text-[11px] sm:text-xs font-mono text-slate-400">/ <?= $totalBulanan ?></span>
                 </div>
             </div>
@@ -1247,40 +1612,63 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
     <!-- ========================================================================= -->
     <!-- 4. MAIN CARD WITH INTEGRATED TOOLBAR & RESPONSIVE DATA TABLE              -->
     <!-- ========================================================================= -->
-    <form method="POST" action="<?= Router::url('/absensi/bulk-store') ?>" id="formPresensi" @submit.prevent="handleSimpanPresensi()" class="m-0">
+    <form method="POST" action="<?= Router::url('/absensi/bulk-store') ?>" id="formPresensi" @submit.prevent="handleSimpanPresensi(tab)" class="m-0">
         <?= CSRF::field() ?>
         <input type="hidden" name="tanggal" value="<?= $tanggal ?>">
         <input type="hidden" name="akun_kas_id" :value="selectedKasId">
+        <input type="hidden" name="cakupan" :value="submitScope">
 
-        <div class="card overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl shadow-sm">
+        <div class="card border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-xl shadow-sm">
             
             <!-- Unified Responsive Toolbar Header -->
-            <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/50">
-                <!-- Left: Tabs (Full-width grid on mobile, inline on desktop) -->
-                <div class="w-full sm:w-auto grid grid-cols-2 sm:flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200/80 dark:border-slate-700/80 gap-1">
-                    <button type="button" 
-                            @click="tab = 'borongan'" 
-                            :class="tab === 'borongan' ? 'is-active' : ''"
-                            class="tab-pill-btn">
-                        <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
-                        <span>Borongan</span>
-                        <span class="text-[10.5px] py-0.2 px-1.5 rounded-full font-mono font-bold" 
-                              :class="tab === 'borongan' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
-                            <?= $totalBorongan ?>
-                        </span>
-                    </button>
+            <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-slate-50/50 dark:bg-slate-900/50 rounded-t-xl">
+                <!-- Left: Tabs (Horizontal scroll on mobile, inline on desktop) -->
+                <div class="tabs-scroll-wrapper sm:w-auto">
+                    <div class="tabs-pill-track">
+                        <button type="button" 
+                                @click="tab = 'borongan'" 
+                                :class="tab === 'borongan' ? 'is-active' : ''"
+                                class="tab-pill-btn">
+                            <span class="tab-icon-box tab-icon-box-borongan">
+                                <i data-lucide="boxes" style="width:13px; height:13px;"></i>
+                            </span>
+                            <span>Borongan</span>
+                            <span class="tab-counter-pill"><?= $totalBorongan ?></span>
+                            <?php if ($isBoronganSaved): ?>
+                                <span class="badge-saved-indicator is-saved" title="Data kehadiran borongan telah tersimpan">
+                                    <i data-lucide="check" style="width:10px; height:10px;"></i>
+                                    <span>Tersimpan</span>
+                                </span>
+                            <?php else: ?>
+                                <span class="badge-saved-indicator is-draft" title="Belum ada rekaman kehadiran borongan tersimpan">
+                                    <span class="draft-dot"></span>
+                                    <span>Draft</span>
+                                </span>
+                            <?php endif; ?>
+                        </button>
 
-                    <button type="button" 
-                            @click="tab = 'bulanan'" 
-                            :class="tab === 'bulanan' ? 'is-active' : ''"
-                            class="tab-pill-btn">
-                        <i data-lucide="briefcase" class="w-3.5 h-3.5"></i>
-                        <span>Bulanan</span>
-                        <span class="text-[10.5px] py-0.2 px-1.5 rounded-full font-mono font-bold" 
-                              :class="tab === 'bulanan' ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'">
-                            <?= $totalBulanan ?>
-                        </span>
-                    </button>
+                        <button type="button" 
+                                @click="tab = 'bulanan'" 
+                                :class="tab === 'bulanan' ? 'is-active' : ''"
+                                class="tab-pill-btn">
+                            <span class="tab-icon-box tab-icon-box-bulanan">
+                                <i data-lucide="briefcase" style="width:13px; height:13px;"></i>
+                            </span>
+                            <span>Bulanan</span>
+                            <span class="tab-counter-pill"><?= $totalBulanan ?></span>
+                            <?php if ($isBulananSaved): ?>
+                                <span class="badge-saved-indicator is-saved" title="Data kehadiran bulanan telah tersimpan">
+                                    <i data-lucide="check" style="width:10px; height:10px;"></i>
+                                    <span>Tersimpan</span>
+                                </span>
+                            <?php else: ?>
+                                <span class="badge-saved-indicator is-draft" title="Belum ada rekaman kehadiran bulanan tersimpan">
+                                    <span class="draft-dot"></span>
+                                    <span>Draft</span>
+                                </span>
+                            <?php endif; ?>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Right: Action Controls (Live Search Box) -->
@@ -1617,7 +2005,7 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
             </div>
 
             <!-- Footer Bar / Keterangan Status Presensi -->
-            <div class="p-3 sm:px-4 bg-slate-50/90 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-500">
+            <div class="p-3 sm:px-4 bg-slate-50/90 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-xs text-slate-500 rounded-b-xl">
                 <div class="w-full sm:w-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3.5 text-[11px] sm:text-[11.5px] text-slate-600 dark:text-slate-400">
                     <div class="flex items-center gap-2">
                         <span class="badge-presence-check shrink-0" style="width:14px; height:14px; min-width:14px; min-height:14px; margin-left:0;">
@@ -1639,38 +2027,137 @@ input[type="text"], input[type="number"], input[type="search"], textarea {
                         <span class="leading-tight">Terkunci periode penggajian (tidak dapat diubah)</span>
                     </div>
                 </div>
-                <div class="hidden sm:block shrink-0">
+                <div class="hidden sm:flex items-center gap-2 shrink-0">
+                    <!-- Tombol Simpan Tab Aktif (Primary Maroon) -->
                     <button type="button" 
-                            @click="handleSimpanPresensi()" 
+                            @click="handleSimpanPresensi(tab)" 
                             :disabled="isSubmitting || <?= $isTanggalLocked ? 'true' : 'false' ?>"
                             :class="{'opacity-75 cursor-not-allowed': isSubmitting}"
-                            class="btn btn-primary-maroon btn-sm flex items-center gap-1.5 px-4 py-1.5 font-semibold text-xs rounded-lg" 
+                            class="btn btn-primary-maroon btn-sm flex items-center gap-1.5 px-3.5 py-1.5 font-semibold text-xs rounded-lg shadow-sm" 
                             <?= $isTanggalLocked ? 'disabled' : '' ?>>
                         <i data-lucide="save" class="w-3.5 h-3.5" x-show="!isSubmitting"></i>
                         <svg x-show="isSubmitting" class="animate-spin w-3.5 h-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        <span x-text="isSubmitting ? 'Menyimpan...' : 'Simpan Presensi'">Simpan Presensi</span>
+                        <span x-text="isSubmitting ? 'Menyimpan...' : (tab === 'borongan' ? 'Simpan Borongan Saja' : 'Simpan Bulanan Saja')"></span>
                     </button>
+
+                    <!-- Tombol Simpan Keduanya (Secondary Clean) -->
+                    <button type="button" 
+                            @click="handleSimpanPresensi('all')" 
+                            :disabled="isSubmitting || <?= $isTanggalLocked ? 'true' : 'false' ?>"
+                            :class="{'opacity-75 cursor-not-allowed': isSubmitting}"
+                            class="btn btn-secondary btn-sm flex items-center gap-1.5 px-3 py-1.5 font-semibold text-xs rounded-lg text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800" 
+                            title="Simpan presensi Borongan & Bulanan sekaligus"
+                            <?= $isTanggalLocked ? 'disabled' : '' ?>>
+                        <i data-lucide="users" class="w-3.5 h-3.5 text-slate-500"></i>
+                        <span>Simpan Keduanya</span>
+                    </button>
+
+                    <!-- Dropdown More Actions (Pilihan Presisi Cepat - Dropup Upward) -->
+                    <div class="relative" @click.outside="saveDropdownOpen = false">
+                        <button type="button" 
+                                @click="saveDropdownOpen = !saveDropdownOpen; $nextTick(() => { if (window.lucide) lucide.createIcons(); })" 
+                                :disabled="isSubmitting || <?= $isTanggalLocked ? 'true' : 'false' ?>"
+                                class="btn btn-secondary btn-sm px-2 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+                                title="Pilihan Cakupan Simpan">
+                            <i data-lucide="chevron-up" class="w-3.5 h-3.5 transition-transform duration-150" :style="saveDropdownOpen ? 'transform: rotate(180deg);' : ''"></i>
+                        </button>
+
+                        <div x-show="saveDropdownOpen" x-cloak
+                             class="scope-dropup-menu">
+                            <div class="px-2.5 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Cakupan Penyimpanan</div>
+                            <button type="button" @click="saveDropdownOpen = false; handleSimpanPresensi('borongan')"
+                                    class="scope-dropup-item">
+                                <span class="scope-icon-box scope-icon-box-borongan">
+                                    <i data-lucide="boxes" style="width:14px; height:14px;"></i>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-semibold text-slate-800 dark:text-slate-100">Simpan Borongan Saja</div>
+                                    <div class="text-[10px] text-slate-400">Hanya rekaman karyawan borongan</div>
+                                </div>
+                            </button>
+                            <button type="button" @click="saveDropdownOpen = false; handleSimpanPresensi('bulanan')"
+                                    class="scope-dropup-item">
+                                <span class="scope-icon-box scope-icon-box-bulanan">
+                                    <i data-lucide="briefcase" style="width:14px; height:14px;"></i>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-semibold text-slate-800 dark:text-slate-100">Simpan Bulanan Saja</div>
+                                    <div class="text-[10px] text-slate-400">Hanya rekaman karyawan bulanan</div>
+                                </div>
+                            </button>
+                            <div class="border-t border-slate-100 dark:border-slate-700/60 my-1"></div>
+                            <button type="button" @click="saveDropdownOpen = false; handleSimpanPresensi('all')"
+                                    class="scope-dropup-item">
+                                <span class="scope-icon-box scope-icon-box-all">
+                                    <i data-lucide="users" style="width:14px; height:14px;"></i>
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-bold text-slate-800 dark:text-slate-100">Simpan Keduanya</div>
+                                    <div class="text-[10px] text-slate-400 font-normal">Borongan & bulanan tersimpan sekaligus</div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </form>
 
     <!-- Floating Sticky Save Bar on Mobile & iOS -->
-    <div class="sticky-mobile-save-bar md:hidden flex items-center justify-between gap-3">
-        <div class="min-w-0">
+    <div class="sticky-mobile-save-bar md:hidden flex items-center justify-between gap-2 px-3 py-2">
+        <div class="min-w-0 flex-1">
             <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Presensi <?= $namaHari ?></div>
             <div class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate"><?= date('d M Y', strtotime($tanggal)) ?></div>
         </div>
-        <button type="button" 
-                @click="handleSimpanPresensi()" 
-                :disabled="isSubmitting || <?= $isTanggalLocked ? 'true' : 'false' ?>"
-                :class="{'opacity-75 cursor-not-allowed': isSubmitting}"
-                class="btn btn-primary-maroon btn-sm flex items-center gap-1.5 px-4 py-2 font-semibold text-xs rounded-xl shadow-md" 
-                <?= $isTanggalLocked ? 'disabled' : '' ?>>
-            <i data-lucide="save" class="w-4 h-4" x-show="!isSubmitting"></i>
-            <svg x-show="isSubmitting" class="animate-spin w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <span x-text="isSubmitting ? 'Menyimpan...' : 'Simpan Presensi'">Simpan Presensi</span>
-        </button>
+        <div class="flex items-center gap-1.5 shrink-0">
+            <!-- Main Button for Active Tab -->
+            <button type="button" 
+                    @click="handleSimpanPresensi(tab)" 
+                    :disabled="isSubmitting || <?= $isTanggalLocked ? 'true' : 'false' ?>"
+                    :class="{'opacity-75 cursor-not-allowed': isSubmitting}"
+                    class="btn btn-primary-maroon btn-sm flex items-center gap-1.5 px-3.5 py-2 font-semibold text-xs rounded-xl shadow-md" 
+                    <?= $isTanggalLocked ? 'disabled' : '' ?>>
+                <i data-lucide="save" class="w-3.5 h-3.5" x-show="!isSubmitting"></i>
+                <svg x-show="isSubmitting" class="animate-spin w-3.5 h-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                <span x-text="isSubmitting ? 'Menyimpan...' : (tab === 'borongan' ? 'Simpan Borongan' : 'Simpan Bulanan')"></span>
+            </button>
+
+            <!-- Dropdown trigger for Keduanya / Other -->
+            <div class="relative" @click.outside="mobileSaveMenuOpen = false">
+                <button type="button" 
+                        @click="mobileSaveMenuOpen = !mobileSaveMenuOpen; $nextTick(() => { if (window.lucide) lucide.createIcons(); })" 
+                        :disabled="isSubmitting || <?= $isTanggalLocked ? 'true' : 'false' ?>"
+                        class="btn btn-secondary btn-sm p-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200">
+                    <i data-lucide="chevron-up" class="w-4 h-4 transition-transform duration-150" :style="mobileSaveMenuOpen ? 'transform: rotate(180deg);' : ''"></i>
+                </button>
+                <div x-show="mobileSaveMenuOpen" x-cloak
+                     class="scope-dropup-menu" style="bottom: calc(100% + 12px); right: 0; width: 245px;">
+                    <div class="px-2.5 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Pilih Aksi Simpan</div>
+                    <button type="button" @click="mobileSaveMenuOpen = false; handleSimpanPresensi('borongan')"
+                            class="scope-dropup-item">
+                        <span class="scope-icon-box scope-icon-box-borongan">
+                            <i data-lucide="boxes" style="width:14px; height:14px;"></i>
+                        </span>
+                        <span class="font-medium text-slate-800 dark:text-slate-100">Simpan Borongan Saja</span>
+                    </button>
+                    <button type="button" @click="mobileSaveMenuOpen = false; handleSimpanPresensi('bulanan')"
+                            class="scope-dropup-item">
+                        <span class="scope-icon-box scope-icon-box-bulanan">
+                            <i data-lucide="briefcase" style="width:14px; height:14px;"></i>
+                        </span>
+                        <span class="font-medium text-slate-800 dark:text-slate-100">Simpan Bulanan Saja</span>
+                    </button>
+                    <div class="border-t border-slate-100 dark:border-slate-700/60 my-1"></div>
+                    <button type="button" @click="mobileSaveMenuOpen = false; handleSimpanPresensi('all')"
+                            class="scope-dropup-item">
+                        <span class="scope-icon-box scope-icon-box-all">
+                            <i data-lucide="users" style="width:14px; height:14px;"></i>
+                        </span>
+                        <span class="font-bold text-slate-800 dark:text-slate-100">Simpan Keduanya</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ========================================================================= -->
@@ -1862,10 +2349,13 @@ function absensiApp() {
     }
     ?>
     return {
-        tab: 'borongan',
+        tab: '<?= (isset($_GET['tab']) && $_GET['tab'] === 'bulanan') ? 'bulanan' : 'borongan' ?>',
         searchQuery: '',
         isDirty: false,
         isSubmitting: false,
+        submitScope: 'all',
+        saveDropdownOpen: false,
+        mobileSaveMenuOpen: false,
         showKasModal: false,
         modalAmbilList: [],
         modalTotalNominal: 0,
@@ -2017,8 +2507,18 @@ function absensiApp() {
                 }
             }
         },
-        async handleSimpanPresensi() {
+        async handleSimpanPresensi(scope = null) {
             if (this.isSubmitting) return;
+
+            const targetScope = scope || this.tab || 'all';
+            this.submitScope = targetScope;
+
+            // Jika cakupan adalah Borongan saja, tidak ada penarikan kas harian bulanan.
+            // Langsung simpan data borongan tanpa pop-up modal kas!
+            if (targetScope === 'borongan') {
+                this.submitFormWithScope('borongan');
+                return;
+            }
 
             const newList = [];
             let totalNewCashNeeded = 0;
@@ -2105,18 +2605,37 @@ function absensiApp() {
 
             this.processSubmitWithCashCheck(totalNewCashNeeded, newList);
         },
+        submitFormWithScope(scope) {
+            this.isSubmitting = true;
+            window._isSubmittingPresensi = true;
+            const form = document.getElementById('formPresensi');
+            if (!form) return;
+
+            // Pastikan input hidden cakupan bernilai scope yang dipilih
+            let cakupanInput = form.querySelector('input[name="cakupan"]');
+            if (!cakupanInput) {
+                cakupanInput = document.createElement('input');
+                cakupanInput.type = 'hidden';
+                cakupanInput.name = 'cakupan';
+                form.appendChild(cakupanInput);
+            }
+            cakupanInput.value = scope;
+
+            // Nonaktifkan field formulir dari tabel di luar cakupan agar tidak ikut terkirim via HTTP
+            if (scope === 'borongan') {
+                form.querySelectorAll('.table-bulanan input, .table-bulanan select').forEach(el => el.disabled = true);
+            } else if (scope === 'bulanan') {
+                form.querySelectorAll('.table-borongan input, .table-borongan select').forEach(el => el.disabled = true);
+            }
+
+            HTMLFormElement.prototype.submit.call(form);
+        },
         processSubmitWithCashCheck(totalNewCashNeeded, newList) {
             // STRICT UX & CASH GUARD:
             // Jika TIDAK ADA UANG BARU yang perlu dicairkan (0 orang / Rp 0),
             // LANGSUNG SIMPAN tanpa memunculkan modal pop up!
-            // Karyawan lain yang diedit tidak akan memicu pemotongan kas ulang!
             if (totalNewCashNeeded <= 0 || newList.length === 0) {
-                this.isSubmitting = true;
-                window._isSubmittingPresensi = true;
-                const form = document.getElementById('formPresensi');
-                if (form) {
-                    HTMLFormElement.prototype.submit.call(form);
-                }
+                this.submitFormWithScope(this.submitScope);
                 return;
             }
 
@@ -2152,14 +2671,9 @@ function absensiApp() {
                 return;
             }
 
-            this.isSubmitting = true;
             this.showKasModal = false;
-            window._isSubmittingPresensi = true;
             this.$nextTick(() => {
-                const form = document.getElementById('formPresensi');
-                if (form) {
-                    HTMLFormElement.prototype.submit.call(form);
-                }
+                this.submitFormWithScope(this.submitScope);
             });
         }
     };
