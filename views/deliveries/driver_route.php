@@ -1034,6 +1034,7 @@ ob_start();
                 </div>
 
                 <!-- Tombol Aksi Cepat & Detail Rute -->
+                <div class="flex items-center gap-2">
                     <?php if ($isCompleted && (!empty($deliv['bukti_terima_foto']) || !empty($deliv['bukti_terima_urls']))): 
                         $urls = !empty($deliv['bukti_terima_urls']) ? $deliv['bukti_terima_urls'] : [$deliv['bukti_terima_foto']];
                         $pCount = count($urls);
@@ -1348,7 +1349,7 @@ ob_start();
                         <span style="font-size: 10.5px; color: var(--color-ink-mute); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Total Tagihan</span>
                         <span class="font-black text-blue-600 dark:text-blue-400 font-sans" style="font-size: 17px;" x-text="'Rp ' + formatRupiah(activeDelivery?.total_netto)"></span>
                     </div>
-                    <button type="button" @click="closeDetailModal()" class="modal-close-x" aria-label="Tutup" title="Tutup Modal">
+                    <button type="button" @click="closeDetailModal()" class="modal-close-x" aria-label="Tutup" title="Tutup Modal (Esc)">
                         <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                     </button>
                 </div>
@@ -1894,6 +1895,13 @@ ob_start();
 
                         <!-- KANAN: Tombol Aksi Operasional -->
                         <div class="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+                            <!-- Tombol Tutup Modal (Desktop Only) -->
+                            <button type="button" 
+                                    @click="closeDetailModal()" 
+                                    class="btn btn-secondary btn-sm modal-btn-cancel-desktop" 
+                                    style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                                <span>Tutup</span>
+                            </button>
                             <!-- Pesan Khusus Jika Masih Draft PO -->
                             <template x-if="activeDelivery?.status_surat_jalan === 'draft_po' || activeDelivery?.status_pemrosesan === 'po'">
                                 <span class="text-xs text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-3.5 py-2 rounded-xl flex items-center gap-2">
@@ -2228,7 +2236,7 @@ ob_start();
                         <span style="font-size: 10.5px; color: var(--color-ink-mute); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Estimasi Belanja</span>
                         <span class="font-black text-amber-600 dark:text-amber-400 font-sans" style="font-size: 17px;" x-text="'Rp ' + formatRupiah(activeShoppingTask?.total_biaya)"></span>
                     </div>
-                    <button type="button" @click="closeShoppingDetailModal()" class="modal-close-x" aria-label="Tutup" title="Tutup Modal">
+                    <button type="button" @click="closeShoppingDetailModal()" class="modal-close-x" aria-label="Tutup" title="Tutup Modal (Esc)">
                         <i data-lucide="x" style="width: 18px; height: 18px;"></i>
                     </button>
                 </div>
@@ -2862,6 +2870,13 @@ ob_start();
 
                         <!-- Kanan: Tombol Aksi Driver -->
                         <div class="flex items-center justify-end gap-2.5 flex-wrap sm:flex-nowrap">
+                            <!-- Tombol Tutup Modal (Desktop Only) -->
+                            <button type="button" 
+                                    @click="closeShoppingDetailModal()" 
+                                    class="btn btn-secondary btn-sm modal-btn-cancel-desktop" 
+                                    style="border-radius: 12px; font-weight: 700; font-size: 13px; padding: 9px 18px; display: inline-flex; align-items: center; gap: 6px;">
+                                <span>Tutup</span>
+                            </button>
                             <!-- Jika Masih Ditugaskan Driver -->
                             <template x-if="activeShoppingTask?.status_penerimaan === 'ditugaskan_driver'">
                                 <div class="flex items-center gap-2 w-full sm:w-auto">
