@@ -569,6 +569,8 @@ class PenggajianController extends Controller
         }
         $karyawanList = $stmtEmp->fetchAll(PDO::FETCH_ASSOC);
 
+        $allPenarikanIdsToLock = [];
+
         foreach ($karyawanList as $emp) {
             $tipeEmp = $emp['tipe_penggajian'];
             if (!isset($options[$tipeEmp])) continue;
@@ -668,6 +670,7 @@ class PenggajianController extends Controller
                     'nominal' => (float)$p['nominal'],
                     'keterangan' => $p['keterangan'],
                 ];
+                $allPenarikanIdsToLock[] = $p['id'];
             }
 
             // F. Komisi Sales
@@ -843,15 +846,13 @@ class PenggajianController extends Controller
             ")->execute(['rid' => $runId, 's' => $s, 'e' => $e]);
         }
 
-        // Lock penarikan_gaji
-        $pdo->prepare("
-            UPDATE public.penarikan_gaji SET penggajian_id = :rid
-            WHERE penggajian_id IS NULL
-              AND karyawan_id IN (
-                  SELECT rp.karyawan_id FROM public.rincian_penggajian rp
-                  WHERE rp.penggajian_id = :rid AND rp.is_excluded = FALSE
-              )
-        ")->execute(['rid' => $runId]);
+        // Lock penarikan_gaji (Only lock the exact advances calculated in this payroll run)
+        if (!empty($allPenarikanIdsToLock)) {
+            $uniqueLockIds = array_values(array_unique($allPenarikanIdsToLock));
+            $placeholders = implode(',', array_fill(0, count($uniqueLockIds), '?'));
+            $stmtLockPenarikan = $pdo->prepare("UPDATE public.penarikan_gaji SET penggajian_id = ? WHERE id IN ($placeholders) AND penggajian_id IS NULL");
+            $stmtLockPenarikan->execute(array_merge([$runId], $uniqueLockIds));
+        }
     }
 
     /**
@@ -991,53 +992,122 @@ class PenggajianController extends Controller
         }
 
         try {
-            $run = Database::fetchOne("SELECT status FROM public.penggajian WHERE id = :id", ['id' => $runId]);
+            $pdo = Database::getConnection();
+            $pdo->beginTransaction();
+
+            $stmtHeader = $pdo->prepare("SELECT status, nomor_referensi FROM public.penggajian WHERE id = :id FOR UPDATE");
+            $stmtHeader->execute(['id' => $runId]);
+            $run = $stmtHeader->fetch(PDO::FETCH_ASSOC);
+
             if (!$run || $run['status'] !== 'draf') {
+                $pdo->rollBack();
                 $this->flashError('Data payroll hanya dapat diedit saat status DRAF.');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
 
-            $item = Database::fetchOne("
+            $stmtItem = $pdo->prepare("
                 SELECT rp.*,
                        COALESCE((SELECT SUM(sisa_pinjaman) FROM public.kasbon WHERE karyawan_id = rp.karyawan_id AND status_kasbon = 'aktif'), 0) as sisa_kasbon,
                        COALESCE((SELECT saldo FROM public.tabungan WHERE karyawan_id = rp.karyawan_id), 0) as saldo_tabungan
                 FROM public.rincian_penggajian rp
-                WHERE rp.id = :id AND rp.penggajian_id = :rid
-            ", ['id' => $itemId, 'rid' => $runId]);
+                WHERE rp.id = :id AND rp.penggajian_id = :rid FOR UPDATE
+            ");
+            $stmtItem->execute(['id' => $itemId, 'rid' => $runId]);
+            $item = $stmtItem->fetch(PDO::FETCH_ASSOC);
 
             if (!$item) {
+                $pdo->rollBack();
                 $this->flashError('Line item karyawan tidak ditemukan.');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
 
-            $tunjanganLain = (float)preg_replace('/[^0-9]/', '', (string)$this->input('tunjangan_lain', '0'));
+            // Input Sanitization & Boundary Guard
+            $parseMoney = function($val): float {
+                $clean = preg_replace('/[^0-9]/', '', (string)$val);
+                return (float)($clean ?: 0);
+            };
+
+            $tunjanganLain = $parseMoney($this->input('tunjangan_lain', '0'));
             $catatanTunjanganLain = trim((string)$this->input('catatan_tunjangan_lain', ''));
 
-            $potonganLain = (float)preg_replace('/[^0-9]/', '', (string)$this->input('potongan_lain', '0'));
+            $potonganLain = $parseMoney($this->input('potongan_lain', '0'));
             $catatanPotonganLain = trim((string)$this->input('catatan_potongan_lain', ''));
 
-            $potonganKasbon = (float)preg_replace('/[^0-9]/', '', (string)$this->input('total_potongan_kasbon', '0'));
-            $potonganTabungan = (float)preg_replace('/[^0-9]/', '', (string)$this->input('total_potongan_tabungan', '0'));
-            $penarikanTabungan = (float)preg_replace('/[^0-9]/', '', (string)$this->input('penarikan_tabungan', '0'));
-            $pembulatan = (float)str_replace(['.', ','], ['', '.'], (string)$this->input('nominal_pembulatan', '0'));
+            $potonganKasbon = $parseMoney($this->input('total_potongan_kasbon', '0'));
+            $potonganTabungan = $parseMoney($this->input('total_potongan_tabungan', '0'));
+            $penarikanTabungan = $parseMoney($this->input('penarikan_tabungan', '0'));
 
-            // Validations
+            // Pembulatan can be negative (misal -500 atau 500)
+            $rawPembulatan = trim((string)$this->input('nominal_pembulatan', '0'));
+            $cleanPembulatan = str_replace(['.', ' ', 'Rp', 'rp'], '', $rawPembulatan);
+            if (!preg_match('/^-?\d+$/', $cleanPembulatan)) {
+                $pdo->rollBack();
+                $this->flashError('Nominal angka pembulatan tidak valid.');
+                $this->redirect('/penggajian/preview?id=' . $runId);
+                return;
+            }
+            $pembulatan = (float)$cleanPembulatan;
+
+            // Maximum numeric boundary guard
+            $maxLimit = 9999999999.00;
+            if ($tunjanganLain > $maxLimit || $potonganLain > $maxLimit || $potonganKasbon > $maxLimit || 
+                $potonganTabungan > $maxLimit || $penarikanTabungan > $maxLimit || abs($pembulatan) > $maxLimit) {
+                $pdo->rollBack();
+                $this->flashError('Nominal komponen melebihi batas yang diizinkan sistem.');
+                $this->redirect('/penggajian/preview?id=' . $runId);
+                return;
+            }
+
+            // Business Validations: Kasbon & Tabungan
             $saldoTabungan = (float)$item['saldo_tabungan'];
             $sisaKasbon = (float)$item['sisa_kasbon'];
 
             if ($penarikanTabungan > $saldoTabungan) {
-                $this->flashError('Penarikan tabungan melebihi saldo karyawan saat ini (' . Format::rupiah($saldoTabungan) . ').');
+                $pdo->rollBack();
+                $this->flashError('Penarikan tabungan melebihi saldo tabungan karyawan saat ini (' . Format::rupiah($saldoTabungan) . ').');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
 
             if ($potonganKasbon > $sisaKasbon) {
-                $potonganKasbon = $sisaKasbon;
+                $pdo->rollBack();
+                $this->flashError('Potongan kasbon melebihi sisa pinjaman kasbon aktif karyawan (' . Format::rupiah($sisaKasbon) . ').');
+                $this->redirect('/penggajian/preview?id=' . $runId);
+                return;
             }
 
-            // Recalculate Net
+            // Re-allocate rincian_json debts agar selalu sinkron dengan total_potongan_kasbon
+            $existingDetails = json_decode((string)($item['rincian_json'] ?? ''), true) ?: [];
+            $newDebts = [];
+            if ($potonganKasbon > 0) {
+                $stmtActiveKb = $pdo->prepare("
+                    SELECT id, keterangan, total_pinjaman, potongan_per_periode, sisa_pinjaman 
+                    FROM public.kasbon 
+                    WHERE karyawan_id = :kid AND status_kasbon = 'aktif' 
+                    ORDER BY tanggal_pengajuan ASC
+                ");
+                $stmtActiveKb->execute(['kid' => $item['karyawan_id']]);
+                $activeKasbons = $stmtActiveKb->fetchAll(PDO::FETCH_ASSOC);
+
+                $remainingToCut = $potonganKasbon;
+                foreach ($activeKasbons as $kb) {
+                    if ($remainingToCut <= 0) break;
+                    $cut = min($remainingToCut, (float)$kb['sisa_pinjaman']);
+                    if ($cut <= 0) continue;
+                    $newDebts[] = [
+                        'kasbon_id'  => $kb['id'],
+                        'keterangan' => $kb['keterangan'] ?? 'Kasbon Karyawan',
+                        'nominal'    => $cut
+                    ];
+                    $remainingToCut -= $cut;
+                }
+            }
+            $existingDetails['debts'] = $newDebts;
+            $newRincianJson = json_encode($existingDetails, JSON_UNESCAPED_UNICODE);
+
+            // Recalculate Net Salary
             $gajiPokok = (float)$item['gaji_pokok'];
             $uangHadir = (float)$item['total_uang_kehadiran'];
             $upahBorongan = (float)$item['total_upah_borongan'];
@@ -1052,9 +1122,15 @@ class PenggajianController extends Controller
             $potonganTotal = $potonganKasbon + $potonganLain + $potonganTabungan + $penarikanGaji;
 
             $gajiBersih = $pendapatanTotal - $potonganTotal + $pembulatan;
-            if ($gajiBersih < 0) $gajiBersih = 0;
 
-            $pdo = Database::getConnection();
+            // Strict Non-Negative Net Guard (Layer 3)
+            if ($gajiBersih < 0) {
+                $pdo->rollBack();
+                $this->flashError('Total potongan melebihi total pendapatan. Gaji bersih tidak boleh minus (negatif).');
+                $this->redirect('/penggajian/preview?id=' . $runId);
+                return;
+            }
+
             $stmtUpdate = $pdo->prepare("
                 UPDATE public.rincian_penggajian
                 SET tunjangan_lain = :tunj_lain,
@@ -1065,7 +1141,8 @@ class PenggajianController extends Controller
                     total_potongan_tabungan = :pot_tab,
                     penarikan_tabungan = :tarik_tab,
                     nominal_pembulatan = :bulat,
-                    gaji_bersih_diterima = :net
+                    gaji_bersih_diterima = :net,
+                    rincian_json = :rjson
                 WHERE id = :id AND penggajian_id = :rid
             ");
             $stmtUpdate->execute([
@@ -1078,20 +1155,34 @@ class PenggajianController extends Controller
                 'tarik_tab' => $penarikanTabungan,
                 'bulat' => $pembulatan,
                 'net' => $gajiBersih,
+                'rjson' => $newRincianJson,
                 'id' => $itemId,
                 'rid' => $runId
             ]);
 
-            // Update header total
+            // Update header total dalam transaksi
             $stmtSum = $pdo->prepare("SELECT COALESCE(SUM(gaji_bersih_diterima), 0) FROM public.rincian_penggajian WHERE penggajian_id = :rid AND is_excluded = FALSE");
             $stmtSum->execute(['rid' => $runId]);
             $newTotal = (float)$stmtSum->fetchColumn();
 
             $pdo->prepare("UPDATE public.penggajian SET total_gaji_dikeluarkan = :total WHERE id = :rid")->execute(['total' => $newTotal, 'rid' => $runId]);
 
+            $pdo->commit();
+
+            ActivityLog::log(
+                'hr_payroll',
+                'UPDATE_PAYROLL_ITEM',
+                "Menyesuaikan komponen payroll karyawan pada {$run['nomor_referensi']} dengan net " . Format::rupiah($gajiBersih) . ".",
+                'rincian_penggajian',
+                $itemId
+            );
+
             $this->flashSuccess('Rincian komponen gaji berhasil diperbarui.');
             $this->redirect('/penggajian/preview?id=' . $runId);
         } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $this->flashError('Gagal mengupdate item penggajian: ' . $e->getMessage());
             $this->redirect('/penggajian/preview?id=' . $runId);
         }
@@ -1120,16 +1211,42 @@ class PenggajianController extends Controller
             return;
         }
 
+        $pdo = Database::getConnection();
+
         try {
-            $item = Database::fetchOne("SELECT is_excluded, karyawan_id FROM public.rincian_penggajian WHERE id = :id AND penggajian_id = :rid", ['id' => $itemId, 'rid' => $runId]);
+            $pdo->beginTransaction();
+
+            // 1. Lock header & verifikasi status masih DRAF
+            $stmtRun = $pdo->prepare("SELECT id, nomor_referensi, status, options_json FROM public.penggajian WHERE id = :id FOR UPDATE");
+            $stmtRun->execute(['id' => $runId]);
+            $run = $stmtRun->fetch(PDO::FETCH_ASSOC);
+
+            if (!$run || $run['status'] !== 'draf') {
+                $pdo->rollBack();
+                $this->flashError('Pengecualian karyawan hanya dapat diubah saat status payroll masih DRAF.');
+                $this->redirect('/penggajian/preview?id=' . $runId);
+                return;
+            }
+
+            // 2. Lock line item
+            $stmtItem = $pdo->prepare("
+                SELECT rp.id, rp.is_excluded, rp.karyawan_id, rp.rincian_json, v.nama_karyawan
+                FROM public.rincian_penggajian rp
+                JOIN public.v_karyawan_info v ON v.id = rp.karyawan_id
+                WHERE rp.id = :id AND rp.penggajian_id = :rid
+                FOR UPDATE
+            ");
+            $stmtItem->execute(['id' => $itemId, 'rid' => $runId]);
+            $item = $stmtItem->fetch(PDO::FETCH_ASSOC);
+
             if (!$item) {
+                $pdo->rollBack();
                 $this->flashError('Data line item tidak ditemukan.');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
 
             $newExcluded = !$item['is_excluded'];
-            $pdo = Database::getConnection();
 
             $pdo->prepare("
                 UPDATE public.rincian_penggajian
@@ -1142,14 +1259,15 @@ class PenggajianController extends Controller
                 'id' => $itemId
             ]);
 
+            $details = json_decode((string)($item['rincian_json'] ?? ''), true) ?: [];
+
             // If excluded -> unlock records for this employee
             if ($newExcluded) {
                 $pdo->prepare("UPDATE public.absensi SET penggajian_id = NULL WHERE penggajian_id = :rid AND karyawan_id = :kid")->execute(['rid' => $runId, 'kid' => $item['karyawan_id']]);
                 $pdo->prepare("UPDATE public.produksi_harian SET penggajian_id = NULL WHERE penggajian_id = :rid AND karyawan_id = :kid")->execute(['rid' => $runId, 'kid' => $item['karyawan_id']]);
                 $pdo->prepare("UPDATE public.penarikan_gaji SET penggajian_id = NULL WHERE penggajian_id = :rid AND karyawan_id = :kid")->execute(['rid' => $runId, 'kid' => $item['karyawan_id']]);
             } else {
-                // Relock records for this employee
-                $run = Database::fetchOne("SELECT options_json FROM public.penggajian WHERE id = :rid", ['rid' => $runId]);
+                // Relock records for this employee within exact options date boundary
                 $options = json_decode((string)$run['options_json'], true);
                 if (is_array($options)) {
                     if (isset($options['borongan'])) {
@@ -1159,20 +1277,41 @@ class PenggajianController extends Controller
                     if (isset($options['bulanan'])) {
                         $pdo->prepare("UPDATE public.absensi SET penggajian_id = :rid WHERE penggajian_id IS NULL AND tanggal BETWEEN :s AND :e AND karyawan_id = :kid")->execute(['rid' => $runId, 's' => $options['bulanan']['start'], 'e' => $options['bulanan']['end'], 'kid' => $item['karyawan_id']]);
                     }
-                    $pdo->prepare("UPDATE public.penarikan_gaji SET penggajian_id = :rid WHERE penggajian_id IS NULL AND karyawan_id = :kid")->execute(['rid' => $runId, 'kid' => $item['karyawan_id']]);
+                    
+                    // Relock penarikan_gaji strictly based on included IDs
+                    $penarikanItems = $details['penarikan'] ?? [];
+                    $penarikanIds = array_column($penarikanItems, 'id_penarikan');
+                    if (!empty($penarikanIds)) {
+                        $placeholders = implode(',', array_fill(0, count($penarikanIds), '?'));
+                        $pdo->prepare("UPDATE public.penarikan_gaji SET penggajian_id = ? WHERE id IN ($placeholders) AND penggajian_id IS NULL")
+                            ->execute(array_merge([$runId], $penarikanIds));
+                    }
                 }
             }
 
-            // Update header total
+            // Update header total dalam transaksi
             $stmtSum = $pdo->prepare("SELECT COALESCE(SUM(gaji_bersih_diterima), 0) FROM public.rincian_penggajian WHERE penggajian_id = :rid AND is_excluded = FALSE");
             $stmtSum->execute(['rid' => $runId]);
             $newTotal = (float)$stmtSum->fetchColumn();
 
-            $pdo->prepare("UPDATE public.penggajian SET total_gaji_dikeluarkan = :total WHERE id = :rid")->execute(['total' => $newTotal, 'rid' => $runId]);
+            $pdo->prepare("UPDATE public.penggajian SET total_gaji_dikeluarkan = :total, diubah_pada = NOW() WHERE id = :rid")->execute(['total' => $newTotal, 'rid' => $runId]);
+
+            $pdo->commit();
+
+            ActivityLog::log(
+                'hr_payroll',
+                'TOGGLE_EXCLUDE_PAYROLL_ITEM',
+                ($newExcluded ? "Mengecualikan" : "Menyertakan kembali") . " karyawan {$item['nama_karyawan']} pada draf payroll {$run['nomor_referensi']}.",
+                'rincian_penggajian',
+                $itemId
+            );
 
             $this->flashSuccess($newExcluded ? 'Karyawan berhasil dikecualikan dari payroll ini.' : 'Karyawan berhasil disertakan kembali ke payroll.');
             $this->redirect('/penggajian/preview?id=' . $runId);
         } catch (Throwable $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $this->flashError('Gagal mengubah status pengecualian: ' . $e->getMessage());
             $this->redirect('/penggajian/preview?id=' . $runId);
         }
@@ -1239,6 +1378,20 @@ class PenggajianController extends Controller
             $stmtTotals->execute(['rid' => $runId]);
             $totalsRow = $stmtTotals->fetch(PDO::FETCH_ASSOC);
 
+            // Layer 4 Guard: Tolak approval jika ada baris included dengan gaji bersih negatif
+            $stmtNegCheck = $pdo->prepare("
+                SELECT COUNT(*) 
+                FROM public.rincian_penggajian 
+                WHERE penggajian_id = :rid AND is_excluded = FALSE AND gaji_bersih_diterima < 0
+            ");
+            $stmtNegCheck->execute(['rid' => $runId]);
+            if ((int)$stmtNegCheck->fetchColumn() > 0) {
+                $pdo->rollBack();
+                $this->flashError('Persetujuan gagal: Terdapat karyawan dengan gaji bersih bernilai negatif. Harap sesuaikan rincian komponen terlebih dahulu.');
+                $this->redirect('/penggajian/preview?id=' . $runId);
+                return;
+            }
+
             $totalGaji = (float)($totalsRow['total_gaji'] ?? 0);
             $totalPotonganTabunganAll = (float)($totalsRow['total_potongan_tabungan'] ?? 0);
             $totalPenarikanTabunganAll = (float)($totalsRow['total_penarikan_tabungan'] ?? 0);
@@ -1271,8 +1424,8 @@ class PenggajianController extends Controller
                 return;
             }
 
-            // Ambil akun kas escrow tabungan karyawan jika ada tabungan
-            $stmtEscrow = $pdo->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE is_escrow = TRUE AND status = 'aktif' LIMIT 1");
+            // Ambil akun kas escrow tabungan karyawan jika ada transaksi tabungan
+            $stmtEscrow = $pdo->query("SELECT id, nama_akun, saldo_saat_ini FROM public.akun_kas WHERE is_escrow = TRUE AND status_aktif = TRUE LIMIT 1");
             $escrowAccount = $stmtEscrow->fetch(PDO::FETCH_ASSOC);
             $escrowKasId = $escrowAccount['id'] ?? null;
 
@@ -1281,6 +1434,44 @@ class PenggajianController extends Controller
                     $saldoEscrow = (float)($escrowAccount['saldo_saat_ini'] ?? 0);
                     $pdo->rollBack();
                     $this->flashError("Saldo kas tabungan karyawan (" . Format::rupiah($saldoEscrow) . ") tidak mencukupi untuk pencairan tabungan karyawan via payroll (" . Format::rupiah($totalPenarikanTabunganAll) . ").");
+                    $this->redirect('/penggajian/preview?id=' . $runId);
+                    return;
+                }
+            }
+
+            // Pre-validation: Cek kecukupan saldo tabungan per karyawan yang menarik tabungan
+            $stmtCheckEmpTab = $pdo->prepare("
+                SELECT rp.karyawan_id, v.nama_karyawan, rp.penarikan_tabungan, COALESCE(t.saldo, 0) as saldo_saat_ini
+                FROM public.rincian_penggajian rp
+                JOIN public.v_karyawan_info v ON v.id = rp.karyawan_id
+                LEFT JOIN public.tabungan t ON t.karyawan_id = rp.karyawan_id
+                WHERE rp.penggajian_id = :rid AND rp.is_excluded = FALSE AND rp.penarikan_tabungan > 0
+            ");
+            $stmtCheckEmpTab->execute(['rid' => $runId]);
+            $tabCheckRows = $stmtCheckEmpTab->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($tabCheckRows as $tRow) {
+                if ((float)$tRow['penarikan_tabungan'] > (float)$tRow['saldo_saat_ini']) {
+                    $pdo->rollBack();
+                    $this->flashError("Persetujuan dibatalkan: Saldo tabungan {$tRow['nama_karyawan']} (" . Format::rupiah((float)$tRow['saldo_saat_ini']) . ") tidak mencukupi untuk penarikan sebesar " . Format::rupiah((float)$tRow['penarikan_tabungan']) . ".");
+                    $this->redirect('/penggajian/preview?id=' . $runId);
+                    return;
+                }
+            }
+
+            // Pre-validation: Cek sisa pinjaman kasbon aktif per karyawan
+            $stmtCheckEmpKb = $pdo->prepare("
+                SELECT rp.karyawan_id, v.nama_karyawan, rp.total_potongan_kasbon,
+                       COALESCE((SELECT SUM(sisa_pinjaman) FROM public.kasbon WHERE karyawan_id = rp.karyawan_id AND status_kasbon = 'aktif'), 0) as sisa_kasbon_aktif
+                FROM public.rincian_penggajian rp
+                JOIN public.v_karyawan_info v ON v.id = rp.karyawan_id
+                WHERE rp.penggajian_id = :rid AND rp.is_excluded = FALSE AND rp.total_potongan_kasbon > 0
+            ");
+            $stmtCheckEmpKb->execute(['rid' => $runId]);
+            $kbCheckRows = $stmtCheckEmpKb->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($kbCheckRows as $kbRow) {
+                if ((float)$kbRow['total_potongan_kasbon'] > (float)$kbRow['sisa_kasbon_aktif']) {
+                    $pdo->rollBack();
+                    $this->flashError("Persetujuan dibatalkan: Potongan kasbon {$kbRow['nama_karyawan']} (" . Format::rupiah((float)$kbRow['total_potongan_kasbon']) . ") melebihi sisa pinjaman kasbon aktif (" . Format::rupiah((float)$kbRow['sisa_kasbon_aktif']) . ").");
                     $this->redirect('/penggajian/preview?id=' . $runId);
                     return;
                 }
@@ -1315,56 +1506,54 @@ class PenggajianController extends Controller
             foreach ($items as $item) {
                 $kid = $item['karyawan_id'];
                 $rincianId = $item['id'];
-                $details = json_decode((string)$item['rincian_json'], true);
+                $details = json_decode((string)$item['rincian_json'], true) ?: [];
 
-                // 2a. Eksekusi Potongan Kasbon
-                if ((float)$item['total_potongan_kasbon'] > 0) {
-                    $debts = $details['debts'] ?? [];
-                    if (!empty($debts)) {
-                        foreach ($debts as $debt) {
-                            $kbId = $debt['kasbon_id'];
-                            $nominalPotong = (float)$debt['nominal'];
-                            if ($nominalPotong <= 0) continue;
+                // 2a. Eksekusi Potongan Kasbon (Alokasi Eksak Sesuai total_potongan_kasbon)
+                $targetKasbonCut = (float)$item['total_potongan_kasbon'];
+                if ($targetKasbonCut > 0) {
+                    $stmtActiveKb = $pdo->prepare("
+                        SELECT id, sisa_pinjaman, keterangan 
+                        FROM public.kasbon 
+                        WHERE karyawan_id = :kid AND status_kasbon = 'aktif' 
+                        ORDER BY tanggal_pengajuan ASC 
+                        FOR UPDATE
+                    ");
+                    $stmtActiveKb->execute(['kid' => $kid]);
+                    $activeLoans = $stmtActiveKb->fetchAll(PDO::FETCH_ASSOC);
 
-                            // Insert potongan_kasbon (DB trigger trg_potongan_kasbon_update_saldo auto-reduces sisa_pinjaman)
-                            $pdo->prepare("
-                                INSERT INTO public.potongan_kasbon (
-                                    kasbon_id, rincian_penggajian_id, akun_kas_id, tanggal, nominal, tipe_potongan, keterangan, dibuat_pada
-                                ) VALUES (
-                                    :kbid, :rpid, :kas_id, CURRENT_DATE, :nom, 'payroll', :ket, NOW()
-                                )
-                            ")->execute([
-                                'kbid' => $kbId,
-                                'rpid' => $rincianId,
-                                'kas_id' => $akunKasId,
-                                'nom' => $nominalPotong,
-                                'ket' => 'Potongan Payroll ' . $run['nomor_referensi']
-                            ]);
-                        }
-                    } else {
-                        // Fallback manual potongan kasbon jika debts array kosong tapi total > 0
-                        $stmtActiveKb = $pdo->prepare("SELECT id, sisa_pinjaman FROM public.kasbon WHERE karyawan_id = :kid AND status_kasbon = 'aktif' ORDER BY tanggal_pengajuan ASC");
-                        $stmtActiveKb->execute(['kid' => $kid]);
-                        $rem = (float)$item['total_potongan_kasbon'];
-                        while ($rowKb = $stmtActiveKb->fetch(PDO::FETCH_ASSOC)) {
-                            if ($rem <= 0) break;
-                            $cut = min($rem, (float)$rowKb['sisa_pinjaman']);
-                            $pdo->prepare("
-                                INSERT INTO public.potongan_kasbon (
-                                    kasbon_id, rincian_penggajian_id, akun_kas_id, tanggal, nominal, tipe_potongan, keterangan, dibuat_pada
-                                ) VALUES (
-                                    :kbid, :rpid, :kas_id, CURRENT_DATE, :nom, 'payroll', :ket, NOW()
-                                )
-                            ")->execute([
-                                'kbid' => $rowKb['id'],
-                                'rpid' => $rincianId,
-                                'kas_id' => $akunKasId,
-                                'nom' => $cut,
-                                'ket' => 'Potongan Payroll ' . $run['nomor_referensi']
-                            ]);
-                            $rem -= $cut;
-                        }
+                    $remainingToCut = $targetKasbonCut;
+                    $executedDebts = [];
+                    foreach ($activeLoans as $kb) {
+                        if ($remainingToCut <= 0) break;
+                        $cut = min($remainingToCut, (float)$kb['sisa_pinjaman']);
+                        if ($cut <= 0) continue;
+
+                        $pdo->prepare("
+                            INSERT INTO public.potongan_kasbon (
+                                kasbon_id, rincian_penggajian_id, akun_kas_id, tanggal, nominal, tipe_potongan, keterangan, dibuat_pada
+                            ) VALUES (
+                                :kbid, :rpid, :kas_id, CURRENT_DATE, :nom, 'payroll', :ket, NOW()
+                            )
+                        ")->execute([
+                            'kbid' => $kb['id'],
+                            'rpid' => $rincianId,
+                            'kas_id' => $akunKasId,
+                            'nom' => $cut,
+                            'ket' => 'Potongan Payroll ' . $run['nomor_referensi']
+                        ]);
+
+                        $executedDebts[] = [
+                            'kasbon_id'  => $kb['id'],
+                            'keterangan' => $kb['keterangan'] ?? 'Kasbon Karyawan',
+                            'nominal'    => $cut
+                        ];
+                        $remainingToCut -= $cut;
                     }
+
+                    // Update rincian_json dengan debts yang benar-benar dieksekusi
+                    $details['debts'] = $executedDebts;
+                    $pdo->prepare("UPDATE public.rincian_penggajian SET rincian_json = :json WHERE id = :id")
+                        ->execute(['json' => json_encode($details, JSON_UNESCAPED_UNICODE), 'id' => $rincianId]);
                 }
 
                 // 2b. Eksekusi Tabungan (Setoran via Payroll)
@@ -1745,7 +1934,10 @@ class PenggajianController extends Controller
         try {
             $pdo->beginTransaction();
 
-            $run = Database::fetchOne("SELECT nomor_referensi, status FROM public.penggajian WHERE id = :id FOR UPDATE", ['id' => $runId]);
+            $stmtRun = $pdo->prepare("SELECT nomor_referensi, status FROM public.penggajian WHERE id = :id FOR UPDATE");
+            $stmtRun->execute(['id' => $runId]);
+            $run = $stmtRun->fetch(PDO::FETCH_ASSOC);
+
             if (!$run || $run['status'] !== 'draf') {
                 $pdo->rollBack();
                 $this->flashError('Hanya payroll berstatus DRAF yang dapat dihapus.');
@@ -1808,7 +2000,10 @@ class PenggajianController extends Controller
         try {
             $pdo->beginTransaction();
 
-            $run = Database::fetchOne("SELECT * FROM public.penggajian WHERE id = :id FOR UPDATE", ['id' => $runId]);
+            $stmtRun = $pdo->prepare("SELECT * FROM public.penggajian WHERE id = :id FOR UPDATE");
+            $stmtRun->execute(['id' => $runId]);
+            $run = $stmtRun->fetch(PDO::FETCH_ASSOC);
+
             if (!$run || $run['status'] !== 'draf') {
                 $pdo->rollBack();
                 $this->flashError('Hanya payroll berstatus DRAF yang dapat di-regenerate.');
@@ -1832,10 +2027,12 @@ class PenggajianController extends Controller
             // 2. Delete existing rincian items
             $pdo->prepare("DELETE FROM public.rincian_penggajian WHERE penggajian_id = :rid")->execute(['rid' => $runId]);
 
-            // 3. Re-run generator
+            // 3. Re-run generator dengan parameter filter karyawan & base salary yang diawetkan
             $itemCount = 0;
             $preventedDoubleCount = 0;
-            $this->generatePayrollItems($pdo, $runId, $options, $itemCount, $preventedDoubleCount);
+            $selectedEmployeeIds = (array)($options['selected_karyawan_ids'] ?? []);
+            $includeMonthlyBase = isset($options['include_monthly_base']) ? (bool)$options['include_monthly_base'] : true;
+            $this->generatePayrollItems($pdo, $runId, $options, $itemCount, $preventedDoubleCount, $selectedEmployeeIds, $includeMonthlyBase);
 
             // 4. Update header total
             $stmtSum = $pdo->prepare("SELECT COALESCE(SUM(gaji_bersih_diterima), 0) FROM public.rincian_penggajian WHERE penggajian_id = :rid AND is_excluded = FALSE");

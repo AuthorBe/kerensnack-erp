@@ -725,6 +725,56 @@ class SalaryHistoryMigrator
             }
             echo "    -> Berhasil memasukkan {$kasbonCount} baris kasbon.\n";
 
+            // 1b. PENYESUAIAN REVISI KASBON PATOKAN (docs/PROMPT/data_kasbon)
+            echo "  - Menerapkan revisi data kasbon patokan (docs/PROMPT/data_kasbon)...\n";
+            // Mona Chulyani
+            $this->pdo->exec("
+                UPDATE public.kasbon 
+                SET sisa_pinjaman = 1300000.00, status_kasbon = 'aktif', diubah_pada = NOW() 
+                WHERE id = '97d24ff7-4a76-5215-95db-a753b20316c3';
+                UPDATE public.kasbon 
+                SET sisa_pinjaman = 0.00, status_kasbon = 'lunas', diubah_pada = NOW() 
+                WHERE id IN ('84e7e0ac-a5eb-5b2f-ab9c-94cbd3f58860', 'e6f02f84-ae6f-50bb-9b7a-2f7c3320e29a');
+            ");
+            // Sri Nurjanah
+            $this->pdo->exec("
+                UPDATE public.kasbon 
+                SET sisa_pinjaman = 0.00, status_kasbon = 'lunas', diubah_pada = NOW() 
+                WHERE id = '7b290c8f-9ce7-5a24-98b3-e8987672be01';
+                INSERT INTO public.kasbon (
+                    id, karyawan_id, tanggal_pengajuan, total_pinjaman,
+                    potongan_per_periode, sisa_pinjaman, status_kasbon,
+                    keterangan, catatan, dibuat_pada, diubah_pada
+                ) VALUES (
+                    '5cdade21-6246-5b97-bdc7-5ee426d5fdf6',
+                    'ea3dad1e-7cb7-4191-8655-91a7e38f8c7a',
+                    '2026-10-03', 700000.00, 100000.00, 700000.00, 'aktif',
+                    'Pinjaman kasbon', 'Revisi data kasbon per 03 Okt 2026', '2026-10-03 08:00:00+07', NOW()
+                ) ON CONFLICT (id) DO UPDATE SET
+                    total_pinjaman = EXCLUDED.total_pinjaman,
+                    sisa_pinjaman = EXCLUDED.sisa_pinjaman,
+                    status_kasbon = EXCLUDED.status_kasbon,
+                    diubah_pada = NOW();
+            ");
+            // Asiyah
+            $this->pdo->exec("
+                INSERT INTO public.kasbon (
+                    id, karyawan_id, tanggal_pengajuan, total_pinjaman,
+                    potongan_per_periode, sisa_pinjaman, status_kasbon,
+                    keterangan, catatan, dibuat_pada, diubah_pada
+                ) VALUES (
+                    '72b0d9a5-a4be-5b20-b862-7a4ec3da97ac',
+                    'e6b1fce6-8abc-4107-b536-6a231bc4bd3e',
+                    '2026-10-09', 12000.00, 12000.00, 12000.00, 'aktif',
+                    'Pinjaman kasbon', 'Revisi data kasbon per 09 Okt 2026', '2026-10-09 08:00:00+07', NOW()
+                ) ON CONFLICT (id) DO UPDATE SET
+                    total_pinjaman = EXCLUDED.total_pinjaman,
+                    sisa_pinjaman = EXCLUDED.sisa_pinjaman,
+                    status_kasbon = EXCLUDED.status_kasbon,
+                    diubah_pada = NOW();
+            ");
+            echo "    -> Berhasil menerapkan penyesuaian revisi kasbon patokan.\n";
+
             // 2. MIGRASI PENGGAJIAN HEADER (10 Baris)
             echo "  - Memigrasikan Header Penggajian (Payroll Runs)...\n";
             $stmtPenggajian = $this->pdo->prepare("
@@ -1324,7 +1374,7 @@ class SalaryHistoryMigrator
             'rincian_penggajian' => ['target' => 214,  'query' => "SELECT COUNT(*) FROM public.rincian_penggajian"],
             'absensi'            => ['target' => 1415, 'query' => "SELECT COUNT(*) FROM public.absensi"],
             'produksi_harian'    => ['target' => 3627, 'query' => "SELECT COUNT(*) FROM public.produksi_harian"],
-            'kasbon'             => ['target' => 35,   'query' => "SELECT COUNT(*) FROM public.kasbon"],
+            'kasbon'             => ['target' => 37,   'query' => "SELECT COUNT(*) FROM public.kasbon"],
             'potongan_kasbon'    => ['target' => 68,   'query' => "SELECT COUNT(*) FROM public.potongan_kasbon"],
             'penarikan_gaji'     => ['target' => 92,   'query' => "SELECT COUNT(*) FROM public.penarikan_gaji"],
             'transaksi_tabungan' => ['target' => 4,    'query' => "SELECT COUNT(*) FROM public.transaksi_tabungan"],
