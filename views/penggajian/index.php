@@ -287,15 +287,22 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
     pointer-events: none;
 }
 
-/* 4. Tipe & Status Badges */
-.badge-tipe-borongan {
+/* 4. Tipe & Status Badges (SSOT Centering & Tabular Figures) */
+.badge-tipe-borongan,
+.badge-tipe-bulanan,
+.badge-tipe-gabungan {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 7px;
-    border-radius: 6px;
-    font-size: 10.5px;
+    justify-content: center;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    font-size: 11px;
     font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    text-align: center;
+}
+.badge-tipe-borongan {
     background: rgba(217, 119, 6, 0.1);
     color: #b45309;
     border: 1px solid rgba(217, 119, 6, 0.22);
@@ -307,13 +314,6 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
 }
 
 .badge-tipe-bulanan {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 7px;
-    border-radius: 6px;
-    font-size: 10.5px;
-    font-weight: 700;
     background: rgba(2, 132, 199, 0.1);
     color: #0284c7;
     border: 1px solid rgba(2, 132, 199, 0.22);
@@ -325,13 +325,6 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
 }
 
 .badge-tipe-gabungan {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 7px;
-    border-radius: 6px;
-    font-size: 10.5px;
-    font-weight: 700;
     background: rgba(147, 51, 234, 0.1);
     color: #7e22ce;
     border: 1px solid rgba(147, 51, 234, 0.22);
@@ -342,14 +335,22 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
     border-color: rgba(147, 51, 234, 0.35);
 }
 
-.badge-status-draf {
+.badge-status-draf,
+.badge-status-disetujui,
+.badge-status-dibayarkan {
     display: inline-flex;
     align-items: center;
-    gap: 4.5px;
-    padding: 3px 8.5px;
+    justify-content: center;
+    gap: 5px;
+    padding: 3.5px 10px;
     border-radius: 9999px;
     font-size: 11px;
     font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    text-align: center;
+}
+.badge-status-draf {
     background: rgba(217, 119, 6, 0.12);
     color: #b45309;
     border: 1px solid rgba(217, 119, 6, 0.25);
@@ -357,16 +358,10 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
 .dark .badge-status-draf {
     background: rgba(217, 119, 6, 0.2);
     color: #fbbf24;
+    border-color: rgba(217, 119, 6, 0.35);
 }
 
 .badge-status-disetujui {
-    display: inline-flex;
-    align-items: center;
-    gap: 4.5px;
-    padding: 3px 8.5px;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 700;
     background: rgba(16, 185, 129, 0.12);
     color: #047857;
     border: 1px solid rgba(16, 185, 129, 0.25);
@@ -374,16 +369,10 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
 .dark .badge-status-disetujui {
     background: rgba(16, 185, 129, 0.2);
     color: #34d399;
+    border-color: rgba(16, 185, 129, 0.35);
 }
 
 .badge-status-dibayarkan {
-    display: inline-flex;
-    align-items: center;
-    gap: 4.5px;
-    padding: 3px 8.5px;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 700;
     background: rgba(13, 148, 136, 0.12);
     color: #0f766e;
     border: 1px solid rgba(13, 148, 136, 0.25);
@@ -391,20 +380,78 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
 .dark .badge-status-dibayarkan {
     background: rgba(13, 148, 136, 0.2);
     color: #2dd4bf;
+    border-color: rgba(13, 148, 136, 0.35);
 }
 
 /* Pulsing dot */
 .dot-pulse {
     width: 6px;
     height: 6px;
+    min-width: 6px;
+    min-height: 6px;
     border-radius: 50%;
     background-color: currentColor;
     animation: pulseDot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    flex-shrink: 0;
+    display: inline-block;
 }
 @keyframes pulseDot {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: .4; transform: scale(0.85); }
 }
+
+/* Karyawan Counter Badge */
+.badge-payroll-karyawan {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    background: var(--color-canvas-soft, #f1f5f9);
+    color: var(--color-ink, #334155);
+    border: 1px solid var(--color-hairline, #e2e8f0);
+}
+.dark .badge-payroll-karyawan {
+    background: #1e293b;
+    color: #cbd5e1;
+    border-color: #334155;
+}
+
+/* No. Referensi Badge */
+.badge-payroll-ref {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3.5px 8px;
+    border-radius: 6px;
+    font-family: var(--font-mono, monospace);
+    font-variant-numeric: tabular-nums;
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    background: var(--color-canvas-soft, #f8fafc);
+    color: var(--color-ink, #334155);
+    border: 1px solid var(--color-hairline, #e2e8f0);
+}
+.dark .badge-payroll-ref {
+    background: #0f172a;
+    color: #cbd5e1;
+    border-color: #334155;
+}
+
+/* Icon size utility fallbacks */
+.w-3 { width: 12px !important; }
+.h-3 { height: 12px !important; }
+.w-3\.5 { width: 14px !important; }
+.h-3\.5 { height: 14px !important; }
+.w-4 { width: 16px !important; }
+.h-4 { height: 16px !important; }
 
 /* Table Container Card */
 .payroll-table-card {
@@ -694,6 +741,34 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
     background: #334155;
     color: #f1f5f9;
 }
+
+/* 5. Mobile Smartphone Responsive Enhancements */
+@media (max-width: 640px) {
+    .dashboard-kpi-card {
+        padding: 11px 13px;
+        min-height: 88px;
+    }
+    .payroll-search-box {
+        max-width: 100%;
+        min-width: 100%;
+        width: 100%;
+    }
+    .payroll-warning-banner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+    }
+    .payroll-warning-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .payroll-btn-periksa {
+        flex: 1;
+        justify-content: center;
+        height: 36px;
+    }
+}
 </style>
 
 <div class="space-y-4" x-data="{
@@ -753,8 +828,20 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
     },
     get approvedCount() {
         return this.payrollList.filter(p => p.status === 'disetujui' || p.status === 'dibayarkan').length;
+    },
+
+    async downloadPdf(url, title, subtitle) {
+        if (typeof window.downloadFileWithLoading === 'function') {
+            await window.downloadFileWithLoading(url, {
+                title: title || 'Menyiapkan Rekap PDF...',
+                subtitle: subtitle || 'Mengompilasi dokumen rekapitulasi penggajian...',
+                defaultFilename: 'Rekapitulasi_Penggajian.pdf'
+            });
+        } else {
+            window.open(url, '_blank');
+        }
     }
-}">
+}" x-init="$nextTick(() => { if (window.lucide) lucide.createIcons(); })">
 
     <!-- 1. PAGE HEADER (Pola Kanonikal KEREN ONE ERP) -->
     <div class="page-header flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -778,12 +865,12 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
 
         <div class="page-header-actions grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto justify-end">
             <a href="<?= Router::url('/penggajian/rekap/karyawan') ?>" class="btn btn-secondary text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 w-full sm:w-auto px-3.5 py-2" style="height:38px; border-radius:10px;">
-                <i data-lucide="user-check" class="w-4 h-4 text-slate-500"></i>
+                <i data-lucide="user-check" style="width: 16px; height: 16px;" class="text-slate-500"></i>
                 <span>Rekap Karyawan</span>
             </a>
             <?php if (Auth::hasPermission('hr.payroll_manage')): ?>
             <a href="<?= Router::url('/penggajian/create') ?>" class="btn btn-primary text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 w-full sm:w-auto px-4 py-2" style="height:38px; border-radius:10px;">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
                 <span>Generate Payroll</span>
             </a>
             <?php endif; ?>
@@ -1004,17 +1091,17 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
 
         <!-- Desktop Table View -->
         <div class="hidden sm:block overflow-x-auto custom-scrollbar">
-            <table class="data-table" style="min-width: 1080px; width: 100%;">
+            <table class="data-table" style="min-width: 990px; width: 100%;">
                 <thead>
                     <tr>
-                        <th style="width: 165px; min-width: 155px;" class="cell-nowrap">No. Referensi</th>
-                        <th style="min-width: 230px;">Nama Payroll</th>
-                        <th style="width: 220px; min-width: 200px;" class="cell-nowrap">Periode</th>
-                        <th style="width: 120px; min-width: 110px;" class="cell-center cell-nowrap">Tipe</th>
-                        <th style="width: 140px; min-width: 130px;" class="cell-center cell-nowrap">Karyawan</th>
-                        <th style="width: 150px; min-width: 140px;" class="cell-right cell-nowrap">Total Gaji</th>
-                        <th style="width: 125px; min-width: 115px;" class="cell-center cell-nowrap">Status</th>
-                        <th style="width: 140px; min-width: 130px; padding-right: 20px;" class="cell-right cell-nowrap">Aksi</th>
+                        <th style="width: 150px; min-width: 140px;" class="cell-nowrap">No. Referensi</th>
+                        <th style="min-width: 220px;">Nama Payroll</th>
+                        <th style="width: 200px; min-width: 190px;" class="cell-nowrap">Periode</th>
+                        <th style="width: 100px; min-width: 90px;" class="cell-center cell-nowrap">Tipe</th>
+                        <th style="width: 130px; min-width: 120px;" class="cell-center cell-nowrap">Karyawan</th>
+                        <th style="width: 140px; min-width: 130px;" class="cell-right cell-nowrap">Total Gaji</th>
+                        <th style="width: 115px; min-width: 105px;" class="cell-center cell-nowrap">Status</th>
+                        <th style="width: 125px; min-width: 115px; padding-right: 18px;" class="cell-right cell-nowrap">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1022,7 +1109,7 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
                         <tr class="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
                             <!-- 1. No. Referensi -->
                             <td class="cell-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-md font-mono text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200/80 dark:border-slate-700" x-text="p.nomor_referensi"></span>
+                                <span class="badge-payroll-ref" x-text="p.nomor_referensi"></span>
                             </td>
 
                             <!-- 2. Nama Payroll -->
@@ -1033,7 +1120,7 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
                             <!-- 3. Periode -->
                             <td class="cell-nowrap">
                                 <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 font-medium">
-                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                                    <svg style="width: 13.5px; height: 13.5px; flex-shrink: 0; display: block; color: var(--color-ink-muted, #94a3b8);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                                     <span x-text="p.periode_awal_fmt + ' s/d ' + p.periode_akhir_fmt"></span>
                                 </div>
                             </td>
@@ -1053,26 +1140,26 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
 
                             <!-- 5. Karyawan Terbayar / Total -->
                             <td class="cell-center cell-nowrap">
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 shadow-2xs">
-                                    <i data-lucide="users" style="width: 13px; height: 13px;" class="text-slate-400 shrink-0"></i>
-                                    <span class="whitespace-nowrap">
-                                        <strong class="font-bold text-slate-900 dark:text-slate-100 font-mono" x-text="p.total_karyawan_terbayar"></strong>
+                                <span class="badge-payroll-karyawan">
+                                    <svg style="width: 12.5px; height: 12.5px; flex-shrink: 0; display: block; color: var(--color-ink-muted, #94a3b8);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    <span class="whitespace-nowrap font-mono">
+                                        <strong class="font-bold text-slate-900 dark:text-slate-100" x-text="p.total_karyawan_terbayar"></strong>
                                         <span class="text-slate-400 font-normal"> / </span>
-                                        <span class="font-mono text-slate-500" x-text="p.total_karyawan"></span>
-                                        <span class="text-[11px] text-slate-400 font-normal ml-0.5">Org</span>
+                                        <span class="text-slate-500" x-text="p.total_karyawan"></span>
+                                        <span class="text-[10px] text-slate-400 font-normal ml-0.5">Org</span>
                                     </span>
                                 </span>
                             </td>
 
                             <!-- 6. Total Gaji -->
                             <td class="cell-right cell-currency">
-                                <span class="font-bold text-sm" 
+                                <span class="font-bold text-sm font-mono" 
                                       :class="p.total_gaji > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'" 
                                       x-text="p.total_gaji_fmt"></span>
                             </td>
 
                             <!-- 7. Status -->
-                            <td class="cell-center cell-nowrap">
+                            <td class="cell-center cell-nowrap" style="padding-left: 6px; padding-right: 6px;">
                                 <template x-if="p.status === 'draf'">
                                     <span class="badge-status-draf">
                                         <span class="dot-pulse"></span>
@@ -1081,34 +1168,34 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
                                 </template>
                                 <template x-if="p.status === 'disetujui'">
                                     <span class="badge-status-disetujui">
-                                        <i data-lucide="check" class="w-3 h-3"></i>
+                                        <svg style="width: 11px; height: 11px; flex-shrink: 0; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                         <span>Disetujui</span>
                                     </span>
                                 </template>
                                 <template x-if="p.status === 'dibayarkan'">
                                     <span class="badge-status-dibayarkan">
-                                        <i data-lucide="check-check" class="w-3 h-3"></i>
+                                        <svg style="width: 12px; height: 12px; flex-shrink: 0; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>
                                         <span>Dibayarkan</span>
                                     </span>
                                 </template>
                             </td>
 
                             <!-- 8. Aksi -->
-                            <td class="cell-right cell-nowrap" style="padding-right: 20px;">
+                            <td class="cell-right cell-nowrap" style="padding-right: 18px;">
                                 <div class="inline-flex items-center gap-1.5 justify-end">
                                     <a :href="'<?= Router::url('/penggajian/preview?id=') ?>' + p.id" 
                                        class="payroll-btn-periksa"
                                        :title="p.status === 'draf' ? 'Periksa dan Edit Draf Payroll' : 'Lihat Rincian Payroll'">
-                                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                                        <svg style="width: 13px; height: 13px; flex-shrink: 0; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                         <span x-text="p.status === 'draf' ? 'Periksa' : 'Detail'"></span>
                                     </a>
                                     <template x-if="p.status !== 'draf'">
-                                        <a :href="'<?= Router::url('/penggajian/rekap-pdf?run_id=') ?>' + p.id" 
-                                           target="_blank" 
+                                        <button type="button" 
+                                           @click="downloadPdf('<?= Router::url('/penggajian/rekap-pdf?run_id=') ?>' + p.id, 'Menyiapkan Rekap PDF...', 'Mengompilasi ' + p.nama_payroll + '...')" 
                                            class="payroll-btn-pdf" 
                                            title="Cetak Rekap PDF">
-                                            <i data-lucide="printer" style="width: 14px; height: 14px;"></i>
-                                        </a>
+                                            <svg style="width: 13px; height: 13px; flex-shrink: 0; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                                        </button>
                                     </template>
                                 </div>
                             </td>
@@ -1119,15 +1206,17 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
         </div>
 
         <!-- Mobile Card View -->
-        <div class="block sm:hidden divide-y divide-slate-200 dark:divide-slate-700">
+        <div class="block sm:hidden divide-y divide-slate-100 dark:divide-slate-800">
             <template x-for="p in filteredList" :key="'mob-' + p.id">
                 <div class="p-3.5 space-y-2.5">
-                    <div class="flex items-start justify-between gap-2">
-                        <div>
-                            <div class="font-bold text-slate-900 dark:text-slate-100 text-sm" x-text="p.nama_payroll"></div>
-                            <div class="inline-flex items-center px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 mt-1" x-text="p.nomor_referensi"></div>
+                    <div class="flex items-start justify-between gap-2.5">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-slate-900 dark:text-slate-100 text-sm leading-snug" x-text="p.nama_payroll"></div>
+                            <div class="mt-1">
+                                <span class="badge-payroll-ref" x-text="p.nomor_referensi"></span>
+                            </div>
                         </div>
-                        <div>
+                        <div class="flex-shrink-0">
                             <template x-if="p.status === 'draf'">
                                 <span class="badge-status-draf">
                                     <span class="dot-pulse"></span>
@@ -1136,28 +1225,28 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
                             </template>
                             <template x-if="p.status === 'disetujui'">
                                 <span class="badge-status-disetujui">
-                                    <i data-lucide="check" class="w-3 h-3"></i>
+                                    <svg style="width: 11px; height: 11px; flex-shrink: 0; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                                     <span>Disetujui</span>
                                 </span>
                             </template>
                             <template x-if="p.status === 'dibayarkan'">
                                 <span class="badge-status-dibayarkan">
-                                    <i data-lucide="check-check" class="w-3 h-3"></i>
+                                    <svg style="width: 12px; height: 12px; flex-shrink: 0; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>
                                     <span>Dibayarkan</span>
                                 </span>
                             </template>
                         </div>
                     </div>
 
-                    <div class="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <div class="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1.5 font-medium">
+                        <svg style="width: 13.5px; height: 13.5px; flex-shrink: 0; display: block; color: var(--color-ink-muted, #94a3b8);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                         <span x-text="p.periode_awal_fmt + ' - ' + p.periode_akhir_fmt"></span>
                     </div>
 
                     <div class="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
-                        <div>
-                            <div class="text-[10.5px] text-slate-400">Tipe &amp; Karyawan</div>
-                            <div class="font-medium text-slate-700 dark:text-slate-300 mt-0.5 flex items-center gap-1.5">
+                        <div class="min-w-0 flex-1 mr-2">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Tipe &amp; Karyawan</div>
+                            <div class="font-medium text-slate-700 dark:text-slate-300 mt-1 flex items-center gap-1.5 flex-wrap">
                                 <template x-if="p.tipe_penggajian === 'borongan' || p.tipe_penggajian === 'mingguan'">
                                     <span class="badge-tipe-borongan">Borongan</span>
                                 </template>
@@ -1167,30 +1256,40 @@ $avgPerRun = $approvedCount > 0 ? ($totalGajiDisetujui / $approvedCount) : 0;
                                 <template x-if="p.tipe_penggajian === 'gabungan'">
                                     <span class="badge-tipe-gabungan">Gabungan</span>
                                 </template>
-                                <span class="text-slate-500 font-mono">(<span x-text="p.total_karyawan_terbayar"></span>/<span x-text="p.total_karyawan"></span>)</span>
+                                <span class="badge-payroll-karyawan">
+                                    <svg style="width: 11px; height: 11px; flex-shrink: 0; display: block; color: var(--color-ink-muted, #94a3b8);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                    <span class="whitespace-nowrap font-mono">
+                                        <strong class="font-bold text-slate-900 dark:text-slate-100" x-text="p.total_karyawan_terbayar"></strong>
+                                        <span class="text-slate-400 font-normal">/</span>
+                                        <span class="text-slate-500" x-text="p.total_karyawan"></span>
+                                        <span class="text-[9.5px] text-slate-400 font-normal ml-0.5">Org</span>
+                                    </span>
+                                </span>
                             </div>
                         </div>
-                        <div class="text-right">
-                            <div class="text-[10.5px] text-slate-400">Total Gaji</div>
-                            <div class="font-bold font-mono text-sm mt-0.5" 
-                                 :class="p.total_gaji > 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'" 
+                        <div class="text-right flex-shrink-0">
+                            <div class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Total Gaji</div>
+                            <div class="font-bold font-mono text-sm mt-1" 
+                                 :class="p.total_gaji > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'" 
                                  x-text="p.total_gaji_fmt"></div>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-end gap-2 pt-1">
                         <a :href="'<?= Router::url('/penggajian/preview?id=') ?>' + p.id" 
-                           class="payroll-btn-periksa">
-                            <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                           class="payroll-btn-periksa flex-1 justify-center"
+                           style="height: 36px;">
+                            <svg style="width: 13px; height: 13px; flex-shrink: 0; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                             <span x-text="p.status === 'draf' ? 'Periksa Draf' : 'Lihat Detail'"></span>
                         </a>
                         <template x-if="p.status !== 'draf'">
-                            <a :href="'<?= Router::url('/penggajian/rekap-pdf?run_id=') ?>' + p.id" 
-                               target="_blank" 
+                            <button type="button" 
+                               @click="downloadPdf('<?= Router::url('/penggajian/rekap-pdf?run_id=') ?>' + p.id, 'Menyiapkan Rekap PDF...', 'Mengompilasi ' + p.nama_payroll + '...')" 
                                class="payroll-btn-pdf" 
+                               style="width: 36px; height: 36px;"
                                title="Rekap PDF">
-                                <i data-lucide="printer" style="width: 14px; height: 14px;"></i>
-                            </a>
+                                <svg style="width: 14px; height: 14px; flex-shrink: 0; display: block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                            </button>
                         </template>
                     </div>
                 </div>

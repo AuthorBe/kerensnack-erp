@@ -545,7 +545,8 @@ class PenggajianController extends Controller
         $sql = "
             SELECT k.id, k.pengguna_id, k.tipe_penggajian, k.gaji_pokok_bulanan,
                    k.uang_kehadiran_harian, k.tunjangan_bulanan,
-                   v.nama_karyawan, v.posisi
+                   v.nama_karyawan, v.posisi,
+                   v.bank_nama, v.bank_nomor_rekening, v.bank_atas_nama
             FROM public.karyawan k
             JOIN public.v_karyawan_info v ON v.id = k.id
             WHERE v.status_aktif = TRUE AND k.tipe_penggajian IN ($inClause)
@@ -756,11 +757,19 @@ class PenggajianController extends Controller
             if ($gajiBersih < 0) $gajiBersih = 0;
 
             // I. Insert rincian_penggajian
+            $hasBankRek = !empty(trim((string)($emp['bank_nomor_rekening'] ?? '')));
+            $isBankNameTunai = strtolower(trim((string)($emp['bank_nama'] ?? ''))) === 'tunai';
+            $metodePembayaran = ($hasBankRek && !$isBankNameTunai) ? 'transfer' : 'tunai';
+
             $rincianJson = json_encode([
                 'debts' => $kasbonDetails,
                 'penarikan' => $penarikanDetails,
                 'kasbon_adjusted_down' => $kasbonAdjustedDown,
-            ]);
+                'metode_pembayaran' => $metodePembayaran,
+                'bank_nama' => (string)($emp['bank_nama'] ?? ''),
+                'bank_nomor_rekening' => (string)($emp['bank_nomor_rekening'] ?? ''),
+                'bank_atas_nama' => (string)($emp['bank_atas_nama'] ?? ''),
+            ], JSON_UNESCAPED_UNICODE);
 
             $stmtInsertRincian = $pdo->prepare("
                 INSERT INTO public.rincian_penggajian (
@@ -886,6 +895,7 @@ class PenggajianController extends Controller
                 SELECT
                     rp.*,
                     v.nama_karyawan, v.nama_panggilan, v.posisi,
+                    v.bank_nama, v.bank_nomor_rekening, v.bank_atas_nama,
                     k.tipe_penggajian,
                     COALESCE((SELECT SUM(sisa_pinjaman) FROM public.kasbon WHERE karyawan_id = rp.karyawan_id AND status_kasbon = 'aktif'), 0) as max_kasbon_aktif,
                     COALESCE((SELECT saldo FROM public.tabungan WHERE karyawan_id = rp.karyawan_id), 0) as saldo_tabungan_saat_ini
@@ -907,7 +917,7 @@ class PenggajianController extends Controller
                 ORDER BY is_default_pos DESC, nama_akun ASC
             ");
 
-            // Summary data
+            // Summary data & Split Kas / Transfer Calculation
             $totalGajiBersih = 0.0;
             $totalKotor = 0.0;
             $totalPotongan = 0.0;
@@ -915,8 +925,31 @@ class PenggajianController extends Controller
             $totalPenarikanTabunganPayroll = 0.0;
             $includedCount = 0;
             $excludedCount = 0;
+            $totalGajiTunai = 0.0;
+            $countTunai = 0;
+            $totalGajiTransfer = 0.0;
+            $countTransfer = 0;
+            $potonganTabunganTunai = 0.0;
+            $potonganTabunganTransfer = 0.0;
 
-            foreach ($items as $item) {
+            foreach ($items as &$item) {
+                $details = json_decode((string)($item['rincian_json'] ?? ''), true) ?: [];
+                $masterBankNama = trim((string)($item['bank_nama'] ?? ''));
+                $masterBankRek  = trim((string)($item['bank_nomor_rekening'] ?? ''));
+                $masterBankAn   = trim((string)($item['bank_atas_nama'] ?? '')) ?: (string)$item['nama_karyawan'];
+                $hasMasterBank  = !empty($masterBankRek) && strtolower($masterBankNama) !== 'tunai';
+
+                $item['master_bank_nama'] = $masterBankNama;
+                $item['master_bank_nomor_rekening'] = $masterBankRek;
+                $item['master_bank_atas_nama'] = $masterBankAn;
+                $item['has_master_bank'] = $hasMasterBank;
+
+                $defaultMetode = $hasMasterBank ? 'transfer' : 'tunai';
+                $item['metode_pembayaran'] = (string)($details['metode_pembayaran'] ?? $defaultMetode);
+                $item['bank_nama'] = (string)($details['bank_nama'] ?? ($hasMasterBank ? $masterBankNama : ''));
+                $item['bank_nomor_rekening'] = (string)($details['bank_nomor_rekening'] ?? ($hasMasterBank ? $masterBankRek : ''));
+                $item['bank_atas_nama'] = (string)($details['bank_atas_nama'] ?? ($hasMasterBank ? $masterBankAn : ''));
+
                 if ($item['is_excluded']) {
                     $excludedCount++;
                     continue;
@@ -930,12 +963,24 @@ class PenggajianController extends Controller
                 $potong = (float)$item['total_potongan_kasbon'] + (float)$item['potongan_lain']
                         + (float)$item['total_potongan_tabungan'] + (float)$item['total_penarikan_gaji'];
 
+                $net = (float)$item['gaji_bersih_diterima'];
                 $totalKotor += $kotor;
                 $totalPotongan += $potong;
-                $totalGajiBersih += (float)$item['gaji_bersih_diterima'];
+                $totalGajiBersih += $net;
                 $totalPotonganTabunganPayroll += (float)$item['total_potongan_tabungan'];
                 $totalPenarikanTabunganPayroll += (float)$item['penarikan_tabungan'];
+
+                if ($item['metode_pembayaran'] === 'transfer') {
+                    $totalGajiTransfer += $net;
+                    $countTransfer++;
+                    $potonganTabunganTransfer += (float)$item['total_potongan_tabungan'];
+                } else {
+                    $totalGajiTunai += $net;
+                    $countTunai++;
+                    $potonganTabunganTunai += (float)$item['total_potongan_tabungan'];
+                }
             }
+            unset($item);
 
             // Check if approval can be cancelled (< 24 hours)
             $canCancelApprove = false;
@@ -959,6 +1004,12 @@ class PenggajianController extends Controller
                 'totalPenarikanTabunganPayroll' => $totalPenarikanTabunganPayroll,
                 'totalPotonganTabunganAll' => $totalPotonganTabunganPayroll,
                 'totalPenarikanTabunganAll' => $totalPenarikanTabunganPayroll,
+                'totalGajiTunai' => $totalGajiTunai,
+                'countTunai' => $countTunai,
+                'totalGajiTransfer' => $totalGajiTransfer,
+                'countTransfer' => $countTransfer,
+                'potonganTabunganTunai' => $potonganTabunganTunai,
+                'potonganTabunganTransfer' => $potonganTabunganTransfer,
                 'includedCount' => $includedCount,
                 'excludedCount' => $excludedCount,
                 'canCancelApprove' => $canCancelApprove
@@ -1008,6 +1059,7 @@ class PenggajianController extends Controller
 
             $stmtItem = $pdo->prepare("
                 SELECT rp.*,
+                       COALESCE((SELECT nama_karyawan FROM public.v_karyawan_info WHERE id = rp.karyawan_id), 'Karyawan') as nama_karyawan,
                        COALESCE((SELECT SUM(sisa_pinjaman) FROM public.kasbon WHERE karyawan_id = rp.karyawan_id AND status_kasbon = 'aktif'), 0) as sisa_kasbon,
                        COALESCE((SELECT saldo FROM public.tabungan WHERE karyawan_id = rp.karyawan_id), 0) as saldo_tabungan
                 FROM public.rincian_penggajian rp
@@ -1104,6 +1156,34 @@ class PenggajianController extends Controller
                     $remainingToCut -= $cut;
                 }
             }
+            $metodeInput = strtolower(trim((string)$this->input('metode_pembayaran', '')));
+            if (in_array($metodeInput, ['tunai', 'transfer'], true)) {
+                $existingDetails['metode_pembayaran'] = $metodeInput;
+            }
+            $inBankNama = trim((string)$this->input('bank_nama', ''));
+            $inBankRek  = trim((string)$this->input('bank_nomor_rekening', ''));
+            $inBankAn   = trim((string)$this->input('bank_atas_nama', ''));
+
+            if ($metodeInput === 'transfer') {
+                if (empty($inBankRek)) {
+                    // Fallback otomatis ke data master karyawan jika nomor rekening tidak diinput manual
+                    $stmtMaster = $pdo->prepare("SELECT bank_nama, bank_nomor_rekening, bank_atas_nama, nama_karyawan FROM public.v_karyawan_info WHERE id = :kid");
+                    $stmtMaster->execute(['kid' => $item['karyawan_id']]);
+                    $mRow = $stmtMaster->fetch(PDO::FETCH_ASSOC);
+                    if ($mRow && !empty(trim((string)$mRow['bank_nomor_rekening']))) {
+                        $inBankNama = trim((string)$mRow['bank_nama']);
+                        $inBankRek  = trim((string)$mRow['bank_nomor_rekening']);
+                        $inBankAn   = trim((string)$mRow['bank_atas_nama']) ?: (string)$mRow['nama_karyawan'];
+                    }
+                }
+                $existingDetails['bank_nama'] = $inBankNama;
+                $existingDetails['bank_nomor_rekening'] = $inBankRek;
+                $existingDetails['bank_atas_nama'] = $inBankAn;
+            } else {
+                if ($this->input('bank_nama') !== null) $existingDetails['bank_nama'] = $inBankNama;
+                if ($this->input('bank_nomor_rekening') !== null) $existingDetails['bank_nomor_rekening'] = $inBankRek;
+                if ($this->input('bank_atas_nama') !== null) $existingDetails['bank_atas_nama'] = $inBankAn;
+            }
             $existingDetails['debts'] = $newDebts;
             $newRincianJson = json_encode($existingDetails, JSON_UNESCAPED_UNICODE);
 
@@ -1169,15 +1249,16 @@ class PenggajianController extends Controller
 
             $pdo->commit();
 
+            $empName = !empty($item['nama_karyawan']) ? $item['nama_karyawan'] : 'karyawan';
             ActivityLog::log(
                 'hr_payroll',
                 'UPDATE_PAYROLL_ITEM',
-                "Menyesuaikan komponen payroll karyawan pada {$run['nomor_referensi']} dengan net " . Format::rupiah($gajiBersih) . ".",
+                "Menyesuaikan komponen gaji {$empName} pada {$run['nomor_referensi']} dengan net " . Format::rupiah($gajiBersih) . ".",
                 'rincian_penggajian',
                 $itemId
             );
 
-            $this->flashSuccess('Rincian komponen gaji berhasil diperbarui.');
+            $this->flashSuccess("Rincian penyesuaian gaji {$empName} berhasil diperbarui.");
             $this->redirect('/penggajian/preview?id=' . $runId);
         } catch (Throwable $e) {
             if (isset($pdo) && $pdo->inTransaction()) {
@@ -1230,9 +1311,9 @@ class PenggajianController extends Controller
 
             // 2. Lock line item
             $stmtItem = $pdo->prepare("
-                SELECT rp.id, rp.is_excluded, rp.karyawan_id, rp.rincian_json, v.nama_karyawan
+                SELECT rp.id, rp.is_excluded, rp.karyawan_id, rp.rincian_json,
+                       COALESCE((SELECT nama_karyawan FROM public.v_karyawan_info WHERE id = rp.karyawan_id), 'Karyawan') as nama_karyawan
                 FROM public.rincian_penggajian rp
-                JOIN public.v_karyawan_info v ON v.id = rp.karyawan_id
                 WHERE rp.id = :id AND rp.penggajian_id = :rid
                 FOR UPDATE
             ");
@@ -1331,10 +1412,24 @@ class PenggajianController extends Controller
         }
 
         $runId = (string)$this->input('penggajian_id', '');
-        $akunKasId = (string)$this->input('akun_kas_id', '');
+        $akunKasTunaiId = (string)$this->input('akun_kas_tunai_id', '');
+        $akunKasTransferId = (string)$this->input('akun_kas_transfer_id', '');
+        $akunKasTabunganSumberId = (string)$this->input('akun_kas_tabungan_sumber_id', '');
+        $legacyKasId = (string)$this->input('akun_kas_id', '');
 
-        if (empty($runId) || empty($akunKasId)) {
-            $this->flashError('Harap pilih akun kas untuk pencatatan arus kas pengeluaran gaji.');
+        // Fallbacks untuk backward-compatibility jika form lama mengirimkan akun_kas_id tunggal
+        if (empty($akunKasTunaiId) && !empty($legacyKasId)) {
+            $akunKasTunaiId = $legacyKasId;
+        }
+        if (empty($akunKasTransferId) && !empty($legacyKasId)) {
+            $akunKasTransferId = $legacyKasId;
+        }
+        if (empty($akunKasTabunganSumberId)) {
+            $akunKasTabunganSumberId = $akunKasTransferId ?: $akunKasTunaiId ?: $legacyKasId;
+        }
+
+        if (empty($runId)) {
+            $this->flashError('ID payroll tidak valid.');
             $this->redirectBack('/penggajian');
             return;
         }
@@ -1345,7 +1440,7 @@ class PenggajianController extends Controller
             $pdo->beginTransaction();
 
             $stmtRun = $pdo->prepare("
-                SELECT id, nomor_referensi, nama_payroll, status, total_gaji_dikeluarkan
+                SELECT id, nomor_referensi, nama_payroll, status, total_gaji_dikeluarkan, options_json
                 FROM public.penggajian
                 WHERE id = :id FOR UPDATE
             ");
@@ -1396,32 +1491,101 @@ class PenggajianController extends Controller
             $totalPotonganTabunganAll = (float)($totalsRow['total_potongan_tabungan'] ?? 0);
             $totalPenarikanTabunganAll = (float)($totalsRow['total_penarikan_tabungan'] ?? 0);
 
-            // Cek saldo akun kas operasional / payroll
-            $stmtKas = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini, is_escrow FROM public.akun_kas WHERE id = :id FOR UPDATE");
-            $stmtKas->execute(['id' => $akunKasId]);
-            $akunKas = $stmtKas->fetch(PDO::FETCH_ASSOC);
+            // Ambil semua line items included beserta data bank karyawan untuk klasifikasi Tunai vs Transfer
+            $stmtItems = $pdo->prepare("
+                SELECT rp.id, rp.karyawan_id, rp.gaji_bersih_diterima, rp.total_potongan_kasbon,
+                       rp.total_potongan_tabungan, rp.penarikan_tabungan, rp.rincian_json,
+                       v.bank_nama, v.bank_nomor_rekening, v.bank_atas_nama
+                FROM public.rincian_penggajian rp
+                JOIN public.v_karyawan_info v ON v.id = rp.karyawan_id
+                WHERE rp.penggajian_id = :rid AND rp.is_excluded = FALSE
+            ");
+            $stmtItems->execute(['rid' => $runId]);
+            $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
 
-            if (!$akunKas) {
+            $totalGajiTunai = 0.0;
+            $totalGajiTransfer = 0.0;
+            foreach ($items as &$item) {
+                $details = json_decode((string)($item['rincian_json'] ?? ''), true) ?: [];
+                $hasBankRek = !empty(trim((string)($item['bank_nomor_rekening'] ?? '')));
+                $isBankNameTunai = strtolower(trim((string)($item['bank_nama'] ?? ''))) === 'tunai';
+                $defaultMetode = ($hasBankRek && !$isBankNameTunai) ? 'transfer' : 'tunai';
+                $metode = (string)($details['metode_pembayaran'] ?? $defaultMetode);
+                $item['resolved_metode'] = $metode;
+
+                $net = (float)$item['gaji_bersih_diterima'];
+                if ($metode === 'transfer') {
+                    $totalGajiTransfer += $net;
+                } else {
+                    $totalGajiTunai += $net;
+                }
+            }
+            unset($item);
+
+            // Validasi keberadaan akun kas yang dibutuhkan
+            if ($totalGajiTunai > 0 && empty($akunKasTunaiId)) {
                 $pdo->rollBack();
-                $this->flashError('Akun kas terpilih tidak valid.');
+                $this->flashError('Harap pilih akun kas untuk pembayaran gaji tunai (kebutuhan: ' . Format::rupiah($totalGajiTunai) . ').');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
 
-            if (!empty($akunKas['is_escrow'])) {
+            if ($totalGajiTransfer > 0 && empty($akunKasTransferId)) {
                 $pdo->rollBack();
-                $this->flashError('Akun kas escrow / tabungan karyawan tidak boleh digunakan sebagai sumber pembayaran gaji operasional.');
+                $this->flashError('Harap pilih akun bank untuk pembayaran gaji transfer (kebutuhan: ' . Format::rupiah($totalGajiTransfer) . ').');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
 
-            $currentSaldoKas = (float)$akunKas['saldo_saat_ini'];
-            $totalKebutuhanKas = $totalGaji + $totalPotonganTabunganAll;
-            if ($totalKebutuhanKas > $currentSaldoKas) {
+            if ($totalPotonganTabunganAll > 0 && empty($akunKasTabunganSumberId)) {
                 $pdo->rollBack();
-                $this->flashError("Saldo akun kas '{$akunKas['nama_akun']}' (" . Format::rupiah($currentSaldoKas) . ") tidak mencukupi untuk pembayaran payroll (" . Format::rupiah($totalKebutuhanKas) . ").");
+                $this->flashError('Harap pilih akun sumber kas untuk setoran tabungan karyawan (kebutuhan: ' . Format::rupiah($totalPotonganTabunganAll) . ').');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
+            }
+
+            // Hitung akumulasi kebutuhan saldo per akun kas (mendukung skenario jika akun yang sama dipilih untuk keduanya)
+            $requiredPerAccount = [];
+            if ($totalGajiTunai > 0 && $akunKasTunaiId) {
+                $requiredPerAccount[$akunKasTunaiId] = ($requiredPerAccount[$akunKasTunaiId] ?? 0.0) + $totalGajiTunai;
+            }
+            if ($totalGajiTransfer > 0 && $akunKasTransferId) {
+                $requiredPerAccount[$akunKasTransferId] = ($requiredPerAccount[$akunKasTransferId] ?? 0.0) + $totalGajiTransfer;
+            }
+            if ($totalPotonganTabunganAll > 0 && $akunKasTabunganSumberId) {
+                $requiredPerAccount[$akunKasTabunganSumberId] = ($requiredPerAccount[$akunKasTabunganSumberId] ?? 0.0) + $totalPotonganTabunganAll;
+            }
+
+            $lockedAccounts = [];
+            foreach (array_keys($requiredPerAccount) as $accId) {
+                $stmtKas = $pdo->prepare("SELECT id, nama_akun, saldo_saat_ini, is_escrow FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtKas->execute(['id' => $accId]);
+                $accRow = $stmtKas->fetch(PDO::FETCH_ASSOC);
+
+                if (!$accRow) {
+                    $pdo->rollBack();
+                    $this->flashError('Akun kas terpilih tidak ditemukan.');
+                    $this->redirect('/penggajian/preview?id=' . $runId);
+                    return;
+                }
+
+                if (!empty($accRow['is_escrow'])) {
+                    $pdo->rollBack();
+                    $this->flashError("Akun kas '{$accRow['nama_akun']}' adalah akun escrow tabungan dan tidak boleh digunakan sebagai sumber pembayaran operasional.");
+                    $this->redirect('/penggajian/preview?id=' . $runId);
+                    return;
+                }
+
+                $currentSaldo = (float)$accRow['saldo_saat_ini'];
+                $needed = $requiredPerAccount[$accId];
+                if ($needed > $currentSaldo) {
+                    $pdo->rollBack();
+                    $this->flashError("Saldo akun kas '{$accRow['nama_akun']}' (" . Format::rupiah($currentSaldo) . ") tidak mencukupi untuk pembayaran payroll & setoran (" . Format::rupiah($needed) . ").");
+                    $this->redirect('/penggajian/preview?id=' . $runId);
+                    return;
+                }
+
+                $lockedAccounts[$accId] = $accRow;
             }
 
             // Ambil akun kas escrow tabungan karyawan jika ada transaksi tabungan
@@ -1479,6 +1643,14 @@ class PenggajianController extends Controller
 
             $userId = Auth::user()['id'] ?? null;
 
+            // Simpan metadata akun pencairan payroll ke dalam options_json
+            $opts = json_decode((string)($run['options_json'] ?? ''), true) ?: [];
+            $opts['disbursement_accounts'] = [
+                'tunai_kas_id' => $akunKasTunaiId ?: null,
+                'transfer_kas_id' => $akunKasTransferId ?: null,
+                'tabungan_sumber_kas_id' => $akunKasTabunganSumberId ?: null,
+            ];
+
             // 1. Update Status Penggajian
             $pdo->prepare("
                 UPDATE public.penggajian
@@ -1486,29 +1658,26 @@ class PenggajianController extends Controller
                     disetujui_oleh = :uid,
                     disetujui_pada = NOW(),
                     total_gaji_dikeluarkan = :total,
+                    options_json = :opt,
                     diubah_pada = NOW()
                 WHERE id = :rid
             ")->execute([
                 'uid' => $userId,
                 'total' => $totalGaji,
+                'opt' => json_encode($opts, JSON_UNESCAPED_UNICODE),
                 'rid' => $runId
             ]);
 
-            // 2. Ambil semua line items included
-            $stmtItems = $pdo->prepare("
-                SELECT id, karyawan_id, total_potongan_kasbon, total_potongan_tabungan, penarikan_tabungan, rincian_json
-                FROM public.rincian_penggajian
-                WHERE penggajian_id = :rid AND is_excluded = FALSE
-            ");
-            $stmtItems->execute(['rid' => $runId]);
-            $items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
-
+            // 2. Eksekusi Potongan Kasbon & Tabungan per Karyawan
             foreach ($items as $item) {
                 $kid = $item['karyawan_id'];
                 $rincianId = $item['id'];
                 $details = json_decode((string)$item['rincian_json'], true) ?: [];
+                $empKasId = ($item['resolved_metode'] === 'transfer')
+                    ? ($akunKasTransferId ?: $akunKasTunaiId)
+                    : ($akunKasTunaiId ?: $akunKasTransferId);
 
-                // 2a. Eksekusi Potongan Kasbon (Alokasi Eksak Sesuai total_potongan_kasbon)
+                // 2a. Eksekusi Potongan Kasbon
                 $targetKasbonCut = (float)$item['total_potongan_kasbon'];
                 if ($targetKasbonCut > 0) {
                     $stmtActiveKb = $pdo->prepare("
@@ -1537,7 +1706,7 @@ class PenggajianController extends Controller
                         ")->execute([
                             'kbid' => $kb['id'],
                             'rpid' => $rincianId,
-                            'kas_id' => $akunKasId,
+                            'kas_id' => $empKasId,
                             'nom' => $cut,
                             'ket' => 'Potongan Payroll ' . $run['nomor_referensi']
                         ]);
@@ -1550,7 +1719,6 @@ class PenggajianController extends Controller
                         $remainingToCut -= $cut;
                     }
 
-                    // Update rincian_json dengan debts yang benar-benar dieksekusi
                     $details['debts'] = $executedDebts;
                     $pdo->prepare("UPDATE public.rincian_penggajian SET rincian_json = :json WHERE id = :id")
                         ->execute(['json' => json_encode($details, JSON_UNESCAPED_UNICODE), 'id' => $rincianId]);
@@ -1559,13 +1727,11 @@ class PenggajianController extends Controller
                 // 2b. Eksekusi Tabungan (Setoran via Payroll)
                 if ((float)$item['total_potongan_tabungan'] > 0) {
                     $setorNominal = (float)$item['total_potongan_tabungan'];
-                    // Ensure tabungan record exists
                     $pdo->prepare("INSERT INTO public.tabungan (karyawan_id, saldo) VALUES (:kid, 0.00) ON CONFLICT (karyawan_id) DO NOTHING")->execute(['kid' => $kid]);
                     $stmtTab = $pdo->prepare("SELECT id FROM public.tabungan WHERE karyawan_id = :kid");
                     $stmtTab->execute(['kid' => $kid]);
                     $tid = $stmtTab->fetchColumn();
 
-                    // Insert transaksi_tabungan (DB trigger trg_transaksi_tabungan_update_saldo auto-adds to saldo)
                     $pdo->prepare("
                         INSERT INTO public.transaksi_tabungan (
                             tabungan_id, karyawan_id, rincian_penggajian_id, akun_kas_id, tanggal, tipe, jumlah, sumber, keterangan, dibuat_pada
@@ -1590,7 +1756,6 @@ class PenggajianController extends Controller
                     $tid = $stmtTab->fetchColumn();
 
                     if ($tid) {
-                        // Insert transaksi_tabungan (DB trigger trg_transaksi_tabungan_update_saldo auto-deducts saldo)
                         $pdo->prepare("
                             INSERT INTO public.transaksi_tabungan (
                                 tabungan_id, karyawan_id, rincian_penggajian_id, akun_kas_id, tanggal, tipe, jumlah, sumber, keterangan, dibuat_pada
@@ -1609,40 +1774,77 @@ class PenggajianController extends Controller
                 }
             }
 
-            // 3. Catat ke Arus Kas — Pembayaran Gaji Bersih
-            $saldoBerjalan = $currentSaldoKas - $totalGaji;
-            $pdo->prepare("
-                INSERT INTO public.arus_kas (
-                    akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
-                    nominal, keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
-                ) VALUES (
-                    :kas_id, CURRENT_DATE, 'keluar', 'pembayaran_payroll',
-                    :nom, :ket, 'penggajian', :rid, :saldo_berjalan, :uid, NOW()
-                )
-            ")->execute([
-                'kas_id' => $akunKasId,
-                'nom' => $totalGaji,
-                'ket' => 'Pembayaran Gaji ' . $run['nama_payroll'] . ' (' . $run['nomor_referensi'] . ')',
-                'rid' => $runId,
-                'saldo_berjalan' => $saldoBerjalan,
-                'uid' => $userId
-            ]);
+            // 3. Catat ke Arus Kas — Pembayaran Gaji Tunai
+            if ($totalGajiTunai > 0 && $akunKasTunaiId) {
+                $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtKasLock->execute(['id' => $akunKasTunaiId]);
+                $saldoCur = (float)$stmtKasLock->fetchColumn();
+                $saldoBerjalan = $saldoCur - $totalGajiTunai;
 
-            // Kurangi Saldo Akun Kas untuk Pembayaran Gaji
-            $pdo->prepare("
-                UPDATE public.akun_kas 
-                SET saldo_saat_ini = saldo_saat_ini - :total, diubah_pada = NOW() 
-                WHERE id = :id AND saldo_saat_ini >= :total
-            ")->execute([
-                'total' => $totalGaji,
-                'id' => $akunKasId
-            ]);
-            $currentSaldoKas = $saldoBerjalan;
+                $pdo->prepare("
+                    INSERT INTO public.arus_kas (
+                        akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
+                        nominal, keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                    ) VALUES (
+                        :kas_id, CURRENT_DATE, 'keluar', 'pembayaran_payroll',
+                        :nom, :ket, 'penggajian', :rid, :saldo_berjalan, :uid, NOW()
+                    )
+                ")->execute([
+                    'kas_id' => $akunKasTunaiId,
+                    'nom' => $totalGajiTunai,
+                    'ket' => 'Pembayaran Gaji Tunai ' . $run['nama_payroll'] . ' (' . $run['nomor_referensi'] . ')',
+                    'rid' => $runId,
+                    'saldo_berjalan' => $saldoBerjalan,
+                    'uid' => $userId
+                ]);
 
-            // 4. Auto-transfer Potongan Tabungan ke Akun Kas Tabungan (Escrow)
-            if ($totalPotonganTabunganAll > 0 && $escrowKasId) {
-                // Outflow dari akun kas operasional
-                $currentSaldoKas -= $totalPotonganTabunganAll;
+                $pdo->prepare("
+                    UPDATE public.akun_kas 
+                    SET saldo_saat_ini = saldo_saat_ini - :total, diubah_pada = NOW() 
+                    WHERE id = :id
+                ")->execute(['total' => $totalGajiTunai, 'id' => $akunKasTunaiId]);
+            }
+
+            // 4. Catat ke Arus Kas — Pembayaran Gaji Transfer Bank
+            if ($totalGajiTransfer > 0 && $akunKasTransferId) {
+                $stmtKasLock = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtKasLock->execute(['id' => $akunKasTransferId]);
+                $saldoCur = (float)$stmtKasLock->fetchColumn();
+                $saldoBerjalan = $saldoCur - $totalGajiTransfer;
+
+                $pdo->prepare("
+                    INSERT INTO public.arus_kas (
+                        akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
+                        nominal, keterangan, referensi_tabel, referensi_id, saldo_berjalan, dicatat_oleh, dibuat_pada
+                    ) VALUES (
+                        :kas_id, CURRENT_DATE, 'keluar', 'pembayaran_payroll',
+                        :nom, :ket, 'penggajian', :rid, :saldo_berjalan, :uid, NOW()
+                    )
+                ")->execute([
+                    'kas_id' => $akunKasTransferId,
+                    'nom' => $totalGajiTransfer,
+                    'ket' => 'Pembayaran Gaji Transfer Bank ' . $run['nama_payroll'] . ' (' . $run['nomor_referensi'] . ')',
+                    'rid' => $runId,
+                    'saldo_berjalan' => $saldoBerjalan,
+                    'uid' => $userId
+                ]);
+
+                $pdo->prepare("
+                    UPDATE public.akun_kas 
+                    SET saldo_saat_ini = saldo_saat_ini - :total, diubah_pada = NOW() 
+                    WHERE id = :id
+                ")->execute(['total' => $totalGajiTransfer, 'id' => $akunKasTransferId]);
+            }
+
+            // 5. Auto-transfer Potongan Tabungan ke Akun Kas Tabungan (Escrow)
+            if ($totalPotonganTabunganAll > 0 && $escrowKasId && $akunKasTabunganSumberId) {
+                $stmtSrcLock = $pdo->prepare("SELECT saldo_saat_ini, nama_akun FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtSrcLock->execute(['id' => $akunKasTabunganSumberId]);
+                $srcRow = $stmtSrcLock->fetch(PDO::FETCH_ASSOC);
+                $srcSaldo = (float)($srcRow['saldo_saat_ini'] ?? 0);
+                $srcSaldoBerjalan = $srcSaldo - $totalPotonganTabunganAll;
+
+                // Outflow dari akun sumber setoran tabungan
                 $pdo->prepare("
                     INSERT INTO public.arus_kas (
                         akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
@@ -1652,11 +1854,11 @@ class PenggajianController extends Controller
                         :nom, :ket, 'penggajian', :rid, :saldo_berjalan, :uid, NOW()
                     )
                 ")->execute([
-                    'kas_id' => $akunKasId,
+                    'kas_id' => $akunKasTabunganSumberId,
                     'nom' => $totalPotonganTabunganAll,
                     'ket' => 'Transfer Potongan Tabungan Payroll ' . $run['nomor_referensi'] . ' ke ' . $escrowAccount['nama_akun'],
                     'rid' => $runId,
-                    'saldo_berjalan' => $currentSaldoKas,
+                    'saldo_berjalan' => $srcSaldoBerjalan,
                     'uid' => $userId
                 ]);
 
@@ -1664,7 +1866,7 @@ class PenggajianController extends Controller
                     UPDATE public.akun_kas 
                     SET saldo_saat_ini = saldo_saat_ini - :total, diubah_pada = NOW() 
                     WHERE id = :id
-                ")->execute(['total' => $totalPotonganTabunganAll, 'id' => $akunKasId]);
+                ")->execute(['total' => $totalPotonganTabunganAll, 'id' => $akunKasTabunganSumberId]);
 
                 // Inflow ke akun kas escrow tabungan
                 $stmtEscrowLock = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
@@ -1683,7 +1885,7 @@ class PenggajianController extends Controller
                 ")->execute([
                     'kas_id' => $escrowKasId,
                     'nom' => $totalPotonganTabunganAll,
-                    'ket' => 'Penerimaan Potongan Tabungan Payroll ' . $run['nomor_referensi'] . ' dari ' . $akunKas['nama_akun'],
+                    'ket' => 'Penerimaan Potongan Tabungan Payroll ' . $run['nomor_referensi'] . ' dari ' . ($srcRow['nama_akun'] ?? 'Kas Operasional'),
                     'rid' => $runId,
                     'saldo_berjalan' => $escrowSaldoBerjalan,
                     'uid' => $userId
@@ -1696,8 +1898,10 @@ class PenggajianController extends Controller
                 ")->execute(['total' => $totalPotonganTabunganAll, 'id' => $escrowKasId]);
             }
 
-            // 5. Auto-reimburse Penarikan Tabungan dari Kas Tabungan (Escrow) ke Kas Payroll
+            // 6. Auto-reimburse Penarikan Tabungan dari Kas Tabungan (Escrow) ke Kas Payroll
             if ($totalPenarikanTabunganAll > 0 && $escrowKasId) {
+                $targetReimburseId = $akunKasTransferId ?: $akunKasTunaiId ?: $legacyKasId;
+
                 // Outflow dari kas tabungan escrow
                 $stmtEscrowLock = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
                 $stmtEscrowLock->execute(['id' => $escrowKasId]);
@@ -1715,7 +1919,7 @@ class PenggajianController extends Controller
                 ")->execute([
                     'kas_id' => $escrowKasId,
                     'nom' => $totalPenarikanTabunganAll,
-                    'ket' => 'Pencairan Tabungan Payroll ' . $run['nomor_referensi'] . ' untuk ' . $akunKas['nama_akun'],
+                    'ket' => 'Pencairan Tabungan Payroll ' . $run['nomor_referensi'],
                     'rid' => $runId,
                     'saldo_berjalan' => $escrowSaldoBerjalan,
                     'uid' => $userId
@@ -1727,8 +1931,12 @@ class PenggajianController extends Controller
                     WHERE id = :id
                 ")->execute(['total' => $totalPenarikanTabunganAll, 'id' => $escrowKasId]);
 
-                // Inflow ke kas operasional/payroll (reimbursement)
-                $currentSaldoKas += $totalPenarikanTabunganAll;
+                // Inflow ke kas operasional terpilih (reimbursement)
+                $stmtReimbLock = $pdo->prepare("SELECT saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtReimbLock->execute(['id' => $targetReimburseId]);
+                $reimbSaldoCur = (float)$stmtReimbLock->fetchColumn();
+                $reimbSaldoBerjalan = $reimbSaldoCur + $totalPenarikanTabunganAll;
+
                 $pdo->prepare("
                     INSERT INTO public.arus_kas (
                         akun_kas_id, tanggal_transaksi, jenis_kas, kategori,
@@ -1738,11 +1946,11 @@ class PenggajianController extends Controller
                         :nom, :ket, 'penggajian', :rid, :saldo_berjalan, :uid, NOW()
                     )
                 ")->execute([
-                    'kas_id' => $akunKasId,
+                    'kas_id' => $targetReimburseId,
                     'nom' => $totalPenarikanTabunganAll,
                     'ket' => 'Reimbursement Pencairan Tabungan Payroll ' . $run['nomor_referensi'] . ' dari ' . $escrowAccount['nama_akun'],
                     'rid' => $runId,
-                    'saldo_berjalan' => $currentSaldoKas,
+                    'saldo_berjalan' => $reimbSaldoBerjalan,
                     'uid' => $userId
                 ]);
 
@@ -1750,15 +1958,18 @@ class PenggajianController extends Controller
                     UPDATE public.akun_kas 
                     SET saldo_saat_ini = saldo_saat_ini + :total, diubah_pada = NOW() 
                     WHERE id = :id
-                ")->execute(['total' => $totalPenarikanTabunganAll, 'id' => $akunKasId]);
+                ")->execute(['total' => $totalPenarikanTabunganAll, 'id' => $targetReimburseId]);
             }
 
             $pdo->commit();
 
+            $accNames = array_map(fn($a) => $a['nama_akun'], $lockedAccounts);
+            $logAccounts = implode(', ', $accNames);
+
             ActivityLog::log(
                 'hr_payroll',
                 'APPROVE_PAYROLL',
-                "Menyetujui dan membayarkan payroll {$run['nomor_referensi']} senilai " . Format::rupiah($totalGaji) . " via {$akunKas['nama_akun']}.",
+                "Menyetujui dan membayarkan payroll {$run['nomor_referensi']} senilai " . Format::rupiah($totalGaji) . " (Tunai: " . Format::rupiah($totalGajiTunai) . ", Transfer: " . Format::rupiah($totalGajiTransfer) . ") via {$logAccounts}.",
                 'penggajian',
                 $runId
             );
@@ -1803,7 +2014,7 @@ class PenggajianController extends Controller
             $stmtRun->execute(['id' => $runId]);
             $run = $stmtRun->fetch(PDO::FETCH_ASSOC);
 
-            if (!$run || $run['status'] !== 'disetujui') {
+            if (!$run || !in_array($run['status'], ['disetujui', 'dibayarkan'], true)) {
                 $pdo->rollBack();
                 $this->flashError('Hanya payroll dengan status DISETUJUI yang dapat dibatalkan.');
                 $this->redirect('/penggajian/preview?id=' . $runId);
@@ -1811,10 +2022,17 @@ class PenggajianController extends Controller
             }
 
             // Check 24 hour window
-            $approveTime = strtotime((string)$run['disetujui_pada']);
-            if (time() - $approveTime > 86400) {
+            if (empty($run['disetujui_pada'])) {
                 $pdo->rollBack();
-                $this->flashError('Pembatalan persetujuan payroll hanya diperbolehkan dalam kurun waktu maksimal 24 jam setelah disetujui.');
+                $this->flashError('Waktu persetujuan payroll tidak ditemukan atau tidak valid.');
+                $this->redirect('/penggajian/preview?id=' . $runId);
+                return;
+            }
+
+            $approveTime = strtotime((string)$run['disetujui_pada']);
+            if ($approveTime === false || (time() - $approveTime > 86400)) {
+                $pdo->rollBack();
+                $this->flashError('Batas waktu pembatalan approval telah kedaluwarsa (maksimal 24 jam setelah payroll disetujui).');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
@@ -1830,11 +2048,23 @@ class PenggajianController extends Controller
             $potonganList = $stmtPk->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($potonganList as $pk) {
-                $pdo->prepare("
-                    UPDATE public.kasbon 
-                    SET sisa_pinjaman = sisa_pinjaman + :nom, status_kasbon = 'aktif', diubah_pada = NOW() 
-                    WHERE id = :kbid
-                ")->execute(['nom' => $pk['nominal'], 'kbid' => $pk['kasbon_id']]);
+                // Lock kasbon row and restore sisa_pinjaman safely
+                $stmtKbLock = $pdo->prepare("SELECT id, total_pinjaman, sisa_pinjaman FROM public.kasbon WHERE id = :kbid FOR UPDATE");
+                $stmtKbLock->execute(['kbid' => $pk['kasbon_id']]);
+                $kbRow = $stmtKbLock->fetch(PDO::FETCH_ASSOC);
+
+                if ($kbRow) {
+                    $restoredSisa = (float)$kbRow['sisa_pinjaman'] + (float)$pk['nominal'];
+                    if ($restoredSisa > (float)$kbRow['total_pinjaman']) {
+                        $restoredSisa = (float)$kbRow['total_pinjaman'];
+                    }
+                    $newStatus = ($restoredSisa > 0) ? 'aktif' : 'lunas';
+                    $pdo->prepare("
+                        UPDATE public.kasbon 
+                        SET sisa_pinjaman = :sisa, status_kasbon = :status, diubah_pada = NOW() 
+                        WHERE id = :kbid
+                    ")->execute(['sisa' => $restoredSisa, 'status' => $newStatus, 'kbid' => $pk['kasbon_id']]);
+                }
 
                 // Buka proteksi rincian_penggajian_id terlebih dahulu agar diizinkan oleh trg_guard_locked_hr_potongan_kasbon
                 $pdo->prepare("UPDATE public.potongan_kasbon SET rincian_penggajian_id = NULL WHERE id = :pkid")->execute(['pkid' => $pk['id']]);
@@ -1843,40 +2073,77 @@ class PenggajianController extends Controller
 
             // 2. Revert Transaksi Tabungan
             $stmtTb = $pdo->prepare("
-                SELECT tt.id, tt.tabungan_id, tt.tipe, tt.jumlah
+                SELECT tt.id, tt.tabungan_id, tt.tipe, tt.jumlah, COALESCE(v.nama_karyawan, 'Karyawan') as nama_karyawan
                 FROM public.transaksi_tabungan tt
                 JOIN public.rincian_penggajian rp ON rp.id = tt.rincian_penggajian_id
+                LEFT JOIN public.v_karyawan_info v ON v.id = tt.karyawan_id
                 WHERE rp.penggajian_id = :rid
             ");
             $stmtTb->execute(['rid' => $runId]);
             $tabunganList = $stmtTb->fetchAll(PDO::FETCH_ASSOC);
 
             foreach ($tabunganList as $tb) {
+                $stmtTabLock = $pdo->prepare("SELECT id, saldo FROM public.tabungan WHERE id = :tid FOR UPDATE");
+                $stmtTabLock->execute(['tid' => $tb['tabungan_id']]);
+                $tabRow = $stmtTabLock->fetch(PDO::FETCH_ASSOC);
+
                 $delta = ($tb['tipe'] === 'deposit') ? -((float)$tb['jumlah']) : ((float)$tb['jumlah']);
-                $pdo->prepare("UPDATE public.tabungan SET saldo = saldo + :delta, diubah_pada = NOW() WHERE id = :tid")->execute(['delta' => $delta, 'tid' => $tb['tabungan_id']]);
+                if ($tabRow) {
+                    $saldoBaru = (float)$tabRow['saldo'] + $delta;
+                    if ($saldoBaru < 0) {
+                        throw new Exception("Saldo tabungan {$tb['nama_karyawan']} saat ini (" . Format::rupiah($tabRow['saldo']) . ") tidak mencukupi untuk pembatalan setoran tabungan (" . Format::rupiah($tb['jumlah']) . ").");
+                    }
+                    $pdo->prepare("UPDATE public.tabungan SET saldo = :saldo, diubah_pada = NOW() WHERE id = :tid")
+                        ->execute(['saldo' => $saldoBaru, 'tid' => $tb['tabungan_id']]);
+                }
 
                 // Buka proteksi rincian_penggajian_id terlebih dahulu agar diizinkan oleh trg_guard_locked_hr_transaksi_tabungan
                 $pdo->prepare("UPDATE public.transaksi_tabungan SET rincian_penggajian_id = NULL WHERE id = :ttid")->execute(['ttid' => $tb['id']]);
                 $pdo->prepare("DELETE FROM public.transaksi_tabungan WHERE id = :ttid")->execute(['ttid' => $tb['id']]);
             }
 
-            // 3. Revert Arus Kas & Saldo Akun Kas (Mendukung Multi-Row Escrow Transfers)
-            $stmtArus = $pdo->prepare("SELECT id, akun_kas_id, nominal, jenis_kas FROM public.arus_kas WHERE referensi_tabel = 'penggajian' AND referensi_id = :rid ORDER BY id DESC");
+            // 3. Revert Arus Kas & Saldo Akun Kas (Mendukung Multi-Row Escrow Transfers & Split Kas/Bank)
+            $stmtArus = $pdo->prepare("
+                SELECT id, akun_kas_id, nominal, jenis_kas 
+                FROM public.arus_kas 
+                WHERE referensi_tabel = 'penggajian' AND referensi_id = :rid 
+                ORDER BY id DESC
+            ");
             $stmtArus->execute(['rid' => $runId]);
             $arusRows = $stmtArus->fetchAll(PDO::FETCH_ASSOC);
 
+            $kasDeltas = [];
             foreach ($arusRows as $arusRow) {
+                $kid = (string)$arusRow['akun_kas_id'];
+                $nom = (float)$arusRow['nominal'];
+                if (!isset($kasDeltas[$kid])) {
+                    $kasDeltas[$kid] = 0.0;
+                }
                 if ($arusRow['jenis_kas'] === 'keluar' || $arusRow['jenis_kas'] === 'transfer_keluar') {
                     // Dana keluar dikembalikan ke kas asal
-                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini + :nom, diubah_pada = NOW() WHERE id = :kid")
-                        ->execute(['nom' => $arusRow['nominal'], 'kid' => $arusRow['akun_kas_id']]);
+                    $kasDeltas[$kid] += $nom;
                 } elseif ($arusRow['jenis_kas'] === 'masuk' || $arusRow['jenis_kas'] === 'transfer_masuk') {
                     // Dana masuk ditarik kembali dari kas tujuan
-                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = saldo_saat_ini - :nom, diubah_pada = NOW() WHERE id = :kid")
-                        ->execute(['nom' => $arusRow['nominal'], 'kid' => $arusRow['akun_kas_id']]);
+                    $kasDeltas[$kid] -= $nom;
                 }
-                $pdo->prepare("DELETE FROM public.arus_kas WHERE id = :aid")->execute(['aid' => $arusRow['id']]);
             }
+
+            foreach ($kasDeltas as $kid => $delta) {
+                $stmtLockKas = $pdo->prepare("SELECT id, nama_akun, tipe_akun, saldo_saat_ini FROM public.akun_kas WHERE id = :id FOR UPDATE");
+                $stmtLockKas->execute(['id' => $kid]);
+                $kasRow = $stmtLockKas->fetch(PDO::FETCH_ASSOC);
+                if ($kasRow) {
+                    $saldoBaru = (float)$kasRow['saldo_saat_ini'] + $delta;
+                    if ($saldoBaru < 0 && !in_array($kasRow['tipe_akun'], ['kartu_kredit', 'giro'], true)) {
+                        throw new Exception("Saldo akun kas '{$kasRow['nama_akun']}' tidak mencukupi untuk ditarik kembali saat pembatalan payroll (Saldo saat ini: " . Format::rupiah($kasRow['saldo_saat_ini']) . ", pengurangan: " . Format::rupiah(abs($delta)) . ").");
+                    }
+                    $pdo->prepare("UPDATE public.akun_kas SET saldo_saat_ini = :saldo, diubah_pada = NOW() WHERE id = :id")
+                        ->execute(['saldo' => $saldoBaru, 'id' => $kid]);
+                }
+            }
+
+            $pdo->prepare("DELETE FROM public.arus_kas WHERE referensi_tabel = 'penggajian' AND referensi_id = :rid")
+                ->execute(['rid' => $runId]);
 
             // 4. Reset Status Penggajian ke Draf
             $pdo->prepare("
@@ -2071,6 +2338,10 @@ class PenggajianController extends Controller
         $rincianId = (string)$this->input('rincian_id', '');
 
         if (empty($runId) || empty($rincianId)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Parameter slip gaji tidak lengkap.'], 400);
+                return;
+            }
             $this->redirect('/penggajian');
             return;
         }
@@ -2094,10 +2365,23 @@ class PenggajianController extends Controller
             ", ['rpid' => $rincianId, 'rid' => $runId]);
 
             if (!$data) {
+                if ($this->isAjax()) {
+                    $this->json(['success' => false, 'message' => 'Data slip gaji tidak ditemukan.'], 404);
+                    return;
+                }
                 $this->flashError('Data slip gaji tidak ditemukan.');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
+
+            $details = json_decode((string)($data['rincian_json'] ?? ''), true) ?: [];
+            $hasBankRek = !empty(trim((string)($data['bank_nomor_rekening'] ?? '')));
+            $isBankNameTunai = strtolower(trim((string)($data['bank_nama'] ?? ''))) === 'tunai';
+            $defaultMetode = ($hasBankRek && !$isBankNameTunai) ? 'transfer' : 'tunai';
+            $data['metode_pembayaran'] = (string)($details['metode_pembayaran'] ?? $defaultMetode);
+            $data['bank_nama'] = (string)($details['bank_nama'] ?? $data['bank_nama'] ?? '');
+            $data['bank_nomor_rekening'] = (string)($details['bank_nomor_rekening'] ?? $data['bank_nomor_rekening'] ?? '');
+            $data['bank_atas_nama'] = (string)($details['bank_atas_nama'] ?? $data['bank_atas_nama'] ?? '');
 
             $company = CompanySetting::getAll();
 
@@ -2108,8 +2392,12 @@ class PenggajianController extends Controller
             $html = ob_get_clean();
 
             $filename = 'Slip_Gaji_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $data['nama_karyawan']) . '_' . $data['nomor_referensi'] . '.pdf';
-            PdfExport::stream($html, $filename, 'A5', 'portrait');
+            PdfExport::stream($html, $filename, 'A4', 'portrait');
         } catch (Throwable $e) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Gagal mencetak slip gaji: ' . $e->getMessage()], 500);
+                return;
+            }
             $this->flashError('Gagal mencetak slip gaji: ' . $e->getMessage());
             $this->redirect('/penggajian/preview?id=' . $runId);
         }
@@ -2122,6 +2410,10 @@ class PenggajianController extends Controller
     {
         $runId = (string)$this->input('run_id', '');
         if (empty($runId)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Parameter ID payroll tidak valid.'], 400);
+                return;
+            }
             $this->redirect('/penggajian');
             return;
         }
@@ -2148,10 +2440,26 @@ class PenggajianController extends Controller
             ", ['rid' => $runId]);
 
             if (empty($items)) {
+                if ($this->isAjax()) {
+                    $this->json(['success' => false, 'message' => 'Tidak ada data slip gaji aktif.'], 404);
+                    return;
+                }
                 $this->flashError('Tidak ada data slip gaji aktif.');
                 $this->redirect('/penggajian/preview?id=' . $runId);
                 return;
             }
+
+            foreach ($items as &$it) {
+                $details = json_decode((string)($it['rincian_json'] ?? ''), true) ?: [];
+                $hasBankRek = !empty(trim((string)($it['bank_nomor_rekening'] ?? '')));
+                $isBankNameTunai = strtolower(trim((string)($it['bank_nama'] ?? ''))) === 'tunai';
+                $defaultMetode = ($hasBankRek && !$isBankNameTunai) ? 'transfer' : 'tunai';
+                $it['metode_pembayaran'] = (string)($details['metode_pembayaran'] ?? $defaultMetode);
+                $it['bank_nama'] = (string)($details['bank_nama'] ?? $it['bank_nama'] ?? '');
+                $it['bank_nomor_rekening'] = (string)($details['bank_nomor_rekening'] ?? $it['bank_nomor_rekening'] ?? '');
+                $it['bank_atas_nama'] = (string)($details['bank_atas_nama'] ?? $it['bank_atas_nama'] ?? '');
+            }
+            unset($it);
 
             $company = CompanySetting::getAll();
 
@@ -2164,6 +2472,10 @@ class PenggajianController extends Controller
             $filename = 'Batch_Slip_Gaji_' . $runRef . '_' . date('Ymd') . '.pdf';
             PdfExport::stream($html, $filename, 'A4', 'portrait');
         } catch (Throwable $e) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Gagal mencetak batch slip: ' . $e->getMessage()], 500);
+                return;
+            }
             $this->flashError('Gagal mencetak batch slip: ' . $e->getMessage());
             $this->redirect('/penggajian/preview?id=' . $runId);
         }
@@ -2176,6 +2488,10 @@ class PenggajianController extends Controller
     {
         $runId = (string)$this->input('run_id', '');
         if (empty($runId)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Parameter ID payroll tidak valid.'], 400);
+                return;
+            }
             $this->redirect('/penggajian');
             return;
         }
@@ -2189,13 +2505,18 @@ class PenggajianController extends Controller
             ", ['id' => $runId]);
 
             if (!$run) {
+                if ($this->isAjax()) {
+                    $this->json(['success' => false, 'message' => 'Data payroll tidak ditemukan.'], 404);
+                    return;
+                }
                 $this->flashError('Data payroll tidak ditemukan.');
                 $this->redirect('/penggajian');
                 return;
             }
 
             $items = Database::fetchAll("
-                SELECT rp.*, v.nama_karyawan, v.posisi, k.tipe_penggajian
+                SELECT rp.*, v.nama_karyawan, v.posisi, k.tipe_penggajian,
+                       v.bank_nama, v.bank_nomor_rekening, v.bank_atas_nama
                 FROM public.rincian_penggajian rp
                 JOIN public.v_karyawan_info v ON v.id = rp.karyawan_id
                 JOIN public.karyawan k ON k.id = rp.karyawan_id
@@ -2204,6 +2525,18 @@ class PenggajianController extends Controller
                     CASE WHEN k.tipe_penggajian = 'bulanan' THEN 0 ELSE 1 END,
                     v.nama_karyawan ASC
             ", ['id' => $runId]);
+
+            foreach ($items as &$it) {
+                $details = json_decode((string)($it['rincian_json'] ?? ''), true) ?: [];
+                $hasBankRek = !empty(trim((string)($it['bank_nomor_rekening'] ?? '')));
+                $isBankNameTunai = strtolower(trim((string)($it['bank_nama'] ?? ''))) === 'tunai';
+                $defaultMetode = ($hasBankRek && !$isBankNameTunai) ? 'transfer' : 'tunai';
+                $it['metode_pembayaran'] = (string)($details['metode_pembayaran'] ?? $defaultMetode);
+                $it['bank_nama'] = (string)($details['bank_nama'] ?? $it['bank_nama'] ?? '');
+                $it['bank_nomor_rekening'] = (string)($details['bank_nomor_rekening'] ?? $it['bank_nomor_rekening'] ?? '');
+                $it['bank_atas_nama'] = (string)($details['bank_atas_nama'] ?? $it['bank_atas_nama'] ?? '');
+            }
+            unset($it);
 
             $company = CompanySetting::getAll();
 
@@ -2214,6 +2547,10 @@ class PenggajianController extends Controller
             $filename = 'Rekap_Penggajian_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $run['nomor_referensi']) . '.pdf';
             PdfExport::stream($html, $filename, 'A4', 'landscape');
         } catch (Throwable $e) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'message' => 'Gagal mencetak rekap penggajian: ' . $e->getMessage()], 500);
+                return;
+            }
             $this->flashError('Gagal mencetak rekap penggajian: ' . $e->getMessage());
             $this->redirect('/penggajian/preview?id=' . $runId);
         }

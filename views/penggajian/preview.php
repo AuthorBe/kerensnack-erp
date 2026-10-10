@@ -17,6 +17,13 @@ $totalPenarikanTabunganAll = (float)($totalPenarikanTabunganAll ?? $totalPenarik
 $totalGajiBersih = (float)($totalGajiBersih ?? 0);
 $totalKebutuhanKasOperasional = $totalGajiBersih + $totalPotonganTabunganAll;
 
+$totalGajiTunai = (float)($totalGajiTunai ?? 0);
+$countTunai = (int)($countTunai ?? 0);
+$totalGajiTransfer = (float)($totalGajiTransfer ?? 0);
+$countTransfer = (int)($countTransfer ?? 0);
+$potonganTabunganTunai = (float)($potonganTabunganTunai ?? 0);
+$potonganTabunganTransfer = (float)($potonganTabunganTransfer ?? 0);
+
 // Periode rincian per tipe (Borongan / Bulanan) dari options_json dengan bulan singkat (e.g. 5 Okt – 10 Okt 2026)
 $opts = json_decode((string)($run['options_json'] ?? ''), true) ?: [];
 
@@ -109,15 +116,25 @@ $periodLabels = [
     font-weight: 600;
     color: var(--color-ink-mute);
     background: transparent;
-    border: none;
+    border: 1px solid transparent !important;
     cursor: pointer;
     transition: all 0.15s ease;
     white-space: nowrap;
     user-select: none;
+    outline: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+    -webkit-tap-highlight-color: transparent;
 }
 .tab-pill-btn:hover {
     color: var(--color-ink);
     background: rgba(0, 0, 0, 0.04);
+}
+.tab-pill-btn:focus,
+.tab-pill-btn:focus-visible,
+.tab-pill-btn:active {
+    outline: none !important;
+    box-shadow: none;
 }
 .dark .tab-pill-btn:hover {
     color: var(--color-ink);
@@ -126,34 +143,58 @@ $periodLabels = [
 .tab-pill-btn.is-active-primary {
     background: var(--color-canvas, #ffffff) !important;
     color: var(--color-ink, #0f172a) !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--color-hairline, #e2e8f0) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
     font-weight: 700;
 }
 .dark .tab-pill-btn.is-active-primary {
     background: #334155 !important;
     color: #f8fafc !important;
+    border-color: #475569 !important;
 }
 .tab-pill-btn.is-active-amber {
     background: #fef3c7 !important;
     color: #b45309 !important;
-    border: 1px solid #fde68a;
+    border: 1px solid #fde68a !important;
     font-weight: 700;
 }
 .dark .tab-pill-btn.is-active-amber {
     background: rgba(245, 158, 11, 0.2) !important;
     color: #fbbf24 !important;
-    border-color: rgba(245, 158, 11, 0.35);
+    border-color: rgba(245, 158, 11, 0.35) !important;
 }
 .tab-pill-btn.is-active-sky {
     background: #eff6ff !important;
     color: #1d4ed8 !important;
-    border: 1px solid #bfdbfe;
+    border: 1px solid #bfdbfe !important;
     font-weight: 700;
 }
 .dark .tab-pill-btn.is-active-sky {
     background: rgba(59, 130, 246, 0.2) !important;
     color: #60a5fa !important;
-    border-color: rgba(59, 130, 246, 0.35);
+    border-color: rgba(59, 130, 246, 0.35) !important;
+}
+.tab-pill-btn.is-active-emerald {
+    background: #ecfdf5 !important;
+    color: #047857 !important;
+    border: 1px solid #a7f3d0 !important;
+    font-weight: 700;
+}
+.dark .tab-pill-btn.is-active-emerald {
+    background: rgba(16, 185, 129, 0.2) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+.tab-pill-btn.is-active-purple {
+    background: #f5f3ff !important;
+    color: #6d28d9 !important;
+    border: 1px solid #ddd6fe !important;
+    font-weight: 700;
+}
+.dark .tab-pill-btn.is-active-purple {
+    background: rgba(139, 92, 246, 0.2) !important;
+    color: #a78bfa !important;
+    border-color: rgba(139, 92, 246, 0.35) !important;
 }
 .tab-pill-counter {
     display: inline-flex;
@@ -441,48 +482,237 @@ $periodLabels = [
     background: rgba(239, 68, 68, 0.15) !important;
 }
 
-/* Warning / Info Banner Minimalis */
+/* Warning / Info Banner Minimalis, Clean & Modern */
 .payroll-warning-banner {
+    padding: 12px 14px;
+    border-radius: var(--rounded-md, 8px);
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    box-shadow: 0 1px 2px rgba(217, 119, 6, 0.06);
+}
+.dark .payroll-warning-banner {
+    background: rgba(245, 158, 11, 0.1) !important;
+    border-color: rgba(245, 158, 11, 0.28) !important;
+    box-shadow: none;
+}
+.payroll-warning-header {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: var(--rounded-md, 8px);
-    background-color: #fffbeb !important;
-    border: 1px solid #fde68a !important;
-    color: #92400e !important;
-    font-size: 11.5px;
-    line-height: 1.5;
+    gap: 9px;
 }
-.payroll-warning-banner .banner-icon-box {
+.payroll-warning-icon {
     width: 22px;
     height: 22px;
     border-radius: 6px;
-    background-color: #fef3c7 !important;
-    color: #b45309 !important;
-    border: 1px solid #fde68a !important;
-    display: flex;
+    background: #fef3c7;
+    color: #d97706;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     margin-top: 1px;
 }
-.payroll-warning-banner strong {
-    color: #78350f !important;
+.dark .payroll-warning-icon {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+}
+.payroll-warning-title {
+    font-size: 12px;
     font-weight: 700;
+    color: #92400e;
+    line-height: 1.3;
 }
-.dark .payroll-warning-banner {
-    background-color: rgba(245, 158, 11, 0.15) !important;
-    border-color: rgba(245, 158, 11, 0.4) !important;
-    color: #fef3c7 !important;
+.dark .payroll-warning-title {
+    color: #fde68a;
 }
-.dark .payroll-warning-banner .banner-icon-box {
-    background-color: rgba(245, 158, 11, 0.25) !important;
-    border-color: rgba(245, 158, 11, 0.45) !important;
-    color: #fcd34d !important;
+.payroll-warning-desc {
+    font-size: 11px;
+    color: #b45309;
+    line-height: 1.35;
+    margin-top: 1.5px;
 }
-.dark .payroll-warning-banner strong {
-    color: #fbbf24 !important;
+.dark .payroll-warning-desc {
+    color: #fcd34d;
+}
+
+/* Row item defisit saldo kas - Clean Card */
+.payroll-deficit-row {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: all 0.15s ease;
+}
+.dark .payroll-deficit-row {
+    background: rgba(15, 23, 42, 0.5);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+.payroll-deficit-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.payroll-deficit-acc-name {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--color-ink, #0f172a);
+    line-height: 1.3;
+}
+.dark .payroll-deficit-acc-name {
+    color: #f1f5f9;
+}
+.payroll-deficit-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    line-height: 1;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    padding: 3px 7px;
+    border-radius: 9999px;
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.dark .payroll-deficit-pill {
+    background: rgba(220, 38, 38, 0.2);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.35);
+}
+.payroll-deficit-row-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10.5px;
+    color: var(--color-ink-mute, #64748b);
+    padding-top: 4px;
+    border-top: 1px solid rgba(245, 158, 11, 0.15);
+    font-family: var(--font-sans);
+}
+.dark .payroll-deficit-row-bottom {
+    border-top-color: rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+}
+
+/* Modal Responsiveness Safeguards for Mobile (HP) */
+@media (max-width: 640px) {
+    .modal-box .modal-body {
+        padding: 14px 14px !important;
+    }
+    .modal-box .modal-header {
+        padding: 14px 14px 12px 14px !important;
+    }
+    .modal-box .modal-footer {
+        padding: 12px 14px !important;
+    }
+}
+
+/* ==========================================================================
+   Header Badges Kebutuhan Akun Kas (Pill Standar & Clean)
+   ========================================================================== */
+.payroll-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.payroll-section-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-ink, #0f172a);
+    line-height: 1.4;
+}
+.dark .payroll-section-title {
+    color: #f1f5f9;
+}
+.payroll-kebutuhan-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.35;
+    white-space: nowrap;
+    width: auto;
+    max-width: 100%;
+    align-self: flex-start;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+@media (min-width: 640px) {
+    .payroll-kebutuhan-badge {
+        align-self: center;
+    }
+}
+.payroll-kebutuhan-badge.is-tunai {
+    background-color: #ecfdf5 !important;
+    color: #047857 !important;
+    border: 1px solid #a7f3d0 !important;
+}
+.dark .payroll-kebutuhan-badge.is-tunai {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.35) !important;
+}
+.payroll-kebutuhan-badge.is-transfer {
+    background-color: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border: 1px solid #bfdbfe !important;
+}
+.dark .payroll-kebutuhan-badge.is-transfer {
+    background-color: rgba(59, 130, 246, 0.15) !important;
+    color: #60a5fa !important;
+    border-color: rgba(59, 130, 246, 0.35) !important;
+}
+.payroll-kebutuhan-badge.is-tabungan {
+    background-color: #f5f3ff !important;
+    color: #6d28d9 !important;
+    border: 1px solid #ddd6fe !important;
+}
+.dark .payroll-kebutuhan-badge.is-tabungan {
+    background-color: rgba(139, 92, 246, 0.15) !important;
+    color: #a78bfa !important;
+    border-color: rgba(139, 92, 246, 0.35) !important;
+}
+.payroll-kebutuhan-badge .badge-label {
+    font-weight: 500;
+    color: inherit;
+}
+.payroll-kebutuhan-badge .badge-amount {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: inherit;
+}
+.payroll-kebutuhan-badge .badge-sep {
+    opacity: 0.5;
+    font-size: 10px;
+}
+.payroll-kebutuhan-badge .badge-count {
+    font-weight: 500;
+    color: inherit;
+    opacity: 0.9;
 }
 
 /* Banner Dampak Otorisasi Biru Soft */
@@ -523,6 +753,596 @@ $periodLabels = [
 }
 .dark .payroll-info-banner-blue ul {
     color: #bfdbfe;
+}
+
+/* ==========================================================================
+   Modern Searchable Kas Account Dropdown in Approval Modal
+   ========================================================================== */
+.payroll-dropdown-trigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    min-height: 52px;
+    border-radius: var(--rounded-md, 8px);
+    border: 1.5px solid var(--color-hairline, #cbd5e1);
+    background: var(--color-canvas, #ffffff);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+}
+.payroll-dropdown-trigger:hover {
+    border-color: #94a3b8;
+    background: var(--color-canvas-soft, #f8fafc);
+}
+.dark .payroll-dropdown-trigger {
+    background: #1e293b;
+    border-color: #334155;
+}
+.dark .payroll-dropdown-trigger:hover {
+    border-color: #475569;
+    background: #273549;
+}
+.payroll-dropdown-trigger.is-open {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
+}
+.dark .payroll-dropdown-trigger.is-open {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3) !important;
+}
+
+.payroll-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    background: var(--color-canvas, #ffffff);
+    border: 1px solid var(--color-hairline, #cbd5e1);
+    border-radius: 12px;
+    box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.14), 0 6px 12px -3px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    animation: payrollDropdownFade 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dark .payroll-dropdown-menu {
+    background: #0f172a;
+    border-color: #334155;
+    box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.45);
+}
+@keyframes payrollDropdownFade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.payroll-dropdown-search-wrap {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--color-hairline, #e2e8f0);
+    background: var(--color-canvas-soft, #f8fafc);
+}
+.dark .payroll-dropdown-search-wrap {
+    background: #1e293b;
+    border-color: #334155;
+}
+.payroll-dropdown-search-input {
+    height: 36px;
+    width: 100%;
+    padding: 0 32px 0 34px;
+    font-size: 12px;
+    border-radius: 8px;
+    border: 1px solid var(--color-hairline-strong, #cbd5e1);
+    background: var(--color-canvas, #ffffff);
+    color: var(--color-ink, #0f172a);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.payroll-dropdown-search-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
+}
+.dark .payroll-dropdown-search-input {
+    background: #0f172a;
+    border-color: #475569;
+    color: #f1f5f9;
+}
+.dark .payroll-dropdown-search-input:focus {
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.28);
+}
+
+.payroll-search-icon {
+    position: absolute;
+    left: 10px;
+    width: 14px;
+    height: 14px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+.payroll-search-clear {
+    position: absolute;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+.payroll-search-clear:hover {
+    color: #475569;
+    background: rgba(148, 163, 184, 0.2);
+}
+.payroll-search-clear svg {
+    width: 12px;
+    height: 12px;
+}
+
+.payroll-dropdown-options-list {
+    max-height: 210px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+.payroll-dropdown-option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 12px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    transition: background-color 0.12s ease;
+}
+.payroll-dropdown-option:last-child {
+    border-bottom: none;
+}
+.payroll-dropdown-option:hover {
+    background-color: var(--color-canvas-soft, #f8fafc);
+}
+.dark .payroll-dropdown-option {
+    border-bottom-color: rgba(51, 65, 85, 0.5);
+}
+.dark .payroll-dropdown-option:hover {
+    background-color: #1e293b;
+}
+.payroll-dropdown-option.is-selected {
+    background-color: #f0fdf4 !important;
+}
+.dark .payroll-dropdown-option.is-selected {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+.payroll-kas-type-pill {
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    background: rgba(100, 116, 139, 0.12);
+    color: #64748b;
+}
+.dark .payroll-kas-type-pill {
+    background: rgba(148, 163, 184, 0.18);
+    color: #94a3b8;
+}
+.payroll-sufficient-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2.5px 7px;
+    border-radius: 9999px;
+    background: #d1fae5;
+    color: #065f46;
+}
+.dark .payroll-sufficient-badge {
+    background: rgba(16, 185, 129, 0.22);
+    color: #6ee7b7;
+}
+.payroll-deficit-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2.5px 7px;
+    border-radius: 9999px;
+    background: #fee2e2;
+    color: #b91c1c;
+}
+.dark .payroll-deficit-badge {
+    background: rgba(239, 68, 68, 0.22);
+    color: #fca5a5;
+}
+.payroll-selected-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #10b981;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.payroll-selected-check svg {
+    width: 11px;
+    height: 11px;
+    stroke-width: 3;
+}
+.payroll-dropdown-empty {
+    padding: 24px 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--color-ink-mute, #94a3b8);
+    font-size: 11.5px;
+}
+.payroll-dropdown-empty svg {
+    width: 22px;
+    height: 22px;
+    color: #cbd5e1;
+}
+.dark .payroll-dropdown-empty svg {
+    color: #475569;
+}
+
+/* Kas Icon Box */
+.payroll-kas-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.payroll-kas-icon.is-tunai {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+.dark .payroll-kas-icon.is-tunai {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.32);
+}
+.payroll-kas-icon.is-bank {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+.dark .payroll-kas-icon.is-bank {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.32);
+}
+
+/* POS Tag */
+.payroll-kas-pos-pill {
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    background: #d1fae5;
+    color: #065f46;
+    letter-spacing: 0.02em;
+}
+.dark .payroll-kas-pos-pill {
+    background: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
+}
+
+/* Saldo highlight */
+.payroll-kas-saldo-insufficient {
+    color: #dc2626 !important;
+    font-weight: 700 !important;
+}
+.dark .payroll-kas-saldo-insufficient {
+    color: #f87171 !important;
+}
+.payroll-kas-saldo-sufficient {
+    color: var(--color-ink, #0f172a) !important;
+    font-weight: 600 !important;
+}
+.dark .payroll-kas-saldo-sufficient {
+    color: #e2e8f0 !important;
+}
+
+/* Radio Cards: Metode Pembayaran Gaji (Prominent & High-Contrast) */
+.payroll-method-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+@media (max-width: 540px) {
+    .payroll-method-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.payroll-method-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--rounded-lg, 10px);
+    border: 1.5px solid var(--color-hairline, #cbd5e1);
+    background: var(--color-canvas, #ffffff);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    text-align: left;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+}
+.payroll-method-card:hover {
+    border-color: #94a3b8;
+    background: var(--color-canvas-soft, #f8fafc);
+}
+.dark .payroll-method-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+.dark .payroll-method-card:hover {
+    border-color: #475569;
+    background: #273549;
+}
+/* Active Tunai (Emerald) */
+.payroll-method-card.is-active-tunai {
+    border-color: #059669 !important;
+    background: #f0fdf4 !important;
+    box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.22) !important;
+}
+.dark .payroll-method-card.is-active-tunai {
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.12) !important;
+    box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.28) !important;
+}
+/* Active Transfer (Blue) */
+.payroll-method-card.is-active-transfer {
+    border-color: #2563eb !important;
+    background: #eff6ff !important;
+    box-shadow: 0 0 0 2.5px rgba(37, 99, 235, 0.22) !important;
+}
+.dark .payroll-method-card.is-active-transfer {
+    border-color: #3b82f6 !important;
+    background: rgba(59, 130, 246, 0.12) !important;
+    box-shadow: 0 0 0 2.5px rgba(59, 130, 246, 0.28) !important;
+}
+/* Method Icon Badge */
+.payroll-method-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+}
+.payroll-method-card:hover .payroll-method-icon {
+    transform: scale(1.05);
+}
+.payroll-method-icon.is-tunai {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+.dark .payroll-method-icon.is-tunai {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.32);
+}
+.payroll-method-icon.is-transfer {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+.dark .payroll-method-icon.is-transfer {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.32);
+}
+
+/* Card Bank Master Terverifikasi */
+.payroll-bank-card {
+    padding: 10px 14px;
+    border-radius: var(--rounded-md, 8px);
+    border: 1px solid #bfdbfe;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.dark .payroll-bank-card {
+    background: #0f172a;
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+/* Emblem / Logo Bank Modern */
+.payroll-bank-emblem {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    user-select: none;
+    transition: transform 0.15s ease;
+}
+.payroll-bank-emblem:hover {
+    transform: scale(1.04);
+}
+
+/* Badge Rekening Master Pill */
+.payroll-bank-master-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2.5px 7px;
+    border-radius: 9999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+.dark .payroll-bank-master-pill {
+    background: rgba(37, 99, 235, 0.2);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.4);
+}
+
+/* Tombol Aksi Ubah Rekening (Sleek Smooth Pill) */
+.payroll-bank-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 6px 13px;
+    border-radius: 9999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.payroll-bank-action-btn:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    transform: translateY(-0.5px);
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.12);
+}
+.dark .payroll-bank-action-btn {
+    background: rgba(37, 99, 235, 0.18);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+}
+.dark .payroll-bank-action-btn:hover {
+    background: rgba(37, 99, 235, 0.3);
+    color: #bfdbfe;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Panel Koreksi Custom Rekening */
+.payroll-bank-custom-panel {
+    padding: 10px 12px;
+    border-radius: var(--rounded-md, 8px);
+    border: 1px dashed #93c5fd;
+    background: rgba(239, 246, 255, 0.5);
+}
+.dark .payroll-bank-custom-panel {
+    border-color: rgba(59, 130, 246, 0.4);
+    background: rgba(30, 58, 138, 0.15);
+}
+
+/* Tombol Reset ke Master */
+.payroll-bank-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4.5px;
+    padding: 3.5px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #2563eb;
+    background: transparent;
+    border: 1px dashed rgba(59, 130, 246, 0.45);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    line-height: 1;
+}
+.payroll-bank-reset-btn:hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #1d4ed8;
+}
+.dark .payroll-bank-reset-btn {
+    color: #93c5fd;
+    border-color: rgba(96, 165, 250, 0.45);
+}
+.dark .payroll-bank-reset-btn:hover {
+    background: rgba(37, 99, 235, 0.2);
+    color: #ffffff;
+}
+
+/* Badge Hint Drag-to-Scroll */
+.payroll-scroll-hint-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5.5px;
+    padding: 3.5px 11px;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    background: var(--color-canvas);
+    border: 1px solid var(--color-hairline);
+    color: var(--color-ink-mute);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    user-select: none;
+    transition: all 0.15s ease;
+}
+.payroll-scroll-hint-badge i,
+.payroll-scroll-hint-badge svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: #2563eb;
+    stroke-width: 2.2;
+    display: block;
+}
+.dark .payroll-scroll-hint-badge {
+    background: var(--color-surface);
+    border-color: var(--color-hairline);
+    color: var(--color-ink-mute);
+}
+.dark .payroll-scroll-hint-badge i,
+.dark .payroll-scroll-hint-badge svg {
+    color: #60a5fa;
 }
 </style>
 
@@ -599,15 +1419,21 @@ $periodLabels = [
 
             <?php else: ?>
                 <!-- Actions saat DISETUJUI / DIBAYARKAN -->
-                <a href="<?= Router::url('/penggajian/slip-batch?run_id=' . $run['id']) ?>" target="_blank" class="btn btn-secondary justify-center col-span-1" style="height:38px; display:inline-flex; align-items:center; gap:6px;">
+                <button type="button" 
+                        @click="downloadPdf('<?= Router::url('/penggajian/slip-batch?run_id=' . $run['id']) ?>', 'Menyiapkan Slip Batch...', 'Mengompilasi seluruh slip gaji karyawan...')" 
+                        class="btn btn-secondary justify-center col-span-1" 
+                        style="height:38px; display:inline-flex; align-items:center; gap:6px;">
                     <i data-lucide="file-text" style="width:16px; height:16px; color:#be123c;"></i>
                     <span>Slip Batch</span>
-                </a>
+                </button>
 
-                <a href="<?= Router::url('/penggajian/rekap-pdf?run_id=' . $run['id']) ?>" target="_blank" class="btn btn-secondary justify-center col-span-1" style="height:38px; display:inline-flex; align-items:center; gap:6px;">
+                <button type="button" 
+                        @click="downloadPdf('<?= Router::url('/penggajian/rekap-pdf?run_id=' . $run['id']) ?>', 'Menyiapkan Rekap PDF...', 'Mengompilasi dokumen rekapitulasi penggajian...')" 
+                        class="btn btn-secondary justify-center col-span-1" 
+                        style="height:38px; display:inline-flex; align-items:center; gap:6px;">
                     <i data-lucide="printer" style="width:16px; height:16px; color:#0284c7;"></i>
                     <span>Rekap PDF</span>
-                </a>
+                </button>
 
                 <?php if ($canCancelApprove && Auth::hasPermission('hr.payroll_approve')): ?>
                     <button type="button" @click="showCancelApproveModal = true" class="btn btn-secondary justify-center col-span-2 sm:col-span-1 text-amber-600 hover:text-amber-700" style="height:38px; display:inline-flex; align-items:center; gap:6px;" title="Batalkan approval dalam batas 24 jam">
@@ -671,7 +1497,11 @@ $periodLabels = [
             <div style="min-width:0; flex:1;">
                 <div class="stat-card-label truncate" style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.04em;">Gaji Bersih (Net)</div>
                 <div class="stat-card-value font-mono font-bold text-sm sm:text-lg lg:text-xl truncate" style="color:#10b981;"><?= Format::rupiah($totalGajiBersih) ?></div>
-                <div style="font-size:10px; color:var(--color-ink-mute); margin-top:1px;" class="truncate hidden sm:block">Beban kas keluar</div>
+                <div style="font-size:10px; color:var(--color-ink-mute); margin-top:1px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                    <span title="Tunai: <?= Format::rupiah($totalGajiTunai) ?> (<?= $countTunai ?> orang)"><i data-lucide="banknote" style="width:11px; height:11px; display:inline-block; vertical-align:middle; color:#059669;"></i> Tunai: <strong class="font-mono text-emerald-700 dark:text-emerald-400"><?= Format::rupiah($totalGajiTunai) ?></strong></span>
+                    <span>&bull;</span>
+                    <span title="Transfer: <?= Format::rupiah($totalGajiTransfer) ?> (<?= $countTransfer ?> orang)"><i data-lucide="arrow-up-right" style="width:11px; height:11px; display:inline-block; vertical-align:middle; color:#2563eb;"></i> TF: <strong class="font-mono text-blue-700 dark:text-blue-400"><?= Format::rupiah($totalGajiTransfer) ?></strong></span>
+                </div>
             </div>
         </div>
     </div>
@@ -684,7 +1514,7 @@ $periodLabels = [
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 sm:p-4 border-b"
              style="border-color:var(--color-hairline); background-color:var(--color-canvas);">
             
-            <!-- Filter Tabs (Semua / Borongan / Bulanan) -->
+            <!-- Filter Tabs (Semua / Borongan / Bulanan / Tunai / Transfer) -->
             <div class="tab-pill-group">
                 <button type="button" @click="statusFilter = 'all'" class="tab-pill-btn" :class="statusFilter === 'all' ? 'is-active-primary' : ''">
                     <span>Semua Karyawan</span>
@@ -697,6 +1527,16 @@ $periodLabels = [
                 <button type="button" @click="statusFilter = 'bulanan'" class="tab-pill-btn" :class="statusFilter === 'bulanan' ? 'is-active-sky' : ''">
                     <span>Bulanan</span>
                     <span class="tab-pill-counter" x-text="bulananCount"></span>
+                </button>
+                <button type="button" @click="statusFilter = 'tunai'" class="tab-pill-btn" :class="statusFilter === 'tunai' ? 'is-active-emerald' : ''">
+                    <i data-lucide="banknote" style="width:12px; height:12px;"></i>
+                    <span>Tunai</span>
+                    <span class="tab-pill-counter" x-text="tunaiCount"></span>
+                </button>
+                <button type="button" @click="statusFilter = 'transfer'" class="tab-pill-btn" :class="statusFilter === 'transfer' ? 'is-active-purple' : ''">
+                    <i data-lucide="credit-card" style="width:12px; height:12px;"></i>
+                    <span>Transfer</span>
+                    <span class="tab-pill-counter" x-text="transferCount"></span>
                 </button>
             </div>
 
@@ -724,8 +1564,8 @@ $periodLabels = [
                     <span>Rincian per Karyawan</span>
                 </div>
                 <!-- Hint Drag-to-Scroll Desktop (Fitur bawaan app.js TableGrabScroll) -->
-                <div class="hidden md:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] text-slate-500 dark:text-slate-400" style="background:var(--color-canvas); border-color:var(--color-hairline);">
-                    <i data-lucide="move-horizontal" style="width:12px; height:12px; color:#2563eb;"></i>
+                <div class="hidden md:inline-flex payroll-scroll-hint-badge">
+                    <i data-lucide="move-horizontal"></i>
                     <span>Tahan &amp; geser untuk scroll</span>
                 </div>
             </div>
@@ -754,6 +1594,18 @@ $periodLabels = [
                     <span class="badge badge-mono" style="font-size:10.5px;" x-text="item.hari_hadir + ' hr'"></span>
                     <template x-if="item.posisi && item.posisi !== '-'">
                         <span style="font-size:11px; color:var(--color-ink-mute);" x-text="item.posisi"></span>
+                    </template>
+                    <template x-if="item.metode_pembayaran === 'transfer'">
+                        <span class="badge" style="background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; font-size:10.5px; padding:1px 6px; display:inline-flex; align-items:center; gap:3px;">
+                            <i data-lucide="arrow-up-right" style="width:11px; height:11px;"></i>
+                            <span x-text="item.bank_nama ? ('TF ' + item.bank_nama) : 'Transfer'"></span>
+                        </span>
+                    </template>
+                    <template x-if="item.metode_pembayaran !== 'transfer'">
+                        <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-size:10.5px; padding:1px 6px; display:inline-flex; align-items:center; gap:3px;">
+                            <i data-lucide="banknote" style="width:11px; height:11px;"></i>
+                            <span>Tunai</span>
+                        </span>
                     </template>
                 </div>
             </td>
@@ -890,11 +1742,14 @@ $periodLabels = [
                         </button>
                     </div>
                 <?php else: ?>
-                    <a :href="'<?= Router::url('/penggajian/slip?run_id=' . $run['id'] . '&rincian_id=') ?>' + item.id" target="_blank"
-                       class="btn btn-secondary btn-sm" style="font-size:11px; padding:4px 9px; gap:4px; display:inline-flex; align-items:center;" title="Cetak Slip Gaji">
+                    <button type="button" 
+                            @click="downloadPdf('<?= Router::url('/penggajian/slip?run_id=' . $run['id'] . '&rincian_id=') ?>' + item.id, 'Menyiapkan Slip Gaji...', 'Memproses slip gaji ' + item.nama_karyawan + '...')"
+                            class="btn btn-secondary btn-sm" 
+                            style="font-size:11px; padding:4px 9px; gap:4px; display:inline-flex; align-items:center;" 
+                            title="Cetak Slip Gaji">
                         <i data-lucide="file-text" style="width:13px; height:13px; color:#be123c;"></i>
                         <span>Slip</span>
-                    </a>
+                    </button>
                 <?php endif; ?>
             </td>
         </tr>
@@ -1005,6 +1860,18 @@ $periodLabels = [
                         </template>
                         <template x-if="item.kasbon_adjusted">
                             <span class="badge badge-warning" style="font-size:10px; padding:1px 5px;">⚠️ Kasbon Disesuaikan</span>
+                        </template>
+                        <template x-if="item.metode_pembayaran === 'transfer'">
+                            <span class="badge" style="background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; font-size:10px; padding:1px 5px; display:inline-flex; align-items:center; gap:2px;">
+                                <i data-lucide="arrow-up-right" style="width:10px; height:10px;"></i>
+                                <span x-text="item.bank_nama ? ('TF ' + item.bank_nama) : 'Transfer'"></span>
+                            </span>
+                        </template>
+                        <template x-if="item.metode_pembayaran !== 'transfer'">
+                            <span class="badge" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; font-size:10px; padding:1px 5px; display:inline-flex; align-items:center; gap:2px;">
+                                <i data-lucide="banknote" style="width:10px; height:10px;"></i>
+                                <span>Tunai</span>
+                            </span>
                         </template>
                     </div>
                 </div>
@@ -1140,11 +2007,14 @@ $periodLabels = [
                         <span>Kecualikan</span>
                     </button>
                 <?php else: ?>
-                    <a :href="'<?= Router::url('/penggajian/slip?run_id=' . $run['id'] . '&rincian_id=') ?>' + item.id" target="_blank"
-                       class="btn btn-secondary flex-1 justify-center py-2 text-xs" style="height:35px;" title="Lihat Slip Gaji">
+                    <button type="button" 
+                            @click="downloadPdf('<?= Router::url('/penggajian/slip?run_id=' . $run['id'] . '&rincian_id=') ?>' + item.id, 'Menyiapkan Slip Gaji...', 'Memproses slip gaji ' + item.nama_karyawan + '...')"
+                            class="btn btn-secondary flex-1 justify-center py-2 text-xs" 
+                            style="height:35px;" 
+                            title="Lihat Slip Gaji">
                         <i data-lucide="file-text" style="width:13px; height:13px; color:#be123c;"></i>
                         <span>Lihat Slip</span>
-                    </a>
+                    </button>
                 <?php endif; ?>
             </div>
         </div>
@@ -1465,6 +2335,188 @@ $periodLabels = [
                             </div>
                         </div>
 
+                        <!-- Section: Metode Pembayaran Gaji (Prominent High-Contrast Radio Cards) -->
+                        <div class="space-y-3 pt-1">
+                            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--color-hairline); padding-bottom:5px;">
+                                <div>
+                                    <span style="font-size:12px; font-weight:700; color:var(--color-ink);">Metode Pembayaran Gaji</span>
+                                    <span style="font-size:11px; color:var(--color-ink-mute); margin-left:6px;">Pilih jalur pencairan gaji karyawan ini</span>
+                                </div>
+                                <span class="badge text-[11px]" :class="editForm.metode_pembayaran === 'transfer' ? 'badge-info' : 'badge-success'">
+                                    <span x-text="editForm.metode_pembayaran === 'transfer' ? 'Transfer Bank' : 'Tunai / Cash'"></span>
+                                </span>
+                            </div>
+
+                            <!-- Hidden inputs POST update-item -->
+                            <input type="hidden" name="metode_pembayaran" :value="editForm.metode_pembayaran">
+                            <input type="hidden" name="bank_nama" :value="editForm.bank_nama">
+                            <input type="hidden" name="bank_nomor_rekening" :value="editForm.bank_nomor_rekening">
+                            <input type="hidden" name="bank_atas_nama" :value="editForm.bank_atas_nama">
+
+                            <!-- Prominent 2-Column Method Cards (Clean, No Circle) -->
+                            <div class="payroll-method-grid">
+                                <!-- Card 1: Tunai (Cash) -->
+                                <button type="button" 
+                                        @click="selectMetode('tunai')"
+                                        :class="editForm.metode_pembayaran === 'tunai' ? 'is-active-tunai' : ''"
+                                        class="payroll-method-card">
+                                    <div class="payroll-method-icon is-tunai">
+                                        <svg style="width:20px;height:20px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="font-bold text-xs" :class="editForm.metode_pembayaran === 'tunai' ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'">Tunai (Cash)</span>
+                                            <span x-show="editForm.metode_pembayaran === 'tunai'" class="payroll-kas-pos-pill" style="background:#ecfdf5; color:#059669; border:1px solid #a7f3d0;">Terpilih</span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                                            Dibayarkan fisik / amplop via kas tunai
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <!-- Card 2: Transfer Bank -->
+                                <button type="button" 
+                                        @click="selectMetode('transfer')"
+                                        :class="editForm.metode_pembayaran === 'transfer' ? 'is-active-transfer' : ''"
+                                        class="payroll-method-card">
+                                    <div class="payroll-method-icon is-transfer">
+                                        <svg style="width:20px;height:20px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="font-bold text-xs" :class="editForm.metode_pembayaran === 'transfer' ? 'text-blue-700 dark:text-blue-400' : 'text-slate-800 dark:text-slate-200'">Transfer Bank</span>
+                                            <span x-show="editForm.metode_pembayaran === 'transfer'" class="payroll-kas-pos-pill" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;">Terpilih</span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-tight">
+                                            Ditransfer langsung ke rekening bank
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <!-- Bank Details Input if Transfer Selected -->
+                            <div x-show="editForm.metode_pembayaran === 'transfer'" 
+                                 x-transition:enter="transition ease-out duration-200"
+                                 x-transition:enter-start="opacity-0 -translate-y-1"
+                                 x-transition:enter-end="opacity-100 translate-y-0"
+                                 x-cloak 
+                                 class="p-3 rounded-lg border space-y-2.5 bg-blue-50/50 dark:bg-blue-950/25" 
+                                 style="border-color:rgba(59,130,246,0.3);">
+
+                                <!-- CASE 1: Karyawan sudah memiliki rekening master (Otomatis & Tanpa Perlu Ketik Ulang) -->
+                                <template x-if="editForm.has_master_bank">
+                                    <div class="space-y-2">
+                                        <div class="payroll-bank-card">
+                                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                                <!-- Emblem / Logo Bank Modern -->
+                                                <div class="payroll-bank-emblem" 
+                                                     :style="{ backgroundColor: getBankBadge(editForm.bank_nama).bg, color: getBankBadge(editForm.bank_nama).color }">
+                                                    <svg style="width:15px;height:15px;margin-bottom:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v4M12 14v4M16 14v4"/>
+                                                    </svg>
+                                                    <span x-text="getBankBadge(editForm.bank_nama).label" style="font-size:9.5px;font-weight:900;letter-spacing:0.04em;line-height:1;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"></span>
+                                                </div>
+                                                <div class="min-w-0 flex-1">
+                                                    <div class="flex items-center gap-2 flex-wrap">
+                                                        <strong class="text-xs text-slate-800 dark:text-slate-100" style="font-size:12.5px; font-weight:700;" x-text="editForm.bank_nama"></strong>
+                                                        <span class="text-slate-400" style="font-size:10px;">•</span>
+                                                        <span class="font-mono text-xs font-bold text-blue-700 dark:text-blue-300" style="font-size:12.5px; letter-spacing:0.02em;" x-text="editForm.bank_nomor_rekening"></span>
+                                                        <span class="payroll-bank-master-pill">Rekening Master</span>
+                                                    </div>
+                                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-1">
+                                                        a.n <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="editForm.bank_atas_nama || editForm.karyawan_nama"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- Tombol Ubah Rekening (Sleek Smooth Pill) -->
+                                            <button type="button" 
+                                                    @click="editForm.show_custom_bank = !editForm.show_custom_bank" 
+                                                    class="payroll-bank-action-btn">
+                                                <template x-if="!editForm.show_custom_bank">
+                                                    <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                                </template>
+                                                <template x-if="editForm.show_custom_bank">
+                                                    <svg style="width:12px;height:12px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                                                </template>
+                                                <span x-text="editForm.show_custom_bank ? 'Tutup Koreksi' : 'Ubah Rekening'"></span>
+                                            </button>
+                                        </div>
+
+                                        <!-- Form opsional jika ingin mengubah rekening khusus untuk slip payroll ini saja -->
+                                        <div x-show="editForm.show_custom_bank" x-cloak class="payroll-bank-custom-panel space-y-2">
+                                            <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                                                <span>Koreksi rekening tujuan untuk slip penggajian ini saja:</span>
+                                                <button type="button" 
+                                                        @click="editForm.bank_nama = editForm.master_bank_nama; editForm.bank_nomor_rekening = editForm.master_bank_nomor_rekening; editForm.bank_atas_nama = editForm.master_bank_atas_nama; editForm.show_custom_bank = false;" 
+                                                        class="payroll-bank-reset-btn">
+                                                    <svg style="width:11px;height:11px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                                    <span>Reset ke Master</span>
+                                                </button>
+                                            </div>
+                                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                                <div>
+                                                    <label class="form-label text-[11px]">Nama Bank</label>
+                                                    <input type="text" x-model="editForm.bank_nama" placeholder="BCA / BRI / Mandiri" class="form-input text-xs" style="height:32px;">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label text-[11px]">Nomor Rekening</label>
+                                                    <input type="text" x-model="editForm.bank_nomor_rekening" placeholder="Nomor rekening" class="form-input text-xs font-mono" style="height:32px;">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label text-[11px]">Atas Nama</label>
+                                                    <input type="text" x-model="editForm.bank_atas_nama" placeholder="Nama pemilik rekening" class="form-input text-xs" style="height:32px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- CASE 2: Karyawan belum memiliki rekening di master data -->
+                                <template x-if="!editForm.has_master_bank">
+                                    <div class="space-y-2">
+                                        <div class="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 text-[11px] text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                                            <svg style="width:14px;height:14px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                            <span>Karyawan ini belum memiliki rekening di master data. Masukkan rekening tujuan transfer untuk payroll ini:</span>
+                                        </div>
+                                        <div class="p-3 rounded-lg border bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-900/60 shadow-sm space-y-2.5">
+                                            <div class="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800">
+                                                <div class="payroll-bank-emblem" 
+                                                     :style="{ backgroundColor: getBankBadge(editForm.bank_nama).bg, color: getBankBadge(editForm.bank_nama).color }">
+                                                    <svg style="width:15px;height:15px;margin-bottom:2px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v4M12 14v4M16 14v4"/>
+                                                    </svg>
+                                                    <span x-text="getBankBadge(editForm.bank_nama).label" style="font-size:9.5px;font-weight:900;letter-spacing:0.04em;line-height:1;text-transform:uppercase;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;"></span>
+                                                </div>
+                                                <div>
+                                                    <div class="text-xs font-bold text-slate-800 dark:text-slate-100" x-text="editForm.bank_nama ? ('Rekening Bank ' + editForm.bank_nama) : 'Rekening Bank Baru'"></div>
+                                                    <div class="text-[11px] text-slate-500 dark:text-slate-400">Rekening ini otomatis dicatat pada slip &amp; ledger payroll periode ini</div>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                                <div>
+                                                    <label class="form-label text-xs font-semibold text-slate-700 dark:text-slate-300">Nama Bank *</label>
+                                                    <input type="text" x-model="editForm.bank_nama" placeholder="Contoh: BCA / BRI / Mandiri" class="form-input text-xs" style="height:35px;">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label text-xs font-semibold text-slate-700 dark:text-slate-300">Nomor Rekening *</label>
+                                                    <input type="text" x-model="editForm.bank_nomor_rekening" placeholder="Nomor rekening tujuan" class="form-input text-xs font-mono" style="height:35px;">
+                                                </div>
+                                                <div>
+                                                    <label class="form-label text-xs font-semibold text-slate-700 dark:text-slate-300">Atas Nama *</label>
+                                                    <input type="text" x-model="editForm.bank_atas_nama" placeholder="Nama pemilik rekening" class="form-input text-xs" style="height:35px;">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <div class="text-[11px] text-blue-700 dark:text-blue-300 flex items-center gap-1.5 pt-0.5">
+                                    <svg style="width:13px;height:13px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                                    <span>Pilihan metode &amp; rekening ini langsung tercatat pada slip &amp; ledger payroll periode ini.</span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Banner Realtime: Net Gaji Setelah Penyesuaian (Layer 1 Guard) -->
                         <div class="net-banner" :class="editNet < 0 ? 'is-negative' : ''">
                             <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;"
@@ -1569,12 +2621,12 @@ $periodLabels = [
     <!-- MODAL 3: OTORISASI & PEMBAYARAN PAYROLL -->
     <template x-teleport="body">
         <div x-show="showApproveModal" x-cloak class="modal-backdrop" @click="showApproveModal = false">
-            <div class="modal-box modal-box-md" style="max-width: 540px;" @click.stop>
+            <div class="modal-box modal-box-md" style="max-width: 580px;" @click.stop>
                 <div class="modal-handle"><div class="modal-handle-bar"></div></div>
                 <div class="modal-header">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         <div style="width:40px; height:40px; border-radius:12px; background:rgba(16,185,129,0.12); color:#10b981; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                            <i data-lucide="check-circle-2" style="width:20px; height:20px;"></i>
+                            <svg style="width:20px;height:20px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="modal-title">Otorisasi &amp; Pembayaran Payroll</div>
@@ -1582,13 +2634,17 @@ $periodLabels = [
                         </div>
                     </div>
                     <button type="button" @click="showApproveModal = false" class="modal-close-x" title="Tutup Modal">
-                        <i data-lucide="x" style="width:18px; height:18px;"></i>
+                        <svg style="width:18px;height:18px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
                     </button>
                 </div>
 
                 <form action="<?= Router::url('/penggajian/approve') ?>" method="POST">
                     <?= CSRF::field() ?>
                     <input type="hidden" name="penggajian_id" value="<?= $run['id'] ?>">
+                    <input type="hidden" name="akun_kas_id" :value="selectedKasTunaiId || selectedKasTransferId || ''">
+                    <input type="hidden" name="akun_kas_tunai_id" :value="selectedKasTunaiId">
+                    <input type="hidden" name="akun_kas_transfer_id" :value="selectedKasTransferId">
+                    <input type="hidden" name="akun_kas_tabungan_sumber_id" :value="selectedKasTabunganId">
 
                     <div class="modal-body custom-scrollbar space-y-4">
                         <!-- Highlight & Breakdown Card -->
@@ -1597,10 +2653,28 @@ $periodLabels = [
                                 <span class="font-medium text-slate-600 dark:text-slate-400">Total Gaji Bersih (Net Dibayarkan):</span>
                                 <span class="font-mono font-bold text-sm text-slate-900 dark:text-slate-100"><?= Format::rupiah($totalGajiBersih) ?></span>
                             </div>
+                            <?php if ($totalGajiTunai > 0): ?>
+                            <div class="flex justify-between items-center text-xs border-t border-slate-200/80 dark:border-slate-800 pt-1.5">
+                                <span class="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-semibold">
+                                    <svg style="width:14px;height:14px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                    <span>Gaji Tunai / Cash (<?= $countTunai ?> Karyawan):</span>
+                                </span>
+                                <span class="font-mono font-bold text-emerald-700 dark:text-emerald-400"><?= Format::rupiah($totalGajiTunai) ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($totalGajiTransfer > 0): ?>
+                            <div class="flex justify-between items-center text-xs border-t border-slate-200/80 dark:border-slate-800 pt-1.5">
+                                <span class="flex items-center gap-1.5 text-blue-700 dark:text-blue-400 font-semibold">
+                                    <svg style="width:14px;height:14px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                    <span>Gaji Transfer Bank (<?= $countTransfer ?> Karyawan):</span>
+                                </span>
+                                <span class="font-mono font-bold text-blue-700 dark:text-blue-400"><?= Format::rupiah($totalGajiTransfer) ?></span>
+                            </div>
+                            <?php endif; ?>
                             <?php if ($totalPotonganTabunganAll > 0): ?>
                             <div class="flex justify-between items-center text-xs border-t border-slate-200/80 dark:border-slate-800 pt-1.5">
                                 <span class="flex items-center gap-1 text-purple-700 dark:text-purple-300">
-                                    <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                                    <svg style="width:13px;height:13px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                                     <span>Transfer ke Kas Tabungan (Escrow):</span>
                                 </span>
                                 <span class="font-mono font-bold text-purple-700 dark:text-purple-300">+<?= Format::rupiah($totalPotonganTabunganAll) ?></span>
@@ -1613,7 +2687,7 @@ $periodLabels = [
                             <?php if ($totalPenarikanTabunganAll > 0): ?>
                             <div class="flex justify-between items-center text-xs border-t border-slate-200/80 dark:border-slate-800 pt-1.5">
                                 <span class="flex items-center gap-1 text-amber-700 dark:text-amber-300">
-                                    <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                                    <svg style="width:13px;height:13px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
                                     <span>Reimbursement dari Kas Tabungan:</span>
                                 </span>
                                 <span class="font-mono font-bold text-amber-700 dark:text-amber-300">+<?= Format::rupiah($totalPenarikanTabunganAll) ?></span>
@@ -1625,81 +2699,458 @@ $periodLabels = [
                             </div>
                         </div>
 
-                        <!-- Cash Account Selector Cards -->
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center justify-between">
-                                <span class="flex items-center gap-1.5">
-                                    <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-600"></i>
-                                    <span>Pilih Sumber Akun Kas Operasional / Payroll</span>
-                                    <span class="text-rose-500">*</span>
-                                </span>
-                                <span class="text-[11px] text-slate-400 font-normal">Wajib bukan akun escrow</span>
-                            </label>
+                        <!-- 1. Akun Kas Tunai (Hanya muncul jika ada gaji tunai) -->
+                        <template x-if="totalGajiTunai > 0">
+                            <div class="space-y-2 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30"
+                                 :style="openKasDropdown === 'tunai' ? 'position: relative; z-index: 35;' : 'position: relative; z-index: 25;'">
+                                <div class="payroll-section-header">
+                                    <div class="payroll-section-title">
+                                        <svg style="width:14px;height:14px;display:block;color:#059669;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                        <span>Akun Kas untuk Gaji Tunai</span>
+                                        <span class="text-rose-500 font-bold">*</span>
+                                    </div>
+                                    <div class="payroll-kebutuhan-badge is-tunai">
+                                        <span class="badge-label">Kebutuhan:</span>
+                                        <span class="badge-amount" x-text="formatRupiah(totalGajiTunai)"></span>
+                                        <span class="badge-sep">·</span>
+                                        <span class="badge-count" x-text="countTunai + ' org'"></span>
+                                    </div>
+                                </div>
 
-                            <input type="hidden" name="akun_kas_id" :value="selectedKasId" required>
-
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto custom-scrollbar p-0.5">
-                                <template x-for="acc in cashAccounts" :key="acc.id">
-                                    <div @click="selectedKasId = acc.id"
-                                         :class="{
-                                             'border-emerald-600 dark:border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-950/20': selectedKasId === acc.id,
-                                             'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-600': selectedKasId !== acc.id,
-                                             'opacity-60 cursor-not-allowed border-dashed': acc.saldo < totalKebutuhanKas
-                                         }"
-                                         class="relative flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer select-none">
-                                        <div class="flex items-center gap-2 min-w-0 flex-1">
-                                            <div class="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-                                                 :class="acc.tipe_akun === 'kas_tunai' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50' : 'bg-blue-50 text-blue-600 dark:bg-blue-950/50'">
-                                                <template x-if="acc.tipe_akun === 'kas_tunai'">
-                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                <!-- Modern Searchable Dropdown: Kas Tunai -->
+                                <div class="relative" @click.outside="if (openKasDropdown === 'tunai') openKasDropdown = null">
+                                    <button type="button"
+                                            @click="openKasDropdown = openKasDropdown === 'tunai' ? null : 'tunai'; if (openKasDropdown === 'tunai') $nextTick(() => $refs.searchTunaiInput?.focus())"
+                                            class="payroll-dropdown-trigger"
+                                            :class="{ 'is-open': openKasDropdown === 'tunai' }">
+                                        <div class="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                                            <div class="payroll-kas-icon shrink-0" :class="getAccount(selectedKasTunaiId)?.tipe_akun === 'bank' ? 'is-bank' : 'is-tunai'">
+                                                <template x-if="getAccount(selectedKasTunaiId)?.tipe_akun === 'bank'">
+                                                    <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
                                                 </template>
-                                                <template x-if="acc.tipe_akun !== 'kas_tunai'">
-                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                                <template x-if="getAccount(selectedKasTunaiId)?.tipe_akun !== 'bank'">
+                                                    <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
                                                 </template>
                                             </div>
                                             <div class="min-w-0 flex-1">
-                                                <div class="flex items-center gap-1">
-                                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" x-text="acc.nama_akun"></span>
-                                                    <span x-show="acc.is_default_pos" class="px-1 py-0.2 text-[9px] font-bold rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300">POS</span>
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" x-text="getAccount(selectedKasTunaiId)?.nama_akun || '-- Pilih Akun Kas Tunai --'"></span>
+                                                    <span x-show="getAccount(selectedKasTunaiId)?.is_default_pos" class="payroll-kas-pos-pill">POS</span>
                                                 </div>
-                                                <div class="text-[10.5px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                                                    Saldo: <span :class="acc.saldo < totalKebutuhanKas ? 'text-rose-600 font-bold' : 'text-slate-700 dark:text-slate-200'" x-text="formatRupiah(acc.saldo)"></span>
+                                                <div class="text-[11px] font-mono mt-0.5 text-slate-500 dark:text-slate-400 flex items-center gap-1 flex-wrap" x-show="getAccount(selectedKasTunaiId)">
+                                                    <span>Saldo Terkini:</span>
+                                                    <strong class="tabular-nums font-mono"
+                                                            :class="(getAccount(selectedKasTunaiId)?.saldo < (accountNeeds[selectedKasTunaiId] || totalGajiTunai)) ? 'payroll-kas-saldo-insufficient' : 'payroll-kas-saldo-sufficient'"
+                                                            x-text="formatRupiah(getAccount(selectedKasTunaiId)?.saldo || 0)"></strong>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="ml-1.5 flex-shrink-0">
-                                            <div class="w-3.5 h-3.5 rounded-full border flex items-center justify-center"
-                                                 :class="selectedKasId === acc.id ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 dark:border-slate-600'">
-                                                <svg x-show="selectedKasId === acc.id" class="w-2 h-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                            </div>
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <template x-if="getAccount(selectedKasTunaiId)">
+                                                <span x-show="getAccount(selectedKasTunaiId).saldo >= (accountNeeds[selectedKasTunaiId] || totalGajiTunai)" class="payroll-sufficient-badge hidden sm:inline-flex">Mencukupi</span>
+                                            </template>
+                                            <template x-if="getAccount(selectedKasTunaiId)">
+                                                <span x-show="getAccount(selectedKasTunaiId).saldo < (accountNeeds[selectedKasTunaiId] || totalGajiTunai)" class="payroll-deficit-badge hidden sm:inline-flex">Kurang</span>
+                                            </template>
+                                            <svg style="width:16px;height:16px;display:block;" class="text-slate-400 transition-transform duration-150" :class="openKasDropdown === 'tunai' ? 'rotate-180 text-emerald-600' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                                         </div>
-                                    </div>
-                                </template>
-                            </div>
+                                    </button>
 
-                            <!-- Info Banner Kuning / Minimalis & Clean -->
-                            <div x-show="selectedKasId && kasBalances[selectedKasId] !== undefined && kasBalances[selectedKasId] < totalKebutuhanKas"
-                                 x-cloak
-                                 class="payroll-warning-banner">
-                                <div class="banner-icon-box">
-                                    <i data-lucide="alert-triangle" style="width:13px; height:13px;"></i>
-                                </div>
-                                <div style="min-width:0; flex:1;">
-                                    <span style="font-weight:700;">Saldo akun kas belum mencukupi</span> untuk pembayaran payroll &amp; setoran tabungan.
-                                    <div style="margin-top:2px; font-family:var(--font-mono); font-size:11px; color:#b45309;">
-                                        Kebutuhan kas: <strong><span x-text="formatRupiah(totalKebutuhanKas)"></span></strong>
+                                    <!-- Dropdown Menu: Tunai -->
+                                    <div x-show="openKasDropdown === 'tunai'"
+                                         x-cloak
+                                         class="payroll-dropdown-menu">
+                                        <div class="payroll-dropdown-search-wrap">
+                                            <div class="relative flex items-center w-full">
+                                                <svg class="payroll-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <circle cx="11" cy="11" r="8"></circle>
+                                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                                </svg>
+                                                <input type="text"
+                                                       x-ref="searchTunaiInput"
+                                                       x-model="searchKasTunai"
+                                                       placeholder="Cari nama akun atau tipe kas..."
+                                                       class="payroll-dropdown-search-input"
+                                                       @keydown.escape="openKasDropdown = null">
+                                                <button type="button"
+                                                        x-show="searchKasTunai"
+                                                        @click="searchKasTunai = ''; $refs.searchTunaiInput?.focus()"
+                                                        class="payroll-search-clear">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="payroll-dropdown-options-list custom-scrollbar">
+                                            <template x-for="acc in getFilteredAccounts(searchKasTunai)" :key="'opt-tunai-' + acc.id">
+                                                <div @click="selectedKasTunaiId = acc.id; openKasDropdown = null; searchKasTunai = '';"
+                                                     class="payroll-dropdown-option"
+                                                     :class="{
+                                                         'is-selected': String(selectedKasTunaiId) === String(acc.id)
+                                                     }">
+                                                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                                        <div class="payroll-kas-icon shrink-0" :class="acc.tipe_akun === 'kas_tunai' ? 'is-tunai' : 'is-bank'">
+                                                            <template x-if="acc.tipe_akun === 'kas_tunai'">
+                                                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                                            </template>
+                                                            <template x-if="acc.tipe_akun !== 'kas_tunai'">
+                                                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                                            </template>
+                                                        </div>
+                                                        <div class="min-w-0 flex-1">
+                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" x-text="acc.nama_akun"></span>
+                                                                <span x-show="acc.is_default_pos" class="payroll-kas-pos-pill">POS</span>
+                                                                <span class="payroll-kas-type-pill" x-text="acc.tipe_akun === 'kas_tunai' ? 'Kas Tunai' : 'Bank'"></span>
+                                                            </div>
+                                                            <div class="text-[11px] font-mono mt-0.5 text-slate-500 dark:text-slate-400">
+                                                                Saldo: <strong :class="acc.saldo < (accountNeeds[acc.id] || totalGajiTunai) ? 'payroll-kas-saldo-insufficient' : 'payroll-kas-saldo-sufficient'" class="tabular-nums font-mono" x-text="formatRupiah(acc.saldo)"></strong>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="flex items-center gap-2 shrink-0">
+                                                        <template x-if="acc.saldo < (accountNeeds[acc.id] || totalGajiTunai)">
+                                                            <span class="payroll-deficit-badge">Saldo Kurang</span>
+                                                        </template>
+                                                        <template x-if="acc.saldo >= (accountNeeds[acc.id] || totalGajiTunai)">
+                                                            <span class="payroll-sufficient-badge">Cukup</span>
+                                                        </template>
+                                                        <div x-show="String(selectedKasTunaiId) === String(acc.id)" class="payroll-selected-check">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+
+                                            <!-- Empty State -->
+                                            <div x-show="getFilteredAccounts(searchKasTunai).length === 0" class="payroll-dropdown-empty">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m14 8-6 6"/><path d="m8 8 6 6"/></svg>
+                                                <span>Tidak ada akun kas yang sesuai pencarian</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </template>
+
+                        <!-- 2. Akun Bank Transfer (Hanya muncul jika ada gaji transfer) -->
+                        <template x-if="totalGajiTransfer > 0">
+                            <div class="space-y-2 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30"
+                                 :style="openKasDropdown === 'transfer' ? 'position: relative; z-index: 35;' : 'position: relative; z-index: 20;'">
+                                <div class="payroll-section-header">
+                                    <div class="payroll-section-title">
+                                        <svg style="width:14px;height:14px;display:block;color:#2563eb;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                        <span>Akun Bank untuk Gaji Transfer</span>
+                                        <span class="text-rose-500 font-bold">*</span>
+                                    </div>
+                                    <div class="payroll-kebutuhan-badge is-transfer">
+                                        <span class="badge-label">Kebutuhan:</span>
+                                        <span class="badge-amount" x-text="formatRupiah(totalGajiTransfer)"></span>
+                                        <span class="badge-sep">·</span>
+                                        <span class="badge-count" x-text="countTransfer + ' org'"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Modern Searchable Dropdown: Bank Transfer -->
+                                <div class="relative" @click.outside="if (openKasDropdown === 'transfer') openKasDropdown = null">
+                                    <button type="button"
+                                            @click="openKasDropdown = openKasDropdown === 'transfer' ? null : 'transfer'; if (openKasDropdown === 'transfer') $nextTick(() => $refs.searchTransferInput?.focus())"
+                                            class="payroll-dropdown-trigger"
+                                            :class="{ 'is-open': openKasDropdown === 'transfer' }">
+                                        <div class="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                                            <div class="payroll-kas-icon shrink-0" :class="getAccount(selectedKasTransferId)?.tipe_akun === 'bank' ? 'is-bank' : 'is-tunai'">
+                                                <template x-if="getAccount(selectedKasTransferId)?.tipe_akun === 'bank'">
+                                                    <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                                </template>
+                                                <template x-if="getAccount(selectedKasTransferId)?.tipe_akun !== 'bank'">
+                                                    <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                                </template>
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" x-text="getAccount(selectedKasTransferId)?.nama_akun || '-- Pilih Akun Bank Transfer --'"></span>
+                                                    <span x-show="getAccount(selectedKasTransferId)?.is_default_pos" class="payroll-kas-pos-pill">POS</span>
+                                                </div>
+                                                <div class="text-[11px] font-mono mt-0.5 text-slate-500 dark:text-slate-400 flex items-center gap-1 flex-wrap" x-show="getAccount(selectedKasTransferId)">
+                                                    <span>Saldo Terkini:</span>
+                                                    <strong class="tabular-nums font-mono"
+                                                            :class="(getAccount(selectedKasTransferId)?.saldo < (accountNeeds[selectedKasTransferId] || totalGajiTransfer)) ? 'payroll-kas-saldo-insufficient' : 'payroll-kas-saldo-sufficient'"
+                                                            x-text="formatRupiah(getAccount(selectedKasTransferId)?.saldo || 0)"></strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <template x-if="getAccount(selectedKasTransferId)">
+                                                <span x-show="getAccount(selectedKasTransferId).saldo >= (accountNeeds[selectedKasTransferId] || totalGajiTransfer)" class="payroll-sufficient-badge hidden sm:inline-flex">Mencukupi</span>
+                                            </template>
+                                            <template x-if="getAccount(selectedKasTransferId)">
+                                                <span x-show="getAccount(selectedKasTransferId).saldo < (accountNeeds[selectedKasTransferId] || totalGajiTransfer)" class="payroll-deficit-badge hidden sm:inline-flex">Kurang</span>
+                                            </template>
+                                            <svg style="width:16px;height:16px;display:block;" class="text-slate-400 transition-transform duration-150" :class="openKasDropdown === 'transfer' ? 'rotate-180 text-blue-600' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                        </div>
+                                    </button>
+
+                                    <!-- Dropdown Menu: Transfer -->
+                                    <div x-show="openKasDropdown === 'transfer'"
+                                         x-cloak
+                                         class="payroll-dropdown-menu">
+                                        <div class="payroll-dropdown-search-wrap">
+                                            <div class="relative flex items-center w-full">
+                                                <svg class="payroll-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <circle cx="11" cy="11" r="8"></circle>
+                                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                                </svg>
+                                                <input type="text"
+                                                       x-ref="searchTransferInput"
+                                                       x-model="searchKasTransfer"
+                                                       placeholder="Cari nama akun atau bank..."
+                                                       class="payroll-dropdown-search-input"
+                                                       @keydown.escape="openKasDropdown = null">
+                                                <button type="button"
+                                                        x-show="searchKasTransfer"
+                                                        @click="searchKasTransfer = ''; $refs.searchTransferInput?.focus()"
+                                                        class="payroll-search-clear">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="payroll-dropdown-options-list custom-scrollbar">
+                                            <template x-for="acc in getFilteredAccounts(searchKasTransfer)" :key="'opt-transfer-' + acc.id">
+                                                <div @click="selectedKasTransferId = acc.id; openKasDropdown = null; searchKasTransfer = '';"
+                                                     class="payroll-dropdown-option"
+                                                     :class="{
+                                                         'is-selected': String(selectedKasTransferId) === String(acc.id)
+                                                     }">
+                                                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                                        <div class="payroll-kas-icon shrink-0" :class="acc.tipe_akun === 'kas_tunai' ? 'is-tunai' : 'is-bank'">
+                                                            <template x-if="acc.tipe_akun === 'kas_tunai'">
+                                                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                                            </template>
+                                                            <template x-if="acc.tipe_akun !== 'kas_tunai'">
+                                                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                                            </template>
+                                                        </div>
+                                                        <div class="min-w-0 flex-1">
+                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" x-text="acc.nama_akun"></span>
+                                                                <span x-show="acc.is_default_pos" class="payroll-kas-pos-pill">POS</span>
+                                                                <span class="payroll-kas-type-pill" x-text="acc.tipe_akun === 'kas_tunai' ? 'Kas Tunai' : 'Bank'"></span>
+                                                            </div>
+                                                            <div class="text-[11px] font-mono mt-0.5 text-slate-500 dark:text-slate-400">
+                                                                Saldo: <strong :class="acc.saldo < (accountNeeds[acc.id] || totalGajiTransfer) ? 'payroll-kas-saldo-insufficient' : 'payroll-kas-saldo-sufficient'" class="tabular-nums font-mono" x-text="formatRupiah(acc.saldo)"></strong>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="flex items-center gap-2 shrink-0">
+                                                        <template x-if="acc.saldo < (accountNeeds[acc.id] || totalGajiTransfer)">
+                                                            <span class="payroll-deficit-badge">Saldo Kurang</span>
+                                                        </template>
+                                                        <template x-if="acc.saldo >= (accountNeeds[acc.id] || totalGajiTransfer)">
+                                                            <span class="payroll-sufficient-badge">Cukup</span>
+                                                        </template>
+                                                        <div x-show="String(selectedKasTransferId) === String(acc.id)" class="payroll-selected-check">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+
+                                            <!-- Empty State -->
+                                            <div x-show="getFilteredAccounts(searchKasTransfer).length === 0" class="payroll-dropdown-empty">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m14 8-6 6"/><path d="m8 8 6 6"/></svg>
+                                                <span>Tidak ada akun kas yang sesuai pencarian</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- 3. Sumber Kas untuk Setoran Tabungan Escrow (Hanya muncul jika ada potongan tabungan) -->
+                        <template x-if="totalPotonganTabunganAll > 0">
+                            <div class="space-y-2 p-3 rounded-lg border border-purple-200 dark:border-purple-900/40 bg-purple-50/40 dark:bg-purple-950/20"
+                                 :style="openKasDropdown === 'tabungan' ? 'position: relative; z-index: 35;' : 'position: relative; z-index: 15;'">
+                                <div class="payroll-section-header">
+                                    <div class="payroll-section-title">
+                                        <svg style="width:14px;height:14px;display:block;color:#7c3aed;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1-.5-1.5-1-2V5z"/><path d="M2 9v1c0 1.1.9 2 2 2h1"/><circle cx="16" cy="11" r="1"/></svg>
+                                        <span>Sumber Kas untuk Setoran Tabungan</span>
+                                    </div>
+                                    <div class="payroll-kebutuhan-badge is-tabungan">
+                                        <span class="badge-label">Kebutuhan:</span>
+                                        <span class="badge-amount" x-text="formatRupiah(totalPotonganTabunganAll)"></span>
+                                    </div>
+                                </div>
+
+                                <!-- Modern Searchable Dropdown: Setoran Tabungan -->
+                                <div class="relative" @click.outside="if (openKasDropdown === 'tabungan') openKasDropdown = null">
+                                    <button type="button"
+                                            @click="openKasDropdown = openKasDropdown === 'tabungan' ? null : 'tabungan'; if (openKasDropdown === 'tabungan') $nextTick(() => $refs.searchTabunganInput?.focus())"
+                                            class="payroll-dropdown-trigger"
+                                            :class="{ 'is-open': openKasDropdown === 'tabungan' }">
+                                        <div class="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+                                            <div class="payroll-kas-icon shrink-0" :class="getAccount(selectedKasTabunganId)?.tipe_akun === 'bank' ? 'is-bank' : 'is-tunai'">
+                                                <template x-if="getAccount(selectedKasTabunganId)?.tipe_akun === 'bank'">
+                                                    <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                                </template>
+                                                <template x-if="getAccount(selectedKasTabunganId)?.tipe_akun !== 'bank'">
+                                                    <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                                </template>
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" x-text="getAccount(selectedKasTabunganId)?.nama_akun || '-- Pilih Sumber Kas Tabungan --'"></span>
+                                                    <span x-show="getAccount(selectedKasTabunganId)?.is_default_pos" class="payroll-kas-pos-pill">POS</span>
+                                                </div>
+                                                <div class="text-[11px] font-mono mt-0.5 text-slate-500 dark:text-slate-400 flex items-center gap-1 flex-wrap" x-show="getAccount(selectedKasTabunganId)">
+                                                    <span>Saldo Terkini:</span>
+                                                    <strong class="tabular-nums font-mono"
+                                                            :class="(getAccount(selectedKasTabunganId)?.saldo < (accountNeeds[selectedKasTabunganId] || totalPotonganTabunganAll)) ? 'payroll-kas-saldo-insufficient' : 'payroll-kas-saldo-sufficient'"
+                                                            x-text="formatRupiah(getAccount(selectedKasTabunganId)?.saldo || 0)"></strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <template x-if="getAccount(selectedKasTabunganId)">
+                                                <span x-show="getAccount(selectedKasTabunganId).saldo >= (accountNeeds[selectedKasTabunganId] || totalPotonganTabunganAll)" class="payroll-sufficient-badge hidden sm:inline-flex">Mencukupi</span>
+                                            </template>
+                                            <template x-if="getAccount(selectedKasTabunganId)">
+                                                <span x-show="getAccount(selectedKasTabunganId).saldo < (accountNeeds[selectedKasTabunganId] || totalPotonganTabunganAll)" class="payroll-deficit-badge hidden sm:inline-flex">Kurang</span>
+                                            </template>
+                                            <svg style="width:16px;height:16px;display:block;" class="text-slate-400 transition-transform duration-150" :class="openKasDropdown === 'tabungan' ? 'rotate-180 text-purple-600' : ''" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                                        </div>
+                                    </button>
+
+                                    <!-- Dropdown Menu: Tabungan -->
+                                    <div x-show="openKasDropdown === 'tabungan'"
+                                         x-cloak
+                                         class="payroll-dropdown-menu">
+                                        <div class="payroll-dropdown-search-wrap">
+                                            <div class="relative flex items-center w-full">
+                                                <svg class="payroll-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <circle cx="11" cy="11" r="8"></circle>
+                                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                                </svg>
+                                                <input type="text"
+                                                       x-ref="searchTabunganInput"
+                                                       x-model="searchKasTabungan"
+                                                       placeholder="Cari nama akun atau bank..."
+                                                       class="payroll-dropdown-search-input"
+                                                       @keydown.escape="openKasDropdown = null">
+                                                <button type="button"
+                                                        x-show="searchKasTabungan"
+                                                        @click="searchKasTabungan = ''; $refs.searchTabunganInput?.focus()"
+                                                        class="payroll-search-clear">
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="payroll-dropdown-options-list custom-scrollbar">
+                                            <template x-for="acc in getFilteredAccounts(searchKasTabungan)" :key="'opt-tabungan-' + acc.id">
+                                                <div @click="selectedKasTabunganId = acc.id; openKasDropdown = null; searchKasTabungan = '';"
+                                                     class="payroll-dropdown-option"
+                                                     :class="{
+                                                         'is-selected': String(selectedKasTabunganId) === String(acc.id)
+                                                     }">
+                                                    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                                        <div class="payroll-kas-icon shrink-0" :class="acc.tipe_akun === 'kas_tunai' ? 'is-tunai' : 'is-bank'">
+                                                            <template x-if="acc.tipe_akun === 'kas_tunai'">
+                                                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>
+                                                            </template>
+                                                            <template x-if="acc.tipe_akun !== 'kas_tunai'">
+                                                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                                                            </template>
+                                                        </div>
+                                                        <div class="min-w-0 flex-1">
+                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" x-text="acc.nama_akun"></span>
+                                                                <span x-show="acc.is_default_pos" class="payroll-kas-pos-pill">POS</span>
+                                                                <span class="payroll-kas-type-pill" x-text="acc.tipe_akun === 'kas_tunai' ? 'Kas Tunai' : 'Bank'"></span>
+                                                            </div>
+                                                            <div class="text-[11px] font-mono mt-0.5 text-slate-500 dark:text-slate-400">
+                                                                Saldo: <strong :class="acc.saldo < (accountNeeds[acc.id] || totalPotonganTabunganAll) ? 'payroll-kas-saldo-insufficient' : 'payroll-kas-saldo-sufficient'" class="tabular-nums font-mono" x-text="formatRupiah(acc.saldo)"></strong>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="flex items-center gap-2 shrink-0">
+                                                        <template x-if="acc.saldo < (accountNeeds[acc.id] || totalPotonganTabunganAll)">
+                                                            <span class="payroll-deficit-badge">Saldo Kurang</span>
+                                                        </template>
+                                                        <template x-if="acc.saldo >= (accountNeeds[acc.id] || totalPotonganTabunganAll)">
+                                                            <span class="payroll-sufficient-badge">Cukup</span>
+                                                        </template>
+                                                        <div x-show="String(selectedKasTabunganId) === String(acc.id)" class="payroll-selected-check">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </template>
+
+                                            <!-- Empty State -->
+                                            <div x-show="getFilteredAccounts(searchKasTabungan).length === 0" class="payroll-dropdown-empty">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/><path d="m14 8-6 6"/><path d="m8 8 6 6"/></svg>
+                                                <span>Tidak ada akun kas yang sesuai pencarian</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Info Banner Saldo Kurang Dinamis (Minimalis & Modern Clean) -->
+                        <template x-if="balanceErrors.length > 0">
+                            <div class="payroll-warning-banner">
+                                <div class="payroll-warning-header">
+                                    <div class="payroll-warning-icon">
+                                        <svg style="width:13px;height:13px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                            <line x1="12" y1="9" x2="12" y2="13"/>
+                                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                        </svg>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <div class="payroll-warning-title">Saldo Akun Kas Belum Mencukupi</div>
+                                        <div class="payroll-warning-desc">Pilih akun kas dengan saldo mencukupi atau lakukan top-up kas sebelum otorisasi:</div>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <template x-for="err in balanceErrors" :key="err.id">
+                                        <div class="payroll-deficit-row">
+                                            <div class="payroll-deficit-row-top">
+                                                <span class="payroll-deficit-acc-name truncate" x-text="err.name"></span>
+                                                <span class="payroll-deficit-pill">
+                                                    Kurang <strong class="font-mono tabular-nums ml-0.5" x-text="formatRupiah(err.deficit)"></strong>
+                                                </span>
+                                            </div>
+                                            <div class="payroll-deficit-row-bottom">
+                                                <span class="flex items-center gap-1">
+                                                    <span>Saldo:</span>
+                                                    <strong class="font-mono tabular-nums text-slate-700 dark:text-slate-300" x-text="formatRupiah(err.balance)"></strong>
+                                                </span>
+                                                <span class="flex items-center gap-1">
+                                                    <span>Dibutuhkan:</span>
+                                                    <strong class="font-mono tabular-nums text-slate-700 dark:text-slate-300" x-text="formatRupiah(err.needed)"></strong>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
 
                         <!-- Banner Dampak Otorisasi Biru Soft -->
                         <div class="payroll-info-banner-blue">
                             <div class="info-title">
-                                <i data-lucide="shield-check" style="width:14px; height:14px; color:#2563eb;"></i>
+                                <svg style="width:14px;height:14px;display:block;color:#2563eb;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
                                 <span>Dampak Otorisasi:</span>
                             </div>
                             <ul class="space-y-0.5">
+                                <li>Pengeluaran kas tercatat pada masing-masing akun kas (Tunai &amp; Bank Transfer).</li>
                                 <li>Cicilan kasbon terpotong otomatis dari saldo pinjaman karyawan.</li>
                                 <li>Tabungan karyawan bertambah atau dicairkan sesuai rincian payroll.</li>
                                 <li>Slip gaji resmi diterbitkan dan siap dibagikan ke karyawan.</li>
@@ -1710,12 +3161,20 @@ $periodLabels = [
                     <div class="modal-footer">
                         <button type="button" @click="showApproveModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
                         <button type="submit" 
-                                class="btn btn-primary w-full sm:w-auto transition-all" 
-                                style="background:#059669; border-color:#047857; display:inline-flex; align-items:center; justify-content:center; gap:6px;"
-                                :disabled="!selectedKasId || (kasBalances[selectedKasId] !== undefined && kasBalances[selectedKasId] < totalKebutuhanKas)"
-                                :class="{'opacity-50 cursor-not-allowed': !selectedKasId || (kasBalances[selectedKasId] !== undefined && kasBalances[selectedKasId] < totalKebutuhanKas)}">
-                            <i data-lucide="check-circle" style="width:16px; height:16px;"></i>
-                            <span x-text="(!selectedKasId || (kasBalances[selectedKasId] !== undefined && kasBalances[selectedKasId] < totalKebutuhanKas)) ? 'Saldo Tidak Cukup' : 'Setujui &amp; Bayar Sekarang'">Setujui &amp; Bayar Sekarang</span>
+                                class="btn w-full sm:w-auto transition-all" 
+                                :style="canApprove ? 'background:#059669; border-color:#047857; color:#ffffff;' : 'background:#64748b; border-color:#475569; color:#ffffff; opacity:0.75; cursor:not-allowed;'"
+                                :disabled="!canApprove"
+                                style="display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:600;">
+                            <template x-if="canApprove">
+                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            </template>
+                            <template x-if="!canApprove && balanceErrors.length > 0">
+                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            </template>
+                            <template x-if="!canApprove && balanceErrors.length === 0">
+                                <svg style="width:16px;height:16px;display:block;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                            </template>
+                            <span x-text="!canApprove ? (balanceErrors.length > 0 ? 'Saldo Kas Belum Cukup' : 'Pilih Akun Kas Terlebih Dahulu') : 'Setujui &amp; Bayar Sekarang'">Setujui &amp; Bayar Sekarang</span>
                         </button>
                     </div>
                 </form>
@@ -1767,8 +3226,12 @@ $periodLabels = [
 
     <!-- MODAL 5: BATALKAN APPROVAL (24 JAM) -->
     <template x-teleport="body">
-        <div x-show="showCancelApproveModal" x-cloak class="modal-backdrop" @click="showCancelApproveModal = false">
-            <div class="modal-box modal-box-md" style="max-width: 480px;" @click.stop>
+        <div x-show="showCancelApproveModal" 
+             x-cloak 
+             class="modal-backdrop" 
+             @click="if(!isCancellingApprove) showCancelApproveModal = false"
+             @keydown.escape.window="if(!isCancellingApprove) showCancelApproveModal = false">
+            <div class="modal-box modal-box-md" style="max-width: 490px;" @click.stop>
                 <div class="modal-handle"><div class="modal-handle-bar"></div></div>
                 <div class="modal-header">
                     <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -1777,29 +3240,89 @@ $periodLabels = [
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="modal-title">Batalkan Persetujuan Payroll</div>
-                            <div style="font-size:12px; color:var(--color-ink-mute); margin-top:1px;">Fitur darurat rollback dalam batas waktu 24 jam.</div>
+                            <div style="font-size:12px; color:var(--color-ink-mute); margin-top:1px;">Rollback darurat dalam batas waktu 24 jam</div>
                         </div>
                     </div>
-                    <button type="button" @click="showCancelApproveModal = false" class="modal-close-x" title="Tutup Modal">
+                    <button type="button" 
+                            @click="showCancelApproveModal = false" 
+                            :disabled="isCancellingApprove"
+                            class="modal-close-x" 
+                            title="Tutup Modal">
                         <i data-lucide="x" style="width:18px; height:18px;"></i>
                     </button>
                 </div>
 
-                <form action="<?= Router::url('/penggajian/cancel-approve') ?>" method="POST">
+                <form action="<?= Router::url('/penggajian/cancel-approve') ?>" 
+                      method="POST" 
+                      @submit="if(isCancellingApprove) { $event.preventDefault(); return; } isCancellingApprove = true;">
                     <?= CSRF::field() ?>
                     <input type="hidden" name="penggajian_id" value="<?= $run['id'] ?>">
 
-                    <div class="modal-body custom-scrollbar space-y-3">
-                        <div style="padding:12px 14px; background:#fffbeb; border:1px solid #fde68a; border-radius:var(--rounded-md); font-size:12.5px; color:#92400e; line-height:1.5;">
-                            Pembatalan akan me-rollback transaksi arus kas, memulihkan saldo akun kas terpilih, mengembalikan cicilan pinjaman kasbon dan tabungan, serta mengembalikan status payroll menjadi <strong>DRAF</strong>.
+                    <div class="modal-body custom-scrollbar space-y-3.5">
+                        <div style="padding:12px 14px; background:#fffbeb; border:1px solid #fde68a; border-radius:var(--rounded-md); font-size:12.5px; color:#92400e; line-height:1.55;">
+                            <div class="font-semibold mb-1" style="display:flex; align-items:center; gap:6px;">
+                                <i data-lucide="alert-triangle" style="width:15px; height:15px; color:#d97706;"></i>
+                                <span>Konfirmasi Rollback Penggajian</span>
+                            </div>
+                            <span>Anda akan membatalkan persetujuan payroll <strong><?= htmlspecialchars($run['nomor_referensi']) ?></strong>. Sistem akan mengembalikan seluruh transaksi keuangan secara otomatis:</span>
+                        </div>
+
+                        <div class="space-y-2 text-xs" style="color:var(--color-ink); line-height:1.5;">
+                            <div class="flex items-start gap-2.5 p-2 rounded-lg" style="background:var(--color-surface-soft, rgba(0,0,0,0.02)); border:1px solid var(--color-hairline, #e2e8f0);">
+                                <i data-lucide="wallet" style="width:15px; height:15px; color:#059669; margin-top:2px; flex-shrink:0;"></i>
+                                <div>
+                                    <div class="font-semibold text-emerald-800 dark:text-emerald-300">Pemulihan Saldo Kas</div>
+                                    <div style="color:var(--color-ink-mute);">Pengembalian saldo kas operasional (Tunai &amp; Transfer) serta pembatalan mutasi escrow tabungan.</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-2.5 p-2 rounded-lg" style="background:var(--color-surface-soft, rgba(0,0,0,0.02)); border:1px solid var(--color-hairline, #e2e8f0);">
+                                <i data-lucide="credit-card" style="width:15px; height:15px; color:#2563eb; margin-top:2px; flex-shrink:0;"></i>
+                                <div>
+                                    <div class="font-semibold text-blue-800 dark:text-blue-300">Pemulihan Pinjaman Kasbon</div>
+                                    <div style="color:var(--color-ink-mute);">Cicilan yang terpotong akan dikembalikan ke sisa pinjaman karyawan dan status pinjaman diaktifkan kembali.</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-2.5 p-2 rounded-lg" style="background:var(--color-surface-soft, rgba(0,0,0,0.02)); border:1px solid var(--color-hairline, #e2e8f0);">
+                                <i data-lucide="piggy-bank" style="width:15px; height:15px; color:#7c3aed; margin-top:2px; flex-shrink:0;"></i>
+                                <div>
+                                    <div class="font-semibold text-purple-800 dark:text-purple-300">Pembalikan Mutasi Tabungan</div>
+                                    <div style="color:var(--color-ink-mute);">Setoran simpanan dibatalkan dan penarikan simpanan dikembalikan ke saldo tabungan karyawan.</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-start gap-2.5 p-2 rounded-lg" style="background:var(--color-surface-soft, rgba(0,0,0,0.02)); border:1px solid var(--color-hairline, #e2e8f0);">
+                                <i data-lucide="file-edit" style="width:15px; height:15px; color:#d97706; margin-top:2px; flex-shrink:0;"></i>
+                                <div>
+                                    <div class="font-semibold text-amber-800 dark:text-amber-300">Pengembalian ke Status Draf</div>
+                                    <div style="color:var(--color-ink-mute);">Lembar penggajian dapat ditinjau atau diedit kembali sebelum dilakukan persetujuan ulang.</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <div class="modal-footer">
-                        <button type="button" @click="showCancelApproveModal = false" class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
-                        <button type="submit" class="btn w-full sm:w-auto" style="background:#d97706; color:#ffffff; border:1px solid #b45309; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700;">
-                            <i data-lucide="rotate-ccw" style="width:16px; height:16px;"></i>
-                            <span>Ya, Batalkan Approval</span>
+                        <button type="button" 
+                                @click="showCancelApproveModal = false" 
+                                :disabled="isCancellingApprove"
+                                class="btn btn-secondary modal-btn-cancel-desktop">Batal</button>
+                        <button type="submit" 
+                                :disabled="isCancellingApprove"
+                                class="btn w-full sm:w-auto" 
+                                style="background:#d97706; color:#ffffff; border:1px solid #b45309; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-weight:700;">
+                            <template x-if="!isCancellingApprove">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <i data-lucide="rotate-ccw" style="width:16px; height:16px;"></i>
+                                    <span>Ya, Batalkan Approval</span>
+                                </span>
+                            </template>
+                            <template x-if="isCancellingApprove">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <span class="animate-spin" style="width:14px; height:14px; border:2px solid #fff; border-top-color:transparent; border-radius:50%; display:inline-block;"></span>
+                                    <span>Memproses Rollback...</span>
+                                </span>
+                            </template>
                         </button>
                     </div>
                 </form>
@@ -1819,13 +3342,112 @@ function payrollPreviewApp() {
         showExcludeModal: false,
         showDeleteModal: false,
         showCancelApproveModal: false,
-        selectedKasId: '<?= !empty($akunKasList[0]['id']) ? (string)$akunKasList[0]['id'] : '' ?>',
+        isCancellingApprove: false,
+        <?php
+        $defaultKasTunaiId = '';
+        $defaultKasTransferId = '';
+        $defaultKasTabunganId = '';
+        if (!empty($akunKasList)) {
+            // Default Kas Tunai
+            foreach ($akunKasList as $ak) {
+                if ($ak['tipe_akun'] === 'kas_tunai' && (float)$ak['saldo_saat_ini'] >= (float)$totalGajiTunai) {
+                    $defaultKasTunaiId = (string)$ak['id'];
+                    break;
+                }
+            }
+            if ($defaultKasTunaiId === '') {
+                foreach ($akunKasList as $ak) {
+                    if ($ak['tipe_akun'] === 'kas_tunai') {
+                        $defaultKasTunaiId = (string)$ak['id'];
+                        break;
+                    }
+                }
+            }
+            if ($defaultKasTunaiId === '' && isset($akunKasList[0]['id'])) {
+                $defaultKasTunaiId = (string)$akunKasList[0]['id'];
+            }
+
+            // Default Kas Transfer Bank
+            foreach ($akunKasList as $ak) {
+                if ($ak['tipe_akun'] === 'bank' && (float)$ak['saldo_saat_ini'] >= (float)$totalGajiTransfer) {
+                    $defaultKasTransferId = (string)$ak['id'];
+                    break;
+                }
+            }
+            if ($defaultKasTransferId === '') {
+                foreach ($akunKasList as $ak) {
+                    if ($ak['tipe_akun'] === 'bank') {
+                        $defaultKasTransferId = (string)$ak['id'];
+                        break;
+                    }
+                }
+            }
+            if ($defaultKasTransferId === '' && isset($akunKasList[0]['id'])) {
+                $defaultKasTransferId = (string)$akunKasList[0]['id'];
+            }
+
+            // Default Tabungan Sumber
+            $defaultKasTabunganId = $defaultKasTransferId ?: $defaultKasTunaiId;
+        }
+        ?>
+        selectedKasTunaiId: '<?= $defaultKasTunaiId ?>',
+        selectedKasTransferId: '<?= $defaultKasTransferId ?>',
+        selectedKasTabunganId: '<?= $defaultKasTabunganId ?>',
+        selectedKasId: '<?= $defaultKasTunaiId ?: $defaultKasTransferId ?>',
         totalPayrollNet: <?= (float)$totalGajiBersih ?>,
+        totalGajiTunai: <?= (float)$totalGajiTunai ?>,
+        countTunai: <?= (int)$countTunai ?>,
+        totalGajiTransfer: <?= (float)$totalGajiTransfer ?>,
+        countTransfer: <?= (int)$countTransfer ?>,
+        potonganTabunganTunai: <?= (float)$potonganTabunganTunai ?>,
+        potonganTabunganTransfer: <?= (float)$potonganTabunganTransfer ?>,
         totalPotonganTabunganAll: <?= (float)$totalPotonganTabunganAll ?>,
         totalPenarikanTabunganAll: <?= (float)$totalPenarikanTabunganAll ?>,
         periodLabels: <?= json_encode($periodLabels, JSON_UNESCAPED_UNICODE) ?>,
         get totalKebutuhanKas() {
             return this.totalPayrollNet + this.totalPotonganTabunganAll;
+        },
+        get accountNeeds() {
+            const needs = {};
+            const tunaiId = String(this.selectedKasTunaiId || '');
+            const transferId = String(this.selectedKasTransferId || '');
+            const tabunganId = String(this.selectedKasTabunganId || transferId || tunaiId || '');
+
+            if (this.totalGajiTunai > 0 && tunaiId) {
+                needs[tunaiId] = (needs[tunaiId] || 0) + this.totalGajiTunai;
+            }
+            if (this.totalGajiTransfer > 0 && transferId) {
+                needs[transferId] = (needs[transferId] || 0) + this.totalGajiTransfer;
+            }
+            if (this.totalPotonganTabunganAll > 0 && tabunganId) {
+                needs[tabunganId] = (needs[tabunganId] || 0) + this.totalPotonganTabunganAll;
+            }
+            return needs;
+        },
+        get balanceErrors() {
+            const errs = [];
+            const needs = this.accountNeeds;
+            for (const [accId, needed] of Object.entries(needs)) {
+                const bal = Number(this.kasBalances[accId] !== undefined ? this.kasBalances[accId] : 0);
+                if (bal < needed) {
+                    const accObj = this.cashAccounts.find(a => String(a.id) === String(accId));
+                    const name = accObj ? accObj.nama_akun : ('Akun #' + accId);
+                    errs.push({
+                        id: accId,
+                        name: name,
+                        needed: needed,
+                        balance: bal,
+                        deficit: needed - bal
+                    });
+                }
+            }
+            return errs;
+        },
+        get canApprove() {
+            if (this.totalGajiTunai > 0 && !this.selectedKasTunaiId) return false;
+            if (this.totalGajiTransfer > 0 && !this.selectedKasTransferId) return false;
+            if (this.totalPotonganTabunganAll > 0 && !this.selectedKasTabunganId) return false;
+            return this.balanceErrors.length === 0;
         },
         cashAccounts: <?= json_encode(array_map(function($a) {
             return [
@@ -1841,7 +3463,124 @@ function payrollPreviewApp() {
             "<?= $ak['id'] ?>": <?= (float)$ak['saldo_saat_ini'] ?>,
             <?php endforeach; ?>
         },
+        openKasDropdown: null,
+        searchKasTunai: '',
+        searchKasTransfer: '',
+        searchKasTabungan: '',
+        getAccount(id) {
+            if (!id) return null;
+            return this.cashAccounts.find(a => String(a.id) === String(id)) || null;
+        },
+        getFilteredAccounts(query) {
+            if (!query || !query.trim()) return this.cashAccounts;
+            const q = query.toLowerCase().trim();
+            return this.cashAccounts.filter(a => {
+                const name = (a.nama_akun || '').toLowerCase();
+                const type = (a.tipe_akun || '').toLowerCase();
+                return name.includes(q) || type.includes(q);
+            });
+        },
         selectedItem: null,
+        runRef: '<?= htmlspecialchars($run['nomor_referensi'], ENT_QUOTES) ?>',
+        isDownloadingPdf: false,
+
+        async downloadPdf(url, title, subtitle, defaultFilename) {
+            if (this.isDownloadingPdf) return;
+            this.isDownloadingPdf = true;
+
+            const t = title || 'Menyiapkan Dokumen PDF...';
+            const s = subtitle || 'Mengompilasi data dan memproses berkas...';
+            const df = defaultFilename || ('Dokumen_' + (this.runRef || 'Payroll') + '.pdf');
+
+            try {
+                if (typeof window.downloadFileWithLoading === 'function') {
+                    await window.downloadFileWithLoading(url, {
+                        title: t,
+                        subtitle: s,
+                        defaultFilename: df
+                    });
+                } else {
+                    if (window.AppAction && typeof window.AppAction.show === 'function') {
+                        window.AppAction.show(t, s);
+                    }
+
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    const contentType = (response.headers.get('content-type') || '').toLowerCase();
+
+                    if (!response.ok || (contentType.indexOf('application/json') !== -1 && contentType.indexOf('pdf') === -1)) {
+                        let errorMsg = 'Terjadi kesalahan saat memproses berkas PDF.';
+                        try {
+                            const errData = await response.json();
+                            errorMsg = errData.message || errorMsg;
+                        } catch (e) {
+                            const txt = await response.text();
+                            if (txt && txt.length < 300) errorMsg = txt;
+                        }
+                        if (window.AppAction && typeof window.AppAction.error === 'function') {
+                            await window.AppAction.error('Gagal Mengunduh!', errorMsg, 3200);
+                        } else if (window.toast) {
+                            window.toast.error(errorMsg);
+                        }
+                        return;
+                    }
+
+                    let filename = df;
+                    const disposition = response.headers.get('content-disposition');
+                    if (disposition) {
+                        const mUtf8 = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+                        if (mUtf8 && mUtf8[1]) {
+                            filename = decodeURIComponent(mUtf8[1]).trim();
+                        } else {
+                            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/i.exec(disposition);
+                            if (matches != null && matches[1]) {
+                                filename = matches[1].replace(/['"]/g, '').trim();
+                            }
+                        }
+                    }
+
+                    const blob = await response.blob();
+                    if (blob.size === 0) {
+                        throw new Error('Berkas yang diterima kosong.');
+                    }
+
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = blobUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+
+                    setTimeout(() => {
+                        if (a.parentNode) a.parentNode.removeChild(a);
+                        window.URL.revokeObjectURL(blobUrl);
+                    }, 1000);
+
+                    if (window.AppAction && typeof window.AppAction.success === 'function') {
+                        await window.AppAction.success('Berhasil Diunduh! ✨', filename, 1800);
+                    } else if (window.toast) {
+                        window.toast.success('Berkas ' + filename + ' berhasil diunduh.');
+                    }
+                }
+            } catch (err) {
+                console.error('[PayrollPreview] Download PDF error:', err);
+                const msg = err.message || 'Koneksi terputus saat mengunduh berkas.';
+                if (window.AppAction && typeof window.AppAction.error === 'function') {
+                    await window.AppAction.error('Gagal Mengunduh Dokumen!', msg, 3200);
+                } else if (window.toast) {
+                    window.toast.error(msg);
+                }
+            } finally {
+                this.isDownloadingPdf = false;
+            }
+        },
 
         // Data JSON Lengkap untuk Reaktivitas Alpine 100%
         itemsList: <?= json_encode(array_map(function($item) {
@@ -1905,6 +3644,15 @@ function payrollPreviewApp() {
                 // Batas Validasi Modal
                 'max_kasbon_aktif' => (int)round((float)($item['max_kasbon_aktif'] ?? 0)),
                 'saldo_tabungan_saat_ini' => (int)round((float)($item['saldo_tabungan_saat_ini'] ?? 0)),
+                // Metode Pembayaran & Rekening Bank
+                'metode_pembayaran' => (string)($item['metode_pembayaran'] ?? 'tunai'),
+                'bank_nama' => (string)($item['bank_nama'] ?? ''),
+                'bank_nomor_rekening' => (string)($item['bank_nomor_rekening'] ?? ''),
+                'bank_atas_nama' => (string)($item['bank_atas_nama'] ?? ''),
+                'has_master_bank' => !empty($item['has_master_bank']),
+                'master_bank_nama' => (string)($item['master_bank_nama'] ?? ''),
+                'master_bank_nomor_rekening' => (string)($item['master_bank_nomor_rekening'] ?? ''),
+                'master_bank_atas_nama' => (string)($item['master_bank_atas_nama'] ?? ''),
             ];
         }, $items), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
 
@@ -1924,6 +3672,15 @@ function payrollPreviewApp() {
             total_potongan_tabungan: 0,
             penarikan_tabungan: 0,
             nominal_pembulatan: 0,
+            metode_pembayaran: 'tunai',
+            bank_nama: '',
+            bank_nomor_rekening: '',
+            bank_atas_nama: '',
+            has_master_bank: false,
+            master_bank_nama: '',
+            master_bank_nomor_rekening: '',
+            master_bank_atas_nama: '',
+            show_custom_bank: false,
         },
 
         excludeForm: {
@@ -1951,6 +3708,44 @@ function payrollPreviewApp() {
             var isNeg = n < 0;
             var s = String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             return isNeg ? ('-' + s) : s;
+        },
+
+        // Helper Visual Emblem Logo Bank (Brand Colors & Vector Badges)
+        getBankBadge(name) {
+            const b = String(name || '').toUpperCase().trim();
+            if (b.includes('BCA')) {
+                return { bg: '#003893', color: '#ffffff', label: 'BCA' };
+            }
+            if (b.includes('BSI') || b.includes('SYARIAH')) {
+                return { bg: '#00a39d', color: '#ffffff', label: 'BSI' };
+            }
+            if (b.includes('BRI')) {
+                return { bg: '#00529c', color: '#ffffff', label: 'BRI' };
+            }
+            if (b.includes('MANDIRI')) {
+                return { bg: '#003d79', color: '#fbbf24', label: 'MANDIRI' };
+            }
+            if (b.includes('BNI')) {
+                return { bg: '#005e6a', color: '#ffffff', label: 'BNI' };
+            }
+            if (b.includes('JAGO')) {
+                return { bg: '#f59e0b', color: '#ffffff', label: 'JAGO' };
+            }
+            if (b.includes('SEABANK') || b.includes('SEA')) {
+                return { bg: '#f25c05', color: '#ffffff', label: 'SEABANK' };
+            }
+            if (b.includes('CIMB')) {
+                return { bg: '#8b0000', color: '#ffffff', label: 'CIMB' };
+            }
+            if (b.includes('DANAMON')) {
+                return { bg: '#0b2c6b', color: '#fbbf24', label: 'DANAMON' };
+            }
+            if (b.includes('PERMATA')) {
+                return { bg: '#047857', color: '#ffffff', label: 'PERMATA' };
+            }
+            const clean = b.replace(/BANK/g, '').trim();
+            const shortName = clean ? clean.substring(0, 4) : 'BANK';
+            return { bg: '#1e40af', color: '#ffffff', label: shortName || 'BANK' };
         },
 
         // Input Currency Formatter Realtime
@@ -2016,12 +3811,22 @@ function payrollPreviewApp() {
             return this.includedItems.filter(i => i.group === 'bulanan').length;
         },
 
+        get tunaiCount() {
+            return this.includedItems.filter(i => (i.metode_pembayaran || 'tunai') === 'tunai').length;
+        },
+
+        get transferCount() {
+            return this.includedItems.filter(i => i.metode_pembayaran === 'transfer').length;
+        },
+
         // Table items berdasarkan tab & search
         get bulananTableItems() {
             if (this.statusFilter === 'borongan') return [];
             const q = (this.searchQuery || '').toLowerCase().trim();
             return this.includedItems.filter(item => {
                 if (item.group !== 'bulanan') return false;
+                if (this.statusFilter === 'tunai' && item.metode_pembayaran === 'transfer') return false;
+                if (this.statusFilter === 'transfer' && item.metode_pembayaran !== 'transfer') return false;
                 if (q) {
                     const name = (item.nama_karyawan || '').toLowerCase();
                     const pos = (item.posisi || '').toLowerCase();
@@ -2036,6 +3841,8 @@ function payrollPreviewApp() {
             const q = (this.searchQuery || '').toLowerCase().trim();
             return this.includedItems.filter(item => {
                 if (item.group !== 'borongan') return false;
+                if (this.statusFilter === 'tunai' && item.metode_pembayaran === 'transfer') return false;
+                if (this.statusFilter === 'transfer' && item.metode_pembayaran !== 'transfer') return false;
                 if (q) {
                     const name = (item.nama_karyawan || '').toLowerCase();
                     const pos = (item.posisi || '').toLowerCase();
@@ -2057,6 +3864,8 @@ function payrollPreviewApp() {
             this.$watch('showApproveModal', val => { if (val) this.safeRefreshIcons(); });
             this.$watch('showEditModal', val => { if (val) this.safeRefreshIcons(); });
             this.$watch('showExcludeModal', val => { if (val) this.safeRefreshIcons(); });
+            this.$watch('showDeleteModal', val => { if (val) this.safeRefreshIcons(); });
+            this.$watch('showCancelApproveModal', val => { if (val) this.safeRefreshIcons(); });
         },
 
         safeRefreshIcons() {
@@ -2067,6 +3876,18 @@ function payrollPreviewApp() {
                     lucide.createIcons();
                 }
             });
+        },
+
+        selectMetode(metode) {
+            this.editForm.metode_pembayaran = metode;
+            if (metode === 'transfer' && this.editForm.has_master_bank) {
+                if (!this.editForm.bank_nomor_rekening) {
+                    this.editForm.bank_nama = this.editForm.master_bank_nama;
+                    this.editForm.bank_nomor_rekening = this.editForm.master_bank_nomor_rekening;
+                    this.editForm.bank_atas_nama = this.editForm.master_bank_atas_nama;
+                }
+            }
+            this.safeRefreshIcons();
         },
 
         openEdit(item) {
@@ -2080,6 +3901,16 @@ function payrollPreviewApp() {
             if (Number(item.tunjangan_bulanan) > 0) bd.push({ label: 'Tunjangan Bulanan', val: Number(item.tunjangan_bulanan) });
             if (Number(item.lembur) > 0) bd.push({ label: 'Upah Lembur', val: Number(item.lembur) });
             if (Number(item.komisi) > 0) bd.push({ label: 'Komisi Sales', val: Number(item.komisi) });
+
+            const hasMaster = !!item.has_master_bank;
+            const currentMetode = String(item.metode_pembayaran || (hasMaster ? 'transfer' : 'tunai'));
+            const bNama = String(item.bank_nama || item.master_bank_nama || '');
+            const bRek = String(item.bank_nomor_rekening || item.master_bank_nomor_rekening || '');
+            const bAn = String(item.bank_atas_nama || item.master_bank_atas_nama || item.nama_karyawan || '');
+            const isCustom = hasMaster && (
+                (bRek && bRek !== String(item.master_bank_nomor_rekening || '')) ||
+                (bNama && bNama !== String(item.master_bank_nama || ''))
+            );
 
             this.editForm = {
                 item_id: String(item.id || ''),
@@ -2097,6 +3928,15 @@ function payrollPreviewApp() {
                 total_potongan_tabungan: Number(item.setor_tabungan) || 0,
                 penarikan_tabungan: Number(item.tarik_tabungan) || 0,
                 nominal_pembulatan: Number(item.pembulatan) || 0,
+                metode_pembayaran: currentMetode,
+                bank_nama: bNama,
+                bank_nomor_rekening: bRek,
+                bank_atas_nama: bAn,
+                has_master_bank: hasMaster,
+                master_bank_nama: String(item.master_bank_nama || ''),
+                master_bank_nomor_rekening: String(item.master_bank_nomor_rekening || ''),
+                master_bank_atas_nama: String(item.master_bank_atas_nama || item.nama_karyawan || ''),
+                show_custom_bank: isCustom,
             };
 
             this.showEditModal = true;
