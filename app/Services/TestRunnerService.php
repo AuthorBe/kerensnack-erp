@@ -300,6 +300,12 @@ class TestRunnerService
             'category'    => 'HR & Penggajian',
             'description' => 'Validasi komprehensif Payroll Engine: kalkulasi borongan & bulanan, anti-double pay, overlap detection, kasbon auto-deduct, mutasi tabungan, advance withdrawal, lock/unlock transaksi, otorisasi approval arus kas, 24h rollback, dan render slip PDF.'
         ],
+        'absensi_scope' => [
+            'file'        => 'AbsensiScopeLifecycleTest.php',
+            'title'       => 'Scoped Attendance Architecture (Borongan, Bulanan & Dual-Save)',
+            'category'    => 'HR & Penggajian',
+            'description' => 'Validasi pemisahan cakupan presensi borongan vs bulanan, independensi penyimpanan data tanpa kontaminasi antar tipe, pembebasan kas pada borongan, dan akurasi metrik status kehadiran.'
+        ],
         'database_manager_service' => [
             'file'        => 'DatabaseManagerServiceTest.php',
             'title'       => 'Database Engine, 1-Click Switcher & Cloud Sync Service',
@@ -376,6 +382,7 @@ class TestRunnerService
         'developer_dashboard_active_users',
         'multi_barcode_integrity',
         'payroll_engine',
+        'absensi_scope',
         'closed_loop_cashflow',
         'produksi_hybrid_deduction',
     ];
