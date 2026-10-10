@@ -2,7 +2,8 @@
 /**
  * views/kasbon/index.php
  * Halaman Utama Modul Pinjaman / Kasbon Karyawan Keren One ERP
- * 100% Selaras dengan DNA Desain & Sistem Modal KEREN ONE
+ * Model Konsolidasi: 1 Baris Per Karyawan (Buku Kasbon Karyawan)
+ * 100% Selaras dengan DNA Desain, SSOT & Standar UI KEREN ONE
  */
 
 use App\Core\Router;
@@ -11,16 +12,18 @@ use App\Helpers\CSRF;
 
 ob_start();
 
-function getKasbonInitials(string $name): string {
-    $words = preg_split('/\s+/', trim($name));
-    $initials = '';
-    foreach ($words as $w) {
-        if (!empty($w)) {
-            $initials .= mb_strtoupper(mb_substr($w, 0, 1));
+if (!function_exists('getKasbonInitials')) {
+    function getKasbonInitials(string $name): string {
+        $words = preg_split('/\s+/', trim($name));
+        $initials = '';
+        foreach ($words as $w) {
+            if (!empty($w)) {
+                $initials .= mb_strtoupper(mb_substr($w, 0, 1));
+            }
+            if (mb_strlen($initials) >= 2) break;
         }
-        if (mb_strlen($initials) >= 2) break;
+        return $initials ?: 'KR';
     }
-    return $initials ?: 'KR';
 }
 
 $countBorongan = 0;
@@ -219,6 +222,7 @@ foreach ($kasbonList as $kb) {
     justify-content: center;
     font-size: 11px;
     font-family: var(--font-mono, monospace);
+    font-variant-numeric: tabular-nums;
     font-weight: 700;
     padding: 0 6px;
     height: 18px;
@@ -287,8 +291,8 @@ foreach ($kasbonList as $kb) {
 
 /* 4. Table Avatar Badge */
 .kasbon-avatar {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 9999px;
     background: rgba(136, 19, 55, 0.1);
     color: #881337;
@@ -297,8 +301,9 @@ foreach ($kasbonList as $kb) {
     align-items: center;
     justify-content: center;
     font-weight: 800;
-    font-size: 11px;
+    font-size: 11.5px;
     font-family: var(--font-mono, monospace);
+    font-variant-numeric: tabular-nums;
     flex-shrink: 0;
     user-select: none;
     box-sizing: border-box;
@@ -394,6 +399,7 @@ foreach ($kasbonList as $kb) {
 [class*="font-mono"],
 .pg-currency-input,
 .pg-currency-addon {
+    font-variant-numeric: tabular-nums;
     font-feature-settings: "zero" 0 !important;
     -webkit-font-feature-settings: "zero" 0 !important;
 }
@@ -439,48 +445,6 @@ foreach ($kasbonList as $kb) {
     border-color: #fb7185 !important;
     color: #fb7185 !important;
 }
-.quick-chip-btn.is-reset {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #dc2626;
-}
-.quick-chip-btn.is-reset:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #b91c1c;
-}
-.dark .quick-chip-btn.is-reset {
-    background: rgba(239, 68, 68, 0.12);
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #f87171;
-}
-
-/* Searchable Dropdown */
-.dropdown-menu-searchable {
-    animation: kasbonDropdownFadeIn 0.15s ease-out;
-}
-@keyframes kasbonDropdownFadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.searchable-option {
-    transition: background-color 0.12s ease;
-    user-select: none;
-}
-.searchable-option:hover,
-.searchable-option.is-active {
-    background-color: var(--color-canvas-soft, #f8fafc);
-}
-.dark .searchable-option:hover,
-.dark .searchable-option.is-active {
-    background-color: #334155;
-}
-.searchable-option.is-selected {
-    background-color: rgba(136, 19, 55, 0.08) !important;
-}
-.dark .searchable-option.is-selected {
-    background-color: rgba(251, 113, 133, 0.14) !important;
-}
 
 /* Canonical Page Header Icon Indigo */
 .page-header-icon.is-indigo {
@@ -492,6 +456,19 @@ foreach ($kasbonList as $kb) {
     background: rgba(99, 102, 241, 0.16) !important;
     color: #818cf8 !important;
     border-color: rgba(99, 102, 241, 0.35) !important;
+}
+
+/* Primary Button in Maroon */
+.btn-primary-maroon {
+    background-color: #881337 !important;
+    color: #ffffff !important;
+    border: 1px solid #700f2d !important;
+    box-shadow: 0 1px 2px rgba(136, 19, 55, 0.2);
+    transition: all 0.15s ease;
+}
+.btn-primary-maroon:hover {
+    background-color: #9f1239 !important;
+    box-shadow: 0 4px 10px rgba(136, 19, 55, 0.3);
 }
 
 /* Sleek Pill Badge for Dropdown Karyawan */
@@ -508,7 +485,7 @@ foreach ($kasbonList as $kb) {
     color: #b45309;
     border: 1px solid rgba(245, 158, 11, 0.28);
     white-space: nowrap;
-    line-height: 1.3;
+    line-height: 1;
 }
 .dark .kasbon-dropdown-badge {
     background: rgba(245, 158, 11, 0.18);
@@ -527,25 +504,12 @@ foreach ($kasbonList as $kb) {
     background: rgba(16, 185, 129, 0.08);
     border: 1px solid rgba(16, 185, 129, 0.22);
     white-space: nowrap;
-    line-height: 1.3;
+    line-height: 1;
 }
 .dark .kasbon-dropdown-badge-empty {
     background: rgba(16, 185, 129, 0.16);
     color: #34d399;
     border-color: rgba(16, 185, 129, 0.32);
-}
-
-/* Primary Button in Maroon */
-.btn-primary-maroon {
-    background-color: #881337 !important;
-    color: #ffffff !important;
-    border: 1px solid #700f2d !important;
-    box-shadow: 0 1px 2px rgba(136, 19, 55, 0.2);
-    transition: all 0.15s ease;
-}
-.btn-primary-maroon:hover {
-    background-color: #9f1239 !important;
-    box-shadow: 0 4px 10px rgba(136, 19, 55, 0.3);
 }
 
 /* =========================================================================
@@ -602,11 +566,13 @@ foreach ($kasbonList as $kb) {
     padding: 0 5px;
     border-radius: 6px;
     font-family: var(--font-mono, monospace);
+    font-variant-numeric: tabular-nums;
     font-size: 11px;
     font-weight: 700;
     background: #f1f5f9;
     color: #475569;
     border: 1px solid #cbd5e1;
+    line-height: 1;
     flex-shrink: 0;
 }
 .dark .pg-mobile-num {
@@ -615,53 +581,11 @@ foreach ($kasbonList as $kb) {
     border-color: #334155;
 }
 
-.pg-mobile-mid-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--color-hairline, #e2e8f0);
-}
-.dark .pg-mobile-mid-row {
-    border-color: #334155;
-}
-
-.pg-mobile-date-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #475569;
-}
-.dark .pg-mobile-date-wrap {
-    color: #94a3b8;
-}
-.pg-mobile-date-wrap svg {
-    width: 15px;
-    height: 15px;
-    min-width: 15px;
-    min-height: 15px;
-    color: #64748b;
-    flex-shrink: 0;
-    display: block;
-}
-.dark .pg-mobile-date-wrap svg {
-    color: #94a3b8;
-}
-.pg-mobile-date-text {
-    font-weight: 700;
-    color: #0f172a;
-    font-size: 13px;
-}
-.dark .pg-mobile-date-text {
-    color: #f1f5f9;
-}
-
 .pg-mobile-nominal {
     font-size: 15px;
     font-weight: 800;
     font-family: var(--font-mono, monospace);
+    font-variant-numeric: tabular-nums;
     color: #881337;
     text-align: right;
     white-space: nowrap;
@@ -670,50 +594,11 @@ foreach ($kasbonList as $kb) {
     color: #fb7185;
 }
 
-.pg-mobile-note {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 7px 11px;
-    border-radius: 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    font-size: 13px;
-    color: #334155;
-    line-height: 1.4;
-}
-.dark .pg-mobile-note {
-    background: rgba(30, 41, 59, 0.5);
-    border-color: #334155;
-    color: #cbd5e1;
-}
-.pg-mobile-note svg {
-    width: 15px;
-    height: 15px;
-    min-width: 15px;
-    min-height: 15px;
-    color: #64748b;
-    flex-shrink: 0;
-    display: block;
-}
-.dark .pg-mobile-note svg {
-    color: #94a3b8;
-}
-.pg-mobile-note-text {
-    font-size: 13px;
-    font-weight: 600;
-    color: #1e293b;
-    word-break: break-word;
-}
-.dark .pg-mobile-note-text {
-    color: #e2e8f0;
-}
-
 .pg-mobile-action-row {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding-top: 12px;
+    padding-top: 10px;
     margin-top: 2px;
     border-top: 1px solid var(--color-hairline, #e2e8f0);
 }
@@ -721,210 +606,100 @@ foreach ($kasbonList as $kb) {
     border-color: #334155;
 }
 
-/* =========================================================================
-   CASH ACCOUNT SELECTION BOX IN MODAL (NO CIRCLE RADIO, HARMONIOUS EMERALD)
-   ========================================================================= */
-.pg-kas-section {
-    padding: 12px;
-    border-radius: 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.dark .pg-kas-section {
-    background: rgba(15, 23, 42, 0.4);
-    border-color: #334155;
-}
-.pg-kas-section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-.pg-kas-section-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    color: #0f172a;
-}
-.dark .pg-kas-section-title {
-    color: #f1f5f9;
-}
-.pg-kas-section-title svg {
-    width: 15px;
-    height: 15px;
-    color: #881337;
-    flex-shrink: 0;
-}
-.dark .pg-kas-section-title svg {
-    color: #fb7185;
-}
-
-.pg-kas-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 8px;
-    max-height: 200px;
-    overflow-y: auto;
-    padding: 4px;
-}
-@media (min-width: 640px) {
-    .pg-kas-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-.pg-kas-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 12px;
-    border-radius: 10px;
-    border: 1.5px solid #e2e8f0;
-    background: #ffffff;
-    cursor: pointer;
-    user-select: none;
-    transition: all 0.15s ease;
-    text-align: left;
+/* Kasbon Progress Bar */
+.kasbon-progress-track {
     width: 100%;
-    outline: none;
+    height: 7px;
+    border-radius: 9999px;
+    background: #e2e8f0;
+    overflow: hidden;
     position: relative;
-    box-sizing: border-box;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
 }
-.pg-kas-card:hover:not(.is-disabled) {
-    border-color: #cbd5e1;
-    background: #f8fafc;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+.dark .kasbon-progress-track {
+    background: #334155;
 }
-.dark .pg-kas-card {
-    background: #1e293b;
-    border-color: #334155;
+.kasbon-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 0;
 }
-.dark .pg-kas-card:hover:not(.is-disabled) {
-    border-color: #475569;
-    background: #273549;
+.kasbon-progress-fill.is-aktif {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
 }
-
-/* Selected State: Harmonious Emerald Green (Lembut & Elegan, Zero Red/Rose) */
-.pg-kas-card.is-selected {
-    border-color: #059669 !important;
-    background: #f0fdf4 !important;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22) !important;
-}
-.dark .pg-kas-card.is-selected {
-    border-color: #10b981 !important;
-    background: rgba(16, 185, 129, 0.12) !important;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+.kasbon-progress-fill.is-lunas {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
 }
 
-/* Disabled State: Saldo Kurang */
-.pg-kas-card.is-disabled {
-    opacity: 0.55;
-    cursor: not-allowed !important;
-    border-style: dashed !important;
-    background: #f1f5f9 !important;
-}
-.dark .pg-kas-card.is-disabled {
-    background: #0f172a !important;
-    border-color: #334155 !important;
-}
-
-/* Cash Icon Box */
-.pg-kas-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    display: flex;
+/* Status Badges */
+.kasbon-badge-aktif {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-}
-.pg-kas-icon svg {
-    width: 18px;
-    height: 18px;
-    stroke-width: 2;
-    flex-shrink: 0;
-}
-.pg-kas-icon.is-tunai {
-    background: #ecfdf5 !important;
-    color: #059669 !important;
-    border: 1px solid #a7f3d0 !important;
-}
-.dark .pg-kas-icon.is-tunai {
-    background: rgba(16, 185, 129, 0.16) !important;
-    color: #34d399 !important;
-    border-color: rgba(16, 185, 129, 0.32) !important;
-}
-.pg-kas-icon.is-bank {
-    background: #eff6ff !important;
-    color: #2563eb !important;
-    border: 1px solid #bfdbfe !important;
-}
-.dark .pg-kas-icon.is-bank {
-    background: rgba(59, 130, 246, 0.16) !important;
-    color: #60a5fa !important;
-    border-color: rgba(59, 130, 246, 0.32) !important;
-}
-
-.pg-kas-pos-pill {
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-size: 9px;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 10.5px;
     font-weight: 700;
-    background: #d1fae5;
-    color: #065f46;
-    letter-spacing: 0.02em;
-}
-.dark .pg-kas-pos-pill {
-    background: rgba(16, 185, 129, 0.25);
-    color: #6ee7b7;
-}
-
-/* Alert & Validation Banners */
-.pg-alert-warning {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 11.5px;
-    font-weight: 500;
-    line-height: 1.35;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
     color: #b45309;
-}
-.dark .pg-alert-warning {
     background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(245, 158, 11, 0.28);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    white-space: nowrap;
+    line-height: 1;
+}
+.dark .kasbon-badge-aktif {
     color: #fbbf24;
-}
-.pg-alert-danger {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 11.5px;
-    font-weight: 500;
-    line-height: 1.35;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #dc2626;
-}
-.dark .pg-alert-danger {
-    background: rgba(239, 68, 68, 0.12);
-    border-color: rgba(239, 68, 68, 0.28);
-    color: #f87171;
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.45);
 }
 
-/* =========================================================================
-   CLEAN ENTERPRISE EMPTY STATE CARD
-   ========================================================================= */
+.kasbon-badge-lunas {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #059669;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    white-space: nowrap;
+    line-height: 1;
+}
+.dark .kasbon-badge-lunas {
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.45);
+}
+
+.kasbon-badge-freq {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 2.5px 8px;
+    border-radius: 9999px;
+    font-size: 10.5px;
+    font-weight: 700;
+    font-family: var(--font-mono, monospace);
+    font-variant-numeric: tabular-nums;
+    color: #475569;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    white-space: nowrap;
+    line-height: 1;
+}
+.dark .kasbon-badge-freq {
+    color: #cbd5e1;
+    background: #0f172a;
+    border-color: #334155;
+}
+
+/* Empty State Card */
 .pg-empty-card {
     display: flex;
     flex-direction: column;
@@ -964,25 +739,6 @@ foreach ($kasbonList as $kb) {
     color: #fb7185;
     border-color: rgba(251, 113, 133, 0.25);
 }
-.pg-empty-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--color-ink, #0f172a);
-    margin-bottom: 4px;
-}
-.dark .pg-empty-title {
-    color: #f1f5f9;
-}
-.pg-empty-desc {
-    font-size: 12px;
-    color: var(--color-ink-mute, #64748b);
-    max-width: 280px;
-    margin: 0 auto;
-    line-height: 1.5;
-}
-.dark .pg-empty-desc {
-    color: #94a3b8;
-}
 .pg-btn-reset-filter {
     display: inline-flex;
     align-items: center;
@@ -1001,89 +757,164 @@ foreach ($kasbonList as $kb) {
     transition: all 0.15s ease;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
-.pg-btn-reset-filter svg {
-    width: 14px;
-    height: 14px;
-    display: block;
-    stroke-width: 2;
-    flex-shrink: 0;
-}
-.pg-btn-reset-filter:hover {
-    background: rgba(136, 19, 55, 0.06);
-    border-color: #881337;
-}
 .dark .pg-btn-reset-filter {
     background: #0f172a;
     color: #fb7185;
     border-color: rgba(251, 113, 133, 0.35);
 }
-.dark .pg-btn-reset-filter:hover {
-    background: rgba(251, 113, 133, 0.14);
-}
 
-/* Kasbon Progress Bar */
-.kasbon-progress-track {
+/* Cash selection in modal */
+.pg-kas-section {
+    padding: 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.dark .pg-kas-section {
+    background: rgba(15, 23, 42, 0.4);
+    border-color: #334155;
+}
+.pg-kas-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 4px;
+}
+@media (min-width: 640px) {
+    .pg-kas-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+.pg-kas-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    background: #ffffff;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    text-align: left;
     width: 100%;
-    height: 7px;
-    border-radius: 9999px;
-    background: #e2e8f0;
-    overflow: hidden;
+    outline: none;
     position: relative;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
 }
-.dark .kasbon-progress-track {
-    background: #334155;
+.pg-kas-card:hover:not(.is-disabled) {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+    transform: translateY(-1px);
 }
-.kasbon-progress-fill {
-    height: 100%;
-    border-radius: 9999px;
-    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 0;
+.dark .pg-kas-card {
+    background: #1e293b;
+    border-color: #334155;
 }
-.kasbon-progress-fill.is-lunas {
-    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+.dark .pg-kas-card:hover:not(.is-disabled) {
+    border-color: #475569;
+    background: #273549;
+}
+.pg-kas-card.is-selected {
+    border-color: #059669 !important;
+    background: #f0fdf4 !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.22) !important;
+}
+.dark .pg-kas-card.is-selected {
+    border-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.12) !important;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25) !important;
+}
+.pg-kas-card.is-disabled {
+    opacity: 0.55;
+    cursor: not-allowed !important;
+    border-style: dashed !important;
+    background: #f1f5f9 !important;
+}
+.dark .pg-kas-card.is-disabled {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+}
+.pg-kas-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.pg-kas-icon.is-tunai {
+    background: #ecfdf5 !important;
+    color: #059669 !important;
+    border: 1px solid #a7f3d0 !important;
+}
+.dark .pg-kas-icon.is-tunai {
+    background: rgba(16, 185, 129, 0.16) !important;
+    color: #34d399 !important;
+    border-color: rgba(16, 185, 129, 0.32) !important;
+}
+.pg-kas-icon.is-bank {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+    border: 1px solid #bfdbfe !important;
+}
+.dark .pg-kas-icon.is-bank {
+    background: rgba(59, 130, 246, 0.16) !important;
+    color: #60a5fa !important;
+    border-color: rgba(59, 130, 246, 0.32) !important;
+}
+.pg-kas-pos-pill {
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    background: #d1fae5;
+    color: #065f46;
+}
+.dark .pg-kas-pos-pill {
+    background: rgba(16, 185, 129, 0.25);
+    color: #6ee7b7;
 }
 
-/* Status Badges */
-.kasbon-badge-aktif {
-    display: inline-flex;
+.pg-alert-warning {
+    display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
-    border-radius: 9999px;
-    font-size: 10.5px;
-    font-weight: 700;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 500;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
     color: #b45309;
+}
+.dark .pg-alert-warning {
     background: rgba(245, 158, 11, 0.12);
-    border: 1px solid rgba(245, 158, 11, 0.35);
-    white-space: nowrap;
-    line-height: 1.3;
-}
-.dark .kasbon-badge-aktif {
+    border-color: rgba(245, 158, 11, 0.28);
     color: #fbbf24;
-    background: rgba(245, 158, 11, 0.18);
-    border-color: rgba(245, 158, 11, 0.45);
 }
-
-.kasbon-badge-lunas {
-    display: inline-flex;
+.pg-alert-danger {
+    display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 3px 10px;
-    border-radius: 9999px;
-    font-size: 10.5px;
-    font-weight: 700;
-    color: #059669;
-    background: rgba(16, 185, 129, 0.12);
-    border: 1px solid rgba(16, 185, 129, 0.35);
-    white-space: nowrap;
-    line-height: 1.3;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 500;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
 }
-.dark .kasbon-badge-lunas {
-    color: #34d399;
-    background: rgba(16, 185, 129, 0.18);
-    border-color: rgba(16, 185, 129, 0.45);
+.dark .pg-alert-danger {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.28);
+    color: #f87171;
 }
 </style>
 
@@ -1093,7 +924,7 @@ foreach ($kasbonList as $kb) {
     <div class="page-header flex-col sm:flex-row items-start sm:items-center gap-3">
         <div class="page-header-body" style="min-width:0; flex:1;">
             <div class="page-header-icon is-indigo" style="flex-shrink:0;">
-                <i data-lucide="hand-coins"></i>
+                <i data-lucide="notebook-tabs"></i>
             </div>
             <div class="page-header-text" style="min-width:0;">
                 <div class="page-header-tag">
@@ -1121,34 +952,34 @@ foreach ($kasbonList as $kb) {
 
     <!-- 2. KPI METRICS STRIP -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
-        <!-- Card 1: Kasbon Aktif -->
+        <!-- Card 1: Total Sisa Kasbon Berjalan -->
         <div class="kasbon-stat-card">
-            <div class="kasbon-stat-icon" style="background:rgba(99, 102, 241, 0.1); color:#4f46e5; border:1px solid rgba(99, 102, 241, 0.25);">
+            <div class="kasbon-stat-icon" style="background:rgba(225, 29, 72, 0.1); color:#e11d48; border:1px solid rgba(225, 29, 72, 0.25);">
                 <i data-lucide="hand-coins"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-snug line-clamp-2">Kasbon Aktif</div>
-                <div class="text-sm sm:text-base lg:text-lg font-bold font-mono text-indigo-600 dark:text-indigo-400 mt-0.5 truncate">
+                <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-snug line-clamp-2">Sisa Kasbon Aktif</div>
+                <div class="text-sm sm:text-base lg:text-lg font-bold font-mono text-rose-600 dark:text-rose-400 mt-0.5 truncate">
                     <?= Format::rupiah($totalSisaAktif) ?>
                 </div>
                 <div class="text-[10.5px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug truncate sm:whitespace-normal">
-                    <?= $countAktif ?> pinjaman berjalan
+                    <?= $countAktif ?> karyawan berstatus aktif
                 </div>
             </div>
         </div>
 
-        <!-- Card 2: Kasbon Lunas -->
+        <!-- Card 2: Karyawan Lunas -->
         <div class="kasbon-stat-card">
             <div class="kasbon-stat-icon" style="background:rgba(16, 185, 129, 0.1); color:#10b981; border:1px solid rgba(16, 185, 129, 0.25);">
                 <i data-lucide="badge-check"></i>
             </div>
             <div class="min-w-0 flex-1">
-                <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-snug line-clamp-2">Kasbon Lunas</div>
+                <div class="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider leading-snug line-clamp-2">Karyawan Lunas</div>
                 <div class="text-sm sm:text-base lg:text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 truncate">
-                    <?= Format::rupiah($totalNominalLunas) ?>
+                    <?= $countLunas ?> Karyawan
                 </div>
                 <div class="text-[10.5px] sm:text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5 leading-snug truncate sm:whitespace-normal">
-                    <?= $countLunas ?> pinjaman selesai
+                    Saldo kasbon Rp 0 (Lunas)
                 </div>
             </div>
         </div>
@@ -1164,7 +995,7 @@ foreach ($kasbonList as $kb) {
                     <?= Format::rupiah($totalCicilanTerbayar ?? 0) ?>
                 </div>
                 <div class="text-[10.5px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug truncate sm:whitespace-normal">
-                    Cicilan kembali ke kas
+                    Akumulasi cicilan kembali ke kas
                 </div>
             </div>
         </div>
@@ -1180,7 +1011,7 @@ foreach ($kasbonList as $kb) {
                     <?= Format::rupiah($pinjamanBulanIni) ?>
                 </div>
                 <div class="text-[10.5px] sm:text-[11px] text-slate-400 mt-0.5 leading-snug truncate sm:whitespace-normal">
-                    Bulan <?= date('m/Y') ?>
+                    Pencairan bulan <?= date('m/Y') ?>
                 </div>
             </div>
         </div>
@@ -1196,7 +1027,7 @@ foreach ($kasbonList as $kb) {
                             @click="statusFilter = 'all'" 
                             class="pg-filter-tab-btn" 
                             :class="statusFilter === 'all' ? 'is-active' : ''">
-                        <span>Semua</span>
+                        <span>Semua Karyawan</span>
                         <span class="pg-tab-counter"><?= count($kasbonList) ?></span>
                     </button>
                     <button type="button" 
@@ -1204,7 +1035,7 @@ foreach ($kasbonList as $kb) {
                             class="pg-filter-tab-btn" 
                             :class="statusFilter === 'aktif' ? 'is-active' : ''">
                         <i data-lucide="clock-3" class="pg-tab-icon"></i>
-                        <span>Aktif</span>
+                        <span>Kasbon Aktif</span>
                         <span class="pg-tab-counter"><?= $countAktif ?></span>
                     </button>
                     <button type="button" 
@@ -1212,7 +1043,7 @@ foreach ($kasbonList as $kb) {
                             class="pg-filter-tab-btn" 
                             :class="statusFilter === 'lunas' ? 'is-active' : ''">
                         <i data-lucide="check" class="pg-tab-icon"></i>
-                        <span>Lunas</span>
+                        <span>Kasbon Lunas</span>
                         <span class="pg-tab-counter"><?= $countLunas ?></span>
                     </button>
                     <button type="button" 
@@ -1240,7 +1071,7 @@ foreach ($kasbonList as $kb) {
                 </svg>
                 <input type="text" 
                        x-model="searchQuery" 
-                       placeholder="Cari peminjam / alasan..." 
+                       placeholder="Cari nama karyawan / posisi..." 
                        class="kasbon-search-input">
                 <button type="button" 
                         x-show="searchQuery.length > 0" 
@@ -1253,7 +1084,7 @@ foreach ($kasbonList as $kb) {
         </div>
     </div>
 
-    <!-- 4. DATA TABLE KASBON -->
+    <!-- 4. DATA TABLE KASBON (1 BARIS PER KARYAWAN) -->
     <div class="kasbon-table-card">
         <!-- Canonical Desktop Table View -->
         <div class="pg-desktop-view table-wrapper overflow-x-auto custom-scrollbar">
@@ -1261,14 +1092,14 @@ foreach ($kasbonList as $kb) {
                 <thead>
                     <tr class="bg-slate-50/60 dark:bg-slate-800/40 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-800">
                         <th class="py-3 px-4 w-12 text-center">No</th>
-                        <th class="py-3 px-4 w-28">Tgl Pinjam</th>
-                        <th class="py-3 px-4 min-w-[190px]">Nama Karyawan</th>
+                        <th class="py-3 px-4 min-w-[210px]">Karyawan</th>
+                        <th class="py-3 px-4 text-center w-36">Riwayat Pinjaman</th>
                         <th class="py-3 px-4 text-right min-w-[130px]">Total Pinjaman</th>
-                        <th class="py-3 px-4 text-right min-w-[130px]">Cicilan/Periode</th>
-                        <th class="py-3 px-4 min-w-[180px]">Sisa Pinjaman & Progress</th>
-                        <th class="py-3 px-4 min-w-[180px]">Keterangan</th>
+                        <th class="py-3 px-4 text-right min-w-[130px]">Total Terbayar</th>
+                        <th class="py-3 px-4 min-w-[180px]">Sisa Kasbon & Progress</th>
+                        <th class="py-3 px-4 w-32 text-center">Pinjaman Terakhir</th>
                         <th class="py-3 px-4 text-center w-28">Status</th>
-                        <th class="py-3 px-4 text-center w-24">Aksi</th>
+                        <th class="py-3 px-4 text-center w-36">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
@@ -1280,7 +1111,7 @@ foreach ($kasbonList as $kb) {
                                         <i data-lucide="hand-coins"></i>
                                     </div>
                                     <div class="pg-empty-title">Belum Ada Catatan Kasbon</div>
-                                    <div class="pg-empty-desc">Belum ada catatan pinjaman kasbon karyawan yang terdaftar dalam sistem.</div>
+                                    <div class="pg-empty-desc">Belum ada karyawan yang tercatat memiliki riwayat pinjaman kasbon dalam sistem.</div>
                                     <button type="button" @click="openModalTambah()" class="pg-btn-reset-filter" style="background:#881337; color:#ffffff; border-color:#700f2d;">
                                         <i data-lucide="plus"></i>
                                         <span>Tambah Kasbon Baru</span>
@@ -1296,8 +1127,8 @@ foreach ($kasbonList as $kb) {
                                     <div class="pg-empty-icon-box">
                                         <i data-lucide="search-x"></i>
                                     </div>
-                                    <div class="pg-empty-title">Tidak Ada Kasbon Yang Cocok</div>
-                                    <div class="pg-empty-desc">Tidak ada data kasbon yang sesuai dengan filter status atau kata kunci saat ini.</div>
+                                    <div class="pg-empty-title">Tidak Ada Karyawan Yang Cocok</div>
+                                    <div class="pg-empty-desc">Tidak ada data karyawan yang sesuai dengan filter status atau kata kunci saat ini.</div>
                                     <button type="button" @click="searchQuery = ''; statusFilter = 'all'" class="pg-btn-reset-filter">
                                         <i data-lucide="rotate-ccw"></i>
                                         <span>Reset Filter & Pencarian</span>
@@ -1306,62 +1137,74 @@ foreach ($kasbonList as $kb) {
                             </td>
                         </tr>
                         <?php foreach ($kasbonList as $idx => $kb): 
-                            $totalPinjaman = (float)$kb['total_pinjaman'];
-                            $sisaPinjaman = (float)$kb['sisa_pinjaman'];
+                            $totalPinjaman = (float)$kb['total_pinjaman_akumulasi'];
+                            $sisaPinjaman = (float)$kb['sisa_pinjaman_berjalan'];
                             $terbayar = (float)$kb['total_terbayar'];
                             $persenLunas = ($totalPinjaman > 0) ? min(100, round(($terbayar / $totalPinjaman) * 100, 1)) : 100;
-                            $isAktif = ($kb['status_kasbon'] === 'aktif');
+                            $isAktif = ($sisaPinjaman > 0);
                             $initials = getKasbonInitials($kb['nama_karyawan']);
-                            $searchKeywords = strtolower($kb['nama_karyawan'] . ' ' . ($kb['posisi'] ?? '') . ' ' . ($kb['keterangan'] ?? '') . ' ' . ($kb['tipe_penggajian'] ?? ''));
+                            $searchKeywords = strtolower($kb['nama_karyawan'] . ' ' . ($kb['posisi'] ?? '') . ' ' . ($kb['tipe_penggajian'] ?? ''));
+                            $statusKaryawan = $isAktif ? 'aktif' : 'lunas';
                         ?>
                         <tr class="hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
-                            x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', '<?= $kb['status_kasbon'] ?>', '<?= $kb['tipe_penggajian'] ?? '' ?>')"
-                            data-id="<?= htmlspecialchars($kb['id']) ?>">
+                            x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', '<?= $statusKaryawan ?>', '<?= $kb['tipe_penggajian'] ?? '' ?>')"
+                            data-kid="<?= htmlspecialchars($kb['karyawan_id']) ?>">
                             
                             <!-- Col 1: No -->
                             <td class="py-3 px-4 text-center font-mono text-slate-400"><?= $idx + 1 ?></td>
 
-                            <!-- Col 2: Tanggal Pengajuan -->
-                            <td class="py-3 px-4">
-                                <div class="flex items-center gap-2 font-mono font-semibold text-slate-800 dark:text-slate-200">
-                                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
-                                    <span><?= Format::tanggalIndo($kb['tanggal_pengajuan']) ?></span>
-                                </div>
-                            </td>
-
-                            <!-- Col 3: Nama Karyawan -->
+                            <!-- Col 2: Karyawan -->
                             <td class="py-3 px-4">
                                 <div class="flex items-center gap-2.5">
                                     <div class="kasbon-avatar">
                                         <?= htmlspecialchars($initials) ?>
                                     </div>
                                     <div class="min-w-0">
-                                        <div class="font-bold text-slate-900 dark:text-slate-100 truncate"><?= htmlspecialchars($kb['nama_karyawan']) ?></div>
-                                        <div class="text-[11px] text-slate-400 capitalize truncate"><?= htmlspecialchars($kb['posisi'] ?? '-') ?> &bull; <?= ucfirst($kb['tipe_penggajian'] ?? '') ?></div>
+                                        <a href="<?= Router::url('/kasbon/detail?karyawan_id=' . $kb['karyawan_id']) ?>" 
+                                           class="font-bold text-slate-900 dark:text-slate-100 hover:text-rose-700 dark:hover:text-rose-400 transition-colors truncate block">
+                                            <?= htmlspecialchars($kb['nama_karyawan']) ?>
+                                        </a>
+                                        <div class="text-[11px] text-slate-400 capitalize truncate">
+                                            <?= htmlspecialchars($kb['posisi'] ?? '-') ?> &bull; <?= ucfirst($kb['tipe_penggajian'] ?? '') ?>
+                                        </div>
                                     </div>
                                 </div>
                             </td>
 
-                            <!-- Col 4: Total Pinjaman -->
+                            <!-- Col 3: Riwayat Pinjaman -->
+                            <td class="py-3 px-4 text-center">
+                                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                                    <span class="kasbon-badge-freq" title="Frekuensi riwayat pinjaman">
+                                        <i data-lucide="layers" class="w-3 h-3 text-slate-400"></i>
+                                        <span><?= (int)$kb['frekuensi_pinjaman'] ?>x Pinjam</span>
+                                    </span>
+                                    <?php if ((int)$kb['jumlah_pinjaman_aktif'] > 0): ?>
+                                        <span class="kasbon-dropdown-badge" style="font-size:10px; padding:2px 6px;">
+                                            <span><?= (int)$kb['jumlah_pinjaman_aktif'] ?> Aktif</span>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+
+                            <!-- Col 4: Total Pinjaman Akumulatif -->
                             <td class="py-3 px-4 text-right font-mono font-bold text-slate-900 dark:text-slate-100">
                                 <?= Format::rupiah($totalPinjaman) ?>
                             </td>
 
-                            <!-- Col 5: Cicilan / Periode -->
-                            <td class="py-3 px-4 text-right font-mono">
-                                <?php if ($kb['potongan_per_periode'] > 0): ?>
-                                    <span class="font-bold text-slate-700 dark:text-slate-300"><?= Format::rupiah((float)$kb['potongan_per_periode']) ?></span>
-                                    <span class="text-[10px] text-slate-400 block font-sans">/periode</span>
-                                <?php else: ?>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Manual</span>
-                                <?php endif; ?>
+                            <!-- Col 5: Total Terbayar -->
+                            <td class="py-3 px-4 text-right font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                                <?= Format::rupiah($terbayar) ?>
                             </td>
 
                             <!-- Col 6: Sisa Pinjaman & Progress -->
                             <td class="py-3 px-4">
                                 <div class="flex items-center justify-between text-xs font-mono mb-1.5">
-                                    <span class="font-bold <?= $isAktif ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400' ?>"><?= Format::rupiah($sisaPinjaman) ?></span>
-                                    <span class="text-[11px] font-bold <?= $persenLunas >= 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300' ?>"><?= $persenLunas ?>% Terlunasi</span>
+                                    <span class="font-bold <?= $isAktif ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400' ?>">
+                                        <?= Format::rupiah($sisaPinjaman) ?>
+                                    </span>
+                                    <span class="text-[11px] font-bold <?= $persenLunas >= 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300' ?>">
+                                        <?= $persenLunas ?>%
+                                    </span>
                                 </div>
                                 <div class="kasbon-progress-track">
                                     <div class="kasbon-progress-fill <?= $persenLunas >= 100 ? 'is-lunas' : 'is-aktif' ?>" 
@@ -1369,10 +1212,12 @@ foreach ($kasbonList as $kb) {
                                 </div>
                             </td>
 
-                            <!-- Col 7: Keterangan -->
-                            <td class="py-3 px-4 text-slate-600 dark:text-slate-300 leading-relaxed text-xs">
-                                <?php if (!empty($kb['keterangan'])): ?>
-                                    <?= htmlspecialchars($kb['keterangan']) ?>
+                            <!-- Col 7: Tanggal Pinjaman Terakhir -->
+                            <td class="py-3 px-4 text-center">
+                                <?php if (!empty($kb['tanggal_pinjaman_terakhir'])): ?>
+                                    <span class="font-mono text-slate-600 dark:text-slate-400">
+                                        <?= Format::tanggalIndo($kb['tanggal_pinjaman_terakhir']) ?>
+                                    </span>
                                 <?php else: ?>
                                     <span class="text-slate-400">-</span>
                                 <?php endif; ?>
@@ -1380,7 +1225,7 @@ foreach ($kasbonList as $kb) {
 
                             <!-- Col 8: Status -->
                             <td class="py-3 px-4 text-center">
-                                <?php if ($kb['status_kasbon'] === 'aktif'): ?>
+                                <?php if ($isAktif): ?>
                                     <span class="kasbon-badge-aktif">
                                         <i data-lucide="clock-3" style="width:12px;height:12px;flex-shrink:0;"></i>
                                         <span>Aktif</span>
@@ -1396,11 +1241,11 @@ foreach ($kasbonList as $kb) {
                             <!-- Col 9: Aksi -->
                             <td class="py-3 px-4 text-center">
                                 <div class="flex items-center justify-center">
-                                    <a href="<?= Router::url('/kasbon/detail?id=' . $kb['id']) ?>" 
+                                    <a href="<?= Router::url('/kasbon/detail?karyawan_id=' . $kb['karyawan_id']) ?>" 
                                        class="btn btn-secondary btn-sm text-xs px-2.5 py-1.5 flex items-center justify-center gap-1.5" 
-                                       title="Lihat Rincian & Riwayat Cicilan">
-                                        <i data-lucide="eye" style="width:13.5px;height:13.5px;" class="text-slate-500"></i>
-                                        <span>Detail</span>
+                                       title="Buka Buku Kasbon & Riwayat Rekening Koran">
+                                        <i data-lucide="notebook-tabs" style="width:13.5px;height:13.5px;" class="text-slate-500"></i>
+                                        <span>Buku Kasbon</span>
                                     </a>
                                 </div>
                             </td>
@@ -1411,7 +1256,7 @@ foreach ($kasbonList as $kb) {
             </table>
         </div>
 
-        <!-- Clean Modern Mobile Card View -->
+        <!-- Clean Modern Mobile Card View (1 Card Per Karyawan) -->
         <div class="pg-mobile-view p-3 sm:p-4 space-y-3 bg-slate-50/60 dark:bg-slate-900/40">
             <?php if (empty($kasbonList)): ?>
                 <!-- Initial Empty State on Mobile -->
@@ -1420,7 +1265,7 @@ foreach ($kasbonList as $kb) {
                         <i data-lucide="hand-coins"></i>
                     </div>
                     <div class="pg-empty-title">Belum Ada Catatan Kasbon</div>
-                    <div class="pg-empty-desc">Belum ada catatan pinjaman kasbon karyawan yang terdaftar dalam sistem.</div>
+                    <div class="pg-empty-desc">Belum ada karyawan yang tercatat memiliki pinjaman kasbon dalam sistem.</div>
                     <button type="button" 
                             @click="openModalTambah()" 
                             class="pg-btn-reset-filter"
@@ -1435,8 +1280,8 @@ foreach ($kasbonList as $kb) {
                     <div class="pg-empty-icon-box">
                         <i data-lucide="search-x"></i>
                     </div>
-                    <div class="pg-empty-title">Tidak Ada Kasbon Yang Cocok</div>
-                    <div class="pg-empty-desc">Tidak ada data kasbon yang sesuai dengan filter atau kata kunci saat ini.</div>
+                    <div class="pg-empty-title">Tidak Ada Karyawan Yang Cocok</div>
+                    <div class="pg-empty-desc">Tidak ada data karyawan yang sesuai dengan filter atau kata kunci saat ini.</div>
                     <button type="button" 
                             @click="searchQuery = ''; statusFilter = 'all'" 
                             class="pg-btn-reset-filter">
@@ -1446,30 +1291,34 @@ foreach ($kasbonList as $kb) {
                 </div>
 
                 <?php foreach ($kasbonList as $idx => $kb): 
-                    $totalPinjaman = (float)$kb['total_pinjaman'];
-                    $sisaPinjaman = (float)$kb['sisa_pinjaman'];
+                    $totalPinjaman = (float)$kb['total_pinjaman_akumulasi'];
+                    $sisaPinjaman = (float)$kb['sisa_pinjaman_berjalan'];
                     $terbayar = (float)$kb['total_terbayar'];
                     $persenLunas = ($totalPinjaman > 0) ? min(100, round(($terbayar / $totalPinjaman) * 100, 1)) : 100;
-                    $isAktif = ($kb['status_kasbon'] === 'aktif');
+                    $isAktif = ($sisaPinjaman > 0);
                     $initials = getKasbonInitials($kb['nama_karyawan']);
-                    $searchKeywords = strtolower($kb['nama_karyawan'] . ' ' . ($kb['posisi'] ?? '') . ' ' . ($kb['keterangan'] ?? '') . ' ' . ($kb['tipe_penggajian'] ?? ''));
+                    $searchKeywords = strtolower($kb['nama_karyawan'] . ' ' . ($kb['posisi'] ?? '') . ' ' . ($kb['tipe_penggajian'] ?? ''));
+                    $statusKaryawan = $isAktif ? 'aktif' : 'lunas';
                 ?>
                 <div class="pg-mobile-card"
-                     x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', '<?= $kb['status_kasbon'] ?>', '<?= $kb['tipe_penggajian'] ?? '' ?>')"
-                     data-id="<?= htmlspecialchars($kb['id']) ?>">
+                     x-show="isRowVisible('<?= htmlspecialchars($searchKeywords, ENT_QUOTES, 'UTF-8') ?>', '<?= $statusKaryawan ?>', '<?= $kb['tipe_penggajian'] ?? '' ?>')"
+                     data-kid="<?= htmlspecialchars($kb['karyawan_id']) ?>">
 
                     <!-- Top: Nomor Urut + Avatar + Name + Status Badge -->
                     <div class="flex items-center justify-between gap-2.5">
                         <div class="flex items-center gap-2 min-w-0">
-                            <!-- Nomor Urut Badge -->
                             <span class="pg-mobile-num">#<?= $idx + 1 ?></span>
-
                             <div class="kasbon-avatar shrink-0">
                                 <?= htmlspecialchars($initials) ?>
                             </div>
                             <div class="min-w-0">
-                                <div class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate"><?= htmlspecialchars($kb['nama_karyawan']) ?></div>
-                                <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate"><?= htmlspecialchars($kb['posisi'] ?? '-') ?> &bull; <?= ucfirst($kb['tipe_penggajian'] ?? '') ?></div>
+                                <a href="<?= Router::url('/kasbon/detail?karyawan_id=' . $kb['karyawan_id']) ?>"
+                                   class="font-bold text-slate-900 dark:text-slate-100 text-sm truncate block">
+                                    <?= htmlspecialchars($kb['nama_karyawan']) ?>
+                                </a>
+                                <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                                    <?= htmlspecialchars($kb['posisi'] ?? '-') ?> &bull; <?= ucfirst($kb['tipe_penggajian'] ?? '') ?>
+                                </div>
                             </div>
                         </div>
                         <div class="shrink-0">
@@ -1487,30 +1336,29 @@ foreach ($kasbonList as $kb) {
                         </div>
                     </div>
 
-                    <!-- Middle: Date & Nominal Row -->
-                    <div class="pg-mobile-mid-row">
-                        <div class="pg-mobile-date-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            <span class="pg-mobile-date-text"><?= Format::tanggalIndo($kb['tanggal_pengajuan']) ?></span>
-                        </div>
-                        <div class="pg-mobile-nominal">
-                            <?= Format::rupiah($totalPinjaman) ?>
-                        </div>
-                    </div>
-
-                    <!-- Sub Row: Cicilan & Sisa Progress Box -->
-                    <div style="background:var(--color-canvas-soft, #f8fafc); border:1px solid var(--color-hairline, #e2e8f0); border-radius:10px; padding:10px 12px;" class="dark:bg-slate-800/50 dark:border-slate-700">
-                        <div class="flex items-center justify-between text-xs mb-1.5 font-mono">
-                            <span class="text-slate-500 font-sans text-[11px] font-semibold">Cicilan:</span>
-                            <span class="font-bold text-slate-700 dark:text-slate-200">
-                                <?= ($kb['potongan_per_periode'] > 0) ? Format::rupiah((float)$kb['potongan_per_periode']) . ' <span class="text-slate-400 font-sans text-[10px]">/periode</span>' : '<span class="text-slate-400 font-sans">Manual</span>' ?>
+                    <!-- Middle: Financial Summary Box -->
+                    <div style="background:var(--color-canvas-soft, #f8fafc); border:1px solid var(--color-hairline, #e2e8f0); border-radius:10px; padding:10px 12px;" class="dark:bg-slate-800/50 dark:border-slate-700 space-y-1.5">
+                        <div class="flex items-center justify-between text-xs font-mono">
+                            <span class="text-slate-500 font-sans text-[11px] font-semibold">Total Pinjaman:</span>
+                            <span class="font-bold text-slate-900 dark:text-slate-100">
+                                <?= Format::rupiah($totalPinjaman) ?>
                             </span>
                         </div>
-                        <div class="flex items-center justify-between text-xs font-mono mb-1.5 pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
-                            <span class="text-slate-500 font-sans text-[11px] font-semibold">Sisa:</span>
+                        <div class="flex items-center justify-between text-xs font-mono">
+                            <span class="text-slate-500 font-sans text-[11px] font-semibold">Sudah Terbayar:</span>
+                            <span class="font-semibold text-emerald-600 dark:text-emerald-400">
+                                <?= Format::rupiah($terbayar) ?>
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs font-mono pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
+                            <span class="text-slate-500 font-sans text-[11px] font-semibold">Sisa Kasbon:</span>
                             <div class="flex items-center gap-2">
-                                <span class="font-bold <?= $isAktif ? 'text-amber-700 dark:text-amber-400' : 'text-slate-400' ?>"><?= Format::rupiah($sisaPinjaman) ?></span>
-                                <span class="text-[10.5px] font-bold <?= $persenLunas >= 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300' ?>">(<?= $persenLunas ?>%)</span>
+                                <span class="font-bold <?= $isAktif ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400' ?>">
+                                    <?= Format::rupiah($sisaPinjaman) ?>
+                                </span>
+                                <span class="text-[10.5px] font-bold <?= $persenLunas >= 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-600 dark:text-slate-300' ?>">
+                                    (<?= $persenLunas ?>%)
+                                </span>
                             </div>
                         </div>
                         <div class="kasbon-progress-track" style="margin-top:6px;">
@@ -1519,21 +1367,26 @@ foreach ($kasbonList as $kb) {
                         </div>
                     </div>
 
-                    <!-- Catatan / Keterangan (if any) -->
-                    <?php if (!empty($kb['keterangan'])): ?>
-                        <div class="pg-mobile-note">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
-                            <span class="pg-mobile-note-text"><?= htmlspecialchars($kb['keterangan']) ?></span>
-                        </div>
-                    <?php endif; ?>
+                    <!-- Riwayat Badge Info -->
+                    <div class="flex items-center justify-between text-xs text-slate-500 px-1">
+                        <span class="kasbon-badge-freq">
+                            <i data-lucide="layers" class="w-3 h-3 text-slate-400"></i>
+                            <span><?= (int)$kb['frekuensi_pinjaman'] ?>x Riwayat</span>
+                        </span>
+                        <?php if (!empty($kb['tanggal_pinjaman_terakhir'])): ?>
+                            <span class="text-[11px] text-slate-400 font-mono">
+                                Terakhir: <?= Format::tanggalIndo($kb['tanggal_pinjaman_terakhir']) ?>
+                            </span>
+                        <?php endif; ?>
+                    </div>
 
-                    <!-- Action Row (Separated with clean 12px top spacing) -->
+                    <!-- Action Row -->
                     <div class="pg-mobile-action-row">
-                        <a href="<?= Router::url('/kasbon/detail?id=' . $kb['id']) ?>" 
+                        <a href="<?= Router::url('/kasbon/detail?karyawan_id=' . $kb['karyawan_id']) ?>" 
                            class="btn btn-secondary flex-1"
                            style="height:36px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:600; border-radius:8px;">
-                            <i data-lucide="eye" style="width:14px;height:14px;"></i>
-                            <span>Detail Pinjaman</span>
+                            <i data-lucide="notebook-tabs" style="width:14px;height:14px;"></i>
+                            <span>Buka Buku Kasbon</span>
                         </a>
                     </div>
 
@@ -1887,13 +1740,14 @@ function kasbonApp() {
 
         // Table Filter & Search
         searchQuery: '',
-        statusFilter: 'aktif', // 'all', 'aktif', 'lunas', 'borongan', 'bulanan'
+        statusFilter: '<?= in_array($status ?? '', ['aktif', 'lunas', 'borongan', 'bulanan']) ? $status : 'all' ?>', // 'all', 'aktif', 'lunas', 'borongan', 'bulanan'
         items: <?= json_encode(array_map(function($kb) {
+            $isAktif = ((float)$kb['sisa_pinjaman_berjalan'] > 0);
             return [
-                'id' => (string)$kb['id'],
-                'keywords' => strtolower($kb['nama_karyawan'] . ' ' . ($kb['posisi'] ?? '') . ' ' . ($kb['keterangan'] ?? '') . ' ' . ($kb['tipe_penggajian'] ?? '')),
-                'status' => $kb['status_kasbon'],
-                'tipeGaji' => $kb['tipe_penggajian'] ?? ''
+                'karyawan_id' => (string)$kb['karyawan_id'],
+                'keywords' => strtolower($kb['nama_karyawan'] . ' ' . ($kb['posisi'] ?? '') . ' ' . ($kb['tipe_penggajian'] ?? '')),
+                'status' => $isAktif ? 'aktif' : 'lunas',
+                'tipeGaji' => strtolower($kb['tipe_penggajian'] ?? '')
             ];
         }, $kasbonList ?? []), JSON_UNESCAPED_UNICODE) ?>,
 
@@ -2014,7 +1868,6 @@ function kasbonApp() {
             let val = Number(amount) || 0;
             this.totalPinjamanRaw = val;
             this.totalPinjamanDisplay = val > 0 ? val.toLocaleString('id-ID') : '';
-            // Default cicilan: bagi 2x
             this.divideCicilan(2);
         },
 
@@ -2039,6 +1892,9 @@ function kasbonApp() {
         },
 
         formatRupiah(num) {
+            if (typeof window.formatRupiah === 'function') {
+                return window.formatRupiah(num);
+            }
             return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
         },
 

@@ -145,6 +145,8 @@ ob_start();
                 <select name="category" class="form-input" style="height:36px;font-size:12.5px;max-width:160px;">
                     <option value="all">Semua Kategori</option>
                     <option value="penjualan" <?= $filters['category'] === 'penjualan' ? 'selected' : '' ?>>Penjualan</option>
+                    <option value="pencairan_kasbon" <?= $filters['category'] === 'pencairan_kasbon' ? 'selected' : '' ?>>Pencairan Kasbon</option>
+                    <option value="pembayaran_kasbon" <?= $filters['category'] === 'pembayaran_kasbon' ? 'selected' : '' ?>>Pembayaran Kasbon</option>
                     <option value="modal_awal" <?= $filters['category'] === 'modal_awal' ? 'selected' : '' ?>>Modal Awal</option>
                     <?php foreach ($categories as $cat): ?>
                     <option value="<?= htmlspecialchars($cat['nama_kategori']) ?>" <?= $filters['category'] === $cat['nama_kategori'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['nama_kategori']) ?></option>
